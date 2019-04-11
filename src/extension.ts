@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
+import { AKSTreeProvider } from './aks-tree';
+
+const explorer = new AKSTreeProvider();
 
 export function activate(context: vscode.ExtensionContext) {
-    const disposable = vscode.commands.registerCommand('extension.sayHello', () => {
-        vscode.window.showInformationMessage('Hello World!');
-    });
+    const disposables = [
+        vscode.window.registerTreeDataProvider("aks.aksExplorer", explorer)
+    ];
 
-    context.subscriptions.push(disposable);
+    context.subscriptions.push(...disposables);
 }

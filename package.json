@@ -11,16 +11,18 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello"
+        "onView:aks.aksExplorer"
     ],
     "main": "./out/extension",
     "contributes": {
-        "commands": [
-            {
-                "command": "extension.sayHello",
-                "title": "Hello World"
-            }
-        ]
+        "views": {
+            "kubernetesView": [
+                {
+                    "id": "aks.aksExplorer",
+                    "name": "Azure Kubernetes Service"
+                }
+            ]
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
@@ -29,11 +31,19 @@
         "postinstall": "node ./node_modules/vscode/bin/install",
         "test": "npm run compile && node ./node_modules/vscode/bin/test"
     },
+    "extensionDependencies": [
+        "ms-vscode.azure-account"
+    ],
     "devDependencies": {
         "typescript": "^2.6.1",
         "vscode": "^1.1.6",
         "tslint": "^5.8.0",
         "@types/node": "^7.0.43",
         "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "ms-rest": "^2.5.0",
+        "ms-rest-azure": "^2.6.0",
+        "azure-arm-resource": "^7.3.0"
     }
 }
