@@ -1,12 +1,13 @@
 {
     "name": "vscode-aks-tools",
-    "displayName": "vscode-aks-tools",
-    "description": "Tools. For AKS.",
+    "displayName": "Azure Kubernetes Service",
+    "description": "Display Azure Kubernetes Services within VS Code",
     "version": "0.0.1",
     "publisher": "ms-kubernetes-tools",
     "engines": {
         "vscode": "^1.33.0"
     },
+    "license": "MIT",
     "categories": [
         "Azure"
     ],
@@ -49,5 +50,9 @@
         "ms-rest": "^2.5.0",
         "ms-rest-azure": "^2.6.0",
         "vscode-kubernetes-tools-api": "^0.0.5"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Azure/vscode-aks-tools"
     }
 }
