@@ -21,8 +21,7 @@
         "onView:kubernetes.cloudExplorer"
     ],
     "main": "./out/extension",
-    "contributes": {
-    },
+    "contributes": {},
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
