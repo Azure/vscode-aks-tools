@@ -1,3 +1,6 @@
+# vscode-aks-tools
+
+Adds AKS clusters to the Kubernetes extension cloud explorer, and supports adding them to kubeconfig.
 
 # Contributing
 
