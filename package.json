@@ -1,0 +1,58 @@
+{
+    "name": "vscode-aks-tools",
+    "displayName": "Azure Kubernetes Service",
+    "description": "Display Azure Kubernetes Services within VS Code",
+    "version": "0.0.1",
+    "publisher": "ms-kubernetes-tools",
+    "engines": {
+        "vscode": "^1.33.0"
+    },
+    "license": "MIT",
+    "categories": [
+        "Azure"
+    ],
+    "keywords": [
+        "kubernetes",
+        "azure",
+        "aks",
+        "acs",
+        "kubernetes-extension-cloud-provider"
+    ],
+    "activationEvents": [
+        "onView:kubernetes.cloudExplorer"
+    ],
+    "main": "./out/extension",
+    "contributes": {},
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    },
+    "extensionDependencies": [
+        "ms-vscode.azure-account",
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
+    ],
+    "devDependencies": {
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "tslint": "^5.8.0",
+        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "@azure/arm-containerservice": "^7.0.1",
+        "@types/js-yaml": "^3.12.1",
+        "azure-arm-containerservice": "^7.0.0",
+        "azure-arm-resource": "^7.3.0",
+        "js-yaml": "^3.13.1",
+        "ms-rest": "^2.5.0",
+        "ms-rest-azure": "^2.6.0",
+        "vscode-kubernetes-tools-api": "^0.0.5"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Azure/vscode-aks-tools"
+    }
+}
