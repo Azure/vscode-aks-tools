@@ -4,6 +4,7 @@
     "description": "Display Azure Kubernetes Services within VS Code",
     "version": "0.0.1",
     "preview": true,
+	"aiKey": "AIF-59F469F4-C48D-4793-9C89-66497523808D",
     "publisher": "ms-kubernetes-tools",
     "engines": {
         "vscode": "^1.33.0"
@@ -36,20 +37,21 @@
         "ms-kubernetes-tools.vscode-kubernetes-tools"
     ],
     "devDependencies": {
-        "typescript": "^2.6.1",
-        "vscode": "^1.1.6",
-        "tslint": "^5.8.0",
+        "@types/js-yaml": "^3.12.1",
+        "@types/mocha": "^2.2.42",
         "@types/node": "^7.0.43",
-        "@types/mocha": "^2.2.42"
+        "tslint": "^5.8.0",
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6"
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
-        "@types/js-yaml": "^3.12.1",
         "azure-arm-containerservice": "^7.0.0",
         "azure-arm-resource": "^7.3.0",
         "js-yaml": "^3.13.1",
         "ms-rest": "^2.5.0",
         "ms-rest-azure": "^2.6.0",
+        "vscode-azureextensionui": "^0.27.1",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
     "repository": {

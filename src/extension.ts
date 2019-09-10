@@ -4,15 +4,38 @@ import * as azcs from 'azure-arm-containerservice';  // deprecated, but @azure/a
 
 import { AKSTreeProvider, AKSClusterTreeNode } from './aks-tree';
 import { parseResource } from './azure-api-utils';
+import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
+import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput } from 'vscode-azureextensionui';
 
 const explorer = new AKSTreeProvider();
 
 export async function activate(context: vscode.ExtensionContext) {
+    const ext = {
+        context,
+        ignoreBundle: !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || ''),
+        outputChannel: vscode.window.createOutputChannel('Azure Identity'),
+        reporter: createTelemetryReporter(context),
+        ui: new AzureUserInput(context.globalState)
+    };
+
+    context.subscriptions.push(ext.outputChannel);
+
+    registerUIExtensionVariables(ext);
+
+    const azureAccountTreeItem = new AzureAccountTreeItem();
+    context.subscriptions.push(azureAccountTreeItem);
+    const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, 'azureAks.loadMore');
+
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     if (cloudExplorer.available) {
         cloudExplorer.api.registerCloudProvider({
-            cloudName: "Azure",
+            cloudName: 'Azure',
             treeDataProvider: explorer,
+            getKubeconfigYaml: getClusterKubeconfig
+        });
+        cloudExplorer.api.registerCloudProvider({
+            cloudName: 'Azure (v2)',
+            treeDataProvider,
             getKubeconfigYaml: getClusterKubeconfig
         });
     } else {
