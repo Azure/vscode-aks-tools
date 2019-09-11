@@ -4,7 +4,7 @@
     "description": "Display Azure Kubernetes Services within VS Code",
     "version": "0.0.1",
     "preview": true,
-	"aiKey": "AIF-59F469F4-C48D-4793-9C89-66497523808D",
+    "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "publisher": "ms-kubernetes-tools",
     "engines": {
         "vscode": "^1.33.0"

@@ -8,12 +8,7 @@ export default class AkClusterTreeItem extends AzureTreeItem {
         private readonly resource: Resource) {
             super(parent);
 
-            /*
-            this.iconPath = {
-                dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'identity.svg'),
-                light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'identity.svg')
-            };
-            */
+            // TODO: Set fancy icon for AKS cluster nodes.
 
             this.id = this.resource.id;
         }

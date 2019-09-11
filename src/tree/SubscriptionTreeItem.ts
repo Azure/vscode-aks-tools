@@ -3,7 +3,7 @@ import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceMa
 import { listAll } from '../azure-api-utils';
 import AksClusterTreeItem from './AksClusterTreeItem';
 
-export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
+export default class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     constructor(
         parent: AzExtParentTreeItem,
         root: ISubscriptionContext) {
