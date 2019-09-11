@@ -24,7 +24,27 @@
         "onView:kubernetes.cloudExplorer"
     ],
     "main": "./out/extension",
-    "contributes": {},
+    "contributes": {
+        "commands": [
+            {
+                "command": "aks.selectSubscriptions",
+                "title": "Select subscriptions...",
+                "icon": {
+                    "dark": "resources/dark/filter.svg",
+                    "light": "resources/light/filter.svg"
+                }
+            }
+        ],
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "aks.selectSubscriptions",
+                    "when": "viewItem == aks.subscription",
+                    "group": "inline"
+                }
+            ]
+        }
+    },
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",

@@ -10,6 +10,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         super(parent, root);
     }
 
+    public readonly contextValue: string = 'aks.subscription';
+
     public hasMoreChildrenImpl(): boolean {
         return false;
     }
