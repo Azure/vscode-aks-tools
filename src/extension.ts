@@ -6,7 +6,8 @@ import { AKSTreeProvider, AKSClusterTreeNode } from './aks-tree';
 import { parseResource } from './azure-api-utils';
 import AksClusterTreeItem from './tree/AksClusterTreeItem';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
-import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput } from 'vscode-azureextensionui';
+import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
+import selectSubscriptions from './commands/selectSubscriptions';
 
 const explorer = new AKSTreeProvider();
 
@@ -22,6 +23,8 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(ext.outputChannel);
 
     registerUIExtensionVariables(ext);
+
+    registerCommand('aks.selectSubscriptions', selectSubscriptions);
 
     const azureAccountTreeItem = new AzureAccountTreeItem();
     context.subscriptions.push(azureAccountTreeItem);
