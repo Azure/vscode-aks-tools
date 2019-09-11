@@ -4,6 +4,7 @@ import * as azcs from 'azure-arm-containerservice';  // deprecated, but @azure/a
 
 import { AKSTreeProvider, AKSClusterTreeNode } from './aks-tree';
 import { parseResource } from './azure-api-utils';
+import AksClusterTreeItem from './tree/AksClusterTreeItem';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput } from 'vscode-azureextensionui';
 
@@ -36,7 +37,7 @@ export async function activate(context: vscode.ExtensionContext) {
         cloudExplorer.api.registerCloudProvider({
             cloudName: 'Azure (v2)',
             treeDataProvider,
-            getKubeconfigYaml: getClusterKubeconfig
+            getKubeconfigYaml: getClusterKubeconfigV2
         });
     } else {
         vscode.window.showWarningMessage(cloudExplorer.reason);
@@ -50,6 +51,23 @@ async function getClusterKubeconfig(target: AKSClusterTreeNode): Promise<string 
         return;
     }
     const client = new azcs.ContainerServiceClient(target.session.credentials, target.subscription.subscriptionId!);  // TODO: safely
+    try {
+        const accessProfile = await client.managedClusters.getAccessProfile(resourceGroupName, name, 'clusterUser');
+        const kubeconfig = accessProfile.kubeConfig!.toString();  // TODO: safely
+        return kubeconfig;
+    } catch (e) {
+        vscode.window.showErrorMessage(`Can't get kubeconfig: ${e}`);
+        return undefined;
+    }
+}
+
+async function getClusterKubeconfigV2(target: AksClusterTreeItem): Promise<string | undefined> {
+    const { resourceGroupName, name } = parseResource(target.id!);
+    if (!resourceGroupName || !name) {
+        vscode.window.showErrorMessage(`Invalid ARM id ${target.id}`);
+        return;
+    }
+    const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
     try {
         const accessProfile = await client.managedClusters.getAccessProfile(resourceGroupName, name, 'clusterUser');
         const kubeconfig = accessProfile.kubeConfig!.toString();  // TODO: safely
