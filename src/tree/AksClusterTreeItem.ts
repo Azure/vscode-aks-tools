@@ -1,9 +1,10 @@
 import { AzExtParentTreeItem, AzureTreeItem } from "vscode-azureextensionui";
+import { Resource } from "azure-arm-storage/lib/models";
 
 export default class AkClusterTreeItem extends AzureTreeItem {
     constructor(
         parent: AzExtParentTreeItem,
-        name: string) {
+        private readonly resource: Resource) {
             super(parent);
 
             /*
@@ -13,12 +14,12 @@ export default class AkClusterTreeItem extends AzureTreeItem {
             };
             */
 
-            this.id = name;
+            this.id = this.resource.id;
         }
 
     public readonly contextValue: string = 'aksCluster';
 
     public get label(): string {
-        return this.id || '';
+        return this.resource.name || '<unnamed resource>';
     }
 }
