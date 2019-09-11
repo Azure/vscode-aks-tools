@@ -36,6 +36,12 @@
             }
         ],
         "menus": {
+            "commandPalette": [
+                {
+                    "command": "aks.selectSubscriptions",
+                    "when": "never"
+                }
+            ],
             "view/item/context": [
                 {
                     "command": "aks.selectSubscriptions",
