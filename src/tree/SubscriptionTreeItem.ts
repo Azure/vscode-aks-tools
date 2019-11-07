@@ -1,4 +1,4 @@
-import { IActionContext, SubscriptionTreeItemBase, AzExtTreeItem, IAzureUserInput, AzExtParentTreeItem, ISubscriptionContext } from 'vscode-azureextensionui';
+import { IActionContext, SubscriptionTreeItemBase, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from 'vscode-azureextensionui';
 import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceManagementClient';
 import { listAll } from '../azure-api-utils';
 import AksClusterTreeItem from './AksClusterTreeItem';
