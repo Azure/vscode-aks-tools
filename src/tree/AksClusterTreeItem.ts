@@ -4,7 +4,7 @@ import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { SubscriptionClient } from 'azure-arm-resource';
 import { toSubscription } from "../azure-api-utils";
 
-export default class AkClusterTreeItem extends AzureTreeItem {
+export default class AksClusterTreeItem extends AzureTreeItem {
     constructor(
         parent: AzExtParentTreeItem,
         private readonly resource: Resource) {

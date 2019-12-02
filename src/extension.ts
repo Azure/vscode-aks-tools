@@ -9,7 +9,8 @@ import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataPro
 import selectSubscriptions from './commands/selectSubscriptions';
 
 export async function activate(context: vscode.ExtensionContext) {
-    const ext = {
+    // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
+    const uiExtensionVariables = {
         context,
         ignoreBundle: !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || ''),
         outputChannel: vscode.window.createOutputChannel('Azure Identity'),
@@ -17,9 +18,9 @@ export async function activate(context: vscode.ExtensionContext) {
         ui: new AzureUserInput(context.globalState)
     };
 
-    context.subscriptions.push(ext.outputChannel);
+    context.subscriptions.push(uiExtensionVariables.outputChannel);
 
-    registerUIExtensionVariables(ext);
+    registerUIExtensionVariables(uiExtensionVariables);
 
     registerCommand('aks.selectSubscriptions', selectSubscriptions);
 
