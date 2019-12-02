@@ -1,7 +1,7 @@
 import { IActionContext, SubscriptionTreeItemBase, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from 'vscode-azureextensionui';
 import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceManagementClient';
 import { listAll, toSubscription } from '../azure-api-utils';
-import AksClusterTreeItem from './AksClusterTreeItem';
+import AksClusterTreeItem from './aksClusterTreeItem';
 import { SubscriptionClient } from 'azure-arm-resource';
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.

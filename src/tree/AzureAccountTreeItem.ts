@@ -1,5 +1,5 @@
 import { AzureAccountTreeItemBase, ISubscriptionContext, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
-import SubscriptionTreeItem from './SubscriptionTreeItem';
+import SubscriptionTreeItem from './subscriptionTreeItem';
 import * as k8s from 'vscode-kubernetes-tools-api';
 
 export default class AzureAccountTreeItem extends AzureAccountTreeItemBase {

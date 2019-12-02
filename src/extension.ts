@@ -3,8 +3,8 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import * as azcs from 'azure-arm-containerservice';  // deprecated, but @azure/arm-containerservice doesn't play nicely with AzureAccount, so...
 
 import { parseResource } from './azure-api-utils';
-import AksClusterTreeItem from './tree/AksClusterTreeItem';
-import AzureAccountTreeItem from './tree/AzureAccountTreeItem';
+import AksClusterTreeItem from './tree/aksClusterTreeItem';
+import AzureAccountTreeItem from './tree/azureAccountTreeItem';
 import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
 
