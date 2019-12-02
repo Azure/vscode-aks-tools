@@ -65,9 +65,9 @@
     "devDependencies": {
         "@types/js-yaml": "^3.12.1",
         "@types/mocha": "^2.2.42",
-        "@types/node": "^7.0.43",
-        "tslint": "^5.8.0",
-        "typescript": "^2.6.1",
+        "@types/node": "^7.10.9",
+        "tslint": "^5.20.1",
+        "typescript": "^3.7.2",
         "vscode": "^1.1.6"
     },
     "dependencies": {
