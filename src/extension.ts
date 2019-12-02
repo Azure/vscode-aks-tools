@@ -9,27 +9,27 @@ import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataPro
 import selectSubscriptions from './commands/selectSubscriptions';
 
 export async function activate(context: vscode.ExtensionContext) {
-    // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
-    const uiExtensionVariables = {
-        context,
-        ignoreBundle: !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || ''),
-        outputChannel: vscode.window.createOutputChannel('Azure Identity'),
-        reporter: createTelemetryReporter(context),
-        ui: new AzureUserInput(context.globalState)
-    };
-
-    context.subscriptions.push(uiExtensionVariables.outputChannel);
-
-    registerUIExtensionVariables(uiExtensionVariables);
-
-    registerCommand('aks.selectSubscriptions', selectSubscriptions);
-
-    const azureAccountTreeItem = new AzureAccountTreeItem();
-    context.subscriptions.push(azureAccountTreeItem);
-    const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, 'azureAks.loadMore');
-
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     if (cloudExplorer.available) {
+        // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
+        const uiExtensionVariables = {
+            context,
+            ignoreBundle: !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || ''),
+            outputChannel: vscode.window.createOutputChannel('Azure Identity'),
+            reporter: createTelemetryReporter(context),
+            ui: new AzureUserInput(context.globalState)
+        };
+
+        context.subscriptions.push(uiExtensionVariables.outputChannel);
+
+        registerUIExtensionVariables(uiExtensionVariables);
+
+        registerCommand('aks.selectSubscriptions', selectSubscriptions);
+
+        const azureAccountTreeItem = new AzureAccountTreeItem();
+        context.subscriptions.push(azureAccountTreeItem);
+        const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, 'azureAks.loadMore');
+
         cloudExplorer.api.registerCloudProvider({
             cloudName: 'Azure',
             treeDataProvider,

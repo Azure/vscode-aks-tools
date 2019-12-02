@@ -4,7 +4,16 @@ import { listAll, toSubscription } from '../azure-api-utils';
 import AksClusterTreeItem from './AksClusterTreeItem';
 import { SubscriptionClient } from 'azure-arm-resource';
 
-export default class SubscriptionTreeItem extends SubscriptionTreeItemBase {
+// The de facto API of tree nodes that represent individual Azure subscriptions.
+// Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
+export interface SubscriptionTreeNode {
+    readonly nodeType: 'subscription';
+    readonly name: string;
+    readonly session: ISubscriptionContext;
+    readonly subscription: SubscriptionClient.SubscriptionModels.Subscription;
+}
+
+export default class SubscriptionTreeItem extends SubscriptionTreeItemBase implements SubscriptionTreeNode {
     constructor(
         parent: AzExtParentTreeItem,
         root: ISubscriptionContext) {
@@ -35,4 +44,6 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public get subscription(): SubscriptionClient.SubscriptionModels.Subscription {
         return toSubscription(this.root);
     }
+
+    public readonly nodeType = 'subscription';
 }

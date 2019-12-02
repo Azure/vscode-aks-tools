@@ -4,7 +4,17 @@ import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { SubscriptionClient } from 'azure-arm-resource';
 import { toSubscription } from "../azure-api-utils";
 
-export default class AksClusterTreeItem extends AzureTreeItem {
+// The de facto API of tree nodes that represent individual AKS clusters.
+// Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
+export interface AksClusterTreeNode {
+    readonly nodeType: 'cluster';
+    readonly armId: string;
+    readonly name: string;
+    readonly session: ISubscriptionContext;
+    readonly subscription: SubscriptionClient.SubscriptionModels.Subscription;
+}
+
+export default class AksClusterTreeItem extends AzureTreeItem implements AksClusterTreeNode {
     constructor(
         parent: AzExtParentTreeItem,
         private readonly resource: Resource) {
@@ -37,5 +47,5 @@ export default class AksClusterTreeItem extends AzureTreeItem {
         return toSubscription(this.root);
     }
 
-    public readonly nodeType: string = 'cluster';
+    public readonly nodeType = 'cluster';
 }
