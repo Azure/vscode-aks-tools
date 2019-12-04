@@ -2,17 +2,37 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import * as azcs from 'azure-arm-containerservice';  // deprecated, but @azure/arm-containerservice doesn't play nicely with AzureAccount, so...
 
-import { AKSTreeProvider, AKSClusterTreeNode } from './aks-tree';
 import { parseResource } from './azure-api-utils';
-
-const explorer = new AKSTreeProvider();
+import AksClusterTreeItem from './tree/aksClusterTreeItem';
+import AzureAccountTreeItem from './tree/azureAccountTreeItem';
+import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
+import selectSubscriptions from './commands/selectSubscriptions';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     if (cloudExplorer.available) {
+        // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
+        const uiExtensionVariables = {
+            context,
+            ignoreBundle: !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || ''),
+            outputChannel: vscode.window.createOutputChannel('Azure Identity'),
+            reporter: createTelemetryReporter(context),
+            ui: new AzureUserInput(context.globalState)
+        };
+
+        context.subscriptions.push(uiExtensionVariables.outputChannel);
+
+        registerUIExtensionVariables(uiExtensionVariables);
+
+        registerCommand('aks.selectSubscriptions', selectSubscriptions);
+
+        const azureAccountTreeItem = new AzureAccountTreeItem();
+        context.subscriptions.push(azureAccountTreeItem);
+        const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, 'azureAks.loadMore');
+
         cloudExplorer.api.registerCloudProvider({
-            cloudName: "Azure",
-            treeDataProvider: explorer,
+            cloudName: 'Azure',
+            treeDataProvider,
             getKubeconfigYaml: getClusterKubeconfig
         });
     } else {
@@ -20,13 +40,13 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 }
 
-async function getClusterKubeconfig(target: AKSClusterTreeNode): Promise<string | undefined> {
-    const { resourceGroupName, name } = parseResource(target.armId);
+async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
+    const { resourceGroupName, name } = parseResource(target.id!);
     if (!resourceGroupName || !name) {
-        vscode.window.showErrorMessage(`Invalid ARM id ${target.armId}`);
+        vscode.window.showErrorMessage(`Invalid ARM id ${target.id}`);
         return;
     }
-    const client = new azcs.ContainerServiceClient(target.session.credentials, target.subscription.subscriptionId!);  // TODO: safely
+    const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
     try {
         const accessProfile = await client.managedClusters.getAccessProfile(resourceGroupName, name, 'clusterUser');
         const kubeconfig = accessProfile.kubeConfig!.toString();  // TODO: safely
