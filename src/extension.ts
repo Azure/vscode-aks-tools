@@ -14,7 +14,7 @@ export async function activate(context: vscode.ExtensionContext) {
         // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
         const uiExtensionVariables = {
             context,
-            ignoreBundle: !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || ''),
+            ignoreBundle: true,
             outputChannel: vscode.window.createOutputChannel('Azure Identity'),
             reporter: createTelemetryReporter(context),
             ui: new AzureUserInput(context.globalState)
