@@ -14,7 +14,6 @@
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "env": {
-                "AZCODE_DOCKER_IGNORE_BUNDLE": "1",
             },
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
