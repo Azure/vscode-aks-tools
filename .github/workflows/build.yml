@@ -26,12 +26,12 @@ jobs:
         npm install
         npm run compile
     - name: Package Extension
-      if: ${{ matrix.os == ubuntu-latest }}
+      if: matrix.os == ubuntu-latest
       run: |
         npm install -g vsce
         vsce package
     - name: Archive Extension
-      if: ${{ matrix.os == ubuntu-latest }}
+      if: matrix.os == ubuntu-latest
       uses: actions/upload-artifact@v1
       with:
         name: vsix
