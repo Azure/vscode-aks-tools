@@ -30,9 +30,11 @@ jobs:
       run: |
         npm install -g vsce
         vsce package
+        mkdir vsix
+        mv *.vsix vsix
     - name: Archive Extension
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v1
       with:
         name: vsix
-        path: "*.vsix"
+        path: vsix
