@@ -1,0 +1,38 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+    - name: Checkout Branch
+      uses: actions/checkout@v1
+    - name: Setup Node.js
+      uses: actions/setup-node@v1
+      with:
+        version: 12
+    - name: Build Extension
+      run: |
+        npm install
+        npm run compile
+    - name: Package Extension
+      if: ${{ matrix.os == ubuntu-latest }}
+      run: |
+        npm install -g vsce
+        vsce package
+    - name: Archive Extension
+      if: ${{ matrix.os == ubuntu-latest }}
+      uses: actions/upload-artifact@v1
+      with:
+        name: vsix
+        path: "*.vsix"
