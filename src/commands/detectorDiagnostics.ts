@@ -7,8 +7,13 @@ import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 
 const meta = require('../../package.json');
-const util = require('util');
-const exec = util.promisify(require('child_process').exec);
+const shelljs = require('shelljs');
+
+export interface ShellResult {
+  readonly code: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
 
 export default async function detectorDiagnostics(
     context: IActionContext,
@@ -65,24 +70,34 @@ async function createDetectorWebView(
 }
 
 async function getAppLensDetectorData(clusterARMId: string): Promise<IAppLensARMresponse | undefined> {
-  // ARM api call.
-  const appLensARMAPI = `az rest -m GET -u "${clusterARMId}/detectors/mcrEndpointUpdate?api-version=2019-08-01&executeChildren=true"`;
-  const clusterAppLensData = await runAksShellCommand(appLensARMAPI);
-
-  return clusterAppLensData;
-}
-
-async function runAksShellCommand(azcomand: string): Promise<IAppLensARMresponse | undefined> {
   try {
-    const { stdout } = await exec(azcomand);
-    const appLensARMresponse = <IAppLensARMresponse> JSON.parse(stdout);
+    const appLensARMAPI = `az rest -m GET -u "${clusterARMId}/detectors/mcrEndpointUpdate?api-version=2019-08-01&executeChildren=true"`;
 
-    return appLensARMresponse;
+    const shellresult = exec(appLensARMAPI);
+    const stdout = (await shellresult).stdout;
+    const stderr = (await shellresult).stderr;
+
+    if (stdout) {
+      const appLensARMresponse = <IAppLensARMresponse> JSON.parse(stdout);
+      return appLensARMresponse;
+    } else if (stderr) {
+      vscode.window.showInformationMessage(stderr);
+    }
   } catch (err) {
     vscode.window.showInformationMessage('Error: ' + err);
     vscode.window.showInformationMessage('Selected Cluster has no data returned.');
-    return;
   }
+  return;
+}
+
+function exec(cmd: string, stdin?: string): Promise<ShellResult> {
+
+  return new Promise<ShellResult>((resolve) => {
+      const proc = shelljs.exec(cmd, (code: number, stdout: string, stderr: string) => resolve({ code: code, stdout: stdout, stderr: stderr }));
+      if (stdin) {
+          proc.stdin.end(stdin);
+      }
+  });
 }
 
 function getWebviewContent(
