@@ -56,7 +56,7 @@
                 },
                 {
                     "command": "aks.detectorDiagnostics",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /kubernetes\\.providesKubeconfig/i"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 }
             ]
         }
@@ -84,6 +84,7 @@
         "@azure/arm-containerservice": "^7.0.1",
         "azure-arm-containerservice": "^7.0.0",
         "azure-arm-resource": "^7.3.0",
+        "handlebars": "^4.7.6",
         "js-yaml": "^3.13.1",
         "ms-rest": "^2.5.0",
         "ms-rest-azure": "^2.6.0",
