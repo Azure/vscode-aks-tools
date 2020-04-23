@@ -81,6 +81,10 @@ async function runAksShellCommand(azcomand: string): Promise<IAppLensARMresponse
   } catch (err) {
     vscode.window.showInformationMessage('Error: ' + err);
     vscode.window.showInformationMessage('Selected Cluster has no data returned.');
+<<<<<<< HEAD
+=======
+    return;
+>>>>>>> Fix: Interface, dynamic html, extensionpath, progress bar and types.
   }
 }
 
