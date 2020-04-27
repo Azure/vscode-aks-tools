@@ -1,19 +1,14 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { IAppLensARMresponse } from './models/iapplensarmresponse';
+import { AppLensARMresponse, AppLensAPIResult } from './models/applensarmresponse';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
+import { Errorable } from './utils/errorable';
+import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceManagementClient';
 
 const meta = require('../../package.json');
-const shelljs = require('shelljs');
-
-export interface ShellResult {
-  readonly code: number;
-  readonly stdout: string;
-  readonly stderr: string;
-}
 
 export default async function detectorDiagnostics(
     context: IActionContext,
@@ -22,31 +17,46 @@ export default async function detectorDiagnostics(
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
     if (cloudExplorer.available) {
-      const cloudTarget = await cloudExplorer.api.resolveCommandTarget(target);
+      const cloudTarget = cloudExplorer.api.resolveCommandTarget(target);
 
       if (cloudTarget && cloudTarget.cloudName === "Azure" &&
             cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
-              loadClusterInsights(cloudTarget);
+              const extensionPath = getExtensionPath();
+              if (extensionPath) {
+                loadClusterInsights(cloudTarget, extensionPath);
+              }
         } else {
           vscode.window.showInformationMessage('This command only applies to AKS clusters.');
         }
     }
 }
 
-function loadClusterInsights(cloudTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode) {
+function getExtensionPath(): string | undefined {
+  const publisherName = `${meta.publisher}.${meta.name}`;
+  const vscodeExtensionPath = vscode.extensions.getExtension(publisherName)?.extensionPath;
+
+  if (!vscodeExtensionPath) {
+    vscode.window.showInformationMessage('No Extension path found.');
+    return;
+  }
+  return vscodeExtensionPath;
+}
+
+function loadClusterInsights(
+  cloudTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode,
+  extensionPath: string) {
   const clsutername = cloudTarget.cloudResource.name;
-  const armId = cloudTarget.cloudResource.armId;
 
   vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
-    title: `Loading ${cloudTarget.cloudResource.name} diagnostics.`,
+    title: `Loading ${clsutername} diagnostics.`,
     cancellable: false
   }, () => {
     return new Promise(async (resolve) => {
-      const clusterAppLensData = await getAppLensDetectorData(armId);
+      const clusterAppLensData = await getAppLensDetectorData(cloudTarget);
 
       if (clusterAppLensData) {
-        await createDetectorWebView(clsutername, clusterAppLensData);
+        await createDetectorWebView(clsutername, clusterAppLensData, extensionPath);
       }
       resolve();
     });
@@ -55,7 +65,8 @@ function loadClusterInsights(cloudTarget: k8s.CloudExplorerV1.CloudExplorerResou
 
 async function createDetectorWebView(
   clusterName: string,
-  clusterAppLensData: IAppLensARMresponse) {
+  clusterAppLensData: AppLensARMresponse,
+  extensionPath: string) {
     const panel = vscode.window.createWebviewPanel(
       'AKS Diagnostics',
       'AKS diagnostics view for: ' + clusterName,
@@ -66,63 +77,52 @@ async function createDetectorWebView(
       }
     );
 
-    panel.webview.html = getWebviewContent(clusterAppLensData, panel);
+    panel.webview.html = getWebviewContent(clusterAppLensData, extensionPath);
 }
 
-async function getAppLensDetectorData(clusterARMId: string): Promise<IAppLensARMresponse | undefined> {
-  try {
-    const appLensARMAPI = `az rest -m GET -u "${clusterARMId}/detectors/mcrEndpointUpdate?api-version=2019-08-01&executeChildren=true"`;
+async function getAppLensDetectorData(
+  clusterTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode
+  ): Promise<AppLensARMresponse | undefined> {
+  const apiResult = await getClusterInsightInfo(clusterTarget);
 
-    const shellresult = exec(appLensARMAPI);
-    const stdout = (await shellresult).stdout;
-    const stderr = (await shellresult).stderr;
-
-    if (stdout) {
-      const appLensARMresponse = <IAppLensARMresponse> JSON.parse(stdout);
-      return appLensARMresponse;
-    } else if (stderr) {
-      vscode.window.showInformationMessage(stderr);
-    }
-  } catch (err) {
-    vscode.window.showInformationMessage('Error: ' + err);
-    vscode.window.showInformationMessage('Selected Cluster has no data returned.');
+  if (apiResult.succeeded) {
+    return apiResult.result.apiresult;
+  } else if (!apiResult.succeeded) {
+    vscode.window.showInformationMessage(apiResult.error);
   }
   return;
 }
 
-function exec(cmd: string, stdin?: string): Promise<ShellResult> {
+async function getClusterInsightInfo(
+  target: k8s.CloudExplorerV1.CloudExplorerResourceNode
+  ): Promise<Errorable<AppLensAPIResult>> {
+  try {
+      const client = new ResourceManagementClient(target.cloudResource.root.credentials, target.cloudResource.root.subscriptionId);
+      const clusterInsightInfo = await client.resources.get(
+        target.cloudResource.armId.split("/")[4], target.cloudResource.resource.type,
+        target.cloudResource.resource.name, "detectors", "mcrEndpointUpdate", "2019-08-01");
 
-  return new Promise<ShellResult>((resolve) => {
-      const proc = shelljs.exec(cmd, (code: number, stdout: string, stderr: string) => resolve({ code: code, stdout: stdout, stderr: stderr }));
-      if (stdin) {
-          proc.stdin.end(stdin);
-      }
-  });
+      return { succeeded: true, result: {apiresult: <AppLensARMresponse> clusterInsightInfo}};
+    } catch (ex) {
+      return { succeeded: false, error:  `Error invoking cluster insight: ${ex}` };
+    }
 }
 
 function getWebviewContent(
-  clusterdata: IAppLensARMresponse,
-  panel: vscode.WebviewPanel) {
+  clusterdata: AppLensARMresponse,
+  vscodeExtensionPath: string) {
     const webviewClusterData = clusterdata?.properties;
-    const publisherName = `${meta.publisher}.${meta.name}`;
-    const vscodeExtensionPath = vscode.extensions.getExtension(publisherName)?.extensionPath;
 
-    if (!vscodeExtensionPath) {
-      vscode.window.showErrorMessage("No Extension path");
-      return "CSS file path missing";
-    }
-
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, "src/commands/style/detector.css"));
+    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', 'detector.css'));
+    const pathToHtmlOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', 'detector.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
-    const pathToHtml = vscode.Uri.file(path.join(vscodeExtensionPath, "src/commands/style/detector.html"));
-    const pathUri = pathToHtml.with({scheme: 'vscode-resource'});
+    const pathUri = pathToHtmlOnDisk.with({scheme: 'vscode-resource'});
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
-
     const template = htmlhandlers.compile(htmldata);
     const data = { "cssuri": `${styleUri}`,
-                     "clustername": `${webviewClusterData.metadata.name}`,
-                     "rowdata": `${webviewClusterData.dataset[0].table.rows[1].toString().split(',')[3]}`
+                   "clustername": `${webviewClusterData.metadata.name}`,
+                   "rowdata": `${webviewClusterData.dataset[0].table.rows[1].toString().split(',')[3]}`
                   };
     const webviewcontent = template(data);
 
