@@ -23,7 +23,7 @@ export default async function detectorDiagnostics(
             cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
               const extensionPath = getExtensionPath();
               if (extensionPath) {
-                loadClusterInsights(cloudTarget, extensionPath);
+                await loadClusterInsights(cloudTarget, extensionPath);
               }
         } else {
           vscode.window.showInformationMessage('This command only applies to AKS clusters.');
@@ -42,25 +42,28 @@ function getExtensionPath(): string | undefined {
   return vscodeExtensionPath;
 }
 
-function loadClusterInsights(
+async function loadClusterInsights(
   cloudTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode,
   extensionPath: string) {
   const clsutername = cloudTarget.cloudResource.name;
 
-  vscode.window.withProgress({
-    location: vscode.ProgressLocation.Notification,
-    title: `Loading ${clsutername} diagnostics.`,
-    cancellable: false
-  }, () => {
-    return new Promise(async (resolve) => {
-      const clusterAppLensData = await getAppLensDetectorData(cloudTarget);
+  await longRunning(`Loading ${clsutername} diagnostics.`,
+        async () => {
+          const clusterAppLensData = await getAppLensDetectorData(cloudTarget);
 
-      if (clusterAppLensData) {
-        await createDetectorWebView(clsutername, clusterAppLensData, extensionPath);
-      }
-      resolve();
-    });
-  });
+          if (clusterAppLensData) {
+            await createDetectorWebView(clsutername, clusterAppLensData, extensionPath);
+          }
+        }
+    );
+}
+
+async function longRunning<T>(title: string, action: () => Promise<T>): Promise<T> {
+  const options = {
+      location: vscode.ProgressLocation.Notification,
+      title: title
+  };
+  return await vscode.window.withProgress(options, (_) => action());
 }
 
 async function createDetectorWebView(
@@ -114,15 +117,21 @@ function getWebviewContent(
     const webviewClusterData = clusterdata?.properties;
 
     const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', 'detector.css'));
-    const pathToHtmlOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', 'detector.html'));
+    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', 'detector.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
-    const pathUri = pathToHtmlOnDisk.with({scheme: 'vscode-resource'});
+    const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
     const template = htmlhandlers.compile(htmldata);
     const data = { "cssuri": `${styleUri}`,
                    "clustername": `${webviewClusterData.metadata.name}`,
-                   "rowdata": `${webviewClusterData.dataset[0].table.rows[1].toString().split(',')[3]}`
+                   "rowdata": `${webviewClusterData.dataset[0].table.rows[1][3].toString()}`,
+                   "update": `${webviewClusterData.dataset[0].table.rows[0][2].toString()}`,
+                   "rowdataupdate": `${webviewClusterData.dataset[0].table.rows[0][3].toString()}`,
+                   "description": `${webviewClusterData.dataset[0].table.rows[1][2].toString()}`,
+                   "rowdatadescription": `${webviewClusterData.dataset[0].table.rows[1][3].toString()}`,
+                   "recommendedaction": `${webviewClusterData.dataset[0].table.rows[2][2].toString()}`,
+                   "rowdatarecommendedaction": `${webviewClusterData.dataset[0].table.rows[2][3].toString()}`
                   };
     const webviewcontent = template(data);
 
