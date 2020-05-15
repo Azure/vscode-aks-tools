@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
 import { AppLensARMresponse, AppLensAPIResult } from './models/applensarmresponse';
+import NetworkConnectivityHtmlHelper  from './helpers/networkconnectivityhtmlhelper';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
@@ -101,11 +102,11 @@ async function getClusterInsightInfo(
   ): Promise<Errorable<AppLensAPIResult>> {
   try {
       const client = new ResourceManagementClient(target.cloudResource.root.credentials, target.cloudResource.root.subscriptionId);
-      const clusterInsightInfo = await client.resources.get(
+      const networkConnectivityInfo = await client.resources.get(
         target.cloudResource.armId.split("/")[4], target.cloudResource.resource.type,
-        target.cloudResource.resource.name, "detectors", "mcrEndpointUpdate", "2019-08-01");
+        target.cloudResource.resource.name, "detectors", "networkconnectivity", "2019-08-01");
 
-      return { succeeded: true, result: {apiresult: <AppLensARMresponse> clusterInsightInfo}};
+      return { succeeded: true, result: {apiresult: <AppLensARMresponse> networkConnectivityInfo}};
     } catch (ex) {
       return { succeeded: false, error:  `Error invoking cluster insight: ${ex}` };
     }
@@ -116,22 +117,26 @@ function getWebviewContent(
   vscodeExtensionPath: string) {
     const webviewClusterData = clusterdata?.properties;
 
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', 'detector.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', 'detector.html'));
+    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', "networkconnectivity", 'networkConnectivity.css'));
+    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', "networkconnectivity", 'networkConnectivity.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
     const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
+    const portalUrl = `https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
+
+    NetworkConnectivityHtmlHelper.htmlHandlerRegisterHelper();
     const template = htmlhandlers.compile(htmldata);
-    const data = { "cssuri": `${styleUri}`,
-                   "clustername": `${webviewClusterData.metadata.name}`,
-                   "rowdata": `${webviewClusterData.dataset[0].table.rows[1][3].toString()}`,
-                   "update": `${webviewClusterData.dataset[0].table.rows[0][2].toString()}`,
-                   "rowdataupdate": `${webviewClusterData.dataset[0].table.rows[0][3].toString()}`,
-                   "description": `${webviewClusterData.dataset[0].table.rows[1][2].toString()}`,
-                   "rowdatadescription": `${webviewClusterData.dataset[0].table.rows[1][3].toString()}`,
-                   "recommendedaction": `${webviewClusterData.dataset[0].table.rows[2][2].toString()}`,
-                   "rowdatarecommendedaction": `${webviewClusterData.dataset[0].table.rows[2][3].toString()}`
+    const data = { cssuri: styleUri,
+                   name: webviewClusterData.metadata.name,
+                   description: webviewClusterData.metadata.description,
+                   portalUrl: portalUrl,
+                   networkconfdata: webviewClusterData.dataset[0],
+                   allocatedoutdata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 1)),
+                   subnetdata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 2)),
+                   subneterrordata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 3)),
+                   domaindata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 4)),
+                   htmldata: webviewClusterData.dataset
                   };
     const webviewcontent = template(data);
 
