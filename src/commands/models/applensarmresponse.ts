@@ -6,7 +6,3 @@ export interface AppLensARMresponse {
     readonly properties: any;
     readonly type: string;
   }
-
-  export interface AppLensAPIResult {
-    readonly apiresult: AppLensARMresponse;
-  }

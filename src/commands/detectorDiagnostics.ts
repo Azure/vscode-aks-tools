@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { AppLensARMresponse, AppLensAPIResult } from './models/applensarmresponse';
+import { AppLensARMresponse } from './models/applensarmresponse';
 import NetworkConnectivityHtmlHelper  from './helpers/networkconnectivityhtmlhelper';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -24,7 +24,7 @@ export default async function detectorDiagnostics(
             cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
               const extensionPath = getExtensionPath();
               if (extensionPath) {
-                await loadClusterInsights(cloudTarget, extensionPath);
+                await loadNetworkConnectivityDetector(cloudTarget, extensionPath);
               }
         } else {
           vscode.window.showInformationMessage('This command only applies to AKS clusters.');
@@ -43,7 +43,7 @@ function getExtensionPath(): string | undefined {
   return vscodeExtensionPath;
 }
 
-async function loadClusterInsights(
+async function loadNetworkConnectivityDetector(
   cloudTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode,
   extensionPath: string) {
   const clsutername = cloudTarget.cloudResource.name;
@@ -87,28 +87,29 @@ async function createDetectorWebView(
 async function getAppLensDetectorData(
   clusterTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode
   ): Promise<AppLensARMresponse | undefined> {
-  const apiResult = await getClusterInsightInfo(clusterTarget);
+  const apiResult = await getNetworkConnectivityInfo(clusterTarget);
 
   if (apiResult.succeeded) {
-    return apiResult.result.apiresult;
+    return apiResult.result;
   } else if (!apiResult.succeeded) {
     vscode.window.showInformationMessage(apiResult.error);
   }
   return;
 }
 
-async function getClusterInsightInfo(
+async function getNetworkConnectivityInfo(
   target: k8s.CloudExplorerV1.CloudExplorerResourceNode
-  ): Promise<Errorable<AppLensAPIResult>> {
+  ): Promise<Errorable<AppLensARMresponse>> {
   try {
       const client = new ResourceManagementClient(target.cloudResource.root.credentials, target.cloudResource.root.subscriptionId);
+      const resourceGroup = target.cloudResource.armId.split("/")[4];
       const networkConnectivityInfo = await client.resources.get(
-        target.cloudResource.armId.split("/")[4], target.cloudResource.resource.type,
+        resourceGroup, target.cloudResource.resource.type,
         target.cloudResource.resource.name, "detectors", "networkconnectivity", "2019-08-01");
 
-      return { succeeded: true, result: {apiresult: <AppLensARMresponse> networkConnectivityInfo}};
+      return { succeeded: true, result: <AppLensARMresponse> networkConnectivityInfo};
     } catch (ex) {
-      return { succeeded: false, error:  `Error invoking cluster insight: ${ex}` };
+      return { succeeded: false, error:  `Error invoking network connectivity detector: ${ex}` };
     }
 }
 
@@ -135,8 +136,7 @@ function getWebviewContent(
                    allocatedoutdata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 1)),
                    subnetdata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 2)),
                    subneterrordata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 3)),
-                   domaindata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 4)),
-                   htmldata: webviewClusterData.dataset
+                   domaindata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 4))
                   };
     const webviewcontent = template(data);
 
