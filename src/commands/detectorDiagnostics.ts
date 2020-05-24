@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { AppLensARMresponse } from './models/applensarmresponse';
-import NetworkConnectivityHtmlHelper  from './helpers/networkconnectivityhtmlhelper';
+import { AppLensARMResponse } from './models/applensarmresponse';
+import { convertHtmlJsonConfiguration, htmlHandlerRegisterHelper }  from './helpers/networkconnectivityhtmlhelper';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
@@ -14,7 +14,7 @@ const meta = require('../../package.json');
 export default async function detectorDiagnostics(
     context: IActionContext,
     target: any
-  ): Promise<void> {
+): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
     if (cloudExplorer.available) {
@@ -24,7 +24,7 @@ export default async function detectorDiagnostics(
             cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
               const extensionPath = getExtensionPath();
               if (extensionPath) {
-                await loadNetworkConnectivityDetector(cloudTarget, extensionPath);
+                await loadNetworkConnectivityDetector(cloudTarget.cloudResource, extensionPath);
               }
         } else {
           vscode.window.showInformationMessage('This command only applies to AKS clusters.');
@@ -44,16 +44,16 @@ function getExtensionPath(): string | undefined {
 }
 
 async function loadNetworkConnectivityDetector(
-  cloudTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode,
+  cloudTarget: any,
   extensionPath: string) {
-  const clsutername = cloudTarget.cloudResource.name;
+  const clustername = cloudTarget.name;
 
-  await longRunning(`Loading ${clsutername} diagnostics.`,
+  await longRunning(`Loading ${clustername} diagnostics.`,
         async () => {
           const clusterAppLensData = await getAppLensDetectorData(cloudTarget);
 
           if (clusterAppLensData) {
-            await createDetectorWebView(clsutername, clusterAppLensData, extensionPath);
+            await createDetectorWebView(clustername, clusterAppLensData, extensionPath);
           }
         }
     );
@@ -69,7 +69,7 @@ async function longRunning<T>(title: string, action: () => Promise<T>): Promise<
 
 async function createDetectorWebView(
   clusterName: string,
-  clusterAppLensData: AppLensARMresponse,
+  clusterAppLensData: AppLensARMResponse,
   extensionPath: string) {
     const panel = vscode.window.createWebviewPanel(
       'AKS Diagnostics',
@@ -85,58 +85,61 @@ async function createDetectorWebView(
 }
 
 async function getAppLensDetectorData(
-  clusterTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode
-  ): Promise<AppLensARMresponse | undefined> {
+  clusterTarget: any
+  ): Promise<AppLensARMResponse | undefined> {
   const apiResult = await getNetworkConnectivityInfo(clusterTarget);
 
   if (apiResult.succeeded) {
     return apiResult.result;
-  } else if (!apiResult.succeeded) {
+  } else {
     vscode.window.showInformationMessage(apiResult.error);
   }
-  return;
+  return undefined;
 }
 
 async function getNetworkConnectivityInfo(
-  target: k8s.CloudExplorerV1.CloudExplorerResourceNode
-  ): Promise<Errorable<AppLensARMresponse>> {
+  target: any
+  ): Promise<Errorable<AppLensARMResponse>> {
   try {
-      const client = new ResourceManagementClient(target.cloudResource.root.credentials, target.cloudResource.root.subscriptionId);
-      const resourceGroup = target.cloudResource.armId.split("/")[4];
+      const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId);
+      // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
+      const resourceGroup = target.armId.split("/")[4];
       const networkConnectivityInfo = await client.resources.get(
-        resourceGroup, target.cloudResource.resource.type,
-        target.cloudResource.resource.name, "detectors", "networkconnectivity", "2019-08-01");
+        resourceGroup, target.resource.type,
+        target.resource.name, "detectors", "networkconnectivity", "2019-08-01");
 
-      return { succeeded: true, result: <AppLensARMresponse> networkConnectivityInfo};
+      return { succeeded: true, result: <AppLensARMResponse> networkConnectivityInfo};
     } catch (ex) {
       return { succeeded: false, error:  `Error invoking network connectivity detector: ${ex}` };
     }
 }
 
 function getWebviewContent(
-  clusterdata: AppLensARMresponse,
-  vscodeExtensionPath: string) {
+  clusterdata: AppLensARMResponse,
+  vscodeExtensionPath: string
+  ): string {
     const webviewClusterData = clusterdata?.properties;
 
     const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', "networkconnectivity", 'networkConnectivity.css'));
     const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', "networkconnectivity", 'networkConnectivity.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
     const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
-    const portalUrl = `https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
+    const portalUrl = `https://portal.azure.com/#@microsoft.onmicrosoft.com/resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
 
-    NetworkConnectivityHtmlHelper.htmlHandlerRegisterHelper();
+    htmlHandlerRegisterHelper();
     const template = htmlhandlers.compile(htmldata);
-    const data = { cssuri: styleUri,
+    const data = {
+                   cssuri: styleUri,
                    name: webviewClusterData.metadata.name,
                    description: webviewClusterData.metadata.description,
                    portalUrl: portalUrl,
                    networkconfdata: webviewClusterData.dataset[0],
-                   allocatedoutdata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 1)),
-                   subnetdata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 2)),
-                   subneterrordata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 3)),
-                   domaindata: JSON.parse(NetworkConnectivityHtmlHelper.convertHtmlJsonConfiguration(webviewClusterData, 4))
+                   allocatedoutdata: convertHtmlJsonConfiguration(webviewClusterData, 1),
+                   subnetdata: convertHtmlJsonConfiguration(webviewClusterData, 2),
+                   subneterrordata: convertHtmlJsonConfiguration(webviewClusterData, 3),
+                   domaindata: convertHtmlJsonConfiguration(webviewClusterData, 4)
                   };
     const webviewcontent = template(data);
 
