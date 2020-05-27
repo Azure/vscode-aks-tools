@@ -3,13 +3,12 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
 import { AppLensARMResponse } from './models/applensarmresponse';
 import { convertHtmlJsonConfiguration, htmlHandlerRegisterHelper }  from './helpers/networkconnectivityhtmlhelper';
+import { longRunning, getExtensionPath }  from './utils/host';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 import { Errorable } from './utils/errorable';
 import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceManagementClient';
-
-const meta = require('../../package.json');
 
 export default async function detectorDiagnostics(
     context: IActionContext,
@@ -32,17 +31,6 @@ export default async function detectorDiagnostics(
     }
 }
 
-function getExtensionPath(): string | undefined {
-  const publisherName = `${meta.publisher}.${meta.name}`;
-  const vscodeExtensionPath = vscode.extensions.getExtension(publisherName)?.extensionPath;
-
-  if (!vscodeExtensionPath) {
-    vscode.window.showInformationMessage('No Extension path found.');
-    return;
-  }
-  return vscodeExtensionPath;
-}
-
 async function loadNetworkConnectivityDetector(
   cloudTarget: any,
   extensionPath: string) {
@@ -57,14 +45,6 @@ async function loadNetworkConnectivityDetector(
           }
         }
     );
-}
-
-async function longRunning<T>(title: string, action: () => Promise<T>): Promise<T> {
-  const options = {
-      location: vscode.ProgressLocation.Notification,
-      title: title
-  };
-  return await vscode.window.withProgress(options, (_) => action());
 }
 
 async function createDetectorWebView(
@@ -120,11 +100,11 @@ function getWebviewContent(
   ): string {
     const webviewClusterData = clusterdata?.properties;
 
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', "networkconnectivity", 'networkConnectivity.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'style', "networkconnectivity", 'networkConnectivity.html'));
+    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src/commands/style/networkconnectivity/networkConnectivity.css'));
+    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src/commands/style/networkconnectivity/networkConnectivity.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
     const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
-    const portalUrl = `https://portal.azure.com/#@microsoft.onmicrosoft.com/resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
+    const portalUrl = `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
 

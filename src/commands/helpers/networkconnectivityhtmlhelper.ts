@@ -18,10 +18,10 @@ export function convertHtmlJsonConfiguration(
 }
 
 export function htmlHandlerRegisterHelper() {
-  htmlhandlers.registerHelper("generatehtml", generateHyperlinkHelper);
+  htmlhandlers.registerHelper("markdownHelper", markdownlinkHelper);
 }
 
-function generateHyperlinkHelper(htmltext: string) {
+function markdownlinkHelper(htmltext: string) {
   // Change git style pretty link [txt](link) to html anchor <a> style.
   // e.g. [text](link) becomes <a href="link">text</a>
   const re = /\[(.*?)\)/g;
