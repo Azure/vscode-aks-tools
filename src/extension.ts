@@ -48,8 +48,8 @@ async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string 
         vscode.window.showErrorMessage(`Invalid ARM id ${target.id}`);
         return;
     }
-    const credentials = <msRestJs.ServiceClientCredentials> <unknown>target.root.credentials;
-    const client = new azcs.ContainerServiceClient(credentials, target.root.subscriptionId);  // TODO: safely
+
+    const client = new azcs.ContainerServiceClient(restJSCredentialsFrom(target), target.root.subscriptionId);  // TODO: safely
     try {
         const accessProfile = await client.managedClusters.getAccessProfile(resourceGroupName, name, 'clusterUser');
         const kubeconfig = accessProfile.kubeConfig!.toString();  // TODO: safely
@@ -58,4 +58,8 @@ async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string 
         vscode.window.showErrorMessage(`Can't get kubeconfig: ${e}`);
         return undefined;
     }
+}
+
+function restJSCredentialsFrom(target: AksClusterTreeItem) {
+    return <msRestJs.ServiceClientCredentials><unknown>target.root.credentials;
 }
