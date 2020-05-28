@@ -5,6 +5,7 @@ export function convertHtmlJsonConfiguration(
   webviewClusterData: AppLensARMResponse["properties"],
   datasetIndex: number
 ): any {
+  // API returns thml embeded in json.
   const htmlRawDataArray = webviewClusterData.dataset[datasetIndex].table.rows;
 
   const htmlJsonDataSet = {

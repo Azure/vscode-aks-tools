@@ -37,20 +37,17 @@
         <hr/>
 
             <div class="insight-container">
-                <div class="panel panel-default insight-panel">
-                    <div class="panel-heading content-table-heading">
+                <div class="panel panel-default data-container">
+                    <div class="panel-heading data-container-heading">
                         <h5 class="panel-title">{{networkconfdata.renderingProperties.title}}</h5>
                     </div>
-
-                    <div class="panel-body nwtable">
-                       {{#each networkconfdata.table.rows}}
+                    <div class="panel-body data-container-body">
+                        {{#each networkconfdata.table.rows}}
                             {{{this}}}
                         {{/each}}
                     </div>
-                    
                 </div>
             </div>
-
             <div class="insight-container">
                 <div class="panel panel-default insight-panel {{allocatedoutdata.subnet.subnetClass}}">
                     <div class="panel-heading toggle">

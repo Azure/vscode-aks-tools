@@ -7,7 +7,7 @@ import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
 import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
-import detectorDiagnostics from './commands/detectorDiagnostics';
+import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;

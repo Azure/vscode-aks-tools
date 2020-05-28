@@ -3,11 +3,11 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
 import { AppLensARMResponse } from './models/applensarmresponse';
 import { convertHtmlJsonConfiguration, htmlHandlerRegisterHelper }  from './helpers/networkconnectivityhtmlhelper';
-import { longRunning, getExtensionPath }  from './utils/host';
+import { longRunning, getExtensionPath }  from '../utils/host';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
-import { Errorable } from './utils/errorable';
+import { Errorable } from '../utils/errorable';
 import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceManagementClient';
 
 export default async function detectorDiagnostics(
@@ -99,9 +99,8 @@ function getWebviewContent(
   vscodeExtensionPath: string
   ): string {
     const webviewClusterData = clusterdata?.properties;
-
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src/commands/style/networkconnectivity/networkConnectivity.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src/commands/style/networkconnectivity/networkConnectivity.html'));
+    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'detectorDiagnostics', 'webviews', 'networkconnectivity', 'networkConnectivity.css'));
+    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'detectorDiagnostics', 'webviews', 'networkconnectivity', 'networkConnectivity.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
     const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
     const portalUrl = `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
