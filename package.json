@@ -81,13 +81,10 @@
         "vscode": "^1.1.6"
     },
     "dependencies": {
-        "@azure/arm-containerservice": "^7.0.1",
-        "azure-arm-containerservice": "^7.0.0",
+        "@azure/arm-containerservice": "11.0.0",
         "azure-arm-resource": "^7.3.0",
         "handlebars": "^4.7.6",
         "js-yaml": "^3.13.1",
-        "ms-rest": "^2.5.0",
-        "ms-rest-azure": "^2.6.0",
         "vscode-azureextensionui": "^0.27.1",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
