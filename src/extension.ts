@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import * as azcs from '@azure/arm-containerservice';
-import * as msRestJs from "@azure/ms-rest-js";
+import * as azcs from 'azure-arm-containerservice';  // deprecated, but @azure/arm-containerservice doesn't play nicely with AzureAccount, so...
 
 import { parseResource } from './azure-api-utils';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
@@ -48,8 +47,7 @@ async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string 
         vscode.window.showErrorMessage(`Invalid ARM id ${target.id}`);
         return;
     }
-
-    const client = new azcs.ContainerServiceClient(restJSCredentialsFrom(target), target.root.subscriptionId);  // TODO: safely
+    const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
     try {
         const accessProfile = await client.managedClusters.getAccessProfile(resourceGroupName, name, 'clusterUser');
         const kubeconfig = accessProfile.kubeConfig!.toString();  // TODO: safely
@@ -58,8 +56,4 @@ async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string 
         vscode.window.showErrorMessage(`Can't get kubeconfig: ${e}`);
         return undefined;
     }
-}
-
-function restJSCredentialsFrom(target: AksClusterTreeItem) {
-    return <msRestJs.ServiceClientCredentials><unknown>target.root.credentials;
 }
