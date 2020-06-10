@@ -18,7 +18,7 @@ export function convertHtmlJsonConfiguration(
     return htmlJsonDataSet;
   }
 
-  return;
+  return undefined;
 }
 
 export function htmlHandlerRegisterHelper() {
