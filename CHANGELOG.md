@@ -1,5 +1,16 @@
 # Change Log
 
+## 0.0.5
+
+* You can now get AppLens cluster diagnostics by right-clicking in Cloud Explorer.
+* We now have a marketplace icon.
+
+Thanks to Ronan Flynn-Curran, Phillip Hoff and Tatsat Mishra.
+
+## 0.0.4
+
+* Flushed a regression. No, I don't know what this did either.
+
 ## 0.0.3
 
 * Fixed subscription icon not displayed in marketplace build.
