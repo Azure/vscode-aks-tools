@@ -41,13 +41,17 @@
                     <div class="panel-heading data-container-heading">
                         <h5 class="panel-title">{{networkconfdata.renderingProperties.title}}</h5>
                     </div>
+                    {{#if networkconfdata}}
                     <div class="panel-body data-container-body">
                         {{#each networkconfdata.table.rows}}
                             {{{this}}}
                         {{/each}}
                     </div>
+                    {{/if}}
                 </div>
             </div>
+
+            {{#if allocatedoutdata.subnet.subnetDataset}}
             <div class="insight-container">
                 <div class="panel panel-default insight-panel {{allocatedoutdata.subnet.subnetClass}}">
                     <div class="panel-heading toggle">
@@ -70,7 +74,9 @@
                     </div>
                 </div>
             </div>
+            {{/if}}
 
+            {{#if subnetdata.subnet.subnetDataset}}
             <div class="insight-container">
                 <div class="panel panel-default insight-panel {{subnetdata.subnet.subnetClass}}">
                     <div class="panel-heading togglesubnet">
@@ -95,7 +101,9 @@
                     </div>
                 </div>
             </div>
+            {{/if}}
 
+            {{#if subneterrordata.subnet.subnetDataset}}
             <div class="insight-container">
                 <div class="panel panel-default insight-panel {{subneterrordata.subnet.subnetClass}}">
                     <div class="panel-heading">
@@ -121,7 +129,9 @@
                     {{/if}}
                 </div>
             </div>
+            {{/if}}
 
+            {{#if domaindata.subnet.subnetDataset}}
             <div class="insight-container">
                 <div class="panel panel-default insight-panel {{domaindata.subnet.subnetClass}}">
                     <div class="panel-heading toggledomaindata">
@@ -146,5 +156,6 @@
                     </div>
                 </div>
             </div>
+            {{/if}}
 </body>
 </html>
