@@ -99,8 +99,8 @@ function getWebviewContent(
   vscodeExtensionPath: string
   ): string {
     const webviewClusterData = clusterdata?.properties;
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'detectorDiagnostics', 'webviews', 'networkconnectivity', 'networkConnectivity.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'src', 'commands', 'detectorDiagnostics', 'webviews', 'networkconnectivity', 'networkConnectivity.html'));
+    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'networkconnectivity', 'networkConnectivity.css'));
+    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'networkconnectivity', 'networkConnectivity.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
     const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
     const portalUrl = `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
