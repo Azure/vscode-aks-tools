@@ -1,11 +1,15 @@
 # Change Log
 
-## 0.0.5
+## 0.0.6
 
 * You can now get AppLens cluster diagnostics by right-clicking in Cloud Explorer.
 * We now have a marketplace icon.
 
 Thanks to Ronan Flynn-Curran, Phillip Hoff and Tatsat Mishra.
+
+## 0.0.5
+
+Unreleased
 
 ## 0.0.4
 
