@@ -49,8 +49,9 @@ async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string 
     }
     const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
     try {
-        const accessProfile = await client.managedClusters.getAccessProfile(resourceGroupName, name, 'clusterUser');
-        const kubeconfig = accessProfile.kubeConfig!.toString();  // TODO: safely
+        const clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(resourceGroupName, name);
+        const kubeconfigList = clusterUserCredentials.kubeconfigs!.filter((kubeInfo) => kubeInfo.name === "clusterUser");  // TODO: safely
+        const kubeconfig = kubeconfigList[0].value?.toString();
         return kubeconfig;
     } catch (e) {
         vscode.window.showErrorMessage(`Can't get kubeconfig: ${e}`);
