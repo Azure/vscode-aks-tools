@@ -8,9 +8,11 @@ import AzureAccountTreeItem from './tree/azureAccountTreeItem';
 import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
 import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
+import periscope from './commands/periscope/periscope';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+
     if (cloudExplorer.available) {
         // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
         const uiExtensionVariables = {
@@ -27,6 +29,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
         registerCommand('aks.selectSubscriptions', selectSubscriptions);
         registerCommand('aks.detectorDiagnostics', detectorDiagnostics);
+        registerCommand('aks.periscope', periscope);
+
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);
         const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, 'azureAks.loadMore');
@@ -41,7 +45,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 }
 
-async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
+export async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
     const { resourceGroupName, name } = parseResource(target.id!);
     if (!resourceGroupName || !name) {
         vscode.window.showErrorMessage(`Invalid ARM id ${target.id}`);
