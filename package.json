@@ -43,7 +43,7 @@
             },
             {
                 "command": "aks.periscope",
-                "title": "Install AKS Periscope"
+                "title": "Run AKS Periscope"
             }
         ],
         "menus": {
@@ -91,6 +91,7 @@
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
+        "@azure/storage-blob": "^12.1.2",
         "azure-arm-containerservice": "^7.0.0",
         "azure-arm-monitor": "^5.4.0",
         "azure-arm-resource": "^7.4.0",
@@ -102,7 +103,6 @@
         "jszip": "^3.5.0",
         "ms-rest": "^2.5.4",
         "ms-rest-azure": "^2.6.0",
-        "@azure/storage-blob": "^12.1.2",
         "replace": "^1.2.0",
         "tmp": "^0.2.1",
         "util": "^0.12.3",

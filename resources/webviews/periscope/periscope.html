@@ -12,98 +12,112 @@
         integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
 
     <script>
-        const vscode = acquireVsCodeApi();
+       // https://code.visualstudio.com/api/extension-guides/webview#passing-messages-from-a-webview-to-an-extension
+       const vscode = acquireVsCodeApi();
+        
+        $(document).ready(function() {
+            $('.periscopeoutput').hide();
 
-        function generateDownloadLink() {
-            // $("input").trigger("click");
-            vscode.postMessage({ command: "default" })
-        }
-        function generateSevenDaysDownloadLink() {
-            vscode.postMessage({ command: "7days" })
-        }
+            $('#generatelink').one('click', function(){
+                $(".spinner").show();
+                vscode.postMessage({ command: "generateDownloadLink" })
+            });
+
+            $(".toggle").click(function(){
+                $('.allocatebody').toggle('slow');
+            });
+            
+            $(".toggleoutput").click(function(){
+                $('.periscopeoutput').toggle('slow');
+            });
+        });
+
     </script>
 </head>
 
 <body>
 
     <div class="heading">
-        <h2 class="content-header">Periscope ran for cluster: {{name}}</h2>
-        <br\> Know more about periscope <a href="https://aka.ms/periscope">https://aka.ms/periscope</a>
+        <h2 class="content-header">AKS Periscope</h2>
+        <br\> AKS Periscope collects and exports node and pod logs into an Azure Blob storage account to help you analyse and identify potential problems or easily share the information during the troubleshooting process. <a href="https://aka.ms/periscope">Learn more</a></a>
     </div>
 
-    <div class="link">
+
+    {{#if noDiagnosticSettings}}
+    <div class="critical">
+        <i class="fa fa-times-circle" style="font-size:14px;color:red"></i>
+        We didn’t find any storage account associated with `{{name}}`. Please use the Diagnostics settings to configure a storage account for your cluster and try again. <a href=''>Learn more</a>
     </div>
-    <hr />
+    {{/if}}
 
-
-    <div class="insight-container">
+    {{#if (equalsZero outputCode)}}
+    <div class="container">
         <div class="panel panel-default data-container">
-            <div class="panel-heading data-container-heading">
-                <h5 class="panel-title">AKS Periscope upload logs information.</h5>
-            </div>
-        {{#unless outputCode}}
             <div class="panel-body data-container-body">
-                Your logs are being uplaoded to the storage account: {{storageAccName}}.
+                <a class="toggle" onclick="$('#collapsed-chevron').toggleClass('fa-rotate-180')" style="padding-top:5px;">
+                    <i class="fa fa-chevron-up" id="collapsed-chevron" style="font-size:14px;padding-right:5px;"></i>
+                    View Logs
+                </a>
+
+                <div class="panel-body data-container-body allocatebody">
+                    <i class="fa status-icon fa-check-circle" style="font-size:14px;color:green;padding-right:5px;padding-bottom:15px;"></i>
+                    AKS Periscope has successfully run on ‘{{name}}’. Please click the below link to generate downloadable and shareable links to the logs.
+                    
+                    <div>
+                        <button class="btn" id="generatelink"><i class="fa"></i>
+                            Generate Link
+                        </button>
+                    </div>
+
+                    <div class="spinner" style="display:none;padding-top: 10px;">
+                        <span class="fa fa-spinner fa-spin" style="font-size:14px;color:blue;"></span> 
+                        We are working on generating links to your logs
+                    </div>
+                    {{#if downloadAndShareNodeLogsList}}
+                        <div class="panel-body">
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Node Name</th>
+                                        <th>Downloadable Link</th>
+                                        <th>7-day Shareable Link</th>
+                                    </tr>
+                                    {{#each downloadAndShareNodeLogsList}}
+                                    <tr>
+                                        <td>{{storageTimeStamp}}</td>
+                                        <td>{{nodeLogFileName}}</td>
+                                        <td><a href='{{downloadableZipUrl}}'>{{downloadableZipFilename}}</a></td>
+                                        <td><a href='{{downloadableZipShareUrl}}'>{{downloadableZipShareFilename}}</a></td> 
+                                    </tr>
+                                    {{/each}}                       
+                                </tbody>
+                            </table>
+
+                            <i class="fa fa-info-circle" style="font-size:14px;padding-right:5px;color:blue;"></i> 
+                            Not seeing all the logs? It’s possible the logs are still uploading. Try clicking <b>Generate Link</b> again.
+                        </div>
+                    {{/if}}
+                </div>
             </div>
-
-            <div class="panel-body data-container-body">
-                <h5 class="panel-title">AKS periscope the logs are uploaded successfully, <br />
-                    (Please note: Due to the nature how Periscope tool works it could be a possibility that log files of
-                    some nodes are still writing to the storage hence
-                    it is recommended to re-click generate button or wait for a minutebefore generating the downloable link.
-                </h5>
-                <button onclick="generateDownloadLink()">Generate download link</button>
-
-                <!-- <input type="file" style="display: none" /> -->
-                <!-- The save as bug\feature-request: https://bugzilla.mozilla.org/show_bug.cgi?id=1302919 -->
-                {{#if downloadableLinks}}
-                <div class="panel-body data-container-body">
-                    <h5 class="panel-title">Click on the links below to download or share or you can copy and share the
-                        link. </h5>
-                </div>
-
-                {{#each downloadableLinks}}
-                <ul>
-                    <li><a href="{{this}}">Node log {{@index}}.</a></li>
-                </ul>
-                {{/each}}
-                </div>
-                {{/if}}
-
-                <div class="panel-body data-container-body">
-                    <h5 class="panel-title">Generate 7-day expiration link for cluster node logs.</h5>
-                    <button onclick="generateSevenDaysDownloadLink()">Generate 7-day expiration links for node logs</button>
-                </div>
-        {{/unless}}
-
-        {{#if sevenDaysDownloadableLinks}}
-            <div class="panel-body data-container-body">
-                <h5 class="panel-title">Click on the links below to download or you can copy and share the link. </h5>
-            </div>
-            {{#each sevenDaysDownloadableLinks}}
-            <ul>
-                <li><a href="{{this}}">Node log {{@index}}.</a></li>
-            </ul>
-            {{/each}}
-        {{/if}}
-        <div class="panel-body data-container-body">
-
         </div>
     </div>
-    </div>
+    {{/if}}
 
-
-    <div class="insight-container">
+    {{#if output}}
+    <div class="container">
         <div class="panel panel-default data-container">
-            <div class="panel-heading data-container-heading critical">
-                <h5 class="panel-title">AKS Periscope Output:</h5>
-            </div>
+            <a class="toggleoutput" onclick="$('#collapsed-chevron-output').toggleClass('fa-rotate-180')" style="padding-top:5px;">
+                <i class="fa fa-chevron-down" id="collapsed-chevron-output" style="font-size:14px;padding-right:5px;"></i>
+                View Console Output
+            </a>
 
-            <div class="panel-body data-container-body .panel.critical">
+            <div class="panel-body data-container-body periscopeoutput">
                 {{output}}
             </div>
         </div>
     </div>
+    {{/if}}
 
 </body>
 

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { getSASKey } from '../../utils/host';
+import { getSASKey, SASExpiryTime } from '../../utils/azurestorage';
 import { parseResource } from '../../../azure-api-utils';
 import * as ast from 'azure-arm-storage';
-import { PeriscopeStorage } from '../models/storage';
+import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
 import * as amon from 'azure-arm-monitor';
 import * as htmlhandlers from "handlebars";
 import * as path from 'path';
@@ -13,7 +13,9 @@ const {
     StorageSharedKeyCredential
 } = require("@azure/storage-blob");
 
-export async function getClusterDiagnosticSettings(target: any) {
+export async function getClusterDiagnosticSettings(
+    target: any
+): Promise<amon.MonitorManagementModels.DiagnosticSettingsCategoryResourceCollection | undefined> {
     try {
         // Get daignostic setting via diagnostic monitor
         const diagnosticMonitor = new amon.MonitorManagementClient(target.root.credentials, target.root.subscriptionId);
@@ -21,7 +23,7 @@ export async function getClusterDiagnosticSettings(target: any) {
 
         return diagnosticSettings;
     } catch (e) {
-        vscode.window.showErrorMessage(`Can't: ${e}`);
+        vscode.window.showErrorMessage(`Error fetching cluster diagnostic monitor: ${e}`);
         return undefined;
     }
 }
@@ -43,10 +45,11 @@ export async function getStorageInfo(
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         const accountKey = storageAccKeyList?.keys!.find((it) => it.keyName === "key1")?.value;
 
-        // Generate SAS.
-        const sas = getSASKey(accountName, accountKey!);
+        // Generate 5 mins downlable shortlived sas along with 7 day shareable SAS.
+        const sas = getSASKey(accountName, accountKey!, SASExpiryTime.FiveMinutes);
+        const sevenDaySas = getSASKey(accountName, accountKey!, SASExpiryTime.SevenDays);
 
-        return <PeriscopeStorage>{ storageName: accountName, storageKey: accountKey, storageDeploymentSas: sas };
+        return <PeriscopeStorage>{ storageName: accountName, storageKey: accountKey, storageDeploymentSas: sas, sevenDaysSasyKey: sevenDaySas };
     } catch (e) {
         vscode.window.showErrorMessage(`Storage associated with cluster had following error: ${e}`);
         return undefined;
@@ -55,66 +58,70 @@ export async function getStorageInfo(
 
 export async function generateDownloadableLinks(
     periscopeStorage: PeriscopeStorage,
-    output: string,
-    generateSevenDaySas = false) {
+    output: string
+): Promise<PeriscopeHTMLInterface[] | undefined> {
 
-    // Generate SAS.
-    const storageAccount = periscopeStorage.storageName;
-    const storageKey = periscopeStorage.storageKey;
+    try {
+        const storageAccount = periscopeStorage.storageName;
+        const storageKey = periscopeStorage.storageKey;
+        const sas = periscopeStorage.storageDeploymentSas;
+        const sevenDaySas = periscopeStorage.sevenDaysSasyKey;
 
-    const sas = getSASKey(storageAccount, storageKey, generateSevenDaySas);
-
-    // Get DNS Core hostname which Periscope use it as name of the container.
-    const matches = output.match(/(https?:\/\/[^\s]+)/g);
-    let containerName;
-    if (matches![0].indexOf('://') !== -1) {
-        containerName = matches![0].replace('https://', '').split('.')[0];
-    }
-
-    // Use SharedKeyCredential with storage account and account key
-    const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
-    const blobServiceClient = new BlobServiceClient(
-        `https://${storageAccount}.blob.core.windows.net`,
-        sharedKeyCredential
-    );
-
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-
-    // List all current blob.
-    const listCurrentUploadedFolders = [];
-    for await (const item of containerClient.listBlobsByHierarchy("/")) {
-        if (item.kind === "prefix") {
-            console.log(`\tBlobPrefix: ${item.name}`);
-            listCurrentUploadedFolders.push(item.name);
+        // Get DNS Core hostname which Periscope use it as name of the container.
+        const matches = output.match(/(https?:\/\/[^\s]+)/g);
+        let containerName;
+        if (matches![0].indexOf('://') !== -1) {
+            containerName = matches![0].replace('https://', '').split('.')[0];
         }
-    }
 
-    // Sort and get the latest uploaded folder under the container used by periscope.
-    const downloadableNodeLogsList = [];
-    for await (const blob of containerClient.listBlobsFlat()) {
-        if (blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]) !== -1 && blob.name.indexOf('.zip') !== -1) {
-            downloadableNodeLogsList.push(`${containerClient.url}/${blob.name}${sas}`);
-            console.log(`Blob: ${blob.name}  + ${downloadableNodeLogsList}`);
-        }
-    }
+        // Use SharedKeyCredential with storage account and account key
+        const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
+        const blobServiceClient = new BlobServiceClient(
+            `https://${storageAccount}.blob.core.windows.net`,
+            sharedKeyCredential
+        );
 
-    return downloadableNodeLogsList;
-}
+        const containerClient = blobServiceClient.getContainerClient(containerName);
 
-export async function getStorageAccountKeyUI(): Promise<string | undefined> {
-    return await vscode.window.showInputBox({ placeHolder: 'Enter storage account key:', ignoreFocusOut: true }).then(
-        (value) => {
-            if (value) {
-                return value;
-            } else {
-                return undefined;
+        // List all current blob.
+        const listCurrentUploadedFolders = [];
+        for await (const item of containerClient.listBlobsByHierarchy("/")) {
+            if (item.kind === "prefix") {
+                listCurrentUploadedFolders.push(item.name);
             }
-        });
+        }
+
+        // Sort and get the latest uploaded folder under the container used by periscope.
+        const downloadableNodeLogsList = [];
+        for await (const blob of containerClient.listBlobsFlat()) {
+            // Get the latest uploaded folder, then Identify the Zip files in the latest uploaded logs within that folder
+            // and extract *.zip files which are individual node logs.
+            if (blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]) !== -1 && blob.name.indexOf('.zip') !== -1) {
+                // downloadableNodeLogsList.push(`${containerClient.url}/${blob.name}${sas}`);
+                const nodeLogName = path.parse(blob.name).name;
+                const dirTimeStamp = path.parse(blob.name).dir.split('/')[0];
+                downloadableNodeLogsList.push(
+                    <PeriscopeHTMLInterface>{
+                        storageTimeStamp: dirTimeStamp,
+                        nodeLogFileName: nodeLogName,
+                        downloadableZipFilename: `${nodeLogName}-downloadable`,
+                        downloadableZipUrl: `${containerClient.url}/${blob.name}${sas}`,
+                        downloadableZipShareFilename: `${nodeLogName}-share`,
+                        downloadableZipShareUrl: `${containerClient.url}/${blob.name}${sevenDaySas}`,
+                    });
+            }
+        }
+        return downloadableNodeLogsList;
+    } catch (e) {
+        vscode.window.showErrorMessage(`Error generating downloadable link: ${e}`);
+        return undefined;
+    }
 }
 
 export function replaceDeploymentAccountNameAndSas(
     periscopeStorageInfo: PeriscopeStorage,
-    aksPeriscopeFilePath: string | Buffer) {
+    aksPeriscopeFilePath: string | Buffer
+) {
 
     // persicope file is written now, replace the acc name and keys.
     const replace = require("replace");
@@ -142,9 +149,9 @@ export function getWebviewContent(
     clustername: string,
     vscodeExtensionPath: string,
     output: any,
-    periscopeStorageInfo: PeriscopeStorage,
-    downloadableNodeLogsList: string[],
-    sevenDaysDownloadableLinks: string[]
+    periscopeStorageInfo: PeriscopeStorage | undefined,
+    downloadAndShareNodeLogsList: PeriscopeHTMLInterface[] | undefined,
+    hasDiagnosticSettings = true
 ): string {
     const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'periscope', 'periscope.css'));
     const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'periscope', 'periscope.html'));
@@ -152,19 +159,32 @@ export function getWebviewContent(
     const pathUri = htmlPathOnDisk.with({ scheme: 'vscode-resource' });
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
-    const commandOutput = output.stderr + output.stdout;
+    const commandOutput = output?.stderr + output?.stdout;
 
+    htmlHandlerRegisterHelper();
     const template = htmlhandlers.compile(htmldata);
     const data = {
         cssuri: styleUri,
-        storageAccName: periscopeStorageInfo.storageName,
+        storageAccName: periscopeStorageInfo?.storageName,
         name: clustername,
         output: commandOutput,
-        outputCode: output.code,
-        downloadableLinks: downloadableNodeLogsList,
-        sevenDaysDownloadableLinks: sevenDaysDownloadableLinks,
+        outputCode: output?.code,
+        downloadAndShareNodeLogsList: downloadAndShareNodeLogsList,
+        noDiagnosticSettings: !hasDiagnosticSettings,
     };
     const webviewcontent = template(data);
 
     return webviewcontent;
+}
+
+export function htmlHandlerRegisterHelper() {
+    htmlhandlers.registerHelper("equalsZero", equalsZeroHelper);
+}
+
+function equalsZeroHelper(value: number): boolean {
+    if (value === 0) {
+        return true;
+    } else {
+        return false;
+    }
 }

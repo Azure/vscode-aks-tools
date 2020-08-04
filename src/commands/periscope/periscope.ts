@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as buffer from 'buffer';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from 'vscode-azureextensionui';
 import { parseResource } from '../../azure-api-utils';
@@ -10,13 +9,12 @@ import { getClusterKubeconfig } from '../../extension';
 import { getExtensionPath, longRunning } from '../utils/host';
 import {
   getClusterDiagnosticSettings,
-  getStorageAccountKeyUI,
   getStorageInfo,
   replaceDeploymentAccountNameAndSas,
   generateDownloadableLinks,
   getWebviewContent
 } from './helpers/storageandhtmlhelper';
-import { PeriscopeStorage } from './models/storage';
+import { PeriscopeStorage, PeriscopeHTMLInterface } from './models/storage';
 import * as amon from 'azure-arm-monitor';
 
 export default async function periscope(
@@ -24,10 +22,10 @@ export default async function periscope(
   target: any
 ): Promise<void> {
   const kubectl = await k8s.extension.kubectl.v1;
-  const cloudExp = await k8s.extension.cloudExplorer.v1;
+  const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-  if (cloudExp.available && kubectl.available) {
-    const cloudTarget = cloudExp.api.resolveCommandTarget(target);
+  if (cloudExplorer.available && kubectl.available) {
+    const cloudTarget = cloudExplorer.api.resolveCommandTarget(target);
     if (cloudTarget && cloudTarget.cloudName === "Azure" &&
       cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
       const cloudResource = cloudTarget.cloudResource;
@@ -35,7 +33,7 @@ export default async function periscope(
       if (clusterKubeConfig) {
         /**
           Three key parts for running aks-periscope on a cluster.
-            1. Get the cluster diagnostic settings for account-storage or get it manually via UI.
+            1. Get the cluster diagnostic settings for account-storage.
             2. Generate SAS for the storage account selected\provided or default supplied.
             3. Run the clean-up and then aks-persicope on the cluster with current cluster kubeconfig.
             4. Generate Dowloadable link once action is performed at the webView.
@@ -49,8 +47,8 @@ export default async function periscope(
               // If cluster diagnosticSetting exist pass it on for UI workflow and aks-preiscope deployment.
               await selectStorageAccountAndInstallAKSPeriscope(diagnosticSettings, clusterKubeConfig, cloudResource);
             } else if (!diagnosticSettings?.value?.length) {
-              // If there is no Diagnostic setting - Present UI for user input.
-              await getStorageAccountNameAndKeyUserInputAndInstallAKSPeriscope(clusterKubeConfig, cloudResource.name);
+              // If there is no storage account attached to diagnostic setting, don't move forward and at this point we will render webview with helpful content.
+              await createPeriscopeWebView(cloudResource.name, undefined, undefined, false);
             }
           });
       }
@@ -65,13 +63,12 @@ async function selectStorageAccountAndInstallAKSPeriscope(
   clusterKubeConfig: string,
   cloudResource: any
 ) {
-
-  let periscopeStorageInfo: PeriscopeStorage | undefined;
   const clusterName = cloudResource.name;
+  let selectedStorageAccount: string;
 
   /*
       Check the diagnostic setting is 1 or more than 1:
-        1. For the scenario of 1 - Pick the storageId resource and get SAS.
+        1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
         2. For the scenario for more than 1 then show VsCode quickPick to select and get SAS of selected.
   */
 
@@ -89,65 +86,47 @@ async function selectStorageAccountAndInstallAKSPeriscope(
       }
     });
 
+    // create quick pick for more than 1 storage account scenario.
     const quickPick = vscode.window.createQuickPick();
     quickPick.placeholder = "Select storage account for periscope deployment:";
     quickPick.title = `Found more than 1 storage account associated with cluster ${clusterName}. Please select from below.`;
     quickPick.ignoreFocusOut = true;
     quickPick.items = Array.from(storageAccountNameToStorageIdMap.keys()).map((label) => ({ label }));
+
     quickPick.onDidChangeSelection(async ([{ label }]) => {
       quickPick.hide();
-
-      await longRunning(`Generate SAS for ${clusterName} cluster.`,
-        async () => {
-          periscopeStorageInfo = await getStorageInfo(cloudResource, storageAccountNameToStorageIdMap.get(label)!);
-          await loadAndDeployPeriscope(clusterKubeConfig, periscopeStorageInfo, clusterName);
-        }
-      );
+      selectedStorageAccount = storageAccountNameToStorageIdMap.get(label)!;
+      await generateSASAndDeployPeriscope(cloudResource, selectedStorageAccount, clusterKubeConfig, clusterName);
     });
+
     quickPick.show();
+
   } else if (diagnosticSettings && diagnosticSettings.value!.length === 1) {
-    await longRunning(`Generate SAS for ${clusterName} cluster.`,
-      async () => {
-        periscopeStorageInfo = await getStorageInfo(cloudResource, diagnosticSettings.value![0].storageAccountId!);
-        await loadAndDeployPeriscope(clusterKubeConfig, periscopeStorageInfo, clusterName);
-      }
-    );
+    // In case of only 1 storage account associated, use the one (1) as default storage account and no UI will be displayed.
+    selectedStorageAccount = diagnosticSettings.value![0].storageAccountId!;
+    await generateSASAndDeployPeriscope(cloudResource, selectedStorageAccount, clusterKubeConfig, clusterName);
   }
 }
 
-async function getStorageAccountNameAndKeyUserInputAndInstallAKSPeriscope(
+async function generateSASAndDeployPeriscope(
+  cloudResource: any,
+  selectedStorageAccount: string,
   clusterKubeConfig: string,
   clusterName: string
 ) {
-  let storageAccount = "";
-  let storageKey = "";
-
-  // "A storage account must be specified, since there isn't one in the diagnostic settings." Hence manual input- to be removed
-  await vscode.window.showInputBox({ placeHolder: 'Enter storage account name:', ignoreFocusOut: true }).then(
-    async (value) => {
-      if (value) {
-        storageAccount = value;
-        await getStorageAccountKeyUI().then((value) => storageKey = value!);
-      }
-    });
-
-  await longRunning(`Load and deploy for ${clusterName} cluster.`,
+  await longRunning(`Generate SAS for ${clusterName} cluster.`,
     async () => {
-      if (storageKey && storageAccount) {
-        storageAccount = buffer.Buffer.from(storageAccount).toString('base64');
-        storageKey = buffer.Buffer.from(storageKey).toString('base64');
-        const periscopeStorageInfo = <PeriscopeStorage>{ storageName: storageAccount, storageDeploymentSas: storageKey };
-
-        await loadAndDeployPeriscope(clusterKubeConfig, periscopeStorageInfo, clusterName);
-      }
-    }
-  );
+      let periscopeStorageInfo: PeriscopeStorage | undefined;
+      periscopeStorageInfo = await getStorageInfo(cloudResource, selectedStorageAccount);
+      await loadAndDeployPeriscope(clusterKubeConfig, periscopeStorageInfo, clusterName);
+    });
 }
 
 async function loadAndDeployPeriscope(
   clusterKubeConfig: string,
   periscopeStorageInfo: PeriscopeStorage | undefined,
-  clusterName: string) {
+  clusterName: string
+) {
 
   await longRunning(`Installing aks periscope for ${clusterName} cluster.`,
     async () => {
@@ -155,8 +134,6 @@ async function loadAndDeployPeriscope(
 
       if (kubectl.available && periscopeStorageInfo) {
         await inMemoryAKSPeriscopeDeplomentFileHandle(clusterKubeConfig, kubectl, periscopeStorageInfo, clusterName);
-      } else {
-        vscode.window.showInformationMessage('Associated storage to the cluster have issues.');
       }
     }
   );
@@ -164,7 +141,7 @@ async function loadAndDeployPeriscope(
 
 async function inMemoryAKSPeriscopeDeplomentFileHandle(
   clusterKubeConfig: string,
-  kubectl: any,
+  kubectl: k8s.APIAvailable<k8s.KubectlV1>,
   periscopeStorageInfo: PeriscopeStorage,
   clusterName: string
 ): Promise<string | undefined> {
@@ -174,28 +151,27 @@ async function inMemoryAKSPeriscopeDeplomentFileHandle(
   await longRunning(`Preparing AKS Periscope Install for ${clusterName} cluster.`,
     async () => {
 
+      // Read the Raw deplyment file for aks-periscope tool.
       await https.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml', async (res: any) => {
-        console.log('statusCode:', res.statusCode);
 
         res.pipe(aksPeriscopeFile);
         aksPeriscopeFile.on('finish', async () => {
+          // Make sure the temp file is finished before adding keys and storage details.
           aksPeriscopeFile.close();  // close() is async, call cb after close completes.
 
-          // persicope file is written, replace the acc name and keys.
+          // Replace the storage account name and keys in persicope deplyment file.
           replaceDeploymentAccountNameAndSas(periscopeStorageInfo, aksPeriscopeFile.path);
 
           await longRunning(`AKS Periscope deployment inprogress for ${clusterName}.`,
             async () => {
               // Clean up running instance.
               await tmpfile.withOptionalTempFile<any>(
-                clusterKubeConfig,
-                "YAML",
+                clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`delete ns aks-periscope --kubeconfig="${f}"`));
 
               // Deploy the aks-periscope.
               const runCommandResult = await tmpfile.withOptionalTempFile<any>(
-                clusterKubeConfig,
-                "YAML",
+                clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`apply -f ${aksPeriscopeFile.path} --kubeconfig="${f}" && kubectl cluster-info --kubeconfig="${f}"`));
 
               await createPeriscopeWebView(clusterName, runCommandResult, periscopeStorageInfo);
@@ -209,7 +185,8 @@ async function inMemoryAKSPeriscopeDeplomentFileHandle(
 async function createPeriscopeWebView(
   clusterName: string,
   outputResult: any,
-  periscopeStorageInfo: PeriscopeStorage
+  periscopeStorageInfo: PeriscopeStorage | undefined,
+  hasDiagnosticSettings = true
 ) {
   const panel = vscode.window.createWebviewPanel(
     'AKS Periscope',
@@ -222,24 +199,29 @@ async function createPeriscopeWebView(
   );
 
   const extensionPath = getExtensionPath();
-  if (extensionPath) {
 
-    panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, [], []);
+  if (extensionPath && !hasDiagnosticSettings) {
+    // In case of no diagnostic setting we serve user with helpful content in webview and
+    // a link as to how to attach the storage account to cluster's diagnostic settings.
+    panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, undefined, [], hasDiagnosticSettings);
+  }
 
-    let downloadableNodeLogsList: string[] = [];
-    let sevenDaysDownloadableNodeLogsList: string[] = [];
+  if (extensionPath && periscopeStorageInfo) {
+    // For the case of successful run of the tool we render webview with the output information.
+    panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, []);
+
+    let downloadableAndShareableNodeLogsList: PeriscopeHTMLInterface[] | undefined;
 
     panel.webview.onDidReceiveMessage(
       async (message) => {
-        console.log(message.command);
         await longRunning(`Generating storage downloadable link.`,
           async () => {
-            if (message.command === "7days") {
-              sevenDaysDownloadableNodeLogsList = await generateDownloadableLinks(periscopeStorageInfo, outputResult.stdout, true);
-            } else {
-              downloadableNodeLogsList = await generateDownloadableLinks(periscopeStorageInfo, outputResult.stdout);
+            if (message.command === "generateDownloadLink") {
+              // Generate link mechanism is in place due to current behaviour of the aks-periscope tool. (which seems by design for now)
+              // more detail here: https://github.com/Azure/aks-periscope/issues/30
+              downloadableAndShareableNodeLogsList = await generateDownloadableLinks(periscopeStorageInfo, outputResult.stdout);
+              panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
             }
-            panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableNodeLogsList, sevenDaysDownloadableNodeLogsList);
           });
       },
       undefined
