@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as k8s from 'vscode-kubernetes-tools-api';
 import { getSASKey, SASExpiryTime } from '../../utils/azurestorage';
 import { parseResource } from '../../../azure-api-utils';
 import * as ast from 'azure-arm-storage';
@@ -26,6 +27,57 @@ export async function getClusterDiagnosticSettings(
         vscode.window.showErrorMessage(`Error fetching cluster diagnostic monitor: ${e}`);
         return undefined;
     }
+}
+
+export async function selectStorageAccountAndInstallAKSPeriscope<T>(
+    diagnosticSettings: amon.MonitorManagementModels.DiagnosticSettingsResourceCollection | undefined,
+    cloudTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode,
+    clusterKubeConfig: string,
+    fn: (target: any, clusterKubeConfig: any, selectedStorageAccount: any) => Promise<T>
+): Promise<string | undefined> {
+    /*
+        Check the diagnostic setting is 1 or more than 1:
+          1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
+          2. For the scenario for more than 1 then show VsCode quickPick to select and get SAS of selected.
+    */
+
+    if (diagnosticSettings && diagnosticSettings?.value!.length > 1) {
+        const storageAccountNameToStorageIdMap: Map<string, string> = new Map();
+
+        diagnosticSettings.value?.forEach((item): any => {
+            if (item.storageAccountId) {
+                const { name } = parseResource(item.storageAccountId!);
+                if (!name) {
+                    vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
+                    return undefined;
+                }
+                storageAccountNameToStorageIdMap.set(name!, item.storageAccountId!);
+            }
+        });
+
+        // Create quick pick for more than 1 storage account scenario.
+        const multipleStorageAccountQuickPick = vscode.window.createQuickPick();
+        multipleStorageAccountQuickPick.placeholder = "Select storage account for periscope deployment:";
+        multipleStorageAccountQuickPick.title = `Found more than 1 storage account associated with cluster ${cloudTarget.cloudResource.name}. Please select from below.`;
+        multipleStorageAccountQuickPick.ignoreFocusOut = true;
+        multipleStorageAccountQuickPick.items = Array.from(storageAccountNameToStorageIdMap.keys()).map((label) => ({ label }));
+
+        multipleStorageAccountQuickPick.onDidChangeSelection(async ([{ label }]) => {
+            multipleStorageAccountQuickPick.hide();
+            const selectedStorageAccount = storageAccountNameToStorageIdMap.get(label)!;
+            // When more then one storage account, on selection aks-periscope run will start.
+            await fn(cloudTarget, clusterKubeConfig, selectedStorageAccount);
+        });
+
+        multipleStorageAccountQuickPick.show();
+
+    } else if (diagnosticSettings && diagnosticSettings.value!.length === 1) {
+        // In case of only one storage account associated, use the one (1) as default storage account and no UI will be displayed.
+        const selectedStorageAccount = diagnosticSettings.value![0].storageAccountId!;
+        return selectedStorageAccount;
+    }
+
+    return undefined;
 }
 
 export async function getStorageInfo(
@@ -56,6 +108,43 @@ export async function getStorageInfo(
     }
 }
 
+export async function writeTempAKSDeploymentFile(file: any): Promise<void> {
+    const https = require("https");
+
+    https.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml', (res: any) => {
+        res.pipe(file);
+    }).on("error", (err: any) => {
+        vscode.window.showWarningMessage(`Error encountered writing aks-deployment file: ${err.message}`);
+    });
+}
+
+export function replaceDeploymentAccountNameAndSas(
+    periscopeStorageInfo: PeriscopeStorage,
+    aksPeriscopeFilePath: string
+) {
+
+    // persicope file is written now, replace the acc name and keys.
+    const replace = require("replace");
+
+    const base64Name = Buffer.from(periscopeStorageInfo.storageName).toString('base64');
+    const base64Sas = Buffer.from(periscopeStorageInfo.storageDeploymentSas).toString('base64');
+    replace({
+        regex: "# <accountName, base64 encoded>",
+        replacement: `"${base64Name}"`,
+        paths: [aksPeriscopeFilePath],
+        recursive: true,
+        silent: true,
+    });
+
+    replace({
+        regex: "# <saskey, base64 encoded>",
+        replacement: `"${base64Sas}"`,
+        paths: [aksPeriscopeFilePath],
+        recursive: true,
+        silent: true,
+    });
+}
+
 export async function generateDownloadableLinks(
     periscopeStorage: PeriscopeStorage,
     output: string
@@ -81,6 +170,7 @@ export async function generateDownloadableLinks(
             sharedKeyCredential
         );
 
+        // Hide this all under single pupose funct which lik elike : getZipDir or get me dirname
         const containerClient = blobServiceClient.getContainerClient(containerName);
 
         // List all current blob.
@@ -92,15 +182,14 @@ export async function generateDownloadableLinks(
         }
 
         // Sort and get the latest uploaded folder under the container used by periscope.
-        const downloadableNodeLogsList = [];
+        const periscopeHtmlinterfaceList = [];
         for await (const blob of containerClient.listBlobsFlat()) {
             // Get the latest uploaded folder, then Identify the Zip files in the latest uploaded logs within that folder
             // and extract *.zip files which are individual node logs.
             if (blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]) !== -1 && blob.name.indexOf('.zip') !== -1) {
-                // downloadableNodeLogsList.push(`${containerClient.url}/${blob.name}${sas}`);
                 const nodeLogName = path.parse(blob.name).name;
                 const dirTimeStamp = path.parse(blob.name).dir.split('/')[0];
-                downloadableNodeLogsList.push(
+                periscopeHtmlinterfaceList.push(
                     <PeriscopeHTMLInterface>{
                         storageTimeStamp: dirTimeStamp,
                         nodeLogFileName: nodeLogName,
@@ -111,38 +200,11 @@ export async function generateDownloadableLinks(
                     });
             }
         }
-        return downloadableNodeLogsList;
+        return periscopeHtmlinterfaceList;
     } catch (e) {
         vscode.window.showErrorMessage(`Error generating downloadable link: ${e}`);
         return undefined;
     }
-}
-
-export function replaceDeploymentAccountNameAndSas(
-    periscopeStorageInfo: PeriscopeStorage,
-    aksPeriscopeFilePath: string | Buffer
-) {
-
-    // persicope file is written now, replace the acc name and keys.
-    const replace = require("replace");
-
-    const base64Name = Buffer.from(periscopeStorageInfo.storageName).toString('base64');
-    const base64Sas = Buffer.from(periscopeStorageInfo.storageDeploymentSas).toString('base64');
-    replace({
-        regex: "# <accountName, base64 encoded>",
-        replacement: `"${base64Name}"`,
-        paths: [aksPeriscopeFilePath],
-        recursive: true,
-        silent: true,
-    });
-
-    replace({
-        regex: "# <saskey, base64 encoded>",
-        replacement: `"${base64Sas}"`,
-        paths: [aksPeriscopeFilePath],
-        recursive: true,
-        silent: true,
-    });
 }
 
 export function getWebviewContent(
@@ -179,10 +241,19 @@ export function getWebviewContent(
 
 export function htmlHandlerRegisterHelper() {
     htmlhandlers.registerHelper("equalsZero", equalsZeroHelper);
+    htmlhandlers.registerHelper("anyNumberButZero", anyNumberButZeroHelper);
 }
 
 function equalsZeroHelper(value: number): boolean {
     if (value === 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function anyNumberButZeroHelper(value: any): boolean {
+    if (!isNaN(Number(value)) && value !== 0) {
         return true;
     } else {
         return false;

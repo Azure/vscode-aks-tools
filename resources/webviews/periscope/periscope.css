@@ -68,3 +68,7 @@ th {
     height: 50px;
     text-align: left;
 }
+
+label {
+    cursor: pointer;
+}

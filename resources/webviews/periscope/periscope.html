@@ -18,7 +18,7 @@
         $(document).ready(function() {
             $('.periscopeoutput').hide();
 
-            $('#generatelink').one('click', function(){
+            $('#generatelink').click(function(){
                 $(".spinner").show();
                 vscode.postMessage({ command: "generateDownloadLink" })
             });
@@ -29,6 +29,18 @@
             
             $(".toggleoutput").click(function(){
                 $('.periscopeoutput').toggle('slow');
+            });
+
+            $('.copy_text').click(function(e) {
+                e.preventDefault();
+                var copyText = $(this).attr('id');
+
+                document.addEventListener('copy', function(e) {
+                    e.clipboardData.setData('text/plain', copyText);
+                    e.preventDefault();
+                }, true);
+
+                document.execCommand('copy');
             });
         });
 
@@ -41,7 +53,6 @@
         <h2 class="content-header">AKS Periscope</h2>
         <br\> AKS Periscope collects and exports node and pod logs into an Azure Blob storage account to help you analyse and identify potential problems or easily share the information during the troubleshooting process. <a href="https://aka.ms/periscope">Learn more</a></a>
     </div>
-
 
     {{#if noDiagnosticSettings}}
     <div class="critical">
@@ -88,7 +99,8 @@
                                         <td>{{storageTimeStamp}}</td>
                                         <td>{{nodeLogFileName}}</td>
                                         <td><a href='{{downloadableZipUrl}}'>{{downloadableZipFilename}}</a></td>
-                                        <td><a href='{{downloadableZipShareUrl}}'>{{downloadableZipShareFilename}}</a></td> 
+                                        <td><a class="copy_text" id='{{downloadableZipShareUrl}}' href=''><i class="fa fa-clone"></i></a> {{downloadableZipShareFilename}}
+                                        </td> 
                                     </tr>
                                     {{/each}}                       
                                 </tbody>
@@ -101,6 +113,13 @@
                 </div>
             </div>
         </div>
+    </div>
+    {{/if}}
+
+    {{#if (anyNumberButZero outputCode)}}
+    <div class="critical">
+        <i class="fa fa-times-circle" style="font-size:14px;color:red"></i>
+        AKS Periscope failed to run on '{{name}}'. Please see the console output below for more details.
     </div>
     {{/if}}
 
