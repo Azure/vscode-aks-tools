@@ -1,14 +1,12 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import * as azcs from 'azure-arm-containerservice';  // deprecated, but @azure/arm-containerservice doesn't play nicely with AzureAccount, so...
-
-import { parseResource } from './azure-api-utils';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
 import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
 import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
 import periscope from './commands/periscope/periscope';
+import * as clusters from './commands/utils/clusters';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -45,20 +43,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 }
 
-export async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
-    const { resourceGroupName, name } = parseResource(target.id!);
-    if (!resourceGroupName || !name) {
-        vscode.window.showErrorMessage(`Invalid ARM id ${target.id}`);
-        return;
-    }
-    const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
-    try {
-        const clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(resourceGroupName, name);
-        const kubeconfigCredResult = clusterUserCredentials.kubeconfigs!.find((kubeInfo) => kubeInfo.name === "clusterUser");
-        const kubeconfig = kubeconfigCredResult?.value?.toString();
-        return kubeconfig;
-    } catch (e) {
-        vscode.window.showErrorMessage(`Can't get kubeconfig: ${e}`);
-        return undefined;
-    }
+async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
+    return await clusters.getKubeConfigYaml(target);
 }

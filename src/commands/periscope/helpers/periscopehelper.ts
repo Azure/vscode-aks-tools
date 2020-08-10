@@ -15,12 +15,13 @@ const {
 } = require("@azure/storage-blob");
 
 export async function getClusterDiagnosticSettings(
-    target: any
+    target: k8s.CloudExplorerV1.CloudExplorerResourceNode
 ): Promise<amon.MonitorManagementModels.DiagnosticSettingsCategoryResourceCollection | undefined> {
     try {
         // Get daignostic setting via diagnostic monitor
-        const diagnosticMonitor = new amon.MonitorManagementClient(target.root.credentials, target.root.subscriptionId);
-        const diagnosticSettings = await diagnosticMonitor.diagnosticSettingsOperations.list(target.id);
+        const cloudResource = target.cloudResource;
+        const diagnosticMonitor = new amon.MonitorManagementClient(cloudResource.root.credentials, cloudResource.root.subscriptionId);
+        const diagnosticSettings = await diagnosticMonitor.diagnosticSettingsOperations.list(cloudResource.id);
 
         return diagnosticSettings;
     } catch (e) {
@@ -31,9 +32,6 @@ export async function getClusterDiagnosticSettings(
 
 export async function selectStorageAccountAndInstallAKSPeriscope<T>(
     diagnosticSettings: amon.MonitorManagementModels.DiagnosticSettingsResourceCollection | undefined,
-    cloudTarget: k8s.CloudExplorerV1.CloudExplorerResourceNode,
-    clusterKubeConfig: string,
-    fn: (target: any, clusterKubeConfig: any, selectedStorageAccount: any) => Promise<T>
 ): Promise<string | undefined> {
     /*
         Check the diagnostic setting is 1 or more than 1:
@@ -56,20 +54,19 @@ export async function selectStorageAccountAndInstallAKSPeriscope<T>(
         });
 
         // Create quick pick for more than 1 storage account scenario.
-        const multipleStorageAccountQuickPick = vscode.window.createQuickPick();
-        multipleStorageAccountQuickPick.placeholder = "Select storage account for periscope deployment:";
-        multipleStorageAccountQuickPick.title = `Found more than 1 storage account associated with cluster ${cloudTarget.cloudResource.name}. Please select from below.`;
-        multipleStorageAccountQuickPick.ignoreFocusOut = true;
-        multipleStorageAccountQuickPick.items = Array.from(storageAccountNameToStorageIdMap.keys()).map((label) => ({ label }));
+        const selectedStorageAccount = await vscode.window.showQuickPick(
+            Array.from(storageAccountNameToStorageIdMap.keys()).map((label) => ({ label })),
+            {
+                placeHolder: "Select storage account for periscope deployment:",
+                ignoreFocusOut: true,
+                onDidSelectItem: (item) => { return item.toString(); }
+            });
 
-        multipleStorageAccountQuickPick.onDidChangeSelection(async ([{ label }]) => {
-            multipleStorageAccountQuickPick.hide();
-            const selectedStorageAccount = storageAccountNameToStorageIdMap.get(label)!;
-            // When more then one storage account, on selection aks-periscope run will start.
-            await fn(cloudTarget, clusterKubeConfig, selectedStorageAccount);
-        });
-
-        multipleStorageAccountQuickPick.show();
+        if (selectedStorageAccount?.label) {
+            return storageAccountNameToStorageIdMap.get(selectedStorageAccount!.label);
+        } else {
+            return undefined;
+        }
 
     } else if (diagnosticSettings && diagnosticSettings.value!.length === 1) {
         // In case of only one storage account associated, use the one (1) as default storage account and no UI will be displayed.
@@ -81,10 +78,11 @@ export async function selectStorageAccountAndInstallAKSPeriscope<T>(
 }
 
 export async function getStorageInfo(
-    target: any,
+    target: k8s.CloudExplorerV1.CloudExplorerResourceNode,
     diagnosticStorageAccountId: string
 ): Promise<PeriscopeStorage | undefined> {
     try {
+        const clusterStorageInfo = <PeriscopeStorage>{};
         const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId!);
 
         if (!resourceGroupName || !accountName) {
@@ -93,22 +91,24 @@ export async function getStorageInfo(
         }
 
         // Get keys from storage client.
-        const storageClient = new ast.StorageManagementClient(target.root.credentials, target.root.subscriptionId);
+        const cloudResource = target.cloudResource;
+        const storageClient = new ast.StorageManagementClient(cloudResource.root.credentials, cloudResource.root.subscriptionId);
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
-        const accountKey = storageAccKeyList?.keys!.find((it) => it.keyName === "key1")?.value;
+        clusterStorageInfo.storageName = accountName;
+        clusterStorageInfo.storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
 
         // Generate 5 mins downlable shortlived sas along with 7 day shareable SAS.
-        const sas = getSASKey(accountName, accountKey!, SASExpiryTime.FiveMinutes);
-        const sevenDaySas = getSASKey(accountName, accountKey!, SASExpiryTime.SevenDays);
+        clusterStorageInfo.storageDeploymentSas = getSASKey(accountName, clusterStorageInfo.storageKey!, SASExpiryTime.FiveMinutes);
+        clusterStorageInfo.sevenDaysSasyKey = getSASKey(accountName, clusterStorageInfo.storageKey!, SASExpiryTime.SevenDays);
 
-        return <PeriscopeStorage>{ storageName: accountName, storageKey: accountKey, storageDeploymentSas: sas, sevenDaysSasyKey: sevenDaySas };
+        return clusterStorageInfo;
     } catch (e) {
         vscode.window.showErrorMessage(`Storage associated with cluster had following error: ${e}`);
         return undefined;
     }
 }
 
-export async function writeTempAKSDeploymentFile(file: any): Promise<void> {
+export function writeTempAKSDeploymentFile(file: any) {
     const https = require("https");
 
     https.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml', (res: any) => {
@@ -186,18 +186,15 @@ export async function generateDownloadableLinks(
         for await (const blob of containerClient.listBlobsFlat()) {
             // Get the latest uploaded folder, then Identify the Zip files in the latest uploaded logs within that folder
             // and extract *.zip files which are individual node logs.
+            const periscopeHTMLInterface = <PeriscopeHTMLInterface>{};
             if (blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]) !== -1 && blob.name.indexOf('.zip') !== -1) {
-                const nodeLogName = path.parse(blob.name).name;
-                const dirTimeStamp = path.parse(blob.name).dir.split('/')[0];
-                periscopeHtmlinterfaceList.push(
-                    <PeriscopeHTMLInterface>{
-                        storageTimeStamp: dirTimeStamp,
-                        nodeLogFileName: nodeLogName,
-                        downloadableZipFilename: `${nodeLogName}-downloadable`,
-                        downloadableZipUrl: `${containerClient.url}/${blob.name}${sas}`,
-                        downloadableZipShareFilename: `${nodeLogName}-share`,
-                        downloadableZipShareUrl: `${containerClient.url}/${blob.name}${sevenDaySas}`,
-                    });
+                periscopeHTMLInterface.storageTimeStamp = path.parse(blob.name).dir.split('/')[0];
+                periscopeHTMLInterface.nodeLogFileName = path.parse(blob.name).name;
+                periscopeHTMLInterface.downloadableZipFilename = `${path.parse(blob.name).name}-downloadable`;
+                periscopeHTMLInterface.downloadableZipUrl = `${containerClient.url}/${blob.name}${sas}`;
+                periscopeHTMLInterface.downloadableZipShareFilename = `${path.parse(blob.name).name}-share`;
+                periscopeHTMLInterface.downloadableZipShareUrl = `${containerClient.url}/${blob.name}${sevenDaySas}`;
+                periscopeHtmlinterfaceList.push(periscopeHTMLInterface);
             }
         }
         return periscopeHtmlinterfaceList;
