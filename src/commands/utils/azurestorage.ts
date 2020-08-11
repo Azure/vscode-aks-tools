@@ -1,44 +1,49 @@
 const storage = require("azure-storage");
 
-export enum SASExpiryTime {
-    FiveMinutes = 5,
-    SevenDays = 7
+export enum LinkDuration {
+    StartTime,
+    DownloadNow,
+    Shareable,
+}
+
+function sasDuration(duration: LinkDuration): number {
+    switch (duration) {
+        case LinkDuration.StartTime: return 2 * 60 * 1000;
+        case LinkDuration.DownloadNow: return 5 * 60 * 1000;
+        case LinkDuration.Shareable: return 7 * 24 * 60 * 60 * 1000;
+    }
+}
+
+function sasPermission(duration: LinkDuration, permission: any): any {
+    // Restrict the permission as default permissioning model.
+    let permissionsForSas = permission.READ + permission.LIST + permission.PROCESS;
+
+    switch (duration) {
+        case LinkDuration.DownloadNow:
+            permissionsForSas = permissionsForSas + permission.ADD + permission.CREATE +
+                permission.WRITE + permission.DELETE + permission.UPDATE;
+            return permissionsForSas;
+        case LinkDuration.Shareable:
+            return permissionsForSas;
+    }
 }
 
 export function getSASKey(
     storageAccount: string,
     storageKey: string,
-    sasExpirationTime: SASExpiryTime
+    linkDuration: LinkDuration
 ): string {
 
     const startDate = new Date();
     const expiryDate = new Date();
-    const fiveMinutesInMilliseconds = 5 * 60 * 1000;
-    const weekInMilliseconds = 7 * 24 * 60 * 60 * 1000;
 
-    startDate.setTime(startDate.getTime() - fiveMinutesInMilliseconds);
+    startDate.setTime(startDate.getTime() - sasDuration(LinkDuration.StartTime));
+    expiryDate.setTime(expiryDate.getTime() + sasDuration(linkDuration));
 
-    let expirationTime = expiryDate.getTime();
     const AccountSasConstants = storage.Constants.AccountSasConstants;
 
     // Restrict the permission as default permissioning model.
-    let permissionsForSas = AccountSasConstants.Permissions.READ + AccountSasConstants.Permissions.LIST + AccountSasConstants.Permissions.PROCESS;
-
-    if (sasExpirationTime === SASExpiryTime.FiveMinutes) {
-        // Default downloadable sas link creation expiry is 5 minutes.
-        expirationTime = expirationTime + fiveMinutesInMilliseconds;
-        permissionsForSas = permissionsForSas +
-            AccountSasConstants.Permissions.ADD +
-            AccountSasConstants.Permissions.CREATE +
-            AccountSasConstants.Permissions.WRITE +
-            AccountSasConstants.Permissions.DELETE +
-            AccountSasConstants.Permissions.UPDATE ;
-
-    } else if (sasExpirationTime === SASExpiryTime.SevenDays) {
-        expirationTime = expirationTime + weekInMilliseconds;
-    }
-
-    expiryDate.setTime(expirationTime);
+    const permissionsForSas = sasPermission(linkDuration, AccountSasConstants.Permissions);
 
     const sharedAccessPolicy = {
         AccessPolicy: {

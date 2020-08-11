@@ -3,11 +3,11 @@ import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import { parseResource } from "../../azure-api-utils";
 import * as azcs from 'azure-arm-containerservice';  // deprecated, but @azure/arm-containerservice doesn't play nicely with AzureAccount, so...
 
-export async function getKubeConfigYaml(target: AksClusterTreeItem): Promise<string | undefined> {
+export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<string | undefined> {
     const { resourceGroupName, name } = parseResource(target.id!);
     if (!resourceGroupName || !name) {
         vscode.window.showErrorMessage(`Invalid ARM id ${target.id}`);
-        return;
+        return undefined;
     }
     const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
     try {

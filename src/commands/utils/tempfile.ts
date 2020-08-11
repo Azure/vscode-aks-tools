@@ -9,7 +9,7 @@ export async function withOptionalTempFile<T>(
         return fn(undefined);
     }
 
-    const tempFile = tmp.fileSync({ prefix: "vsduffle-", postfix: `.${fileType}` });
+    const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.${fileType}` });
     await fs.writeFile(tempFile.name, content);
 
     try {

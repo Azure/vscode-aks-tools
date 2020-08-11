@@ -44,5 +44,5 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
-    return await clusters.getKubeConfigYaml(target);
+    return await clusters.getKubeconfigYaml(target);
 }
