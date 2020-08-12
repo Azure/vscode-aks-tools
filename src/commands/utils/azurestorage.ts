@@ -41,8 +41,6 @@ export function getSASKey(
     expiryDate.setTime(expiryDate.getTime() + sasDuration(linkDuration));
 
     const AccountSasConstants = storage.Constants.AccountSasConstants;
-
-    // Restrict the permission as default permissioning model.
     const permissionsForSas = sasPermission(linkDuration, AccountSasConstants.Permissions);
 
     const sharedAccessPolicy = {

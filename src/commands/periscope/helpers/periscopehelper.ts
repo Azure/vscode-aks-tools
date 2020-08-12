@@ -8,6 +8,7 @@ import * as amon from 'azure-arm-monitor';
 import * as htmlhandlers from "handlebars";
 import * as path from 'path';
 import * as fs from 'fs';
+import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 
 const {
     BlobServiceClient,
@@ -15,13 +16,12 @@ const {
 } = require("@azure/storage-blob");
 
 export async function getClusterDiagnosticSettings(
-    cluster: k8s.CloudExplorerV1.CloudExplorerResourceNode
+    cluster: AksClusterTreeItem
 ): Promise<amon.MonitorManagementModels.DiagnosticSettingsCategoryResourceCollection | undefined> {
     try {
         // Get daignostic setting via diagnostic monitor
-        const cloudResource = cluster.cloudResource;
-        const diagnosticMonitor = new amon.MonitorManagementClient(cloudResource.root.credentials, cloudResource.root.subscriptionId);
-        const diagnosticSettings = await diagnosticMonitor.diagnosticSettingsOperations.list(cloudResource.id);
+        const diagnosticMonitor = new amon.MonitorManagementClient(cluster.root.credentials, cluster.root.subscriptionId);
+        const diagnosticSettings = await diagnosticMonitor.diagnosticSettingsOperations.list(cluster.id!);
 
         return diagnosticSettings;
     } catch (e) {
@@ -78,7 +78,7 @@ export async function chooseStorageAccount(
 }
 
 export async function getStorageInfo(
-    cluster: k8s.CloudExplorerV1.CloudExplorerResourceNode,
+    cluster: AksClusterTreeItem,
     diagnosticStorageAccountId: string
 ): Promise<PeriscopeStorage | undefined> {
     try {
@@ -91,15 +91,14 @@ export async function getStorageInfo(
         }
 
         // Get keys from storage client.
-        const cloudResource = cluster.cloudResource;
-        const storageClient = new ast.StorageManagementClient(cloudResource.root.credentials, cloudResource.root.subscriptionId);
+        const storageClient = new ast.StorageManagementClient(cluster.root.credentials, cluster.root.subscriptionId);
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         clusterStorageInfo.storageName = accountName;
         clusterStorageInfo.storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
 
         // Generate 5 mins downloadable shortlived sas along with 7 day shareable SAS.
-        clusterStorageInfo.storageDeploymentSas = getSASKey(accountName, clusterStorageInfo.storageKey, LinkDuration.DownloadNow); // getSASKey(accountName, clusterStorageInfo.storageKey!, SASExpiryTime.FiveMinutes);
-        clusterStorageInfo.sevenDaysSasKey = getSASKey(accountName, clusterStorageInfo.storageKey, LinkDuration.DownloadNow); // getSASKey(accountName, clusterStorageInfo.storageKey!, SASExpiryTime.SevenDays);
+        clusterStorageInfo.storageDeploymentSas = getSASKey(accountName, clusterStorageInfo.storageKey, LinkDuration.DownloadNow);
+        clusterStorageInfo.sevenDaysSasKey = getSASKey(accountName, clusterStorageInfo.storageKey, LinkDuration.DownloadNow);
 
         return clusterStorageInfo;
     } catch (e) {
@@ -108,14 +107,18 @@ export async function getStorageInfo(
     }
 }
 
-export function writeTempAKSDeploymentFile(clusterStorageInfo: PeriscopeStorage, filePath: string) {
+export async function writeTempAKSDeploymentFile(
+    clusterStorageInfo: PeriscopeStorage,
+    filePath: string
+) {
     const https = require("https");
     const periscopeDeploymentFile = fs.createWriteStream(filePath);
 
-    https.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml', (res: any) => {
+    await https.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml', (res: any) => {
         res.pipe(periscopeDeploymentFile);
         periscopeDeploymentFile.on('finish', () => {
             replaceDeploymentAccountNameAndSas(clusterStorageInfo, filePath);
+            periscopeDeploymentFile.close();
         });
     }).on("error", (err: any) => {
         vscode.window.showWarningMessage(`Error encountered writing Periscope deployment file: ${err.message}`);
@@ -189,16 +192,18 @@ export async function generateDownloadableLinks(
         for await (const blob of containerClient.listBlobsFlat()) {
             // Get the latest uploaded folder, then Identify the Zip files in the latest uploaded logs within that folder
             // and extract *.zip files which are individual node logs.
-            const periscopeHTMLInterface = <PeriscopeHTMLInterface>{};
-            const latestBlobUploadedByperiscope = blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]);
+            const latestBlobUploadedByPeriscope = blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]);
 
-            if (latestBlobUploadedByperiscope !== -1 && blob.name.indexOf('.zip') !== -1) {
-                periscopeHTMLInterface.storageTimeStamp = path.parse(blob.name).dir.split('/')[0];
-                periscopeHTMLInterface.nodeLogFileName = path.parse(blob.name).name;
-                periscopeHTMLInterface.downloadableZipFilename = `${path.parse(blob.name).name}-downloadable`;
-                periscopeHTMLInterface.downloadableZipUrl = `${containerClient.url}/${blob.name}${sas}`;
-                periscopeHTMLInterface.downloadableZipShareFilename = `${path.parse(blob.name).name}-share`;
-                periscopeHTMLInterface.downloadableZipShareUrl = `${containerClient.url}/${blob.name}${sevenDaySas}`;
+            if (latestBlobUploadedByPeriscope !== -1 && blob.name.indexOf('.zip') !== -1) {
+                const periscopeHTMLInterface = {
+                    storageTimeStamp: path.parse(blob.name).dir.split('/')[0],
+                    nodeLogFileName: path.parse(blob.name).name,
+                    downloadableZipFilename: `${path.parse(blob.name).name}-downloadable`,
+                    downloadableZipUrl: `${containerClient.url}/${blob.name}${sas}`,
+                    downloadableZipShareFilename: `${path.parse(blob.name).name}-share`,
+                    downloadableZipShareUrl: `${containerClient.url}/${blob.name}${sevenDaySas}`
+                };
+
                 periscopeHtmlInterfaceList.push(periscopeHTMLInterface);
             }
         }
@@ -212,7 +217,7 @@ export async function generateDownloadableLinks(
 export function getWebviewContent(
     clustername: string,
     aksExtensionPath: string,
-    output: any,
+    output: k8s.KubectlV1.ShellResult | undefined,
     periscopeStorageInfo: PeriscopeStorage | undefined,
     downloadAndShareNodeLogsList: PeriscopeHTMLInterface[] | undefined,
     hasDiagnosticSettings = true
@@ -223,7 +228,7 @@ export function getWebviewContent(
     const pathUri = htmlPathOnDisk.with({ scheme: 'vscode-resource' });
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
-    const commandOutput = output?.stderr + output?.stdout;
+    const commandOutput = output ? output.stderr + output.stdout : undefined;
 
     htmlHandlerRegisterHelper();
     const template = htmlhandlers.compile(htmldata);
