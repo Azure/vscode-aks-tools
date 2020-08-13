@@ -14,7 +14,6 @@ import {
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { DiagnosticSettingsResourceCollection } from 'azure-arm-monitor/lib/models';
 const tmp = require('tmp');
 
 export default async function periscope(
