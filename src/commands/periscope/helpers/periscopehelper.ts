@@ -40,30 +40,33 @@ export async function chooseStorageAccount(
     */
 
     if (diagnosticSettings && diagnosticSettings.value!.length > 1) {
-        const storageAccountNameToStorageIdMap: Map<string, string> = new Map();
+        const storageAccountNameToStorageIdArray: { id: string; label: string; }[] = [];
 
-        diagnosticSettings.value?.forEach((item): any => {
+        diagnosticSettings.value?.forEach((item) => {
             if (item.storageAccountId) {
                 const { name } = parseResource(item.storageAccountId!);
                 if (!name) {
                     vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
-                    return undefined;
+                    return;
                 }
-                storageAccountNameToStorageIdMap.set(name, item.storageAccountId!);
+                storageAccountNameToStorageIdArray.push({ id: item.storageAccountId, label: name });
             }
         });
 
+        // accounts is now an array of {id, name}
+        const accountQuickPicks = storageAccountNameToStorageIdArray;
+
         // Create quick pick for more than 1 storage account scenario.
-        const selectedStorageAccount = await vscode.window.showQuickPick(
-            Array.from(storageAccountNameToStorageIdMap.keys()).map((label) => ({ label })),
+        const selectedQuickPick = await vscode.window.showQuickPick(
+            accountQuickPicks,
             {
                 placeHolder: "Select storage account for Periscope deployment:",
                 ignoreFocusOut: true,
-                onDidSelectItem: (item) => { return item.toString(); }
+                onDidSelectItem: (item: string) => { return item.toString(); }
             });
 
-        if (selectedStorageAccount?.label) {
-            return storageAccountNameToStorageIdMap.get(selectedStorageAccount!.label);
+        if (selectedQuickPick?.label) {
+            return selectedQuickPick?.id;
         } else {
             return undefined;
         }
@@ -82,7 +85,6 @@ export async function getStorageInfo(
     diagnosticStorageAccountId: string
 ): Promise<PeriscopeStorage | undefined> {
     try {
-        const clusterStorageInfo = <PeriscopeStorage>{};
         const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId!);
 
         if (!resourceGroupName || !accountName) {
@@ -93,12 +95,14 @@ export async function getStorageInfo(
         // Get keys from storage client.
         const storageClient = new ast.StorageManagementClient(cluster.root.credentials, cluster.root.subscriptionId);
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
-        clusterStorageInfo.storageName = accountName;
-        clusterStorageInfo.storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
+        const storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
 
-        // Generate 5 mins downloadable shortlived sas along with 7 day shareable SAS.
-        clusterStorageInfo.storageDeploymentSas = getSASKey(accountName, clusterStorageInfo.storageKey, LinkDuration.DownloadNow);
-        clusterStorageInfo.sevenDaysSasKey = getSASKey(accountName, clusterStorageInfo.storageKey, LinkDuration.DownloadNow);
+        const clusterStorageInfo = {
+            storageName: accountName,
+            storageKey: storageKey,
+            storageDeploymentSas: getSASKey(accountName, storageKey, LinkDuration.DownloadNow),
+            sevenDaysSasKey: getSASKey(accountName, storageKey, LinkDuration.Shareable)
+        };
 
         return clusterStorageInfo;
     } catch (e) {
