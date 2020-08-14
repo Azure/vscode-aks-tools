@@ -7,9 +7,11 @@ import selectSubscriptions from './commands/selectSubscriptions';
 import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
+import { Reporter } from './commands/utils/reporter';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    context.subscriptions.push(new Reporter(context));
 
     if (cloudExplorer.available) {
         // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.

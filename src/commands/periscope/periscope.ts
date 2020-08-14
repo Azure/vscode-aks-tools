@@ -8,13 +8,13 @@ import {
     getClusterDiagnosticSettings,
     chooseStorageAccount,
     getStorageInfo,
-    writeTempAKSDeploymentFile,
+    prepareAKSPeriscopeDeploymetFile,
     generateDownloadableLinks,
     getWebviewContent
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-const tmp = require('tmp');
+import { reporter } from '../utils/reporter';
 
 export default async function periscope(
     context: IActionContext,
@@ -22,6 +22,7 @@ export default async function periscope(
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    reporter.sendTelemetryEvent("command", { command: "vscode-vscode-aks-tools.periscope" });
 
     if (cloudExplorer.available && kubectl.available) {
         const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
@@ -87,16 +88,7 @@ async function runAKSPeriscope(
     }
 }
 
-async function prepareAKSPeriscopeDeploymetFile(
-    clusterStorageInfo: PeriscopeStorage
-): Promise<string | undefined> {
-    const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.yaml` });
-    await writeTempAKSDeploymentFile(clusterStorageInfo, tempFile.name);
-
-    return tempFile.name;
-}
-
-export async function runAssociatedAKSPeriscopeCommand(
+async function runAssociatedAKSPeriscopeCommand(
     aksPeriscopeFile: string,
     clusterKubeConfig: string | undefined
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {

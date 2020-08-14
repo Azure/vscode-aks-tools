@@ -9,6 +9,7 @@ import * as htmlhandlers from "handlebars";
 import * as path from 'path';
 import * as fs from 'fs';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
+const tmp = require('tmp');
 
 const {
     BlobServiceClient,
@@ -111,22 +112,25 @@ export async function getStorageInfo(
     }
 }
 
-export async function writeTempAKSDeploymentFile(
-    clusterStorageInfo: PeriscopeStorage,
-    filePath: string
-) {
+export async function prepareAKSPeriscopeDeploymetFile(
+    clusterStorageInfo: PeriscopeStorage
+): Promise<string | undefined> {
+    const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.yaml` });
     const https = require("https");
-    const periscopeDeploymentFile = fs.createWriteStream(filePath);
+    const periscopeDeploymentFile = fs.createWriteStream(tempFile.name);
 
     await https.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml', (res: any) => {
         res.pipe(periscopeDeploymentFile);
         periscopeDeploymentFile.on('finish', () => {
-            replaceDeploymentAccountNameAndSas(clusterStorageInfo, filePath);
+            replaceDeploymentAccountNameAndSas(clusterStorageInfo, tempFile.name);
             periscopeDeploymentFile.close();
         });
     }).on("error", (err: any) => {
         vscode.window.showWarningMessage(`Error encountered writing Periscope deployment file: ${err.message}`);
+        return undefined;
     });
+
+    return tempFile.name;
 }
 
 function replaceDeploymentAccountNameAndSas(
