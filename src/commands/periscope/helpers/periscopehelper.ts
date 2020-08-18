@@ -68,8 +68,6 @@ export async function chooseStorageAccount(
 
         if (selectedQuickPick?.label) {
             return selectedQuickPick?.id;
-        } else {
-            return undefined;
         }
 
     } else if (diagnosticSettings && diagnosticSettings.value!.length === 1) {
@@ -116,21 +114,17 @@ export async function prepareAKSPeriscopeDeploymetFile(
     clusterStorageInfo: PeriscopeStorage
 ): Promise<string | undefined> {
     const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.yaml` });
-    const https = require("https");
-    const periscopeDeploymentFile = fs.createWriteStream(tempFile.name);
+    const axios = require("axios");
 
-    await https.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml', (res: any) => {
-        res.pipe(periscopeDeploymentFile);
-        periscopeDeploymentFile.on('finish', () => {
-            replaceDeploymentAccountNameAndSas(clusterStorageInfo, tempFile.name);
-            periscopeDeploymentFile.close();
-        });
-    }).on("error", (err: any) => {
-        vscode.window.showWarningMessage(`Error encountered writing Periscope deployment file: ${err.message}`);
+    try {
+        const response = await axios.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml');
+        fs.writeFileSync(tempFile.name, response.data);
+        replaceDeploymentAccountNameAndSas(clusterStorageInfo, tempFile.name);
+        return tempFile.name;
+    } catch (e) {
+        vscode.window.showErrorMessage(`Periscope Deployment file had following error: ${e}`);
         return undefined;
-    });
-
-    return tempFile.name;
+    }
 }
 
 function replaceDeploymentAccountNameAndSas(

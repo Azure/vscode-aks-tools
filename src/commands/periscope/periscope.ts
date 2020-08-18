@@ -22,7 +22,8 @@ export default async function periscope(
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    reporter.sendTelemetryEvent("command", { command: "vscode-vscode-aks-tools.periscope" });
+    // ToDo: Generalise this for other feature as wrapper.
+    reporter.sendTelemetryEvent("command", { command: "aks.periscope" });
 
     if (cloudExplorer.available && kubectl.available) {
         const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
@@ -52,40 +53,38 @@ async function runAKSPeriscope(
         () => getClusterDiagnosticSettings(cluster)
     );
 
-    if (clusterDiagnosticSettings && clusterDiagnosticSettings.value?.length) {
-        const clusterStorageAccountId = await longRunning(`Identifying cluster associated storage account.`,
-            () => chooseStorageAccount(clusterDiagnosticSettings)
-        );
-
-        // Generate storage sas keys, manage aks persicope run.
-        if (clusterStorageAccountId) {
-            const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`,
-                () => getStorageInfo(cluster, clusterStorageAccountId)
-            );
-
-            if (!clusterStorageInfo) return undefined;
-
-            if (clusterStorageInfo) {
-                const aksDeplymentFile = await longRunning(`Deploying AKS Periscope to ${clusterName}.`,
-                    () => prepareAKSPeriscopeDeploymetFile(clusterStorageInfo)
-                );
-
-                if (!aksDeplymentFile) return undefined;
-
-                if (aksDeplymentFile) {
-                    const runCommandResult = await longRunning(`Running AKS Periscope on ${clusterName}.`,
-                        () => runAssociatedAKSPeriscopeCommand(aksDeplymentFile, clusterKubeConfig)
-                    );
-
-                    await createPeriscopeWebView(clusterName, runCommandResult, clusterStorageInfo);
-                }
-            }
-        }
-    } else {
+    if (!clusterDiagnosticSettings || !clusterDiagnosticSettings.value?.length) {
         // If there is no storage account attached to diagnostic setting, don't move forward and at this point we will render webview with helpful content.
         await createPeriscopeWebView(cluster.name, undefined, undefined, false);
         return undefined;
+
     }
+
+    const clusterStorageAccountId = await longRunning(`Identifying cluster associated storage account.`,
+        () => chooseStorageAccount(clusterDiagnosticSettings)
+    );
+
+    // Generate storage sas keys, manage aks persicope run.
+    if (!clusterStorageAccountId) return undefined;
+
+    const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`,
+        () => getStorageInfo(cluster, clusterStorageAccountId)
+    );
+
+    if (!clusterStorageInfo) return undefined;
+
+    const aksDeplymentFile = await longRunning(`Deploying AKS Periscope to ${clusterName}.`,
+        () => prepareAKSPeriscopeDeploymetFile(clusterStorageInfo)
+    );
+
+    if (!aksDeplymentFile) return undefined;
+
+    const runCommandResult = await longRunning(`Running AKS Periscope on ${clusterName}.`,
+        () => runAssociatedAKSPeriscopeCommand(aksDeplymentFile, clusterKubeConfig)
+    );
+
+    await createPeriscopeWebView(clusterName, runCommandResult, clusterStorageInfo);
+
 }
 
 async function runAssociatedAKSPeriscopeCommand(

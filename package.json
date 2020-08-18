@@ -92,6 +92,7 @@
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
         "@azure/storage-blob": "^12.1.2",
+        "axios": "^0.19.2",
         "azure-arm-containerservice": "^7.0.0",
         "azure-arm-monitor": "^5.4.0",
         "azure-arm-resource": "^7.4.0",
@@ -107,8 +108,8 @@
         "tmp": "^0.2.1",
         "util": "^0.12.3",
         "vscode-azureextensionui": "^0.27.1",
-        "vscode-kubernetes-tools-api": "^1.0.0",
-        "vscode-extension-telemetry": "^0.0.17"
+        "vscode-extension-telemetry": "^0.0.17",
+        "vscode-kubernetes-tools-api": "^1.0.0"
     },
     "repository": {
         "type": "git",
