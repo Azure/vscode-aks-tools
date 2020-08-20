@@ -20,7 +20,9 @@
 
             $('#generatelink').click(function () {
                 $(".spinner").show();
-                vscode.postMessage({ command: "generateDownloadLink" })
+                vscode.postMessage({ command: "generateDownloadLink" });
+                // https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations
+                setTimeout(function() {$(".spinner").hide()}, 30000);
             });
 
             $(".toggle").click(function () {

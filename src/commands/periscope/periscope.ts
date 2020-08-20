@@ -45,7 +45,7 @@ export default async function periscope(
 async function runAKSPeriscope(
     cluster: AksClusterTreeItem,
     clusterKubeConfig: string
-): Promise<void | undefined> {
+): Promise<void> {
     const clusterName = cluster.name;
 
     // Get Diagnostic settings for cluster and get associated storage account information.
@@ -60,9 +60,7 @@ async function runAKSPeriscope(
 
     }
 
-    const clusterStorageAccountId = await longRunning(`Identifying cluster associated storage account.`,
-        () => chooseStorageAccount(clusterDiagnosticSettings)
-    );
+    const clusterStorageAccountId = await chooseStorageAccount(clusterDiagnosticSettings);
 
     // Generate storage sas keys, manage aks persicope run.
     if (!clusterStorageAccountId) return undefined;
@@ -73,14 +71,14 @@ async function runAKSPeriscope(
 
     if (!clusterStorageInfo) return undefined;
 
-    const aksDeplymentFile = await longRunning(`Deploying AKS Periscope to ${clusterName}.`,
+    const aksDeploymentFile = await longRunning(`Deploying AKS Periscope to ${clusterName}.`,
         () => prepareAKSPeriscopeDeploymetFile(clusterStorageInfo)
     );
 
-    if (!aksDeplymentFile) return undefined;
+    if (!aksDeploymentFile) return undefined;
 
     const runCommandResult = await longRunning(`Running AKS Periscope on ${clusterName}.`,
-        () => runAssociatedAKSPeriscopeCommand(aksDeplymentFile, clusterKubeConfig)
+        () => runAssociatedAKSPeriscopeCommand(aksDeploymentFile, clusterKubeConfig)
     );
 
     await createPeriscopeWebView(clusterName, runCommandResult, clusterStorageInfo);
@@ -93,22 +91,22 @@ async function runAssociatedAKSPeriscopeCommand(
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     const kubectl = await k8s.extension.kubectl.v1;
 
-    if (kubectl.available) {
-        // Clean up running instance.
-        await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-            clusterKubeConfig, "YAML",
-            (f) => kubectl.api.invokeCommand(`delete ns aks-periscope --kubeconfig="${f}"`));
-
-        // Deploy the aks-periscope.
-        const runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-            clusterKubeConfig, "YAML",
-            (f) => kubectl.api.invokeCommand(`apply -f ${aksPeriscopeFile} --kubeconfig="${f}" && kubectl cluster-info --kubeconfig="${f}"`));
-
-        return runCommandResult;
-    } else {
+    if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return undefined;
     }
+
+    // Clean up running instance.
+    await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+        clusterKubeConfig, "YAML",
+        (f) => kubectl.api.invokeCommand(`delete ns aks-periscope --kubeconfig="${f}"`));
+
+    // Deploy the aks-periscope.
+    const runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+        clusterKubeConfig, "YAML",
+        (f) => kubectl.api.invokeCommand(`apply -f ${aksPeriscopeFile} --kubeconfig="${f}" && kubectl cluster-info --kubeconfig="${f}"`));
+
+    return runCommandResult;
 }
 
 async function createPeriscopeWebView(

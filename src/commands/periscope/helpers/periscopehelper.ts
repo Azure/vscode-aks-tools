@@ -9,6 +9,7 @@ import * as htmlhandlers from "handlebars";
 import * as path from 'path';
 import * as fs from 'fs';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
+import * as axios from 'axios';
 const tmp = require('tmp');
 
 const {
@@ -32,51 +33,49 @@ export async function getClusterDiagnosticSettings(
 }
 
 export async function chooseStorageAccount(
-    diagnosticSettings: amon.MonitorManagementModels.DiagnosticSettingsResourceCollection | undefined,
-): Promise<string | undefined> {
+    diagnosticSettings: amon.MonitorManagementModels.DiagnosticSettingsResourceCollection,
+): Promise<string | void> {
     /*
         Check the diagnostic setting is 1 or more than 1:
           1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
           2. For the scenario for more than 1 then show VsCode quickPick to select and get SAS of selected.
     */
+    if (!diagnosticSettings || !diagnosticSettings.value) return undefined;
 
-    if (diagnosticSettings && diagnosticSettings.value!.length > 1) {
-        const storageAccountNameToStorageIdArray: { id: string; label: string; }[] = [];
-
-        diagnosticSettings.value?.forEach((item) => {
-            if (item.storageAccountId) {
-                const { name } = parseResource(item.storageAccountId!);
-                if (!name) {
-                    vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
-                    return;
-                }
-                storageAccountNameToStorageIdArray.push({ id: item.storageAccountId, label: name });
-            }
-        });
-
-        // accounts is now an array of {id, name}
-        const accountQuickPicks = storageAccountNameToStorageIdArray;
-
-        // Create quick pick for more than 1 storage account scenario.
-        const selectedQuickPick = await vscode.window.showQuickPick(
-            accountQuickPicks,
-            {
-                placeHolder: "Select storage account for Periscope deployment:",
-                ignoreFocusOut: true,
-                onDidSelectItem: (item: string) => { return item.toString(); }
-            });
-
-        if (selectedQuickPick?.label) {
-            return selectedQuickPick?.id;
-        }
-
-    } else if (diagnosticSettings && diagnosticSettings.value!.length === 1) {
+    if (diagnosticSettings.value.length === 1) {
         // In case of only one storage account associated, use the one (1) as default storage account and no UI will be displayed.
         const selectedStorageAccount = diagnosticSettings.value![0].storageAccountId!;
         return selectedStorageAccount;
     }
 
-    return undefined;
+    const storageAccountNameToStorageIdArray: { id: string; label: string; }[] = [];
+
+    diagnosticSettings.value?.forEach((item) => {
+        if (item.storageAccountId) {
+            const { name } = parseResource(item.storageAccountId!);
+            if (!name) {
+                vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
+                return;
+            }
+            storageAccountNameToStorageIdArray.push({ id: item.storageAccountId, label: name });
+        }
+    });
+
+    // accounts is now an array of {id, name}
+    const accountQuickPicks = storageAccountNameToStorageIdArray;
+
+    // Create quick pick for more than 1 storage account scenario.
+    const selectedQuickPick = await vscode.window.showQuickPick(
+        accountQuickPicks,
+        {
+            placeHolder: "Select storage account for Periscope deployment:",
+            ignoreFocusOut: true
+        });
+
+    if (selectedQuickPick) {
+        return selectedQuickPick.id;
+    }
+
 }
 
 export async function getStorageInfo(
@@ -84,11 +83,11 @@ export async function getStorageInfo(
     diagnosticStorageAccountId: string
 ): Promise<PeriscopeStorage | undefined> {
     try {
-        const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId!);
+        const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId);
 
         if (!resourceGroupName || !accountName) {
             vscode.window.showErrorMessage(`Invalid storage id ${diagnosticStorageAccountId} associated with the cluster`);
-            return;
+            return undefined;
         }
 
         // Get keys from storage client.
@@ -114,10 +113,9 @@ export async function prepareAKSPeriscopeDeploymetFile(
     clusterStorageInfo: PeriscopeStorage
 ): Promise<string | undefined> {
     const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.yaml` });
-    const axios = require("axios");
 
     try {
-        const response = await axios.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml');
+        const response = await axios.default.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml');
         fs.writeFileSync(tempFile.name, response.data);
         replaceDeploymentAccountNameAndSas(clusterStorageInfo, tempFile.name);
         return tempFile.name;
