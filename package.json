@@ -23,7 +23,8 @@
     ],
     "activationEvents": [
         "onView:kubernetes.cloudExplorer",
-        "onCommand:aks.detectorDiagnostics"
+        "onCommand:aks.detectorDiagnostics",
+        "onCommand:aks.periscope"
     ],
     "main": "./out/extension",
     "contributes": {
@@ -39,6 +40,10 @@
             {
                 "command": "aks.detectorDiagnostics",
                 "title": "Run AKS Diagnostics"
+            },
+            {
+                "command": "aks.periscope",
+                "title": "Run AKS Periscope"
             }
         ],
         "menus": {
@@ -56,6 +61,10 @@
                 },
                 {
                     "command": "aks.detectorDiagnostics",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                },
+                {
+                    "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 }
             ]
@@ -82,13 +91,24 @@
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
+        "@azure/storage-blob": "^12.1.2",
+        "axios": "^0.19.2",
         "azure-arm-containerservice": "^7.0.0",
-        "azure-arm-resource": "^7.3.0",
+        "azure-arm-monitor": "^5.4.0",
+        "azure-arm-resource": "^7.4.0",
+        "azure-arm-storage": "^8.1.0",
+        "azure-blob-storage": "^4.2.3",
+        "azure-storage": "^2.10.3",
         "handlebars": "^4.7.6",
-        "js-yaml": "^3.13.1",
-        "ms-rest": "^2.5.0",
+        "js-yaml": "^3.14.0",
+        "jszip": "^3.5.0",
+        "ms-rest": "^2.5.4",
         "ms-rest-azure": "^2.6.0",
+        "replace": "^1.2.0",
+        "tmp": "^0.2.1",
+        "util": "^0.12.3",
         "vscode-azureextensionui": "^0.27.1",
+        "vscode-extension-telemetry": "^0.0.17",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
     "repository": {
