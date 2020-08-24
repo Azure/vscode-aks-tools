@@ -23,11 +23,7 @@ export default class AksClusterTreeItem extends AzureTreeItem implements AksClus
         private readonly resource: Resource) {
         super(parent);
 
-        // TODO: Set fancy icon for AKS cluster nodes for Google Cloud and AWS.
-        // For now this carefully enables AKS Icons for Azure Clsuter.
-        if (this.nodeType === "cluster" && this.root.environment.name === "Azure" && this.contextValue.includes("aks.cluster")) {
-            this.iconPath = vscode.Uri.file(path.join(getExtensionPath()!, 'resources', 'k8s-logo.png'));
-        }
+        this.iconPath = vscode.Uri.file(path.join(getExtensionPath()!, 'resources', 'aks-tools.png'));
         this.id = this.resource.id;
     }
 
