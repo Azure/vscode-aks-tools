@@ -2,12 +2,13 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
-import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
+import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
 import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter } from './commands/utils/reporter';
+import { registerCommandWithTelemetry } from './commands/utils/host';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -27,9 +28,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
         registerUIExtensionVariables(uiExtensionVariables);
 
-        registerCommand('aks.selectSubscriptions', selectSubscriptions);
-        registerCommand('aks.detectorDiagnostics', detectorDiagnostics);
-        registerCommand('aks.periscope', periscope);
+        registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
+        registerCommandWithTelemetry('aks.detectorDiagnostics', detectorDiagnostics);
+        registerCommandWithTelemetry('aks.periscope', periscope);
 
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);

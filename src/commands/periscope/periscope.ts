@@ -14,7 +14,6 @@ import {
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { reporter } from '../utils/reporter';
 
 export default async function periscope(
     context: IActionContext,
@@ -22,8 +21,6 @@ export default async function periscope(
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    // ToDo: Generalise this for other feature as wrapper.
-    reporter.sendTelemetryEvent("command", { command: "aks.periscope" });
 
     if (cloudExplorer.available && kubectl.available) {
         const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);

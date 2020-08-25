@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { registerCommand } from 'vscode-azureextensionui';
+import { reporter } from '../utils/reporter';
 
 const meta = require('../../../package.json');
 
@@ -19,4 +21,13 @@ export function getExtensionPath(): string | undefined {
         return;
     }
     return vscodeExtensionPath;
+}
+
+export function registerCommandWithTelemetry(
+    commandId: string,
+    callback: any
+) {
+
+    reporter.sendTelemetryEvent("command", { command: commandId });
+    registerCommand(commandId, callback);
 }
