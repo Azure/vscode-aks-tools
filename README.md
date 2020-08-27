@@ -4,6 +4,14 @@
 * Add AKS clusters to kubeconfig via the GUI
 * Run AppLens detector diagnostics on your AKS clusters
 
+## Telemetry
+
+This extension collects telemetry data to help us build a better experience for building applications with Kubernetes and VS Code. We only collect the following data:
+
+* Which commands are executed, and whether they are executed against an Azure cluster.
+
+We do not collect any information about image names, paths, etc. The extension respects the `telemetry.enableTelemetry` setting which you can learn more about in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
+
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
