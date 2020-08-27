@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
-import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand } from 'vscode-azureextensionui';
+import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand, IActionContext } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
 import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
-import { Reporter } from './commands/utils/reporter';
+import { Reporter, reporter } from './commands/utils/reporter';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -27,9 +27,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
         registerUIExtensionVariables(uiExtensionVariables);
 
-        registerCommand('aks.selectSubscriptions', selectSubscriptions);
-        registerCommand('aks.detectorDiagnostics', detectorDiagnostics);
-        registerCommand('aks.periscope', periscope);
+        registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
+        registerCommandWithTelemetry('aks.detectorDiagnostics', detectorDiagnostics);
+        registerCommandWithTelemetry('aks.periscope', periscope);
 
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);
@@ -47,4 +47,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
 async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
     return await clusters.getKubeconfigYaml(target);
+}
+
+function registerCommandWithTelemetry(command: string, callback: (context: IActionContext, target: any) => any) {
+    const wrappedCallback = telemetrise(command, callback);
+    return registerCommand(command, wrappedCallback);
+}
+
+function telemetrise(command: string, callback: (context: IActionContext, target: any) => any): (context: IActionContext, target: any) => any {
+    return (context, target) => {
+        if (reporter) {
+            reporter.sendTelemetryEvent("command", { command: command });
+        }
+
+        return callback(context, target);
+    };
 }
