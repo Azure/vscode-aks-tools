@@ -18,13 +18,23 @@ Ensure that you have installed the [Kubernetes Tools](https://marketplace.visual
 
 ## Features
 
-### Merge and Save Kubeconfig
+Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.  
 
-Log-in with your Azure credentials and view all AKS clusters in your Azure subscription(s) within VS Code. Right click on your AKS cluster and click on **Merge into Kubeconfig** to add the selected AKS cluster to the kubeconfig file or click on **Save Kubeconfig** to save the kubeconfig of the selected AKS cluster.
+<---Placeholder for a screenshot of the CloudExplorer showing the menu --->
+
+### Merge into Kubeconfig
+
+Right click on your AKS cluster and click on **Merge into Kubeconfig** to add the selected AKS cluster to the kubeconfig file.
+
+### Save Kubeconfig
+
+Right click on your AKS cluster and click on **Save Kubeconfig** to save the kubeconfig of the selected AKS cluster.
 
 ### AKS Diagnostics
 
 Right click on your AKS cluster and click on **Run AKS Diagnostics** to run a series of checks on your AKS cluster's backend telemetry to get diagnostics information on your network configuration and recommended solutions for network and connectivity issues. Also, to perform more checks on your AKS cluster to troubleshoot and get recommended solutions, click on the AKS Diagnostics link at the top of the page to open it for the selected cluster. For more information on AKS Diagnostics, visit [AKS Diagnostics Overview](https://docs.microsoft.com/azure/aks/concepts-diagnostics).
+
+<----Placeholder for AKS Diagnostics screenshot----> 
 
 ### AKS Periscope
 
@@ -33,6 +43,8 @@ Right click on your AKS cluster and click on **Run AKS Periscope** to collect no
 > If you are not seeing the logs for all the nodes, it is possible the logs were still uploading. Try clicking the **Generate Link** button again to load more logs.
 
 For more information, visit [AKS Periscope](https://github.com/Azure/aks-periscope).
+
+<----Placeholder for AKS Periscope screenshot---->
 
 #### Configuring Storage Account
 
