@@ -1,10 +1,9 @@
 # Azure Kubernetes Service (AKS) Extension for Visual Studio Code (Preview)
 
-The Visual Studio Code extension for Azure Kubernetes Service helps you view your AKS cluster, merge and save kubeconfig, perform AKS Diagnostics checks, and run AKS Periscope within VS Code.
-
-## Prerequisites
-
-Ensure that you have installed the [Kubernetes Tools](https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-kubernetes-tools) extension for VS Code prior to installing the Azure Kubernetes Service Extension for Visual Studio Code following these [instructions](https://code.visualstudio.com/docs/azure/kubernetes#_install-the-kubernetes-extension).
+* View your AKS clusters in the Kubernetes extension cloud explorer
+* Add AKS clusters to kubeconfig
+* Perform AKS Diagnostics checks on your AKS cluster 
+* Run AKS Periscope within VS Code
 
 ## Installation
 
