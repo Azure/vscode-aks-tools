@@ -16,6 +16,8 @@ Ensure that you have installed the [Kubernetes Tools](https://marketplace.visual
 
 4. Sign in to your Azure Account by clicking **Sign in to Azure…**
 
+![Sign in to your Azure Account](resources/Sign-in.png)
+
 ## Features
 
 Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.  
