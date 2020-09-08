@@ -21,7 +21,7 @@
 
 Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.  
 
-<---Placeholder for a screenshot of the CloudExplorer showing the menu --->
+![Cloud explorer extension menu](resources/right-click-menu-options.png)
 
 ### Merge into Kubeconfig
 
@@ -35,7 +35,7 @@ Right click on your AKS cluster and click on **Save Kubeconfig** to save the kub
 
 Right click on your AKS cluster and click on **Run AKS Diagnostics** to run a series of checks on your AKS cluster's backend telemetry to get diagnostics information on your network configuration and recommended solutions for network and connectivity issues. Also, to perform more checks on your AKS cluster to troubleshoot and get recommended solutions, click on the AKS Diagnostics link at the top of the page to open it for the selected cluster. For more information on AKS Diagnostics, visit [AKS Diagnostics Overview](https://docs.microsoft.com/azure/aks/concepts-diagnostics).
 
-<----Placeholder for AKS Diagnostics screenshot----> 
+![AKS Diagnostics Webview](resources/aks-diagnostics-webview.png)
 
 ### AKS Periscope
 
@@ -45,7 +45,7 @@ Right click on your AKS cluster and click on **Run AKS Periscope** to collect no
 
 For more information, visit [AKS Periscope](https://github.com/Azure/aks-periscope).
 
-<----Placeholder for AKS Periscope screenshot---->
+![AKS Periscope Webview](resources/aks-periscope-webview.png)
 
 #### Configuring Storage Account
 
