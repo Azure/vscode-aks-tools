@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.0.7
+
+* You can now get AKS Periscope diagnostic information for your clusters.
+* Fixed getting kubeconfig under Azure RBAC
+* Shiny new icon for your AKS clusters!
+
+Thanks to Tatsat Mishra.
+
 ## 0.0.6
 
 * You can now get AppLens cluster diagnostics by right-clicking in Cloud Explorer.
