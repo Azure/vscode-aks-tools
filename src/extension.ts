@@ -33,9 +33,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.periscope', periscope);
         registerCommandWithTelemetry('aks.refreshSubscription', refreshSubscriptions);
 
-        // () => {
-        //     treeDataProvider.refresh();
-        // });
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);
         const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, 'azureAks.loadMore');
