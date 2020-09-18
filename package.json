@@ -38,6 +38,14 @@
                 }
             },
             {
+                "command": "aks.refreshSubscription",
+                "title": "Refresh subscription...",
+                "icon": {
+                    "dark": "resources/dark/refresh.svg",
+                    "light": "resources/light/refresh.svg"
+                }
+            },
+            {
                 "command": "aks.detectorDiagnostics",
                 "title": "Run AKS Diagnostics"
             },
@@ -51,11 +59,20 @@
                 {
                     "command": "aks.selectSubscriptions",
                     "when": "never"
+                },
+                {
+                    "command": "aks.refreshSubscription",
+                    "when": "never"
                 }
             ],
             "view/item/context": [
                 {
                     "command": "aks.selectSubscriptions",
+                    "when": "viewItem == aks.subscription",
+                    "group": "inline"
+                },
+                {
+                    "command": "aks.refreshSubscription",
                     "when": "viewItem == aks.subscription",
                     "group": "inline"
                 },
