@@ -44,7 +44,7 @@ async function getCluster(target: any): Promise<AksClusterTreeItem | undefined> 
 async function isDeployToAzureExtensionInstalled(): Promise<boolean> {
     const pipelinesExtension = vscode.extensions.getExtension(deployToAzureExtensionId);
     if (!pipelinesExtension) {
-        vscode.window.showWarningMessage('Please install/enable `Deploy to Azure` extension and then retry.');
+        vscode.window.showWarningMessage('Please install/enable `Deploy to Azure` extension and start again.');
         await vscode.commands.executeCommand('extension.open', deployToAzureExtensionId);
         return false;
     }
