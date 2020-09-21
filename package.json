@@ -46,11 +46,11 @@
                 "title": "Run AKS Periscope"
             },
             {
-                "command": "aks.ConfigureCICDPipeline",
+                "command": "extension.ConfigureCICDPipeline",
                 "title": "Configure CI/CD"
             },
             {
-                "command": "aks.BrowseCICDPipeline",
+                "command": "extension.BrowseCICDPipeline",
                 "title": "Browse All Pipelines"
             }
         ],
@@ -61,11 +61,11 @@
                     "when": "never"
                 },
                 {
-                    "command": "aks.ConfigureCICDPipeline",
+                    "command": "extension.ConfigureCICDPipeline",
                     "when": "never"
                 },
                 {
-                    "command": "aks.BrowseCICDPipeline",
+                    "command": "extension.BrowseCICDPipeline",
                     "when": "never"
                 }
             ],
@@ -84,12 +84,12 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 },
                 {
-                    "command": "aks.BrowseCICDPipeline",
+                    "command": "extension.BrowseCICDPipeline",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "7@2"
                 },
                 {
-                    "command": "aks.ConfigureCICDPipeline",
+                    "command": "extension.ConfigureCICDPipeline",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "7@1"
                 }
