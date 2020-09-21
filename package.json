@@ -44,12 +44,28 @@
             {
                 "command": "aks.periscope",
                 "title": "Run AKS Periscope"
+            },
+            {
+                "command": "extension.ConfigureCICDPipeline",
+                "title": "Configure CI/CD"
+            },
+            {
+                "command": "extension.BrowseCICDPipeline",
+                "title": "Browse All Pipelines"
             }
         ],
         "menus": {
             "commandPalette": [
                 {
                     "command": "aks.selectSubscriptions",
+                    "when": "never"
+                },
+                {
+                    "command": "extension.ConfigureCICDPipeline",
+                    "when": "never"
+                },
+                {
+                    "command": "extension.BrowseCICDPipeline",
                     "when": "never"
                 }
             ],
@@ -66,6 +82,16 @@
                 {
                     "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                },
+                {
+                    "command": "extension.ConfigureCICDPipeline",
+                    "group": "7@2",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /kubernetes/i"
+                },
+                {
+                    "command": "extension.BrowseCICDPipeline",
+                    "group": "7@3",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /kubernetes/i"
                 }
             ]
         }

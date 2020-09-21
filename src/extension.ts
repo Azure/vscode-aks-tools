@@ -8,6 +8,7 @@ import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnost
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
+import { configurePipeline, browsePipeline } from './commands/cicdPipeline';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -30,6 +31,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
         registerCommandWithTelemetry('aks.detectorDiagnostics', detectorDiagnostics);
         registerCommandWithTelemetry('aks.periscope', periscope);
+        registerCommand('extension.ConfigureCICDPipeline', configurePipeline),
+        registerCommand('extension.BrowseCICDPipeline', browsePipeline)
 
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);
