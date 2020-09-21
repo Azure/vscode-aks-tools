@@ -84,13 +84,11 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 },
                 {
-                    "command": "extension.ConfigureCICDPipeline",
-                    "group": "7@2",
+                    "command": "extension.BrowseCICDPipeline",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /kubernetes/i"
                 },
                 {
-                    "command": "extension.BrowseCICDPipeline",
-                    "group": "7@3",
+                    "command": "extension.ConfigureCICDPipeline",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /kubernetes/i"
                 }
             ]
