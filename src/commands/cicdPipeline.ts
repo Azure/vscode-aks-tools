@@ -21,16 +21,16 @@ export async function browsePipeline(context: IActionContext, target: any): Prom
 
 async function getClusterAndExecute(target: any, command: string): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    if (cloudExplorer.available) {
+    if (!cloudExplorer.available) {
+        return undefined;
+    } else {
         const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
         if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
             await executeDeployToAzureExtensionInstalled(command, clusterTarget);
         } else {
             vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-            return;
+            return undefined;
         }
-    } else {
-        return;
     }
 }
 
