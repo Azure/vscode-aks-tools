@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import * as utils from 'util';
-import AksClusterTreeItem from '../tree/aksClusterTreeItem';
 import { IActionContext } from 'vscode-azureextensionui';
 
 const deployToAzureExtensionId = 'ms-vscode-deploy-azure.azure-deploy';
@@ -10,28 +9,22 @@ const browsePipelineCommand = 'browse-cicd-pipeline';
 
 export async function configurePipeline(context: IActionContext, target: any): Promise<void> {
     if (await isDeployToAzureExtensionInstalled()) {
-        const cluster = await getCluster(target);
-        if (!!cluster) {
-            await executeDeployToAzureExtensionInstalled(configurePipelineCommand, cluster);
-        }
+        await getClusterAndExecute(target, configurePipelineCommand);
     }
 }
 
 export async function browsePipeline(context: IActionContext, target: any): Promise<void> {
     if (await isDeployToAzureExtensionInstalled()) {
-        const cluster = await getCluster(target);
-        if (!!cluster) {
-            await executeDeployToAzureExtensionInstalled(browsePipelineCommand, cluster);
-        }
+        await getClusterAndExecute(target, browsePipelineCommand);
     }
 }
 
-async function getCluster(target: any): Promise<AksClusterTreeItem | undefined> {
+async function getClusterAndExecute(target: any, command: string): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     if (cloudExplorer.available) {
         const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
         if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
-            return clusterTarget.cloudResource as AksClusterTreeItem;
+            await executeDeployToAzureExtensionInstalled(command, clusterTarget);
         } else {
             vscode.window.showInformationMessage('This command only applies to AKS clusters.');
             return;
@@ -56,5 +49,5 @@ async function executeDeployToAzureExtensionInstalled(commandToRun: string, clus
     if (listOfCommands.find((commmand: string) => commmand === commandToRun)) {
         return vscode.commands.executeCommand(commandToRun, cluster);
     }
-    throw new Error(utils.format('Unable to find command %s. Make sure `Deploy to Azure` extension is installed and enabled.', commandToRun));
+    throw new Error(utils.format(`Unable to find command ${commandToRun}. Make sure Deploy to Azure extension is installed and enabled.`));
 }
