@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from 'vscode-azureextensionui';
+import { CloudExplorerV1 } from 'vscode-kubernetes-tools-api';
 
 const deployToAzureExtensionId = 'ms-vscode-deploy-azure.azure-deploy';
 const configurePipelineCommand = 'configure-cicd-pipeline';
-const browsePipelineCommand = 'browse-cicd-pipeline';
+const azurePortalUrl = 'https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/';
 
 export async function configurePipeline(context: IActionContext, target: any): Promise<void> {
     if (await isDeployToAzureExtensionInstalled()) {
@@ -13,9 +14,24 @@ export async function configurePipeline(context: IActionContext, target: any): P
 }
 
 export async function browsePipeline(context: IActionContext, target: any): Promise<void> {
-    if (await isDeployToAzureExtensionInstalled()) {
-        await getClusterAndExecute(target, browsePipelineCommand);
+    const deploymentCenterUrl: string = await getDeploymentCenterUrl(target);
+    if (deploymentCenterUrl) {
+        await vscode.env.openExternal(vscode.Uri.parse(deploymentCenterUrl));
+    } else {
+        vscode.window.showErrorMessage(`Unable to browse pipelines for the resource. Select appropriate cluster.`);
     }
+
+}
+
+async function getDeploymentCenterUrl(target: any): Promise<string> {
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    if (cloudExplorer.available) {
+        const clusterTarget = cloudExplorer.api.resolveCommandTarget(target) as CloudExplorerV1.CloudExplorerResourceNode;
+        if (clusterTarget) {
+            return `${azurePortalUrl}resource${clusterTarget.cloudResource.id}/deloymentCenter`;
+        }
+    }
+    return '';
 }
 
 async function getClusterAndExecute(target: any, command: string): Promise<void> {

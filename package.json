@@ -77,21 +77,23 @@
                 },
                 {
                     "command": "aks.detectorDiagnostics",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "8@1"
                 },
                 {
                     "command": "aks.periscope",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "8@2"
                 },
                 {
                     "command": "azure-deploy.BrowseCicdPipeline",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "7@2"
+                    "group": "9@2"
                 },
                 {
                     "command": "azure-deploy.ConfigureCicdPipeline",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "7@1"
+                    "group": "9@1"
                 }
             ]
         }
