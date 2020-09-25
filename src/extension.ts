@@ -31,8 +31,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
         registerCommandWithTelemetry('aks.detectorDiagnostics', detectorDiagnostics);
         registerCommandWithTelemetry('aks.periscope', periscope);
-        registerCommandWithTelemetry('azure-deploy.ConfigureCICDPipeline', configurePipeline);
-        registerCommandWithTelemetry('azure-deploy.BrowseCICDPipeline', browsePipeline);
+        registerCommandWithTelemetry('azure-deploy.ConfigureCicdPipeline', configurePipeline);
+        registerCommandWithTelemetry('azure-deploy.BrowseCicdPipeline', browsePipeline);
 
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);

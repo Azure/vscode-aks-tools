@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import * as utils from 'util';
 import { IActionContext } from 'vscode-azureextensionui';
 
 const deployToAzureExtensionId = 'ms-vscode-deploy-azure.azure-deploy';
@@ -23,15 +22,15 @@ async function getClusterAndExecute(target: any, command: string): Promise<void>
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     if (!cloudExplorer.available) {
         return undefined;
-    } else {
-        const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
-        if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
-            await executeDeployToAzureExtensionInstalled(command, clusterTarget);
-        } else {
-            vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-            return undefined;
-        }
     }
+    const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
+    if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
+        await executeDeployToAzureExtensionInstalled(command, clusterTarget);
+    } else {
+        vscode.window.showInformationMessage('This command only applies to AKS clusters.');
+        return undefined;
+    }
+
 }
 
 async function isDeployToAzureExtensionInstalled(): Promise<boolean> {
@@ -49,5 +48,5 @@ async function executeDeployToAzureExtensionInstalled(commandToRun: string, clus
     if (listOfCommands.find((commmand: string) => commmand === commandToRun)) {
         return vscode.commands.executeCommand(commandToRun, cluster);
     }
-    throw new Error(utils.format(`Unable to find command ${commandToRun}. Make sure Deploy to Azure extension is installed and enabled.`));
+    vscode.window.showErrorMessage(`Unable to find command ${commandToRun}. Make sure Deploy to Azure extension is installed and enabled.`);
 }
