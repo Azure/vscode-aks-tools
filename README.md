@@ -68,6 +68,15 @@ Running the AKS Periscope requires you to have a storage account associated with
 
 For more information on Diagnostics settings, visit [Create diagnostic settings to send platform logs and metics to different destinations](https://docs.microsoft.com/azure/azure-monitor/platform/diagnostic-settings).
 
+### Configure CI/CD 
+
+Right click on your AKS cluster and click on **Configure CI/CD** to create a CI/CD pipeline targetting your cluster. 
+
+### Browse Pipelines
+
+Right click on your AKS cluster and click on **Browse Pipelines** to view details of all existing CI/CD pipelines that are configured against your cluster.
+
+
 ## Telemetry
 
 This extension collects telemetry data to help us build a better experience for building applications with Azure Kubernetes Service and VS Code. We only collect the following data:
