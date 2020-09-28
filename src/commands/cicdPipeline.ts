@@ -7,20 +7,20 @@ export async function configurePipeline(context: IActionContext, target: any): P
     const deployToAzureExtensionInstalled = await isDeployToAzureExtensionInstalled();
     if (!deployToAzureExtensionInstalled) {
         return undefined;
-    } else {
-        const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-        const configurePipelineCommand = 'configure-cicd-pipeline';
-        if (!cloudExplorer.available) {
-            return undefined;
-        }
-        const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
-        if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
-            await executeDeployToAzureExtensionInstalled(configurePipelineCommand, clusterTarget);
-        } else {
-            vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-            return undefined;
-        }
     }
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const configurePipelineCommand = 'configure-cicd-pipeline';
+    if (!cloudExplorer.available) {
+        return undefined;
+    }
+    const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
+    if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
+        await executeDeployToAzureExtensionInstalled(configurePipelineCommand, clusterTarget);
+    } else {
+        vscode.window.showInformationMessage('This command only applies to AKS clusters.');
+        return undefined;
+    }
+
 }
 
 async function isDeployToAzureExtensionInstalled(): Promise<boolean> {
