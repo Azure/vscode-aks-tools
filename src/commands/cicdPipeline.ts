@@ -4,7 +4,10 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { CloudExplorerV1 } from 'vscode-kubernetes-tools-api';
 
 export async function configurePipeline(context: IActionContext, target: any): Promise<void | undefined> {
-    if (isDeployToAzureExtensionInstalled()) {
+    const deployToAzureExtensionInstalled = await isDeployToAzureExtensionInstalled();
+    if (!deployToAzureExtensionInstalled) {
+        return undefined;
+    } else {
         const cloudExplorer = await k8s.extension.cloudExplorer.v1;
         const configurePipelineCommand = 'configure-cicd-pipeline';
         if (!cloudExplorer.available) {
@@ -38,7 +41,7 @@ async function executeDeployToAzureExtensionInstalled(commandToRun: string, clus
             vscode.commands.executeCommand(commandToRun, cluster);
         }
         catch (error) {
-            vscode.window.showErrorMessage(error + "Report the issue with [Deploy to Azure extension](https://github.com/microsoft/vscode-deploy-azure/issues).");
+            vscode.window.showErrorMessage("Please report the issue with [Deploy to Azure extension](https://github.com/microsoft/vscode-deploy-azure/issues), execute command failed with error:" + error);
         }
     } else {
         vscode.window.showErrorMessage(`Unable to find command ${commandToRun}. Make sure Deploy to Azure extension is installed and enabled.`);
