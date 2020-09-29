@@ -4,6 +4,8 @@
 * Add AKS clusters to kubeconfig
 * Perform AKS Diagnostics checks on your AKS cluster 
 * Run AKS Periscope within VS Code
+* Configure a Continous Integration / Continous Deployment ( CI/CD ) Pipeline targetting AKS cluster from within VSCode
+* Browse to all Continous Integration / Continous Deployment ( CI/CD ) Pipelines targetting AKS cluster
 
 ## Installation
 
@@ -70,11 +72,11 @@ For more information on Diagnostics settings, visit [Create diagnostic settings 
 
 ### Configure CI/CD 
 
-Right click on your AKS cluster and click on **Configure CI/CD** to create a CI/CD pipeline targetting your cluster. 
+Right click on your AKS cluster and click on **Configure CI/CD** to create a Continous Integration / Continous Deployment (CI/CD) pipeline targetting your cluster. This will use [Deploy to Azure](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) VSCode extension and have a  guided experience to generate a YAML file defining the build and deploy process.
 
 ### Browse Pipelines
 
-Right click on your AKS cluster and click on **Browse Pipelines** to view details of all existing CI/CD pipelines that are configured against your cluster.
+Right click on your AKS cluster and click on **Browse Pipelines** to view details of all existing Continous Integration / Continous Deployment (CI/CD) pipelines that are configured against your cluster.
 
 
 ## Telemetry
