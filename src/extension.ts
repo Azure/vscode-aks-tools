@@ -8,8 +8,8 @@ import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnost
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
-import { configurePipeline } from './commands/deployAzurePipeline/configurePipeline';
 import { browsePipeline } from './commands/deployAzurePipeline/browsePipeline';
+import { configurePipeline } from './commands/deployAzurePipeline/configureCicdPipeline/configurePipeline';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
