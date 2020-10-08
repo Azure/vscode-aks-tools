@@ -1,6 +1,6 @@
 import { GenericResource } from 'azure-arm-resource/lib/resource/models';
 
-export interface resourceNode extends GenericResource{
+export interface resourceNode{
     resource: GenericResource;
     subscriptionId: string;
 }
