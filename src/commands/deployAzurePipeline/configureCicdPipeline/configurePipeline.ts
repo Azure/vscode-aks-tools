@@ -12,7 +12,7 @@ export async function configurePipeline(context: IActionContext, target: any): P
         if (cloudExplorer.available) {
             const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
             if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
-                const cluster: resourceNode = {resource: clusterTarget.cloudResource, subscriptionId: clusterTarget.cloudResource.subscription.subscriptionId};
+                const cluster = {resource: clusterTarget.cloudResource, subscriptionId: clusterTarget.cloudResource.subscription.subscriptionId};
                 await executeDeployToAzureExtensionInstalled(CONFIGURE_PIPELINE_COMMAND, cluster);
             } else {
                 vscode.window.showInformationMessage('This command only applies to AKS clusters.');
@@ -24,12 +24,12 @@ export async function configurePipeline(context: IActionContext, target: any): P
     }
 }
 
-async function isDeployToAzureExtensionInstalled(): Promise<boolean> {
+function isDeployToAzureExtensionInstalled(): boolean {
     const pipelinesExtension = vscode.extensions.getExtension(DEPLOY_TO_AZURE_EXTENSION_ID);
-    if (!!pipelinesExtension) {
-        return true;
+    if (!pipelinesExtension) {
+        return false;
     }
-    return false;
+    return true;
 }
 
 async function executeDeployToAzureExtensionInstalled(commandToRun: string, cluster: resourceNode): Promise<void> {
