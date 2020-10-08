@@ -6,13 +6,13 @@ const CONFIGURE_PIPELINE_COMMAND = 'configure-cicd-pipeline';
 const DEPLOY_TO_AZURE_EXTENSION_ID = 'ms-vscode-deploy-azure.azure-deploy';
 
 export async function configurePipeline(context: IActionContext, target: any): Promise<void> {
-    const deployToAzureExtensionInstalled = await isDeployToAzureExtensionInstalled();
+    const deployToAzureExtensionInstalled = isDeployToAzureExtensionInstalled();
     if (deployToAzureExtensionInstalled) {
         const cloudExplorer = await k8s.extension.cloudExplorer.v1;
         if (cloudExplorer.available) {
             const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
             if (clusterTarget && clusterTarget.cloudName === "Azure" && clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
-                const cluster = {resource: clusterTarget.cloudResource, subscriptionId: clusterTarget.cloudResource.subscription.subscriptionId};
+                const cluster = { resource: clusterTarget.cloudResource, subscriptionId: clusterTarget.cloudResource.subscription.subscriptionId };
                 await executeDeployToAzureExtensionInstalled(CONFIGURE_PIPELINE_COMMAND, cluster);
             } else {
                 vscode.window.showInformationMessage('This command only applies to AKS clusters.');
