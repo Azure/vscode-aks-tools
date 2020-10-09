@@ -33,8 +33,8 @@ function isDeployToAzureExtensionInstalled(): boolean {
 }
 
 async function executeDeployToAzureExtensionInstalled(commandToRun: string, cluster: resourceNode): Promise<void> {
-    const listOfCommands = vscode.commands.getCommands(true);
-    if ((await (listOfCommands)).includes(commandToRun)) {
+    const listOfCommands = await vscode.commands.getCommands(true);
+    if (((listOfCommands)).includes(commandToRun)) {
         try {
             vscode.commands.executeCommand(commandToRun, cluster);
         }
