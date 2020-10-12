@@ -21,8 +21,8 @@ export async function configurePipeline(context: IActionContext, target: any): P
     } else {
         const installDeployToAzure = await vscode.window.showInformationMessage(
             '"Deploy to Azure" VSCode extension is needed for this command. Please install/enable the extension and try again.',
-            "Open");
-        if (installDeployToAzure === "Open") {
+            "Show Extension");
+        if (installDeployToAzure === "Show Extension") {
             await vscode.commands.executeCommand('extension.open', DEPLOY_TO_AZURE_EXTENSION_ID);
         }
     }

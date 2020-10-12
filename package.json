@@ -47,11 +47,11 @@
             },
             {
                 "command": "azure-deploy.configureCicdPipeline",
-                "title": "Configure CI/CD"
+                "title": "Configure CI/CD Workflow"
             },
             {
                 "command": "azure-deploy.browseCicdPipeline",
-                "title": "Browse All Pipelines"
+                "title": "Browse CI/CD Workflows"
             }
         ],
         "menus": {
