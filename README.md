@@ -70,13 +70,13 @@ Running the AKS Periscope requires you to have a storage account associated with
 
 For more information on Diagnostics settings, visit [Create diagnostic settings to send platform logs and metics to different destinations](https://docs.microsoft.com/azure/azure-monitor/platform/diagnostic-settings).
 
-### Configure CI/CD 
+### Configure CI/CD Workflow
 
-Right click on your AKS cluster and click on **Configure CI/CD** to create a Continous Integration / Continous Deployment (CI/CD) pipeline targetting your cluster. This will use [Deploy to Azure](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) VSCode extension and have a  guided experience to generate a YAML file defining the build and deploy process.
+Right click on your AKS cluster and click on **Configure CI/CD Workflow** to create a Continous Integration / Continous Deployment (CI/CD) pipeline targetting your cluster. This will use [Deploy to Azure](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) VSCode extension and have a  guided experience to generate a YAML file defining the build and deploy process.
 
-### Browse Pipelines
+### Browse CI/CD Workflows
 
-Right click on your AKS cluster and click on **Browse Pipelines** to view details of all existing Continous Integration / Continous Deployment (CI/CD) pipelines that are configured against your cluster.
+Right click on your AKS cluster and click on **Browse CI/CD Workflows** to view details of all existing Continous Integration / Continous Deployment (CI/CD) pipelines that are configured against your cluster.
 
 
 ## Telemetry
