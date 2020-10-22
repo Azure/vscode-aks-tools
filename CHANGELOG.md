@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.0.8
+
+* Integration with [Deploy to Azure](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) extension.
+* Fixed a typo.
+
+Thanks to Tatsat Mishra, Kanika Pasrija and Pulkit Agarwal.
+
 ## 0.0.7
 
 * You can now get AKS Periscope diagnostic information for your clusters.
