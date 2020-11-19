@@ -9,8 +9,10 @@ import {
     applyCertManager,
     runASOIssuerCertYAML,
     getAzureServicePrincipal,
-    applyAzureOperatorSettingsYAML
+    applyAzureOperatorSettingsYAML,
+    runASOYaml
 } from './helpers/azureservicehelper';
+import * as clusters from '../utils/clusters';
 
 export default async function azureServiceOperator(
     context: IActionContext,
@@ -28,8 +30,11 @@ export default async function azureServiceOperator(
             clusterExplorer.available) {
             clusterExplorer.api.refresh();
             const cluster = clusterTarget.cloudResource as AksClusterTreeItem;
+            const clusterKubeConfig = await clusters.getKubeconfigYaml(cluster);
 
-            await runAzureServiceOperator(cluster);
+            if (clusterKubeConfig) {
+                await runAzureServiceOperator(cluster, clusterKubeConfig);
+            }
         } else {
             vscode.window.showInformationMessage('This command only applies to AKS clusters.');
         }
@@ -37,15 +42,22 @@ export default async function azureServiceOperator(
 }
 
 async function runAzureServiceOperator(
-    cloudTarget: AksClusterTreeItem
+    cloudTarget: AksClusterTreeItem,
+    clusterKubeConfig: string
 ): Promise<void> {
     // Steps aka Psuedo code for this:
     // 1) Azure Service Operator requires self-signed certificates for CRD Conversion Webhooks: 
     //     * kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml
 
     const certManagerOutput = await longRunning(`Applying Cert Manager for Azure Service Operator.`,
-        () => applyCertManager()
+        () => applyCertManager(clusterKubeConfig)
     );
+
+    const settingOperatornamespaceOutput = await longRunning(`Applying Azure Service Operator Namespace.`,
+        () => runASOYaml(clusterKubeConfig)
+    );
+
+    if (!settingOperatornamespaceOutput) return undefined;
 
     // 2) Install OLM is the pre-requisite of this work, the install.sh is idempotent.
     // Page to refer: https://operatorhub.io/operator/azure-service-operator (Click on Installation Button)
@@ -54,7 +66,7 @@ async function runAzureServiceOperator(
 
     // 3) kubectl apply -f Issuerandcertmanager.yaml (with fields filled in)
     const issuerOutput = await longRunning(`Applying Issuer Manager for Azure Service Operator.`,
-        () => runASOIssuerCertYAML()
+        () => runASOIssuerCertYAML(clusterKubeConfig)
     );
 
     if (!issuerOutput) return undefined;
@@ -78,14 +90,14 @@ async function runAzureServiceOperator(
     if (!operatorSettingsObj) return undefined;
 
     const resultApplyASOSettings = await longRunning(`Service Principal hook for Azure Service Operator.`,
-        () => applyAzureOperatorSettingsYAML(operatorSettingsObj)
+        () => applyAzureOperatorSettingsYAML(operatorSettingsObj, clusterKubeConfig)
     );
 
     if (!resultApplyASOSettings) return undefined;
 
     // 6) Final step: Get the azure service operator pod. - kubectl get pods -n operators
     const runResultGetOperatorPod = await longRunning(`Getting Azure Service Operator Pod.`,
-        () => getKubectlGetOperatorsPod()
+        () => getKubectlGetOperatorsPod(clusterKubeConfig)
     );
 
     if (!runResultGetOperatorPod) return undefined;

@@ -7,23 +7,32 @@ import { getExtensionPath } from '../../utils/host';
 import { OperatorSettings } from '../models/operatorSettings';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
+const tmp = require('tmp');
 
-export async function getKubectlGetOperatorsPod(): Promise<k8s.KubectlV1.ShellResult | undefined> {
+export async function getKubectlGetOperatorsPod(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
     // kubectl get pods -n operators
     const kubectl = await k8s.extension.kubectl.v1;
 
     if (!kubectl.available) return undefined;
 
-    const finalOutPut = await kubectl.api.invokeCommand("get pods -n operators");
+    const finalOutPut = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+        clusterKubeConfig, "YAML",
+        (f) => kubectl.api.invokeCommand(`get pods -n operators --kubeconfig="${f}"`));
     return finalOutPut;
 }
 
-export async function applyCertManager(): Promise<k8s.KubectlV1.ShellResult | undefined> {
+export async function applyCertManager(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
         const kubectl = await k8s.extension.kubectl.v1;
         let runResult;
         if (kubectl.available) {
-            runResult = await kubectl.api.invokeCommand(`apply -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml`);
+            // runResult = await kubectl.api.invokeCommand(`apply -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml --kubeconfig="${kubeconfig}"`);
+            const cerManagerFile = "https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml";
+            // Deploy the aks-periscope.
+            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+                clusterKubeConfig, "YAML",
+                (f) => kubectl.api.invokeCommand(`apply -f ${cerManagerFile} --kubeconfig="${f}"`));
+
         }
 
         return runResult;
@@ -33,19 +42,55 @@ export async function applyCertManager(): Promise<k8s.KubectlV1.ShellResult | un
     }
 }
 
-export async function runASOIssuerCertYAML(): Promise<k8s.KubectlV1.ShellResult | undefined> {
+export async function runASOYaml(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
+    try {
+        const kubectl = await k8s.extension.kubectl.v1;
+        let runResult, runResult1, runResult2;
+        if (kubectl.available) {
+            // kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml
+            // kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml
+
+            const asoCrdYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml";
+            const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml";
+            const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
+
+            // Deploy the aks-periscope.
+            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+                clusterKubeConfig, "YAML",
+                (f) => kubectl.api.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
+
+            runResult1 = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+                clusterKubeConfig, "YAML",
+                (f) => kubectl.api.invokeCommand(`create -f ${asoOlmYamlFile} --kubeconfig="${f}"`));
+
+            runResult2 = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+                clusterKubeConfig, "YAML",
+                (f) => kubectl.api.invokeCommand(`create -f ${asoYamlFile} --kubeconfig="${f}"`));
+        }
+        // kubectl create -f https://operatorhub.io/install/azure-service-operator.yaml
+        return runResult;
+    } catch (e) {
+        vscode.window.showErrorMessage(`ASO Cert Manager Deployment file had following error: ${e}`);
+        return undefined;
+    }
+}
+
+export async function runASOIssuerCertYAML(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
         const extensionPath = getExtensionPath();
-        const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'Issuerandcertmanager.yaml'));
+        const tempFile = tmp.fileSync({ prefix: "aso-issuer", postfix: `.yaml` });
 
-        const fileContents = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8');
+        const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'issuerandcertmanager.yaml'));
+
+        const issuerandcertmanager = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8');
+        fs.writeFileSync(tempFile.name, issuerandcertmanager);
 
         const kubectl = await k8s.extension.kubectl.v1;
         let runCommandResult;
         if (kubectl.available) {
             runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                fileContents, "YAML",
-                (f) => kubectl.api.invokeCommand(`apply -f ${f}`));
+                clusterKubeConfig, "YAML",
+                (f) => kubectl.api.invokeCommand(`apply -f ${tempFile.name} --kubeconfig="${f}"`));
         }
 
         return runCommandResult;
@@ -91,25 +136,25 @@ export async function getAzureServicePrincipal(
 }
 
 export async function applyAzureOperatorSettingsYAML(
-    operatorSettingInfo: OperatorSettings
+    operatorSettingInfo: OperatorSettings,
+    clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
         const extensionPath = getExtensionPath();
         const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'azureoperatorsettings.yaml'));
 
-        const fileContents = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8');
-        fileContents.replace("<TENANT_ID>", operatorSettingInfo.tenantId);
-        fileContents.replace("<SUB_ID>", operatorSettingInfo.subId);
-        fileContents.replace("<APP_ID>", operatorSettingInfo.appId);
-        fileContents.replace("<CLIENT_SECRET>", operatorSettingInfo.clientSecret);
-        fileContents.replace("<ENV_CLOUD>", operatorSettingInfo.cloudEnv);
+        const azureoperatorsettings = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8');
+        const tempFile = tmp.fileSync({ prefix: "aso-operatorsettings", postfix: `.yaml` });
+        fs.writeFileSync(tempFile.name, azureoperatorsettings);
+
+        replaceOperatorSettingsPlacehoders(operatorSettingInfo, tempFile.name);
 
         const kubectl = await k8s.extension.kubectl.v1;
         let runCommandResult;
         if (kubectl.available) {
             runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                fileContents, "YAML",
-                (f) => kubectl.api.invokeCommand(`apply -f ${f}`));
+                clusterKubeConfig, "YAML",
+                (f) => kubectl.api.invokeCommand(`apply -f ${tempFile.name} --kubeconfig="${f}"`));
         }
 
         return runCommandResult;
@@ -117,6 +162,54 @@ export async function applyAzureOperatorSettingsYAML(
         vscode.window.showErrorMessage(`Apply ASO Settings had following error: ${e}`);
         return undefined;
     }
+}
+
+function replaceOperatorSettingsPlacehoders(
+    operatorSettingInfo: OperatorSettings,
+    operatorSettingFilePath: string
+) {
+    // persicope file is written now, replace the acc name and keys.
+    const replace = require("replace");
+
+    replace({
+        regex: "<TENANT_ID>",
+        replacement: `"${operatorSettingInfo.tenantId}"`,
+        paths: [operatorSettingFilePath],
+        recursive: false,
+        silent: true,
+    });
+
+    replace({
+        regex: "<SUB_ID>",
+        replacement: `"${operatorSettingInfo.subId}"`,
+        paths: [operatorSettingFilePath],
+        recursive: false,
+        silent: true,
+    });
+
+    replace({
+        regex: "<APP_ID>",
+        replacement: `"${operatorSettingInfo.appId}"`,
+        paths: [operatorSettingFilePath],
+        recursive: false,
+        silent: true,
+    });
+
+    replace({
+        regex: "<CLIENT_SECRET>",
+        replacement: `"${operatorSettingInfo.clientSecret}"`,
+        paths: [operatorSettingFilePath],
+        recursive: false,
+        silent: true,
+    });
+
+    replace({
+        regex: "<ENV_CLOUD>",
+        replacement: `"${operatorSettingInfo.cloudEnv}"`,
+        paths: [operatorSettingFilePath],
+        recursive: false,
+        silent: true,
+    });
 }
 
 function convertAzureCloudEnv(cloudName: string): string {
