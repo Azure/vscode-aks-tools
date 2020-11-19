@@ -136,7 +136,7 @@
                 },
                 {
                     "command": "aks.azureServiceOperator",
-                    "when": "viewItem =~ /vsKubernetes\\.\\w*cluster($|[^.])/i"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 },
                 {
                     "command": "aks.aso.pinned",
