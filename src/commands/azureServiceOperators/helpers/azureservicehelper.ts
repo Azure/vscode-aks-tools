@@ -51,7 +51,7 @@ export async function certManagerRolloutStatus(clusterKubeConfig: string): Promi
 
         }
 
-        if (runResult?.code !== 0 ) {
+        if (runResult?.code !== 0) {
             vscode.window.showErrorMessage(`ASO Cert Manager Rollout had following error: ${runResult?.stderr}`);
             return undefined;
         }
@@ -63,34 +63,60 @@ export async function certManagerRolloutStatus(clusterKubeConfig: string): Promi
     }
 }
 
-export async function runASOInstallOperatorNameSpaceYaml(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
+export async function runOLMCRDYaml(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
         const kubectl = await k8s.extension.kubectl.v1;
-        let runResult, runResult1, runResult2;
+        let runResult;
         if (kubectl.available) {
-            // kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml
-            // kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml
-
             const asoCrdYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml";
-            const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml";
-            const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
 
             runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
+        }
+        return runResult;
 
-            runResult1 = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+    } catch (e) {
+        vscode.window.showErrorMessage(`ASO Cert Manager Deployment resrouce had following error: ${e}`);
+        return undefined;
+    }
+}
+
+
+export async function runOLMYaml(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
+    try {
+        const kubectl = await k8s.extension.kubectl.v1;
+        let runResult;
+        if (kubectl.available) {
+            const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml";
+
+            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoOlmYamlFile} --kubeconfig="${f}"`));
+        }
+        return runResult;
 
-            runResult2 = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+    } catch (e) {
+        vscode.window.showErrorMessage(`ASO OLM Deployment resource had following error: ${e}`);
+        return undefined;
+    }
+}
+
+export async function runOLMASOYaml(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
+    try {
+        const kubectl = await k8s.extension.kubectl.v1;
+        let runResult;
+        if (kubectl.available) {
+            const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
+
+            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoYamlFile} --kubeconfig="${f}"`));
         }
-
         return runResult;
+
     } catch (e) {
-        vscode.window.showErrorMessage(`ASO Cert Manager Deployment file had following error: ${e}`);
+        vscode.window.showErrorMessage(`ASO Deployment resoruce had following error: ${e}`);
         return undefined;
     }
 }

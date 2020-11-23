@@ -10,8 +10,10 @@ import {
     runASOIssuerCertYAML,
     getAzureServicePrincipal,
     applyAzureOperatorSettingsYAML,
-    runASOInstallOperatorNameSpaceYaml,
-    certManagerRolloutStatus
+    certManagerRolloutStatus,
+    runOLMCRDYaml,
+    runOLMYaml,
+    runOLMASOYaml
 } from './helpers/azureservicehelper';
 import * as clusters from '../utils/clusters';
 
@@ -63,11 +65,22 @@ async function runAzureServiceOperator(
 
     // 3) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
-    const settingOperatornamespaceOutput = await longRunning(`Applying Azure Service Operator Namespace.`,
-        () => runASOInstallOperatorNameSpaceYaml(clusterKubeConfig)
+    const olmCRDYamlRun = await longRunning(`Applying Azure Service Operator OLM CRD resource.`,
+        () => runOLMCRDYaml(clusterKubeConfig)
     );
 
-    if (!settingOperatornamespaceOutput) return undefined;
+    if (!olmCRDYamlRun) return undefined;
+
+    const olmYamlRun = await longRunning(`Applying Azure Service Operator OLM resrouce.`,
+        () => runOLMYaml(clusterKubeConfig)
+    );
+
+    if (!olmYamlRun) return undefined;
+
+    const olmOperatorNamepaceRun = await longRunning(`Applying Azure Service Operator resrouce for Namespace.`,
+        () => runOLMASOYaml(clusterKubeConfig)
+    );
+    if (!olmOperatorNamepaceRun) return undefined;
 
     // 3) IssuerCert apply with Operator namespace created above.
     const issuerOutput = await longRunning(`Applying Issuer Manager for Azure Service Operator.`,
