@@ -33,23 +33,12 @@
     "contributes": {
         "configuration": [
             {
-                "title": "Configuration Samples",
+                "title": "ASO Pinned Configuration",
                 "properties": {
                     "aso.pinned": {
                         "type": "string",
-                        "default": [
-                            {
-                                "displayName": "Event Hubs",
-                                "kind": "Eventhub",
-                                "resourceType": "eventhubs"
-                            },
-                            {
-                                "displayName": "MySQL Servers",
-                                "kind": "MySQLServer",
-                                "resourceType": "mysqlservers"
-                            }
-                        ],
-                        "description": "Blah",
+                        "default": [],
+                        "description": "Pinned ASO resources",
                         "scope": "window"
                     }
                 }

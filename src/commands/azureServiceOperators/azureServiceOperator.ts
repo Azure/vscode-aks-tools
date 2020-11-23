@@ -10,7 +10,8 @@ import {
     runASOIssuerCertYAML,
     getAzureServicePrincipal,
     applyAzureOperatorSettingsYAML,
-    runASOYaml
+    runASOInstallOperatorNameSpaceYaml,
+    certManagerRolloutStatus
 } from './helpers/azureservicehelper';
 import * as clusters from '../utils/clusters';
 
@@ -28,12 +29,13 @@ export default async function azureServiceOperator(
         if (clusterTarget && clusterTarget.cloudName === "Azure" &&
             clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster" &&
             clusterExplorer.available) {
-            clusterExplorer.api.refresh();
+
             const cluster = clusterTarget.cloudResource as AksClusterTreeItem;
             const clusterKubeConfig = await clusters.getKubeconfigYaml(cluster);
 
             if (clusterKubeConfig) {
                 await runAzureServiceOperator(cluster, clusterKubeConfig);
+                clusterExplorer.api.refresh();
             }
         } else {
             vscode.window.showInformationMessage('This command only applies to AKS clusters.');
@@ -45,36 +47,36 @@ async function runAzureServiceOperator(
     cloudTarget: AksClusterTreeItem,
     clusterKubeConfig: string
 ): Promise<void> {
-    // Steps aka Psuedo code for this:
-    // 1) Azure Service Operator requires self-signed certificates for CRD Conversion Webhooks: 
+    // 1) Azure Service Operator requires self-signed certificates for CRD Conversion Webhooks:
     //     * kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml
 
     const certManagerOutput = await longRunning(`Applying Cert Manager for Azure Service Operator.`,
         () => applyCertManager(clusterKubeConfig)
     );
 
+    // 2) The cert-manager pods should be running before proceeding to the next step.
+    const certManagerStatus = await longRunning(`Applying Cert Manager Rollout Status Check.`,
+        () => certManagerRolloutStatus(clusterKubeConfig)
+    );
+
+    if (!certManagerStatus) return undefined;
+
+    // 3) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
+    // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
     const settingOperatornamespaceOutput = await longRunning(`Applying Azure Service Operator Namespace.`,
-        () => runASOYaml(clusterKubeConfig)
+        () => runASOInstallOperatorNameSpaceYaml(clusterKubeConfig)
     );
 
     if (!settingOperatornamespaceOutput) return undefined;
 
-    // 2) Install OLM is the pre-requisite of this work, the install.sh is idempotent.
-    // Page to refer: https://operatorhub.io/operator/azure-service-operator (Click on Installation Button)
-    // Installtion of this script takes minimum of 5 mins or so on penaltimate clicks, so first time it seems fine and then onwards it becomes slower and slower.
-    //     * curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.16.1/install.sh | bash -s 0.16.1
-
-    // 3) kubectl apply -f Issuerandcertmanager.yaml (with fields filled in)
+    // 3) IssuerCert apply with Operator namespace created above.
     const issuerOutput = await longRunning(`Applying Issuer Manager for Azure Service Operator.`,
         () => runASOIssuerCertYAML(clusterKubeConfig)
     );
 
     if (!issuerOutput) return undefined;
 
-    // 4) Get service Principal AppId and Password from user.
-    // One of the ways user can get this information is by following command:
-    //  Run az ad sp create-for-rbac -n "azure-service-operator" --role contributor \
-    //          --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID
+    // 4) Get Service Principal AppId and Password from user.
     const operatorSettingsObj = await longRunning(`Service Principal hook for Azure Service Operator.`,
         () => getAzureServicePrincipal(cloudTarget)
     );
@@ -103,8 +105,6 @@ async function runAzureServiceOperator(
     if (!runResultGetOperatorPod) return undefined;
 
     await createASOWebView(cloudTarget.name, certManagerOutput, issuerOutput, resultApplyASOSettings, runResultGetOperatorPod);
-
-    await vscode.window.showInformationMessage(`Installed Azure Service Operator on: ${cloudTarget.name}.`);
 }
 
 async function createASOWebView(

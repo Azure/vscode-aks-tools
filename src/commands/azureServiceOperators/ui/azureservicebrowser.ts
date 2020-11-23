@@ -35,7 +35,7 @@ import * as vscode from 'vscode';
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
         const all = await allServiceKinds();
 
-        return all.map((k) => new AzureServiceKindNode(this.explorer, k));
+        return all!.map((k) => new AzureServiceKindNode(this.explorer, k));
     }
     getTreeItem(): TreeItem {
         const treeItem = new TreeItem("All Service Types", TreeItemCollapsibleState.Collapsed);
@@ -49,7 +49,6 @@ import * as vscode from 'vscode';
     constructor(private readonly explorer: k8s.ClusterExplorerV1, private readonly kind: AzureServiceKind) {}
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
         const allFolderChildren = this.explorer.nodeSources.resourceFolder(this.kind.displayName, this.kind.displayName, this.kind.manifestKind, this.kind.abbreviation);
-
         return allFolderChildren.nodes();
     }
     getTreeItem(): TreeItem {
@@ -87,18 +86,21 @@ async function pinnedServiceKinds(): Promise<AzureServiceKind[]> {
 }
 
 // should be errorable but skip for prototype
-async function allServiceKinds(): Promise<AzureServiceKind[]> {
+async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
     const kubectl = await k8s.extension.kubectl.v1;
+
     if (!kubectl.available) {
-        return [];  // TODO: ERROR
+        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+        return undefined;
     }
-    const sr = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
-    if (!sr || sr.code !== 0) {
-        return [];  // TODO: ERROR
+    const srASOAPIResourceCommand = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
+    if (!srASOAPIResourceCommand || srASOAPIResourceCommand.code !== 0) {
+        vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${srASOAPIResourceCommand?.stderr}.`);
+        return undefined;
     }
 
-    const lines = sr.stdout.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-    return lines.map((l) => parseServiceResource(l));
+    const treeResourceItems = srASOAPIResourceCommand.stdout.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+    return treeResourceItems.map((l) => parseServiceResource(l));
 }
 
 function parseServiceResource(text: string): AzureServiceKind {

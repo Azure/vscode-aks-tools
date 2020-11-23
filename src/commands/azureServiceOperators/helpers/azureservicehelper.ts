@@ -26,9 +26,7 @@ export async function applyCertManager(clusterKubeConfig: string): Promise<k8s.K
         const kubectl = await k8s.extension.kubectl.v1;
         let runResult;
         if (kubectl.available) {
-            // runResult = await kubectl.api.invokeCommand(`apply -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml --kubeconfig="${kubeconfig}"`);
             const cerManagerFile = "https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml";
-            // Deploy the aks-periscope.
             runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`apply -f ${cerManagerFile} --kubeconfig="${f}"`));
@@ -37,12 +35,35 @@ export async function applyCertManager(clusterKubeConfig: string): Promise<k8s.K
 
         return runResult;
     } catch (e) {
-        vscode.window.showErrorMessage(`ASO Cert Manager Deployment file had following error: ${e}`);
+        vscode.window.showErrorMessage(`ASO Cert Manager Rollout had following error: ${e}`);
         return undefined;
     }
 }
 
-export async function runASOYaml(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
+export async function certManagerRolloutStatus(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
+    try {
+        const kubectl = await k8s.extension.kubectl.v1;
+        let runResult;
+        if (kubectl.available) {
+            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+                clusterKubeConfig, "YAML",
+                (f) => kubectl.api.invokeCommand(`rollout status -n cert-manager deploy/cert-manager-webhook --kubeconfig="${f}"`));
+
+        }
+
+        if (runResult?.code !== 0 ) {
+            vscode.window.showErrorMessage(`ASO Cert Manager Rollout had following error: ${runResult?.stderr}`);
+            return undefined;
+        }
+
+        return runResult;
+    } catch (e) {
+        vscode.window.showErrorMessage(`ASO Cert Manager Rollout had following error: ${e}`);
+        return undefined;
+    }
+}
+
+export async function runASOInstallOperatorNameSpaceYaml(clusterKubeConfig: string): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
         const kubectl = await k8s.extension.kubectl.v1;
         let runResult, runResult1, runResult2;
@@ -54,7 +75,6 @@ export async function runASOYaml(clusterKubeConfig: string): Promise<k8s.Kubectl
             const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml";
             const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
 
-            // Deploy the aks-periscope.
             runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
@@ -67,7 +87,7 @@ export async function runASOYaml(clusterKubeConfig: string): Promise<k8s.Kubectl
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoYamlFile} --kubeconfig="${f}"`));
         }
-        // kubectl create -f https://operatorhub.io/install/azure-service-operator.yaml
+
         return runResult;
     } catch (e) {
         vscode.window.showErrorMessage(`ASO Cert Manager Deployment file had following error: ${e}`);
@@ -103,12 +123,13 @@ export async function runASOIssuerCertYAML(clusterKubeConfig: string): Promise<k
 export async function getAzureServicePrincipal(
     target: AksClusterTreeItem
 ): Promise<OperatorSettings | undefined> {
-    // Note: Will be removed
+    // Note: Will be removed soon.
     // So what is happenign here?
     // There is no way I could see we can generate ServicePricipal credential for the user.
     // Refer this page: https://operatorhub.io/operator/azure-service-operator : essentially this page gives reference to how user can generate one.
     // hence we need AppId and ClientSecret for ServicePrincipal from the user.
     // I have had a look in here:
+    // More Issues I foud owas if you are running AZ CLI 2.13 the service principal command will not work correctly.
     // ==> https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli#password-based-authentication 
     // ==> https://docs.microsoft.com/en-us/javascript/api/overview/azure/keyvault-secrets-readme?view=azure-node-latest
 
@@ -168,7 +189,6 @@ function replaceOperatorSettingsPlacehoders(
     operatorSettingInfo: OperatorSettings,
     operatorSettingFilePath: string
 ) {
-    // persicope file is written now, replace the acc name and keys.
     const replace = require("replace");
 
     replace({
