@@ -16,33 +16,14 @@
         const vscode = acquireVsCodeApi();
 
         $(document).ready(function () {
-            $('.periscopeoutput').hide();
-
-            $('#generatelink').click(function () {
-                $(".spinner").show();
-                vscode.postMessage({ command: "generateDownloadLink" });
-                // https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations
-                setTimeout(function() {$(".spinner").hide()}, 30000);
-            });
+            $('.asooutput').hide();
 
             $(".toggle").click(function () {
                 $('.allocatebody').toggle('slow');
             });
 
             $(".toggleoutput").click(function () {
-                $('.periscopeoutput').toggle('slow');
-            });
-
-            $('.copy_text').click(function (e) {
-                e.preventDefault();
-                var copyText = $(this).attr('id');
-
-                document.addEventListener('copy', function (e) {
-                    e.clipboardData.setData('text/plain', copyText);
-                    e.preventDefault();
-                }, true);
-
-                document.execCommand('copy');
+                $('.asooutput').toggle('slow');
             });
         });
 
@@ -88,7 +69,7 @@
                 View Console Output
             </a>
 
-            <div class="panel-body data-container-body periscopeoutput">
+            <div class="panel-body data-container-body asooutput">
                 <div><b>Cert Manager Output</b><br/>{{{breaklines certManagerOutput}}}</div>
 
                 <div><b>Issuer Cert Output</b><br/>{{{breaklines issuerOutput}}}</div>
