@@ -17,7 +17,7 @@ import {
 } from './helpers/azureservicehelper';
 import * as clusters from '../utils/clusters';
 
-export default async function azureServiceOperator(
+export default async function installAzureServiceOperator(
     context: IActionContext,
     target: any
 ): Promise<void> {

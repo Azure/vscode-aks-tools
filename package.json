@@ -25,25 +25,10 @@
         "onView:kubernetes.cloudExplorer",
         "onCommand:aks.detectorDiagnostics",
         "onCommand:aks.periscope",
-        "onCommand:aks.azureServiceOperator",
-        "onCommand:aks.aso.pinned",
-        "onCommand:aks.aso.unpinned"
+        "onCommand:aks.installAzureServiceOperator"
     ],
     "main": "./out/extension",
     "contributes": {
-        "configuration": [
-            {
-                "title": "ASO Pinned Configuration",
-                "properties": {
-                    "aso.pinned": {
-                        "type": "string",
-                        "default": [],
-                        "description": "Pinned ASO resources",
-                        "scope": "window"
-                    }
-                }
-            }
-        ],
         "commands": [
             {
                 "command": "aks.selectSubscriptions",
@@ -70,16 +55,8 @@
                 "title": "Browse CI/CD Workflows"
             },
             {
-                "command": "aks.azureServiceOperator",
+                "command": "aks.installAzureServiceOperator",
                 "title": "Install Azure Service Operator"
-            },
-            {
-                "command": "aks.aso.pinned",
-                "title": "Pin"
-            },
-            {
-                "command": "aks.aso.unpinned",
-                "title": "Unpin"
             }
         ],
         "menus": {
@@ -124,16 +101,8 @@
                     "group": "9@1"
                 },
                 {
-                    "command": "aks.azureServiceOperator",
+                    "command": "aks.installAzureServiceOperator",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
-                },
-                {
-                    "command": "aks.aso.pinned",
-                    "when": "viewItem =~ /aks\\.aso\\.allservices\\.serviceitem/i"
-                },
-                {
-                    "command": "aks.aso.unpinned",
-                    "when": "viewItem =~ /aks\\.aso\\.azureservices\\.pinnedserviceitem/i"
                 }
             ]
         }
