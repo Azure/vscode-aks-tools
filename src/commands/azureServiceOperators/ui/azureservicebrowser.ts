@@ -1,76 +1,12 @@
-// import { TreeItem, TreeItemCollapsibleState } from 'vscode';
-import { TreeItem, TreeItemCollapsibleState } from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import * as vscode from 'vscode';
 
- export class AzureServiceBrowser implements k8s.ClusterExplorerV1.NodeContributor {
-    constructor(private readonly explorer: k8s.ClusterExplorerV1) {}
-    contributesChildren(parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): boolean {
-        return !!parent && parent.nodeType === 'context';
-    }
-    async getChildren(parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): Promise<k8s.ClusterExplorerV1.Node[]> {
-        if (this.contributesChildren(parent)) {
-            return [new AzureServicesFolderNode(this.explorer)];
-        }
-        return [];
-    }
-}
+export async function AzureServiceBrowser(explorer: k8s.ClusterExplorerV1): Promise<k8s.ClusterExplorerV1.NodeContributor> {
+    const allKinds = await allServiceKinds();
+    const allFolderChildren = allKinds!.map((k) => explorer.nodeSources.resourceFolder(k.displayName, k.displayName, k.manifestKind, k.abbreviation));
 
- class AzureServicesFolderNode implements k8s.ClusterExplorerV1.Node {
-    constructor(private readonly explorer: k8s.ClusterExplorerV1) {}
-    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
-        const pinnedNodes = (await pinnedServiceKinds()).map((k) => new PinnedAzureServiceKindNode(this.explorer, k));
-        const allNode = new AllAzureServicesFolderNode(this.explorer);
-        return [...pinnedNodes, allNode];
-    }
-    getTreeItem(): TreeItem {
-        const treeItem = new TreeItem("Azure Services", TreeItemCollapsibleState.Collapsed);
-        treeItem.contextValue = "aks.aso.azureservices";
-        return treeItem;
-    }
-}
-
- class AllAzureServicesFolderNode implements k8s.ClusterExplorerV1.Node {
-    constructor(private readonly explorer: k8s.ClusterExplorerV1) {}
-    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
-        const all = await allServiceKinds();
-
-        return all!.map((k) => new AzureServiceKindNode(this.explorer, k));
-    }
-    getTreeItem(): TreeItem {
-        const treeItem = new TreeItem("All Service Types", TreeItemCollapsibleState.Collapsed);
-        treeItem.contextValue = "aks.aso.allservices";
-        return treeItem;
-    }
-
- }
-
- class AzureServiceKindNode  implements k8s.ClusterExplorerV1.Node {
-    constructor(private readonly explorer: k8s.ClusterExplorerV1, private readonly kind: AzureServiceKind) {}
-    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
-        const allFolderChildren = this.explorer.nodeSources.resourceFolder(this.kind.displayName, this.kind.displayName, this.kind.manifestKind, this.kind.abbreviation);
-        return allFolderChildren.nodes();
-    }
-    getTreeItem(): TreeItem {
-        const treeItem = new TreeItem(this.kind.displayName, TreeItemCollapsibleState.Collapsed);
-        treeItem.contextValue = "aks.aso.allservices.serviceitem";
-
-        return treeItem;
-    }
-}
-
-class PinnedAzureServiceKindNode  implements k8s.ClusterExplorerV1.Node {
-    constructor(private readonly explorer: k8s.ClusterExplorerV1, private readonly kind: AzureServiceKind) {}
-    async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
-        const allFolderChildren = this.explorer.nodeSources.resourceFolder(this.kind.displayName, this.kind.displayName, this.kind.manifestKind, this.kind.abbreviation);
-
-        return allFolderChildren.nodes();
-    }
-    getTreeItem(): TreeItem {
-        const treeItem = new TreeItem(this.kind.displayName, TreeItemCollapsibleState.Collapsed);
-        treeItem.contextValue = "aks.aso.azureservices.pinnedserviceitem";
-        return treeItem;
-    }
+    const servicesFolder = explorer.nodeSources.groupingFolder("Azure Services", undefined, ...allFolderChildren);
+    return servicesFolder.at(undefined);
 }
 
 export interface AzureServiceKind {
@@ -79,13 +15,6 @@ export interface AzureServiceKind {
     readonly abbreviation: string;
 }
 
-async function pinnedServiceKinds(): Promise<AzureServiceKind[]> {
-    const pinnedKindNames = <AzureServiceKind[]>vscode.workspace.getConfiguration().get('aso.pinned');
-
-    return pinnedKindNames;
-}
-
-// should be errorable but skip for prototype
 async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
     const kubectl = await k8s.extension.kubectl.v1;
 
