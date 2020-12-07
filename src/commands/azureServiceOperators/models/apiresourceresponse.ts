@@ -5,4 +5,4 @@ export interface APIResourceResponce {
     // readonly namespaced: string;
     readonly kind: string;
     readonly resourceType: string;
-   }
+}

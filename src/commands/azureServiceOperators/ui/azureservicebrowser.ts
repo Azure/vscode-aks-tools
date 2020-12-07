@@ -9,7 +9,7 @@ export async function AzureServiceBrowser(explorer: k8s.ClusterExplorerV1): Prom
     return servicesFolder.at(undefined);
 }
 
-export interface AzureServiceKind {
+interface AzureServiceKind {
     readonly displayName: string;
     readonly manifestKind: string;
     readonly abbreviation: string;
@@ -22,25 +22,27 @@ async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return undefined;
     }
-    const srASOAPIResourceCommand = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
-    if (!srASOAPIResourceCommand || srASOAPIResourceCommand.code !== 0) {
-        vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${srASOAPIResourceCommand?.stderr}.`);
+    const asoAPIResourceCommand = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
+    if (!asoAPIResourceCommand || asoAPIResourceCommand.code !== 0) {
+        vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommand?.stderr}.`);
         return undefined;
     }
 
-    const treeResourceItems = srASOAPIResourceCommand.stdout.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-    return treeResourceItems.map((l) => parseServiceResource(l));
+    const treeResourceItems = asoAPIResourceCommand.stdout.split("\n").map((line: string) => line.trim()).filter((line: string | any[]) => line.length > 0);
+
+    return treeResourceItems.map((item: string) => parseServiceResource(item)!);
 }
 
-function parseServiceResource(text: string): AzureServiceKind {
-    const bits = text.split(' ').filter((s) => s.length > 0);
-    if (bits.length === 4) {
+function parseServiceResource(apiResourceLineItem: string): AzureServiceKind | undefined {
+    const apiResource = apiResourceLineItem.split(' ').filter((s) => s.length > 0);
+    if (apiResource.length === 4) {
         // name, apigroup, namespaced, kind
-        return { displayName: bits[3], manifestKind: bits[3], abbreviation: bits[0] };
-    } else if (bits.length === 5) {
+        return { displayName: apiResource[3], manifestKind: apiResource[3], abbreviation: apiResource[0] };
+    } else if (apiResource.length === 5) {
         // name, shortnames, apigroup, namespaced, kind
-        return { displayName: bits[4], manifestKind: bits[4], abbreviation: bits[0] };
+        return { displayName: apiResource[4], manifestKind: apiResource[4], abbreviation: apiResource[0] };
     } else {
-        return { displayName: "WAT " + text, manifestKind: "WAT", abbreviation: "wat" };
+        vscode.window.showWarningMessage(`Invalid api-resource output from azure service operator...`);
+        return undefined;
     }
 }
