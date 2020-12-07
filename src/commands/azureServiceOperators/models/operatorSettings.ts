@@ -4,4 +4,4 @@ export interface OperatorSettings {
     readonly appId: string;
     readonly clientSecret: string;
     readonly cloudEnv: string;
-   }
+}
