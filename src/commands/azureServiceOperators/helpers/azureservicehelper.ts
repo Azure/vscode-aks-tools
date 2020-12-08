@@ -7,6 +7,7 @@ import { getExtensionPath } from '../../utils/host';
 import { OperatorSettings } from '../models/operatorSettings';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
+import { InstallationResponse } from '../models/installationResponse';
 const tmp = require('tmp');
 
 export async function getAzureServicePrincipal(
@@ -15,12 +16,12 @@ export async function getAzureServicePrincipal(
 
     const optionsAppId: vscode.InputBoxOptions = {
         prompt: "AppID of Service Principal: ",
-        placeHolder: "AppId of Service Principal",
+        placeHolder: "Enter AppId of Service Principal",
         ignoreFocusOut: true
     };
     const optionsPassword: vscode.InputBoxOptions = {
         prompt: "Password of Service Principal",
-        placeHolder: "Password for the Service Principal.",
+        placeHolder: "Enter Password for the Service Principal.",
         ignoreFocusOut: true
     };
 
@@ -36,17 +37,22 @@ export async function getAzureServicePrincipal(
     };
 }
 
-export async function getKubectlGetOperatorsPod(
+export async function getOperatorsPod(
     kubectl: k8s.API<k8s.KubectlV1>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     // kubectl get pods -n operators
-    if (!kubectl.available) return undefined;
+    try {
+        if (!kubectl.available) return undefined;
 
-    const finalOutPut = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-        clusterKubeConfig, "YAML",
-        (f) => kubectl.api.invokeCommand(`get pods -n operators --kubeconfig="${f}"`));
-    return finalOutPut;
+        const finalOutPut = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`get pods -n operators --kubeconfig="${f}"`));
+        return finalOutPut;
+    } catch (e) {
+        vscode.window.showErrorMessage(`Get operator pod had following error: ${e}`);
+        return undefined;
+    }
 }
 
 export async function installCertManager(
@@ -81,11 +87,6 @@ export async function checkCertManagerRolloutStatus(
                 (f) => kubectl.api.invokeCommand(`rollout status -n cert-manager deploy/cert-manager-webhook --kubeconfig="${f}"`));
         }
 
-        if (runResult?.code !== 0) {
-            vscode.window.showErrorMessage(`Cert Manager Rollout had following error: ${runResult?.stderr}`);
-            return undefined;
-        }
-
         return runResult;
     } catch (e) {
         vscode.window.showErrorMessage(`Cert Manager Rollout had following error: ${e}`);
@@ -106,8 +107,8 @@ export async function installOlmCrd(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
         }
-        return runResult;
 
+        return runResult;
     } catch (e) {
         vscode.window.showErrorMessage(`Installing operator lifecycle manager CRD resource had following error: ${e}`);
         return undefined;
@@ -127,8 +128,8 @@ export async function installOlm(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoOlmYamlFile} --kubeconfig="${f}"`));
         }
-        return runResult;
 
+        return runResult;
     } catch (e) {
         vscode.window.showErrorMessage(`Installing operator lifecycle manager resource had following error: ${e}`);
         return undefined;
@@ -148,8 +149,8 @@ export async function installOperator(
                 clusterKubeConfig, "YAML",
                 (f) => kubectl.api.invokeCommand(`create -f ${asoYamlFile} --kubeconfig="${f}"`));
         }
-        return runResult;
 
+        return runResult;
     } catch (e) {
         vscode.window.showErrorMessage(`Installing operator resoruce had following error: ${e}`);
         return undefined;
@@ -221,10 +222,7 @@ export async function installOperatorSettings(
 export function getWebviewContent(
     clustername: string,
     aksExtensionPath: string,
-    outputCertManagerResult: k8s.KubectlV1.ShellResult | undefined,
-    outputIssuerCertResult: k8s.KubectlV1.ShellResult | undefined,
-    outputASOSettingResult: k8s.KubectlV1.ShellResult | undefined,
-    output: k8s.KubectlV1.ShellResult | undefined
+    installationResponse: InstallationResponse
 ): string {
     const stylePathOnDisk = vscode.Uri.file(path.join(aksExtensionPath, 'resources', 'webviews', 'azureserviceoperator', 'azureserviceoperator.css'));
     const htmlPathOnDisk = vscode.Uri.file(path.join(aksExtensionPath, 'resources', 'webviews', 'azureserviceoperator', 'azureserviceoperator.html'));
@@ -232,22 +230,54 @@ export function getWebviewContent(
     const pathUri = htmlPathOnDisk.with({ scheme: 'vscode-resource' });
 
     const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
-    const commandCertManagerOutput = outputCertManagerResult ? outputCertManagerResult.stderr + outputCertManagerResult.stdout : undefined;
-    const commandIssuerOutput = outputIssuerCertResult ? outputIssuerCertResult.stderr + outputIssuerCertResult.stdout : undefined;
-    const commandASOSettingsOutput = outputASOSettingResult ? outputASOSettingResult.stderr + outputASOSettingResult.stdout : undefined;
-    const commandOutput = output ? output.stderr + output.stdout : undefined;
+    const certManagerResult = installationResponse.installCertManagerResult;
+    const certManagerSatatusResult = installationResponse.checkCertManagerRolloutStatusResult;
+    const issuerCertResult = installationResponse.installIssuerCertResult;
+    const olmCrdResult = installationResponse.installOlmCrdResult;
+    const olmResult = installationResponse.installOlmResult;
+    const operatorResult = installationResponse.installOperatorSettingsResult;
+    const operatorSettingsResult = installationResponse.installOperatorResult;
+    const getOperatorsPodResult = installationResponse.getOperatorsPodResult;
+
+    // Standard output of all the installation response.
+    const installCertManagerOutput = certManagerResult ? certManagerResult.stderr + certManagerResult.stdout : undefined;
+    const checkCertManagerRolloutStatusOutput = certManagerSatatusResult ? certManagerSatatusResult.stderr + certManagerSatatusResult.stdout : undefined;
+    const installIssuerCertOutput = issuerCertResult ? issuerCertResult.stderr + issuerCertResult.stdout : undefined;
+    const installOlmCrdOutput = olmCrdResult ? olmCrdResult.stderr + olmCrdResult.stdout : undefined;
+    const installOlmOutput = olmResult ? olmResult.stderr + olmResult.stdout : undefined;
+    const installOperatorOutput = operatorResult ? operatorResult.stderr + operatorResult.stdout : undefined;
+    const installOperatorSettingsOutput = operatorSettingsResult ? operatorSettingsResult.stderr + operatorSettingsResult.stdout : undefined;
+    const getOperatorsPodOutput = getOperatorsPodResult ? getOperatorsPodResult.stderr + getOperatorsPodResult.stdout : undefined;
+
+    // Standard output code of all the installation response.
+    const installCertManagerOutputCode = certManagerResult ? certManagerResult.code : 1;
+    const checkCertManagerRolloutStatusOutputCode = certManagerSatatusResult ? certManagerSatatusResult.code : 1;
+    const installIssuerCertOutputCode = issuerCertResult ? issuerCertResult.code : 1;
+    const installOlmCrdOutputCode = olmCrdResult ? olmCrdResult.code : 1;
+    const installOlmOutputCode = olmResult ? olmResult.code : 1;
+    const installOperatorOutputCode = operatorResult ? operatorResult.code : 1;
+    const installOperatorSettingsOutputCode = operatorSettingsResult ? operatorSettingsResult.code : 1;
+    const getOperatorsPodOutputCode = getOperatorsPodResult ? getOperatorsPodResult.code : 1;
+
+    // If total of outputCode is more than 0 then obviously something failed and display the html error, with std ouput.
+    const outputCode = installCertManagerOutputCode + checkCertManagerRolloutStatusOutputCode +
+        installIssuerCertOutputCode + installOlmCrdOutputCode + installOlmOutputCode +
+        installOperatorOutputCode + installOperatorSettingsOutputCode + getOperatorsPodOutputCode;
 
     htmlHandlerRegisterHelper();
     const template = htmlhandlers.compile(htmldata);
     const data = {
         cssuri: styleUri,
-        storageAccName: "test",
         name: clustername,
-        certManagerOutput: commandCertManagerOutput,
-        issuerOutput: commandIssuerOutput,
-        asoSettingsOutput: commandASOSettingsOutput,
-        output: commandOutput,
-        outputCode: output?.code
+        certManagerOutput: installCertManagerOutput,
+        certManagerRolloutStatus: checkCertManagerRolloutStatusOutput,
+        issuerOutput: installIssuerCertOutput,
+        installOlmCrdOutput: installOlmCrdOutput,
+        installOlmOutput: installOlmOutput,
+        installOperatorOutput: installOperatorOutput,
+        asoSettingsOutput: installOperatorSettingsOutput,
+        getOperatorsPodOutput: getOperatorsPodOutput,
+        outputCode: outputCode
     };
     const webviewcontent = template(data);
 
@@ -272,6 +302,8 @@ function isNonZeroNumber(value: any): boolean {
 }
 
 function breaklines(text: any): any {
-    text = text.replace(/(\r\n|\n|\r)/gm, '<br>');
+    if (text) {
+        text = text.replace(/(\r\n|\n|\r)/gm, '<br>');
+    }
     return text;
 }

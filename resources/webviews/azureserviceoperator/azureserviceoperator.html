@@ -34,12 +34,14 @@
     <div class="heading">
         <h2 class="content-header">Azure Service Operator</h2>
         <br\> The Azure Service Operator comprises of:
-        <br/>
-        - The Custom Resource Definitions (CRDs) for each of the Azure services a Kubernetes user can provision.
-        <br/>
-        - The Kubernetes controller that watches for requests to create Custom Resources for each of these CRDs and creates them.
-        <br/>
-        To help you analyse and identify potential problems or easily share the information during the troubleshooting process.
+            <br />
+            - The Custom Resource Definitions (CRDs) for each of the Azure services a Kubernetes user can provision.
+            <br />
+            - The Kubernetes controller that watches for requests to create Custom Resources for each of these CRDs and
+            creates them.
+            <br />
+            To help you analyse and identify potential problems or easily share the information during the
+            troubleshooting process.
             <a href="https://operatorhub.io/operator/azure-service-operator">Learn more</a></a>
     </div>
 
@@ -47,7 +49,10 @@
     {{#if (equalsZero outputCode)}}
     <div class="container">
         <div class="panel panel-default data-container">
-            
+            <i class="fa status-icon fa-check-circle"
+                style="font-size:14px;color:green;padding-right:5px;padding-bottom:15px;"></i>
+            Azure Service Operator Successfully installed on '{{name}}'. Please see the console output below for more
+            details.
         </div>
     </div>
     {{/if}}
@@ -55,11 +60,10 @@
     {{#if (isNonZeroNumber outputCode)}}
     <div class="critical">
         <i class="fa fa-times-circle" style="font-size:14px;color:red"></i>
-        AKS Periscope failed to run on '{{name}}'. Please see the console output below for more details.
+        Azure Service Operator Failed to install on '{{name}}'. Please see the console output below for more details.
     </div>
     {{/if}}
 
-    {{#if output}}
     <div class="container">
         <div class="panel panel-default data-container">
             <a class="toggleoutput" onclick="$('#collapsed-chevron-output').toggleClass('fa-rotate-180')"
@@ -70,18 +74,42 @@
             </a>
 
             <div class="panel-body data-container-body asooutput">
-                <div><b>Cert Manager Output</b><br/>{{{breaklines certManagerOutput}}}</div>
+                {{#if certManagerOutput}}
+                <div><b>Cert Manager Output</b><br />{{{breaklines certManagerOutput}}}</div>
+                {{/if}}
 
-                <div><b>Issuer Cert Output</b><br/>{{{breaklines issuerOutput}}}</div>
+                {{#if certManagerRolloutStatus}}
+                <div><b>Issuer Cert RollOut Status</b><br />{{{breaklines certManagerRolloutStatus}}}</div>
+                {{/if}}
 
-                <div><b>ASO Setting Apply Output</b><br/>{{{breaklines asoSettingsOutput}}}</div>
+                {{#if issuerOutput}}
+                <div><b>Issuer Cert Output</b><br />{{{breaklines issuerOutput}}}</div>
+                {{/if}}
 
-                <div><b>Operator pod output</b><br/>{{{breaklines output}}}</div>
+                {{#if installOlmCrdOutput}}
+                <div><b>Install Operator Lifecycle CRD Output</b><br />{{{breaklines installOlmCrdOutput}}}</div>
+                {{/if}}
+
+                {{#if installOlmOutput}}
+                <div><b>Install Operator Lifecycle Output</b><br />{{{breaklines installOlmOutput}}}</div>
+                {{/if}}
+
+                {{#if installOperatorOutput}}
+                <div><b>Install Operator Output</b><br />{{{breaklines installOperatorOutput}}}</div>
+                {{/if}}
+
+                {{#if asoSettingsOutput}}
+                <div><b>ASO Setting Apply Output</b><br />{{{breaklines asoSettingsOutput}}}</div>
+                {{/if}}
+
+                {{#if getOperatorsPodOutput}}
+                <div><b>Operator pod output</b><br />{{{breaklines getOperatorsPodOutput}}}</div>
+                {{/if}}
 
             </div>
         </div>
     </div>
-    {{/if}}
+
 </body>
 
 </html>
