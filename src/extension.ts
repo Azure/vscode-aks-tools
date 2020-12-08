@@ -15,7 +15,6 @@ import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azurese
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    const clusterExplorer = await k8s.extension.clusterExplorer.v1;
     context.subscriptions.push(new Reporter(context));
 
     if (cloudExplorer.available) {
@@ -40,10 +39,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommand('aks.installAzureServiceOperator', installAzureServiceOperator );
 
         await registerAzureServiceNodes(context);
-        if (!clusterExplorer.available) {
-            console.log("Unable to register node customizer: " + clusterExplorer.reason);
-            return;
-        }
 
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);

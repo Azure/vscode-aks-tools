@@ -3,9 +3,9 @@ import * as vscode from 'vscode';
 
 export async function AzureServiceBrowser(explorer: k8s.ClusterExplorerV1): Promise<k8s.ClusterExplorerV1.NodeContributor> {
     const allKinds = await allServiceKinds();
-    const allFolderChildren = allKinds!.map((k) => explorer.nodeSources.resourceFolder(k.displayName, k.displayName, k.manifestKind, k.abbreviation));
 
-    const servicesFolder = explorer.nodeSources.groupingFolder("Azure Services", undefined, ...allFolderChildren);
+    const allFolderChildren = allKinds?.map((k) => explorer.nodeSources.resourceFolder(k.displayName, k.displayName, k.manifestKind, k.abbreviation));
+    const servicesFolder = explorer.nodeSources.groupingFolder("Azure Services", undefined, ...allFolderChildren?? []);
     return servicesFolder.at(undefined);
 }
 
@@ -22,13 +22,13 @@ async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return undefined;
     }
-    const asoAPIResourceCommand = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
-    if (!asoAPIResourceCommand || asoAPIResourceCommand.code !== 0) {
-        vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommand?.stderr}.`);
+    const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
+    if (!asoAPIResourceCommandResult || (asoAPIResourceCommandResult.code !== 0 && !asoAPIResourceCommandResult.stdout)) {
+        vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommandResult?.stderr}.`);
         return undefined;
     }
 
-    const treeResourceItems = asoAPIResourceCommand.stdout.split("\n").map((line: string) => line.trim()).filter((line: string | any[]) => line.length > 0);
+    const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line: string) => line.trim()).filter((line: string | any[]) => line.length > 0);
 
     return treeResourceItems.map((item: string) => parseServiceResource(item)!);
 }
