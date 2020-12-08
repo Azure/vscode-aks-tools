@@ -34,12 +34,8 @@ export default async function installAzureServiceOperator(
             clusterExplorer.available) {
 
             const aksCluster = clusterTarget.cloudResource as AksClusterTreeItem;
-            const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
-
-            if (clusterKubeConfig) {
-                await install(aksCluster, clusterKubeConfig);
-                clusterExplorer.api.refresh();
-            }
+            await install(aksCluster);
+            clusterExplorer.api.refresh();
         } else {
             vscode.window.showInformationMessage('This command only applies to AKS clusters.');
         }
@@ -47,18 +43,26 @@ export default async function installAzureServiceOperator(
 }
 
 async function install(
-    aksCluster: AksClusterTreeItem,
-    clusterKubeConfig: string
+    aksCluster: AksClusterTreeItem
 ): Promise<void> {
 
     const kubectl = await k8s.extension.kubectl.v1;
     const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
+
+    if (!kubectl.available) {
+        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+        return undefined;
+    }
+
+    // getKubeconfigYaml handles reporting failure to the user, hence we dont need it here.
+    const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
+    if (!clusterKubeConfig) return undefined;
+
     // Get user input upfront.
     // Get Service Principal AppId and Password from user.
     const operatorSettingsInfo = await longRunning(`Getting Service Principal for Azure Service Operator...`,
         () => getAzureServicePrincipal(aksCluster)
     );
-
     if (!operatorSettingsInfo) return undefined;
 
     // 1) Azure Service Operator requires self-signed certificates for CRD Conversion Webhooks.
