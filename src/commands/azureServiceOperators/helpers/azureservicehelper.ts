@@ -38,13 +38,11 @@ export async function getAzureServicePrincipal(
 }
 
 export async function getOperatorsPod(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     // kubectl get pods -n operators
     try {
-        if (!kubectl.available) return undefined;
-
         const finalOutPut = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
             clusterKubeConfig, "YAML",
             (f) => kubectl.api.invokeCommand(`get pods -n operators --kubeconfig="${f}"`));
@@ -56,17 +54,14 @@ export async function getOperatorsPod(
 }
 
 export async function installCertManager(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
-        let runResult;
-        if (kubectl.available) {
-            const cerManagerFile = "https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml";
-            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                clusterKubeConfig, "YAML",
-                (f) => kubectl.api.invokeCommand(`apply -f ${cerManagerFile} --kubeconfig="${f}"`));
-        }
+        const cerManagerFile = "https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml";
+        const runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`apply -f ${cerManagerFile} --kubeconfig="${f}"`));
 
         return runResult;
     } catch (e) {
@@ -76,16 +71,13 @@ export async function installCertManager(
 }
 
 export async function checkCertManagerRolloutStatus(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
-        let runResult;
-        if (kubectl.available) {
-            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                clusterKubeConfig, "YAML",
-                (f) => kubectl.api.invokeCommand(`rollout status -n cert-manager deploy/cert-manager-webhook --kubeconfig="${f}"`));
-        }
+        const runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`rollout status -n cert-manager deploy/cert-manager-webhook --kubeconfig="${f}"`));
 
         return runResult;
     } catch (e) {
@@ -95,18 +87,14 @@ export async function checkCertManagerRolloutStatus(
 }
 
 export async function installOlmCrd(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
-        let runResult;
-        if (kubectl.available) {
-            const asoCrdYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml";
-
-            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                clusterKubeConfig, "YAML",
-                (f) => kubectl.api.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
-        }
+        const asoCrdYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml";
+        const runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
 
         return runResult;
     } catch (e) {
@@ -116,18 +104,14 @@ export async function installOlmCrd(
 }
 
 export async function installOlm(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
-        let runResult;
-        if (kubectl.available) {
-            const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml";
-
-            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                clusterKubeConfig, "YAML",
-                (f) => kubectl.api.invokeCommand(`create -f ${asoOlmYamlFile} --kubeconfig="${f}"`));
-        }
+        const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml";
+        const runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`create -f ${asoOlmYamlFile} --kubeconfig="${f}"`));
 
         return runResult;
     } catch (e) {
@@ -137,18 +121,14 @@ export async function installOlm(
 }
 
 export async function installOperator(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
-        let runResult;
-        if (kubectl.available) {
-            const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
-
-            runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                clusterKubeConfig, "YAML",
-                (f) => kubectl.api.invokeCommand(`create -f ${asoYamlFile} --kubeconfig="${f}"`));
-        }
+        const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
+        const runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`create -f ${asoYamlFile} --kubeconfig="${f}"`));
 
         return runResult;
     } catch (e) {
@@ -158,24 +138,19 @@ export async function installOperator(
 }
 
 export async function installIssuerCert(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
         const extensionPath = getExtensionPath();
         const templateYAML = tmp.fileSync({ prefix: "aso-issuer", postfix: `.yaml` });
-
         const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'issuerandcertmanager.yaml'));
-
         const issuerandcertmanager = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8');
         fs.writeFileSync(templateYAML.name, issuerandcertmanager);
 
-        let runCommandResult;
-        if (kubectl.available) {
-            runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                clusterKubeConfig, "YAML",
-                (f) => kubectl.api.invokeCommand(`apply -f ${templateYAML.name} --kubeconfig="${f}"`));
-        }
+        const runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`apply -f ${templateYAML.name} --kubeconfig="${f}"`));
 
         return runCommandResult;
     } catch (e) {
@@ -185,7 +160,7 @@ export async function installIssuerCert(
 }
 
 export async function installOperatorSettings(
-    kubectl: k8s.API<k8s.KubectlV1>,
+    kubectl: k8s.APIAvailable<any>,
     operatorSettingInfo: OperatorSettings,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
@@ -201,16 +176,12 @@ export async function installOperatorSettings(
             .replace("<CLIENT_SECRET>", operatorSettingInfo.clientSecret)
             .replace("<ENV_CLOUD>", operatorSettingInfo.cloudEnv);
 
-
         const templateYaml = tmp.fileSync({ prefix: "aso-operatorsettings", postfix: `.yaml` });
         fs.writeFileSync(templateYaml.name, azureoperatorsettings);
 
-        let runCommandResult;
-        if (kubectl.available) {
-            runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-                clusterKubeConfig, "YAML",
-                (f) => kubectl.api.invokeCommand(`apply -f ${templateYaml.name} --kubeconfig="${f}"`));
-        }
+        const runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`apply -f ${templateYaml.name} --kubeconfig="${f}"`));
 
         return runCommandResult;
     } catch (e) {
