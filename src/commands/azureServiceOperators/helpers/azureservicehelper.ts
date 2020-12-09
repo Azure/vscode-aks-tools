@@ -210,49 +210,56 @@ export function getWebviewContent(
     const operatorSettingsResult = installationResponse.installOperatorResult;
     const getOperatorsPodResult = installationResponse.getOperatorsPodResult;
 
-    // Standard output of all the installation response.
-    const installCertManagerOutput = certManagerResult ? certManagerResult.stderr + certManagerResult.stdout : undefined;
-    const checkCertManagerRolloutStatusOutput = certManagerSatatusResult ? certManagerSatatusResult.stderr + certManagerSatatusResult.stdout : undefined;
-    const installIssuerCertOutput = issuerCertResult ? issuerCertResult.stderr + issuerCertResult.stdout : undefined;
-    const installOlmCrdOutput = olmCrdResult ? olmCrdResult.stderr + olmCrdResult.stdout : undefined;
-    const installOlmOutput = olmResult ? olmResult.stderr + olmResult.stdout : undefined;
-    const installOperatorOutput = operatorResult ? operatorResult.stderr + operatorResult.stdout : undefined;
-    const installOperatorSettingsOutput = operatorSettingsResult ? operatorSettingsResult.stderr + operatorSettingsResult.stdout : undefined;
-    const getOperatorsPodOutput = getOperatorsPodResult ? getOperatorsPodResult.stderr + getOperatorsPodResult.stdout : undefined;
-
-    // Standard output code of all the installation response.
-    const installCertManagerOutputCode = certManagerResult ? certManagerResult.code : 1;
-    const checkCertManagerRolloutStatusOutputCode = certManagerSatatusResult ? certManagerSatatusResult.code : 1;
-    const installIssuerCertOutputCode = issuerCertResult ? issuerCertResult.code : 1;
-    const installOlmCrdOutputCode = olmCrdResult ? olmCrdResult.code : 1;
-    const installOlmOutputCode = olmResult ? olmResult.code : 1;
-    const installOperatorOutputCode = operatorResult ? operatorResult.code : 1;
-    const installOperatorSettingsOutputCode = operatorSettingsResult ? operatorSettingsResult.code : 1;
-    const getOperatorsPodOutputCode = getOperatorsPodResult ? getOperatorsPodResult.code : 1;
+    let exitCode = 0;
 
     // If total of outputCode is more than 0 then obviously something failed and display the html error, with std ouput.
-    const outputCode = installCertManagerOutputCode + checkCertManagerRolloutStatusOutputCode +
-        installIssuerCertOutputCode + installOlmCrdOutputCode + installOlmOutputCode +
-        installOperatorOutputCode + installOperatorSettingsOutputCode + getOperatorsPodOutputCode;
+    exitCode = installationExitCodeResponse(exitCode, certManagerResult);
+    exitCode = installationExitCodeResponse(exitCode, certManagerSatatusResult);
+    exitCode = installationExitCodeResponse(exitCode, issuerCertResult);
+    exitCode = installationExitCodeResponse(exitCode, olmCrdResult);
+    exitCode = installationExitCodeResponse(exitCode, olmResult);
+    exitCode = installationExitCodeResponse(exitCode, operatorResult);
+    exitCode = installationExitCodeResponse(exitCode, operatorSettingsResult);
+    exitCode = installationExitCodeResponse(exitCode, getOperatorsPodResult);
 
     htmlHandlerRegisterHelper();
     const template = htmlhandlers.compile(htmldata);
     const data = {
         cssuri: styleUri,
         name: clustername,
-        certManagerOutput: installCertManagerOutput,
-        certManagerRolloutStatus: checkCertManagerRolloutStatusOutput,
-        issuerOutput: installIssuerCertOutput,
-        installOlmCrdOutput: installOlmCrdOutput,
-        installOlmOutput: installOlmOutput,
-        installOperatorOutput: installOperatorOutput,
-        asoSettingsOutput: installOperatorSettingsOutput,
-        getOperatorsPodOutput: getOperatorsPodOutput,
-        outputCode: outputCode
+        certManagerOutput: installationStdResponse(certManagerResult),
+        certManagerRolloutStatus: installationStdResponse(certManagerSatatusResult),
+        issuerOutput: installationStdResponse(issuerCertResult),
+        installOlmCrdOutput: installationStdResponse(olmCrdResult),
+        installOlmOutput: installationStdResponse(olmResult),
+        installOperatorOutput: installationStdResponse(operatorResult),
+        asoSettingsOutput: installationStdResponse(operatorSettingsResult),
+        getOperatorsPodOutput: installationStdResponse(getOperatorsPodResult),
+        outputCode: exitCode
     };
     const webviewcontent = template(data);
 
     return webviewcontent;
+}
+
+function installationStdResponse(
+    installShellResult: k8s.KubectlV1.ShellResult | undefined
+): string | undefined {
+    // Standard output code of all the installation response.
+    return installShellResult ? installShellResult.stderr + installShellResult.stdout : undefined
+}
+
+function installationExitCodeResponse(
+    exitCode: number,
+    installShellResult: k8s.KubectlV1.ShellResult | undefined
+): number {
+
+    if (exitCode === 0 && installShellResult) {
+        exitCode += installShellResult.code;
+        return exitCode;
+    }
+
+    return exitCode;
 }
 
 export function htmlHandlerRegisterHelper() {
