@@ -26,33 +26,40 @@ export default async function installAzureServiceOperator(
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
 
-    if (cloudExplorer.available && kubectl.available) {
-        const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
-
-        if (clusterTarget && clusterTarget.cloudName === "Azure" &&
-            clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster" &&
-            clusterExplorer.available) {
-
-            const aksCluster = clusterTarget.cloudResource as AksClusterTreeItem;
-            await install(aksCluster);
-            clusterExplorer.api.refresh();
-        } else {
-            vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-        }
-    }
-}
-
-async function install(
-    aksCluster: AksClusterTreeItem
-): Promise<void> {
-
-    const kubectl = await k8s.extension.kubectl.v1;
-    const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
-
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return undefined;
     }
+
+    if (!cloudExplorer.available) {
+        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
+        return undefined;
+    }
+
+    if (!clusterExplorer.available) {
+        vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
+        return undefined;
+    }
+
+    const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
+
+    if (clusterTarget && clusterTarget.cloudName === "Azure" &&
+        clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster" &&
+        clusterExplorer.available) {
+
+        const aksCluster = clusterTarget.cloudResource as AksClusterTreeItem;
+        await install(kubectl.api, aksCluster);
+        clusterExplorer.api.refresh();
+    } else {
+        vscode.window.showInformationMessage('This command only applies to AKS clusters.');
+    }
+}
+
+async function install(
+    kubectl: k8s.KubectlV1,
+    aksCluster: AksClusterTreeItem
+): Promise<void> {
+    const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
 
     // getKubeconfigYaml handles reporting failure to the user, hence we dont need it here.
     const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
