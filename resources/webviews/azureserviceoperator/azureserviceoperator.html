@@ -45,25 +45,20 @@
             <a href="https://operatorhub.io/operator/azure-service-operator">Learn more</a></a>
     </div>
 
-
-    {{#if (equalsZero outputCode)}}
     <div class="container">
+        {{#if isSuccess}}
         <div class="panel panel-default data-container">
             <i class="fa status-icon fa-check-circle"
                 style="font-size:14px;color:green;padding-right:5px;padding-bottom:15px;"></i>
-            Azure Service Operator Successfully installed on '{{name}}'. Please see the console output below for more
-            details.
+            {{mainMessage}}
         </div>
+        {{else}}
+        <div class="critical">
+            <i class="fa fa-times-circle" style="font-size:14px;color:red"></i>
+            {{mainMessage}}
+        </div>
+        {{/if}}
     </div>
-    {{/if}}
-
-    {{#if (isNonZeroNumber outputCode)}}
-    <div class="critical">
-        <i class="fa fa-times-circle" style="font-size:14px;color:red"></i>
-        Azure Service Operator Failed to install on '{{name}}'. Please see the console output below for more details.
-    </div>
-    {{/if}}
-
     <div class="container">
         <div class="panel panel-default data-container">
             <a class="toggleoutput" onclick="$('#collapsed-chevron-output').toggleClass('fa-rotate-180')"
@@ -74,38 +69,10 @@
             </a>
 
             <div class="panel-body data-container-body asooutput">
-                {{#if certManagerOutput}}
-                <div><b>Cert Manager Output</b><br />{{{breaklines certManagerOutput}}}</div>
-                {{/if}}
 
-                {{#if certManagerRolloutStatus}}
-                <div><b>Issuer Cert RollOut Status</b><br />{{{breaklines certManagerRolloutStatus}}}</div>
-                {{/if}}
-
-                {{#if issuerOutput}}
-                <div><b>Issuer Cert Output</b><br />{{{breaklines issuerOutput}}}</div>
-                {{/if}}
-
-                {{#if installOlmCrdOutput}}
-                <div><b>Install Operator Lifecycle CRD Output</b><br />{{{breaklines installOlmCrdOutput}}}</div>
-                {{/if}}
-
-                {{#if installOlmOutput}}
-                <div><b>Install Operator Lifecycle Output</b><br />{{{breaklines installOlmOutput}}}</div>
-                {{/if}}
-
-                {{#if installOperatorOutput}}
-                <div><b>Install Operator Output</b><br />{{{breaklines installOperatorOutput}}}</div>
-                {{/if}}
-
-                {{#if asoSettingsOutput}}
-                <div><b>ASO Setting Apply Output</b><br />{{{breaklines asoSettingsOutput}}}</div>
-                {{/if}}
-
-                {{#if getOperatorsPodOutput}}
-                <div><b>Operator pod output</b><br />{{{breaklines getOperatorsPodOutput}}}</div>
-                {{/if}}
-
+                {{#each resultLogs}}
+                <div><b>{{title}}</b><br />{{{breaklines messages}}}</div>
+                {{/each}}
             </div>
         </div>
     </div>
