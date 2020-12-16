@@ -2,21 +2,21 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from 'vscode-azureextensionui';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { getExtensionPath, longRunning } from '../utils/host';
 import {
-    getWebviewContent,
     getOperatorsPod,
     installCertManager,
     installIssuerCert,
-    getAzureServicePrincipal,
     installOperatorSettings,
     checkCertManagerRolloutStatus,
     installOlmCrd,
     installOlm,
-    installOperator
-} from './helpers/azureservicehelper';
+    installOperator } from './helpers/azureservicehelper';
+import {
+    convertAzureCloudEnv,
+    createASOWebView } from './helpers/azureservicehtmlhelper';
 import * as clusters from '../utils/clusters';
 import { InstallationResponse } from './models/installationResponse';
+import { getExtensionPath, longRunning } from '../utils/host';
 
 export default async function installAzureServiceOperator(
     context: IActionContext,
@@ -55,7 +55,7 @@ export default async function installAzureServiceOperator(
     }
 }
 
-async function install(
+export async function install(
     kubectl: k8s.KubectlV1,
     aksCluster: AksClusterTreeItem
 ): Promise<void> {
@@ -67,79 +67,15 @@ async function install(
 
     // Get user input upfront.
     // Get Service Principal AppId and Password from user.
-    const operatorSettingsInfo = await longRunning(`Getting Service Principal for Azure Service Operator...`,
-        () => getAzureServicePrincipal(aksCluster)
-    );
-    if (!operatorSettingsInfo) return undefined;
-
-    // 1) Azure Service Operator requires self-signed certificates for CRD Conversion Webhooks.
-    installationResponse.installCertManagerResult = await longRunning(`Installing Cert Manager for Azure Service Operator...`,
-        () => installCertManager(kubectl, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.installCertManagerResult, installationResponse))) return undefined;
-
-    // 2) The cert-manager pods should be running before proceeding to the next step.
-    installationResponse.checkCertManagerRolloutStatusResult = await longRunning(`Checking Cert Manager Rollout Status...`,
-        () => checkCertManagerRolloutStatus(kubectl, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.checkCertManagerRolloutStatusResult, installationResponse))) return undefined;
-
-    // 3) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
-    // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
-    installationResponse.installOlmCrdResult = await longRunning(`Installing Operator Lifecycle Manager CRD resource...`,
-        () => installOlmCrd(kubectl, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.installOlmCrdResult, installationResponse))) return undefined;
-
-    installationResponse.installOlmResult = await longRunning(`Installing Operator Lifecycle Manager resource...`,
-        () => installOlm(kubectl, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.installOlmResult, installationResponse))) return undefined;
-
-    installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
-        () => installOperator(kubectl, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.installOperatorResult, installationResponse))) return undefined;
-
-    // 4) IssuerCert apply with Operator namespace created above.
-    installationResponse.installIssuerCertResult = await longRunning(`Installing the Issuer and Certificate cert-manager resources....`,
-        () => installIssuerCert(kubectl, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.installIssuerCertResult, installationResponse))) return undefined;
-
-    // 5) Run kubectl apply for azureoperatorsettings.yaml
-    installationResponse.installOperatorSettingsResult = await longRunning(`Installing Azure Service Operator Settings...`,
-        () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.installOperatorSettingsResult, installationResponse))) return undefined;
-
-    // 6) Final step: Get the azure service operator pod. - kubectl get pods -n operators
-    installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
-        () => getOperatorsPod(kubectl, clusterKubeConfig)
-    );
-    if (!(await isInstallationSuccessfull(installationResponse.getOperatorsPodResult, installationResponse))) return undefined;
-
-    await createASOWebView(installationResponse);
+    // Then start the installation process.
+    await getUserInputAndInstallASO(kubectl, installationResponse, aksCluster, true);
 }
 
-async function isInstallationSuccessfull(
-    installationShellResult: k8s.KubectlV1.ShellResult | undefined,
-    installationResponse: InstallationResponse
-): Promise<boolean> {
-    let success = true;
-
-    if (!installationShellResult) return false;
-
-    if (installationShellResult.code !== 0) {
-        await createASOWebView(installationResponse);
-        success = false;
-    }
-
-    return success;
-}
-
-async function createASOWebView(
-    installationResponse: InstallationResponse
+export async function getUserInputAndInstallASO(
+    kubectl: k8s.KubectlV1,
+    installationResponse: InstallationResponse,
+    aksCluster: AksClusterTreeItem,
+    getUserInput = false
 ): Promise<void | undefined> {
     const panel = vscode.window.createWebviewPanel(
         `Azure Service Operator`,
@@ -158,8 +94,107 @@ async function createASOWebView(
     }
 
     // For the case of successful run of the tool we render webview with the output information.
-    panel.webview.html = getWebviewContent(
-        installationResponse.clusterName,
-        extensionPath,
-        installationResponse);
+    await createASOWebView(panel, extensionPath, installationResponse, getUserInput);
+
+    panel.webview.onDidReceiveMessage(
+        async (message) => {
+            if (message.appid && message.password) {
+                const inputAppIdBox = message.appid;
+                const inputPasswordBox = message.password;
+                const cloudName = convertAzureCloudEnv(aksCluster.root.environment.name);
+
+                if (!inputAppIdBox || !inputPasswordBox) {
+                    return undefined;
+                }
+
+                if (!cloudName) {
+                    vscode.window.showWarningMessage(`Cloud environment name ${cloudName} is not supported.`);
+                    return undefined;
+                }
+
+                const operatorSettingsInfo = {
+                    tenantId: aksCluster.root.tenantId,
+                    subId: aksCluster.subscription.subscriptionId!,
+                    appId: inputAppIdBox,
+                    clientSecret: inputPasswordBox,
+                    cloudEnv: cloudName
+                };
+
+                const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
+
+                // getKubeconfigYaml handles reporting failure to the user, hence we dont need it here.
+                const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
+                if (!clusterKubeConfig) return undefined;
+
+                // 1) Azure Service Operator requires self-signed certificates for CRD Conversion Webhooks.
+                installationResponse.installCertManagerResult = await longRunning(`Installing Cert Manager for Azure Service Operator...`,
+                    () => installCertManager(kubectl, clusterKubeConfig)
+                );
+                if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installCertManagerResult, installationResponse))) return undefined;
+
+                // 2) The cert-manager pods should be running before proceeding to the next step.
+                installationResponse.checkCertManagerRolloutStatusResult = await longRunning(`Checking Cert Manager Rollout Status...`,
+                    () => checkCertManagerRolloutStatus(kubectl, clusterKubeConfig)
+                );
+                if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.checkCertManagerRolloutStatusResult, installationResponse))) return undefined;
+
+                // 3) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
+                // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
+                installationResponse.installOlmCrdResult = await longRunning(`Installing Operator Lifecycle Manager CRD resource...`,
+                    () => installOlmCrd(kubectl, clusterKubeConfig)
+                );
+                if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmCrdResult, installationResponse))) return undefined;
+
+                installationResponse.installOlmResult = await longRunning(`Installing Operator Lifecycle Manager resource...`,
+                    () => installOlm(kubectl, clusterKubeConfig)
+                );
+                if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmResult, installationResponse))) return undefined;
+
+                installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
+                    () => installOperator(kubectl, clusterKubeConfig)
+                );
+                if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorResult, installationResponse))) return undefined;
+
+                // 4) IssuerCert apply with Operator namespace created above.
+                installationResponse.installIssuerCertResult = await longRunning(`Installing the Issuer and Certificate cert-manager resources....`,
+                    () => installIssuerCert(kubectl, clusterKubeConfig)
+                );
+                if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installIssuerCertResult, installationResponse))) return undefined;
+
+                // 5) Run kubectl apply for azureoperatorsettings.yaml
+                installationResponse.installOperatorSettingsResult = await longRunning(`Installing Azure Service Operator Settings...`,
+                    () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig)
+                );
+                if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
+
+                // 6) Final step: Get the azure service operator pod. - kubectl get pods -n operators
+                installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
+                    () => getOperatorsPod(kubectl, clusterKubeConfig)
+                );
+                if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.getOperatorsPodResult, installationResponse))) return undefined;
+
+                await createASOWebView(panel, extensionPath, installationResponse);
+            }
+            return undefined;
+        },
+        undefined
+    );
+}
+
+function isInstallationSuccessfull(
+    panel: vscode.WebviewPanel,
+    extensionPath: string,
+    installationShellResult: k8s.KubectlV1.ShellResult | undefined,
+    installationResponse: InstallationResponse
+): boolean {
+    let success = true;
+
+    if (!installationShellResult) return false;
+
+    if (installationShellResult.code !== 0) {
+        createASOWebView(panel, extensionPath, installationResponse);
+        success = false;
+    }
+
+    return success;
 }
