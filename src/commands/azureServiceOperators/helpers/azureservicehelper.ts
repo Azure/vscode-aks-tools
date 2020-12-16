@@ -18,7 +18,7 @@ export async function startInstallation(
     installationResponse: InstallationResponse,
     aksCluster: AksClusterTreeItem,
     operatorSettingsInfo: OperatorSettings
-) {
+): Promise<void | undefined> {
 
     // getKubeconfigYaml handles reporting failure to the user, hence we dont need it here.
     const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
