@@ -16,6 +16,22 @@ interface LogSection {
     messages?: string;
 }
 
+export function createASOWebViewPanel(
+    installationResponse: InstallationResponse
+): vscode.WebviewPanel {
+    const panel = vscode.window.createWebviewPanel(
+        `Azure Service Operator`,
+        `Azure service Operator: ${installationResponse.clusterName}`,
+        vscode.ViewColumn.Active,
+        {
+            enableScripts: true,
+            enableCommandUris: true
+        }
+    );
+
+    return panel;
+}
+
 export function createASOWebView(
     panel: vscode.WebviewPanel,
     extensionPath: string,
