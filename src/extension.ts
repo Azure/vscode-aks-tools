@@ -36,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.periscope', periscope);
         registerCommandWithTelemetry('azure-deploy.configureCicdPipeline', configurePipeline);
         registerCommandWithTelemetry('azure-deploy.browseCicdPipeline', browsePipeline);
-        registerCommand('aks.installAzureServiceOperator', installAzureServiceOperator );
+        registerCommandWithTelemetry('aks.installAzureServiceOperator', installAzureServiceOperator );
 
         await registerAzureServiceNodes(context);
 
