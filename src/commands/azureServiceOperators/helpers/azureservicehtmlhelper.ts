@@ -16,6 +16,17 @@ interface LogSection {
     messages?: string;
 }
 
+enum LogsTitle {
+    "Cert Manager Output",
+    "Issuer Cert RollOut Status",
+    "Issuer Cert Output",
+    "Install Operator Lifecycle CRD Output",
+    "Install Operator Lifecycle Output",
+    "Install Operator Output",
+    "Setting Apply Operator Output",
+    "Operator pod output",
+}
+
 export function createASOWebViewPanel(
     installationResponse: InstallationResponse
 ): vscode.WebviewPanel {
@@ -99,43 +110,23 @@ function getOrganisedInstallResult(
         installResults.mainMessage = `Azure Service Operator Failed to install on ${clustername}. Please see the console output below for more details.`;
     }
 
-    const logs = [];
-
-    if (certManagerResult) {
-        logs.push(getHtmlLogSectionFromResponse("Cert Manager Output", certManagerResult));
-    }
-
-    if (certManagerSatatusResult) {
-        logs.push(getHtmlLogSectionFromResponse("Issuer Cert RollOut Status", certManagerSatatusResult));
-    }
-
-    if (issuerCertResult) {
-        logs.push(getHtmlLogSectionFromResponse("Issuer Cert Output", issuerCertResult));
-    }
-
-    if (olmCrdResult) {
-        logs.push(getHtmlLogSectionFromResponse("Install Operator Lifecycle CRD Output", olmCrdResult));
-    }
-
-    if (olmResult) {
-        logs.push(getHtmlLogSectionFromResponse("Install Operator Lifecycle Output", olmResult));
-    }
-
-    if (operatorResult) {
-        logs.push(getHtmlLogSectionFromResponse("Install Operator Output", operatorResult));
-    }
-
-    if (operatorSettingsResult) {
-        logs.push(getHtmlLogSectionFromResponse("ASO Setting Apply Output", operatorSettingsResult));
-    }
-
-    if (getOperatorsPodResult) {
-        logs.push(getHtmlLogSectionFromResponse("Operator pod output", getOperatorsPodResult));
-    }
-
-    installResults.logs = logs;
+    installResults.logs = installationLogsResponse(installResultCollection);
 
     return installResults;
+}
+
+function installationLogsResponse(
+    installShellResult: (k8s.KubectlV1.ShellResult | undefined)[],
+): LogSection[] {
+    const logs: LogSection[] = [];
+
+    installShellResult.filter(Boolean).forEach((sr, index) => {
+        if (sr) {
+            logs.push(getHtmlLogSectionFromResponse(Object.values(LogsTitle)[index].toString(), sr));
+        }
+    });
+
+    return logs;
 }
 
 function getHtmlLogSectionFromResponse(
