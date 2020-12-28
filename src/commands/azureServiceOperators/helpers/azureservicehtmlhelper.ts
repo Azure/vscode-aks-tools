@@ -16,17 +16,6 @@ interface LogSection {
     messages?: string;
 }
 
-enum LogsTitle {
-    "Cert Manager Output",
-    "Issuer Cert RollOut Status",
-    "Issuer Cert Output",
-    "Install Operator Lifecycle CRD Output",
-    "Install Operator Lifecycle Output",
-    "Install Operator Output",
-    "Setting Apply Operator Output",
-    "Operator pod output",
-}
-
 export function createASOWebViewPanel(
     installationResponse: InstallationResponse
 ): vscode.WebviewPanel {
@@ -120,9 +109,20 @@ function installationLogsResponse(
 ): LogSection[] {
     const logs: LogSection[] = [];
 
+    const logsTitle: { [order: number]: string } = {
+        1: "Cert Manager Output",
+        2: "Issuer Cert RollOut Status",
+        3: "Issuer Cert Output",
+        4: "Install Operator Lifecycle CRD Output",
+        5: "Install Operator Lifecycle Output",
+        6: "Install Operator Output",
+        7: "Setting Apply Operator Output",
+        8: "Operator pod output",
+    };
+
     installShellResult.filter(Boolean).forEach((sr, index) => {
         if (sr) {
-            logs.push(getHtmlLogSectionFromResponse(Object.values(LogsTitle)[index].toString(), sr));
+            logs.push(getHtmlLogSectionFromResponse(logsTitle[index], sr));
         }
     });
 
@@ -171,15 +171,12 @@ function breaklines(text: any): any {
 
 export function convertAzureCloudEnv(cloudName: string): string | undefined {
     // Cloud env map: https://docs.microsoft.com/en-us/azure/storage/common/storage-powershell-independent-clouds#get-endpoint-using-get-azenvironment
-    if (cloudName === "AzureCloud") {
-        return "AzurePublicCloud";
-    }
-    if (cloudName === "AzureUSGovernment") {
-        return "AzureUSGovernmentCloud";
-    }
-    if (cloudName === "AzureChinaCloud" || cloudName === "AzureGermanCloud") {
-        return cloudName;
-    }
+    const cloudEnvironment: { [cloudType: string]: string } = {
+        AzureChinaCloud: "AzureChinaCloud",
+        AzureCloud: "AzurePublicCloud",
+        AzureGermanCloud: "AzureGermanCloud",
+        AzureUSGovernment: "AzureUSGovernmentCloud",
+      };
 
-    return undefined;
+    return cloudEnvironment[cloudName];
 }
