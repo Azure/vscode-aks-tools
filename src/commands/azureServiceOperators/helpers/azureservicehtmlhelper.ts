@@ -110,14 +110,14 @@ function installationLogsResponse(
     const logs: LogSection[] = [];
 
     const logsTitle: { [order: number]: string } = {
-        1: "Cert Manager Output",
-        2: "Issuer Cert RollOut Status",
-        3: "Issuer Cert Output",
-        4: "Install Operator Lifecycle CRD Output",
-        5: "Install Operator Lifecycle Output",
-        6: "Install Operator Output",
-        7: "Setting Apply Operator Output",
-        8: "Operator pod output",
+        0: "Cert Manager Output",
+        1: "Issuer Cert RollOut Status",
+        2: "Issuer Cert Output",
+        3: "Install Operator Lifecycle CRD Output",
+        4: "Install Operator Lifecycle Output",
+        5: "Install Operator Output",
+        6: "Setting Apply Operator Output",
+        7: "Operator pod output",
     };
 
     installShellResult.filter(Boolean).forEach((sr, index) => {

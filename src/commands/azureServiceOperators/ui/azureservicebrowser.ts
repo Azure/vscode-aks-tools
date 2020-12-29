@@ -1,18 +1,18 @@
 import * as k8s from 'vscode-kubernetes-tools-api';
 import * as vscode from 'vscode';
 
+interface AzureServiceKind {
+    readonly displayName: string;
+    readonly manifestKind: string;
+    readonly abbreviation: string;
+}
+
 export async function AzureServiceBrowser(explorer: k8s.ClusterExplorerV1): Promise<k8s.ClusterExplorerV1.NodeContributor> {
     const allKinds = await allServiceKinds();
 
     const allFolderChildren = allKinds?.map((k) => explorer.nodeSources.resourceFolder(k.displayName, k.displayName, k.manifestKind, k.abbreviation));
     const servicesFolder = explorer.nodeSources.groupingFolder("Azure Services", undefined, ...allFolderChildren?? []);
     return servicesFolder.at(undefined);
-}
-
-interface AzureServiceKind {
-    readonly displayName: string;
-    readonly manifestKind: string;
-    readonly abbreviation: string;
 }
 
 async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
@@ -42,7 +42,7 @@ function parseServiceResource(apiResourceLineItem: string): AzureServiceKind | u
         // name, shortnames, apigroup, namespaced, kind
         return { displayName: apiResource[4], manifestKind: apiResource[4], abbreviation: apiResource[0] };
     } else {
-        vscode.window.showWarningMessage(`Invalid api-resource output from azure service operator...`);
+        vscode.window.showWarningMessage(`Invalid api-resource output from azure service operator.`);
         return undefined;
     }
 }
