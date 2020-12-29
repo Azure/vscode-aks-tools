@@ -28,36 +28,36 @@ export async function startInstallation(
     installationResponse.installCertManagerResult = await longRunning(`Installing Cert Manager for Azure Service Operator...`,
         () => installCertManager(kubectl, clusterKubeConfig)
     );
-    if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installCertManagerResult, installationResponse))) return undefined;
+    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installCertManagerResult, installationResponse)) return undefined;
 
     // 2) The cert-manager pods should be running before proceeding to the next step.
     installationResponse.checkCertManagerRolloutStatusResult = await longRunning(`Checking Cert Manager Rollout Status...`,
         () => checkCertManagerRolloutStatus(kubectl, clusterKubeConfig)
     );
-    if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.checkCertManagerRolloutStatusResult, installationResponse))) return undefined;
+    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.checkCertManagerRolloutStatusResult, installationResponse)) return undefined;
 
     // 3) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
     installationResponse.installOlmCrdResult = await longRunning(`Installing Operator Lifecycle Manager CRD resource...`,
         () => installOlmCrd(kubectl, clusterKubeConfig)
     );
-    if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmCrdResult, installationResponse))) return undefined;
+    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmCrdResult, installationResponse)) return undefined;
 
     installationResponse.installOlmResult = await longRunning(`Installing Operator Lifecycle Manager resource...`,
         () => installOlm(kubectl, clusterKubeConfig)
     );
-    if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmResult, installationResponse))) return undefined;
+    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmResult, installationResponse)) return undefined;
 
     installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
         () => installOperator(kubectl, clusterKubeConfig)
     );
-    if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorResult, installationResponse))) return undefined;
+    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorResult, installationResponse)) return undefined;
 
     // 4) IssuerCert apply with Operator namespace created above.
     installationResponse.installIssuerCertResult = await longRunning(`Installing the Issuer and Certificate cert-manager resources....`,
         () => installIssuerCert(kubectl, clusterKubeConfig)
     );
-    if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.installIssuerCertResult, installationResponse))) return undefined;
+    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installIssuerCertResult, installationResponse)) return undefined;
 
     // 5) Run kubectl apply for azureoperatorsettings.yaml
     installationResponse.installOperatorSettingsResult = await longRunning(`Installing Azure Service Operator Settings...`,
@@ -69,7 +69,7 @@ export async function startInstallation(
     installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
         () => getOperatorsPod(kubectl, clusterKubeConfig)
     );
-    if (!(isInstallationSuccessfull(panel, extensionPath, installationResponse.getOperatorsPodResult, installationResponse))) return undefined;
+    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.getOperatorsPodResult, installationResponse)) return undefined;
 
     createASOWebView(panel, extensionPath, installationResponse);
 }

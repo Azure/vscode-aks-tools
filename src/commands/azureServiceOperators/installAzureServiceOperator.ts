@@ -77,13 +77,7 @@ export async function install(
     panel.webview.onDidReceiveMessage(
         async (message) => {
             if (message.appid && message.password) {
-                const inputAppIdBox = message.appid;
-                const inputPasswordBox = message.password;
                 const cloudName = convertAzureCloudEnv(aksCluster.root.environment.name);
-
-                if (!inputAppIdBox || !inputPasswordBox) {
-                    return undefined;
-                }
 
                 if (!cloudName) {
                     vscode.window.showWarningMessage(`Cloud environment name ${cloudName} is not supported.`);
@@ -93,8 +87,8 @@ export async function install(
                 const operatorSettingsInfo = {
                     tenantId: aksCluster.root.tenantId,
                     subId: aksCluster.subscription.subscriptionId!,
-                    appId: inputAppIdBox,
-                    clientSecret: inputPasswordBox,
+                    appId: message.appid,
+                    clientSecret: message.password,
                     cloudEnv: cloudName
                 };
 
