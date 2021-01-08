@@ -24,7 +24,8 @@
     "activationEvents": [
         "onView:kubernetes.cloudExplorer",
         "onCommand:aks.detectorDiagnostics",
-        "onCommand:aks.periscope"
+        "onCommand:aks.periscope",
+        "onCommand:aks.installAzureServiceOperator"
     ],
     "main": "./out/extension",
     "contributes": {
@@ -52,6 +53,10 @@
             {
                 "command": "azure-deploy.browseCicdPipeline",
                 "title": "Browse CI/CD Workflows"
+            },
+            {
+                "command": "aks.installAzureServiceOperator",
+                "title": "Install Azure Service Operator"
             }
         ],
         "menus": {
@@ -94,6 +99,10 @@
                     "command": "azure-deploy.configureCicdPipeline",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@1"
+                },
+                {
+                    "command": "aks.installAzureServiceOperator",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 }
             ]
         }

@@ -1,0 +1,21 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: azureoperator-selfsigned-issuer
+  namespace: operators
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: azureoperator-serving-cert
+  namespace: operators
+spec:
+  dnsNames:
+  - azureoperator-webhook-service.operators.svc
+  - azureoperator-webhook-service.operators.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: azureoperator-selfsigned-issuer
+  secretName: webhook-server-cert
