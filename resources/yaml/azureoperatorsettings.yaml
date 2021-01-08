@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azureoperatorsettings
+  namespace: operators
+stringData:
+  AZURE_TENANT_ID: <TENANT_ID>
+  AZURE_SUBSCRIPTION_ID: <SUB_ID>
+  AZURE_CLIENT_ID: <APP_ID>
+  AZURE_CLIENT_SECRET: <CLIENT_SECRET>
+  AZURE_CLOUD_ENV: <ENV_CLOUD>

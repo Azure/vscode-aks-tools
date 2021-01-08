@@ -10,6 +10,8 @@ import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
 import { browsePipeline } from './commands/deployAzurePipeline/browsePipeline';
 import { configurePipeline } from './commands/deployAzurePipeline/configureCicdPipeline/configurePipeline';
+import installAzureServiceOperator  from './commands/azureServiceOperators/installAzureServiceOperator';
+import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azureservicebrowser';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -34,6 +36,9 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.periscope', periscope);
         registerCommandWithTelemetry('azure-deploy.configureCicdPipeline', configurePipeline);
         registerCommandWithTelemetry('azure-deploy.browseCicdPipeline', browsePipeline);
+        registerCommandWithTelemetry('aks.installAzureServiceOperator', installAzureServiceOperator );
+
+        await registerAzureServiceNodes(context);
 
         const azureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);
@@ -46,6 +51,18 @@ export async function activate(context: vscode.ExtensionContext) {
         });
     } else {
         vscode.window.showWarningMessage(cloudExplorer.reason);
+    }
+}
+
+export async function registerAzureServiceNodes(context: vscode.ExtensionContext) {
+    const disposables: never[] = [];
+    context.subscriptions.push(...disposables);
+
+    const clusterExplorer = await k8s.extension.clusterExplorer.v1;
+    if (clusterExplorer.available) {
+        clusterExplorer.api.registerNodeContributor(await AzureServiceBrowser(clusterExplorer.api));
+     } else {
+        vscode.window.showWarningMessage(clusterExplorer.reason);
     }
 }
 
