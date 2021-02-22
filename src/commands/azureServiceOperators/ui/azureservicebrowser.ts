@@ -23,7 +23,12 @@ async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
         return undefined;
     }
     const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
-    if (!asoAPIResourceCommandResult || (asoAPIResourceCommandResult.code !== 0 && !asoAPIResourceCommandResult.stdout)) {
+
+    if (!asoAPIResourceCommandResult) {
+        return undefined;
+    }
+
+    if (asoAPIResourceCommandResult.code !== 0 && !asoAPIResourceCommandResult.stdout) {
         vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommandResult?.stderr}.`);
         return undefined;
     }
