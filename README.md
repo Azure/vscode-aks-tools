@@ -78,6 +78,15 @@ Right click on your AKS cluster and click on **Configure CI/CD Workflow** to cre
 
 Right click on your AKS cluster and click on **Browse CI/CD Workflows** to view details of all existing Continous Integration / Continous Deployment (CI/CD) pipelines that are configured against your cluster.
 
+### Install Azure Service Operator
+
+Right click on your AKS cluster and click on **Install Azure Service Operator** to easily deploy the latest version of Azure Service Operator (ASO) on your AKS cluster and provision and connect applications to Azure resources within Kubernetes. Upon selecting the option, a web view will load requesting your input on Service Principal App Id and the password. Fill out these required fields and click **Submit** to kick off the installation of Azure Servic Operator.
+
+> Install Azure Service Operator can only be performed on an AKS cluster that has never had ASO installed before. If you have already initiated the installation manually, follow the instructions on [Azure Service Operator](https://github.com/Azure/azure-service-operator) to complete.
+
+For more information on Azure Service Operator, visit [Azure Service Operator (for Kubernetes)](https://github.com/Azure/azure-service-operator). If you are experiencing issues with Azure Service Operator, visit [Azure Service Operator (ASO) troubleshooting](https://github.com/Azure/azure-service-operator/docs/troubleshooting.md).
+
+![Azure Service Operator Webview](resources/azure-service-operator-webview.png)
 
 ## Telemetry
 
