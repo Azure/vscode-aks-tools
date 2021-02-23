@@ -1,10 +1,15 @@
 import * as k8s from 'vscode-kubernetes-tools-api';
 import * as vscode from 'vscode';
+import { Errorable } from '../../utils/errorable';
 
 interface AzureServiceKind {
     readonly displayName: string;
     readonly manifestKind: string;
     readonly abbreviation: string;
+}
+
+enum ASOInstallation {
+    ASONotInstalled = 'ASONotInstalled'
 }
 
 export async function AzureServiceBrowser(explorer: k8s.ClusterExplorerV1): Promise<k8s.ClusterExplorerV1.NodeContributor> {
@@ -16,21 +21,36 @@ export async function AzureServiceBrowser(explorer: k8s.ClusterExplorerV1): Prom
 }
 
 async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
+    const apiResult = await getAPIResourceCommandResult();
+
+    if (apiResult.succeeded) {
+        return apiResult.result;
+    }
+
+    if (apiResult.error !== ASOInstallation.ASONotInstalled) {
+        vscode.window.showWarningMessage(apiResult.error);
+    }
+    return undefined;
+}
+
+async function getAPIResourceCommandResult(): Promise<Errorable<AzureServiceKind[]>> {
     const kubectl = await k8s.extension.kubectl.v1;
 
     if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
-        return undefined;
+        return { succeeded: false, error: `Kubectl is unavailable.` };
     }
     const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
-    if (!asoAPIResourceCommandResult || (asoAPIResourceCommandResult.code !== 0 && !asoAPIResourceCommandResult.stdout)) {
-        vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommandResult?.stderr}.`);
-        return undefined;
+
+    if (!asoAPIResourceCommandResult) { // Fail to invoke command.
+        return { succeeded: false, error: `Azure Service Operator api-resources failed to invoke command.` };
+    } else if (asoAPIResourceCommandResult.stdout) { // kubectl returned a list of resources (even if it errored part way through)
+        const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+        return { succeeded: true, result: treeResourceItems.map((item: string) => parseServiceResource(item)!) };
+    } else if (asoAPIResourceCommandResult.code === 0) { // ASO is not installed.
+        return { succeeded: false, error: ASOInstallation.ASONotInstalled };
+    } else {
+        return { succeeded: false, error: `Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommandResult?.stderr}.` };
     }
-
-    const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line: string) => line.trim()).filter((line: string | any[]) => line.length > 0);
-
-    return treeResourceItems.map((item: string) => parseServiceResource(item)!);
 }
 
 function parseServiceResource(apiResourceLineItem: string): AzureServiceKind | undefined {
