@@ -25,7 +25,9 @@ async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
 
     if (apiResult.succeeded) {
         return apiResult.result;
-    } else if (apiResult.error !== ASOInstallation.ASONotInstalled) {
+    }
+
+    if (apiResult.error !== ASOInstallation.ASONotInstalled) {
         vscode.window.showWarningMessage(apiResult.error);
     }
     return undefined;
@@ -41,13 +43,13 @@ async function getAPIResourceCommandResult(): Promise<Errorable<AzureServiceKind
 
     if (!asoAPIResourceCommandResult) { // Fail to invoke command.
         return { succeeded: false, error: `Azure Service Operator api-resources failed to invoke command.` };
-    } else if (asoAPIResourceCommandResult.code !== 0 && !asoAPIResourceCommandResult.stdout) { // Error result and Faild execution.
-        return { succeeded: false, error: `Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommandResult?.stderr}.` };
-    } else if (asoAPIResourceCommandResult.code === 0 && !asoAPIResourceCommandResult.stdout) { // No ASO installed.
-        return { succeeded: false, error: ASOInstallation.ASONotInstalled };
-    } else { // success sceanrio.
-        const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line: string) => line.trim()).filter((line: string | any[]) => line.length > 0);
+    } else if (asoAPIResourceCommandResult.stdout) { // kubectl returned a list of resources (even if it errored part way through)
+        const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
         return { succeeded: true, result: treeResourceItems.map((item: string) => parseServiceResource(item)!) };
+    } else if (asoAPIResourceCommandResult.code === 0) { // ASO is not installed.
+        return { succeeded: false, error: ASOInstallation.ASONotInstalled };
+    } else {
+        return { succeeded: false, error: `Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommandResult?.stderr}.` };
     }
 }
 
