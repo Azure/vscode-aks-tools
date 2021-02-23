@@ -24,18 +24,18 @@ async function allServiceKinds(): Promise<AzureServiceKind[] | undefined> {
     }
     const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
 
-    if (!asoAPIResourceCommandResult) {
+    if (!asoAPIResourceCommandResult) { // Fail to invoke command
+        vscode.window.showWarningMessage(`Azure Service Operator api-resources failed to invoke command.`);
         return undefined;
-    }
-
-    if (asoAPIResourceCommandResult.code !== 0 && !asoAPIResourceCommandResult.stdout) {
+    } else if (asoAPIResourceCommandResult.code !== 0 && !asoAPIResourceCommandResult.stdout) { // Error result and Faild execution.
         vscode.window.showWarningMessage(`Azure Service Operator api-resources command failed with following error: ${asoAPIResourceCommandResult?.stderr}.`);
         return undefined;
+    } else if (asoAPIResourceCommandResult.code === 0 && !asoAPIResourceCommandResult.stdout) { // No ASO installed.
+        return undefined;
+    } else {
+        const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line: string) => line.trim()).filter((line: string | any[]) => line.length > 0);
+        return treeResourceItems.map((item: string) => parseServiceResource(item)!);
     }
-
-    const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line: string) => line.trim()).filter((line: string | any[]) => line.length > 0);
-
-    return treeResourceItems.map((item: string) => parseServiceResource(item)!);
 }
 
 function parseServiceResource(apiResourceLineItem: string): AzureServiceKind | undefined {
