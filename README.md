@@ -6,6 +6,7 @@
 * Run AKS Periscope within VS Code
 * Configure a Continous Integration / Continous Deployment ( CI/CD ) Pipeline targetting AKS cluster from within VSCode
 * Browse to all Continous Integration / Continous Deployment ( CI/CD ) Pipelines targetting AKS cluster
+* Install Azure Service Operator on your AKS cluster
 
 ## Installation
 
