@@ -80,7 +80,7 @@ Right click on your AKS cluster and click on **Browse CI/CD Workflows** to view 
 
 ### Install Azure Service Operator
 
-Right click on your AKS cluster and click on **Install Azure Service Operator** to easily deploy the latest version of Azure Service Operator (ASO) on your AKS cluster and provision and connect applications to Azure resources within Kubernetes. Upon selecting the option, a web view will load requesting your input on Service Principal App Id and the password. Fill out these required fields and click **Submit** to kick off the installation of Azure Servic Operator.
+Right click on your AKS cluster and click on **Install Azure Service Operator** to easily deploy the latest version of Azure Service Operator (ASO) on your AKS cluster and provision and connect applications to Azure resources within Kubernetes. When you select this option, you'll be prompted for a service principal for ASO to use when performing Azure resource operations. This service principal must have appropriate permissions (typically Contributor at suitable scope). Fill out the service principal details and click **Submit** to kick off the installation of Azure Servic Operator.
 
 > Install Azure Service Operator can only be performed on an AKS cluster that has never had ASO installed before. If you have already initiated the installation manually, follow the instructions on [Azure Service Operator](https://github.com/Azure/azure-service-operator) to complete.
 
