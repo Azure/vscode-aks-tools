@@ -24,7 +24,7 @@ jobs:
     - name: Build Extension
       run: |
         npm install
-        npm run compile
+        npm run webpack
     - name: Package Extension
       if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
       run: |
