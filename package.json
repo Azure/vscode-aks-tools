@@ -27,7 +27,7 @@
         "onCommand:aks.periscope",
         "onCommand:aks.installAzureServiceOperator"
     ],
-    "main": "./out/extension",
+    "main": "./dist/extension",
     "contributes": {
         "commands": [
             {
@@ -108,9 +108,10 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
+        "vscode:prepublish": "webpack --mode production",
+        "webpack": "webpack --mode development",
+        "webpack-dev": "webpack --mode development --watch",
+        "test-compile": "tsc -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install",
         "test": "npm run compile && node ./node_modules/vscode/bin/test"
     },
@@ -122,9 +123,12 @@
         "@types/js-yaml": "^3.12.1",
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.10.9",
+        "ts-loader": "^8.0.17",
         "tslint": "^5.20.1",
         "typescript": "^3.7.2",
-        "vscode": "^1.1.6"
+        "vscode": "^1.1.6",
+        "webpack": "^5.24.2",
+        "webpack-cli": "^4.5.0"
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
