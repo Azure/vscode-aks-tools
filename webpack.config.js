@@ -28,6 +28,7 @@ const config = {
     'ms-rest': 'ms-rest'
   },
   plugins: [
+    new webpack.IgnorePlugin(/^electron$/),
       new webpack.IgnorePlugin(/^\.\/locale$/, /handlebars$/)
   ],
   resolve: {
