@@ -122,17 +122,18 @@
     "devDependencies": {
         "@types/js-yaml": "^3.12.1",
         "@types/mocha": "^2.2.42",
-        "@types/node": "^7.10.9",
+        "@types/node": "^10.2.0",
         "ts-loader": "^8.0.17",
         "tslint": "^5.20.1",
         "typescript": "^3.7.2",
-        "vscode": "^1.1.6",
+        "vscode": "^1.1.21",
         "webpack": "^5.24.2",
         "webpack-cli": "^4.5.0"
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
         "@azure/storage-blob": "^12.1.2",
+        "@opentelemetry/tracing": "^0.17.0",
         "axios": "^0.19.2",
         "azure-arm-containerservice": "^7.0.0",
         "azure-arm-monitor": "^5.4.0",
@@ -149,7 +150,7 @@
         "tmp": "^0.2.1",
         "util": "^0.12.3",
         "vscode-azureextensionui": "^0.27.1",
-        "vscode-extension-telemetry": "^0.0.17",
+        "vscode-extension-telemetry": "^0.1.1",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
     "repository": {

@@ -19,11 +19,19 @@ const config = {
   },
   devtool: 'source-map',
   externals: {
-    vscode: 'commonjs vscode' // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
+    vscode: 'commonjs vscode',
+    bufferutil: 'commonjs bufferutil',
+    'spawn-sync': 'commonjs spawn-sync',
+    'utf-8-validate': 'commonjs utf-8-validate'
   },
+  plugins: [
+      new webpack.IgnorePlugin(/^\.\/locale$/, /handlebars$/)
+  ],
   resolve: {
-    // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
-    extensions: ['.ts', '.js']
+    extensions: ['.ts', '.js', '.json'],
+    alias: {
+      'handlebars' : 'handlebars/dist/handlebars.js'
+    },
   },
   module: {
     rules: [
@@ -35,6 +43,10 @@ const config = {
             loader: 'ts-loader'
           }
         ]
+      },
+      {
+          test: /\.yaml$/,
+          use: ['file-loader']
       }
     ]
   }
