@@ -133,7 +133,9 @@
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
         "@azure/storage-blob": "^12.1.2",
+        "@opentelemetry/core": "^0.17.0",
         "@opentelemetry/tracing": "^0.17.0",
+        "applicationinsights-native-metrics": "^0.0.6",
         "axios": "^0.19.2",
         "azure-arm-containerservice": "^7.0.0",
         "azure-arm-monitor": "^5.4.0",

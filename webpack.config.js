@@ -22,7 +22,10 @@ const config = {
     vscode: 'commonjs vscode',
     bufferutil: 'commonjs bufferutil',
     'spawn-sync': 'commonjs spawn-sync',
-    'utf-8-validate': 'commonjs utf-8-validate'
+    'utf-8-validate': 'commonjs utf-8-validate',
+    'applicationinsights-native-metrics': 'applicationinsights-native-metrics',
+    '@opentelemetry/tracing': '@opentelemetry/tracing',
+    'ms-rest': 'ms-rest'
   },
   plugins: [
       new webpack.IgnorePlugin(/^\.\/locale$/, /handlebars$/)
@@ -30,7 +33,7 @@ const config = {
   resolve: {
     extensions: ['.ts', '.js', '.json'],
     alias: {
-      'handlebars' : 'handlebars/dist/handlebars.js'
+      'handlebars' : 'handlebars/dist/handlebars.js',
     },
   },
   module: {
