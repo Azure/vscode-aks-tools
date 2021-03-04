@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import { parseResource } from "../../azure-api-utils";
 import * as azcs from '@azure/arm-containerservice'; // 'azure-arm-containerservice'; // deprecated, but @azure/arm-containerservice doesn't play nicely with AzureAccount, so...
-import * as msRestJs from "@azure/ms-rest-js";
 
 export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<string | undefined> {
     const { resourceGroupName, name } = parseResource(target.id!);
