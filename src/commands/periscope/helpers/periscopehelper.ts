@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { getSASKey, LinkDuration } from '../../utils/azurestorage';
 import { parseResource } from '../../../azure-api-utils';
-import * as ast from '@azure/arm-storage'; // 'azure-arm-storage';
+import * as ast from '@azure/arm-storage';
 import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
 import * as amon from '@azure/arm-monitor';
 import * as htmlhandlers from "handlebars";

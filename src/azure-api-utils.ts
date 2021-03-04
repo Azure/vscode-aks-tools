@@ -1,5 +1,4 @@
 import { ISubscriptionContext } from "vscode-azureextensionui";
-// import { SubscriptionClient } from 'azure-arm-resource';
 import { SubscriptionModels } from '@azure/arm-subscriptions';
 
 export interface PartialList<T> extends Array<T> {
