@@ -2,10 +2,8 @@ import { AzExtParentTreeItem, AzureTreeItem, ISubscriptionContext } from "vscode
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { SubscriptionModels } from '@azure/arm-subscriptions';
 import { toSubscription } from "../azure-api-utils";
-import { getExtensionPath } from "../commands/utils/host";
-import * as path from 'path';
-import * as vscode from 'vscode';
 import { Resource } from "@azure/arm-resources/esm/models";
+import { assetUri } from "../assets";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -23,7 +21,7 @@ export default class AksClusterTreeItem extends AzureTreeItem implements AksClus
         private readonly resource: Resource) {
         super(parent);
 
-        this.iconPath = vscode.Uri.file(path.join(getExtensionPath()!, 'resources', 'aks-tools.png'));
+        this.iconPath = assetUri("resources/aks-tools.png");
         this.id = this.resource.id;
     }
 
