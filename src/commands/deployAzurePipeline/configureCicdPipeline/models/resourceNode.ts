@@ -1,4 +1,4 @@
-import { GenericResource } from 'azure-arm-resource/lib/resource/models';
+import { GenericResource } from '@azure/arm-resources/esm/models';
 
 export interface resourceNode{
     resource: GenericResource;

@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 import { Errorable } from '../utils/errorable';
-import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceManagementClient';
+import { ResourceManagementClient } from '@azure/arm-resources';
 
 export default async function detectorDiagnostics(
     context: IActionContext,

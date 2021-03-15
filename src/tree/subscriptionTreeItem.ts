@@ -1,8 +1,8 @@
 import { IActionContext, SubscriptionTreeItemBase, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from 'vscode-azureextensionui';
-import ResourceManagementClient from 'azure-arm-resource/lib/resource/resourceManagementClient';
 import { listAll, toSubscription } from '../azure-api-utils';
 import AksClusterTreeItem from './aksClusterTreeItem';
-import { SubscriptionClient } from 'azure-arm-resource';
+import { SubscriptionModels } from '@azure/arm-subscriptions';
+import { ResourceManagementClient } from '@azure/arm-resources';
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -10,7 +10,7 @@ export interface SubscriptionTreeNode {
     readonly nodeType: 'subscription';
     readonly name: string;
     readonly session: ISubscriptionContext;
-    readonly subscription: SubscriptionClient.SubscriptionModels.Subscription;
+    readonly subscription: SubscriptionModels.Subscription;
 }
 
 export default class SubscriptionTreeItem extends SubscriptionTreeItemBase implements SubscriptionTreeNode {
@@ -41,7 +41,7 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
         return this.root;
     }
 
-    public get subscription(): SubscriptionClient.SubscriptionModels.Subscription {
+    public get subscription(): SubscriptionModels.Subscription {
         return toSubscription(this.root);
     }
 
