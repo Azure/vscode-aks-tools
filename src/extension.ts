@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
-import { createTelemetryReporter, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand, IActionContext } from 'vscode-azureextensionui';
+import { createAzExtOutputChannel, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand, IActionContext } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
 import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
 import periscope from './commands/periscope/periscope';
@@ -22,8 +22,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const uiExtensionVariables = {
             context,
             ignoreBundle: true,
-            outputChannel: vscode.window.createOutputChannel('Azure Identity'),
-            reporter: createTelemetryReporter(context),
+            outputChannel: createAzExtOutputChannel('Azure Identity', ''),
             ui: new AzureUserInput(context.globalState)
         };
 

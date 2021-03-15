@@ -1,11 +1,11 @@
 import { AzExtParentTreeItem, AzureTreeItem, ISubscriptionContext } from "vscode-azureextensionui";
-import { Resource } from "azure-arm-storage/lib/models";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
-import { SubscriptionClient } from 'azure-arm-resource';
+import { SubscriptionModels } from '@azure/arm-subscriptions';
 import { toSubscription } from "../azure-api-utils";
 import { getExtensionPath } from "../commands/utils/host";
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { Resource } from "@azure/arm-resources/esm/models";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -14,7 +14,7 @@ export interface AksClusterTreeNode {
     readonly armId: string;
     readonly name: string;
     readonly session: ISubscriptionContext;
-    readonly subscription: SubscriptionClient.SubscriptionModels.Subscription;
+    readonly subscription: SubscriptionModels.Subscription;
 }
 
 export default class AksClusterTreeItem extends AzureTreeItem implements AksClusterTreeNode {
@@ -45,7 +45,7 @@ export default class AksClusterTreeItem extends AzureTreeItem implements AksClus
         return this.root;
     }
 
-    public get subscription(): SubscriptionClient.SubscriptionModels.Subscription {
+    public get subscription(): SubscriptionModels.Subscription {
         return toSubscription(this.root);
     }
 
