@@ -2,7 +2,11 @@
     "name": "vscode-aks-tools",
     "displayName": "Azure Kubernetes Service",
     "description": "Display Azure Kubernetes Services within VS Code",
+<<<<<<< HEAD
     "version": "0.0.9",
+=======
+    "version": "0.0.11-test",
+>>>>>>> f4be0ff... azureextensionui key iconpath fix.
     "preview": true,
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "publisher": "ms-kubernetes-tools",
@@ -147,6 +151,7 @@
         "@azure/storage-blob": "^12.7.0",
         "axios": "^0.19.2",
         "azure-storage": "^2.10.3",
+        "filemanager-webpack-plugin": "^4.0.0",
         "handlebars": "^4.7.6",
         "js-yaml": "^3.14.0",
         "jszip": "^3.5.0",

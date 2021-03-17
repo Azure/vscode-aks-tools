@@ -4,6 +4,7 @@
 
 const path = require('path');
 const webpack = require('webpack');
+const fileManagerPlugin = require('filemanager-webpack-plugin');
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -22,15 +23,25 @@ const config = {
     'spawn-sync': 'commonjs spawn-sync',
     'utf-8-validate': 'commonjs utf-8-validate',
     'applicationinsights-native-metrics': 'applicationinsights-native-metrics',
-    '@opentelemetry/tracing': '@opentelemetry/tracing',
-    'vscode-azureextensionui': 'vscode-azureextensionui'
+    '@opentelemetry/tracing': '@opentelemetry/tracing'
   },
   plugins: [
       new webpack.IgnorePlugin(/^electron$/),
-      new webpack.IgnorePlugin(/^\.\/locale$/, /handlebars$/)
+      new webpack.IgnorePlugin(/^\.\/locale$/, /handlebars$/),
+      new fileManagerPlugin({
+        events: {
+          onEnd: {
+              copy: [
+                  {
+                      source: path.join(__dirname, 'node_modules', 'vscode-azureextensionui', 'resources', '**'),
+                      destination: path.join(__dirname, 'dist', 'node_modules', 'vscode-azureextensionui', 'resources')
+                  }
+              ]
+          }
+      }
+    })
   ],
   resolve: {
-    // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
     extensions: ['.ts', '.js', '.json'],
     alias: {
       'handlebars' : 'handlebars/dist/handlebars.js',
@@ -48,6 +59,10 @@ const config = {
         ]
       }
     ]
+  },
+  node: {
+    __dirname: false,
+    __filename: false,
   }
 };
 module.exports = config;
