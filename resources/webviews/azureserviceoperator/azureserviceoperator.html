@@ -65,18 +65,18 @@
                 {{#if getUserInput}}
                     <form id="serviceprincipalform" >
 
-                            <div style="background: #F0F6FF; border-radius: 2px; width: 654px; padding-bottom: 20px;">
-                                <span class="fa status-icon fa-info-circle" style="font-size:14px;color:blue;"></span> 
-                                Provide the App Id and password of the Service Principal with Contributor permissions for your subscription. This allows ASO to create resources in your subscription on your behalf. 
-                                <a href="https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli">Learn more</a>
-                            </div>
-                            <br/>
-                            <div style="background: #F0F6FF; border-radius: 2px; width: 654px; padding-top: 20px;">
-                                <span class="fa status-icon fa-info-circle" style="font-size:14px;color:blue;"></span> 
-                                There is a limitation on ASO with Service Principal validation which will allow installation to succeed with incorrect Service Principal credentials. Please ensure that your Service Principal is correct.
-                                <a href="https://operatorhub.io/operator/azure-service-operator">Learn more</a>
-                            </div>
-                            <br/>
+                        <div style="background: #F0F6FF; border-radius: 2px; width: 654px; padding: 10px;">
+                            <span class="fa status-icon fa-info-circle" style="font-size:14px;color:blue;"></span> 
+                            Provide the App Id and password of the Service Principal with Contributor permissions for your subscription. This allows ASO to create resources in your subscription on your behalf. 
+                            <a href="https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli">Learn more</a>
+                        </div>
+                        <br/>
+                        <div style="background: #F0F6FF; border-radius: 2px; width: 654px; padding: 10px;">
+                            <span class="fa status-icon fa-info-circle" style="font-size:14px;color:blue;"></span> 
+                            There is a limitation on ASO with Service Principal validation which will allow installation to succeed with incorrect Service Principal credentials. Please ensure that your Service Principal is correct.
+                            <a href="https://operatorhub.io/operator/azure-service-operator">Learn more</a>
+                        </div>
+                        <br/>
 
                         <label for="spappid">Enter App ID of service principal:</label>
                         <input required id="spappid" name="spappid" size="50" type="text"
