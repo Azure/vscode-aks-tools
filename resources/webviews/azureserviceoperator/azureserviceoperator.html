@@ -44,7 +44,7 @@
     <div class="heading">
         <h2 class="content-header">Azure Service Operator</h2>
         <br\> The Azure Service Operator helps you provision Azure resources and connect your applications to them from within Kubernetes.
-            <a href="https://aka.ms/aks/aso-debug">Learn more</a></a>
+            <a href="https://aka.ms/aks/aso">Learn more</a></a>
     </div>
 
     <div class="container">
@@ -59,7 +59,7 @@
 
             <div class="spinner" style="display:none;padding-top: 10px;">
                 <span class="fa fa-spinner fa-spin" style="font-size:14px;color:blue;"></span>
-                Azure Service Operator installion in progress
+                Azure Service Operator installation in progress
             </div>
             <div class="allocatebody">
                 {{#if getUserInput}}
@@ -102,7 +102,7 @@
                     <div class="critical">
                         <i class="fa fa-times-circle" 
                             style="font-size:14px;color:red;padding-right:5px;padding-bottom:15px;"></i>
-                        {{mainMessage}}
+                        {{{mainMessage}}}
                     </div>
                     {{/if}}
                 {{/if}}
