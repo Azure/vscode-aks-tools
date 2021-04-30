@@ -124,7 +124,7 @@
         "@types/node": "^7.10.9",
         "tslint": "^5.20.1",
         "typescript": "^3.7.2",
-        "vscode": "^1.1.6"
+        "vscode": "^1.1.37"
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
