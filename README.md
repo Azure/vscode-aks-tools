@@ -1,5 +1,3 @@
-[![Build](https://github.com/Azure/vscode-aks-tools/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/Azure/vscode-aks-tools/actions/workflows/build.yml)
-
 # Azure Kubernetes Service (AKS) Extension for Visual Studio Code (Preview)
 
 * View your AKS clusters in the Kubernetes extension cloud explorer
