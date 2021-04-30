@@ -96,7 +96,7 @@ function getOrganisedInstallResult(
     if (installResults.succeeded) {
         installResults.mainMessage = `Azure Service Operator Successfully installed on ${clustername}. Please see the console output below for more details.`;
     } else {
-        installResults.mainMessage = `Azure Service Operator Failed to install on ${clustername}. Please see the console output below for more details.`;
+        installResults.mainMessage = `Azure Service Operator Failed to install on ${clustername}. Please see the console output below for more details. <a href="https://aka.ms/aks/aso-debug">Learn more about common issues.</a>`;
     }
 
     installResults.logs = installationLogsResponse(installResultCollection);
