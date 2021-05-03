@@ -87,7 +87,7 @@ Right click on your AKS cluster and click on **Install Azure Service Operator** 
 
 For more information on Azure Service Operator, visit [Azure Service Operator (for Kubernetes)](https://github.com/Azure/azure-service-operator). If you are experiencing issues with Azure Service Operator, visit [Azure Service Operator (ASO) troubleshooting](https://github.com/Azure/azure-service-operator/blob/master/docs/troubleshooting.md).
 
-![Azure Service Operator Webview](resources/azure-service-operator-webview.png)
+![Azure Service Operator Webview](resources/azure-service-operator-screenshot.png)
 
 ## Telemetry
 
