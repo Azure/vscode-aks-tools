@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { getSASKey, LinkDuration } from '../../utils/azurestorage';
 import { parseResource } from '../../../azure-api-utils';
-import * as ast from 'azure-arm-storage';
+import * as ast from '@azure/arm-storage';
 import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
-import * as amon from 'azure-arm-monitor';
+import * as amon from '@azure/arm-monitor';
 import * as htmlhandlers from "handlebars";
 import * as path from 'path';
 import * as fs from 'fs';
@@ -23,7 +23,7 @@ export async function getClusterDiagnosticSettings(
     try {
         // Get daignostic setting via diagnostic monitor
         const diagnosticMonitor = new amon.MonitorManagementClient(cluster.root.credentials, cluster.root.subscriptionId);
-        const diagnosticSettings = await diagnosticMonitor.diagnosticSettingsOperations.list(cluster.id!);
+        const diagnosticSettings = await diagnosticMonitor.diagnosticSettings.list(cluster.id!);
 
         return diagnosticSettings;
     } catch (e) {
