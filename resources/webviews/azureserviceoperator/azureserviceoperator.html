@@ -17,24 +17,23 @@
         const vscode = acquireVsCodeApi();
 
         $(document).ready(function () {
-            $('.asooutput').hide();
-            $('.loader').hide();
 
             $(".toggleoutput").click(function () {
                 $('.asooutput').toggle('slow');
             });
-
+            $(".toggle").click(function(){
+                $('.allocatebody').toggle('slow');
+            });
             $('#spsubmit').click(function () {
                 var appid = $('#spappid').val();
                 var password = $('#spcred').val();
 
                 if (appid.length > 0 && password.length > 0) {
-                    $('.loader').show();
-                    $('.spform').hide();
+                    $(".spinner").show();
+                    $('#serviceprincipalform').hide();
                     vscode.postMessage({ appid: appid, password: password });
                 }
             })
-
 
         });
 
@@ -44,60 +43,73 @@
 <body>
     <div class="heading">
         <h2 class="content-header">Azure Service Operator</h2>
-        <br\> The Azure Service Operator comprises of:
-            <br />
-            - The Custom Resource Definitions (CRDs) for each of the Azure services a Kubernetes user can provision.
-            <br />
-            - The Kubernetes controller that watches for requests to create Custom Resources for each of these CRDs and
-            creates them.
-            <br />
-            To help you analyse and identify potential problems or easily share the information during the
-            troubleshooting process.
-            <a href="https://aka.ms/aks/aso-debug">Learn more</a></a>
+        <br\> The Azure Service Operator helps you provision Azure resources and connect your applications to them from within Kubernetes.
+            <a href="https://aka.ms/aks/aso">Learn more</a></a>
     </div>
-    {{#if getUserInput}}
+
     <div class="container">
-        <div class="loader"></div>
+
         <div class="panel panel-default data-container spform">
-            <i class="fa fa-wpforms" aria-hidden="true"
-                style="font-size:14px;padding-right:5px;padding-bottom:15px;"></i>
-            Please provide service principal appid and password, as detailed in <a
-                href="https://operatorhub.io/operator/azure-service-operator">step 4 of Azure Service Operator docs</a>.
-            <br />
-            <blockquote cite="https://operatorhub.io/operator/azure-service-operator">
-                Service Principal with Contributor permissions for your subscription is required,
-                so ASO can create resources in your subscription on your behalf.
-                Note that the <a
-                    href="https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli">ServicePrincipal</a>
-                you pass to the command below needs to have
-                access to create resources in your subscription.
-            </blockquote>
-            <form id="serviceprincipalform" class="allocatebody">
-                <label for="spappid">Enter App ID of service principal:</label>
-                <input required id="spappid" name="spappid" size="50" type="text"
-                    placeholder="e.g. 041ccd53-e72f-45d1-bbff-382c82f6f9a1" /><br><br>
-                <label for="spcred">Enter Password of Service Principal:</label>
-                <input required id="spcred" name="spcred" size="50" type="text"
-                    placeholder="Service principal password" /><br><br>
-                <input id="spsubmit" type="submit" value="Submit">
-            </form>
+            <a class="toggle" onclick="$('#collapsed-chevron-form').toggleClass('fa-rotate-180')"
+                style="padding-top:5px;color:black;">
+                <i class="fa fa-chevron-down" id="collapsed-chevron-form"
+                    style="font-size:14px;padding-right:5px;;color:#605E5C;"></i>
+                Install Azure Service Operator
+            </a>
+
+            <div class="spinner" style="display:none;padding-top: 10px;">
+                <span class="fa fa-spinner fa-spin" style="font-size:14px;color:blue;"></span>
+                Azure Service Operator installation in progress
+            </div>
+            <div class="allocatebody">
+                {{#if getUserInput}}
+                    <form id="serviceprincipalform" >
+
+                        <div style="background: #F0F6FF; border-radius: 2px; width: 654px; padding: 10px;">
+                            <span class="fa status-icon fa-info-circle" style="font-size:14px;color:blue;"></span> 
+                            Provide the App Id and password of the Service Principal with Contributor permissions for your subscription. This allows ASO to create resources in your subscription on your behalf. 
+                            <a href="https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli">Learn more</a>
+                        </div>
+                        <br/>
+                        <div style="background: #F0F6FF; border-radius: 2px; width: 654px; padding: 10px;">
+                            <span class="fa status-icon fa-info-circle" style="font-size:14px;color:blue;"></span> 
+                            There is a limitation on ASO with Service Principal validation which will allow installation to succeed with incorrect Service Principal credentials. Please ensure that your Service Principal is correct.
+                            <a href="https://operatorhub.io/operator/azure-service-operator">Learn more</a>
+                        </div>
+                        <br/>
+
+                        <label for="spappid">Enter App ID of service principal:</label>
+                        <input required id="spappid" name="spappid" size="50" type="text"
+                            placeholder="e.g. 041ccd53-e72f-45d1-bbff-382c82f6f9a1" /><br><br>
+                        <label for="spcred">Enter Password of Service Principal:</label>
+                        <input required id="spcred" name="spcred" size="50" type="text"
+                            placeholder="Service principal password" /><br><br>
+
+                        <div>
+                            <button class="btn" id="spsubmit"><i class="fa"></i>
+                                Submit
+                            </button>
+                        </div>
+                    </form>
+                {{else}}
+                    {{#if isSuccess}}
+                    <div class="success">
+                        <i class="fa status-icon fa-check-circle"
+                            style="font-size:14px;color:green;padding-right:5px;padding-bottom:15px;"></i>
+                        {{mainMessage}}
+                    </div>
+                    {{else}}
+                    <div class="critical">
+                        <i class="fa fa-times-circle" 
+                            style="font-size:14px;color:red;padding-right:5px;padding-bottom:15px;"></i>
+                        {{{mainMessage}}}
+                    </div>
+                    {{/if}}
+                {{/if}}
+            </div>
         </div>
     </div>
-    {{else}}
-    <div class="container">
-        {{#if isSuccess}}
-        <div class="panel panel-default data-container">
-            <i class="fa status-icon fa-check-circle"
-                style="font-size:14px;color:green;padding-right:5px;padding-bottom:15px;"></i>
-            {{mainMessage}}
-        </div>
-        {{else}}
-        <div class="critical">
-            <i class="fa fa-times-circle" style="font-size:14px;color:red"></i>
-            {{mainMessage}}
-        </div>
-        {{/if}}
-    </div>
+
     <div class="container">
         <div class="panel panel-default data-container">
             <a class="toggleoutput" onclick="$('#collapsed-chevron-output').toggleClass('fa-rotate-180')"
@@ -115,7 +127,6 @@
             </div>
         </div>
     </div>
-    {{/if}}
 </body>
 
 </html>
