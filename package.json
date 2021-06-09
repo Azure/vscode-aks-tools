@@ -10,6 +10,12 @@
     "engines": {
         "vscode": "^1.33.0"
     },
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": false,
+            "description": "This extension requires workspace trust."
+        }
+    },
     "license": "MIT",
     "categories": [
         "Azure"
