@@ -8,7 +8,7 @@
     "publisher": "ms-kubernetes-tools",
     "icon": "resources/aks-tools.png",
     "engines": {
-        "vscode": "^1.33.0"
+        "vscode": "^1.52.0"
     },
     "license": "MIT",
     "categories": [
@@ -114,7 +114,6 @@
         "test-compile": "tsc -p ./",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install",
         "test": "npm run compile && node ./node_modules/vscode/bin/test"
     },
     "extensionDependencies": [
@@ -125,10 +124,10 @@
         "@types/js-yaml": "^3.12.1",
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.10.9",
+        "@types/vscode": "^1.52.0",
         "ts-loader": "^8.0.18",
         "tslint": "^5.20.1",
         "typescript": "^3.7.2",
-        "vscode": "^1.1.37",
         "webpack": "^5.36.2",
         "webpack-cli": "^4.6.0"
     },
