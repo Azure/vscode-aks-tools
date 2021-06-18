@@ -121,9 +121,9 @@
         "@types/js-yaml": "^3.12.1",
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.10.9",
+        "@types/vscode": "^1.52.0",
         "tslint": "^5.20.1",
-        "typescript": "^3.7.2",
-        "@types/vscode": "^1.52.0"
+        "typescript": "^3.7.2"
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
@@ -134,6 +134,7 @@
         "@azure/storage-blob": "^12.1.2",
         "axios": "^0.19.2",
         "azure-storage": "^2.10.3",
+        "downloads-folder": "^3.0.1",
         "handlebars": "^4.7.6",
         "js-yaml": "^3.14.0",
         "jszip": "^3.5.0",

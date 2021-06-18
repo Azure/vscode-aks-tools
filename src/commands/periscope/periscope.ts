@@ -10,7 +10,8 @@ import {
     getStorageInfo,
     prepareAKSPeriscopeDeploymetFile,
     generateDownloadableLinks,
-    getWebviewContent
+    getWebviewContent,
+    downloadableLinks
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
@@ -150,7 +151,15 @@ async function createPeriscopeWebView(
 
                     panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
                 }
+                if (message.command === "downloadLink") {
+                    // Generate link mechanism is in place due to current behaviour of the aks-periscope tool. (which seems by design for now)
+                    // more detail here: https://github.com/Azure/aks-periscope/issues/30
+                    await longRunning(`Downloading links to Periscope logs.`,
+                        () => downloadableLinks(periscopeStorageInfo, outputResult!.stdout, message.text)
+                    );
 
+                    // panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
+                }
             },
             undefined
         );

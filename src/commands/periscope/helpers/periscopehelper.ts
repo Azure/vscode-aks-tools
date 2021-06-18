@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as axios from 'axios';
+import JSZip = require('jszip');
 const tmp = require('tmp');
 
 const {
@@ -195,6 +196,7 @@ export async function generateDownloadableLinks(
             const latestBlobUploadedByPeriscope = blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]);
 
             if (latestBlobUploadedByPeriscope !== -1 && blob.name.indexOf('.zip') !== -1) {
+
                 const periscopeHTMLInterface = {
                     storageTimeStamp: path.parse(blob.name).dir.split('/')[0],
                     nodeLogFileName: path.parse(blob.name).name,
@@ -212,6 +214,94 @@ export async function generateDownloadableLinks(
         vscode.window.showErrorMessage(`Error generating downloadable link: ${e}`);
         return undefined;
     }
+}
+
+export async function downloadableLinks(
+    periscopeStorage: PeriscopeStorage,
+    output: string,
+    nodeName: string
+): Promise<any> {
+
+    try {
+        const storageAccount = periscopeStorage.storageName;
+        const storageKey = periscopeStorage.storageKey;
+
+        // Get DNS Core hostname which Periscope use it as name of the container.
+        const matches = output.match(/(https?:\/\/[^\s]+)/g);
+        let containerName;
+        if (matches![0].indexOf('://') !== -1) {
+            containerName = matches![0].replace('https://', '').split('.')[0];
+        }
+
+        // Use SharedKeyCredential with storage account and account key
+        const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
+        const blobServiceClient = new BlobServiceClient(
+            `https://${storageAccount}.blob.core.windows.net`,
+            sharedKeyCredential
+        );
+
+        // Hide this all under single pupose funct which lik elike : getZipDir or get me dirname
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        // List all current blob.
+        const listCurrentUploadedFolders = [];
+        for await (const item of containerClient.listBlobsByHierarchy("/")) {
+            if (item.kind === "prefix") {
+                listCurrentUploadedFolders.push(item.name);
+            }
+        }
+
+        // Sort and get the latest uploaded folder under the container used by periscope.
+        // const periscopeHtmlInterfaceList = [];
+        // jszip for zipping
+        const zip = new JSZip();
+
+        for await (const blob of containerClient.listBlobsFlat()) {
+            // Get the latest uploaded folder, then Identify the Zip files in the latest uploaded logs within that folder
+            // and extract *.zip files which are individual node logs.
+            const latestBlobUploadedByPeriscope = blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]);
+
+            if (latestBlobUploadedByPeriscope !== -1 && blob.name.indexOf('.zip') !== 0 && blob.name.indexOf(nodeName) !== -1) {
+                // Get a block blob client
+                const blockBlobClient = containerClient.getBlockBlobClient(blob.name);
+
+                // Get blob content from position 0 to the end
+                // In Node.js, get downloaded data by accessing downloadBlockBlobResponse.readableStreamBody
+                const downloadBlockBlobResponse = await blockBlobClient.download(0);
+                console.log('\nDownloaded blob content...');
+                const contentOfFile = await streamToString(downloadBlockBlobResponse.readableStreamBody);
+                console.log('\t', contentOfFile);
+                const filename = blob.name.replace(/^.*[\\\/]/, '');
+
+                zip.file(filename, `${contentOfFile}`);
+            }
+
+        }
+        const downloadsFolder = require('downloads-folder');
+        console.log('\nDownloads folder is...');
+        console.log(downloadsFolder());
+        const filename = `${downloadsFolder()}/${nodeName}.zip`;
+        zip.generateAsync({ type: "nodebuffer" }).then(function (content) {
+            fs.writeFileSync(filename, content);
+        });
+    } catch (e) {
+        vscode.window.showErrorMessage(`Error generating downloadable link: ${e}`);
+        return undefined;
+    }
+}
+
+// A helper function used to read a Node.js readable stream into a string
+async function streamToString(readableStream: any) {
+    return new Promise((resolve, reject) => {
+        const chunks: any[] = [];
+        readableStream.on("data", (data: any) => {
+            chunks.push(data.toString());
+        });
+        readableStream.on("end", () => {
+            resolve(chunks.join(""));
+        });
+        readableStream.on("error", reject);
+    });
 }
 
 export function getWebviewContent(

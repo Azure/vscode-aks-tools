@@ -25,6 +25,10 @@
                 setTimeout(function() {$(".spinner").hide()}, 30000);
             });
 
+            $('.downloadLink').click(function () {
+                vscode.postMessage({ command: "downloadLink", text: $(this).prop('id') });
+            });
+
             $(".toggle").click(function () {
                 $('.allocatebody').toggle('slow');
             });
@@ -100,17 +104,17 @@
                                     <th>Timestamp</th>
                                     <th>Node Name</th>
                                     <th>Download Now</th>
-                                    <th>7-day Shareable Link</th>
+                                    <!-- <th>7-day Shareable Link</th> -->
                                 </tr>
                                 {{#each downloadAndShareNodeLogsList}}
                                 <tr>
                                     <td>{{storageTimeStamp}}</td>
                                     <td>{{nodeLogFileName}}</td>
-                                    <td><a href='{{downloadableZipUrl}}'>{{downloadableZipFilename}}</a></td>
-                                    <td><a title="copy shareable link." class="copy_text"
+                                    <td><a href="#" class="downloadLink" id='{{nodeLogFileName}}'>{{downloadableZipFilename}}</a></td>
+                                    <!-- <td><a title="copy shareable link." class="copy_text"
                                             id='{{downloadableZipShareUrl}}' href=''><i class="fa fa-clone"></i></a>
                                         {{downloadableZipShareFilename}}
-                                    </td>
+                                    </td> -->
                                 </tr>
                                 {{/each}}
                             </tbody>
