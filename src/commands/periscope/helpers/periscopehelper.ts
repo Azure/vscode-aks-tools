@@ -261,8 +261,9 @@ export async function downloadableLinks(
             // and extract *.zip files which are individual node logs.
             const latestBlobUploadedByPeriscope = blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]);
 
-            if (latestBlobUploadedByPeriscope !== -1 && blob.name.indexOf('.zip') !== 0 && blob.name.indexOf(nodeName) !== -1) {
+            if (latestBlobUploadedByPeriscope !== -1 && path.extname(blob.name) !== '.zip' && blob.name.indexOf(nodeName) !== -1) {
                 // Get a block blob client
+                // https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-nodejs-legacy#download-a-blob
                 const blockBlobClient = containerClient.getBlockBlobClient(blob.name);
 
                 // Get blob content from position 0 to the end
@@ -270,27 +271,37 @@ export async function downloadableLinks(
                 const downloadBlockBlobResponse = await blockBlobClient.download(0);
                 console.log('\nDownloaded blob content...');
                 const contentOfFile = await streamToString(downloadBlockBlobResponse.readableStreamBody);
-                console.log('\t', contentOfFile);
+                // console.log('\t', contentOfFile);
+                // The zip structure folder will be parent folder along with the log file.
+                // Example: /path/to/node-name/iptables/iptables.log ==> will get zipped as iptables/iptables.log
                 const filename = blob.name.replace(/^.*[\\\/]/, '');
-
-                zip.file(filename, `${contentOfFile}`);
+                const parentDir = path.dirname(blob.name).split(path.sep).pop();
+                zip.file(path.join(parentDir!, filename), `${contentOfFile}`);
             }
 
         }
-        const downloadsFolder = require('downloads-folder');
-        console.log('\nDownloads folder is...');
-        console.log(downloadsFolder());
-        const filename = `${downloadsFolder()}/${nodeName}.zip`;
-        zip.generateAsync({ type: "nodebuffer" }).then(function (content) {
-            fs.writeFileSync(filename, content);
-        });
+
+        // Write zip file to download location.
+        writeZipToDownloadLocation(nodeName, zip);
+
     } catch (e) {
         vscode.window.showErrorMessage(`Error generating downloadable link: ${e}`);
         return undefined;
     }
 }
 
+function writeZipToDownloadLocation(nodeName: string, zip: JSZip) {
+    const downloadsFolder = require('downloads-folder');
+    console.log('\nDownloads folder is...');
+    console.log(downloadsFolder());
+    const filename = `${downloadsFolder()}/${nodeName}.zip`;
+    zip.generateAsync({ type: "nodebuffer" }).then((content) => {
+        fs.writeFileSync(filename, content);
+    });
+}
+
 // A helper function used to read a Node.js readable stream into a string
+// https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-nodejs-legacy#download-a-blob
 async function streamToString(readableStream: any) {
     return new Promise((resolve, reject) => {
         const chunks: any[] = [];

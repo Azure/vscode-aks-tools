@@ -104,25 +104,32 @@
                                     <th>Timestamp</th>
                                     <th>Node Name</th>
                                     <th>Download Now</th>
-                                    <!-- <th>7-day Shareable Link</th> -->
+                                    <th>7-day Shareable Link</th>
                                 </tr>
                                 {{#each downloadAndShareNodeLogsList}}
                                 <tr>
                                     <td>{{storageTimeStamp}}</td>
                                     <td>{{nodeLogFileName}}</td>
                                     <td><a href="#" class="downloadLink" id='{{nodeLogFileName}}'>{{downloadableZipFilename}}</a></td>
-                                    <!-- <td><a title="copy shareable link." class="copy_text"
+                                    <td><a title="copy shareable link." class="copy_text"
                                             id='{{downloadableZipShareUrl}}' href=''><i class="fa fa-clone"></i></a>
                                         {{downloadableZipShareFilename}}
-                                    </td> -->
+                                    </td>
                                 </tr>
                                 {{/each}}
                             </tbody>
                         </table>
-
-                        <i class="fa fa-info-circle" style="font-size:14px;padding-right:5px;color:blue;"></i>
-                        Not seeing all the logs? It’s possible the logs are still uploading. Try clicking <b>Generate
-                            Link</b> again.
+                        <div>
+                            <i class="fa fa-info-circle" style="font-size:14px;padding-right:5px;color:blue;"></i>
+                            Not seeing all the logs? It’s possible the logs are still uploading. Try clicking <b>Generate
+                                Link</b> again.
+                            <br/>
+                            <i class="fa fa-info-circle" style="font-size:14px;padding-right:5px;color:blue;"></i>
+                            7 Day shareable: Your logs are being uploaded to storage account. You can download Azure Storage Explorer here
+                            <a href="https://azure.microsoft.com/en-us/features/storage-explorer/">You can download Azure Storage Explorer here</a>
+                            Or share with trusted parties to check the logs by adding the storage account using the following URL: log_storage_account_url.
+                        </div>
+                        
                     </div>
                     {{/if}}
                 </div>
