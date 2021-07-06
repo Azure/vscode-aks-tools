@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.0.9
+
+* Install [Azure Service Operator](https://cloudblogs.microsoft.com/opensource/2020/06/25/announcing-azure-service-operator-kubernetes/) and browse Azure service resources
+
+Thanks to Tatsat Mishra and Yun Jung Choi.
+
 ## 0.0.8
 
 * Integration with [Deploy to Azure](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) extension.
