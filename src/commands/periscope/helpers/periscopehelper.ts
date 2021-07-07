@@ -116,39 +116,16 @@ export async function prepareAKSPeriscopeDeploymetFile(
 
     try {
         const response = await axios.default.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml');
-        fs.writeFileSync(tempFile.name, response.data);
-        replaceDeploymentAccountNameAndSas(clusterStorageInfo, tempFile.name);
+        const base64Name = Buffer.from(clusterStorageInfo.storageName).toString('base64');
+         const base64Sas = Buffer.from(clusterStorageInfo.storageDeploymentSas).toString('base64');
+         const aksReplacedData = response.data.replace("# <accountName, base64 encoded>", `"${base64Name}"`)
+                      .replace("# <saskey, base64 encoded>", `"${base64Sas}"`);
+         fs.writeFileSync(tempFile.name, aksReplacedData);
         return tempFile.name;
     } catch (e) {
         vscode.window.showErrorMessage(`Periscope Deployment file had following error: ${e}`);
         return undefined;
     }
-}
-
-function replaceDeploymentAccountNameAndSas(
-    periscopeStorageInfo: PeriscopeStorage,
-    aksPeriscopeFilePath: string
-) {
-    // persicope file is written now, replace the acc name and keys.
-    const replace = require("replace");
-
-    const base64Name = Buffer.from(periscopeStorageInfo.storageName).toString('base64');
-    const base64Sas = Buffer.from(periscopeStorageInfo.storageDeploymentSas).toString('base64');
-    replace({
-        regex: "# <accountName, base64 encoded>",
-        replacement: `"${base64Name}"`,
-        paths: [aksPeriscopeFilePath],
-        recursive: false,
-        silent: true,
-    });
-
-    replace({
-        regex: "# <saskey, base64 encoded>",
-        replacement: `"${base64Sas}"`,
-        paths: [aksPeriscopeFilePath],
-        recursive: false,
-        silent: true,
-    });
 }
 
 export async function generateDownloadableLinks(
