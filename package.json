@@ -12,8 +12,7 @@
     },
     "capabilities": {
         "untrustedWorkspaces": {
-            "supported": false,
-            "description": "This extension requires workspace trust."
+            "supported": true
         }
     },
     "license": "MIT",
