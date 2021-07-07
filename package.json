@@ -10,6 +10,11 @@
     "engines": {
         "vscode": "^1.52.0"
     },
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": true
+        }
+    },
     "license": "MIT",
     "categories": [
         "Azure"
