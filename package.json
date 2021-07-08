@@ -14,10 +14,7 @@
         "untrustedWorkspaces": {
             "supported": true
         },
-        "virtualWorkspaces": {
-            "supported": false,
-            "description": "Debugging is not possible in virtual workspaces."
-        }
+        "virtualWorkspaces": true
     },
     "license": "MIT",
     "categories": [
