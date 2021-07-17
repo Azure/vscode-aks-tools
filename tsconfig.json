@@ -8,7 +8,7 @@
             "esnext.asynciterable",
         ],
         "sourceMap": true,
-        "rootDir": "src",
+        "rootDirs": ["src","test"],
         "strict": true, /* enable all strict type-checking options */
         "noUnusedLocals": true, /* Report errors on unused locals. */
         "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
