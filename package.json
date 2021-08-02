@@ -114,8 +114,7 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm --mode production",
-        "webpack": "webpack --mode none",
+        "webpack": "webpack --mode production",
         "webpack-dev": "webpack --mode development --watch --info-verbosity verbose",
         "test-compile": "tsc -p ./",
         "compile": "tsc -p ./",
