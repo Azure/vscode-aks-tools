@@ -10,6 +10,9 @@ const fileManagerPlugin = require('filemanager-webpack-plugin');
 const config = {
   target: 'node',
   entry: './src/extension.ts',
+  optimization: { 
+    minimize: false
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.js',
