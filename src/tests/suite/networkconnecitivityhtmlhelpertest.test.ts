@@ -1,8 +1,8 @@
-import { convertHtmlJsonConfiguration }  from '../../src/commands/detectorDiagnostics/helpers/networkconnectivityhtmlhelper';
+import { convertHtmlJsonConfiguration }  from '../../commands/detectorDiagnostics/helpers/networkconnectivityhtmlhelper';
 import { expect } from 'chai';
 // if you used the '@types/mocha' method to install mocha type definitions, uncomment the following line
 import 'mocha';
-import { AppLensARMResponse } from '../../src/commands/detectorDiagnostics/models/applensarmresponse';
+import { AppLensARMResponse } from '../../commands/detectorDiagnostics/models/applensarmresponse';
 
 const mockAppLensARMResponse = <AppLensARMResponse> {
     id: "test",
