@@ -63,7 +63,7 @@ async function runAKSPeriscope(
     if (!clusterStorageAccountId) return undefined;
 
     const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`,
-        () => getStorageInfo(cluster, clusterStorageAccountId)
+        () => getStorageInfo(cluster, clusterStorageAccountId, clusterKubeConfig)
     );
 
     if (!clusterStorageInfo) return undefined;

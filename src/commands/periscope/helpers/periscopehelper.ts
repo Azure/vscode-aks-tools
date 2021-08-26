@@ -9,7 +9,8 @@ import * as htmlhandlers from "handlebars";
 import * as path from 'path';
 import * as fs from 'fs';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
-import * as axios from 'axios';
+import * as tmpfile from '../../utils/tempfile';
+import { getExtensionPath } from '../../utils/host';
 const tmp = require('tmp');
 
 const {
@@ -80,7 +81,8 @@ export async function chooseStorageAccount(
 
 export async function getStorageInfo(
     cluster: AksClusterTreeItem,
-    diagnosticStorageAccountId: string
+    diagnosticStorageAccountId: string,
+    clusterKubeConfig: string | undefined
 ): Promise<PeriscopeStorage | undefined> {
     try {
         const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId);
@@ -95,7 +97,11 @@ export async function getStorageInfo(
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         const storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
 
+        // Get container name from cluster-info default behaviour was APIServerName without
+        const containerName = await extractContainerName(clusterKubeConfig!);
+
         const clusterStorageInfo = {
+            containerName: containerName!,
             storageName: accountName,
             storageKey: storageKey,
             storageDeploymentSas: getSASKey(accountName, storageKey, LinkDuration.DownloadNow),
@@ -109,18 +115,48 @@ export async function getStorageInfo(
     }
 }
 
+async function extractContainerName(clusterKubeConfig: string): Promise<string | undefined> {
+        const kubectl = await k8s.extension.kubectl.v1;
+
+        if (!kubectl.available) {
+            vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+            return;
+        }
+
+        // Run cluster-info to get DNS Core hostname.
+        const runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+            clusterKubeConfig, "YAML",
+            (f) => kubectl.api.invokeCommand(`cluster-info --kubeconfig="${f}"`));
+
+        // Get DNS Core hostname which Periscope use it as name of the container.
+        const matches = runCommandResult?.stdout.match(/(https?:\/\/[^\s]+)/g);
+        let containerName: string;
+        if (matches![0].indexOf('://') !== -1) {
+            containerName = matches![0].replace('https://', '').split('.')[0];
+        } else {
+            vscode.window.showWarningMessage(`Cluster-Info had no host name available.`);
+            return;
+        }
+
+        return containerName;
+}
+
 export async function prepareAKSPeriscopeDeploymetFile(
     clusterStorageInfo: PeriscopeStorage
 ): Promise<string | undefined> {
     const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.yaml` });
 
     try {
-        const response = await axios.default.get('https://raw.githubusercontent.com/Azure/aks-periscope/master/deployment/aks-periscope.yaml');
-        const base64Name = Buffer.from(clusterStorageInfo.storageName).toString('base64');
-         const base64Sas = Buffer.from(clusterStorageInfo.storageDeploymentSas).toString('base64');
-         const aksReplacedData = response.data.replace("# <accountName, base64 encoded>", `"${base64Name}"`)
-                      .replace("# <saskey, base64 encoded>", `"${base64Sas}"`);
-         fs.writeFileSync(tempFile.name, aksReplacedData);
+        const extensionPath = getExtensionPath();
+        const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'aks-periscope.yaml'));
+        const base64Sas = Buffer.from(clusterStorageInfo.storageDeploymentSas).toString('base64');
+
+        const deploymentContent = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8')
+                                        .replace("# <saskey, base64 encoded>", base64Sas)
+                                        .replace("# <accountName, string>", clusterStorageInfo.storageName)
+                                        .replace("# <containerName, string>", clusterStorageInfo.containerName);
+        fs.writeFileSync(tempFile.name, deploymentContent);
+
         return tempFile.name;
     } catch (e) {
         vscode.window.showErrorMessage(`Periscope Deployment file had following error: ${e}`);
@@ -139,13 +175,6 @@ export async function generateDownloadableLinks(
         const sas = periscopeStorage.storageDeploymentSas;
         const sevenDaySas = periscopeStorage.sevenDaysSasKey;
 
-        // Get DNS Core hostname which Periscope use it as name of the container.
-        const matches = output.match(/(https?:\/\/[^\s]+)/g);
-        let containerName;
-        if (matches![0].indexOf('://') !== -1) {
-            containerName = matches![0].replace('https://', '').split('.')[0];
-        }
-
         // Use SharedKeyCredential with storage account and account key
         const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
         const blobServiceClient = new BlobServiceClient(
@@ -154,7 +183,7 @@ export async function generateDownloadableLinks(
         );
 
         // Hide this all under single pupose funct which lik elike : getZipDir or get me dirname
-        const containerClient = blobServiceClient.getContainerClient(containerName);
+        const containerClient = blobServiceClient.getContainerClient(periscopeStorage.containerName);
 
         // List all current blob.
         const listCurrentUploadedFolders = [];
