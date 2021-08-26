@@ -172,7 +172,7 @@ spec:
             name: nodelogs-config
         - secretRef:
             name: azureblob-secret
-        image: aksrepos.azurecr.io/staging/aks-periscope:v0.3
+        image: aksrepos.azurecr.io/staging/aks-periscope:0.5
         imagePullPolicy: Always
         name: aks-periscope
         resources:
