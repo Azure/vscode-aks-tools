@@ -172,7 +172,7 @@ spec:
             name: nodelogs-config
         - secretRef:
             name: azureblob-secret
-        image: aksrepos.azurecr.io/staging/aks-periscope:0.5
+        image: mcr.microsoft.com/aks/periscope:v0.6
         imagePullPolicy: Always
         name: aks-periscope
         resources:
@@ -187,6 +187,10 @@ spec:
         volumeMounts:
         - mountPath: /var/log
           name: varlog
+        - mountPath: /run/systemd/resolve
+          name: resolvlog
+        - mountPath: /etchostlogs
+          name: etcvmlog
       hostPID: true
       nodeSelector:
         beta.kubernetes.io/os: linux
@@ -195,3 +199,9 @@ spec:
       - hostPath:
           path: /var/log
         name: varlog
+      - hostPath:
+          path: /run/systemd/resolve
+        name: resolvlog
+      - name: etcvmlog
+        hostPath:
+          path: /etc
