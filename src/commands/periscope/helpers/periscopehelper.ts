@@ -138,6 +138,16 @@ async function extractContainerName(clusterKubeConfig: string): Promise<string |
             return;
         }
 
+        // Form containerName from FQDN hence "-hcp-"" aka standard aks cluster vs "privatelink.<region>.azmk8s.io" private cluster.
+        // https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names 
+        const maxContainerNameLength = 63;
+        const normalisedContainerName = containerName.replace(".", "-");
+        let lenContainerName = normalisedContainerName.indexOf("-hcp-");
+        if (lenContainerName === -1) {
+            lenContainerName = maxContainerNameLength;
+        }
+        containerName = containerName.substr(0, lenContainerName);
+
         return containerName;
 }
 
@@ -165,8 +175,7 @@ export async function prepareAKSPeriscopeDeploymetFile(
 }
 
 export async function generateDownloadableLinks(
-    periscopeStorage: PeriscopeStorage,
-    output: string
+    periscopeStorage: PeriscopeStorage
 ): Promise<PeriscopeHTMLInterface[] | undefined> {
 
     try {
