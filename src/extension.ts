@@ -12,16 +12,18 @@ import { browsePipeline } from './commands/deployAzurePipeline/browsePipeline';
 import { configurePipeline } from './commands/deployAzurePipeline/configureCicdPipeline/configurePipeline';
 import installAzureServiceOperator  from './commands/azureServiceOperators/installAzureServiceOperator';
 import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azureservicebrowser';
+import { setAssetContext } from './assets';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter(context));
+    setAssetContext(context);
 
     if (cloudExplorer.available) {
         // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
         const uiExtensionVariables = {
             context,
-            ignoreBundle: true,
+            ignoreBundle: false,
             outputChannel: createAzExtOutputChannel('Azure Identity', ''),
             ui: new AzureUserInput(context.globalState)
         };
