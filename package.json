@@ -33,7 +33,7 @@
         "onCommand:aks.periscope",
         "onCommand:aks.installAzureServiceOperator"
     ],
-    "main": "./out/extension",
+    "main": "./dist/extension",
     "contributes": {
         "commands": [
             {
@@ -114,8 +114,11 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
+        "vscode:prepublish": "webpack --mode production",
+        "webpack": "webpack --mode production",
+        "webpack-dev": "webpack --mode development --watch --info-verbosity verbose",
+        "test-compile": "tsc -p ./",
+        "compile": "webpack --mode none",
         "watch": "tsc -watch -p ./",
         "test": "npm run compile && node ./node_modules/vscode/bin/test"
     },
@@ -127,9 +130,13 @@
         "@types/js-yaml": "^3.12.1",
         "@types/mocha": "^2.2.42",
         "@types/node": "^7.10.9",
+        "ts-loader": "^8.0.18",
         "tslint": "^5.20.1",
         "typescript": "^3.7.2",
-        "@types/vscode": "^1.52.0"
+        "@types/vscode": "^1.52.0",
+        "vscode": "^1.1.6",
+        "webpack": "^5.25.1",
+        "webpack-cli": "^4.5.0"
     },
     "dependencies": {
         "@azure/arm-containerservice": "^7.0.1",
@@ -140,10 +147,10 @@
         "@azure/storage-blob": "^12.7.0",
         "axios": "^0.19.2",
         "azure-storage": "^2.10.3",
+        "filemanager-webpack-plugin": "^4.0.0",
         "handlebars": "^4.7.6",
         "js-yaml": "^3.14.0",
         "jszip": "^3.5.0",
-        "replace": "^1.2.0",
         "tmp": "^0.2.1",
         "util": "^0.12.3",
         "vscode-azureextensionui": "^0.39.4",
