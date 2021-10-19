@@ -63,7 +63,7 @@ async function runAKSPeriscope(
     if (!clusterStorageAccountId) return undefined;
 
     const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`,
-        () => getStorageInfo(cluster, clusterStorageAccountId)
+        () => getStorageInfo(cluster, clusterStorageAccountId, clusterKubeConfig)
     );
 
     if (!clusterStorageInfo) return undefined;
@@ -145,7 +145,7 @@ async function createPeriscopeWebView(
                     // Generate link mechanism is in place due to current behaviour of the aks-periscope tool. (which seems by design for now)
                     // more detail here: https://github.com/Azure/aks-periscope/issues/30
                     const downloadableAndShareableNodeLogsList = await longRunning(`Generating links to Periscope logs.`,
-                        () => generateDownloadableLinks(periscopeStorageInfo, outputResult!.stdout)
+                        () => generateDownloadableLinks(periscopeStorageInfo)
                     );
 
                     panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
