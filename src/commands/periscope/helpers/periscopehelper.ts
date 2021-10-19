@@ -11,12 +11,13 @@ import * as fs from 'fs';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
 import { getExtensionPath } from '../../utils/host';
+import { ok, err, Result } from 'neverthrow';
 const tmp = require('tmp');
 
 const {
     BlobServiceClient,
     StorageSharedKeyCredential
-} = require("@azure/storage-blob");
+} = require("@azure/storage-blob"); 
 
 export async function getClusterDiagnosticSettings(
     cluster: AksClusterTreeItem
@@ -82,7 +83,7 @@ export async function chooseStorageAccount(
 export async function getStorageInfo(
     cluster: AksClusterTreeItem,
     diagnosticStorageAccountId: string,
-    clusterKubeConfig: string | undefined
+    clusterKubeConfig: string
 ): Promise<PeriscopeStorage | undefined> {
     try {
         const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId);
@@ -98,10 +99,11 @@ export async function getStorageInfo(
         const storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
 
         // Get container name from cluster-info default behaviour was APIServerName without
-        const containerName = await extractContainerName(clusterKubeConfig!);
+        const containerName = await extractContainerName(clusterKubeConfig);
+        if (!containerName ) return undefined;
 
         const clusterStorageInfo = {
-            containerName: containerName!,
+            containerName: containerName,
             storageName: accountName,
             storageKey: storageKey,
             storageDeploymentSas: getSASKey(accountName, storageKey, LinkDuration.DownloadNow),
@@ -115,42 +117,6 @@ export async function getStorageInfo(
     }
 }
 
-async function extractContainerName(clusterKubeConfig: string): Promise<string | undefined> {
-        const kubectl = await k8s.extension.kubectl.v1;
-
-        if (!kubectl.available) {
-            vscode.window.showWarningMessage(`Kubectl is unavailable.`);
-            return;
-        }
-
-        // Run cluster-info to get DNS Core hostname.
-        const runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
-            clusterKubeConfig, "YAML",
-            (f) => kubectl.api.invokeCommand(`cluster-info --kubeconfig="${f}"`));
-
-        // Get DNS Core hostname which Periscope use it as name of the container.
-        const matches = runCommandResult?.stdout.match(/(https?:\/\/[^\s]+)/g);
-        let containerName: string;
-        if (matches![0].indexOf('://') !== -1) {
-            containerName = matches![0].replace('https://', '').split('.')[0];
-        } else {
-            vscode.window.showWarningMessage(`Cluster-Info had no host name available.`);
-            return;
-        }
-
-        // Form containerName from FQDN hence "-hcp-"" aka standard aks cluster vs "privatelink.<region>.azmk8s.io" private cluster.
-        // https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names 
-        const maxContainerNameLength = 63;
-        const normalisedContainerName = containerName.replace(".", "-");
-        let lenContainerName = normalisedContainerName.indexOf("-hcp-");
-        if (lenContainerName === -1) {
-            lenContainerName = maxContainerNameLength;
-        }
-        containerName = containerName.substr(0, lenContainerName);
-
-        return containerName;
-}
-
 export async function prepareAKSPeriscopeDeploymetFile(
     clusterStorageInfo: PeriscopeStorage
 ): Promise<string | undefined> {
@@ -162,9 +128,9 @@ export async function prepareAKSPeriscopeDeploymetFile(
         const base64Sas = Buffer.from(clusterStorageInfo.storageDeploymentSas).toString('base64');
 
         const deploymentContent = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8')
-                                        .replace("# <saskey, base64 encoded>", base64Sas)
-                                        .replace("# <accountName, string>", clusterStorageInfo.storageName)
-                                        .replace("# <containerName, string>", clusterStorageInfo.containerName);
+            .replace("# <saskey, base64 encoded>", base64Sas)
+            .replace("# <accountName, string>", clusterStorageInfo.storageName)
+            .replace("# <containerName, string>", clusterStorageInfo.containerName);
         fs.writeFileSync(tempFile.name, deploymentContent);
 
         return tempFile.name;
@@ -275,4 +241,73 @@ function isNonZeroNumber(value: any): boolean {
         return false;
     }
     return value !== 0;
+}
+
+async function extractContainerName(clusterKubeConfig: string): Promise<string | undefined> {
+    const runCommandResult = await getClusterInfo(clusterKubeConfig);
+    if (runCommandResult.isErr()) {
+        vscode.window.showErrorMessage(runCommandResult.error.message);
+        return undefined;
+    }
+
+    const hostNameResult = await getHostName(runCommandResult.value);
+    if (hostNameResult.isErr()) {
+        vscode.window.showErrorMessage(hostNameResult.error.message);
+        return undefined;
+    }
+    let containerName: string;
+
+    // Form containerName from FQDN hence "-hcp-"" aka standard aks cluster vs "privatelink.<region>.azmk8s.io" private cluster.
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
+    const maxContainerNameLength = 63;
+    const normalisedContainerName = hostNameResult.value.replace(".", "-");
+    let lenContainerName = normalisedContainerName.indexOf("-hcp-");
+    if (lenContainerName === -1) {
+        lenContainerName = maxContainerNameLength;
+    }
+    containerName = hostNameResult.value.substr(0, lenContainerName);
+
+    return containerName;
+}
+
+async function getClusterInfo(clusterKubeConfig: string): Promise<Result<string, Error>> {
+    const kubectl = await k8s.extension.kubectl.v1;
+
+    if (!kubectl.available) {
+        return err(Error(`Kubectl is unavailable.`));
+    }
+
+    // Run cluster-info to get DNS Core hostname.
+    const runCommandResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
+        clusterKubeConfig, "YAML",
+        (f) => kubectl.api.invokeCommand(`cluster-info --kubeconfig="${f}"`)
+    );
+
+    if (runCommandResult === undefined) {
+        return err(Error(`Cluster-info failed with ${runCommandResult} error.`));
+    } else if (runCommandResult.code !== 0) {
+        return err(Error(`Get cluster-info failed with exit code ${runCommandResult.code} and error: ${runCommandResult.stderr}`));
+    }
+
+    return ok(runCommandResult.stdout);
+}
+
+async function getHostName(output: string): Promise<Result<string, Error>> {
+
+    // Get DNS Core hostname which Periscope use it as name of the container.
+    // Doc: https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#discovering-builtin-services
+    const matches = output.match(/(https?:\/\/[^\s]+)/g);
+    if (matches === null) {
+        return err(Error(`Extract container name failed with no match.`));
+    }
+
+    let hostName: string;
+    if (matches.length > 0 && matches[0].indexOf('://') !== -1) {
+        hostName = matches[0].replace('https://', '').split('.')[0];
+    } else {
+        return err(new Error(`Cluster-Info contains no host name.`));
+    }
+
+    return ok(hostName);
+
 }
