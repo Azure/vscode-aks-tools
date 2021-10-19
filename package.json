@@ -147,7 +147,7 @@
         "@azure/arm-subscriptions": "^3.0.0",
         "@azure/storage-blob": "^12.7.0",
         "axios": "^0.19.2",
-        "azure-storage": "^2.10.3",
+        "azure-storage": "^2.10.5",
         "filemanager-webpack-plugin": "^4.0.0",
         "handlebars": "^4.7.6",
         "js-yaml": "^3.14.0",
