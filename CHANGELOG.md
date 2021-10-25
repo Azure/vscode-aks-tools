@@ -1,5 +1,19 @@
 # Change Log
 
+## [0.0.10]
+
+* Support Workspace Trust feature (#71)
+* Update icon to latest design (#83)
+* Fix storage SDK issue under VS Code 1.59 (#81)
+* Mark as supporting virtual workspaces (#77)
+* Webpack the extension (#62)
+* Periscope work for kustomise related changes (#82)
+* Fix packaging failure (#84)
+* Remove unused package and update handlebars (#85)
+* GitHub action to release and publish (#86)
+
+Thanks to @itowlson, @AaronCrawfis and @qpetraroia.
+
 ## 0.0.9
 
 * Install [Azure Service Operator](https://cloudblogs.microsoft.com/opensource/2020/06/25/announcing-azure-service-operator-kubernetes/) and browse Azure service resources
