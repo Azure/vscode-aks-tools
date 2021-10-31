@@ -1,4 +1,4 @@
-const storage = require("azure-storage");
+import storage = require("@azure/storage-blob");
 
 export enum LinkDuration {
     StartTime,
@@ -14,14 +14,13 @@ function sasDuration(duration: LinkDuration): number {
     }
 }
 
-function sasPermission(duration: LinkDuration, permission: any): any {
+function sasPermission(duration: LinkDuration): any {
     // Restrict the permission as default permissioning model.
-    let permissionsForSas = permission.READ + permission.LIST + permission.PROCESS;
+    let permissionsForSas = "rlp";
 
     switch (duration) {
         case LinkDuration.DownloadNow:
-            permissionsForSas = permissionsForSas + permission.ADD + permission.CREATE +
-                permission.WRITE + permission.DELETE + permission.UPDATE;
+            permissionsForSas = permissionsForSas + "acwdu";
             return permissionsForSas;
         case LinkDuration.Shareable:
             return permissionsForSas;
@@ -40,23 +39,23 @@ export function getSASKey(
     startDate.setTime(startDate.getTime() - sasDuration(LinkDuration.StartTime));
     expiryDate.setTime(expiryDate.getTime() + sasDuration(linkDuration));
 
-    const AccountSasConstants = storage.Constants.AccountSasConstants;
-    const permissionsForSas = sasPermission(linkDuration, AccountSasConstants.Permissions);
+    const permissionsForSas = sasPermission(linkDuration);
 
-    const sharedAccessPolicy = {
-        AccessPolicy: {
-            Services: AccountSasConstants.Services.BLOB,
-            ResourceTypes: AccountSasConstants.Resources.SERVICE +
-                AccountSasConstants.Resources.CONTAINER +
-                AccountSasConstants.Resources.OBJECT,
-            Permissions: permissionsForSas,
-            Start: startDate,
-            Expiry: expiryDate
-        }
-    };
+    // Please refer to the new implementation of azure-storage api here: https://github.com/Azure/azure-storage-node 
+    // Constans used to be available externallbut not in new packages they dont.
+    // https://github.com/Azure/azure-storage-node/blob/master/lib/common/util/constants.js#L179
+    const cerds = new storage.StorageSharedKeyCredential(storageAccount, storageKey);
+    const accountSharedAccessSignature = storage.generateAccountSASQueryParameters({
+        expiresOn : expiryDate,
+        permissions: storage.AccountSASPermissions.parse(permissionsForSas),
+        protocol: storage.SASProtocol.Https,
+        resourceTypes: storage.AccountSASResourceTypes.parse("sco").toString(),
+        services: storage.AccountSASServices.parse("b").toString(),
+        startsOn: startDate
+    }, cerds).toString();
 
     // Generate SAS.
-    const sas = "?" + storage.generateAccountSharedAccessSignature(storageAccount, storageKey, sharedAccessPolicy);
+    const sas = "?" + accountSharedAccessSignature;
 
     return sas;
 }
