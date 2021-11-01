@@ -41,10 +41,9 @@ export function getSASKey(
 
     const permissionsForSas = sasPermission(linkDuration);
 
-    // Please refer to the new implementation of azure-storage api here: https://github.com/Azure/azure-storage-node 
-    // Constans used to be available externallbut not in new packages they dont.
-    // https://github.com/Azure/azure-storage-node/blob/master/lib/common/util/constants.js#L179
-    const cerds = new storage.StorageSharedKeyCredential(storageAccount, storageKey);
+    // The Azure storage client doesn't export constants.
+    // The ones we declare here are copied from https://github.com/Azure/azure-storage-node/blob/c4226315f037f2791f7c938e900b3497c9c0a67a/lib/common/util/constants.js#L179
+    const creds = new storage.StorageSharedKeyCredential(storageAccount, storageKey);
     const accountSharedAccessSignature = storage.generateAccountSASQueryParameters({
         expiresOn : expiryDate,
         permissions: storage.AccountSASPermissions.parse(permissionsForSas),
@@ -52,7 +51,7 @@ export function getSASKey(
         resourceTypes: storage.AccountSASResourceTypes.parse("sco").toString(),
         services: storage.AccountSASServices.parse("b").toString(),
         startsOn: startDate
-    }, cerds).toString();
+    }, creds).toString();
 
     // Generate SAS.
     const sas = "?" + accountSharedAccessSignature;
