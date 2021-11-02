@@ -145,6 +145,7 @@
         "@azure/arm-storage": "^15.2.0",
         "@azure/arm-subscriptions": "^3.0.0",
         "@azure/storage-blob": "^12.7.0",
+        "ajv": "^6.12.6",
         "filemanager-webpack-plugin": "^4.0.0",
         "handlebars": "^4.7.7",
         "js-yaml": "^3.14.0",

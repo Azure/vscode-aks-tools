@@ -26,14 +26,14 @@ jobs:
         npm install
         npm run compile
     - name: Package Extension
-      if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         npm install -g vsce
         vsce package
         mkdir vsix
         mv *.vsix vsix
     - name: Archive Extension
-      if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v1
       with:
         name: vsix
