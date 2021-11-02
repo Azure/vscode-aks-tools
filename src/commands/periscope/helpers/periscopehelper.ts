@@ -17,7 +17,7 @@ const tmp = require('tmp');
 const {
     BlobServiceClient,
     StorageSharedKeyCredential
-} = require("@azure/storage-blob"); 
+} = require("@azure/storage-blob");
 
 export async function getClusterDiagnosticSettings(
     cluster: AksClusterTreeItem
