@@ -135,7 +135,6 @@
         "ts-loader": "^8.0.18",
         "tslint": "^5.20.1",
         "typescript": "^3.7.2",
-        "vscode": "^1.1.6",
         "webpack": "^5.25.1",
         "webpack-cli": "^4.5.0"
     },
@@ -146,7 +145,6 @@
         "@azure/arm-storage": "^15.2.0",
         "@azure/arm-subscriptions": "^3.0.0",
         "@azure/storage-blob": "^12.7.0",
-        "azure-storage": "^2.10.5",
         "filemanager-webpack-plugin": "^4.0.0",
         "handlebars": "^4.7.7",
         "js-yaml": "^3.14.0",
