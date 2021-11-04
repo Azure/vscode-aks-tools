@@ -24,19 +24,7 @@ export async function startInstallation(
     const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
     if (!clusterKubeConfig) return undefined;
 
-    // 1) Azure Service Operator requires self-signed certificates for CRD Conversion Webhooks.
-    installationResponse.installCertManagerResult = await longRunning(`Installing Cert Manager for Azure Service Operator...`,
-        () => installCertManager(kubectl, clusterKubeConfig)
-    );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installCertManagerResult, installationResponse)) return undefined;
-
-    // 2) The cert-manager pods should be running before proceeding to the next step.
-    installationResponse.checkCertManagerRolloutStatusResult = await longRunning(`Checking Cert Manager Rollout Status...`,
-        () => checkCertManagerRolloutStatus(kubectl, clusterKubeConfig)
-    );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.checkCertManagerRolloutStatusResult, installationResponse)) return undefined;
-
-    // 3) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
+    // 1) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
     installationResponse.installOlmCrdResult = await longRunning(`Installing Operator Lifecycle Manager CRD resource...`,
         () => installOlmCrd(kubectl, clusterKubeConfig)
@@ -53,19 +41,13 @@ export async function startInstallation(
     );
     if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorResult, installationResponse)) return undefined;
 
-    // 4) IssuerCert apply with Operator namespace created above.
-    installationResponse.installIssuerCertResult = await longRunning(`Installing the Issuer and Certificate cert-manager resources....`,
-        () => installIssuerCert(kubectl, clusterKubeConfig)
-    );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installIssuerCertResult, installationResponse)) return undefined;
-
-    // 5) Run kubectl apply for azureoperatorsettings.yaml
+    // 2) Run kubectl apply for azureoperatorsettings.yaml
     installationResponse.installOperatorSettingsResult = await longRunning(`Installing Azure Service Operator Settings...`,
         () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig)
     );
     if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
 
-    // 6) Final step: Get the azure service operator pod. - kubectl get pods -n operators
+    // 3) Final step: Get the azure service operator pod. - kubectl get pods -n operators
     installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
         () => getOperatorsPod(kubectl, clusterKubeConfig)
     );
@@ -86,35 +68,12 @@ async function getOperatorsPod(
     return result;
 }
 
-async function installCertManager(
-    kubectl: k8s.KubectlV1,
-    clusterKubeConfig: string
-): Promise<k8s.KubectlV1.ShellResult | undefined> {
-    const cerManagerFile = "https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml";
-    const command = `apply -f ${cerManagerFile}`;
-    const failureDescription = "Cert Manager Rollout had following error";
-
-    const result = await invokeKubectlCommand(kubectl, clusterKubeConfig, command, failureDescription);
-    return result;
-}
-
-async function checkCertManagerRolloutStatus(
-    kubectl: k8s.KubectlV1,
-    clusterKubeConfig: string
-): Promise<k8s.KubectlV1.ShellResult | undefined> {
-    const command = `rollout status -n cert-manager deploy/cert-manager-webhook`;
-    const failureDescription = "Cert Manager Rollout had following error";
-
-    const result = await invokeKubectlCommand(kubectl, clusterKubeConfig, command, failureDescription);
-    return result;
-}
-
 async function installOlmCrd(
     kubectl: k8s.KubectlV1,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
-        const asoCrdYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/crds.yaml";
+        const asoCrdYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.18.3/crds.yaml";
         const runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
             clusterKubeConfig, "yaml",
             (f) => kubectl.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
@@ -130,7 +89,7 @@ async function installOlm(
     kubectl: k8s.KubectlV1,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
-    const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.17.0/olm.yaml";
+    const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.18.3/olm.yaml";
     const command = `create -f ${asoOlmYamlFile}`;
     const failureDescription = "Installing operator lifecycle manager resource had following error";
 
@@ -145,23 +104,6 @@ async function installOperator(
     const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
     const command = `create -f ${asoYamlFile}`;
     const failureDescription = "Installing operator resoruce had following error";
-
-    const result = await invokeKubectlCommand(kubectl, clusterKubeConfig, command, failureDescription);
-    return result;
-}
-
-async function installIssuerCert(
-    kubectl: k8s.KubectlV1,
-    clusterKubeConfig: string
-): Promise<k8s.KubectlV1.ShellResult | undefined> {
-    const extensionPath = getExtensionPath();
-    const templateYaml = tmp.fileSync({ prefix: "aso-issuer", postfix: `.yaml` });
-    const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'issuerandcertmanager.yaml'));
-    const issuerandcertmanager = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8');
-    fs.writeFileSync(templateYaml.name, issuerandcertmanager);
-
-    const command = `apply -f ${templateYaml.name}`;
-    const failureDescription = "ASO Issuer and Cert Deployment file had following error";
 
     const result = await invokeKubectlCommand(kubectl, clusterKubeConfig, command, failureDescription);
     return result;
