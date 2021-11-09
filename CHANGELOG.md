@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.11]
+
+* Changes to incorporate new Azure Service Operator changes. (#90)
+
+Thanks to @itowlson, @rzhang628, @babbageclunk
+
 ## [0.0.10]
 
 * Support Workspace Trust feature (#71)
