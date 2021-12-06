@@ -19,17 +19,16 @@ export function run(): Promise<void> {
 			// Add files to the test suite
 			files.forEach((f) => {
 				mocha.addFile(path.resolve(testsRoot, f));
-				console.log(`AND HERE : ${f}`);
+				console.log(`Added file : ${f} to the test suite.`);
 			});
 
 			try {
-				console.log("TEST TEST");
 				// Run the mocha test
 				mocha.run((failures) => {
 					if (failures > 0) {
 						e(new Error(`${failures} tests failed.`));
 					} else {
-						console.log("NOT FAILED");
+						console.log("Test passed.");
 						c();
 					}
 				});
