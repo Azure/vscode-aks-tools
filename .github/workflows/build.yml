@@ -25,6 +25,12 @@ jobs:
       run: |
         npm install
         npm run compile
+    - name: Smoke test (Linux)
+      run: xvfb-run -a npm run test
+      if: runner.os == 'Linux'
+    - name: Smoke test (Mac, Windows)
+      run: npm run test
+      if: runner.os != 'Linux'
     - name: Package Extension
       if: matrix.os == 'ubuntu-latest'
       run: |
