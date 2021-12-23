@@ -32,6 +32,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
         registerUIExtensionVariables(uiExtensionVariables);
 
+        /* Please Note: Other Azure teams like "azure-deploy" have taken dependencies on
+           the Cloud tree node objects, and the compatibility must be considered when modifying
+           any Cloud tree functionality. */
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
         registerCommandWithTelemetry('aks.detectorDiagnostics', detectorDiagnostics);
         registerCommandWithTelemetry('aks.periscope', periscope);
