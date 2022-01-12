@@ -1,3 +1,8 @@
+<a href="https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-aks-tools" alt="Click to visit marketplace">
+    <img src="https://vsmarketplacebadge.apphb.com/version-short/ms-kubernetes-tools.vscode-aks-tools.svg">
+    <img src="https://vsmarketplacebadge.apphb.com/rating-star/ms-kubernetes-tools.vscode-aks-tools.svg">
+</a>
+
 # Azure Kubernetes Service (AKS) Extension for Visual Studio Code (Preview)
 
 * View your AKS clusters in the Kubernetes extension cloud explorer
