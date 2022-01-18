@@ -92,6 +92,12 @@
                     "group": "8@1"
                 },
                 {
+                    "submenu": "aks.submenu1",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "8@1"
+                },
+                
+                {
                     "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@2"
@@ -110,8 +116,24 @@
                     "command": "aks.installAzureServiceOperator",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 }
+            ],
+            "aks.submenu1": [
+                {
+                  "command": "git.stageAll",
+                  "group": "navigation"
+                },
+                {
+                  "command": "git.stage",
+                  "group": "navigation"
+                }
             ]
-        }
+        },
+        "submenus": [
+            {
+              "id": "aks.submenu1",
+              "label": "Network Detector"
+            }
+          ]
     },
     "scripts": {
         "vscode:prepublish": "webpack --mode production",
