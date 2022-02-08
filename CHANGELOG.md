@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.0.12]
+
+* Fix for periscope feature and update depricated api version from beta1 to v1.
+* New badges for this repo and message display changes for periscope.
+
+Thanks to @rzhang628, @davefellows, @squillace, @itowlson
+
 ## [0.0.11]
 
 * Changes to incorporate new Azure Service Operator changes. (#90)
