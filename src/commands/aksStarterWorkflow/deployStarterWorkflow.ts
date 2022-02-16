@@ -8,14 +8,8 @@ export default async function deployStarterWorkflow(
     context: IActionContext,
     target: any
 ): Promise<void> {
-    const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
-
-    if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
-        return undefined;
-    }
 
     if (!cloudExplorer.available) {
         vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
