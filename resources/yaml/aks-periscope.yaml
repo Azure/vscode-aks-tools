@@ -174,7 +174,7 @@ spec:
             name: nodelogs-config
         - secretRef:
             name: azureblob-secret
-        image: ghcr.io/tatsinnit/aks/periscope:test-image-tag-live-demo
+        image: mcr.microsoft.com/aks/periscope:v0.6
         imagePullPolicy: Always
         name: aks-periscope
         resources:
