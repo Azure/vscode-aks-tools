@@ -94,9 +94,9 @@ For more information on Azure Service Operator, visit [Azure Service Operator (f
 
 ![Azure Service Operator Webview](resources/azure-service-operator-screenshot.png)
 
-### Configure GitHub Actions Starter Workflow
+### Create GitHub Starter Workflow
 
-Right click on your AKS cluster and click on **Configure GitHub Actions Starter Workflow** to easily open and create a workflow starter template. This helps in quick generation of the workflow templates with pre populates resource and clustername. [More details here](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service.yml)
+Right click on your AKS cluster and click on **Create GitHub Starter Workflow** to easily open and create a workflow starter template. This helps in quick generation of the workflow templates with pre populates resource and clustername. [More details here](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service.yml)
 
 ## Telemetry
 
