@@ -67,7 +67,7 @@
             },
             {
                 "command": "aks.deployStarterWorkflow",
-                "title": "Configure AKS Starter Workflow"
+                "title": "Configure Github Actions"
             }
         ],
         "menus": {
