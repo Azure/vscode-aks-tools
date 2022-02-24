@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from 'vscode-azureextensionui';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { configureStarterConfigDataForAKS } from './deployStarterWorkflowHelper';
+import { configureStarterConfigDataForAKS } from './configureStarterWorkflowHelper';
 
-export default async function deployStarterWorkflow(
+export default async function configureStarterWorkflow(
     context: IActionContext,
     target: any
 ): Promise<void> {
