@@ -31,7 +31,8 @@
         "onView:kubernetes.cloudExplorer",
         "onCommand:aks.detectorDiagnostics",
         "onCommand:aks.periscope",
-        "onCommand:aks.installAzureServiceOperator"
+        "onCommand:aks.installAzureServiceOperator",
+        "onCommand:aks.configureStarterWorkflow"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -63,6 +64,10 @@
             {
                 "command": "aks.installAzureServiceOperator",
                 "title": "Install Azure Service Operator"
+            },
+            {
+                "command": "aks.configureStarterWorkflow",
+                "title": "Create GitHub Starter Workflow"
             }
         ],
         "menus": {
@@ -109,6 +114,11 @@
                 {
                     "command": "aks.installAzureServiceOperator",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                },
+                {
+                    "command": "aks.configureStarterWorkflow",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                
                 }
             ]
         }
