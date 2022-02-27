@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.13]
+
+* Create [GitHub AKS Starter Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service.yml).
+
+Thanks to @gambtho, @peterbom, @OliverMKing, @qike-ms, @itowlson, @rzhang628, @davefellows, @squillace and @qpetraroia
+
 ## [0.0.12]
 
 * Fix for periscope feature and update depricated api version from beta1 to v1.
