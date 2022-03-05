@@ -13,6 +13,7 @@ import { configurePipeline } from './commands/deployAzurePipeline/configureCicdP
 import installAzureServiceOperator  from './commands/azureServiceOperators/installAzureServiceOperator';
 import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azureservicebrowser';
 import { setAssetContext } from './assets';
+import configureStarterWorkflow from './commands/aksStarterWorkflow/configureStarterWorkflow';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -38,6 +39,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('azure-deploy.configureCicdPipeline', configurePipeline);
         registerCommandWithTelemetry('azure-deploy.browseCicdPipeline', browsePipeline);
         registerCommandWithTelemetry('aks.installAzureServiceOperator', installAzureServiceOperator );
+        registerCommandWithTelemetry('aks.configureStarterWorkflow', configureStarterWorkflow );
 
         await registerAzureServiceNodes(context);
 
