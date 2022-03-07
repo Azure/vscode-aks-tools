@@ -32,7 +32,8 @@
         "onCommand:aks.detectorDiagnostics",
         "onCommand:aks.periscope",
         "onCommand:aks.installAzureServiceOperator",
-        "onCommand:aks.configureStarterWorkflow"
+        "onCommand:aks.configureStarterWorkflow",
+        "onCommand:aks.aksCRUDDiagnostics"        
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -47,7 +48,7 @@
             },
             {
                 "command": "aks.detectorDiagnostics",
-                "title": "Run AKS Diagnostics"
+                "title": "Network and Connectivity"
             },
             {
                 "command": "aks.periscope",
@@ -68,6 +69,10 @@
             {
                 "command": "aks.configureStarterWorkflow",
                 "title": "Create GitHub Starter Workflow"
+            },
+            {
+                "command": "aks.aksCRUDDiagnostics",
+                "title": "Create, Upgrade, Delete and Scale"
             }
         ],
         "menus": {
@@ -92,12 +97,7 @@
                     "group": "inline"
                 },
                 {
-                    "command": "aks.detectorDiagnostics",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "8@1"
-                },
-                {
-                    "submenu": "aks.submenu1",
+                    "submenu": "aks.detectorsSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@1"
                 },
@@ -127,21 +127,21 @@
                 
                 }
             ],
-            "aks.submenu1": [
+            "aks.detectorsSubMenu": [
                 {
-                  "command": "git.stageAll",
+                  "command": "aks.detectorDiagnostics",
                   "group": "navigation"
                 },
                 {
-                  "command": "git.stage",
+                  "command": "aks.aksCRUDDiagnostics",
                   "group": "navigation"
                 }
             ]
         },
         "submenus": [
             {
-              "id": "aks.submenu1",
-              "label": "Network Detector"
+              "id": "aks.detectorsSubMenu",
+              "label": "Run AKS Diagnostics"
             }
           ]
     },
