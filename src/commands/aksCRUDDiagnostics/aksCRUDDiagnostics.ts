@@ -7,7 +7,7 @@ import { AppLensARMResponse } from '../detectorDiagnostics/models/applensarmresp
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 import path = require('path');
-import { convertHtmlJsonConfiguration, htmlHandlerRegisterHelper } from '../detectorDiagnostics/helpers/networkconnectivityhtmlhelper';
+import { htmlHandlerRegisterHelper } from './helpers/crudhtmlhelper';
 
 export default async function aksCRUDDiagnostics(
     context: IActionContext,
@@ -23,7 +23,6 @@ export default async function aksCRUDDiagnostics(
               const extensionPath = getExtensionPath();
               if (extensionPath) {
                 await loadDetector(cloudTarget.cloudResource, extensionPath);
-                // vscode.window.showInformationMessage(`Do CRUD Detector ARM calls and fill web-view with return data: ${dataset}.`);
               }
         } else {
           vscode.window.showInformationMessage('This command only applies to AKS clusters.');
@@ -41,10 +40,12 @@ async function loadDetector(
             const clusterAppLensData = await getAppLensDetectorData(cloudTarget, "aks-category-crud");
             const detectorMap = new Map();
 
-            await Promise.all(clusterAppLensData?.properties.dataset[0].renderingProperties.detectorIds.map(async (detector: string) => {
+            // Crud detector list is guranteed form the ARM call to aks-category-crud, under below data structure.
+            const crudDetectorList = clusterAppLensData?.properties.dataset[0].renderingProperties.detectorIds;
+
+            await Promise.all(crudDetectorList.map(async (detector: string) => {
               const detectorAppLensData = await getAppLensDetectorData(cloudTarget, detector);
               detectorMap.set(detector , detectorAppLensData);
-              detectorMap.get(detector);
             }));
 
             if (clusterAppLensData && detectorMap.size > 0) {
@@ -93,11 +94,7 @@ function getWebviewContent(
                    name: webviewClusterData.metadata.name,
                    description: webviewClusterData.metadata.description,
                    portalUrl: portalUrl,
-                   detectorData: detectorMap,
-                   detectorDataTest: convertHtmlJsonConfiguration(detectorMap.get("advisor-available-ips")?.properties, 1),
-                  //  subnetdata: convertHtmlJsonConfiguration(webviewClusterData, 2),
-                  //  subneterrordata: convertHtmlJsonConfiguration(webviewClusterData, 3),
-                  //  domaindata: convertHtmlJsonConfiguration(webviewClusterData, 4)
+                   detectorData: detectorMap
                   };
     const webviewcontent = template(data);
 
