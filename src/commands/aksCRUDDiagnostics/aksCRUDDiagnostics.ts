@@ -79,7 +79,7 @@ function getWebviewContent(
   vscodeExtensionPath: string
   ): string {
     const webviewClusterData = clusterdata?.properties;
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'akscrud', 'aksCRUD.css'));
+    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'common', 'detector.css'));
     const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'akscrud', 'aksCRUD.html'));
     const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
     const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
