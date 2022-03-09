@@ -43,10 +43,10 @@ async function loadDetector(
             // Crud detector list is guranteed form the ARM call to aks-category-crud, under below data structure.
             const crudDetectorList = clusterAppLensData?.properties.dataset[0].renderingProperties.detectorIds;
 
-            await Promise.all(crudDetectorList.map(async (detector: string) => {
+            for (const detector of crudDetectorList) {
               const detectorAppLensData = await getAppLensDetectorData(cloudTarget, detector);
               detectorMap.set(detector , detectorAppLensData);
-            }));
+            }
 
             if (clusterAppLensData && detectorMap.size > 0) {
               await createDetectorWebView(clustername, clusterAppLensData, detectorMap, extensionPath);
