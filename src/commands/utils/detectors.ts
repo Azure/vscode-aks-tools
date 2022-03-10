@@ -1,8 +1,16 @@
 import * as vscode from 'vscode';
 import { ResourceManagementClient } from "@azure/arm-resources";
-import { AppLensARMResponse } from "../detectorDiagnostics/models/applensarmresponse";
 import { Errorable } from "./errorable";
 
+export interface AppLensARMResponse {
+    readonly id: string;
+    readonly name: string;
+    readonly location: string;
+    readonly resourceGroup?: string;
+    readonly properties: any;
+    readonly type: string;
+}
+  
 export async function getAppLensDetectorData(
     clusterTarget: any,
     detectorName: string

@@ -1,4 +1,4 @@
-import { AppLensARMResponse } from '../models/applensarmresponse';
+import { AppLensARMResponse } from '../../utils/detectors';
 import * as htmlhandlers from "handlebars";
 
 export function convertHtmlJsonConfiguration(
