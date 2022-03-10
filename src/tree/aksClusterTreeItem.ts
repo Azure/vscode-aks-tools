@@ -18,7 +18,7 @@ export interface AksClusterTreeNode {
 export default class AksClusterTreeItem extends AzureTreeItem implements AksClusterTreeNode {
     constructor(
         parent: AzExtParentTreeItem,
-        private readonly resource: Resource) {
+        readonly resource: Resource) {
         super(parent);
 
         this.iconPath = assetUri("resources/aks-tools.png");

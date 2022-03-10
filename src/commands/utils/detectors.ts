@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { Errorable } from "./errorable";
+import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 
 export interface AppLensARMResponse {
     readonly id: string;
@@ -10,9 +11,9 @@ export interface AppLensARMResponse {
     readonly properties: any;
     readonly type: string;
 }
-  
+
 export async function getAppLensDetectorData(
-    clusterTarget: any,
+    clusterTarget: AksClusterTreeItem,
     detectorName: string
 ): Promise<AppLensARMResponse | undefined> {
     const apiResult = await getDetectorInfo(clusterTarget, detectorName);
@@ -26,9 +27,17 @@ export async function getAppLensDetectorData(
 }
 
 async function getDetectorInfo(
-    target: any,
+    target: AksClusterTreeItem,
     detectorName: string
 ): Promise<Errorable<AppLensARMResponse>> {
+    if (target.resource.name === undefined) {
+        return { succeeded: false, error: `Cluster resource ${target.armId} does not have a name.` };
+    }
+
+    if (target.resource.type === undefined) {
+        return { succeeded: false, error: `Cluster resource ${target.name} does not have a type.` };
+    }
+
     try {
         const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId);
         // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
