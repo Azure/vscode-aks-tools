@@ -6,28 +6,25 @@ import { convertHtmlJsonConfiguration }  from './helpers/networkconnectivityhtml
 import * as htmlhandlers from "handlebars";
 import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning } from '../utils/host';
-import path = require('path');
+import * as path from 'path';
 import * as fs from 'fs';
 
 export default async function networkAndConnectivityDiagnostics(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    if (cloudExplorer.available) {
-      const cloudTarget = cloudExplorer.api.resolveCommandTarget(target);
+    const cluster = getAksClusterTreeItem(target, cloudExplorer);
+    if (cluster === undefined) {
+      return;
+    }
 
-      if (cloudTarget && cloudTarget.cloudName === "Azure" &&
-            cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
-              const extensionPath = getExtensionPath();
-              if (extensionPath) {
-                await loadNetworkConnectivityDetector(cloudTarget.cloudResource, extensionPath);
-              }
-        } else {
-          vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-        }
+    const extensionPath = getExtensionPath();
+    if (extensionPath) {
+      await loadNetworkConnectivityDetector(cluster, extensionPath);
     }
 }
 

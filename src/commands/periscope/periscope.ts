@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from 'vscode-azureextensionui';
 import * as tmpfile from '../utils/tempfile';
-import * as clusters from '../utils/clusters';
+import { getAksClusterTreeItem, getKubeconfigYaml } from '../utils/clusters';
 import { getExtensionPath, longRunning } from '../utils/host';
 import {
     getClusterDiagnosticSettings,
@@ -16,26 +16,24 @@ import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 
 export default async function periscope(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
+    if (!kubectl.available) {
+        return;
+    }
+
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    if (cloudExplorer.available && kubectl.available) {
-        const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
+    const cluster = getAksClusterTreeItem(target, cloudExplorer);
+    if (cluster === undefined) {
+        return;
+    }
 
-        if (clusterTarget && clusterTarget.cloudName === "Azure" &&
-            clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
-            const cluster = clusterTarget.cloudResource as AksClusterTreeItem;
-            const clusterKubeConfig = await clusters.getKubeconfigYaml(cluster);
-
-            if (clusterKubeConfig) {
-                await runAKSPeriscope(cluster, clusterKubeConfig);
-            }
-        } else {
-            vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-        }
+    const clusterKubeConfig = await getKubeconfigYaml(cluster);
+    if (clusterKubeConfig) {
+        await runAKSPeriscope(cluster, clusterKubeConfig);
     }
 }
 

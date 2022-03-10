@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
+import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning }  from '../utils/host';
 import { AppLensARMResponse, getAppLensDetectorData } from '../utils/detectors';
 import * as fs from 'fs';
@@ -10,24 +11,19 @@ import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 
 export default async function aksCRUDDiagnostics(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    if (cloudExplorer.available) {
-      const cloudTarget = cloudExplorer.api.resolveCommandTarget(target);
+    const cluster = getAksClusterTreeItem(target, cloudExplorer);
+    if (cluster === undefined) {
+      return;
+    }
 
-      if (cloudTarget && cloudTarget.cloudName === "Azure" &&
-            cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
-              const cluster = cloudTarget.cloudResource as AksClusterTreeItem;
-              const extensionPath = getExtensionPath();
-              if (extensionPath && cluster) {
-                await loadDetector(cluster, extensionPath);
-              }
-        } else {
-          vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-        }
+    const extensionPath = getExtensionPath();
+    if (extensionPath) {
+      await loadDetector(cluster, extensionPath);
     }
 }
 

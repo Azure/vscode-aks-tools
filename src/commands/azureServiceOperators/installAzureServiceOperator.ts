@@ -10,10 +10,11 @@ import {
 } from './helpers/azureservicehtmlhelper';
 import * as clusters from '../utils/clusters';
 import { InstallationResponse } from './models/installationResponse';
+import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath } from '../utils/host';
 
 export default async function installAzureServiceOperator(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -25,28 +26,18 @@ export default async function installAzureServiceOperator(
         return undefined;
     }
 
-    if (!cloudExplorer.available) {
-        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
-        return undefined;
-    }
-
     if (!clusterExplorer.available) {
         vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
         return undefined;
     }
 
-    const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
-
-    if (clusterTarget && clusterTarget.cloudName === "Azure" &&
-        clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster" &&
-        clusterExplorer.available) {
-
-        const aksCluster = clusterTarget.cloudResource as AksClusterTreeItem;
-        await install(kubectl.api, aksCluster);
-        clusterExplorer.api.refresh();
-    } else {
-        vscode.window.showInformationMessage('This command only applies to AKS clusters.');
+    const cluster = getAksClusterTreeItem(target, cloudExplorer);
+    if (cluster === undefined) {
+        return undefined;
     }
+
+    await install(kubectl.api, cluster);
+    clusterExplorer.api.refresh();
 }
 
 export async function install(
