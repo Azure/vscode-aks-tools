@@ -4,7 +4,7 @@ import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
 import { createAzExtOutputChannel, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand, IActionContext } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
-import detectorDiagnostics from './commands/detectorDiagnostics/detectorDiagnostics';
+import networkAndConnectivityDiagnostics from './commands/networkAndConnectivityDiagnostics/networkAndConnectivityDiagnostics';
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
@@ -35,7 +35,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerUIExtensionVariables(uiExtensionVariables);
 
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
-        registerCommandWithTelemetry('aks.detectorDiagnostics', detectorDiagnostics);
+        registerCommandWithTelemetry('aks.networkAndConnectivityDiagnostics', networkAndConnectivityDiagnostics);
         registerCommandWithTelemetry('aks.periscope', periscope);
         registerCommandWithTelemetry('azure-deploy.configureCicdPipeline', configurePipeline);
         registerCommandWithTelemetry('azure-deploy.browseCicdPipeline', browsePipeline);

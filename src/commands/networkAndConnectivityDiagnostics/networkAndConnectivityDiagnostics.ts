@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { AppLensARMResponse } from './models/applensarmresponse';
+import { AppLensARMResponse } from '../utils/detectors';
 import { convertHtmlJsonConfiguration, htmlHandlerRegisterHelper }  from './helpers/networkconnectivityhtmlhelper';
 import { longRunning, getExtensionPath }  from '../utils/host';
 import * as path from 'path';
@@ -10,7 +10,7 @@ import * as htmlhandlers from "handlebars";
 import { Errorable } from '../utils/errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
 
-export default async function detectorDiagnostics(
+export default async function networkAndConnectivityDiagnostics(
     context: IActionContext,
     target: any
 ): Promise<void> {
