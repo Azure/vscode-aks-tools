@@ -8,8 +8,6 @@ import networkAndConnectivityDiagnostics from './commands/networkAndConnectivity
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
-import { browsePipeline } from './commands/deployAzurePipeline/browsePipeline';
-import { configurePipeline } from './commands/deployAzurePipeline/configureCicdPipeline/configurePipeline';
 import installAzureServiceOperator  from './commands/azureServiceOperators/installAzureServiceOperator';
 import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azureservicebrowser';
 import { setAssetContext } from './assets';
@@ -37,8 +35,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
         registerCommandWithTelemetry('aks.networkAndConnectivityDiagnostics', networkAndConnectivityDiagnostics);
         registerCommandWithTelemetry('aks.periscope', periscope);
-        registerCommandWithTelemetry('azure-deploy.configureCicdPipeline', configurePipeline);
-        registerCommandWithTelemetry('azure-deploy.browseCicdPipeline', browsePipeline);
         registerCommandWithTelemetry('aks.installAzureServiceOperator', installAzureServiceOperator );
         registerCommandWithTelemetry('aks.configureStarterWorkflow', configureStarterWorkflow );
         registerCommandWithTelemetry('aks.aksCRUDDiagnostics', aksCRUDDiagnostics );

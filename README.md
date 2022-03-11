@@ -9,8 +9,6 @@
 * Add AKS clusters to kubeconfig
 * Perform AKS Diagnostics checks on your AKS cluster 
 * Run AKS Periscope within VS Code
-* Configure a Continous Integration / Continous Deployment ( CI/CD ) Pipeline targetting AKS cluster from within VSCode
-* Browse to all Continous Integration / Continous Deployment ( CI/CD ) Pipelines targetting AKS cluster
 * Install Azure Service Operator on your AKS cluster
 * Create GitHub Starter Workflow from your AKS cluster
 
@@ -81,14 +79,6 @@ Running the AKS Periscope requires you to have a storage account associated with
 7. When ready, select **Save** to enable collection of the selected logs.
 
 For more information on Diagnostics settings, visit [Create diagnostic settings to send platform logs and metics to different destinations](https://docs.microsoft.com/azure/azure-monitor/platform/diagnostic-settings).
-
-### Configure CI/CD Workflow
-
-Right click on your AKS cluster and click on **Configure CI/CD Workflow** to create a Continous Integration / Continous Deployment (CI/CD) pipeline targetting your cluster. This will use [Deploy to Azure](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) VSCode extension and have a  guided experience to generate a YAML file defining the build and deploy process.
-
-### Browse CI/CD Workflows
-
-Right click on your AKS cluster and click on **Browse CI/CD Workflows** to view details of all existing Continous Integration / Continous Deployment (CI/CD) pipelines that are configured against your cluster.
 
 ### Install Azure Service Operator
 
