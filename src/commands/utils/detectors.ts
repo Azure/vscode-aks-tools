@@ -10,7 +10,7 @@ export interface AppLensARMResponse {
     readonly properties: any;
     readonly type: string;
 }
-  
+
 export async function getAppLensDetectorData(
     clusterTarget: any,
     detectorName: string

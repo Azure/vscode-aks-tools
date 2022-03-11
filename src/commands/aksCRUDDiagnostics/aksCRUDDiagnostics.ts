@@ -6,7 +6,7 @@ import { AppLensARMResponse, getAppLensDetectorData } from '../utils/detectors';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 import path = require('path');
-import { htmlHandlerRegisterHelper } from './helpers/crudhtmlhelper';
+import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
 
 export default async function aksCRUDDiagnostics(
     context: IActionContext,

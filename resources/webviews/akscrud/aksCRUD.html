@@ -39,7 +39,17 @@
 
                     <div class="panel-body subnet">
                         <table>
-                            <tbody> {{property.[0].[1]}} </tbody>
+                            <tbody> <tr>{{property.[0].[1]}} </tr>
+                                {{#each property}}
+                                <tr>
+                                    <td class="table-key">{{{this.[2]}}}</td>
+                                    <td class="table-value">
+                                        <p>{{#markdownHelper this.[3]}}{{/markdownHelper}}</p>
+                                    </td>
+                                </tr>
+                                
+                            {{/each}}
+                            </tbody>
                         </table>
                     </div>
                 </div>
