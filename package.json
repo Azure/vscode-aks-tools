@@ -55,14 +55,6 @@
                 "title": "Run AKS Periscope"
             },
             {
-                "command": "azure-deploy.configureCicdPipeline",
-                "title": "Configure CI/CD Workflow"
-            },
-            {
-                "command": "azure-deploy.browseCicdPipeline",
-                "title": "Browse CI/CD Workflows"
-            },
-            {
                 "command": "aks.installAzureServiceOperator",
                 "title": "Install Azure Service Operator"
             },
@@ -79,14 +71,6 @@
             "commandPalette": [
                 {
                     "command": "aks.selectSubscriptions",
-                    "when": "never"
-                },
-                {
-                    "command": "azure-deploy.configureCicdPipeline",
-                    "when": "never"
-                },
-                {
-                    "command": "azure-deploy.browseCicdPipeline",
                     "when": "never"
                 }
             ],
@@ -106,16 +90,6 @@
                     "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@2"
-                },
-                {
-                    "command": "azure-deploy.browseCicdPipeline",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "9@2"
-                },
-                {
-                    "command": "azure-deploy.configureCicdPipeline",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "9@1"
                 },
                 {
                     "command": "aks.installAzureServiceOperator",
