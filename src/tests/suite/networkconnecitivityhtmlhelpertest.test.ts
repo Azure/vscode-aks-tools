@@ -1,7 +1,7 @@
-import * as networkconnectivityhelper  from '../../commands/detectorDiagnostics/helpers/networkconnectivityhtmlhelper';
+import * as networkconnectivityhelper  from '../../commands/networkAndConnectivityDiagnostics/helpers/networkconnectivityhtmlhelper';
 import { expect } from 'chai';
 import 'sinon';
-import { AppLensARMResponse } from '../../commands/detectorDiagnostics/models/applensarmresponse';
+import { AppLensARMResponse } from '../../commands/utils/detectors';
 import sinon = require('sinon');
 
 describe('Detector Diagnostic Convert HTML JSON Config function Fail case', () => {

@@ -36,7 +36,11 @@ export default class AksClusterTreeItem extends AzureTreeItem implements AksClus
     }
 
     public get name(): string {
-        return this.resource.name || '';
+        return this.resource.name!;
+    }
+
+    public get resourceType(): string {
+        return this.resource.type!;
     }
 
     public get session(): ISubscriptionContext {
