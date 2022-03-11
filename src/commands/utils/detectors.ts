@@ -30,21 +30,13 @@ async function getDetectorInfo(
     target: AksClusterTreeItem,
     detectorName: string
 ): Promise<Errorable<AppLensARMResponse>> {
-    if (target.resource.name === undefined) {
-        return { succeeded: false, error: `Cluster resource ${target.armId} does not have a name.` };
-    }
-
-    if (target.resource.type === undefined) {
-        return { succeeded: false, error: `Cluster resource ${target.name} does not have a type.` };
-    }
-
     try {
         const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId);
         // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
         const resourceGroup = target.armId.split("/")[4];
         const detectorInfo = await client.resources.get(
-            resourceGroup, target.resource.type,
-            target.resource.name, "detectors", detectorName, "2019-08-01");
+            resourceGroup, target.resourceType,
+            target.name, "detectors", detectorName, "2019-08-01");
 
         return { succeeded: true, result: <AppLensARMResponse>detectorInfo };
     } catch (ex) {
