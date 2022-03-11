@@ -29,10 +29,11 @@
     ],
     "activationEvents": [
         "onView:kubernetes.cloudExplorer",
-        "onCommand:aks.detectorDiagnostics",
+        "onCommand:aks.networkAndConnectivityDiagnostics",
         "onCommand:aks.periscope",
         "onCommand:aks.installAzureServiceOperator",
-        "onCommand:aks.configureStarterWorkflow"
+        "onCommand:aks.configureStarterWorkflow",
+        "onCommand:aks.aksCRUDDiagnostics"        
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -46,8 +47,8 @@
                 }
             },
             {
-                "command": "aks.detectorDiagnostics",
-                "title": "Run AKS Diagnostics"
+                "command": "aks.networkAndConnectivityDiagnostics",
+                "title": "Network and Connectivity"
             },
             {
                 "command": "aks.periscope",
@@ -68,6 +69,10 @@
             {
                 "command": "aks.configureStarterWorkflow",
                 "title": "Create GitHub Starter Workflow"
+            },
+            {
+                "command": "aks.aksCRUDDiagnostics",
+                "title": "Create, Upgrade, Delete and Scale"
             }
         ],
         "menus": {
@@ -92,10 +97,11 @@
                     "group": "inline"
                 },
                 {
-                    "command": "aks.detectorDiagnostics",
+                    "submenu": "aks.detectorsSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@1"
                 },
+                
                 {
                     "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
@@ -120,8 +126,24 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 
                 }
+            ],
+            "aks.detectorsSubMenu": [
+                {
+                  "command": "aks.networkAndConnectivityDiagnostics",
+                  "group": "navigation"
+                },
+                {
+                  "command": "aks.aksCRUDDiagnostics",
+                  "group": "navigation"
+                }
             ]
-        }
+        },
+        "submenus": [
+            {
+              "id": "aks.detectorsSubMenu",
+              "label": "Run AKS Diagnostics"
+            }
+          ]
     },
     "scripts": {
         "vscode:prepublish": "webpack --mode production",

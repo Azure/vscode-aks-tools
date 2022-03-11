@@ -42,7 +42,12 @@ Right click on your AKS cluster and click on **Save Kubeconfig** to save the kub
 
 ### AKS Diagnostics
 
-Right click on your AKS cluster and click on **Run AKS Diagnostics** to run a series of checks on your AKS cluster's backend telemetry to get diagnostics information on your network configuration and recommended solutions for network and connectivity issues. Also, to perform more checks on your AKS cluster to troubleshoot and get recommended solutions, click on the AKS Diagnostics link at the top of the page to open it for the selected cluster. For more information on AKS Diagnostics, visit [AKS Diagnostics Overview](https://docs.microsoft.com/azure/aks/concepts-diagnostics).
+Right click on your AKS cluster and click on **Run AKS Diagnostics** to display diagnostics information based on your AKS cluster's backend telemetry for:
+
+- Create, Upgrade, Delete and Scale issues
+- Network and Connectivity issues
+
+To perform further checks on your AKS cluster to troubleshoot and get recommended solutions, click on the AKS Diagnostics link at the top of the page to open it for the selected cluster. For more information on AKS Diagnostics, visit [AKS Diagnostics Overview](https://docs.microsoft.com/azure/aks/concepts-diagnostics). 
 
 ![AKS Diagnostics Webview](resources/aks-diagnostics-webview.png)
 
