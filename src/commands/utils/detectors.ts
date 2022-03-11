@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { Errorable } from "./errorable";
+import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 
 export interface AppLensARMResponse {
     readonly id: string;
@@ -12,7 +13,7 @@ export interface AppLensARMResponse {
 }
 
 export async function getAppLensDetectorData(
-    clusterTarget: any,
+    clusterTarget: AksClusterTreeItem,
     detectorName: string
 ): Promise<AppLensARMResponse | undefined> {
     const apiResult = await getDetectorInfo(clusterTarget, detectorName);
@@ -26,7 +27,7 @@ export async function getAppLensDetectorData(
 }
 
 async function getDetectorInfo(
-    target: any,
+    target: AksClusterTreeItem,
     detectorName: string
 ): Promise<Errorable<AppLensARMResponse>> {
     try {
@@ -34,8 +35,8 @@ async function getDetectorInfo(
         // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
         const resourceGroup = target.armId.split("/")[4];
         const detectorInfo = await client.resources.get(
-            resourceGroup, target.resource.type,
-            target.resource.name, "detectors", detectorName, "2019-08-01");
+            resourceGroup, target.resourceType,
+            target.name, "detectors", detectorName, "2019-08-01");
 
         return { succeeded: true, result: <AppLensARMResponse>detectorInfo };
     } catch (ex) {

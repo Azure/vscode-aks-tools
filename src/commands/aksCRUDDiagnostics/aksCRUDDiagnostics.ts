@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 import path = require('path');
 import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
+import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 
 export default async function aksCRUDDiagnostics(
     context: IActionContext,
@@ -19,9 +20,10 @@ export default async function aksCRUDDiagnostics(
 
       if (cloudTarget && cloudTarget.cloudName === "Azure" &&
             cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
+              const cluster = cloudTarget.cloudResource as AksClusterTreeItem;
               const extensionPath = getExtensionPath();
-              if (extensionPath) {
-                await loadDetector(cloudTarget.cloudResource, extensionPath);
+              if (extensionPath && cluster) {
+                await loadDetector(cluster, extensionPath);
               }
         } else {
           vscode.window.showInformationMessage('This command only applies to AKS clusters.');
@@ -30,7 +32,7 @@ export default async function aksCRUDDiagnostics(
 }
 
 async function loadDetector(
-    cloudTarget: any,
+    cloudTarget: AksClusterTreeItem,
     extensionPath: string) {
     const clustername = cloudTarget.name;
 

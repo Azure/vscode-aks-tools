@@ -1,15 +1,14 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { AppLensARMResponse } from '../utils/detectors';
+import { AppLensARMResponse, getAppLensDetectorData } from '../utils/detectors';
 import { convertHtmlJsonConfiguration }  from './helpers/networkconnectivityhtmlhelper';
-import { longRunning, getExtensionPath }  from '../utils/host';
-import * as path from 'path';
-import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
-import { Errorable } from '../utils/errorable';
-import { ResourceManagementClient } from '@azure/arm-resources';
 import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
+import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+import { getExtensionPath, longRunning } from '../utils/host';
+import path = require('path');
+import * as fs from 'fs';
 
 export default async function networkAndConnectivityDiagnostics(
     context: IActionContext,
@@ -33,13 +32,13 @@ export default async function networkAndConnectivityDiagnostics(
 }
 
 async function loadNetworkConnectivityDetector(
-  cloudTarget: any,
+  cloudTarget: AksClusterTreeItem,
   extensionPath: string) {
   const clustername = cloudTarget.name;
 
   await longRunning(`Loading ${clustername} diagnostics.`,
         async () => {
-          const clusterAppLensData = await getAppLensDetectorData(cloudTarget);
+          const clusterAppLensData = await getAppLensDetectorData(cloudTarget, "networkconnectivity");
 
           if (clusterAppLensData) {
             await createDetectorWebView(clustername, clusterAppLensData, extensionPath);
@@ -63,36 +62,6 @@ async function createDetectorWebView(
     );
 
     panel.webview.html = getWebviewContent(clusterAppLensData, extensionPath);
-}
-
-async function getAppLensDetectorData(
-  clusterTarget: any
-  ): Promise<AppLensARMResponse | undefined> {
-  const apiResult = await getNetworkConnectivityInfo(clusterTarget);
-
-  if (apiResult.succeeded) {
-    return apiResult.result;
-  } else {
-    vscode.window.showInformationMessage(apiResult.error);
-  }
-  return undefined;
-}
-
-async function getNetworkConnectivityInfo(
-  target: any
-  ): Promise<Errorable<AppLensARMResponse>> {
-  try {
-      const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId);
-      // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-      const resourceGroup = target.armId.split("/")[4];
-      const networkConnectivityInfo = await client.resources.get(
-        resourceGroup, target.resource.type,
-        target.resource.name, "detectors", "networkconnectivity", "2019-08-01");
-
-      return { succeeded: true, result: <AppLensARMResponse> networkConnectivityInfo};
-    } catch (ex) {
-      return { succeeded: false, error:  `Error invoking network connectivity detector: ${ex}` };
-    }
 }
 
 function getWebviewContent(
