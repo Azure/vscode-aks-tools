@@ -3,11 +3,12 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning }  from '../utils/host';
-import { AppLensARMResponse, getAppLensDetectorData } from '../utils/detectors';
+import { AppLensARMResponse, getDetectorInfo, getDetectorListData } from '../utils/detectors';
 import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 import path = require('path');
 import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
+import { failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 
 export default async function aksCRUDDiagnostics(
@@ -30,27 +31,26 @@ export default async function aksCRUDDiagnostics(
 async function loadDetector(
     cloudTarget: AksClusterTreeItem,
     extensionPath: string) {
+
     const clustername = cloudTarget.name;
-
     await longRunning(`Loading ${clustername} diagnostics.`,
-          async () => {
-            const clusterAppLensData = await getAppLensDetectorData(cloudTarget, "aks-category-crud");
-            const detectorMap = new Map();
+      async () => {
+        const detectorInfo = await getDetectorInfo(cloudTarget, "aks-category-crud");
+        if (failed(detectorInfo)) {
+          vscode.window.showErrorMessage(detectorInfo.error);
+          return;
+        }
 
-            // Crud detector list is guranteed form the ARM call to aks-category-crud, under below data structure.
-            const crudDetectorList = clusterAppLensData?.properties.dataset[0].renderingProperties.detectorIds;
+        const detectorMap = await getDetectorListData(cloudTarget, detectorInfo.result);
+        if (failed(detectorMap)) {
+          vscode.window.showErrorMessage(detectorMap.error);
+          return;
+        }
 
-            await Promise.all(crudDetectorList.map(async (detector: string) => {
-              const detectorAppLensData = await getAppLensDetectorData(cloudTarget, detector);
-              detectorMap.set(detector , detectorAppLensData);
-            }));
-
-            if (clusterAppLensData && detectorMap.size > 0) {
-              await createDetectorWebView(clustername, clusterAppLensData, detectorMap, extensionPath);
-            }
-          }
-      );
-  }
+        createDetectorWebView(clustername, detectorInfo.result, detectorMap.result, extensionPath);
+      }
+    );
+}
 
 async function createDetectorWebView(
   clusterName: string,
@@ -72,7 +72,7 @@ async function createDetectorWebView(
 
 function getWebviewContent(
   clusterdata: AppLensARMResponse,
-  detectorMap: Map<string, AppLensARMResponse | undefined>,
+  detectorMap: Map<string, AppLensARMResponse>,
   vscodeExtensionPath: string
   ): string {
     const webviewClusterData = clusterdata?.properties;

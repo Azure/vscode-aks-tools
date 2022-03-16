@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { AppLensARMResponse, getAppLensDetectorData } from '../utils/detectors';
+import { AppLensARMResponse, getDetectorInfo } from '../utils/detectors';
 import { convertHtmlJsonConfiguration }  from './helpers/networkconnectivityhtmlhelper';
 import * as htmlhandlers from "handlebars";
 import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
@@ -10,6 +10,7 @@ import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning } from '../utils/host';
 import * as path from 'path';
 import * as fs from 'fs';
+import { failed } from '../utils/errorable';
 
 export default async function networkAndConnectivityDiagnostics(
     _context: IActionContext,
@@ -34,14 +35,16 @@ async function loadNetworkConnectivityDetector(
   const clustername = cloudTarget.name;
 
   await longRunning(`Loading ${clustername} diagnostics.`,
-        async () => {
-          const clusterAppLensData = await getAppLensDetectorData(cloudTarget, "networkconnectivity");
+    async () => {
+      const detectorInfo = await getDetectorInfo(cloudTarget, "networkconnectivity");
+      if (failed(detectorInfo)) {
+        vscode.window.showErrorMessage(detectorInfo.error);
+        return;
+      }
 
-          if (clusterAppLensData) {
-            await createDetectorWebView(clustername, clusterAppLensData, extensionPath);
-          }
-        }
-    );
+      await createDetectorWebView(clustername, detectorInfo.result, extensionPath);
+    }
+  );
 }
 
 async function createDetectorWebView(

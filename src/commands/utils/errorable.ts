@@ -24,3 +24,18 @@ export function map<T, U>(e: Errorable<T>, fn: (t: T) => U): Errorable<U> {
     }
     return { succeeded: true, result: fn(e.result) };
 }
+
+export function combine<T>(es: Errorable<T>[]): Errorable<T[]> {
+    const failures = es.filter(failed);
+    if (failures.length > 0) {
+        return {
+            succeeded: false,
+            error: failures.map(f => f.error).join('\n')
+        };
+    }
+
+    return {
+        succeeded: true,
+        result: es.map(e => (e as Succeeded<T>).result)
+    };
+}
