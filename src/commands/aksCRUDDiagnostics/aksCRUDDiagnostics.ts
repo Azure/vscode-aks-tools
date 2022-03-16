@@ -3,14 +3,10 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning }  from '../utils/host';
-import { AppLensARMResponse, getDetectorInfo, getDetectorListData } from '../utils/detectors';
-import * as fs from 'fs';
-import * as htmlhandlers from "handlebars";
-import path = require('path');
-import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
+import { AppLensARMResponse, getDetectorInfo, getDetectorListData, getPortalUrl } from '../utils/detectors';
 import { failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { createWebView } from '../utils/webviews';
+import { createWebView, getRenderedContent, getResourceUri, HtmlHelper } from '../utils/webviews';
 
 export default async function aksCRUDDiagnostics(
     _context: IActionContext,
@@ -60,24 +56,15 @@ function getWebviewContent(
   vscodeExtensionPath: string
   ): string {
     const webviewClusterData = clusterdata?.properties;
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'common', 'detector.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'akscrud', 'aksCRUD.html'));
-    const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
-    const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
-    const portalUrl = `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
-
-    const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
-
-    htmlHandlerRegisterHelper();
-    const template = htmlhandlers.compile(htmldata);
+    const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
+    const templateUri = getResourceUri(vscodeExtensionPath, 'akscrud', 'aksCRUD.html');
     const data = {
-                   cssuri: styleUri,
-                   name: webviewClusterData.metadata.name,
-                   description: webviewClusterData.metadata.description,
-                   portalUrl: portalUrl,
-                   detectorData: detectorMap
-                  };
-    const webviewcontent = template(data);
+      cssuri: styleUri,
+      name: webviewClusterData.metadata.name,
+      description: webviewClusterData.metadata.description,
+      portalUrl: getPortalUrl(clusterdata),
+      detectorData: detectorMap
+    };
 
-    return webviewcontent;
-  }
+    return getRenderedContent(templateUri, data, HtmlHelper.MarkdownLinkHelper | HtmlHelper.EachProperty | HtmlHelper.ToLowerCase);
+}

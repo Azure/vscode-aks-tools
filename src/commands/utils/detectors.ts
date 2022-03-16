@@ -57,3 +57,7 @@ export async function getDetectorInfo(
         return { succeeded: false, error: `Error invoking ${detectorName} detector: ${ex}` };
     }
 }
+
+export function getPortalUrl(clusterdata: AppLensARMResponse) {
+    return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
+}
