@@ -4,7 +4,6 @@ import { IActionContext } from 'vscode-azureextensionui';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { startInstallation } from './helpers/azureservicehelper';
 import {
-    createASOWebViewPanel,
     convertAzureCloudEnv,
     createASOWebView
 } from './helpers/azureservicehtmlhelper';
@@ -12,6 +11,7 @@ import * as clusters from '../utils/clusters';
 import { InstallationResponse } from './models/installationResponse';
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath } from '../utils/host';
+import { createWebView } from '../utils/webviews';
 
 export default async function installAzureServiceOperator(
     _context: IActionContext,
@@ -53,7 +53,7 @@ export async function install(
     // Get user input upfront.
     // Get Service Principal AppId and Password from user.
     // Then start the installation process.
-    const panel = createASOWebViewPanel(installationResponse);
+    const webview = createWebView('Azure Service Operator', `Azure service Operator: ${installationResponse.clusterName}`);
 
     const extensionPath = getExtensionPath();
 
@@ -62,10 +62,10 @@ export async function install(
     }
 
     // Create webview with user input required.
-    createASOWebView(panel, extensionPath, installationResponse, true);
+    createASOWebView(webview, extensionPath, installationResponse, true);
 
     // Once the submit for them webview is successfull we handle rest of the installation process for Azure Service Operator.
-    panel.webview.onDidReceiveMessage(
+    webview.onDidReceiveMessage(
         async (message) => {
             if (message.appid && message.password) {
                 const cloudName = convertAzureCloudEnv(aksCluster.root.environment.name);
@@ -85,7 +85,7 @@ export async function install(
 
                 const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
 
-                await startInstallation(panel, extensionPath, kubectl, installationResponse, aksCluster, operatorSettingsInfo);
+                await startInstallation(webview, extensionPath, kubectl, installationResponse, aksCluster, operatorSettingsInfo);
             }
             return undefined;
         },

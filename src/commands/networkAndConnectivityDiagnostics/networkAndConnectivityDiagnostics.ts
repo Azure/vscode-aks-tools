@@ -11,6 +11,7 @@ import { getExtensionPath, longRunning } from '../utils/host';
 import * as path from 'path';
 import * as fs from 'fs';
 import { failed } from '../utils/errorable';
+import { createWebView } from '../utils/webviews';
 
 export default async function networkAndConnectivityDiagnostics(
     _context: IActionContext,
@@ -42,26 +43,10 @@ async function loadNetworkConnectivityDetector(
         return;
       }
 
-      await createDetectorWebView(clustername, detectorInfo.result, extensionPath);
+      const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`);
+      webview.html = getWebviewContent(detectorInfo.result, extensionPath);
     }
   );
-}
-
-async function createDetectorWebView(
-  clusterName: string,
-  clusterAppLensData: AppLensARMResponse,
-  extensionPath: string) {
-    const panel = vscode.window.createWebviewPanel(
-      'AKS Diagnostics',
-      'AKS diagnostics view for: ' + clusterName,
-      vscode.ViewColumn.Active,
-      {
-        enableScripts: true,
-        enableCommandUris: true
-      }
-    );
-
-    panel.webview.html = getWebviewContent(clusterAppLensData, extensionPath);
 }
 
 function getWebviewContent(

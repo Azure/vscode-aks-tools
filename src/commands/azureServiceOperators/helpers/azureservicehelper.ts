@@ -12,7 +12,7 @@ import { createASOWebView } from './azureservicehtmlhelper';
 const tmp = require('tmp');
 
 export async function startInstallation(
-    panel: vscode.WebviewPanel,
+    webview: vscode.Webview,
     extensionPath: string,
     kubectl: k8s.KubectlV1,
     installationResponse: InstallationResponse,
@@ -29,31 +29,31 @@ export async function startInstallation(
     installationResponse.installOlmCrdResult = await longRunning(`Installing Operator Lifecycle Manager CRD resource...`,
         () => installOlmCrd(kubectl, clusterKubeConfig)
     );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmCrdResult, installationResponse)) return undefined;
+    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOlmCrdResult, installationResponse)) return undefined;
 
     installationResponse.installOlmResult = await longRunning(`Installing Operator Lifecycle Manager resource...`,
         () => installOlm(kubectl, clusterKubeConfig)
     );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOlmResult, installationResponse)) return undefined;
+    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOlmResult, installationResponse)) return undefined;
 
     installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
         () => installOperator(kubectl, clusterKubeConfig)
     );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorResult, installationResponse)) return undefined;
+    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorResult, installationResponse)) return undefined;
 
     // 2) Run kubectl apply for azureoperatorsettings.yaml
     installationResponse.installOperatorSettingsResult = await longRunning(`Installing Azure Service Operator Settings...`,
         () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig)
     );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
+    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
 
     // 3) Final step: Get the azure service operator pod. - kubectl get pods -n operators
     installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
         () => getOperatorsPod(kubectl, clusterKubeConfig)
     );
-    if (!isInstallationSuccessfull(panel, extensionPath, installationResponse.getOperatorsPodResult, installationResponse)) return undefined;
+    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.getOperatorsPodResult, installationResponse)) return undefined;
 
-    createASOWebView(panel, extensionPath, installationResponse);
+    createASOWebView(webview, extensionPath, installationResponse);
 }
 
 async function getOperatorsPod(
@@ -134,7 +134,7 @@ async function installOperatorSettings(
 }
 
 function isInstallationSuccessfull(
-    panel: vscode.WebviewPanel,
+    webview: vscode.Webview,
     extensionPath: string,
     installationShellResult: k8s.KubectlV1.ShellResult | undefined,
     installationResponse: InstallationResponse
@@ -144,7 +144,7 @@ function isInstallationSuccessfull(
     if (!installationShellResult) return false;
 
     if (installationShellResult.code !== 0) {
-        createASOWebView(panel, extensionPath, installationResponse);
+        createASOWebView(webview, extensionPath, installationResponse);
         success = false;
     }
 

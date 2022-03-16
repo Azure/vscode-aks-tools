@@ -10,6 +10,7 @@ import path = require('path');
 import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
 import { failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+import { createWebView } from '../utils/webviews';
 
 export default async function aksCRUDDiagnostics(
     _context: IActionContext,
@@ -47,27 +48,10 @@ async function loadDetector(
           return;
         }
 
-        createDetectorWebView(clustername, detectorInfo.result, detectorMap.result, extensionPath);
+        const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`);
+        webview.html = getWebviewContent(detectorInfo.result, detectorMap.result, extensionPath);
       }
     );
-}
-
-async function createDetectorWebView(
-  clusterName: string,
-  clusterAppLensData: AppLensARMResponse,
-  detectorMap: Map<string, AppLensARMResponse | undefined>,
-  extensionPath: string) {
-    const panel = vscode.window.createWebviewPanel(
-      'AKS Diagnostics',
-      'AKS diagnostics view for: ' + clusterName,
-      vscode.ViewColumn.Active,
-      {
-        enableScripts: true,
-        enableCommandUris: true
-      }
-    );
-
-    panel.webview.html = getWebviewContent(clusterAppLensData, detectorMap, extensionPath);
 }
 
 function getWebviewContent(

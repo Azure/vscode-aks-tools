@@ -14,6 +14,7 @@ import {
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+import { createWebView } from '../utils/webviews';
 
 export default async function periscope(
     _context: IActionContext,
@@ -110,15 +111,7 @@ async function createPeriscopeWebView(
     periscopeStorageInfo: PeriscopeStorage | undefined,
     hasDiagnosticSettings = true
 ): Promise<void | undefined> {
-    const panel = vscode.window.createWebviewPanel(
-        `AKS Periscope`,
-        `AKS Periscope: ${clusterName}`,
-        vscode.ViewColumn.Active,
-        {
-            enableScripts: true,
-            enableCommandUris: true
-        }
-    );
+    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`);
 
     const extensionPath = getExtensionPath();
 
@@ -129,15 +122,15 @@ async function createPeriscopeWebView(
     if (!hasDiagnosticSettings) {
         // In case of no diagnostic setting we serve user with helpful content in webview and
         // a link as to how to attach the storage account to cluster's diagnostic settings.
-        panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, undefined, [], hasDiagnosticSettings);
+        webview.html = getWebviewContent(clusterName, extensionPath, outputResult, undefined, [], hasDiagnosticSettings);
         return undefined;
     }
 
     if (periscopeStorageInfo) {
         // For the case of successful run of the tool we render webview with the output information.
-        panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, []);
+        webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, []);
 
-        panel.webview.onDidReceiveMessage(
+        webview.onDidReceiveMessage(
             async (message) => {
                 if (message.command === "generateDownloadLink") {
                     // Generate link mechanism is in place due to current behaviour of the aks-periscope tool. (which seems by design for now)
@@ -146,7 +139,7 @@ async function createPeriscopeWebView(
                         () => generateDownloadableLinks(periscopeStorageInfo)
                     );
 
-                    panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
+                    webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
                 }
 
             },

@@ -16,30 +16,14 @@ interface LogSection {
     messages?: string;
 }
 
-export function createASOWebViewPanel(
-    installationResponse: InstallationResponse
-): vscode.WebviewPanel {
-    const panel = vscode.window.createWebviewPanel(
-        `Azure Service Operator`,
-        `Azure service Operator: ${installationResponse.clusterName}`,
-        vscode.ViewColumn.Active,
-        {
-            enableScripts: true,
-            enableCommandUris: true
-        }
-    );
-
-    return panel;
-}
-
 export function createASOWebView(
-    panel: vscode.WebviewPanel,
+    webview: vscode.Webview,
     extensionPath: string,
     installationResponse: InstallationResponse,
     getUserInput = false
 ) {
     // For the case of successful run of the tool we render webview with the output information.
-    panel.webview.html = getWebviewContent(
+    webview.html = getWebviewContent(
         installationResponse.clusterName,
         extensionPath,
         installationResponse,
