@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.0.14]
+
+* Retiring [deploy-to-azure extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) CI/CD commands.
+* AKS Diagnostics Enable CRUD detectors and code move around.
+
+Thanks to @peterbom, @rzhang628, @bishal-pdMSFT, @bnookala and @squillace.
+
 ## [0.0.13]
 
 * Create [GitHub AKS Starter Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service.yml).
