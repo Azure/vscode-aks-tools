@@ -12,6 +12,7 @@ import { InstallationResponse } from './models/installationResponse';
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath } from '../utils/host';
 import { createWebView } from '../utils/webviews';
+import { failed } from '../utils/errorable';
 
 export default async function installAzureServiceOperator(
     _context: IActionContext,
@@ -32,11 +33,12 @@ export default async function installAzureServiceOperator(
     }
 
     const cluster = getAksClusterTreeItem(target, cloudExplorer);
-    if (cluster === undefined) {
+    if (failed(cluster)) {
+        vscode.window.showErrorMessage(cluster.error);
         return undefined;
     }
 
-    await install(kubectl.api, cluster);
+    await install(kubectl.api, cluster.result);
     clusterExplorer.api.refresh();
 }
 
@@ -46,9 +48,11 @@ export async function install(
 ): Promise<void> {
     const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
 
-    // getKubeconfigYaml handles reporting failure to the user, hence we dont need it here.
     const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
-    if (!clusterKubeConfig) return undefined;
+    if (failed(clusterKubeConfig)) {
+        vscode.window.showErrorMessage(clusterKubeConfig.error);
+        return undefined;
+    }
 
     // Get user input upfront.
     // Get Service Principal AppId and Password from user.

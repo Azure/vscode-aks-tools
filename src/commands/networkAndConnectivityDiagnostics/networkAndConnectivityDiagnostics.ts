@@ -16,13 +16,14 @@ export default async function networkAndConnectivityDiagnostics(
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
     const cluster = getAksClusterTreeItem(target, cloudExplorer);
-    if (cluster === undefined) {
+    if (failed(cluster)) {
+      vscode.window.showErrorMessage(cluster.error);
       return;
     }
 
     const extensionPath = getExtensionPath();
     if (extensionPath) {
-      await loadNetworkConnectivityDetector(cluster, extensionPath);
+      await loadNetworkConnectivityDetector(cluster.result, extensionPath);
     }
 }
 

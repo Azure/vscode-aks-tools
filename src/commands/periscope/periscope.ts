@@ -15,6 +15,7 @@ import {
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView } from '../utils/webviews';
+import { failed } from '../utils/errorable';
 
 export default async function periscope(
     _context: IActionContext,
@@ -28,14 +29,18 @@ export default async function periscope(
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
     const cluster = getAksClusterTreeItem(target, cloudExplorer);
-    if (cluster === undefined) {
+    if (failed(cluster)) {
+        vscode.window.showErrorMessage(cluster.error);
         return;
     }
 
-    const clusterKubeConfig = await getKubeconfigYaml(cluster);
-    if (clusterKubeConfig) {
-        await runAKSPeriscope(cluster, clusterKubeConfig);
+    const clusterKubeConfig = await getKubeconfigYaml(cluster.result);
+    if (failed(clusterKubeConfig)) {
+        vscode.window.showErrorMessage(clusterKubeConfig.error);
+        return;
     }
+
+    await runAKSPeriscope(cluster.result, clusterKubeConfig.result);
 }
 
 async function runAKSPeriscope(

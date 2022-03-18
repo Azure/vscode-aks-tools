@@ -9,6 +9,7 @@ import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import { InstallationResponse } from '../models/installationResponse';
 import * as clusters from '../../utils/clusters';
 import { createASOWebView } from './azureservicehtmlhelper';
+import { failed } from '../../utils/errorable';
 const tmp = require('tmp');
 
 export async function startInstallation(
@@ -20,36 +21,38 @@ export async function startInstallation(
     operatorSettingsInfo: OperatorSettings
 ): Promise<void | undefined> {
 
-    // getKubeconfigYaml handles reporting failure to the user, hence we dont need it here.
     const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
-    if (!clusterKubeConfig) return undefined;
+    if (failed(clusterKubeConfig)) {
+        vscode.window.showErrorMessage(clusterKubeConfig.error);
+        return undefined;
+    }
 
     // 1) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
     installationResponse.installOlmCrdResult = await longRunning(`Installing Operator Lifecycle Manager CRD resource...`,
-        () => installOlmCrd(kubectl, clusterKubeConfig)
+        () => installOlmCrd(kubectl, clusterKubeConfig.result)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOlmCrdResult, installationResponse)) return undefined;
 
     installationResponse.installOlmResult = await longRunning(`Installing Operator Lifecycle Manager resource...`,
-        () => installOlm(kubectl, clusterKubeConfig)
+        () => installOlm(kubectl, clusterKubeConfig.result)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOlmResult, installationResponse)) return undefined;
 
     installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
-        () => installOperator(kubectl, clusterKubeConfig)
+        () => installOperator(kubectl, clusterKubeConfig.result)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorResult, installationResponse)) return undefined;
 
     // 2) Run kubectl apply for azureoperatorsettings.yaml
     installationResponse.installOperatorSettingsResult = await longRunning(`Installing Azure Service Operator Settings...`,
-        () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig)
+        () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig.result)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
 
     // 3) Final step: Get the azure service operator pod. - kubectl get pods -n operators
     installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
-        () => getOperatorsPod(kubectl, clusterKubeConfig)
+        () => getOperatorsPod(kubectl, clusterKubeConfig.result)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.getOperatorsPodResult, installationResponse)) return undefined;
 
