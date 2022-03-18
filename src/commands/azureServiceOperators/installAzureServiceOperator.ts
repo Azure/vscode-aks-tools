@@ -60,13 +60,13 @@ export async function install(
     const webview = createWebView('Azure Service Operator', `Azure service Operator: ${installationResponse.clusterName}`);
 
     const extensionPath = getExtensionPath();
-
-    if (!extensionPath) {
+    if (failed(extensionPath)) {
+        vscode.window.showErrorMessage(extensionPath.error);
         return undefined;
     }
-
+  
     // Create webview with user input required.
-    createASOWebView(webview, extensionPath, installationResponse, true);
+    createASOWebView(webview, extensionPath.result, installationResponse, true);
 
     // Once the submit for them webview is successfull we handle rest of the installation process for Azure Service Operator.
     webview.onDidReceiveMessage(
@@ -89,7 +89,7 @@ export async function install(
 
                 const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
 
-                await startInstallation(webview, extensionPath, kubectl, installationResponse, aksCluster, operatorSettingsInfo);
+                await startInstallation(webview, extensionPath.result, kubectl, installationResponse, aksCluster, operatorSettingsInfo);
             }
             return undefined;
         },

@@ -12,6 +12,7 @@ import * as tmpfile from '../../utils/tempfile';
 import { getExtensionPath } from '../../utils/host';
 import { ok, err, Result } from 'neverthrow';
 import { getRenderedContent, getResourceUri, HtmlHelper } from '../../utils/webviews';
+import { failed } from '../../utils/errorable';
 const tmp = require('tmp');
 
 const {
@@ -122,9 +123,14 @@ export async function prepareAKSPeriscopeDeploymetFile(
 ): Promise<string | undefined> {
     const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.yaml` });
 
+    const extensionPath = getExtensionPath();
+    if (failed(extensionPath)) {
+        vscode.window.showErrorMessage(extensionPath.error);
+        return undefined;
+    }
+
     try {
-        const extensionPath = getExtensionPath();
-        const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'aks-periscope.yaml'));
+        const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath.result, 'resources', 'yaml', 'aks-periscope.yaml'));
         const base64Sas = Buffer.from(clusterStorageInfo.storageDeploymentSas).toString('base64');
 
         const deploymentContent = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8')

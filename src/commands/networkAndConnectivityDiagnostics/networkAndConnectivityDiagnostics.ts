@@ -22,9 +22,12 @@ export default async function networkAndConnectivityDiagnostics(
     }
 
     const extensionPath = getExtensionPath();
-    if (extensionPath) {
-      await loadNetworkConnectivityDetector(cluster.result, extensionPath);
+    if (failed(extensionPath)) {
+      vscode.window.showErrorMessage(extensionPath.error);
+      return undefined;
     }
+
+    await loadNetworkConnectivityDetector(cluster.result, extensionPath.result);
 }
 
 async function loadNetworkConnectivityDetector(

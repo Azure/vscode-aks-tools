@@ -21,9 +21,12 @@ export default async function aksCRUDDiagnostics(
     }
 
     const extensionPath = getExtensionPath();
-    if (extensionPath) {
-      await loadDetector(cluster.result, extensionPath);
+    if (failed(extensionPath)) {
+      vscode.window.showErrorMessage(extensionPath.error);
+      return;
     }
+  
+    await loadDetector(cluster.result, extensionPath.result);
 }
 
 async function loadDetector(

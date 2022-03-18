@@ -119,21 +119,21 @@ async function createPeriscopeWebView(
     const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`);
 
     const extensionPath = getExtensionPath();
-
-    if (!extensionPath) {
+    if (failed(extensionPath)) {
+        vscode.window.showErrorMessage(extensionPath.error);
         return undefined;
     }
 
     if (!hasDiagnosticSettings) {
         // In case of no diagnostic setting we serve user with helpful content in webview and
         // a link as to how to attach the storage account to cluster's diagnostic settings.
-        webview.html = getWebviewContent(clusterName, extensionPath, outputResult, undefined, [], hasDiagnosticSettings);
+        webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, undefined, [], hasDiagnosticSettings);
         return undefined;
     }
 
     if (periscopeStorageInfo) {
         // For the case of successful run of the tool we render webview with the output information.
-        webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, []);
+        webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, periscopeStorageInfo, []);
 
         webview.onDidReceiveMessage(
             async (message) => {
@@ -144,7 +144,7 @@ async function createPeriscopeWebView(
                         () => generateDownloadableLinks(periscopeStorageInfo)
                     );
 
-                    webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
+                    webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
                 }
 
             },

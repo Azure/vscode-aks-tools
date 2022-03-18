@@ -118,7 +118,12 @@ async function installOperatorSettings(
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     const extensionPath = getExtensionPath();
-    const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'azureoperatorsettings.yaml'));
+    if (failed(extensionPath)) {
+        vscode.window.showErrorMessage(extensionPath.error);
+        return;
+    }
+
+    const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath.result, 'resources', 'yaml', 'azureoperatorsettings.yaml'));
 
     const azureoperatorsettings = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8')
         .replace("<TENANT_ID>", operatorSettingInfo.tenantId)

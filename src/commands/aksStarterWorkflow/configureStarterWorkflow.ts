@@ -19,10 +19,14 @@ export default async function configureStarterWorkflow(
 
     // Configure the starter workflow data.
     const aksStarterWorkflowData = configureStarterConfigDataForAKS(cluster.result.armId.split("/")[4], cluster.result.name);
+    if (failed(aksStarterWorkflowData)) {
+        vscode.window.showErrorMessage(aksStarterWorkflowData.error);
+        return;
+    }
 
     // Display it to the end-user in their vscode editor.
     vscode.workspace.openTextDocument({
-        content: aksStarterWorkflowData,
+        content: aksStarterWorkflowData.result,
         language: "yaml"
     });
 }
