@@ -13,6 +13,7 @@ import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azurese
 import { setAssetContext } from './assets';
 import configureStarterWorkflow from './commands/aksStarterWorkflow/configureStarterWorkflow';
 import aksCRUDDiagnostics from './commands/aksCRUDDiagnostics/aksCRUDDiagnostics';
+import { failed } from './commands/utils/errorable';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -68,7 +69,13 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 }
 
 async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
-    return await clusters.getKubeconfigYaml(target);
+    const kubeconfig = await clusters.getKubeconfigYaml(target);
+    if (failed(kubeconfig)) {
+        vscode.window.showErrorMessage(kubeconfig.error);
+        return undefined;
+    }
+
+    return kubeconfig.result;
 }
 
 function registerCommandWithTelemetry(command: string, callback: (context: IActionContext, target: any) => any) {

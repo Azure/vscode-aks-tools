@@ -1,6 +1,5 @@
-import * as vscode from 'vscode';
 import { ResourceManagementClient } from "@azure/arm-resources";
-import { Errorable } from "./errorable";
+import { Errorable, combine, failed } from "./errorable";
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 
 export interface AppLensARMResponse {
@@ -12,21 +11,36 @@ export interface AppLensARMResponse {
     readonly type: string;
 }
 
-export async function getAppLensDetectorData(
-    clusterTarget: AksClusterTreeItem,
-    detectorName: string
-): Promise<AppLensARMResponse | undefined> {
-    const apiResult = await getDetectorInfo(clusterTarget, detectorName);
+export async function getDetectorListData(
+    cloudTarget: AksClusterTreeItem,
+    clusterAppLensData: AppLensARMResponse
+): Promise<Errorable<Map<string, AppLensARMResponse>>> {
 
-    if (apiResult.succeeded) {
-        return apiResult.result;
-    } else {
-        vscode.window.showInformationMessage(apiResult.error);
+    // Crud detector list is guranteed form the ARM call to aks-category-crud, under below data structure.
+    const crudDetectorList: string[] = clusterAppLensData?.properties.dataset[0].renderingProperties.detectorIds;
+    if (crudDetectorList.length === 0) {
+        return { succeeded: false, error: `No detectors found in AppLens response for ${clusterAppLensData.name}` };
     }
-    return undefined;
+
+    let results: Errorable<AppLensARMResponse>[] = [];
+    try {
+        results = await Promise.all(crudDetectorList.map((detector) => getDetectorInfo(cloudTarget, detector)));
+    } catch (err) {
+        // This would be unexpected even in the event of network failure, because the individual promises handle
+        // their own errors.
+        return { succeeded: false, error: `Failed to retrieve detector data for ${clusterAppLensData.name}` };
+    }
+
+    const responses = combine(results);
+    if (failed(responses)) {
+        return { succeeded: false, error: responses.error };
+    }
+
+    const detectorMap = new Map(responses.result.map((r, i) => [crudDetectorList[i], r]));
+    return { succeeded: true, result: detectorMap };
 }
 
-async function getDetectorInfo(
+export async function getDetectorInfo(
     target: AksClusterTreeItem,
     detectorName: string
 ): Promise<Errorable<AppLensARMResponse>> {
@@ -42,4 +56,8 @@ async function getDetectorInfo(
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${detectorName} detector: ${ex}` };
     }
+}
+
+export function getPortalUrl(clusterdata: AppLensARMResponse) {
+    return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
 }

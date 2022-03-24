@@ -1,103 +1,74 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
+import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning }  from '../utils/host';
-import { AppLensARMResponse, getAppLensDetectorData } from '../utils/detectors';
-import * as fs from 'fs';
-import * as htmlhandlers from "handlebars";
-import path = require('path');
-import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
+import { AppLensARMResponse, getDetectorInfo, getDetectorListData, getPortalUrl } from '../utils/detectors';
+import { failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 
 export default async function aksCRUDDiagnostics(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    if (cloudExplorer.available) {
-      const cloudTarget = cloudExplorer.api.resolveCommandTarget(target);
-
-      if (cloudTarget && cloudTarget.cloudName === "Azure" &&
-            cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
-              const cluster = cloudTarget.cloudResource as AksClusterTreeItem;
-              const extensionPath = getExtensionPath();
-              if (extensionPath && cluster) {
-                await loadDetector(cluster, extensionPath);
-              }
-        } else {
-          vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-        }
+    const cluster = getAksClusterTreeItem(target, cloudExplorer);
+    if (failed(cluster)) {
+      vscode.window.showErrorMessage(cluster.error);
+      return;
     }
+
+    const extensionPath = getExtensionPath();
+    if (failed(extensionPath)) {
+      vscode.window.showErrorMessage(extensionPath.error);
+      return;
+    }
+  
+    await loadDetector(cluster.result, extensionPath.result);
 }
 
 async function loadDetector(
     cloudTarget: AksClusterTreeItem,
     extensionPath: string) {
+
     const clustername = cloudTarget.name;
-
     await longRunning(`Loading ${clustername} diagnostics.`,
-          async () => {
-            const clusterAppLensData = await getAppLensDetectorData(cloudTarget, "aks-category-crud");
-            const detectorMap = new Map();
+      async () => {
+        const detectorInfo = await getDetectorInfo(cloudTarget, "aks-category-crud");
+        if (failed(detectorInfo)) {
+          vscode.window.showErrorMessage(detectorInfo.error);
+          return;
+        }
 
-            // Crud detector list is guranteed form the ARM call to aks-category-crud, under below data structure.
-            const crudDetectorList = clusterAppLensData?.properties.dataset[0].renderingProperties.detectorIds;
+        const detectorMap = await getDetectorListData(cloudTarget, detectorInfo.result);
+        if (failed(detectorMap)) {
+          vscode.window.showErrorMessage(detectorMap.error);
+          return;
+        }
 
-            await Promise.all(crudDetectorList.map(async (detector: string) => {
-              const detectorAppLensData = await getAppLensDetectorData(cloudTarget, detector);
-              detectorMap.set(detector , detectorAppLensData);
-            }));
-
-            if (clusterAppLensData && detectorMap.size > 0) {
-              await createDetectorWebView(clustername, clusterAppLensData, detectorMap, extensionPath);
-            }
-          }
-      );
-  }
-
-async function createDetectorWebView(
-  clusterName: string,
-  clusterAppLensData: AppLensARMResponse,
-  detectorMap: Map<string, AppLensARMResponse | undefined>,
-  extensionPath: string) {
-    const panel = vscode.window.createWebviewPanel(
-      'AKS Diagnostics',
-      'AKS diagnostics view for: ' + clusterName,
-      vscode.ViewColumn.Active,
-      {
-        enableScripts: true,
-        enableCommandUris: true
+        const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`);
+        webview.html = getWebviewContent(detectorInfo.result, detectorMap.result, extensionPath);
       }
     );
-
-    panel.webview.html = getWebviewContent(clusterAppLensData, detectorMap, extensionPath);
 }
 
 function getWebviewContent(
   clusterdata: AppLensARMResponse,
-  detectorMap: Map<string, AppLensARMResponse | undefined>,
+  detectorMap: Map<string, AppLensARMResponse>,
   vscodeExtensionPath: string
   ): string {
     const webviewClusterData = clusterdata?.properties;
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'common', 'detector.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'akscrud', 'aksCRUD.html'));
-    const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
-    const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
-    const portalUrl = `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
-
-    const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
-
-    htmlHandlerRegisterHelper();
-    const template = htmlhandlers.compile(htmldata);
+    const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
+    const templateUri = getResourceUri(vscodeExtensionPath, 'akscrud', 'aksCRUD.html');
     const data = {
-                   cssuri: styleUri,
-                   name: webviewClusterData.metadata.name,
-                   description: webviewClusterData.metadata.description,
-                   portalUrl: portalUrl,
-                   detectorData: detectorMap
-                  };
-    const webviewcontent = template(data);
+      cssuri: styleUri,
+      name: webviewClusterData.metadata.name,
+      description: webviewClusterData.metadata.description,
+      portalUrl: getPortalUrl(clusterdata),
+      detectorData: detectorMap
+    };
 
-    return webviewcontent;
-  }
+    return getRenderedContent(templateUri, data);
+}
