@@ -5,13 +5,14 @@ import { parseResource } from '../../../azure-api-utils';
 import * as ast from '@azure/arm-storage';
 import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
 import * as amon from '@azure/arm-monitor';
-import * as htmlhandlers from "handlebars";
 import * as path from 'path';
 import * as fs from 'fs';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
 import { getExtensionPath } from '../../utils/host';
 import { ok, err, Result } from 'neverthrow';
+import { getRenderedContent, getResourceUri } from '../../utils/webviews';
+import { failed } from '../../utils/errorable';
 const tmp = require('tmp');
 
 const {
@@ -122,9 +123,14 @@ export async function prepareAKSPeriscopeDeploymetFile(
 ): Promise<string | undefined> {
     const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.yaml` });
 
+    const extensionPath = getExtensionPath();
+    if (failed(extensionPath)) {
+        vscode.window.showErrorMessage(extensionPath.error);
+        return undefined;
+    }
+
     try {
-        const extensionPath = getExtensionPath();
-        const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath!, 'resources', 'yaml', 'aks-periscope.yaml'));
+        const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath.result, 'resources', 'yaml', 'aks-periscope.yaml'));
         const base64Sas = Buffer.from(clusterStorageInfo.storageDeploymentSas).toString('base64');
 
         const deploymentContent = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8')
@@ -203,16 +209,10 @@ export function getWebviewContent(
     downloadAndShareNodeLogsList: PeriscopeHTMLInterface[] | undefined,
     hasDiagnosticSettings = true
 ): string {
-    const stylePathOnDisk = vscode.Uri.file(path.join(aksExtensionPath, 'resources', 'webviews', 'periscope', 'periscope.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(aksExtensionPath, 'resources', 'webviews', 'periscope', 'periscope.html'));
-    const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
-    const pathUri = htmlPathOnDisk.with({ scheme: 'vscode-resource' });
+    const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
+    const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.html');
 
-    const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
     const commandOutput = output ? output.stderr + output.stdout : undefined;
-
-    htmlHandlerRegisterHelper();
-    const template = htmlhandlers.compile(htmldata);
     const data = {
         cssuri: styleUri,
         storageAccName: periscopeStorageInfo?.storageName,
@@ -222,25 +222,8 @@ export function getWebviewContent(
         downloadAndShareNodeLogsList: downloadAndShareNodeLogsList,
         noDiagnosticSettings: !hasDiagnosticSettings,
     };
-    const webviewcontent = template(data);
-
-    return webviewcontent;
-}
-
-export function htmlHandlerRegisterHelper() {
-    htmlhandlers.registerHelper("equalsZero", equalsZero);
-    htmlhandlers.registerHelper("isNonZeroNumber", isNonZeroNumber);
-}
-
-function equalsZero(value: number): boolean {
-    return value === 0;
-}
-
-function isNonZeroNumber(value: any): boolean {
-    if (isNaN(Number(value))) {
-        return false;
-    }
-    return value !== 0;
+  
+    return getRenderedContent(templateUri, data);
 }
 
 async function extractContainerName(clusterKubeConfig: string): Promise<string | undefined> {

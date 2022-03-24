@@ -1,34 +1,33 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { AppLensARMResponse, getAppLensDetectorData } from '../utils/detectors';
+import { AppLensARMResponse, getDetectorInfo, getPortalUrl } from '../utils/detectors';
 import { convertHtmlJsonConfiguration }  from './helpers/networkconnectivityhtmlhelper';
-import * as htmlhandlers from "handlebars";
-import { htmlHandlerRegisterHelper } from '../utils/detectorhtmlhelpers';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning } from '../utils/host';
-import path = require('path');
-import * as fs from 'fs';
+import { failed } from '../utils/errorable';
+import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 
 export default async function networkAndConnectivityDiagnostics(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    if (cloudExplorer.available) {
-      const cloudTarget = cloudExplorer.api.resolveCommandTarget(target);
-
-      if (cloudTarget && cloudTarget.cloudName === "Azure" &&
-            cloudTarget.nodeType === "resource" && cloudTarget.cloudResource.nodeType === "cluster") {
-              const extensionPath = getExtensionPath();
-              if (extensionPath) {
-                await loadNetworkConnectivityDetector(cloudTarget.cloudResource, extensionPath);
-              }
-        } else {
-          vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-        }
+    const cluster = getAksClusterTreeItem(target, cloudExplorer);
+    if (failed(cluster)) {
+      vscode.window.showErrorMessage(cluster.error);
+      return;
     }
+
+    const extensionPath = getExtensionPath();
+    if (failed(extensionPath)) {
+      vscode.window.showErrorMessage(extensionPath.error);
+      return undefined;
+    }
+
+    await loadNetworkConnectivityDetector(cluster.result, extensionPath.result);
 }
 
 async function loadNetworkConnectivityDetector(
@@ -37,60 +36,37 @@ async function loadNetworkConnectivityDetector(
   const clustername = cloudTarget.name;
 
   await longRunning(`Loading ${clustername} diagnostics.`,
-        async () => {
-          const clusterAppLensData = await getAppLensDetectorData(cloudTarget, "networkconnectivity");
-
-          if (clusterAppLensData) {
-            await createDetectorWebView(clustername, clusterAppLensData, extensionPath);
-          }
-        }
-    );
-}
-
-async function createDetectorWebView(
-  clusterName: string,
-  clusterAppLensData: AppLensARMResponse,
-  extensionPath: string) {
-    const panel = vscode.window.createWebviewPanel(
-      'AKS Diagnostics',
-      'AKS diagnostics view for: ' + clusterName,
-      vscode.ViewColumn.Active,
-      {
-        enableScripts: true,
-        enableCommandUris: true
+    async () => {
+      const detectorInfo = await getDetectorInfo(cloudTarget, "networkconnectivity");
+      if (failed(detectorInfo)) {
+        vscode.window.showErrorMessage(detectorInfo.error);
+        return;
       }
-    );
 
-    panel.webview.html = getWebviewContent(clusterAppLensData, extensionPath);
+      const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`);
+      webview.html = getWebviewContent(detectorInfo.result, extensionPath);
+    }
+  );
 }
 
 function getWebviewContent(
   clusterdata: AppLensARMResponse,
   vscodeExtensionPath: string
-  ): string {
-    const webviewClusterData = clusterdata?.properties;
-    const stylePathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'common', 'detector.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', 'networkconnectivity', 'networkConnectivity.html'));
-    const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
-    const pathUri = htmlPathOnDisk.with({scheme: 'vscode-resource'});
-    const portalUrl = `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
+): string {
+  const webviewClusterData = clusterdata?.properties;
+  const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
+  const templateUri = getResourceUri(vscodeExtensionPath, 'networkconnectivity', 'networkConnectivity.html');
+  const data = {
+    cssuri: styleUri,
+    name: webviewClusterData.metadata.name,
+    description: webviewClusterData.metadata.description,
+    portalUrl: getPortalUrl(clusterdata),
+    networkconfdata: webviewClusterData.dataset[0],
+    allocatedoutdata: convertHtmlJsonConfiguration(webviewClusterData, 1),
+    subnetdata: convertHtmlJsonConfiguration(webviewClusterData, 2),
+    subneterrordata: convertHtmlJsonConfiguration(webviewClusterData, 3),
+    domaindata: convertHtmlJsonConfiguration(webviewClusterData, 4)
+  };
 
-    const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
-
-    htmlHandlerRegisterHelper();
-    const template = htmlhandlers.compile(htmldata);
-    const data = {
-                   cssuri: styleUri,
-                   name: webviewClusterData.metadata.name,
-                   description: webviewClusterData.metadata.description,
-                   portalUrl: portalUrl,
-                   networkconfdata: webviewClusterData.dataset[0],
-                   allocatedoutdata: convertHtmlJsonConfiguration(webviewClusterData, 1),
-                   subnetdata: convertHtmlJsonConfiguration(webviewClusterData, 2),
-                   subneterrordata: convertHtmlJsonConfiguration(webviewClusterData, 3),
-                   domaindata: convertHtmlJsonConfiguration(webviewClusterData, 4)
-                  };
-    const webviewcontent = template(data);
-
-    return webviewcontent;
-  }
+  return getRenderedContent(templateUri, data);
+}

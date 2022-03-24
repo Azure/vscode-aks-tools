@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import * as htmlhandlers from "handlebars";
-import * as path from 'path';
-import * as fs from 'fs';
 import { InstallationResponse } from '../models/installationResponse';
+import { getRenderedContent, getResourceUri } from '../../utils/webviews';
 
 interface InstallResult {
     succeeded?: boolean;
@@ -16,30 +14,14 @@ interface LogSection {
     messages?: string;
 }
 
-export function createASOWebViewPanel(
-    installationResponse: InstallationResponse
-): vscode.WebviewPanel {
-    const panel = vscode.window.createWebviewPanel(
-        `Azure Service Operator`,
-        `Azure service Operator: ${installationResponse.clusterName}`,
-        vscode.ViewColumn.Active,
-        {
-            enableScripts: true,
-            enableCommandUris: true
-        }
-    );
-
-    return panel;
-}
-
 export function createASOWebView(
-    panel: vscode.WebviewPanel,
+    webview: vscode.Webview,
     extensionPath: string,
     installationResponse: InstallationResponse,
     getUserInput = false
 ) {
     // For the case of successful run of the tool we render webview with the output information.
-    panel.webview.html = getWebviewContent(
+    webview.html = getWebviewContent(
         installationResponse.clusterName,
         extensionPath,
         installationResponse,
@@ -52,16 +34,10 @@ function getWebviewContent(
     installationResponse: InstallationResponse,
     getUserInput: boolean
 ): string {
-    const stylePathOnDisk = vscode.Uri.file(path.join(aksExtensionPath, 'resources', 'webviews', 'azureserviceoperator', 'azureserviceoperator.css'));
-    const htmlPathOnDisk = vscode.Uri.file(path.join(aksExtensionPath, 'resources', 'webviews', 'azureserviceoperator', 'azureserviceoperator.html'));
-    const styleUri = stylePathOnDisk.with({ scheme: 'vscode-resource' });
-    const pathUri = htmlPathOnDisk.with({ scheme: 'vscode-resource' });
+    const styleUri = getResourceUri(aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.css');
+    const templateUri = getResourceUri(aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.html');
 
-    const htmldata = fs.readFileSync(pathUri.fsPath, 'utf8').toString();
     const installHtmlResult = getOrganisedInstallResult(clustername, installationResponse);
-
-    htmlHandlerRegisterHelper();
-    const template = htmlhandlers.compile(htmldata);
     const data = {
         cssuri: styleUri,
         name: clustername,
@@ -70,9 +46,8 @@ function getWebviewContent(
         isSuccess: installHtmlResult.succeeded,
         getUserInput: getUserInput
     };
-    const webviewcontent = template(data);
 
-    return webviewcontent;
+    return getRenderedContent(templateUri, data);
 }
 
 function getOrganisedInstallResult(
@@ -149,17 +124,6 @@ function installationExitCodeResponse(
     const isSuccess = installShellResult.filter(Boolean).every((sr) => !!sr && sr.code === 0);
 
     return isSuccess;
-}
-
-export function htmlHandlerRegisterHelper() {
-    htmlhandlers.registerHelper("breaklines", breaklines);
-}
-
-function breaklines(text: any): any {
-    if (text) {
-        text = text.replace(/(\r\n|\n|\r)/gm, '<br>');
-    }
-    return text;
 }
 
 export function convertAzureCloudEnv(cloudName: string): string | undefined {

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from 'vscode-azureextensionui';
 import * as tmpfile from '../utils/tempfile';
-import * as clusters from '../utils/clusters';
+import { getAksClusterTreeItem, getKubeconfigYaml } from '../utils/clusters';
 import { getExtensionPath, longRunning } from '../utils/host';
 import {
     getClusterDiagnosticSettings,
@@ -14,29 +14,33 @@ import {
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+import { createWebView } from '../utils/webviews';
+import { failed } from '../utils/errorable';
 
 export default async function periscope(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
+    if (!kubectl.available) {
+        return;
+    }
+
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    if (cloudExplorer.available && kubectl.available) {
-        const clusterTarget = cloudExplorer.api.resolveCommandTarget(target);
-
-        if (clusterTarget && clusterTarget.cloudName === "Azure" &&
-            clusterTarget.nodeType === "resource" && clusterTarget.cloudResource.nodeType === "cluster") {
-            const cluster = clusterTarget.cloudResource as AksClusterTreeItem;
-            const clusterKubeConfig = await clusters.getKubeconfigYaml(cluster);
-
-            if (clusterKubeConfig) {
-                await runAKSPeriscope(cluster, clusterKubeConfig);
-            }
-        } else {
-            vscode.window.showInformationMessage('This command only applies to AKS clusters.');
-        }
+    const cluster = getAksClusterTreeItem(target, cloudExplorer);
+    if (failed(cluster)) {
+        vscode.window.showErrorMessage(cluster.error);
+        return;
     }
+
+    const clusterKubeConfig = await getKubeconfigYaml(cluster.result);
+    if (failed(clusterKubeConfig)) {
+        vscode.window.showErrorMessage(clusterKubeConfig.error);
+        return;
+    }
+
+    await runAKSPeriscope(cluster.result, clusterKubeConfig.result);
 }
 
 async function runAKSPeriscope(
@@ -112,34 +116,26 @@ async function createPeriscopeWebView(
     periscopeStorageInfo: PeriscopeStorage | undefined,
     hasDiagnosticSettings = true
 ): Promise<void | undefined> {
-    const panel = vscode.window.createWebviewPanel(
-        `AKS Periscope`,
-        `AKS Periscope: ${clusterName}`,
-        vscode.ViewColumn.Active,
-        {
-            enableScripts: true,
-            enableCommandUris: true
-        }
-    );
+    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`);
 
     const extensionPath = getExtensionPath();
-
-    if (!extensionPath) {
+    if (failed(extensionPath)) {
+        vscode.window.showErrorMessage(extensionPath.error);
         return undefined;
     }
 
     if (!hasDiagnosticSettings) {
         // In case of no diagnostic setting we serve user with helpful content in webview and
         // a link as to how to attach the storage account to cluster's diagnostic settings.
-        panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, undefined, [], hasDiagnosticSettings);
+        webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, undefined, [], hasDiagnosticSettings);
         return undefined;
     }
 
     if (periscopeStorageInfo) {
         // For the case of successful run of the tool we render webview with the output information.
-        panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, []);
+        webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, periscopeStorageInfo, []);
 
-        panel.webview.onDidReceiveMessage(
+        webview.onDidReceiveMessage(
             async (message) => {
                 if (message.command === "generateDownloadLink") {
                     // Generate link mechanism is in place due to current behaviour of the aks-periscope tool. (which seems by design for now)
@@ -148,7 +144,7 @@ async function createPeriscopeWebView(
                         () => generateDownloadableLinks(periscopeStorageInfo)
                     );
 
-                    panel.webview.html = getWebviewContent(clusterName, extensionPath, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
+                    webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
                 }
 
             },
