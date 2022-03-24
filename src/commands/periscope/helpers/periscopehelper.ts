@@ -11,7 +11,7 @@ import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
 import { getExtensionPath } from '../../utils/host';
 import { ok, err, Result } from 'neverthrow';
-import { getRenderedContent, getResourceUri, HtmlHelper } from '../../utils/webviews';
+import { getRenderedContent, getResourceUri } from '../../utils/webviews';
 import { failed } from '../../utils/errorable';
 const tmp = require('tmp');
 
@@ -223,7 +223,7 @@ export function getWebviewContent(
         noDiagnosticSettings: !hasDiagnosticSettings,
     };
   
-    return getRenderedContent(templateUri, data, HtmlHelper.EqualsZero | HtmlHelper.IsNonZeroNumber);
+    return getRenderedContent(templateUri, data);
 }
 
 async function extractContainerName(clusterKubeConfig: string): Promise<string | undefined> {

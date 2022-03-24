@@ -7,7 +7,7 @@ import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning } from '../utils/host';
 import { failed } from '../utils/errorable';
-import { createWebView, getRenderedContent, getResourceUri, HtmlHelper } from '../utils/webviews';
+import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 
 export default async function networkAndConnectivityDiagnostics(
     _context: IActionContext,
@@ -68,5 +68,5 @@ function getWebviewContent(
     domaindata: convertHtmlJsonConfiguration(webviewClusterData, 4)
   };
 
-  return getRenderedContent(templateUri, data, HtmlHelper.MarkdownLinkHelper | HtmlHelper.EachProperty | HtmlHelper.ToLowerCase);
+  return getRenderedContent(templateUri, data);
 }

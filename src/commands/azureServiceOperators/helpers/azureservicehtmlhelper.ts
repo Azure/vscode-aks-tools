@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { InstallationResponse } from '../models/installationResponse';
-import { getRenderedContent, getResourceUri, HtmlHelper } from '../../utils/webviews';
+import { getRenderedContent, getResourceUri } from '../../utils/webviews';
 
 interface InstallResult {
     succeeded?: boolean;
@@ -47,7 +47,7 @@ function getWebviewContent(
         getUserInput: getUserInput
     };
 
-    return getRenderedContent(templateUri, data, HtmlHelper.BreakLines);
+    return getRenderedContent(templateUri, data);
 }
 
 function getOrganisedInstallResult(

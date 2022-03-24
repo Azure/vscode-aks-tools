@@ -6,7 +6,7 @@ import { getExtensionPath, longRunning }  from '../utils/host';
 import { AppLensARMResponse, getDetectorInfo, getDetectorListData, getPortalUrl } from '../utils/detectors';
 import { failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { createWebView, getRenderedContent, getResourceUri, HtmlHelper } from '../utils/webviews';
+import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 
 export default async function aksCRUDDiagnostics(
     _context: IActionContext,
@@ -70,5 +70,5 @@ function getWebviewContent(
       detectorData: detectorMap
     };
 
-    return getRenderedContent(templateUri, data, HtmlHelper.MarkdownLinkHelper | HtmlHelper.EachProperty | HtmlHelper.ToLowerCase);
+    return getRenderedContent(templateUri, data);
 }
