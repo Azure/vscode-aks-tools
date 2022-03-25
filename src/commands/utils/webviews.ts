@@ -14,7 +14,7 @@ htmlhandlers.registerHelper('markdownHelper', (htmltext: string) => {
     const re = /\[(.*?)\)/g;
     let replacedHtmlText = htmltext;
     let match;
-    replacedHtmlText = replacedHtmlText.split("\n").join("<br/>");
+    replacedHtmlText = replacedHtmlText?.split("\n").join("<br/>");
 
     while (match = re.exec(htmltext)) {
         const matchstr = `[${match[1]})`;

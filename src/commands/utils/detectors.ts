@@ -24,7 +24,12 @@ export async function getDetectorListData(
 
     let results: Errorable<AppLensARMResponse>[] = [];
     try {
-        results = await Promise.all(crudDetectorList.map((detector) => getDetectorInfo(cloudTarget, detector)));
+        const promiseResults = await Promise.all(crudDetectorList.map((detector) => getDetectorInfo(cloudTarget, detector)));
+        // TODO: Temporry code - Heavily commenting.
+        // This is temporarily put jsut to show that if we agree i.e. PM agree as requirement.
+        // We can safely swallow the detectors in the detectorId list which are not available.
+        // But handling Random API anamolous behaviour should not be handled form this VsCode.
+        results = promiseResults.filter((x) => x.succeeded !== false);
     } catch (err) {
         // This would be unexpected even in the event of network failure, because the individual promises handle
         // their own errors.
