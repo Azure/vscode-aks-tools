@@ -195,7 +195,7 @@ spec:
           name: etcvmlog
       hostPID: true
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       serviceAccountName: aks-periscope-service-account
       volumes:
       - hostPath:
