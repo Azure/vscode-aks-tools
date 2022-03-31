@@ -61,7 +61,7 @@ function getWebviewContent(
   ): string {
     const webviewClusterData = clusterdata?.properties;
     const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
-    const templateUri = getResourceUri(vscodeExtensionPath, 'akscrud', 'aksCRUD.html');
+    const templateUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.html');
     const data = {
       cssuri: styleUri,
       name: webviewClusterData.metadata.name,
