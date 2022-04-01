@@ -14,6 +14,7 @@ import { setAssetContext } from './assets';
 import configureStarterWorkflow from './commands/aksStarterWorkflow/configureStarterWorkflow';
 import aksCRUDDiagnostics from './commands/aksCRUDDiagnostics/aksCRUDDiagnostics';
 import { failed } from './commands/utils/errorable';
+import aksBestPracticesDiagnostics from './commands/aksBestPractices/aksBestPractices';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -39,6 +40,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.installAzureServiceOperator', installAzureServiceOperator );
         registerCommandWithTelemetry('aks.configureStarterWorkflow', configureStarterWorkflow );
         registerCommandWithTelemetry('aks.aksCRUDDiagnostics', aksCRUDDiagnostics );
+        registerCommandWithTelemetry('aks.aksBestPracticesDiagnostics', aksBestPracticesDiagnostics );
 
         await registerAzureServiceNodes(context);
 

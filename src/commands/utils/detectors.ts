@@ -24,7 +24,10 @@ export async function getDetectorListData(
 
     let results: Errorable<AppLensARMResponse>[] = [];
     try {
-        results = await Promise.all(crudDetectorList.map((detector) => getDetectorInfo(cloudTarget, detector)));
+        const promiseResults = await Promise.all(crudDetectorList.map((detector) => getDetectorInfo(cloudTarget, detector)));
+        // Line below is added to handle edge case of applens detector list with missing implementation,
+        // due to internal server error it causes rest of list to fail.
+        results = promiseResults.filter((x) => x.succeeded);
     } catch (err) {
         // This would be unexpected even in the event of network failure, because the individual promises handle
         // their own errors.

@@ -33,7 +33,8 @@
         "onCommand:aks.periscope",
         "onCommand:aks.installAzureServiceOperator",
         "onCommand:aks.configureStarterWorkflow",
-        "onCommand:aks.aksCRUDDiagnostics"        
+        "onCommand:aks.aksCRUDDiagnostics",
+        "onCommand:aks.aksBestPracticesDiagnostics"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -65,6 +66,10 @@
             {
                 "command": "aks.aksCRUDDiagnostics",
                 "title": "Create, Upgrade, Delete and Scale"
+            },
+            {
+                "command": "aks.aksBestPracticesDiagnostics",
+                "title": "Best Practices"
             }
         ],
         "menus": {
@@ -108,6 +113,10 @@
                 },
                 {
                   "command": "aks.aksCRUDDiagnostics",
+                  "group": "navigation"
+                },
+                {
+                  "command": "aks.aksBestPracticesDiagnostics",
                   "group": "navigation"
                 }
             ]
