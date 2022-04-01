@@ -8,7 +8,7 @@ import { failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 
-export default async function aksCRUDDiagnostics(
+export default async function aksBestPracticesDiagnostics(
     _context: IActionContext,
     target: any
 ): Promise<void> {
@@ -36,7 +36,7 @@ async function loadDetector(
     const clustername = cloudTarget.name;
     await longRunning(`Loading ${clustername} diagnostics.`,
       async () => {
-        const detectorInfo = await getDetectorInfo(cloudTarget, "aks-category-crud");
+        const detectorInfo = await getDetectorInfo(cloudTarget, "aks-category-risk-assessment");
         if (failed(detectorInfo)) {
           vscode.window.showErrorMessage(detectorInfo.error);
           return;
