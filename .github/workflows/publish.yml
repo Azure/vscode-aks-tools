@@ -35,7 +35,7 @@ jobs:
       with:
         tag_name : ${{ steps.package_version.outputs.current-version}}
         release_name: ${{ steps.package_version.outputs.current-version}}
-        body: Publish ${{ steps.package_version.outputs.current-version}}
+        body: Publish ${{ steps.package_version.outputs.changes}}
     - name: Create vsix and publish to marketplace
       id: create_vsix
       uses: HaaLeo/publish-vscode-extension@v0
