@@ -15,6 +15,7 @@ import configureStarterWorkflow from './commands/aksStarterWorkflow/configureSta
 import aksCRUDDiagnostics from './commands/aksCRUDDiagnostics/aksCRUDDiagnostics';
 import { failed } from './commands/utils/errorable';
 import aksBestPracticesDiagnostics from './commands/aksBestPractices/aksBestPractices';
+import aksIdentitySecurityDiagnostics from './commands/aksIdentitySecurity/aksIdentitySecurity';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -41,6 +42,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.configureStarterWorkflow', configureStarterWorkflow );
         registerCommandWithTelemetry('aks.aksCRUDDiagnostics', aksCRUDDiagnostics );
         registerCommandWithTelemetry('aks.aksBestPracticesDiagnostics', aksBestPracticesDiagnostics );
+        registerCommandWithTelemetry('aks.aksIdentitySecurityDiagnostics', aksIdentitySecurityDiagnostics );
 
         await registerAzureServiceNodes(context);
 

@@ -70,6 +70,10 @@
             {
                 "command": "aks.aksBestPracticesDiagnostics",
                 "title": "Best Practices"
+            },
+            {
+                "command": "aks.aksIdentitySecurityDiagnostics",
+                "title": "Identity and Security"
             }
         ],
         "menus": {
@@ -117,6 +121,10 @@
                 },
                 {
                   "command": "aks.aksBestPracticesDiagnostics",
+                  "group": "navigation"
+                },
+                {
+                  "command": "aks.aksIdentitySecurityDiagnostics",
                   "group": "navigation"
                 }
             ]
