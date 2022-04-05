@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.0.15]
+
+* Refactor to ease creation of new commands.
+* Fix aks-periscope deprecated beta tag.
+* Integrating Best Practices detector.
+* Integrate Identity and security diagnostics
+
+Thanks to @rzhang628, @peterbom.
+
 ## [0.0.14]
 
 * Retiring [deploy-to-azure extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-deploy-azure.azure-deploy) CI/CD commands.
