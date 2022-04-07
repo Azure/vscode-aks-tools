@@ -10,7 +10,7 @@
 * Perform AKS Diagnostics checks on your AKS cluster 
 * Run AKS Periscope within VS Code
 * Install Azure Service Operator on your AKS cluster
-* Create GitHub Starter Workflow from your AKS cluster
+* Create GitHub Workflow from your AKS cluster
 
 ## Installation
 
@@ -94,7 +94,7 @@ For more information on Azure Service Operator, visit [Azure Service Operator (f
 
 ![Azure Service Operator Webview](resources/azure-service-operator-screenshot.png)
 
-### Create GitHub Starter Workflow
+### Create GitHub Workflow
 
 Right click on your AKS cluster and click on **Create GitHub Workflow** to easily open and create a workflow starter template. This helps in quick generation of the workflow templates with pre populates resource and clustername for:
 
