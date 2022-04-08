@@ -17,8 +17,8 @@ export function configureStarterConfigDataForAKS(
       // Load vscode resoruce yaml file and replace content.
     const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath.result, 'resources', 'yaml', `${workflowName}.yml`));
     const starterFileAutoFillContent = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8')
-                                            .replace('<RESOURCE_GROUP>', resourceName)
-                                            .replace('<CLUSTER_NAME>', clusterName);
+                                            .replace('your-resource-group', resourceName)
+                                            .replace('your-cluster-name', clusterName);
 
     return { succeeded: true, result: starterFileAutoFillContent };
 }
