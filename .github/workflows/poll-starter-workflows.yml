@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  STARTER_WORKFLOW_PATH: "./resources/yaml"
+  STARTER_WORKFLOW_PATH: "./resources/yaml/"
   STARTER_WORKFLOW_REPO_BRANCH: "partner_templates"
 
 jobs:
