@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.0.16]
+
+* Addition of Create Github Workflow Submenu.
+* Ability to Create AKS Starter Workflow, Helm Workflow, Kompose Worlflow and Kustomize Workflow.
+
+Thanks to @palma21, @qpetraroia, @OliverMKing, @tbarnes94, @peterbom, @gambtho and @rzhang628.
+
 ## [0.0.15]
 
 * Refactor to ease creation of new commands.
