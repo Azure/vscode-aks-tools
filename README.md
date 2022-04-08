@@ -10,7 +10,7 @@
 * Perform AKS Diagnostics checks on your AKS cluster 
 * Run AKS Periscope within VS Code
 * Install Azure Service Operator on your AKS cluster
-* Create GitHub Starter Workflow from your AKS cluster
+* Create GitHub Workflow from your AKS cluster
 
 ## Installation
 
@@ -29,6 +29,8 @@
 Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.  
 
 ![Cloud explorer extension menu](resources/right-click-menu.png)
+
+![Cloud explorer extension menu](resources/right-click-menu-workflow.png)
 
 ### Merge into Kubeconfig
 
@@ -92,9 +94,14 @@ For more information on Azure Service Operator, visit [Azure Service Operator (f
 
 ![Azure Service Operator Webview](resources/azure-service-operator-screenshot.png)
 
-### Create GitHub Starter Workflow
+### Create GitHub Workflow
 
-Right click on your AKS cluster and click on **Create GitHub Starter Workflow** to easily open and create a workflow starter template. This helps in quick generation of the workflow templates with pre populates resource and clustername. [More details here](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service.yml)
+Right click on your AKS cluster and click on **Create GitHub Workflow** to easily open and create a workflow starter template. This helps in quick generation of the workflow templates with pre populates resource and clustername for:
+
+- [Starter Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service.yml)
+- [Helm Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-helm.yml)
+- [Kompose Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-kompose.yml)
+- [Kustomize Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-kustomize.yml)
 
 ## Telemetry
 
