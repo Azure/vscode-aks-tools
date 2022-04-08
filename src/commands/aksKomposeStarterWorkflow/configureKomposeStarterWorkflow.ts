@@ -5,7 +5,7 @@ import { getAksClusterTreeItem } from '../utils/clusters';
 import { configureStarterConfigDataForAKS } from '../utils/configureWorkflowHelper';
 import { failed } from '../utils/errorable';
 
-export default async function configureStarterWorkflow(
+export default async function configureKomposeStarterWorkflow(
     _context: IActionContext,
     target: any
 ): Promise<void> {
@@ -18,7 +18,7 @@ export default async function configureStarterWorkflow(
     }
 
     // Configure the starter workflow data.
-    const aksStarterWorkflowData = configureStarterConfigDataForAKS(cluster.result.armId.split("/")[4], cluster.result.name, "azure-kubernetes-service");
+    const aksStarterWorkflowData = configureStarterConfigDataForAKS(cluster.result.armId.split("/")[4], cluster.result.name, "azure-kubernetes-service-kompose");
     if (failed(aksStarterWorkflowData)) {
         vscode.window.showErrorMessage(aksStarterWorkflowData.error);
         return;
