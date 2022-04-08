@@ -34,7 +34,10 @@
         "onCommand:aks.installAzureServiceOperator",
         "onCommand:aks.configureStarterWorkflow",
         "onCommand:aks.aksCRUDDiagnostics",
-        "onCommand:aks.aksBestPracticesDiagnostics"
+        "onCommand:aks.aksBestPracticesDiagnostics",
+        "onCommand:aks.configureHelmStarterWorkflow",
+        "onCommand:aks.configureKomposeStarterWorkflow",
+        "onCommand:aks.configureKustomizeStarterWorkflow"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -61,7 +64,7 @@
             },
             {
                 "command": "aks.configureStarterWorkflow",
-                "title": "Create GitHub Starter Workflow"
+                "title": "Starter Workflow"
             },
             {
                 "command": "aks.aksCRUDDiagnostics",
@@ -74,6 +77,18 @@
             {
                 "command": "aks.aksIdentitySecurityDiagnostics",
                 "title": "Identity and Security"
+            },
+            {
+                "command": "aks.configureHelmStarterWorkflow",
+                "title": "Helm Workflow"
+            },
+            {
+                "command": "aks.configureKomposeStarterWorkflow",
+                "title": "Kompose Workflow"
+            },
+            {
+                "command": "aks.configureKustomizeStarterWorkflow",
+                "title": "Kustomize Workflow"
             }
         ],
         "menus": {
@@ -94,7 +109,6 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@1"
                 },
-                
                 {
                     "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
@@ -105,9 +119,9 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 },
                 {
-                    "command": "aks.configureStarterWorkflow",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
-                
+                    "submenu": "aks.ghWorkflowSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@1"
                 }
             ],
             "aks.detectorsSubMenu": [
@@ -127,12 +141,34 @@
                   "command": "aks.aksIdentitySecurityDiagnostics",
                   "group": "navigation"
                 }
+            ],
+            "aks.ghWorkflowSubMenu": [
+                {
+                  "command": "aks.configureHelmStarterWorkflow",
+                  "group": "navigation"
+                },
+                {
+                  "command": "aks.configureKomposeStarterWorkflow",
+                  "group": "navigation"
+                },
+                {
+                  "command": "aks.configureKustomizeStarterWorkflow",
+                  "group": "navigation"
+                },
+                {
+                  "command": "aks.configureStarterWorkflow",
+                  "group": "navigation"
+                }
             ]
         },
         "submenus": [
             {
               "id": "aks.detectorsSubMenu",
               "label": "Run AKS Diagnostics"
+            },
+            {
+              "id": "aks.ghWorkflowSubMenu",
+              "label": "Create GitHub Workflow"
             }
           ]
     },
