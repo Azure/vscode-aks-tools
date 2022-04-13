@@ -21,7 +21,7 @@ jobs:
         id: download
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: poll-starter.yml
+          workflow: poll-starter-workflows.yml
           workflow_conclusion: success
           name: seen
           path: /tmp
