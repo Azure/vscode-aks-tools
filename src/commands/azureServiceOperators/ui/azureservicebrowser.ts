@@ -39,7 +39,7 @@ async function getAPIResourceCommandResult(): Promise<Errorable<AzureServiceKind
     if (!kubectl.available) {
         return { succeeded: false, error: `Kubectl is unavailable.` };
     }
-    const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("api-resources --api-group azure.microsoft.com --no-headers");
+    const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("get crds -o='custom-columns=Name:.metadata.name' | grep azure.com");
 
     if (!asoAPIResourceCommandResult) { // Fail to invoke command.
         return { succeeded: false, error: `Azure Service Operator api-resources failed to invoke command.` };
@@ -54,13 +54,10 @@ async function getAPIResourceCommandResult(): Promise<Errorable<AzureServiceKind
 }
 
 function parseServiceResource(apiResourceLineItem: string): AzureServiceKind | undefined {
-    const apiResource = apiResourceLineItem.split(' ').filter((s) => s.length > 0);
+    const apiResource = apiResourceLineItem.split('.').filter((s) => s.length > 0);
     if (apiResource.length === 4) {
         // name, apigroup, namespaced, kind
-        return { displayName: apiResource[3], manifestKind: apiResource[3], abbreviation: apiResource[0] };
-    } else if (apiResource.length === 5) {
-        // name, shortnames, apigroup, namespaced, kind
-        return { displayName: apiResource[4], manifestKind: apiResource[4], abbreviation: apiResource[0] };
+        return { displayName: apiResource[0], manifestKind: apiResource[1], abbreviation: apiResource[0] };
     } else {
         vscode.window.showWarningMessage(`Invalid api-resource output from azure service operator.`);
         return undefined;
