@@ -4,21 +4,27 @@ import { getExtensionPath } from "./host";
 import * as vscode from 'vscode';
 import { Errorable, failed } from "./errorable";
 
-export function configureStarterConfigDataForAKS(
-    resourceName: string,
-    clusterName: string,
-    workflowName: string
-): Errorable<string> {
+export function getWorkflowYaml(workflowName: string) : Errorable<string> {
     const extensionPath = getExtensionPath();
     if (failed(extensionPath)) {
         return extensionPath;
     }
 
-      // Load vscode resoruce yaml file and replace content.
     const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath.result, 'resources', 'yaml', `${workflowName}.yml`));
-    const starterFileAutoFillContent = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8')
-                                            .replace('your-resource-group', resourceName)
-                                            .replace('your-cluster-name', clusterName);
+    try {
+        const content = fs.readFileSync(yamlPathOnDisk.fsPath, 'utf8');
+        return { succeeded: true, result: content };
+    } catch (e) {
+        return { succeeded: false, error: `Failed to read ${yamlPathOnDisk}: ${e}`};
+    }
+}
 
-    return { succeeded: true, result: starterFileAutoFillContent };
+export function substituteClusterInWorkflowYaml(
+    workflowYaml: string,
+    resourceGroupName: string,
+    clusterName: string
+): string {
+    return workflowYaml
+        .replace('your-resource-group', resourceGroupName)
+        .replace('your-cluster-name', clusterName);
 }
