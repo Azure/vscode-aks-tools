@@ -10,16 +10,23 @@ describe('Test getWorkflowYaml for missing file', () => {
   });
 });
 
+const knownWorkflowNames = [
+  "azure-kubernetes-service",
+  "azure-kubernetes-service-helm",
+  "azure-kubernetes-service-kompose",
+  "azure-kubernetes-service-kustomize"
+];
+
 describe('Test getWorkflowYaml for known files', () => {
   it('should return string content with expected placeholders', () => {
-    ["azure-kubernetes-service",
-    "azure-kubernetes-service-helm",
-    "azure-kubernetes-service-kompose",
-    "azure-kubernetes-service-kustomize"].forEach(workflowName => {
+    knownWorkflowNames.forEach(workflowName => {
       const result = configureStarterWorkflow.getWorkflowYaml(workflowName);
       expect(succeeded(result)).to.be.true;
-      expect((result as Succeeded<string>).result).to.contain('RESOURCE_GROUP: "your-resource-group"', `resource group placeholder missing from ${workflowName}`);
-      expect((result as Succeeded<string>).result).to.contain('CLUSTER_NAME: "your-cluster-name"', `cluster name placeholder missing from ${workflowName}`);
+      const content = (result as Succeeded<string>).result;
+      expect(content).to.contain('RESOURCE_GROUP: "your-resource-group"', `resource group placeholder missing from ${workflowName}`);
+      expect(content).to.contain('CLUSTER_NAME: "your-cluster-name"', `cluster name placeholder missing from ${workflowName}`);
+      expect(content).not.to.contain('<RESOURCE_GROUP>', `incorrect placeholder <RESOURCE_GROUP> in ${workflowName}`);
+      expect(content).not.to.contain('<CLUSTER_NAME>', `incorrect placeholder <CLUSTER_NAME> in ${workflowName}`);
     });
   });
 });
