@@ -27,7 +27,7 @@ export async function startInstallation(
         return undefined;
     }
 
-    // 1) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
+    // 1) Install Cert-Manager https://azure.github.io/azure-service-operator/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
     installationResponse.installCertManagerResult = await longRunning(`Installing Cert-Manager resource...`,
         () => installCerManager(kubectl, clusterKubeConfig.result)
@@ -45,7 +45,7 @@ export async function startInstallation(
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
 
-    // 3) Final step: Get the azure service operator pod. - kubectl get pods -n operators
+    // 3) Final step: Get the azure service operator pod. - kubectl get pods -n azureserviceoperator-system
     installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
         () => getOperatorsPod(kubectl, clusterKubeConfig.result)
     );
