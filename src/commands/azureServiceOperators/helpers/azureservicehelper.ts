@@ -34,11 +34,6 @@ export async function startInstallation(
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installCertManagerResult, installationResponse)) return undefined;
 
-    // installationResponse.installOlmResult = await longRunning(`Installing Operator Lifecycle Manager resource...`,
-    //     () => installOlm(kubectl, clusterKubeConfig.result)
-    // );
-    // if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOlmResult, installationResponse)) return undefined;
-
     installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
         () => installOperator(kubectl, clusterKubeConfig.result)
     );
