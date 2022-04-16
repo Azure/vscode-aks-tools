@@ -51,6 +51,18 @@ htmlhandlers.registerHelper('breaklines', (text: any): any => {
     return text;
 });
 
+htmlhandlers.registerHelper('hasResourceThrottle', (value: any): boolean => {
+    if (value === "Azure Resource Request Throttling") {
+        return true;
+    }
+    return false;
+});
+
+htmlhandlers.registerHelper("setStyleVar", (varValue) => {
+        const styleString = `style="background-color: ${varValue}"`;
+        return styleString;
+    });
+
 export function createWebView(viewType: string, title: string): vscode.Webview {
     const panel = vscode.window.createWebviewPanel(
         viewType,
