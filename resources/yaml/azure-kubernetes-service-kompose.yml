@@ -16,6 +16,8 @@
 #
 # 2. Set the following environment variables (or replace the values below):
 #    - AZURE_CONTAINER_REGISTRY (name of your container registry / ACR)
+#    - RESOURCE_GROUP (where your cluster is deployed)
+#    - CLUSTER_NAME (name of your AKS cluster)
 #    - CONTAINER_NAME (name of the container image you would like to push up to your ACR)
 #
 # 3. Choose the appropriate render engine for the bake step https://github.com/Azure/k8s-bake. The config below assumes Kompose.
@@ -64,8 +66,8 @@ jobs:
     - name: Get K8s context
       uses: azure/aks-set-context@v2.0
       with:
-        resource-group: <RESOURCE_GROUP>
-        cluster-name: <CLUSTER_NAME>
+        resource-group: ${{ env.RESOURCE_GROUP }}
+        cluster-name: ${{ env.CLUSTER_NAME }}
 
    # Attaches ACR to your AKS Cluster
     - name: Attach ACR to AKS cluster
