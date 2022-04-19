@@ -30,7 +30,7 @@ export async function startInstallation(
     // 1) Install Cert-Manager https://azure.github.io/azure-service-operator/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
     installationResponse.installCertManagerResult = await longRunning(`Installing Cert-Manager resource...`,
-        () => installCerManager(kubectl, clusterKubeConfig.result)
+        () => installCertManager(kubectl, clusterKubeConfig.result)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installCertManagerResult, installationResponse)) return undefined;
 
@@ -66,7 +66,7 @@ async function getOperatorsPod(
     return result;
 }
 
-async function installCerManager(
+async function installCertManager(
     kubectl: k8s.KubectlV1,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
