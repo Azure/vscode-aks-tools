@@ -55,13 +55,12 @@ function getOrganisedInstallResult(
     installationResponse: InstallationResponse
 ) {
     const installResults: InstallResult = {};
-    const olmCrdResult = installationResponse.installOlmCrdResult;
-    const olmResult = installationResponse.installOlmResult;
+    const certManagerResult = installationResponse.installCertManagerResult;
     const operatorResult = installationResponse.installOperatorSettingsResult;
     const operatorSettingsResult = installationResponse.installOperatorResult;
     const getOperatorsPodResult = installationResponse.getOperatorsPodResult;
 
-    const installResultCollection = [olmCrdResult, olmResult, operatorResult, operatorSettingsResult, getOperatorsPodResult];
+    const installResultCollection = [certManagerResult, operatorResult, operatorSettingsResult, getOperatorsPodResult];
     installResults.succeeded = installationExitCodeResponse(installResultCollection);
 
     if (installResults.succeeded) {
@@ -81,11 +80,10 @@ function installationLogsResponse(
     const logs: LogSection[] = [];
 
     const logsTitle: { [order: number]: string } = {
-        0: "Install Operator Lifecycle CRD Output",
-        1: "Install Operator Lifecycle Output",
-        2: "Install Operator Output",
-        3: "Setting Apply Operator Output",
-        4: "Operator pod output",
+        0: "Install Cert Manager Output",
+        1: "Install Operator Output",
+        2: "Setting Apply Operator Output",
+        3: "Operator pod output",
     };
 
     installShellResult.filter(Boolean).forEach((sr, index) => {
