@@ -23,8 +23,10 @@ jobs:
       id: package_version
       uses: martinbeentjes/npm-get-version-action@v1.1.0
     - name: Check version is mentioned in Changelog
-      uses: mindsers/changelog-reader-action@v2.0.0
+      id: changelog_reader
+      uses: mindsers/changelog-reader-action@v2
       with:
+        validation_depth: 10
         version: ${{ steps.package_version.outputs.current-version }}
         path: 'CHANGELOG.md'
     - name: Create a Release
@@ -35,7 +37,7 @@ jobs:
       with:
         tag_name : ${{ steps.package_version.outputs.current-version}}
         release_name: ${{ steps.package_version.outputs.current-version}}
-        body: Publish ${{ steps.package_version.outputs.changes}}
+        body: Publish ${{ steps.changelog_reader.outputs.changes }}
     - name: Create vsix and publish to marketplace
       id: create_vsix
       uses: HaaLeo/publish-vscode-extension@v0
