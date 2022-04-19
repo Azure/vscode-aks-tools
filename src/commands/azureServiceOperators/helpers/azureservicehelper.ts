@@ -27,17 +27,12 @@ export async function startInstallation(
         return undefined;
     }
 
-    // 1) Install OLM is the pre-requisite of this work, using the apply YAML instructions here: https://github.com/operator-framework/operator-lifecycle-manager/releases/.
+    // 1) Install Cert-Manager https://azure.github.io/azure-service-operator/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
-    installationResponse.installOlmCrdResult = await longRunning(`Installing Operator Lifecycle Manager CRD resource...`,
-        () => installOlmCrd(kubectl, clusterKubeConfig.result)
+    installationResponse.installCertManagerResult = await longRunning(`Installing Cert-Manager resource...`,
+        () => installCertManager(kubectl, clusterKubeConfig.result)
     );
-    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOlmCrdResult, installationResponse)) return undefined;
-
-    installationResponse.installOlmResult = await longRunning(`Installing Operator Lifecycle Manager resource...`,
-        () => installOlm(kubectl, clusterKubeConfig.result)
-    );
-    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOlmResult, installationResponse)) return undefined;
+    if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installCertManagerResult, installationResponse)) return undefined;
 
     installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
         () => installOperator(kubectl, clusterKubeConfig.result)
@@ -50,7 +45,7 @@ export async function startInstallation(
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
 
-    // 3) Final step: Get the azure service operator pod. - kubectl get pods -n operators
+    // 3) Final step: Get the azure service operator pod. - kubectl get pods -n azureserviceoperator-system
     installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
         () => getOperatorsPod(kubectl, clusterKubeConfig.result)
     );
@@ -64,47 +59,35 @@ async function getOperatorsPod(
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     // kubectl get pods -n operators
-    const command = `get pods -n operators`;
-    const failureDescription = "Get operator pod had following error";
+    const command = `get pods -n azureserviceoperator-system`;
+    const failureDescription = "Get azureserviceoperator-system pod had following error";
 
     const result = await invokeKubectlCommand(kubectl, clusterKubeConfig, command, failureDescription);
     return result;
 }
 
-async function installOlmCrd(
+async function installCertManager(
     kubectl: k8s.KubectlV1,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
     try {
-        const asoCrdYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.18.3/crds.yaml";
+        const asoCrdYamlFile = "https://github.com/jetstack/cert-manager/releases/download/v1.7.1/cert-manager.yaml";
         const runResult = await tmpfile.withOptionalTempFile<k8s.KubectlV1.ShellResult | undefined>(
             clusterKubeConfig, "yaml",
             (f) => kubectl.invokeCommand(`create -f ${asoCrdYamlFile} --kubeconfig="${f}"`));
 
         return runResult;
     } catch (e) {
-        vscode.window.showErrorMessage(`Installing operator lifecycle manager CRD resource had following error: ${e}`);
+        vscode.window.showErrorMessage(`Installing cert-manager resource had following error: ${e}`);
         return undefined;
     }
-}
-
-async function installOlm(
-    kubectl: k8s.KubectlV1,
-    clusterKubeConfig: string
-): Promise<k8s.KubectlV1.ShellResult | undefined> {
-    const asoOlmYamlFile = "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.18.3/olm.yaml";
-    const command = `create -f ${asoOlmYamlFile}`;
-    const failureDescription = "Installing operator lifecycle manager resource had following error";
-
-    const result = await invokeKubectlCommand(kubectl, clusterKubeConfig, command, failureDescription);
-    return result;
 }
 
 async function installOperator(
     kubectl: k8s.KubectlV1,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
-    const asoYamlFile = "https://operatorhub.io/install/azure-service-operator.yaml";
+    const asoYamlFile = "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0-beta.0/azureserviceoperator_v2.0.0-beta.0.yaml";
     const command = `create -f ${asoYamlFile}`;
     const failureDescription = "Installing operator resoruce had following error";
 

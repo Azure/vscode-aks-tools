@@ -64,7 +64,7 @@ export async function install(
         vscode.window.showErrorMessage(extensionPath.error);
         return undefined;
     }
-  
+
     // Create webview with user input required.
     createASOWebView(webview, extensionPath.result, installationResponse, true);
 
