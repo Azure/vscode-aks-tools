@@ -30,6 +30,28 @@
         </div>
         <hr/>
             {{#eachProperty detectorData}}
+            {{#if (ifEquals value "Azure Resource Request Throttling")}}
+            <div class="insight-container">
+                <div class="panel panel-default insight-panel {{toLowerCase property.[0].[0]}}">
+                    <div class="panel-heading togglesubnet">
+                        <span class="fa status-icon fa-check-circle"></span>
+                        <h5 class="panel-title">{{value}}</h5>
+                    </div>
+                    <div class="throttle panel-body subnet">
+                        <table>
+                            <tbody>
+                                <tr>
+                                {{#each property}}
+                                    <td class="table-key-graph" {{{setStyleVar this.[2] }}}> </td>
+                                    <td class="bottom-center-text">{{{this.[1]}}} </br> {{{this.[0]}}} </td>
+                                {{/each}}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {{else}}
             <div class="insight-container">
                 <div class="panel panel-default insight-panel {{toLowerCase property.[0].[0]}}">
                     <div class="panel-heading togglesubnet">
@@ -52,8 +74,11 @@
                             </tbody>
                         </table>
                     </div>
+                    
                 </div>
             </div>
+            {{/if}}
+
             {{/eachProperty }}
 </body>
 </html>

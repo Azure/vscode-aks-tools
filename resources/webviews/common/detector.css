@@ -149,3 +149,9 @@ body {
     width: 20%;
     font-weight: 700;
 }
+
+.bottom-center-text{
+    vertical-align:bottom;
+    text-align:left;
+    height:50px;
+}
