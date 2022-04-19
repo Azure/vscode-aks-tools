@@ -79,6 +79,10 @@
                 "title": "Identity and Security"
             },
             {
+                "command": "aks.aksNodeHealthDiagnostics",
+                "title": "Node Health"
+            },
+            {
                 "command": "aks.configureHelmStarterWorkflow",
                 "title": "Helm Workflow"
             },
@@ -139,6 +143,10 @@
                 },
                 {
                   "command": "aks.aksIdentitySecurityDiagnostics",
+                  "group": "navigation"
+                },
+                {
+                  "command": "aks.aksNodeHealthDiagnostics",
                   "group": "navigation"
                 }
             ],

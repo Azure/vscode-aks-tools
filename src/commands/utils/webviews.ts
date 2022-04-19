@@ -51,6 +51,15 @@ htmlhandlers.registerHelper('breaklines', (text: any): any => {
     return text;
 });
 
+htmlhandlers.registerHelper('ifEquals', (originalValue, valueToCompare) => {
+    return (originalValue === valueToCompare);
+});
+
+htmlhandlers.registerHelper("setStyleVar", (varValue) => {
+        const styleString = `style="background-color: ${varValue}; width: 20px; height: 50px;"`;
+        return styleString;
+});
+
 export function createWebView(viewType: string, title: string): vscode.Webview {
     const panel = vscode.window.createWebviewPanel(
         viewType,
