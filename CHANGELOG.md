@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.0.17]
+
+* Integrating Node Health detector.
+* Upgrade feature [Azure Service Opertaor V2 feature](https://azure.github.io/azure-service-operator/#installation).
+* Starter workflow upgrade for auto PR.
+
+Thanks to @rzhang628, @peterbom and @OliverMKing.
+
 ## [0.0.16]
 
 * Addition of Create Github Workflow Submenu.

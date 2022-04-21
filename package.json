@@ -2,7 +2,7 @@
     "name": "vscode-aks-tools",
     "displayName": "Azure Kubernetes Service",
     "description": "Display Azure Kubernetes Services within VS Code",
-    "version": "0.0.16",
+    "version": "0.0.17",
     "preview": true,
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "publisher": "ms-kubernetes-tools",
