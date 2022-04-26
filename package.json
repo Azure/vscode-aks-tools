@@ -83,6 +83,10 @@
                 "title": "Node Health"
             },
             {
+                "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
+                "title": "Known Issues, Availability and Performance"
+            },
+            {
                 "command": "aks.configureHelmStarterWorkflow",
                 "title": "Helm Workflow"
             },
@@ -147,6 +151,10 @@
                 },
                 {
                     "command": "aks.aksNodeHealthDiagnostics",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
                     "group": "navigation"
                 }
             ],
