@@ -55,6 +55,10 @@ htmlhandlers.registerHelper('ifEquals', (originalValue, valueToCompare) => {
     return (originalValue === valueToCompare);
 });
 
+htmlhandlers.registerHelper('isNotGarbage', (originalValue) => {
+    return (originalValue && originalValue.toLowerCase() !== "test");
+});
+
 htmlhandlers.registerHelper("setStyleVar", (varValue) => {
         const styleString = `style="background-color: ${varValue}; width: 20px; height: 50px;"`;
         return styleString;

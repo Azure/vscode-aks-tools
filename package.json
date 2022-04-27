@@ -83,6 +83,10 @@
                 "title": "Node Health"
             },
             {
+                "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
+                "title": "Known Issues, Availability and Performance"
+            },
+            {
                 "command": "aks.configureHelmStarterWorkflow",
                 "title": "Helm Workflow"
             },
@@ -130,55 +134,59 @@
             ],
             "aks.detectorsSubMenu": [
                 {
-                  "command": "aks.networkAndConnectivityDiagnostics",
-                  "group": "navigation"
+                    "command": "aks.networkAndConnectivityDiagnostics",
+                    "group": "navigation"
                 },
                 {
-                  "command": "aks.aksCRUDDiagnostics",
-                  "group": "navigation"
+                    "command": "aks.aksCRUDDiagnostics",
+                    "group": "navigation"
                 },
                 {
-                  "command": "aks.aksBestPracticesDiagnostics",
-                  "group": "navigation"
+                    "command": "aks.aksBestPracticesDiagnostics",
+                    "group": "navigation"
                 },
                 {
-                  "command": "aks.aksIdentitySecurityDiagnostics",
-                  "group": "navigation"
+                    "command": "aks.aksIdentitySecurityDiagnostics",
+                    "group": "navigation"
                 },
                 {
-                  "command": "aks.aksNodeHealthDiagnostics",
-                  "group": "navigation"
+                    "command": "aks.aksNodeHealthDiagnostics",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
+                    "group": "navigation"
                 }
             ],
             "aks.ghWorkflowSubMenu": [
                 {
-                  "command": "aks.configureHelmStarterWorkflow",
-                  "group": "navigation"
+                    "command": "aks.configureHelmStarterWorkflow",
+                    "group": "navigation"
                 },
                 {
-                  "command": "aks.configureKomposeStarterWorkflow",
-                  "group": "navigation"
+                    "command": "aks.configureKomposeStarterWorkflow",
+                    "group": "navigation"
                 },
                 {
-                  "command": "aks.configureKustomizeStarterWorkflow",
-                  "group": "navigation"
+                    "command": "aks.configureKustomizeStarterWorkflow",
+                    "group": "navigation"
                 },
                 {
-                  "command": "aks.configureStarterWorkflow",
-                  "group": "navigation"
+                    "command": "aks.configureStarterWorkflow",
+                    "group": "navigation"
                 }
             ]
         },
         "submenus": [
             {
-              "id": "aks.detectorsSubMenu",
-              "label": "Run AKS Diagnostics"
+                "id": "aks.detectorsSubMenu",
+                "label": "Run AKS Diagnostics"
             },
             {
-              "id": "aks.ghWorkflowSubMenu",
-              "label": "Create GitHub Workflow"
+                "id": "aks.ghWorkflowSubMenu",
+                "label": "Create GitHub Workflow"
             }
-          ]
+        ]
     },
     "scripts": {
         "vscode:prepublish": "webpack --mode production",
@@ -221,12 +229,13 @@
         "@types/sinon": "^10.0.6",
         "@types/sinonjs__fake-timers": "^6.0.2",
         "ajv": "^6.12.6",
-        "filemanager-webpack-plugin": "^4.0.0",
+        "filemanager-webpack-plugin": "^7.0.0-beta.0",
         "handlebars": "^4.7.7",
         "js-yaml": "^3.14.0",
         "neverthrow": "^4.3.0",
         "sinon": "^12.0.1",
         "tmp": "^0.2.1",
+        "tslib": "^2.1.0",
         "underscore": "^1.13.1",
         "util": "^0.12.3",
         "vscode-azureextensionui": "^0.39.4",
