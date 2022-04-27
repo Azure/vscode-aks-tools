@@ -22,7 +22,9 @@
 
         <div class="heading">
             <h2 class="content-header">{{name}}</h2> 
+            {{#if (isNotGarbage description)}}
             <br\> {{description}}
+            {{/if}}
         </div>
 
         <div class="link">
