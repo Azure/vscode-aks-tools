@@ -55,8 +55,8 @@ htmlhandlers.registerHelper('ifEquals', (originalValue, valueToCompare) => {
     return (originalValue === valueToCompare);
 });
 
-htmlhandlers.registerHelper('ifNotGarbage', (originalValue) => {
-    return (originalValue || originalValue.toLowerCase !== "test");
+htmlhandlers.registerHelper('isNotGarbage', (originalValue) => {
+    return (originalValue && originalValue.toLowerCase() !== "test");
 });
 
 htmlhandlers.registerHelper("setStyleVar", (varValue) => {

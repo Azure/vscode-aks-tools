@@ -22,9 +22,9 @@
 
         <div class="heading">
             <h2 class="content-header">{{name}}</h2> 
-            {{#unless (ifNotGarbage description)}}
+            {{#if (isNotGarbage description)}}
             <br\> {{description}}
-            {{/unless}}
+            {{/if}}
         </div>
 
         <div class="link">
