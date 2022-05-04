@@ -39,12 +39,12 @@ async function getAPIResourceCommandResult(): Promise<Errorable<AzureServiceKind
     if (!kubectl.available) {
         return { succeeded: false, error: `Kubectl is unavailable.` };
     }
-    const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("get crds -o='custom-columns=Name:.metadata.name' | grep azure.com");
+    const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("get crds -o='custom-columns=Name:.metadata.name'");
 
     if (!asoAPIResourceCommandResult) { // Fail to invoke command.
         return { succeeded: false, error: `Azure Service Operator api-resources failed to invoke command.` };
     } else if (asoAPIResourceCommandResult.stdout) { // kubectl returned a list of resources (even if it errored part way through)
-        const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+        const treeResourceItems = asoAPIResourceCommandResult.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && line.includes("azure.com"));
         return { succeeded: true, result: treeResourceItems.map((item: string) => parseServiceResource(item)!) };
     } else if (asoAPIResourceCommandResult.code === 0) { // ASO is not installed.
         return { succeeded: false, error: ASOInstallation.ASONotInstalled };
