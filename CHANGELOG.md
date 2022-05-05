@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.0.18]
+
+* Integrating Known Issues, Availability and Performance detector.
+* ASO V2 windows grep command fix.
+
+Thanks to @rzhang628 and @peterbom.
+
 ## [0.0.17]
 
 * Integrating Node Health detector.
