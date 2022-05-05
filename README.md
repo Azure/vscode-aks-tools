@@ -47,6 +47,7 @@ Right click on your AKS cluster and click on **Run AKS Diagnostics** to display 
 - Best Practices
 - Create, Upgrade, Delete and Scale issues
 - Identity and Security
+- Known Issues, Availability and Performance
 - Network and Connectivity issues
 - Node Health
 
