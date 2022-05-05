@@ -39,7 +39,10 @@ async function getAPIResourceCommandResult(): Promise<Errorable<AzureServiceKind
     if (!kubectl.available) {
         return { succeeded: false, error: `Kubectl is unavailable.` };
     }
-    const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("get crds -o='custom-columns=Name:.metadata.name'");
+
+    // Don't quote the 'custom-columns' expression. Something about the way invokeCommand parses out the arguments on Windows
+    // results in a runtime error: unable to match a printer suitable for the output format "'custom-columns=Name:.metadata.name'"
+    const asoAPIResourceCommandResult = await kubectl.api.invokeCommand("get crds --no-headers -o custom-columns=Name:.metadata.name");
 
     if (!asoAPIResourceCommandResult) { // Fail to invoke command.
         return { succeeded: false, error: `Azure Service Operator api-resources failed to invoke command.` };
