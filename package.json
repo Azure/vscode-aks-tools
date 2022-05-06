@@ -101,7 +101,7 @@
             },
             {
                 "command": "aks.showInPortal",
-                "title": "Show In Portal"
+                "title": "Show In Azure Portal"
             }
         ],
         "menus": {
