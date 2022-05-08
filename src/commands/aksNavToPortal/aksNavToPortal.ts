@@ -23,5 +23,6 @@ export default async function aksNavToPortal(
       return;
     }
 
-    vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#resource${target.value.id}/overview`));
+    // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
+    vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#resource${cluster.armId}/overview`));
 }
