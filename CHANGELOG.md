@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.19]
+
+* Enabling show in azure portal usability feature.
+
+Thanks to @rzhang628 and @peterbom for reviews.
+
 ## [0.0.18]
 
 * Integrating Known Issues, Availability and Performance detector.
