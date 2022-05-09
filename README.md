@@ -11,6 +11,7 @@
 * Run AKS Periscope within VS Code
 * Install Azure Service Operator on your AKS cluster
 * Create GitHub Workflow from your AKS cluster
+* Show AKS cluster overview in Azure Portal
 
 ## Installation
 
@@ -104,6 +105,10 @@ Right click on your AKS cluster and click on **Create GitHub Workflow** to easil
 - [Helm Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-helm.yml)
 - [Kompose Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-kompose.yml)
 - [Kustomize Workflow](https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-kustomize.yml)
+
+### Show in Azure Portal
+
+Right click on your AKS cluster and click on **Show in Azure Portal** to easily navigate to AKS cluster overview page in Azure Portal.
 
 ## Telemetry
 
