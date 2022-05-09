@@ -37,7 +37,8 @@
         "onCommand:aks.aksBestPracticesDiagnostics",
         "onCommand:aks.configureHelmStarterWorkflow",
         "onCommand:aks.configureKomposeStarterWorkflow",
-        "onCommand:aks.configureKustomizeStarterWorkflow"
+        "onCommand:aks.configureKustomizeStarterWorkflow",
+        "onCommand:aks.showInPortal"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -97,6 +98,10 @@
             {
                 "command": "aks.configureKustomizeStarterWorkflow",
                 "title": "Kustomize Workflow"
+            },
+            {
+                "command": "aks.showInPortal",
+                "title": "Show In Azure Portal"
             }
         ],
         "menus": {
@@ -121,6 +126,11 @@
                     "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@2"
+                },
+                {
+                    "command": "aks.showInPortal",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "8@3"
                 },
                 {
                     "command": "aks.installAzureServiceOperator",
