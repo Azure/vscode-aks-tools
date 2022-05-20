@@ -43,8 +43,14 @@
                                     <td>Kubernetes Version</td>
                                     <td>{{clusterData.kubernetesVersion}}</td>
                                 </tr>
+                            </tbody>
+                        </table>
+                        <b>Agent Pool Properties</b>
+                        <table>
+                            <tbody>
                                 <tr>
-                                    <td><b>Agent Pool Properties</b></td>
+                                    <th>Properties</th>
+                                    <th>Values</th>
                                 </tr>
                                 {{#each clusterData.agentPoolProfiles}}
                                 <tr>
