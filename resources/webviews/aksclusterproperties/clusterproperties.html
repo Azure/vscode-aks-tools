@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKS Cluster Properties</title>
+    <!-- Link to the css file -->
+    <link rel="stylesheet" href="{{cssuri}}">
+</head>
+
+<body>
+    <div class="heading">
+        <h2 class="content-header">AKS Cluster Properties of {{name}}</h2>
+    </div>
+
+    <div class="insight-container">
+        <div class="panel panel-default data-container">
+            <div class="panel-body data-container-body">
+
+                <div class="panel-body data-container-body allocatebody">
+                    <div class="panel-body">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <th>Properties</th>
+                                    <th>Values</th>
+                                </tr>
+
+                                <tr>
+                                    <td>Provisioning State</td>
+                                    <td>{{clusterData.provisioningState}}</td>
+                                </tr>
+                                <tr>
+                                    <td>FQDN</td>
+                                    <td>{{clusterData.fqdn}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Kubernetes Version</td>
+                                    <td>{{clusterData.kubernetesVersion}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        {{#each clusterData.agentPoolProfiles}}
+                        <b>Agent Pool: {{this.name}}</b>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <th>Properties</th>
+                                    <th>Values</th>
+                                </tr>
+                                <tr>
+                                    <td>Node Version</td>
+                                    <td>{{this.nodeImageVersion}}</td>
+                                </tr>
+                                <tr>
+                                    <td>O/S Disk Size</td>
+                                    <td>{{this.osDiskSizeGB}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Provision State</td>
+                                    <td>{{this.provisioningState}}</td>
+                                </tr>
+                                <tr>
+                                    <td>VM Size</td>
+                                    <td>{{this.vmSize}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Node Count</td>
+                                    <td>{{this.count}}</td>
+                                </tr>
+                                <tr>
+                                    <td>O/S Type</td>
+                                    <td>{{this.osType}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        {{/each}}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

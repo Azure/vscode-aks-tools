@@ -38,7 +38,8 @@
         "onCommand:aks.configureHelmStarterWorkflow",
         "onCommand:aks.configureKomposeStarterWorkflow",
         "onCommand:aks.configureKustomizeStarterWorkflow",
-        "onCommand:aks.showInPortal"
+        "onCommand:aks.showInPortal",
+        "onCommand:aks.clusterProperties"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -102,6 +103,10 @@
             {
                 "command": "aks.showInPortal",
                 "title": "Show In Azure Portal"
+            },
+            {
+                "command": "aks.clusterProperties",
+                "title": "Show Properties"
             }
         ],
         "menus": {
@@ -129,6 +134,11 @@
                 },
                 {
                     "command": "aks.showInPortal",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "8@3"
+                },
+                {
+                    "command": "aks.clusterProperties",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@3"
                 },
