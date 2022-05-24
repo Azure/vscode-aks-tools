@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.0.0]
+
+* Enabling show cluster properties feature.
+* Extension is now out of preview.
+
+Thanks to @rzhang628 and @peterbom for reviews.
+
 ## [0.0.19]
 
 * Enabling show in azure portal usability feature.
