@@ -3,7 +3,7 @@
     <img src="https://vsmarketplacebadge.apphb.com/rating-star/ms-kubernetes-tools.vscode-aks-tools.svg">
 </a>
 
-# Azure Kubernetes Service (AKS) Extension for Visual Studio Code (Preview)
+# Azure Kubernetes Service (AKS) Extension for Visual Studio Code
 
 * View your AKS clusters in the Kubernetes extension cloud explorer
 * Add AKS clusters to kubeconfig
@@ -12,6 +12,7 @@
 * Install Azure Service Operator on your AKS cluster
 * Create GitHub Workflow from your AKS cluster
 * Show AKS cluster overview in Azure Portal
+* Show AKS cluster properties
 
 ## Installation
 
@@ -109,6 +110,10 @@ Right click on your AKS cluster and click on **Create GitHub Workflow** to easil
 ### Show in Azure Portal
 
 Right click on your AKS cluster and click on **Show in Azure Portal** to easily navigate to AKS cluster overview page in Azure Portal.
+
+### Show Properties
+
+Right click on your AKS cluster and click on **Show Properties** to display the AKS cluster and agent pool properties like provisioning state, fqdn, k8s version, along with node properties like node version, vm type, vm size, o/s type, o/s disk size and nodes provisioning state.
 
 ## Telemetry
 
