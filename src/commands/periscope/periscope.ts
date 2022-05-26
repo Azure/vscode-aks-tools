@@ -61,7 +61,6 @@ async function runAKSPeriscope(
         // If there is no storage account attached to diagnostic setting, don't move forward and at this point we will render webview with helpful content.
         await createPeriscopeWebView(cluster.name, undefined, undefined, false);
         return undefined;
-
     }
 
     const clusterStorageAccountId = await chooseStorageAccount(clusterDiagnosticSettings);

@@ -12,7 +12,7 @@ export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     ]);
 
     if (failed(props)) {
-        return { succeeded: false, error: `error reading aks.periscope configuration: ${props.error}` };
+        return { succeeded: false, error: `Failed to read aks.periscope configuration: ${props.error}` };
     }
 
     const config = {
