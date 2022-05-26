@@ -5,6 +5,7 @@ import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
 import { ManagedClustersListClusterUserCredentialsResponse } from '@azure/arm-containerservice/esm/models';
 import { ResourceManagementClient } from '@azure/arm-resources';
+import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
 
 export interface ClusterARMResponse {
     readonly id: string;
@@ -36,6 +37,29 @@ export function getAksClusterTreeItem(commandTarget: any, cloudExplorer: API<Clo
     }
 
     return { succeeded: true, result: cluster };
+}
+
+export function getAksClusterSubscriptionItem(commandTarget: any, cloudExplorer: API<CloudExplorerV1>): Errorable<SubscriptionTreeNode> {
+    if (!cloudExplorer.available) {
+        return { succeeded: false, error: 'Cloud explorer is unavailable.'};
+    }
+
+    const cloudTarget = cloudExplorer.api.resolveCommandTarget(commandTarget) as CloudExplorerV1.CloudExplorerResourceNode;
+
+    const isAKSSubscriptionTarget = cloudTarget !== undefined &&
+        cloudTarget.cloudName === "Azure" &&
+        cloudTarget.cloudResource.nodeType === "subscription";
+
+    if (!isAKSSubscriptionTarget) {
+        return { succeeded: false, error: 'This command only applies to AKS subscription.'};
+    }
+
+    const cloudResource = cloudTarget.cloudResource as SubscriptionTreeNode;
+    if (cloudResource === undefined) {
+        return { succeeded: false, error: 'Cloud target cluster resource is not of type AksClusterSubscriptionItem.'};
+    }
+
+    return { succeeded: true, result: cloudResource };
 }
 
 export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Errorable<string>> {
