@@ -2,13 +2,9 @@ import { fs } from './fs';
 const tmp = require('tmp');
 
 export async function withOptionalTempFile<T>(
-    content: string | undefined,
+    content: string,
     fileType: string,
-    fn: (filename: string | undefined) => Promise<T>): Promise<T> {
-    if (!content) {
-        return fn(undefined);
-    }
-
+    fn: (filename: string) => Promise<T>): Promise<T> {
     const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.${fileType}` });
     await fs.writeFile(tempFile.name, content);
 

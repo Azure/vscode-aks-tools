@@ -42,6 +42,35 @@
     ],
     "main": "./dist/extension",
     "contributes": {
+        "configuration": {
+            "title": "AKS",
+            "properties": {
+                "aks.periscope.repoOrg": {
+                    "type": "string",
+                    "default": "azure",
+                    "title": "Periscope GitHub repository organization",
+                    "description": "GitHub organization for the repository containing the Kustomize base template."
+                },
+                "aks.periscope.containerRegistry": {
+                    "type": "string",
+                    "default": "mcr.microsoft.com",
+                    "title": "Periscope image container registry",
+                    "description": "Container registry to pull Periscope images from."
+                },
+                "aks.periscope.releaseTag": {
+                    "type": "string",
+                    "default": "v0.9",
+                    "title": "Periscope repository release tag",
+                    "description": "Release tag for the Kustomize templates in the Periscope repository."
+                },
+                "aks.periscope.imageVersion": {
+                    "type": "string",
+                    "default": "0.0.9",
+                    "title": "Periscope image version",
+                    "description": "Docker image tag corresponding to the Periscope version."
+                }
+            }
+        },
         "commands": [
             {
                 "command": "aks.selectSubscriptions",
