@@ -38,7 +38,9 @@
         "onCommand:aks.configureKomposeStarterWorkflow",
         "onCommand:aks.configureKustomizeStarterWorkflow",
         "onCommand:aks.showInPortal",
-        "onCommand:aks.clusterProperties"
+        "onCommand:aks.clusterProperties",
+        "onCommand:aks.createClusterNavToAzurePortal"
+
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -135,6 +137,10 @@
             {
                 "command": "aks.clusterProperties",
                 "title": "Show Properties"
+            },
+            {
+                "command": "aks.createClusterNavToAzurePortal",
+                "title": "Create Cluster From Azure Portal"
             }
         ],
         "menus": {
@@ -178,6 +184,10 @@
                     "submenu": "aks.ghWorkflowSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@1"
+                },
+                {
+                    "command": "aks.createClusterNavToAzurePortal",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
                 }
             ],
             "aks.detectorsSubMenu": [
