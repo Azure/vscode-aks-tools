@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.1.0]
+
+* Refactor to support AKS Periscope Windows changes.
+* Enabling create AKS cluster from azure portal.
+
+Thanks to @rzhang628 and @peterbom.
+
 ## [1.0.0]
 
 * Enabling show cluster properties feature.

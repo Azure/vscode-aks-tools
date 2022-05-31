@@ -13,6 +13,7 @@
 * Create GitHub Workflow from your AKS cluster
 * Show AKS cluster overview in Azure Portal
 * Show AKS cluster properties
+* Create AKS cluster from Azure Portal
 
 ## Installation
 
@@ -33,6 +34,8 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 ![Cloud explorer extension menu](resources/right-click-menu.png)
 
 ![Cloud explorer extension menu](resources/right-click-menu-workflow.png)
+
+![Cloud explorer extension menu](resources/right-click-subscription.png)
 
 ### Merge into Kubeconfig
 
@@ -114,6 +117,10 @@ Right click on your AKS cluster and click on **Show in Azure Portal** to easily 
 ### Show Properties
 
 Right click on your AKS cluster and click on **Show Properties** to display the AKS cluster and agent pool properties like provisioning state, fqdn, k8s version, along with node properties like node version, vm type, vm size, o/s type, o/s disk size and nodes provisioning state.
+
+### Create cluster from Azure Portal
+
+Right click on your AKS sunscription and click on **Create cluster from Azure Portal** to easily navigate to AKS create cluster page in Azure Portal.
 
 ## Telemetry
 
