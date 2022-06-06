@@ -63,5 +63,5 @@ export async function getDetectorInfo(
 }
 
 export function getPortalUrl(clusterdata: AppLensARMResponse) {
-    return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics?source=${meta.name}`;
+    return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics?source=vscode&context=${meta.name}`;
 }
