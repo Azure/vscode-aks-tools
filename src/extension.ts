@@ -20,6 +20,7 @@ import aksNodeHealth from './commands/aksNodeHealth/aksNodeHealth';
 import aksKnownIssuesAvailabilityPerformanceDiagnostics from './commands/aksKnownIssuesAvailabilityPerformance/aksKnownIssuesAvailabilityPerformance';
 import aksNavToPortal from './commands/aksNavToPortal/aksNavToPortal';
 import aksClusterProperties from './commands/aksClusterProperties/aksClusterProperties';
+import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -54,6 +55,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksKnownIssuesAvailabilityPerformanceDiagnostics', aksKnownIssuesAvailabilityPerformanceDiagnostics );
         registerCommandWithTelemetry('aks.showInPortal', aksNavToPortal );
         registerCommandWithTelemetry('aks.clusterProperties', aksClusterProperties);
+        registerCommandWithTelemetry('aks.createClusterNavToAzurePortal', aksCreateClusterNavToAzurePortal);
 
         await registerAzureServiceNodes(context);
 
