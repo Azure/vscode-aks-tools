@@ -1,6 +1,7 @@
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { Errorable, combine, failed } from "./errorable";
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
+const meta = require('../../../package.json');
 
 export interface AppLensARMResponse {
     readonly id: string;
@@ -62,5 +63,5 @@ export async function getDetectorInfo(
 }
 
 export function getPortalUrl(clusterdata: AppLensARMResponse) {
-    return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics`;
+    return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics?referrer_source=vscode&referrer_context=${meta.name}`;
 }
