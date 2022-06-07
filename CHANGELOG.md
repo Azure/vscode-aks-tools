@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.2.0]
+
+* VsCode to Azure portal URL forward with referrer parameters.
+
+Thanks to @rzhang628, @chandraneel, @rechevarria and @peterbom.
+
 ## [1.1.0]
 
 * Refactor to support AKS Periscope Windows changes.
