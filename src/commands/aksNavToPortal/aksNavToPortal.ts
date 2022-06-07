@@ -4,6 +4,7 @@ import { IActionContext } from "vscode-azureextensionui";
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath }  from '../utils/host';
 import { failed } from '../utils/errorable';
+const meta = require('../../../package.json');
 
 export default async function aksNavToPortal(
     _context: IActionContext,
@@ -24,5 +25,5 @@ export default async function aksNavToPortal(
     }
 
     // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-    vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#resource${cluster.result.armId}/overview`));
+    vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
 }
