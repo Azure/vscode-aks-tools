@@ -9,7 +9,7 @@ import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
 import installAzureServiceOperator  from './commands/azureServiceOperators/installAzureServiceOperator';
-import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azureservicebrowser';
+import { AzureResourceNodeContributor } from './tree/azureResourceNodeContributor';
 import { setAssetContext } from './assets';
 import { configureStarterWorkflow, configureHelmStarterWorkflow, configureKomposeStarterWorkflow, configureKustomizeStarterWorkflow } from './commands/aksStarterWorkflow/configureStarterWorkflow';
 import aksCRUDDiagnostics from './commands/aksCRUDDiagnostics/aksCRUDDiagnostics';
@@ -78,11 +78,19 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
     context.subscriptions.push(...disposables);
 
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
-    if (clusterExplorer.available) {
-        clusterExplorer.api.registerNodeContributor(await AzureServiceBrowser(clusterExplorer.api));
-     } else {
-        vscode.window.showWarningMessage(clusterExplorer.reason);
+    if (!clusterExplorer.available) {
+        vscode.window.showWarningMessage(`Cluster explorer not available: ${clusterExplorer.reason}`);
+        return;
     }
+
+    const kubectl = await k8s.extension.kubectl.v1;
+    if (!kubectl.available) {
+        vscode.window.showWarningMessage(`Kubectl not available: ${kubectl.reason}`);
+        return;
+    }
+
+    const azureResourceNodeContributor = new AzureResourceNodeContributor(clusterExplorer.api, kubectl.api);
+    clusterExplorer.api.registerNodeContributor(azureResourceNodeContributor);
 }
 
 async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
