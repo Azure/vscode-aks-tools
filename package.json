@@ -39,7 +39,9 @@
         "onCommand:aks.configureKustomizeStarterWorkflow",
         "onCommand:aks.showInPortal",
         "onCommand:aks.clusterProperties",
-        "onCommand:aks.createClusterNavToAzurePortal"
+        "onCommand:aks.createClusterNavToAzurePortal",
+        "onCommand:aks.startCluster",
+        "onCommand:aks.stopCluster"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -140,6 +142,14 @@
             {
                 "command": "aks.createClusterNavToAzurePortal",
                 "title": "Create Cluster From Azure Portal"
+            },
+            {
+                "command": "aks.startCluster",
+                "title": "Start Cluster"
+            },
+            {
+                "command": "aks.stopCluster",
+                "title": "Stop Cluster"
             }
         ],
         "menus": {
@@ -240,7 +250,11 @@
             ],
             "aks.aksManagedServices": [
                 {
-                    "command": "aks.configureHelmStarterWorkflow",
+                    "command": "aks.startCluster",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.stopCluster",
                     "group": "navigation"
                 }
             ]
@@ -290,11 +304,12 @@
         "webpack-cli": "^4.5.0"
     },
     "dependencies": {
-        "@azure/arm-containerservice": "^7.0.1",
+        "@azure/arm-containerservice": "^16.1.0",
         "@azure/arm-monitor": "^6.0.0",
         "@azure/arm-resources": "^3.0.0",
         "@azure/arm-storage": "^15.2.0",
         "@azure/arm-subscriptions": "^3.0.0",
+        "@azure/identity": "^2.1.0",
         "@azure/storage-blob": "^12.7.0",
         "@sinonjs/fake-timers": "^6.0.1",
         "@types/chai": "^4.2.21",

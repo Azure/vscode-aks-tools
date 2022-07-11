@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "vscode-azureextensionui";
-import { getAksClusterTreeItem, startCluster } from '../../utils/clusters';
+import { getAksClusterTreeItem, stopCluster } from '../../utils/clusters';
 import { getExtensionPath, longRunning }  from '../../utils/host';
 import { failed } from '../../utils/errorable';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import { createWebView, getRenderedContent, getResourceUri } from '../../utils/webviews';
 
-export default async function aksStartCluster(
+export default async function aksStopCluster(
     _context: IActionContext,
     target: any
 ): Promise<void> {
@@ -33,9 +33,9 @@ async function loadClusterProperties(
     extensionPath: string) {
 
     const clustername = cloudTarget.name;
-    await longRunning(`Starting ${clustername} cluster.`,
+    await longRunning(`Stopping ${clustername} cluster.`,
       async () => {
-        const clusterInfo = await startCluster(cloudTarget, clustername);
+        const clusterInfo = await stopCluster(cloudTarget, clustername);
         if (failed(clusterInfo)) {
           vscode.window.showErrorMessage(clusterInfo.error);
           return;

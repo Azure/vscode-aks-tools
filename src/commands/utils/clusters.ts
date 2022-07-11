@@ -3,9 +3,9 @@ import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import { parseResource } from "../../azure-api-utils";
 import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
-import { ManagedClustersListClusterUserCredentialsResponse } from '@azure/arm-containerservice/esm/models';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
+import { DefaultAzureCredential } from "@azure/identity";
 
 export interface ClusterARMResponse {
     readonly id: string;
@@ -67,9 +67,9 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
     if (!resourceGroupName || !name) {
         return { succeeded: false, error: `Invalid ARM id ${target.id}`};
     }
-
-    const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
-    let clusterUserCredentials: ManagedClustersListClusterUserCredentialsResponse;
+    const client = new azcs.ContainerServiceClient(new DefaultAzureCredential(), target.root.subscriptionId);
+    // const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
+    let clusterUserCredentials: azcs.ManagedClustersListClusterUserCredentialsResponse;
     try {
         clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(resourceGroupName, name);
     } catch (e) {
@@ -83,7 +83,7 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
 
     const kubeconfig = kubeconfigCredResult.value?.toString();
     if (kubeconfig === undefined) {
-        return { succeeded: false, error: `Empty kubeconfig for cluster ${name}.` }
+        return { succeeded: false, error: `Empty kubeconfig for cluster ${name}.` };
     }
 
     return { succeeded: true, result: kubeconfig };
@@ -111,19 +111,39 @@ export async function startCluster(
 ): Promise<Errorable<ClusterARMResponse>> {
     try {
         const resourceGroupName = target.armId.split("/")[4];
+        const containerClient = new azcs.ContainerServiceClient(new DefaultAzureCredential(), target.root.subscriptionId);
+        const clusterInfo = (await containerClient.managedClusters.get(resourceGroupName, clusterName));
 
-        const containerClient = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
-        containerClient.agentPools.createOrUpdate(resourceGroupName, clusterName, "", {
-            maxCount: 3,
-            count: 1,
-            vmSize: 'Standard_A1'
-        });
-        const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
-        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-        // https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}/start?api-version=2022-04-01
-        const clusterInfo = await client.resources.update(resourceGroupName, target.resourceType, "", "", clusterName, "start" , "2022-04-01");
+        if ( clusterInfo.provisioningState !== "Stopping"
+                && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Stopped") ) {
+            containerClient.managedClusters.beginStartAndWait(resourceGroupName, clusterName, undefined);
+        } else {
+            return { succeeded: false, error: `Cluster ${clusterName} is already Started.` };
+        }
 
-        return { succeeded: true, result: <ClusterARMResponse>clusterInfo };
+        return { succeeded: true, result: <ClusterARMResponse><unknown>"" };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
+    }
+}
+
+export async function stopCluster(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<ClusterARMResponse>> {
+    try {
+        const resourceGroupName = target.armId.split("/")[4];
+        const containerClient = new azcs.ContainerServiceClient(new DefaultAzureCredential(), target.root.subscriptionId);
+        const clusterInfo = (await containerClient.managedClusters.get(resourceGroupName, clusterName));
+
+        if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.provisioningState === "Succeeded"
+                && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Running") ) {
+            containerClient.managedClusters.beginStopAndWait(resourceGroupName, clusterName, undefined);
+        }  else {
+            return { succeeded: false, error: `Cluster ${clusterName} is already Stopped.` };
+        }
+
+        return { succeeded: true, result: <ClusterARMResponse><unknown>"" };
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
     }
