@@ -40,7 +40,6 @@
         "onCommand:aks.showInPortal",
         "onCommand:aks.clusterProperties",
         "onCommand:aks.createClusterNavToAzurePortal"
-
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -186,6 +185,11 @@
                     "group": "9@1"
                 },
                 {
+                    "submenu": "aks.aksManagedServices",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@2"
+                },
+                {
                     "command": "aks.createClusterNavToAzurePortal",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
                 }
@@ -233,6 +237,12 @@
                     "command": "aks.configureStarterWorkflow",
                     "group": "navigation"
                 }
+            ],
+            "aks.aksManagedServices": [
+                {
+                    "command": "aks.configureHelmStarterWorkflow",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
@@ -243,6 +253,10 @@
             {
                 "id": "aks.ghWorkflowSubMenu",
                 "label": "Create GitHub Workflow"
+            },
+            {
+                "id": "aks.aksManagedServices",
+                "label": "AKS Managed Services Operations"
             }
         ]
     },

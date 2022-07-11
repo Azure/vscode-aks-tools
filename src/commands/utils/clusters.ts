@@ -104,3 +104,27 @@ export async function getClusterProperties(
         return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
     }
 }
+
+export async function startCluster(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<ClusterARMResponse>> {
+    try {
+        const resourceGroupName = target.armId.split("/")[4];
+
+        const containerClient = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
+        containerClient.agentPools.createOrUpdate(resourceGroupName, clusterName, "", {
+            maxCount: 3,
+            count: 1,
+            vmSize: 'Standard_A1'
+        });
+        const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
+        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
+        // https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}/start?api-version=2022-04-01
+        const clusterInfo = await client.resources.update(resourceGroupName, target.resourceType, "", "", clusterName, "start" , "2022-04-01");
+
+        return { succeeded: true, result: <ClusterARMResponse>clusterInfo };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
+    }
+}
