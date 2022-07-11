@@ -53,10 +53,11 @@ function getWebviewContent(
     clusterName: string
     ): string {
       const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
-      const templateUri = getResourceUri(vscodeExtensionPath, 'aksstartcluster', 'clusterstart.html');
+      const templateUri = getResourceUri(vscodeExtensionPath, 'aksstartstopcluster', 'clusterstartstop.html');
       const data = {
         cssuri: styleUri,
-        name: clusterName
+        name: clusterName,
+        operationName: "Stop"
       };
 
       return getRenderedContent(templateUri, data);
