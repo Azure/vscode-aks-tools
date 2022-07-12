@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from 'vscode-azureextensionui';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { startInstallation } from './helpers/azureservicehelper';
 import {

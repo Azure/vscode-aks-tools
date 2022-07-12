@@ -1,5 +1,5 @@
-import { ISubscriptionContext } from "vscode-azureextensionui";
-import { SubscriptionModels } from '@azure/arm-subscriptions';
+import { Subscription } from '@azure/arm-subscriptions';
+import { ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 
 export interface PartialList<T> extends Array<T> {
     nextLink?: string;
@@ -25,7 +25,7 @@ function bitAfter(bits: string[], after: string): string | undefined {
     return bits[afterIndex + 1];
 }
 
-export function toSubscription(context: ISubscriptionContext): SubscriptionModels.Subscription {
+export function toSubscription(context: ISubscriptionContext): Subscription {
     return {
         id: context.subscriptionPath,
         subscriptionId: context.subscriptionId,

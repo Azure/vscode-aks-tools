@@ -1,7 +1,8 @@
-import { IActionContext, SubscriptionTreeItemBase, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from 'vscode-azureextensionui';
+import { SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
+import { IActionContext, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { listAll, toSubscription } from '../azure-api-utils';
 import AksClusterTreeItem from './aksClusterTreeItem';
-import { SubscriptionModels } from '@azure/arm-subscriptions';
+import { Subscription } from '@azure/arm-subscriptions';
 import { ResourceManagementClient } from '@azure/arm-resources';
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
@@ -10,7 +11,7 @@ export interface SubscriptionTreeNode {
     readonly nodeType: 'subscription';
     readonly name: string;
     readonly session: ISubscriptionContext;
-    readonly subscription: SubscriptionModels.Subscription;
+    readonly subscription: Subscription;
 }
 
 export default class SubscriptionTreeItem extends SubscriptionTreeItemBase implements SubscriptionTreeNode {
@@ -27,22 +28,22 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const client = new ResourceManagementClient(this.root.credentials, this.root.subscriptionId);
+        const client = new ResourceManagementClient(this.parent?.subscription.credentials!, this.parent?.subscription.subscriptionId!);
         const aksClusterResources = await listAll(client.resources, client.resources.list({ filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'" }));
 
         return aksClusterResources.map((aksClusterResource) => new AksClusterTreeItem(this, aksClusterResource));
     }
 
     public get name(): string {
-        return this.root.subscriptionDisplayName || '';
+        return this.subscription.subscriptionDisplayName || '';
     }
 
     public get session(): ISubscriptionContext {
-        return this.root;
+        return this.session;
     }
 
-    public get subscription(): SubscriptionModels.Subscription {
-        return toSubscription(this.root);
+    public get subscription(): ISubscriptionContext {
+        return toSubscription(this.session);
     }
 
     public readonly nodeType = 'subscription';
