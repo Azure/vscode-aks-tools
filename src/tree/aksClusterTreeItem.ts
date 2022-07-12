@@ -3,6 +3,7 @@ import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { Subscription } from '@azure/arm-subscriptions';
 import { Resource } from "@azure/arm-resources/esm/models";
 import { assetUri } from "../assets";
+import { parseResource } from "../azure-api-utils";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -12,6 +13,7 @@ export interface AksClusterTreeNode {
     readonly name: string;
     readonly session: ISubscriptionContext;
     readonly subscription: Subscription;
+    readonly resourceGroupName: string;
 }
 
 export default class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
@@ -44,6 +46,11 @@ export default class AksClusterTreeItem extends AzExtTreeItem implements AksClus
 
     public get session(): ISubscriptionContext {
         return this.session;
+    }
+
+    public get resourceGroupName(): string {
+        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
+        return parseResource(this.armId).resourceGroupName!;
     }
 
     public readonly nodeType = 'cluster';
