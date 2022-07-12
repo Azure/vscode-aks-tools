@@ -1,9 +1,9 @@
-import { AzExtParentTreeItem, AzureTreeItem, ISubscriptionContext } from "vscode-azureextensionui";
+import { AzExtParentTreeItem, AzExtTreeItem , ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
-import { SubscriptionModels } from '@azure/arm-subscriptions';
-import { toSubscription } from "../azure-api-utils";
+import { Subscription } from '@azure/arm-subscriptions';
 import { Resource } from "@azure/arm-resources/esm/models";
 import { assetUri } from "../assets";
+import { parseResource } from "../azure-api-utils";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -12,10 +12,11 @@ export interface AksClusterTreeNode {
     readonly armId: string;
     readonly name: string;
     readonly session: ISubscriptionContext;
-    readonly subscription: SubscriptionModels.Subscription;
+    readonly subscription: Subscription;
+    readonly resourceGroupName: string;
 }
 
-export default class AksClusterTreeItem extends AzureTreeItem implements AksClusterTreeNode {
+export default class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
     constructor(
         parent: AzExtParentTreeItem,
         private readonly resource: Resource) {
@@ -44,11 +45,12 @@ export default class AksClusterTreeItem extends AzureTreeItem implements AksClus
     }
 
     public get session(): ISubscriptionContext {
-        return this.root;
+        return this.session;
     }
 
-    public get subscription(): SubscriptionModels.Subscription {
-        return toSubscription(this.root);
+    public get resourceGroupName(): string {
+        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
+        return parseResource(this.armId).resourceGroupName!;
     }
 
     public readonly nodeType = 'cluster';
