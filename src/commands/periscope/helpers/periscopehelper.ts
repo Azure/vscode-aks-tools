@@ -231,7 +231,7 @@ export function getWebviewContent(
         downloadAndShareNodeLogsList: downloadAndShareNodeLogsList,
         noDiagnosticSettings: !hasDiagnosticSettings,
     };
-  
+
     return getRenderedContent(templateUri, data);
 }
 
@@ -262,8 +262,8 @@ async function getClusterInfo(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterK
     const runCommandResult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(
         clusterKubeConfig,
         "YAML",
-        kubeConfigFile => invokeKubectlCommand(kubectl, kubeConfigFile, 'cluster-info'));
-    
+        (kubeConfigFile) => invokeKubectlCommand(kubectl, kubeConfigFile, 'cluster-info'));
+
     if (failed(runCommandResult)) return runCommandResult;
 
     return { succeeded: true, result: runCommandResult.result.stdout };

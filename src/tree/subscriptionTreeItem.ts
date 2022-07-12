@@ -28,7 +28,7 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const client = new ResourceManagementClient(this.subscription.credentials!, this.subscription.subscriptionId!);
+        const client = new ResourceManagementClient(this.subscription.credentials, this.subscription.subscriptionId);
         const aksClusterResources = await listAll(client.resources, client.resources.list({ filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'" }));
 
         return aksClusterResources.map((aksClusterResource) => new AksClusterTreeItem(this, aksClusterResource));
@@ -41,10 +41,6 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
     public get session(): ISubscriptionContext {
         return this.session;
     }
-
-    // public get subscription(): ISubscriptionContext {
-    //     return toSubscription(this.session);
-    // }
 
     public readonly nodeType = 'subscription';
 }
