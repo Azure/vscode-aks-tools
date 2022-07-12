@@ -1,6 +1,6 @@
 import { SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { listAll, toSubscription } from '../azure-api-utils';
+import { listAll } from '../azure-api-utils';
 import AksClusterTreeItem from './aksClusterTreeItem';
 import { Subscription } from '@azure/arm-subscriptions';
 import { ResourceManagementClient } from '@azure/arm-resources';
@@ -28,7 +28,7 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const client = new ResourceManagementClient(this.parent?.subscription.credentials!, this.parent?.subscription.subscriptionId!);
+        const client = new ResourceManagementClient(this.subscription.credentials!, this.subscription.subscriptionId!);
         const aksClusterResources = await listAll(client.resources, client.resources.list({ filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'" }));
 
         return aksClusterResources.map((aksClusterResource) => new AksClusterTreeItem(this, aksClusterResource));
@@ -42,9 +42,9 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
         return this.session;
     }
 
-    public get subscription(): ISubscriptionContext {
-        return toSubscription(this.session);
-    }
+    // public get subscription(): ISubscriptionContext {
+    //     return toSubscription(this.session);
+    // }
 
     public readonly nodeType = 'subscription';
 }

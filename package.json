@@ -281,6 +281,7 @@
         "@azure/arm-resources-subscriptions": "^2.0.1",
         "@azure/arm-storage": "^15.2.0",
         "@azure/arm-subscriptions": "^5.0.1",
+        "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.7.0",
         "@microsoft/vscode-azext-azureutils": "^0.3.1",
         "@microsoft/vscode-azext-utils": "^0.3.7",
