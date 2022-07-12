@@ -2,14 +2,14 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
-import { createAzExtOutputChannel, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand, IActionContext } from 'vscode-azureextensionui';
+import { createAzExtOutputChannel, AzExtTreeDataProvider, registerCommand, IActionContext } from '@microsoft/vscode-azext-utils';
 import selectSubscriptions from './commands/selectSubscriptions';
 import networkAndConnectivityDiagnostics from './commands/networkAndConnectivityDiagnostics/networkAndConnectivityDiagnostics';
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
 import installAzureServiceOperator  from './commands/azureServiceOperators/installAzureServiceOperator';
-import { AzureServiceBrowser } from './commands/azureServiceOperators/ui/azureservicebrowser';
+import { AzureResourceNodeContributor } from './tree/azureResourceNodeContributor';
 import { setAssetContext } from './assets';
 import { configureStarterWorkflow, configureHelmStarterWorkflow, configureKomposeStarterWorkflow, configureKustomizeStarterWorkflow } from './commands/aksStarterWorkflow/configureStarterWorkflow';
 import aksCRUDDiagnostics from './commands/aksCRUDDiagnostics/aksCRUDDiagnostics';
@@ -23,6 +23,7 @@ import aksClusterProperties from './commands/aksClusterProperties/aksClusterProp
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
 import aksStartCluster from './commands/aksManagedServiceOperations/startCluster/startCluster';
 import aksStopCluster from './commands/aksManagedServiceOperations/stopCluster/stopCluster';
+import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -35,12 +36,12 @@ export async function activate(context: vscode.ExtensionContext) {
             context,
             ignoreBundle: false,
             outputChannel: createAzExtOutputChannel('Azure Identity', ''),
-            ui: new AzureUserInput(context.globalState)
+            prefix: ''
         };
 
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
-        registerUIExtensionVariables(uiExtensionVariables);
+        registerAzureUtilsExtensionVariables(uiExtensionVariables);
 
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
         registerCommandWithTelemetry('aks.networkAndConnectivityDiagnostics', networkAndConnectivityDiagnostics);
@@ -82,11 +83,19 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
     context.subscriptions.push(...disposables);
 
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
-    if (clusterExplorer.available) {
-        clusterExplorer.api.registerNodeContributor(await AzureServiceBrowser(clusterExplorer.api));
-     } else {
-        vscode.window.showWarningMessage(clusterExplorer.reason);
+    if (!clusterExplorer.available) {
+        vscode.window.showWarningMessage(`Cluster explorer not available: ${clusterExplorer.reason}`);
+        return;
     }
+
+    const kubectl = await k8s.extension.kubectl.v1;
+    if (!kubectl.available) {
+        vscode.window.showWarningMessage(`Kubectl not available: ${kubectl.reason}`);
+        return;
+    }
+
+    const azureResourceNodeContributor = new AzureResourceNodeContributor(clusterExplorer.api, kubectl.api);
+    clusterExplorer.api.registerNodeContributor(azureResourceNodeContributor);
 }
 
 async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {

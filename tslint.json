@@ -1,5 +1,6 @@
 {
 	"rules": {
+		"skipLibCheck": true,
 		"only-arrow-functions": [
 			true,
 			"allow-declarations",

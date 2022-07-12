@@ -5,7 +5,6 @@ import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
-import { TokenCredential } from '@azure/identity';
 
 export interface ClusterARMResponse {
     readonly id: string;
@@ -68,19 +67,20 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
         return { succeeded: false, error: `Invalid ARM id ${target.id}`};
     }
     // Please read: This TokenCredential type conversion is in need from AzExtServiceClientCredentials to be consumed by code at runtime.
-    // If we use the DefaultAzureCredential() mentioned here https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/containerservice/arm-containerservice 
+    // If we use the DefaultAzureCredential() mentioned here https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/containerservice/arm-containerservice
     // we have a hard dependency on the user identity by az-cli login which we dont want.
     // Longterm fix: carefully redo the vscode-azureextensionui which is now deprecated and possibly that will bring the right type.
-    const client = new azcs.ContainerServiceClient(<TokenCredential> <unknown>target.root.credentials, target.root.subscriptionId);
+    const client = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
 
-    let clusterUserCredentials: azcs.ManagedClustersListClusterUserCredentialsResponse;
+    let clusterUserCredentials: any;
+
     try {
         clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(resourceGroupName, name);
     } catch (e) {
         return { succeeded: false, error: `Failed to retrieve user credentials for cluster ${name}: ${e}`};
     }
 
-    const kubeconfigCredResult = clusterUserCredentials.kubeconfigs!.find((kubeInfo) => kubeInfo.name === "clusterUser");
+    const kubeconfigCredResult = clusterUserCredentials.kubeconfigs!.find((kubeInfo: { name: string; }) => kubeInfo.name === "clusterUser");
     if (kubeconfigCredResult === undefined) {
         return { succeeded: false, error: `No "clusterUser" kubeconfig found for cluster ${name}.`};
     }
@@ -98,10 +98,8 @@ export async function getClusterProperties(
     clusterName: string
 ): Promise<Errorable<ClusterARMResponse>> {
     try {
-        const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
-        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-        const resourceGroupName = target.armId.split("/")[4];
-        const clusterInfo = await client.resources.get(resourceGroupName, target.resourceType, "", "", clusterName, "2022-02-01");
+        const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
+        const clusterInfo = await client.resources.get(target.resourceGroupName, target.resourceType, "", "", clusterName, "2022-02-01");
 
         return { succeeded: true, result: <ClusterARMResponse>clusterInfo };
     } catch (ex) {
@@ -116,10 +114,10 @@ export async function startCluster(
     try {
         const resourceGroupName = target.armId.split("/")[4];
         // Please read: This TokenCredential type conversion is in need from AzExtServiceClientCredentials to be consumed by code at runtime.
-        // If we use the DefaultAzureCredential() mentioned here https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/containerservice/arm-containerservice 
+        // If we use the DefaultAzureCredential() mentioned here https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/containerservice/arm-containerservice
         // we have a hard dependency on the user identity by az-cli login which we dont want.
         // Longterm fix: carefully redo the vscode-azureextensionui which is now deprecated and possibly that will bring the right type.
-        const containerClient = new azcs.ContainerServiceClient(<TokenCredential> <unknown>target.root.credentials, target.root.subscriptionId);
+        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
         const clusterInfo = (await containerClient.managedClusters.get(resourceGroupName, clusterName));
 
         if ( clusterInfo.provisioningState !== "Stopping"
@@ -144,10 +142,10 @@ export async function stopCluster(
     try {
         const resourceGroupName = target.armId.split("/")[4];
         // Please read: This TokenCredential type conversion is in need from AzExtServiceClientCredentials to be consumed by code at runtime.
-        // If we use the DefaultAzureCredential() mentioned here https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/containerservice/arm-containerservice 
+        // If we use the DefaultAzureCredential() mentioned here https://github.com/Azure/azure-sdk-for-js/tree/main/sdk/containerservice/arm-containerservice
         // we have a hard dependency on the user identity by az-cli login which we dont want.
         // Longterm fix: carefully redo the vscode-azureextensionui which is now deprecated and possibly that will bring the right type.
-        const containerClient = new azcs.ContainerServiceClient(<TokenCredential> <unknown>target.root.credentials, target.root.subscriptionId);
+        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
         const clusterInfo = (await containerClient.managedClusters.get(resourceGroupName, clusterName));
 
         if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.provisioningState === "Succeeded"
