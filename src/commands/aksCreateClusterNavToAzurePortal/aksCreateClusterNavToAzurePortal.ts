@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from "vscode-azureextensionui";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getAksClusterSubscriptionItem } from '../utils/clusters';
 import { failed } from '../utils/errorable';
 

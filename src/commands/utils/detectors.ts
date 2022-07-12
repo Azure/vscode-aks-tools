@@ -49,7 +49,7 @@ export async function getDetectorInfo(
     detectorName: string
 ): Promise<Errorable<AppLensARMResponse>> {
     try {
-        const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
+        const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
         // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
         const resourceGroup = target.armId.split("/")[4];
         const detectorInfo = await client.resources.get(

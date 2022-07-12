@@ -68,7 +68,7 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
         return { succeeded: false, error: `Invalid ARM id ${target.id}`};
     }
 
-    const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
+    const client = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);  // TODO: safely
     let clusterUserCredentials: ManagedClustersListClusterUserCredentialsResponse;
     try {
         clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(resourceGroupName, name);
@@ -83,7 +83,7 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
 
     const kubeconfig = kubeconfigCredResult.value?.toString();
     if (kubeconfig === undefined) {
-        return { succeeded: false, error: `Empty kubeconfig for cluster ${name}.` }
+        return { succeeded: false, error: `Empty kubeconfig for cluster ${name}.` };
     }
 
     return { succeeded: true, result: kubeconfig };
@@ -94,10 +94,8 @@ export async function getClusterProperties(
     clusterName: string
 ): Promise<Errorable<ClusterARMResponse>> {
     try {
-        const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
-        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-        const resourceGroupName = target.armId.split("/")[4];
-        const clusterInfo = await client.resources.get(resourceGroupName, target.resourceType, "", "", clusterName, "2022-02-01");
+        const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
+        const clusterInfo = await client.resources.get(target.resourceGroupName, target.resourceType, "", "", clusterName, "2022-02-01");
 
         return { succeeded: true, result: <ClusterARMResponse>clusterInfo };
     } catch (ex) {

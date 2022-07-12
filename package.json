@@ -40,7 +40,6 @@
         "onCommand:aks.showInPortal",
         "onCommand:aks.clusterProperties",
         "onCommand:aks.createClusterNavToAzurePortal"
-
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -271,7 +270,7 @@
         "sinon": "^12.0.1",
         "ts-loader": "^8.0.18",
         "tslint": "^5.20.1",
-        "typescript": "^3.7.2",
+        "typescript": "^3.9.10",
         "webpack": "^5.25.1",
         "webpack-cli": "^4.5.0"
     },
@@ -279,9 +278,13 @@
         "@azure/arm-containerservice": "^7.0.1",
         "@azure/arm-monitor": "^6.0.0",
         "@azure/arm-resources": "^3.0.0",
+        "@azure/arm-resources-subscriptions": "^2.0.1",
         "@azure/arm-storage": "^15.2.0",
-        "@azure/arm-subscriptions": "^3.0.0",
+        "@azure/arm-subscriptions": "^5.0.1",
+        "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.7.0",
+        "@microsoft/vscode-azext-azureutils": "^0.3.1",
+        "@microsoft/vscode-azext-utils": "^0.3.7",
         "@sinonjs/fake-timers": "^6.0.1",
         "@types/chai": "^4.2.21",
         "@types/sinon": "^10.0.6",
@@ -296,7 +299,6 @@
         "tslib": "^2.1.0",
         "underscore": "^1.13.1",
         "util": "^0.12.3",
-        "vscode-azureextensionui": "^0.39.4",
         "vscode-extension-telemetry": "^0.1.6",
         "vscode-kubernetes-tools-api": "^1.0.0",
         "vscode-test": "^1.5.2"
