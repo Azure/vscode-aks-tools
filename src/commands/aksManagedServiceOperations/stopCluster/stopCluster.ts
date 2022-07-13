@@ -62,5 +62,3 @@ function getWebviewContent(
 
       return getRenderedContent(templateUri, data);
   }
-
-// POST https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}/start?api-version=2022-04-01
