@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as htmlhandlers from "handlebars";
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { ClusterState } from './clusters';
 
 //
 // Register the custom HTML handlers. Having these registered the first time the module is imported means
@@ -89,4 +90,23 @@ export function getRenderedContent(templateUri: vscode.Uri, data: object): strin
 
     const template = htmlhandlers.compile(templateContent);
     return template(data);
+}
+
+htmlhandlers.registerHelper('showStartStopButton', (value: any): boolean => {
+    if (value === ClusterState.Starting || value === ClusterState.Stopping ) {
+        return false;
+    }
+
+    return true;
+});
+
+htmlhandlers.registerHelper('startStopClusterValue', (value: any): string => {
+    if (value === ClusterState.Stopped) {
+        return "Start";
+    }
+    return "Stop";
+});
+
+export function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
 }

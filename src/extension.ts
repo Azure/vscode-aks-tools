@@ -21,8 +21,6 @@ import aksKnownIssuesAvailabilityPerformanceDiagnostics from './commands/aksKnow
 import aksNavToPortal from './commands/aksNavToPortal/aksNavToPortal';
 import aksClusterProperties from './commands/aksClusterProperties/aksClusterProperties';
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
-import aksStartCluster from './commands/aksManagedServiceOperations/startCluster/startCluster';
-import aksStopCluster from './commands/aksManagedServiceOperations/stopCluster/stopCluster';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -59,8 +57,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.showInPortal', aksNavToPortal );
         registerCommandWithTelemetry('aks.clusterProperties', aksClusterProperties);
         registerCommandWithTelemetry('aks.createClusterNavToAzurePortal', aksCreateClusterNavToAzurePortal);
-        registerCommandWithTelemetry('aks.startCluster', aksStartCluster);
-        registerCommandWithTelemetry('aks.stopCluster', aksStopCluster);
 
         await registerAzureServiceNodes(context);
 

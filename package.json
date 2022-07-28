@@ -39,9 +39,7 @@
         "onCommand:aks.configureKustomizeStarterWorkflow",
         "onCommand:aks.showInPortal",
         "onCommand:aks.clusterProperties",
-        "onCommand:aks.createClusterNavToAzurePortal",
-        "onCommand:aks.startCluster",
-        "onCommand:aks.stopCluster"
+        "onCommand:aks.createClusterNavToAzurePortal"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -142,14 +140,6 @@
             {
                 "command": "aks.createClusterNavToAzurePortal",
                 "title": "Create Cluster From Azure Portal"
-            },
-            {
-                "command": "aks.startCluster",
-                "title": "Start Cluster"
-            },
-            {
-                "command": "aks.stopCluster",
-                "title": "Stop Cluster"
             }
         ],
         "menus": {
@@ -193,11 +183,6 @@
                     "submenu": "aks.ghWorkflowSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@1"
-                },
-                {
-                    "submenu": "aks.aksManagedServices",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "9@2"
                 },
                 {
                     "command": "aks.createClusterNavToAzurePortal",
@@ -247,16 +232,6 @@
                     "command": "aks.configureStarterWorkflow",
                     "group": "navigation"
                 }
-            ],
-            "aks.aksManagedServices": [
-                {
-                    "command": "aks.startCluster",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.stopCluster",
-                    "group": "navigation"
-                }
             ]
         },
         "submenus": [
@@ -267,10 +242,6 @@
             {
                 "id": "aks.ghWorkflowSubMenu",
                 "label": "Create GitHub Workflow"
-            },
-            {
-                "id": "aks.aksManagedServices",
-                "label": "AKS Operations"
             }
         ]
     },

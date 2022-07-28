@@ -5,6 +5,7 @@ import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
+import * as vscode from 'vscode';
 
 export interface ClusterARMResponse {
     readonly id: string;
@@ -14,6 +15,13 @@ export interface ClusterARMResponse {
     readonly properties: any;
     readonly type: string;
 }
+
+export enum ClusterState {
+    Started = 'Started',
+    Starting = 'Starting',
+    Stopped = 'Stopped',
+    Stopping = 'Stopping'
+  }
 
 export function getAksClusterTreeItem(commandTarget: any, cloudExplorer: API<CloudExplorerV1>): Errorable<AksClusterTreeItem> {
     if (!cloudExplorer.available) {
@@ -103,6 +111,30 @@ export async function getClusterProperties(
     }
 }
 
+export async function determineClusterState(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<string | undefined> {
+    try {
+        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
+        const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
+
+        if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Stopped") ) {
+                return ClusterState.Stopped;
+        } else if ( clusterInfo.provisioningState === "Succeeded" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Running") ) {
+                return ClusterState.Started;
+        } else if (clusterInfo.provisioningState === "Stopping") {
+            return ClusterState.Stopping;
+        } else {
+            return ClusterState.Starting;
+        }
+
+    } catch (ex) {
+        vscode.window.showErrorMessage(`Error invoking ${clusterName} managed cluster: ${ex}`);
+        return;
+    }
+}
+
 export async function startCluster(
     target: AksClusterTreeItem,
     clusterName: string
@@ -141,7 +173,7 @@ export async function stopCluster(
             return { succeeded: false, error: `Cluster ${clusterName} is either Stopped or in Stopping state.` };
         }
 
-        return { succeeded: true, result: "Start cluster succeeded." };
+        return { succeeded: true, result: "Stop cluster succeeded." };
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
     }
