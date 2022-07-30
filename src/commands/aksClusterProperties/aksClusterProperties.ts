@@ -34,11 +34,12 @@ async function prepareClusterProperties(
   }
 
   const clusterState = await longRunning(`Determine ${clustername} cluster state.`, async () => await determineClusterState(cloudTarget, clustername));
-  if (!clusterState) {
+  if (failed(clusterState)) {
+      vscode.window.showErrorMessage(clusterState.error);
       return;
   }
 
-  await loadWebViewClusterProperties(cloudTarget, clusterData.result, clusterState);
+  await loadWebViewClusterProperties(cloudTarget, clusterData.result, clusterState.result);
 }
 
 async function loadWebViewClusterProperties(
@@ -57,21 +58,26 @@ async function loadWebViewClusterProperties(
 
     await longRunning(`Loading webview ${clustername} for cluster properties.`,
       async () => {
-        let clusterData: ClusterARMResponse | undefined;
-        const webview = createWebView('AKS Cluster Properties', `AKS properties view for: ${clustername}`);
+        const webviewPanel = createWebView('AKS Cluster Properties', `AKS properties view for: ${clustername}`);
+        const webview = webviewPanel.webview;
 
         webview.onDidReceiveMessage(
           async (message) => {
-              if (message.command === "startCluster") {
-                clusterData = await onRecievePerformOperations(cloudTarget, clustername, 'start');
-              } else if (message.command === "stopCluster") {
-                clusterData = await onRecievePerformOperations(cloudTarget, clustername, 'stop');
+              const clusterData = await onReceivePerformOperations(cloudTarget, clustername, message.command);
+
+              if (failed(clusterData)) {
+                webviewPanel.dispose();
+                vscode.window.showErrorMessage(clusterData.error);
+                return;
               }
+
               const clusterState = await determineClusterState(cloudTarget, clustername);
-              if (!clusterState || !clusterData) {
-                  return;
+              if (failed(clusterState)) {
+                vscode.window.showErrorMessage(clusterState.error);
+                return;
               }
-              webview.html = getWebviewContent(clusterData, clusterState, extensionPath.result);
+
+              webview.html = getWebviewContent(clusterData.result, clusterState.result, extensionPath.result);
           },
           undefined
       );
@@ -93,33 +99,35 @@ async function getClusterData(
     );
 }
 
-async function onRecievePerformOperations(
+async function onReceivePerformOperations(
   cloudTarget: AksClusterTreeItem,
   clusterName: string,
   eventName: string
-): Promise<ClusterARMResponse | undefined> {
+): Promise<Errorable<ClusterARMResponse>> {
 
     let startStopClusterInfo: Errorable<string>;
-    if (eventName === 'start') {
-     startStopClusterInfo = await longRunning(`Starting cluster.`, () => startCluster(cloudTarget, clusterName) );
-    } else {
-      startStopClusterInfo = await longRunning(`Stopping cluster.`, () => stopCluster(cloudTarget, clusterName));
+    switch (eventName) {
+      case 'startCluster':
+            startStopClusterInfo = await longRunning(`Starting cluster.`, () => startCluster(cloudTarget, clusterName) );
+            break;
+      case 'stopCluster':
+            startStopClusterInfo = await longRunning(`Stopping cluster.`, () => stopCluster(cloudTarget, clusterName));
+            break;
+      default:
+            throw vscode.window.showErrorMessage(`Invalid ${eventName} triggered.`);
     }
 
     if (failed(startStopClusterInfo)) {
-      vscode.window.showErrorMessage(startStopClusterInfo.error);
-      return;
+      return { succeeded: false, error: startStopClusterInfo.error };
     }
     // This delay is deliberate for previous action to kick-in,
     // without delay if we call load data it is consistent to get old data from RP.
-    await delay(10000);
-
-    const clusterData = await getClusterData(cloudTarget);
+    const clusterData = await longRunning(`Getting cluster data.`, async () => { await delay(10000); return getClusterData(cloudTarget); });
     if (failed(clusterData)) {
-      vscode.window.showErrorMessage(clusterData.error);
-      return;
+      return { succeeded: false, error: clusterData.error };
     }
-    return clusterData.result;
+    return { succeeded: true, result: clusterData.result };
+
 }
 
 function getWebviewContent(

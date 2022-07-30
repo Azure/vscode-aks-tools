@@ -13,24 +13,20 @@
         integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
 
     <script>
-        // https://code.visualstudio.com/api/extension-guides/webview#passing-messages-from-a-webview-to-an-extension
-        const vscode = acquireVsCodeApi();
-
         $(document).ready(function () {
+            // https://code.visualstudio.com/api/extension-guides/webview#passing-messages-from-a-webview-to-an-extension
+            const vscode = acquireVsCodeApi();
+
             $('#Startcluster').click(function () {
                 $(".spinner").show();
                 $(this).hide();
                 vscode.postMessage({ command: "startCluster" });
-                // https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations
-                setTimeout(function() {$(".spinner").hide()}, 30000);
             });
 
             $('#Stopcluster').click(function () {
                 $(".spinner").show();
                 $(this).hide();
                 vscode.postMessage({ command: "stopCluster" });
-                // https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations
-                setTimeout(function() {$(".spinner").hide()}, 30000);
             });
         });
 
@@ -83,10 +79,6 @@
                                         {{else}}
                                             Cluster is in {{clusterState}} state
                                         {{/if}}
-                                        <div class="spinner" style="display:none;padding-top: 10px;">
-                                            <span class="fa fa-spinner fa-spin" style="font-size:14px;color:blue;"></span>
-                                            {{startStopClusterValue clusterState}}ing Cluster...
-                                        </div>
                                     </td>
                                 </tr>
                             </tbody>

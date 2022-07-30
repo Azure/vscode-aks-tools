@@ -5,7 +5,6 @@ import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
-import * as vscode from 'vscode';
 
 export interface ClusterARMResponse {
     readonly id: string;
@@ -16,7 +15,7 @@ export interface ClusterARMResponse {
     readonly type: string;
 }
 
-export enum ClusterState {
+export enum ClusterStartStopState {
     Started = 'Started',
     Starting = 'Starting',
     Stopped = 'Stopped',
@@ -114,24 +113,23 @@ export async function getClusterProperties(
 export async function determineClusterState(
     target: AksClusterTreeItem,
     clusterName: string
-): Promise<string | undefined> {
+): Promise<Errorable<string>> {
     try {
         const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
         const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
 
         if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Stopped") ) {
-                return ClusterState.Stopped;
+                return { succeeded: true, result: ClusterStartStopState.Stopped };
         } else if ( clusterInfo.provisioningState === "Succeeded" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Running") ) {
-                return ClusterState.Started;
+            return { succeeded: true, result: ClusterStartStopState.Started };
         } else if (clusterInfo.provisioningState === "Stopping") {
-            return ClusterState.Stopping;
+            return { succeeded: true, result:  ClusterStartStopState.Stopping };
         } else {
-            return ClusterState.Starting;
+            return { succeeded: true, result:  ClusterStartStopState.Starting };
         }
 
     } catch (ex) {
-        vscode.window.showErrorMessage(`Error invoking ${clusterName} managed cluster: ${ex}`);
-        return;
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
     }
 }
 
