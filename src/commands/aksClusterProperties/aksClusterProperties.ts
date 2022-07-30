@@ -45,7 +45,7 @@ async function prepareClusterProperties(
 async function loadWebViewClusterProperties(
     cloudTarget: AksClusterTreeItem,
     clusterInfo: ClusterARMResponse,
-    clusterState: string
+    clusterStateResult: string
 ) {
 
     const clustername = cloudTarget.name;
@@ -63,7 +63,7 @@ async function loadWebViewClusterProperties(
 
         webview.onDidReceiveMessage(
           async (message) => {
-              const clusterData = await onReceivePerformOperations(cloudTarget, clustername, message.command);
+              const clusterData = await onReceivePerformOperations(cloudTarget, clustername, message.command, clusterStateResult);
 
               if (failed(clusterData)) {
                 webviewPanel.dispose();
@@ -82,7 +82,7 @@ async function loadWebViewClusterProperties(
           undefined
       );
 
-        webview.html = getWebviewContent(clusterInfo, clusterState, extensionPath.result);
+        webview.html = getWebviewContent(clusterInfo, clusterStateResult, extensionPath.result);
       }
     );
 }
@@ -102,16 +102,17 @@ async function getClusterData(
 async function onReceivePerformOperations(
   cloudTarget: AksClusterTreeItem,
   clusterName: string,
-  eventName: string
+  eventName: string,
+  clusterState: string
 ): Promise<Errorable<ClusterARMResponse>> {
 
     let startStopClusterInfo: Errorable<string>;
     switch (eventName) {
       case 'startCluster':
-            startStopClusterInfo = await longRunning(`Starting cluster.`, () => startCluster(cloudTarget, clusterName) );
+            startStopClusterInfo = await longRunning(`Starting cluster.`, () => startCluster(cloudTarget, clusterName, clusterState) );
             break;
       case 'stopCluster':
-            startStopClusterInfo = await longRunning(`Stopping cluster.`, () => stopCluster(cloudTarget, clusterName));
+            startStopClusterInfo = await longRunning(`Stopping cluster.`, () => stopCluster(cloudTarget, clusterName, clusterState));
             break;
       default:
             throw vscode.window.showErrorMessage(`Invalid ${eventName} triggered.`);

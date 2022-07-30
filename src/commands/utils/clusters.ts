@@ -119,7 +119,7 @@ export async function determineClusterState(
         const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
 
         if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Stopped") ) {
-                return { succeeded: true, result: ClusterStartStopState.Stopped };
+            return { succeeded: true, result: ClusterStartStopState.Stopped };
         } else if ( clusterInfo.provisioningState === "Succeeded" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Running") ) {
             return { succeeded: true, result: ClusterStartStopState.Started };
         } else if (clusterInfo.provisioningState === "Stopping") {
@@ -135,16 +135,15 @@ export async function determineClusterState(
 
 export async function startCluster(
     target: AksClusterTreeItem,
-    clusterName: string
+    clusterName: string,
+    clusterState: string
 ): Promise<Errorable<string>> {
     try {
         const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
-        const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
 
-        if ( clusterInfo.provisioningState !== "Stopping"
-                && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Stopped") ) {
-                    containerClient.managedClusters.beginStartAndWait(target.resourceGroupName, clusterName, undefined);
-        } else if ( clusterInfo.provisioningState === "Stopping") {
+        if (clusterState === ClusterStartStopState.Stopped ) {
+            containerClient.managedClusters.beginStartAndWait(target.resourceGroupName, clusterName, undefined);
+        } else if ( clusterState === ClusterStartStopState.Stopping) {
             return { succeeded: false, error: `Cluster ${clusterName} is in Stopping state wait until cluster is fully stopped.` };
         } else {
             return { succeeded: false, error: `Cluster ${clusterName} is already Started.` };
@@ -158,15 +157,14 @@ export async function startCluster(
 
 export async function stopCluster(
     target: AksClusterTreeItem,
-    clusterName: string
+    clusterName: string,
+    clusterState: string
 ): Promise<Errorable<string>> {
     try {
         const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
-        const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
 
-        if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.provisioningState === "Succeeded"
-                && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Running") ) {
-                    containerClient.managedClusters.beginStopAndWait(target.resourceGroupName, clusterName, undefined);
+        if (clusterState === ClusterStartStopState.Started) {
+            containerClient.managedClusters.beginStopAndWait(target.resourceGroupName, clusterName, undefined);
         }  else {
             return { succeeded: false, error: `Cluster ${clusterName} is either Stopped or in Stopping state.` };
         }
