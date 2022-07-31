@@ -57,7 +57,7 @@ export async function install(
     // Get user input upfront.
     // Get Service Principal AppId and Password from user.
     // Then start the installation process.
-    const webview = createWebView('Azure Service Operator', `Azure service Operator: ${installationResponse.clusterName}`);
+    const webview = createWebView('Azure Service Operator', `Azure service Operator: ${installationResponse.clusterName}`).webview;
 
     const extensionPath = getExtensionPath();
     if (failed(extensionPath)) {

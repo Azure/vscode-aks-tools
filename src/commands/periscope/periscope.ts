@@ -128,7 +128,7 @@ async function createPeriscopeWebView(
     periscopeStorageInfo: PeriscopeStorage | undefined,
     hasDiagnosticSettings = true
 ): Promise<void | undefined> {
-    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`);
+    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
 
     const extensionPath = getExtensionPath();
     if (failed(extensionPath)) {

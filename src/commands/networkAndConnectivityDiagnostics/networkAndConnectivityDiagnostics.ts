@@ -43,7 +43,7 @@ async function loadNetworkConnectivityDetector(
         return;
       }
 
-      const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`);
+      const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`).webview;
       webview.html = getWebviewContent(detectorInfo.result, extensionPath);
     }
   );
