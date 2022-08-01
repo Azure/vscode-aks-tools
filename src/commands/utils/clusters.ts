@@ -3,6 +3,7 @@ import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import { parseResource } from "../../azure-api-utils";
 import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
+import { ManagedClustersListClusterUserCredentialsResponse } from '@azure/arm-containerservice/esm/models';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
 
@@ -14,13 +15,6 @@ export interface ClusterARMResponse {
     readonly properties: any;
     readonly type: string;
 }
-
-export enum ClusterStartStopState {
-    Started = 'Started',
-    Starting = 'Starting',
-    Stopped = 'Stopped',
-    Stopping = 'Stopping'
-  }
 
 export function getAksClusterTreeItem(commandTarget: any, cloudExplorer: API<CloudExplorerV1>): Errorable<AksClusterTreeItem> {
     if (!cloudExplorer.available) {
@@ -74,9 +68,8 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
         return { succeeded: false, error: `Invalid ARM id ${target.id}`};
     }
 
-    const client = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
-    let clusterUserCredentials: azcs.CredentialResults;
-
+    const client = new azcs.ContainerServiceClient(target.root.credentials, target.root.subscriptionId);  // TODO: safely
+    let clusterUserCredentials: ManagedClustersListClusterUserCredentialsResponse;
     try {
         clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(resourceGroupName, name);
     } catch (e) {
@@ -90,7 +83,7 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
 
     const kubeconfig = kubeconfigCredResult.value?.toString();
     if (kubeconfig === undefined) {
-        return { succeeded: false, error: `Empty kubeconfig for cluster ${name}.` };
+        return { succeeded: false, error: `Empty kubeconfig for cluster ${name}.` }
     }
 
     return { succeeded: true, result: kubeconfig };
@@ -101,75 +94,12 @@ export async function getClusterProperties(
     clusterName: string
 ): Promise<Errorable<ClusterARMResponse>> {
     try {
-        const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
-        const clusterInfo = await client.resources.get(target.resourceGroupName, target.resourceType, "", "", clusterName, "2022-02-01");
+        const client = new ResourceManagementClient(target.root.credentials, target.root.subscriptionId, { noRetryPolicy: true });
+        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
+        const resourceGroupName = target.armId.split("/")[4];
+        const clusterInfo = await client.resources.get(resourceGroupName, target.resourceType, "", "", clusterName, "2022-02-01");
 
         return { succeeded: true, result: <ClusterARMResponse>clusterInfo };
-    } catch (ex) {
-        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
-    }
-}
-
-export async function determineClusterState(
-    target: AksClusterTreeItem,
-    clusterName: string
-): Promise<Errorable<string>> {
-    try {
-        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
-        const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
-
-        if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Stopped") ) {
-            return { succeeded: true, result: ClusterStartStopState.Stopped };
-        } else if ( clusterInfo.provisioningState === "Succeeded" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Running") ) {
-            return { succeeded: true, result: ClusterStartStopState.Started };
-        } else if (clusterInfo.provisioningState === "Stopping") {
-            return { succeeded: true, result:  ClusterStartStopState.Stopping };
-        } else {
-            return { succeeded: true, result:  ClusterStartStopState.Starting };
-        }
-
-    } catch (ex) {
-        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
-    }
-}
-
-export async function startCluster(
-    target: AksClusterTreeItem,
-    clusterName: string,
-    clusterState: string
-): Promise<Errorable<string>> {
-    try {
-        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
-
-        if (clusterState === ClusterStartStopState.Stopped ) {
-            containerClient.managedClusters.beginStartAndWait(target.resourceGroupName, clusterName, undefined);
-        } else if ( clusterState === ClusterStartStopState.Stopping) {
-            return { succeeded: false, error: `Cluster ${clusterName} is in Stopping state wait until cluster is fully stopped.` };
-        } else {
-            return { succeeded: false, error: `Cluster ${clusterName} is already Started.` };
-        }
-
-        return { succeeded: true, result: "Start cluster succeeded." };
-    } catch (ex) {
-        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
-    }
-}
-
-export async function stopCluster(
-    target: AksClusterTreeItem,
-    clusterName: string,
-    clusterState: string
-): Promise<Errorable<string>> {
-    try {
-        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
-
-        if (clusterState === ClusterStartStopState.Started) {
-            containerClient.managedClusters.beginStopAndWait(target.resourceGroupName, clusterName, undefined);
-        }  else {
-            return { succeeded: false, error: `Cluster ${clusterName} is either Stopped or in Stopping state.` };
-        }
-
-        return { succeeded: true, result: "Stop cluster succeeded." };
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
     }

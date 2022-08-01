@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { IActionContext } from "vscode-azureextensionui";
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath, longRunning }  from '../utils/host';
 import { AppLensARMResponse, getDetectorInfo, getDetectorListData, getPortalUrl } from '../utils/detectors';
@@ -48,7 +48,7 @@ async function loadDetector(
           return;
         }
 
-        const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`).webview;
+        const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`);
         webview.html = getWebviewContent(detectorInfo.result, detectorMap.result, extensionPath);
       }
     );
