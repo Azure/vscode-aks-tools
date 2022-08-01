@@ -14,7 +14,6 @@
 * Show AKS cluster overview in Azure Portal
 * Show AKS cluster properties
 * Create AKS cluster from Azure Portal
-* Stop and Start the AKS cluster
 
 ## Installation
 
@@ -122,12 +121,6 @@ Right click on your AKS cluster and click on **Show Properties** to display the 
 ### Create cluster from Azure Portal
 
 Right click on your AKS sunscription and click on **Create cluster from Azure Portal** to easily navigate to AKS create cluster page in Azure Portal.
-
-### Start or Stop AKS cluster
-
-Right click on your AKS cluster and click on **Show Properties** to display the AKS cluster properties, within the page there will be **Stop/Start Cluster** button to perform the start or stop the cluster operation.
-
-![Start or Stop Cluster From Properties Webview](resources/aks-startstop-cluster.png)
 
 ## Telemetry
 
