@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { IActionContext } from 'vscode-azureextensionui';
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getWorkflowYaml, substituteClusterInWorkflowYaml } from '../utils/configureWorkflowHelper';
 import { failed } from '../utils/errorable';

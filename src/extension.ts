@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
-import { createAzExtOutputChannel, AzExtTreeDataProvider, registerCommand, IActionContext } from '@microsoft/vscode-azext-utils';
+import { createAzExtOutputChannel, registerUIExtensionVariables, AzExtTreeDataProvider, AzureUserInput, registerCommand, IActionContext } from 'vscode-azureextensionui';
 import selectSubscriptions from './commands/selectSubscriptions';
 import networkAndConnectivityDiagnostics from './commands/networkAndConnectivityDiagnostics/networkAndConnectivityDiagnostics';
 import periscope from './commands/periscope/periscope';
@@ -21,7 +21,6 @@ import aksKnownIssuesAvailabilityPerformanceDiagnostics from './commands/aksKnow
 import aksNavToPortal from './commands/aksNavToPortal/aksNavToPortal';
 import aksClusterProperties from './commands/aksClusterProperties/aksClusterProperties';
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
-import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -34,12 +33,12 @@ export async function activate(context: vscode.ExtensionContext) {
             context,
             ignoreBundle: false,
             outputChannel: createAzExtOutputChannel('Azure Identity', ''),
-            prefix: ''
+            ui: new AzureUserInput(context.globalState)
         };
 
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
-        registerAzureUtilsExtensionVariables(uiExtensionVariables);
+        registerUIExtensionVariables(uiExtensionVariables);
 
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
         registerCommandWithTelemetry('aks.networkAndConnectivityDiagnostics', networkAndConnectivityDiagnostics);

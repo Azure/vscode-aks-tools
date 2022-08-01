@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { IActionContext } from 'vscode-azureextensionui';
 import * as tmpfile from '../utils/tempfile';
 import { getAksClusterTreeItem, getKubeconfigYaml } from '../utils/clusters';
 import { getKustomizeConfig } from '../utils/config';
@@ -128,7 +128,7 @@ async function createPeriscopeWebView(
     periscopeStorageInfo: PeriscopeStorage | undefined,
     hasDiagnosticSettings = true
 ): Promise<void | undefined> {
-    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
+    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`);
 
     const extensionPath = getExtensionPath();
     if (failed(extensionPath)) {

@@ -1,3 +1,5 @@
+import { ISubscriptionContext } from "vscode-azureextensionui";
+import { SubscriptionModels } from '@azure/arm-subscriptions';
 
 export interface PartialList<T> extends Array<T> {
     nextLink?: string;
@@ -21,4 +23,12 @@ export function parseResource(armId: string): { resourceGroupName: string | unde
 function bitAfter(bits: string[], after: string): string | undefined {
     const afterIndex = bits.indexOf(after);
     return bits[afterIndex + 1];
+}
+
+export function toSubscription(context: ISubscriptionContext): SubscriptionModels.Subscription {
+    return {
+        id: context.subscriptionPath,
+        subscriptionId: context.subscriptionId,
+        displayName: context.subscriptionDisplayName
+    };
 }
