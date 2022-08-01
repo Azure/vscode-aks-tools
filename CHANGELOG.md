@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.3.0]
+
+* Enable AKS start and stop cluster feature.
+* Update deprecated vscode-extensionui package.
+* Defer CRD-loading for ASO CRDs by moving to NodeContributor implementation.
+* Update to latest k8s extension API.
+* Update vscode engine.
+
+ Thanks to @rzhang628 and @peterbom.
+
 ## [1.2.0]
 
 * VsCode to Azure portal URL forward with referrer parameters.
