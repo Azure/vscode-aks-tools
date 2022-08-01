@@ -26,8 +26,7 @@ const config = {
     'spawn-sync': 'commonjs spawn-sync',
     'utf-8-validate': 'commonjs utf-8-validate',
     'applicationinsights-native-metrics': 'applicationinsights-native-metrics',
-    '@opentelemetry/tracing': '@opentelemetry/tracing',
-    '@microsoft/vscode-azext-utils': '@microsoft/vscode-azext-utils'
+    '@opentelemetry/tracing': '@opentelemetry/tracing'
   },
   plugins: [
       new webpack.IgnorePlugin(/^electron$/),
@@ -37,8 +36,8 @@ const config = {
           onEnd: {
               copy: [
                   {
-                      source: path.join(__dirname, 'node_modules', '@microsoft', 'vscode-azext-azureutils', 'resources', '**'),
-                      destination: path.join(__dirname, 'dist', 'node_modules', '@microsoft', 'vscode-azext-azureutils', 'resources')
+                      source: path.join(__dirname, 'node_modules', 'vscode-azureextensionui', 'resources', '**'),
+                      destination: path.join(__dirname, 'dist', 'node_modules', 'vscode-azureextensionui', 'resources')
                   }
               ]
           }

@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { ClusterARMResponse, determineClusterState, getAksClusterTreeItem, getClusterProperties, startCluster, stopCluster } from '../utils/clusters';
+import { IActionContext } from "vscode-azureextensionui";
+import { ClusterARMResponse, getAksClusterTreeItem, getClusterProperties } from '../utils/clusters';
 import { getExtensionPath, longRunning }  from '../utils/host';
-import { Errorable, failed } from '../utils/errorable';
+import { failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { createWebView, delay, getRenderedContent, getResourceUri } from '../utils/webviews';
+import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 
 export default async function aksClusterProperties(
     _context: IActionContext,
@@ -19,121 +19,37 @@ export default async function aksClusterProperties(
       return;
     }
 
-    await prepareClusterProperties(cluster.result);
-}
-
-async function prepareClusterProperties(
-  cloudTarget: AksClusterTreeItem
-): Promise<void> {
-  const clustername = cloudTarget.name;
-
-  const clusterData = await longRunning(`Loading ${clustername} cluster properties.`, async () => await getClusterData(cloudTarget));
-  if (failed(clusterData)) {
-    vscode.window.showErrorMessage(clusterData.error);
-    return;
-  }
-
-  const clusterState = await longRunning(`Determine ${clustername} cluster state.`, async () => await determineClusterState(cloudTarget, clustername));
-  if (failed(clusterState)) {
-      vscode.window.showErrorMessage(clusterState.error);
-      return;
-  }
-
-  await loadWebViewClusterProperties(cloudTarget, clusterData.result, clusterState.result);
-}
-
-async function loadWebViewClusterProperties(
-    cloudTarget: AksClusterTreeItem,
-    clusterInfo: ClusterARMResponse,
-    clusterStateResult: string
-) {
-
-    const clustername = cloudTarget.name;
-
     const extensionPath = getExtensionPath();
     if (failed(extensionPath)) {
       vscode.window.showErrorMessage(extensionPath.error);
       return;
     }
 
-    await longRunning(`Loading webview ${clustername} for cluster properties.`,
-      async () => {
-        const webviewPanel = createWebView('AKS Cluster Properties', `AKS properties view for: ${clustername}`);
-        const webview = webviewPanel.webview;
-
-        webview.onDidReceiveMessage(
-          async (message) => {
-              const clusterData = await onReceivePerformOperations(cloudTarget, clustername, message.command, clusterStateResult);
-
-              if (failed(clusterData)) {
-                webviewPanel.dispose();
-                vscode.window.showErrorMessage(clusterData.error);
-                return;
-              }
-
-              const clusterState = await determineClusterState(cloudTarget, clustername);
-              if (failed(clusterState)) {
-                vscode.window.showErrorMessage(clusterState.error);
-                return;
-              }
-
-              webview.html = getWebviewContent(clusterData.result, clusterState.result, extensionPath.result);
-          },
-          undefined
-      );
-
-        webview.html = getWebviewContent(clusterInfo, clusterStateResult, extensionPath.result);
-      }
-    );
+    await loadClusterProperties(cluster.result, extensionPath.result);
 }
 
-async function getClusterData(
-  cloudTarget: AksClusterTreeItem
-): Promise<Errorable<ClusterARMResponse>> {
+async function loadClusterProperties(
+    cloudTarget: AksClusterTreeItem,
+    extensionPath: string) {
 
-    return await longRunning(`Loading ${cloudTarget.name} cluster data.`,
+    const clustername = cloudTarget.name;
+    await longRunning(`Loading ${clustername} cluster properties.`,
       async () => {
-        const clusterInfo = await getClusterProperties(cloudTarget, cloudTarget.name);
-        return clusterInfo;
+        const clusterInfo = await getClusterProperties(cloudTarget, clustername);
+        if (failed(clusterInfo)) {
+          vscode.window.showErrorMessage(clusterInfo.error);
+          return;
+        }
+
+        const webview = createWebView('AKS Cluster Properties', `AKS properties view for: ${clustername}`);
+
+        webview.html = getWebviewContent(clusterInfo.result, extensionPath);
       }
     );
-}
-
-async function onReceivePerformOperations(
-  cloudTarget: AksClusterTreeItem,
-  clusterName: string,
-  eventName: string,
-  clusterState: string
-): Promise<Errorable<ClusterARMResponse>> {
-
-    let startStopClusterInfo: Errorable<string>;
-    switch (eventName) {
-      case 'startCluster':
-            startStopClusterInfo = await longRunning(`Starting cluster.`, () => startCluster(cloudTarget, clusterName, clusterState) );
-            break;
-      case 'stopCluster':
-            startStopClusterInfo = await longRunning(`Stopping cluster.`, () => stopCluster(cloudTarget, clusterName, clusterState));
-            break;
-      default:
-            throw vscode.window.showErrorMessage(`Invalid ${eventName} triggered.`);
-    }
-
-    if (failed(startStopClusterInfo)) {
-      return { succeeded: false, error: startStopClusterInfo.error };
-    }
-    // This delay is deliberate for previous action to kick-in,
-    // without delay if we call load data it is consistent to get old data from RP.
-    const clusterData = await longRunning(`Getting cluster data.`, async () => { await delay(10000); return getClusterData(cloudTarget); });
-    if (failed(clusterData)) {
-      return { succeeded: false, error: clusterData.error };
-    }
-    return { succeeded: true, result: clusterData.result };
-
 }
 
 function getWebviewContent(
     clusterdata: ClusterARMResponse,
-    clusterState: string,
     vscodeExtensionPath: string
     ): string {
       const webviewClusterData = clusterdata?.properties;
@@ -142,8 +58,7 @@ function getWebviewContent(
       const data = {
         cssuri: styleUri,
         name: clusterdata.name,
-        clusterData: webviewClusterData,
-        clusterState: clusterState
+        clusterData: webviewClusterData
       };
 
       return getRenderedContent(templateUri, data);
