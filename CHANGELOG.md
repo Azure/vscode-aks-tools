@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.3.2]
+
+* Enable AKS start and stop cluster feature.
+* Update deprecated vscode-extensionui package.
+
+ Thanks to @rzhang628 and @peterbom.
+
 ## [1.3.1]
 
 * Revert update deprecated vscode-extensionui package and AKS start and stop cluster feature.
