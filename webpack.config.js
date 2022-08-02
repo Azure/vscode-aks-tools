@@ -26,8 +26,7 @@ const config = {
     'spawn-sync': 'commonjs spawn-sync',
     'utf-8-validate': 'commonjs utf-8-validate',
     'applicationinsights-native-metrics': 'applicationinsights-native-metrics',
-    '@opentelemetry/tracing': '@opentelemetry/tracing',
-    '@microsoft/vscode-azext-utils': '@microsoft/vscode-azext-utils'
+    '@opentelemetry/tracing': '@opentelemetry/tracing'
   },
   plugins: [
       new webpack.IgnorePlugin(/^electron$/),
