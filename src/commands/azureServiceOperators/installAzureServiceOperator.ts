@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from 'vscode-azureextensionui';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { startInstallation } from './helpers/azureservicehelper';
 import {
@@ -57,7 +57,7 @@ export async function install(
     // Get user input upfront.
     // Get Service Principal AppId and Password from user.
     // Then start the installation process.
-    const webview = createWebView('Azure Service Operator', `Azure service Operator: ${installationResponse.clusterName}`);
+    const webview = createWebView('Azure Service Operator', `Azure service Operator: ${installationResponse.clusterName}`).webview;
 
     const extensionPath = getExtensionPath();
     if (failed(extensionPath)) {
@@ -72,7 +72,7 @@ export async function install(
     webview.onDidReceiveMessage(
         async (message) => {
             if (message.appid && message.password) {
-                const cloudName = convertAzureCloudEnv(aksCluster.root.environment.name);
+                const cloudName = convertAzureCloudEnv(aksCluster.subscription.environment.name);
 
                 if (!cloudName) {
                     vscode.window.showWarningMessage(`Cloud environment name ${cloudName} is not supported.`);
@@ -80,7 +80,7 @@ export async function install(
                 }
 
                 const operatorSettingsInfo = {
-                    tenantId: aksCluster.root.tenantId,
+                    tenantId: aksCluster.subscription.tenantId,
                     subId: aksCluster.subscription.subscriptionId!,
                     appId: message.appid,
                     clientSecret: message.password,

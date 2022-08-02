@@ -36,8 +36,8 @@ const config = {
           onEnd: {
               copy: [
                   {
-                      source: path.join(__dirname, 'node_modules', 'vscode-azureextensionui', 'resources', '**'),
-                      destination: path.join(__dirname, 'dist', 'node_modules', 'vscode-azureextensionui', 'resources')
+                      source: path.join(__dirname, 'node_modules', '@microsoft', 'vscode-azext-azureutils', 'resources', '**'),
+                      destination: path.join(__dirname, 'dist', 'node_modules', '@microsoft', 'vscode-azext-azureutils', 'resources')
                   }
               ]
           }
