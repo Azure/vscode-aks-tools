@@ -1,6 +1,6 @@
 import { API, CloudExplorerV1 } from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
-import { parseResource } from "../../azure-api-utils";
+import { parseResource, parseSovereignCloudCheck } from "../../azure-api-utils";
 import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
@@ -74,7 +74,7 @@ export async function getKubeconfigYaml(target: AksClusterTreeItem): Promise<Err
         return { succeeded: false, error: `Invalid ARM id ${target.id}`};
     }
 
-    const client = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
+    const client = getContainerClient(target);
     let clusterUserCredentials: azcs.CredentialResults;
 
     try {
@@ -115,7 +115,7 @@ export async function determineClusterState(
     clusterName: string
 ): Promise<Errorable<string>> {
     try {
-        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
+        const containerClient = getContainerClient(target);
         const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
 
         if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerState?.code === "Stopped") ) {
@@ -139,7 +139,7 @@ export async function startCluster(
     clusterState: string
 ): Promise<Errorable<string>> {
     try {
-        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
+        const containerClient = getContainerClient(target);
 
         if (clusterState === ClusterStartStopState.Stopped ) {
             containerClient.managedClusters.beginStartAndWait(target.resourceGroupName, clusterName, undefined);
@@ -161,7 +161,7 @@ export async function stopCluster(
     clusterState: string
 ): Promise<Errorable<string>> {
     try {
-        const containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
+        const containerClient = getContainerClient(target);
 
         if (clusterState === ClusterStartStopState.Started) {
             containerClient.managedClusters.beginStopAndWait(target.resourceGroupName, clusterName, undefined);
@@ -173,4 +173,14 @@ export async function stopCluster(
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
     }
+}
+
+function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
+    const location = parseSovereignCloudCheck(target);
+    let containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
+    if (location) {
+        containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint: location});
+    }
+
+    return containerClient;
 }

@@ -1,3 +1,4 @@
+import AksClusterTreeItem from "./tree/aksClusterTreeItem";
 
 export interface PartialList<T> extends Array<T> {
     nextLink?: string;
@@ -16,6 +17,14 @@ export function parseResource(armId: string): { resourceGroupName: string | unde
     const resourceGroupName = bitAfter(bits, 'resourceGroups');
     const name = bits[bits.length - 1];
     return { resourceGroupName, name };
+}
+
+export function parseSovereignCloudCheck(target: AksClusterTreeItem): string | void {
+    const location = target.resource.location;
+
+    if (location!.includes("usgov")) {
+        return "https://management.usgovcloudapi.net";
+    }
 }
 
 function bitAfter(bits: string[], after: string): string | undefined {
