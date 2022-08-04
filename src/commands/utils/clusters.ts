@@ -20,7 +20,11 @@ export enum ClusterStartStopState {
     Starting = 'Starting',
     Stopped = 'Stopped',
     Stopping = 'Stopping'
-  }
+}
+
+export enum SovereignCloudType {
+    USGov = "usgov"
+}
 
 export function getAksClusterTreeItem(commandTarget: any, cloudExplorer: API<CloudExplorerV1>): Errorable<AksClusterTreeItem> {
     if (!cloudExplorer.available) {
@@ -178,8 +182,9 @@ export async function stopCluster(
 function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
     const location = parseSovereignCloudCheck(target);
     let containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
-    if (location) {
-        containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint: location});
+
+    if (location === SovereignCloudType.USGov) {
+        containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint:  "https://management.usgovcloudapi.net"});
     }
 
     return containerClient;

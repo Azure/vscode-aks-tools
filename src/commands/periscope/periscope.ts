@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as tmpfile from '../utils/tempfile';
-import { getAksClusterTreeItem, getKubeconfigYaml } from '../utils/clusters';
+import { getAksClusterTreeItem, getKubeconfigYaml, SovereignCloudType } from '../utils/clusters';
 import { getKustomizeConfig } from '../utils/config';
 import { getExtensionPath, longRunning } from '../utils/host';
 import {
@@ -18,6 +18,7 @@ import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView } from '../utils/webviews';
 import { Errorable, failed } from '../utils/errorable';
 import { invokeKubectlCommand } from '../utils/kubectl';
+import { parseSovereignCloudCheck } from '../../azure-api-utils';
 
 export default async function periscope(
     _context: IActionContext,
@@ -33,6 +34,14 @@ export default async function periscope(
     const cluster = getAksClusterTreeItem(target, cloudExplorer);
     if (failed(cluster)) {
         vscode.window.showErrorMessage(cluster.error);
+        return;
+    }
+
+    // Once Periscope will support usgov endpoints all we need is to remove this check.
+    // I have done background plumbing for vscode to fetch downlodable link from correct endpoint.
+    const usGovCloud = parseSovereignCloudCheck(cluster.result);
+    if (usGovCloud === SovereignCloudType.USGov) {
+        vscode.window.showInformationMessage(`Periscope is not supported in ${usGovCloud} cloud.`);
         return;
     }
 

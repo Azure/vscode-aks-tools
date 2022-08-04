@@ -4,6 +4,7 @@ export interface PeriscopeStorage {
     storageKey: string;
     storageDeploymentSas: string;
     sevenDaysSasKey: string;
+    usGovCloud: boolean;
 }
 
 export interface PeriscopeHTMLInterface {

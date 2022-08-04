@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterTreeItem } from '../utils/clusters';
+import { getAksClusterTreeItem, SovereignCloudType } from '../utils/clusters';
 import { getExtensionPath }  from '../utils/host';
 import { failed } from '../utils/errorable';
+import { parseSovereignCloudCheck } from '../../azure-api-utils';
 const meta = require('../../../package.json');
 
 export default async function aksNavToPortal(
@@ -25,5 +26,9 @@ export default async function aksNavToPortal(
     }
 
     // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-    vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
+    if (parseSovereignCloudCheck(target) === SovereignCloudType.USGov) {
+      vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.us/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
+    } else {
+      vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
+    }
 }
