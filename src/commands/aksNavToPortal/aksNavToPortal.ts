@@ -26,7 +26,7 @@ export default async function aksNavToPortal(
     }
 
     // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-    if (parseSovereignCloudCheck(target) === SovereignCloudType.USGov) {
+    if (parseSovereignCloudCheck(cluster.result) === SovereignCloudType.USGov) {
       vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.us/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
     } else {
       vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
