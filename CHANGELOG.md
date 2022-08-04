@@ -2,6 +2,13 @@
 
 ## [1.3.2]
 
+* Enable AKS features for USGov Cloud feature.
+* Update deprecated vscode-extensionui package.
+
+ Thanks to @rzhang628 and @peterbom.
+
+## [1.3.2]
+
 * Enable AKS start and stop cluster feature.
 * Update deprecated vscode-extensionui package.
 
