@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.3.3]
+
+* Enable AKS features for USGov Cloud feature.
+
+ Thanks to @rzhang628 and @peterbom.
+
 ## [1.3.2]
 
 * Enable AKS start and stop cluster feature.
