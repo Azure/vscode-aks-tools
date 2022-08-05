@@ -1,4 +1,4 @@
-import { SovereignCloudType } from "./commands/utils/clusters";
+import { CloudType } from "./commands/utils/clusters";
 import AksClusterTreeItem from "./tree/aksClusterTreeItem";
 
 export interface PartialList<T> extends Array<T> {
@@ -20,12 +20,14 @@ export function parseResource(armId: string): { resourceGroupName: string | unde
     return { resourceGroupName, name };
 }
 
-export function parseSovereignCloudCheck(target: AksClusterTreeItem): SovereignCloudType | void {
+export function getCloudType(target: AksClusterTreeItem): CloudType {
     const location = target.resource.location;
 
     if (location && location.includes("usgov")) {
-        return SovereignCloudType.USGov;
+        return CloudType.USGov;
     }
+
+    return CloudType.Public;
 }
 
 function bitAfter(bits: string[], after: string): string | undefined {

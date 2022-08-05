@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { getSASKey, LinkDuration } from '../../utils/azurestorage';
-import { parseResource, parseSovereignCloudCheck } from '../../../azure-api-utils';
+import { parseResource } from '../../../azure-api-utils';
 import * as ast from '@azure/arm-storage';
 import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
 import * as amon from '@azure/arm-monitor';
@@ -13,7 +13,6 @@ import { getRenderedContent, getResourceUri } from '../../utils/webviews';
 import { Errorable, failed } from '../../utils/errorable';
 import { invokeKubectlCommand } from '../../utils/kubectl';
 import { KustomizeConfig } from '../models/kustomizeConfig';
-import { SovereignCloudType } from '../../utils/clusters';
 const tmp = require('tmp');
 
 const {
@@ -109,8 +108,7 @@ export async function getStorageInfo(
             storageName: accountName,
             storageKey: storageKey,
             storageDeploymentSas: getSASKey(accountName, storageKey, LinkDuration.DownloadNow),
-            sevenDaysSasKey: getSASKey(accountName, storageKey, LinkDuration.Shareable),
-            usGovCloud: (parseSovereignCloudCheck(cluster) === SovereignCloudType.USGov)
+            sevenDaysSasKey: getSASKey(accountName, storageKey, LinkDuration.Shareable)
         };
 
         return { succeeded: true, result: clusterStorageInfo };
@@ -166,15 +164,12 @@ export async function generateDownloadableLinks(
         const storageKey = periscopeStorage.storageKey;
         const sas = periscopeStorage.storageDeploymentSas;
         const sevenDaySas = periscopeStorage.sevenDaysSasKey;
-        let storageEndPoint = `https://${storageAccount}.blob.core.windows.net`;
 
         // Use SharedKeyCredential with storage account and account key
         const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
-        if (periscopeStorage.usGovCloud) {
-            storageEndPoint = `https://${storageAccount}.blob.core.usgovcloudapi.net`;
-        }
+
         const blobServiceClient = new BlobServiceClient(
-            storageEndPoint,
+            `https://${storageAccount}.blob.core.windows.net`,
             sharedKeyCredential
         );
 

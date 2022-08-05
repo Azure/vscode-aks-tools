@@ -1,6 +1,6 @@
 import { API, CloudExplorerV1 } from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
-import { parseResource, parseSovereignCloudCheck } from "../../azure-api-utils";
+import { getCloudType, parseResource } from "../../azure-api-utils";
 import * as azcs from '@azure/arm-containerservice';
 import { Errorable } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
@@ -22,7 +22,8 @@ export enum ClusterStartStopState {
     Stopping = 'Stopping'
 }
 
-export enum SovereignCloudType {
+export enum CloudType {
+    Public = "public",
     USGov = "usgov"
 }
 
@@ -180,12 +181,12 @@ export async function stopCluster(
 }
 
 function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
-    const location = parseSovereignCloudCheck(target);
-    let containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
+    const cloudType = getCloudType(target);
 
-    if (location === SovereignCloudType.USGov) {
-        containerClient = new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint:  "https://management.usgovcloudapi.net"});
+    switch (cloudType){
+        case CloudType.USGov:
+            return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint:  "https://management.usgovcloudapi.net"});
+        default:
+            return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId);
     }
-
-    return containerClient;
 }
