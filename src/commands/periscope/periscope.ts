@@ -45,9 +45,11 @@ export default async function periscope(
         case CloudType.USGov:
           vscode.window.showInformationMessage(`Periscope is not supported in ${cloudType} cloud.`);
           return;
+        case CloudType.Public:
+          break;
         default:
           vscode.window.showErrorMessage(`Unrecognised cloud type ${cloudType}.`);
-          break;
+          return;
       }
 
     const clusterKubeConfig = await getKubeconfigYaml(cluster.result);
