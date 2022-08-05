@@ -1,9 +1,8 @@
 # Change Log
 
-## [1.3.2]
+## [1.3.3]
 
 * Enable AKS features for USGov Cloud feature.
-* Update deprecated vscode-extensionui package.
 
  Thanks to @rzhang628 and @peterbom.
 
