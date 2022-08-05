@@ -167,6 +167,7 @@ export async function generateDownloadableLinks(
 
         // Use SharedKeyCredential with storage account and account key
         const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
+
         const blobServiceClient = new BlobServiceClient(
             `https://${storageAccount}.blob.core.windows.net`,
             sharedKeyCredential
