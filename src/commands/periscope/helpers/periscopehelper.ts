@@ -7,12 +7,15 @@ import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
 import * as amon from '@azure/arm-monitor';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as semver from 'semver';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
 import { getRenderedContent, getResourceUri } from '../../utils/webviews';
-import { Errorable, failed } from '../../utils/errorable';
+import { combine, Errorable, failed } from '../../utils/errorable';
 import { invokeKubectlCommand } from '../../utils/kubectl';
 import { KustomizeConfig } from '../models/kustomizeConfig';
+import { ClusterFeatures } from '../models/clusterFeatures';
+import { asJson } from '../../utils/text';
 const tmp = require('tmp');
 
 const {
@@ -119,16 +122,29 @@ export async function getStorageInfo(
 
 export async function prepareAKSPeriscopeKustomizeOverlay(
     clusterStorageInfo: PeriscopeStorage,
-    kustomizeConfig: KustomizeConfig
+    kustomizeConfig: KustomizeConfig,
+    clusterFeatures: ClusterFeatures,
+    runId: string
 ): Promise<Errorable<string>> {
     const kustomizeDirObj = tmp.dirSync();
     const kustomizeFile = path.join(kustomizeDirObj.name, "kustomization.yaml");
+
+    // Build the list of components to include in the Kustomize overlay spec based on cluster features.
+    let components = "components:\n";
+    if ((clusterFeatures & ClusterFeatures.WindowsHpc) === ClusterFeatures.WindowsHpc) {
+        // The Windows HPC component is only supported in Periscope 0.0.10 and higher.
+        if (semver.gte(kustomizeConfig.releaseTag, "0.0.10")) {
+            components += `- https://github.com/${kustomizeConfig.repoOrg}/aks-periscope//deployment/components/win-hpc?ref=${kustomizeConfig.releaseTag}\n`;
+        }
+    }
 
     // Build a Kustomize overlay referencing a base for a known release, and using the images from MCR
     // for that release.
     const kustomizeContent = `
 resources:
 - https://github.com/${kustomizeConfig.repoOrg}/aks-periscope//deployment/base?ref=${kustomizeConfig.releaseTag}
+
+${components}
 
 images:
 - name: periscope-linux
@@ -145,6 +161,12 @@ secretGenerator:
   - AZURE_BLOB_ACCOUNT_NAME=${clusterStorageInfo.storageName}
   - AZURE_BLOB_SAS_KEY=${clusterStorageInfo.storageDeploymentSas}
   - AZURE_BLOB_CONTAINER_NAME=${clusterStorageInfo.containerName}
+
+configMapGenerator:
+- name: diagnostic-config
+  behavior: merge
+  literals:
+  - DIAGNOSTIC_RUN_ID=${runId}
 `;
 
     try {
@@ -287,4 +309,96 @@ function getHostName(output: string): Errorable<string> {
     }
 
     return { succeeded: true, result: hostName };
+}
+
+// Represents the outputs of kubectl commands used to determine cluster features
+type FeatureKubectlResults = {
+    versionResult: string; // The version JSON for the cluster
+    windowsContainerRuntimeResult: string; // The container runtimes for the Windows nodes
+}
+
+export async function getClusterFeatures(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterKubeConfig: string): Promise<Errorable<ClusterFeatures>> {
+    // Run kubectl commands in parallel to gather some output about cluster features.
+    const kubectlResults = await tmpfile.withOptionalTempFile<Errorable<FeatureKubectlResults>>(
+        clusterKubeConfig, "YAML", async (kubeConfigFile) => {
+            const kubectlCommands = [
+                'version -o json',
+                'get node --selector "kubernetes.io/os=windows" -o jsonpath="{.items[*].status.nodeInfo.containerRuntimeVersion}"'
+            ];
+
+            const cmdResults = await Promise.all(kubectlCommands.map((cmd) => invokeKubectlCommand(kubectl, kubeConfigFile, cmd)));
+            const shellResults = combine(cmdResults);
+            if (failed(shellResults)) {
+                return shellResults;
+            }
+
+            const results = {
+                versionResult: shellResults.result[0].stdout,
+                windowsContainerRuntimeResult: shellResults.result[1].stdout
+            };
+
+            return { succeeded: true, result: results };
+        }
+    );
+
+    if (failed(kubectlResults)) return kubectlResults;
+
+    // Extract some version information from the kubectl outputs.
+    const k8sVersion = getK8sVersion(kubectlResults.result);
+    if (failed(k8sVersion)) return k8sVersion;
+
+    const containerdVersions = getWindowsContainerdVersions(kubectlResults.result);
+    if (failed(containerdVersions)) return containerdVersions;
+
+    // Build the feature list.
+    let features = ClusterFeatures.None;
+    if (isWindowsHcpSupported(k8sVersion.result, containerdVersions.result)) {
+        features |= ClusterFeatures.WindowsHpc;
+    }
+
+    return { succeeded: true, result: features };
+}
+
+function getK8sVersion(kubectlResults: FeatureKubectlResults): Errorable<string> {
+    const k8sVersionObj = asJson(kubectlResults.versionResult);
+    if (failed(k8sVersionObj)) return k8sVersionObj;
+
+    const k8sVersion = k8sVersionObj.result?.serverVersion?.gitVersion;
+    if (!k8sVersion) {
+        return { succeeded: false, error: `Failed to read server version from ${kubectlResults.versionResult}` };
+    }
+
+    const cleanK8sVersion = semver.clean(k8sVersion);
+    if (cleanK8sVersion === null) {
+        return { succeeded: false, error: `Failed to clean version identifier ${k8sVersion}` };
+    }
+
+    return { succeeded: true, result: cleanK8sVersion };
+}
+
+function getWindowsContainerdVersions(kubectlResults: FeatureKubectlResults): Errorable<string[]> {
+    const containerdPrefix = "containerd://";
+    const runtimes = kubectlResults.windowsContainerRuntimeResult.split(' ')
+        .filter(r => r.startsWith(containerdPrefix))
+        .map(r => r.slice(containerdPrefix.length));
+    return { succeeded: true, result: runtimes };
+}
+
+function isWindowsHcpSupported(k8sVersion: string, containerdVersions: string[]): boolean {
+    // Based on https://docs.microsoft.com/en-us/azure/aks/use-windows-hpc#limitations
+    if (semver.lt(k8sVersion, "1.23.0")) {
+        return false;
+    }
+
+    if (containerdVersions.length === 0) {
+        return false;
+    }
+
+    for (const version of containerdVersions) {
+        if (semver.lt(version, "1.6.0")) {
+            return false;
+        }
+    }
+
+    return true;
 }

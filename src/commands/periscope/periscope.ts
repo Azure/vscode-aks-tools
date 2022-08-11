@@ -11,7 +11,8 @@ import {
     getStorageInfo,
     prepareAKSPeriscopeKustomizeOverlay,
     generateDownloadableLinks,
-    getWebviewContent
+    getWebviewContent,
+    getClusterFeatures
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
@@ -99,8 +100,18 @@ async function runAKSPeriscope(
         return undefined;
     }
 
+    // Get the features of the cluster that determine which optional kustomize components to deploy.
+    const clusterFeatures = await getClusterFeatures(kubectl, clusterKubeConfig);
+    if (failed(clusterFeatures)) {
+        vscode.window.showErrorMessage(clusterFeatures.error);
+        return undefined;
+    }
+
+    // Create a run ID of format: YYYY-MM-DDThh-mm-ssZ
+    const runId = new Date().toISOString().slice(0, 19).replace(/:/g, "-") + "Z";
+
     const aksDeploymentFile = await longRunning(`Creating AKS Periscope resource specification for ${clusterName}.`,
-        () => prepareAKSPeriscopeKustomizeOverlay(clusterStorageInfo.result, kustomizeConfig.result)
+        () => prepareAKSPeriscopeKustomizeOverlay(clusterStorageInfo.result, kustomizeConfig.result, clusterFeatures.result, runId)
     );
 
     if (failed(aksDeploymentFile)) {
