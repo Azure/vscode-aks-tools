@@ -11,11 +11,12 @@ import * as semver from 'semver';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
 import { getRenderedContent, getResourceUri } from '../../utils/webviews';
-import { combine, Errorable, failed } from '../../utils/errorable';
+import { Errorable, failed } from '../../utils/errorable';
 import { invokeKubectlCommand } from '../../utils/kubectl';
 import { KustomizeConfig } from '../models/kustomizeConfig';
 import { ClusterFeatures } from '../models/clusterFeatures';
-import { asJson } from '../../utils/text';
+import { ContainerServiceClient } from '@azure/arm-containerservice';
+import { getWindowsNodePoolKubernetesVersions } from '../../utils/clusters';
 const tmp = require('tmp');
 
 const {
@@ -311,91 +312,40 @@ function getHostName(output: string): Errorable<string> {
     return { succeeded: true, result: hostName };
 }
 
-// Represents the outputs of kubectl commands used to determine cluster features
-type FeatureKubectlResults = {
-    versionResult: string; // The version JSON for the cluster
-    windowsContainerRuntimeResult: string; // The container runtimes for the Windows nodes
-}
-
-export async function getClusterFeatures(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterKubeConfig: string): Promise<Errorable<ClusterFeatures>> {
-    // Run kubectl commands in parallel to gather some output about cluster features.
-    const kubectlResults = await tmpfile.withOptionalTempFile<Errorable<FeatureKubectlResults>>(
-        clusterKubeConfig, "YAML", async (kubeConfigFile) => {
-            const kubectlCommands = [
-                'version -o json',
-                'get node --selector "kubernetes.io/os=windows" -o jsonpath="{.items[*].status.nodeInfo.containerRuntimeVersion}"'
-            ];
-
-            const cmdResults = await Promise.all(kubectlCommands.map((cmd) => invokeKubectlCommand(kubectl, kubeConfigFile, cmd)));
-            const shellResults = combine(cmdResults);
-            if (failed(shellResults)) {
-                return shellResults;
-            }
-
-            const results = {
-                versionResult: shellResults.result[0].stdout,
-                windowsContainerRuntimeResult: shellResults.result[1].stdout
-            };
-
-            return { succeeded: true, result: results };
-        }
-    );
-
-    if (failed(kubectlResults)) return kubectlResults;
-
-    // Extract some version information from the kubectl outputs.
-    const k8sVersion = getK8sVersion(kubectlResults.result);
-    if (failed(k8sVersion)) return k8sVersion;
-
-    const containerdVersions = getWindowsContainerdVersions(kubectlResults.result);
-    if (failed(containerdVersions)) return containerdVersions;
+export async function getClusterFeatures(
+    containerClient: ContainerServiceClient,
+    resourceGroupName: string,
+    clusterName: string
+): Promise<Errorable<ClusterFeatures>> {
+    const windowsNodePoolK8sVersions = await getWindowsNodePoolKubernetesVersions(containerClient, resourceGroupName, clusterName);
+    if (failed(windowsNodePoolK8sVersions)) return windowsNodePoolK8sVersions;
 
     // Build the feature list.
     let features = ClusterFeatures.None;
-    if (isWindowsHcpSupported(k8sVersion.result, containerdVersions.result)) {
+    if (isWindowsHcpSupported(windowsNodePoolK8sVersions.result)) {
         features |= ClusterFeatures.WindowsHpc;
     }
 
     return { succeeded: true, result: features };
 }
 
-function getK8sVersion(kubectlResults: FeatureKubectlResults): Errorable<string> {
-    const k8sVersionObj = asJson(kubectlResults.versionResult);
-    if (failed(k8sVersionObj)) return k8sVersionObj;
-
-    const k8sVersion = k8sVersionObj.result?.serverVersion?.gitVersion;
-    if (!k8sVersion) {
-        return { succeeded: false, error: `Failed to read server version from ${kubectlResults.versionResult}` };
-    }
-
-    const cleanK8sVersion = semver.clean(k8sVersion);
-    if (cleanK8sVersion === null) {
-        return { succeeded: false, error: `Failed to clean version identifier ${k8sVersion}` };
-    }
-
-    return { succeeded: true, result: cleanK8sVersion };
-}
-
-function getWindowsContainerdVersions(kubectlResults: FeatureKubectlResults): Errorable<string[]> {
-    const containerdPrefix = "containerd://";
-    const runtimes = kubectlResults.windowsContainerRuntimeResult.split(' ')
-        .filter(r => r.startsWith(containerdPrefix))
-        .map(r => r.slice(containerdPrefix.length));
-    return { succeeded: true, result: runtimes };
-}
-
-function isWindowsHcpSupported(k8sVersion: string, containerdVersions: string[]): boolean {
-    // Based on https://docs.microsoft.com/en-us/azure/aks/use-windows-hpc#limitations
-    if (semver.lt(k8sVersion, "1.23.0")) {
+function isWindowsHcpSupported(windowsNodePoolKubernetesVersions: string[]): boolean {
+    // If there are no Windows node pools there is no point in enabling this component
+    if (windowsNodePoolKubernetesVersions.length === 0) {
         return false;
     }
 
-    if (containerdVersions.length === 0) {
-        return false;
-    }
-
-    for (const version of containerdVersions) {
-        if (semver.lt(version, "1.6.0")) {
+    // Strictly speaking, whether host-process containers are supported in a Windows node pool depends on:
+    // - Kubernetes version of the node pool (must be >= 1.23)
+    // - The container runtime of the node pool (must be containerd, and version >= 1.6)
+    // see: https://docs.microsoft.com/en-us/azure/aks/use-windows-hpc#limitations
+    // However, for simplicity and ease of maintenance we only check the K8s version here.
+    // Justification: the number of users who are on a supported K8s version but unsupported container runtime
+    // is small, and will continue to decrease as users upgrade.
+    for (const version of windowsNodePoolKubernetesVersions) {
+        // To use this feature, *all* Windows node pools must support HPC. In other words,
+        // if *any* of them have a Kuberenetes version below 1.23 we return false.
+        if (semver.lt(version, "1.23.0")) {
             return false;
         }
     }

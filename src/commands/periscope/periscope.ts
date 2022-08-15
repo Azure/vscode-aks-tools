@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as tmpfile from '../utils/tempfile';
-import { CloudType, getAksClusterTreeItem, getKubeconfigYaml } from '../utils/clusters';
+import { CloudType, getAksClusterTreeItem, getContainerClient, getKubeconfigYaml } from '../utils/clusters';
 import { getKustomizeConfig } from '../utils/config';
 import { getExtensionPath, longRunning } from '../utils/host';
 import {
@@ -100,8 +100,10 @@ async function runAKSPeriscope(
         return undefined;
     }
 
+    const containerClient = getContainerClient(cluster);
+
     // Get the features of the cluster that determine which optional kustomize components to deploy.
-    const clusterFeatures = await getClusterFeatures(kubectl, clusterKubeConfig);
+    const clusterFeatures = await getClusterFeatures(containerClient, cluster.resourceGroupName, cluster.name);
     if (failed(clusterFeatures)) {
         vscode.window.showErrorMessage(clusterFeatures.error);
         return undefined;
