@@ -7,32 +7,13 @@ on:
 
 env:
   STARTER_WORKFLOW_PATH: "./resources/yaml/"
-  STARTER_WORKFLOW_REPO_BRANCH: "partner_templates"
+  STARTER_WORKFLOW_REPO_BRANCH: "main"
 
 jobs:
   poll:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Download run information
-        uses: dawidd6/action-download-artifact@v2
-        continue-on-error: true
-        id: download
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: poll-starter-workflows.yml
-          workflow_conclusion: success
-          name: seen
-          path: /tmp
-
-      - name: Create new run information
-        if: steps.download.outcome != 'success'
-        run: |
-          echo "Creating new run information record"
-          declare -A seenWorkflows
-          touch /tmp/seenWorkflows
-          declare -p seenWorkflows > /tmp/seenWorkflows
 
       - name: Download starter workflows
         run: |
@@ -48,28 +29,15 @@ jobs:
             downloadUrl=$(echo $workflow | jq '.download_url' -r)
             sha=$(echo $workflow | jq '.sha' -r)
 
-            # get previous seen workflows (bash runs while loops in new shell)
-            source /tmp/seenWorkflows
-            
-            # download workflow if it's an AKS workflow and not seen before
+            # download workflow if it's an AKS workflow
             echo "Checking workflow $name"
-            if [[ ( $name == azure-kubernetes-service* ) && ( ${seenWorkflows["$name"]} != "$sha" ) ]] ;
+            if [[ ( $name == azure-kubernetes-service* ) ]] ;
             then
               echo "Downloading starter workflow $name"
               mkdir -p $STARTER_WORKFLOW_PATH && touch $STARTER_WORKFLOW_PATH$name
               wget -O $STARTER_WORKFLOW_PATH$name $downloadUrl
-
-              echo "Writting to seen workflows"
-              seenWorkflows["$name"]="$sha"
-              declare -p seenWorkflows > /tmp/seenWorkflows
             fi
           done
-
-      - name: Upload run information
-        uses: actions/upload-artifact@v3
-        with:
-          name: seen
-          path: /tmp/seenWorkflows
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4
