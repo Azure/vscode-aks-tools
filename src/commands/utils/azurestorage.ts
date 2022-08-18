@@ -9,7 +9,7 @@ export enum LinkDuration {
 function sasDuration(duration: LinkDuration): number {
     switch (duration) {
         case LinkDuration.StartTime: return 2 * 60 * 1000;
-        case LinkDuration.DownloadNow: return 5 * 60 * 1000;
+        case LinkDuration.DownloadNow: return 15 * 60 * 1000; // 15 minutes to allow for Windows image pulls and log export
         case LinkDuration.Shareable: return 7 * 24 * 60 * 60 * 1000;
     }
 }

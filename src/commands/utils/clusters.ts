@@ -180,7 +180,36 @@ export async function stopCluster(
     }
 }
 
-function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
+export async function getWindowsNodePoolKubernetesVersions(
+    containerClient: azcs.ContainerServiceClient,
+    resourceGroupName: string,
+    clusterName: string
+): Promise<Errorable<string[]>> {
+    try {
+        const k8sVersions: string[] = [];
+        for await (let page of containerClient.agentPools.list(resourceGroupName, clusterName).byPage()) {
+            for (const nodePool of page) {
+                if (!nodePool.osType) {
+                    return { succeeded: false, error: `OS type not available for node pool ${nodePool.name} for cluster ${clusterName}` };
+                }
+    
+                if (nodePool.osType.toUpperCase() === "WINDOWS") {
+                    if (!nodePool.currentOrchestratorVersion) {
+                        return { succeeded: false, error: `Kubernetes version not available for node pool ${nodePool.name} for cluster ${clusterName}` };
+                    }
+
+                    k8sVersions.push(nodePool.currentOrchestratorVersion);
+                }
+            }
+        }
+
+        return { succeeded: true, result: k8sVersions };
+    } catch (ex) {
+        return { succeeded: false, error: `Error retrieving Windows node pool Kubernetes versions for ${clusterName}: ${ex}` };
+    }
+}
+
+export function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
     const cloudType = getCloudType(target);
 
     switch (cloudType){
