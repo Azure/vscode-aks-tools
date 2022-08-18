@@ -7,12 +7,16 @@ import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
 import * as amon from '@azure/arm-monitor';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as semver from 'semver';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
 import { getRenderedContent, getResourceUri } from '../../utils/webviews';
 import { Errorable, failed } from '../../utils/errorable';
 import { invokeKubectlCommand } from '../../utils/kubectl';
 import { KustomizeConfig } from '../models/kustomizeConfig';
+import { ClusterFeatures } from '../models/clusterFeatures';
+import { ContainerServiceClient } from '@azure/arm-containerservice';
+import { getWindowsNodePoolKubernetesVersions } from '../../utils/clusters';
 const tmp = require('tmp');
 
 const {
@@ -119,16 +123,29 @@ export async function getStorageInfo(
 
 export async function prepareAKSPeriscopeKustomizeOverlay(
     clusterStorageInfo: PeriscopeStorage,
-    kustomizeConfig: KustomizeConfig
+    kustomizeConfig: KustomizeConfig,
+    clusterFeatures: ClusterFeatures,
+    runId: string
 ): Promise<Errorable<string>> {
     const kustomizeDirObj = tmp.dirSync();
     const kustomizeFile = path.join(kustomizeDirObj.name, "kustomization.yaml");
+
+    // Build the list of components to include in the Kustomize overlay spec based on cluster features.
+    let components = "components:\n";
+    if ((clusterFeatures & ClusterFeatures.WindowsHpc) === ClusterFeatures.WindowsHpc) {
+        // The Windows HPC component is only supported in Periscope 0.0.10 and higher.
+        if (semver.gte(kustomizeConfig.releaseTag, "0.0.10")) {
+            components += `- https://github.com/${kustomizeConfig.repoOrg}/aks-periscope//deployment/components/win-hpc?ref=${kustomizeConfig.releaseTag}\n`;
+        }
+    }
 
     // Build a Kustomize overlay referencing a base for a known release, and using the images from MCR
     // for that release.
     const kustomizeContent = `
 resources:
 - https://github.com/${kustomizeConfig.repoOrg}/aks-periscope//deployment/base?ref=${kustomizeConfig.releaseTag}
+
+${components}
 
 images:
 - name: periscope-linux
@@ -145,6 +162,12 @@ secretGenerator:
   - AZURE_BLOB_ACCOUNT_NAME=${clusterStorageInfo.storageName}
   - AZURE_BLOB_SAS_KEY=${clusterStorageInfo.storageDeploymentSas}
   - AZURE_BLOB_CONTAINER_NAME=${clusterStorageInfo.containerName}
+
+configMapGenerator:
+- name: diagnostic-config
+  behavior: merge
+  literals:
+  - DIAGNOSTIC_RUN_ID=${runId}
 `;
 
     try {
@@ -287,4 +310,45 @@ function getHostName(output: string): Errorable<string> {
     }
 
     return { succeeded: true, result: hostName };
+}
+
+export async function getClusterFeatures(
+    containerClient: ContainerServiceClient,
+    resourceGroupName: string,
+    clusterName: string
+): Promise<Errorable<ClusterFeatures>> {
+    const windowsNodePoolK8sVersions = await getWindowsNodePoolKubernetesVersions(containerClient, resourceGroupName, clusterName);
+    if (failed(windowsNodePoolK8sVersions)) return windowsNodePoolK8sVersions;
+
+    // Build the feature list.
+    let features = ClusterFeatures.None;
+    if (isWindowsHcpSupported(windowsNodePoolK8sVersions.result)) {
+        features |= ClusterFeatures.WindowsHpc;
+    }
+
+    return { succeeded: true, result: features };
+}
+
+function isWindowsHcpSupported(windowsNodePoolKubernetesVersions: string[]): boolean {
+    // If there are no Windows node pools there is no point in enabling this component
+    if (windowsNodePoolKubernetesVersions.length === 0) {
+        return false;
+    }
+
+    // Strictly speaking, whether host-process containers are supported in a Windows node pool depends on:
+    // - Kubernetes version of the node pool (must be >= 1.23)
+    // - The container runtime of the node pool (must be containerd, and version >= 1.6)
+    // see: https://docs.microsoft.com/en-us/azure/aks/use-windows-hpc#limitations
+    // However, for simplicity and ease of maintenance we only check the K8s version here.
+    // Justification: the number of users who are on a supported K8s version but unsupported container runtime
+    // is small, and will continue to decrease as users upgrade.
+    for (const version of windowsNodePoolKubernetesVersions) {
+        // To use this feature, *all* Windows node pools must support HPC. In other words,
+        // if *any* of them have a Kuberenetes version below 1.23 we return false.
+        if (semver.lt(version, "1.23.0")) {
+            return false;
+        }
+    }
+
+    return true;
 }

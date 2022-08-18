@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as tmpfile from '../utils/tempfile';
-import { CloudType, getAksClusterTreeItem, getKubeconfigYaml } from '../utils/clusters';
+import { CloudType, getAksClusterTreeItem, getContainerClient, getKubeconfigYaml } from '../utils/clusters';
 import { getKustomizeConfig } from '../utils/config';
 import { getExtensionPath, longRunning } from '../utils/host';
 import {
@@ -11,7 +11,8 @@ import {
     getStorageInfo,
     prepareAKSPeriscopeKustomizeOverlay,
     generateDownloadableLinks,
-    getWebviewContent
+    getWebviewContent,
+    getClusterFeatures
 } from './helpers/periscopehelper';
 import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
@@ -99,8 +100,20 @@ async function runAKSPeriscope(
         return undefined;
     }
 
+    const containerClient = getContainerClient(cluster);
+
+    // Get the features of the cluster that determine which optional kustomize components to deploy.
+    const clusterFeatures = await getClusterFeatures(containerClient, cluster.resourceGroupName, cluster.name);
+    if (failed(clusterFeatures)) {
+        vscode.window.showErrorMessage(clusterFeatures.error);
+        return undefined;
+    }
+
+    // Create a run ID of format: YYYY-MM-DDThh-mm-ssZ
+    const runId = new Date().toISOString().slice(0, 19).replace(/:/g, "-") + "Z";
+
     const aksDeploymentFile = await longRunning(`Creating AKS Periscope resource specification for ${clusterName}.`,
-        () => prepareAKSPeriscopeKustomizeOverlay(clusterStorageInfo.result, kustomizeConfig.result)
+        () => prepareAKSPeriscopeKustomizeOverlay(clusterStorageInfo.result, kustomizeConfig.result, clusterFeatures.result, runId)
     );
 
     if (failed(aksDeploymentFile)) {

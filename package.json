@@ -60,13 +60,13 @@
                 },
                 "aks.periscope.releaseTag": {
                     "type": "string",
-                    "default": "v0.9",
+                    "default": "0.0.10",
                     "title": "Periscope repository release tag",
                     "description": "Release tag for the Kustomize templates in the Periscope repository."
                 },
                 "aks.periscope.imageVersion": {
                     "type": "string",
-                    "default": "0.0.9",
+                    "default": "0.0.10",
                     "title": "Periscope image version",
                     "description": "Docker image tag corresponding to the Periscope version."
                 }
@@ -263,6 +263,7 @@
         "@types/js-yaml": "^3.12.1",
         "@types/mocha": "^2.2.48",
         "@types/node": "^16.11.7",
+        "@types/semver": "^7.3.11",
         "@types/underscore": "^1.11.3",
         "@types/vscode": "^1.52.0",
         "chai": "^4.3.4",
@@ -295,6 +296,7 @@
         "handlebars": "^4.7.7",
         "js-yaml": "^3.14.0",
         "neverthrow": "^4.3.0",
+        "semver": "^7.3.7",
         "sinon": "^12.0.1",
         "tmp": "^0.2.1",
         "tslib": "^2.1.0",
