@@ -22,6 +22,7 @@ import aksNavToPortal from './commands/aksNavToPortal/aksNavToPortal';
 import aksClusterProperties from './commands/aksClusterProperties/aksClusterProperties';
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
+import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectlGetAPIResourcesCommands, aksKubectlGetNodeCommands, aksKubectlDescribeServicesCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -57,6 +58,11 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.showInPortal', aksNavToPortal );
         registerCommandWithTelemetry('aks.clusterProperties', aksClusterProperties);
         registerCommandWithTelemetry('aks.createClusterNavToAzurePortal', aksCreateClusterNavToAzurePortal);
+        registerCommandWithTelemetry('aks.aksKubectlGetPodsCommands', aksKubectlGetPodsCommands);
+        registerCommandWithTelemetry('aks.aksKubectlGetClusterInfoCommands', aksKubectlGetClusterInfoCommands);
+        registerCommandWithTelemetry('aks.aksKubectlGetAPIResourcesCommands', aksKubectlGetAPIResourcesCommands);
+        registerCommandWithTelemetry('aks.aksKubectlGetNodeCommands', aksKubectlGetNodeCommands);
+        registerCommandWithTelemetry('aks.aksKubectlDescribeServicesCommands', aksKubectlDescribeServicesCommands);
 
         await registerAzureServiceNodes(context);
 

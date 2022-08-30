@@ -39,7 +39,12 @@
         "onCommand:aks.configureKustomizeStarterWorkflow",
         "onCommand:aks.showInPortal",
         "onCommand:aks.clusterProperties",
-        "onCommand:aks.createClusterNavToAzurePortal"
+        "onCommand:aks.createClusterNavToAzurePortal",
+        "onCommand:aks.aksKubectlGetPodsCommands",
+        "onCommand:aks.aksKubectlGetClusterInfoCommands",
+        "onCommand:aks.aksKubectlGetAPIResourcesCommands",
+        "onCommand:aks.aksKubectlGetNodeCommands",
+        "onCommand:aks.aksKubectlDescribeServicesCommands"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -140,6 +145,26 @@
             {
                 "command": "aks.createClusterNavToAzurePortal",
                 "title": "Create Cluster From Azure Portal"
+            },
+            {
+                "command": "aks.aksKubectlGetPodsCommands",
+                "title": "Get All Pods"
+            },
+            {
+                "command": "aks.aksKubectlGetClusterInfoCommands",
+                "title": "Get Cluster Info"
+            },
+            {
+                "command": "aks.aksKubectlGetAPIResourcesCommands",
+                "title": "Get API Resources"
+            },
+            {
+                "command": "aks.aksKubectlGetNodeCommands",
+                "title": "Get Node"
+            },
+            {
+                "command": "aks.aksKubectlDescribeServicesCommands",
+                "title": "Describe Services"
             }
         ],
         "menus": {
@@ -187,6 +212,11 @@
                 {
                     "command": "aks.createClusterNavToAzurePortal",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
+                    "submenu": "aks.runKubectlCmdSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@1"
                 }
             ],
             "aks.detectorsSubMenu": [
@@ -232,6 +262,28 @@
                     "command": "aks.configureStarterWorkflow",
                     "group": "navigation"
                 }
+            ],
+            "aks.runKubectlCmdSubMenu": [
+                {
+                    "command": "aks.aksKubectlGetPodsCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKubectlGetClusterInfoCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKubectlGetAPIResourcesCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKubectlGetNodeCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKubectlDescribeServicesCommands",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
@@ -242,6 +294,10 @@
             {
                 "id": "aks.ghWorkflowSubMenu",
                 "label": "Create GitHub Workflow"
+            },
+            {
+                "id": "aks.runKubectlCmdSubMenu",
+                "label": "Run Kubectl Commands"
             }
         ]
     },
