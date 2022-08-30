@@ -134,7 +134,7 @@ export async function prepareAKSPeriscopeKustomizeOverlay(
     let components = "components:\n";
     if ((clusterFeatures & ClusterFeatures.WindowsHpc) === ClusterFeatures.WindowsHpc) {
         // The Windows HPC component is only supported in Periscope 0.0.10 and higher.
-        if (semver.gte(kustomizeConfig.releaseTag, "0.0.10")) {
+        if (semver.parse(kustomizeConfig.imageVersion) && semver.gte(kustomizeConfig.imageVersion, "0.0.10")) {
             components += `- https://github.com/${kustomizeConfig.repoOrg}/aks-periscope//deployment/components/win-hpc?ref=${kustomizeConfig.releaseTag}\n`;
         }
     }
