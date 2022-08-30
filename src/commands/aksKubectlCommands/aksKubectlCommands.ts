@@ -51,9 +51,9 @@ export async function aksKubectlDescribeServicesCommands(
 }
 
 async function aksKubectlCommands(
-    _context: IActionContext,
-    target: any,
-    command: string
+  _context: IActionContext,
+  target: any,
+  command: string
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -81,46 +81,43 @@ async function aksKubectlCommands(
         return undefined;
     }
 
-    // Kubectl command Wrapper
-    
-
     await loadKubectlCommandRun(cluster.result, extensionPath.result, clusterKubeConfig.result, command, kubectl);
-
 }
 
 async function loadKubectlCommandRun(
-    cloudTarget: AksClusterTreeItem,
-    extensionPath: string,
-    clusterConfig: string,
-    command: string,
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+  cloudTarget: AksClusterTreeItem,
+  extensionPath: string,
+  clusterConfig: string,
+  command: string,
+  kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
 
-    const clustername = cloudTarget.name;
-    await longRunning(`Loading ${clustername} kubectl command run.`,
-       async () => {
-        const kubectlresult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(clusterConfig, "YAML", async (kubeConfigFile) => {
-            return await invokeKubectlCommand(kubectl, kubeConfigFile, command);
-          });
-        if (failed(kubectlresult)) {
-            vscode.window.showErrorMessage(kubectlresult.error);
-            return;
-        }
-        const webview = createWebView('AKS Kubectl Commands', `AKS Kubectl Command view for: ${clustername}`).webview;
-        webview.html = getWebviewContent(kubectlresult.result, command, extensionPath);
+  const clustername = cloudTarget.name;
+  await longRunning(`Loading ${clustername} kubectl command run.`,
+    async () => {
+      const kubectlresult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(clusterConfig, "YAML", async (kubeConfigFile) => {
+        return await invokeKubectlCommand(kubectl, kubeConfigFile, command);
+      });
+
+      if (failed(kubectlresult)) {
+        vscode.window.showErrorMessage(kubectlresult.error);
+        return;
       }
-    );
+      const webview = createWebView('AKS Kubectl Commands', `AKS Kubectl Command view for: ${clustername}`).webview;
+      webview.html = getWebviewContent(kubectlresult.result, command, extensionPath);
+    }
+  );
 }
 
 function getWebviewContent(
   clusterdata: k8s.KubectlV1.ShellResult,
-  commandRan: string,
+  commandRun: string,
   vscodeExtensionPath: string
   ): string {
     const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
     const templateUri = getResourceUri(vscodeExtensionPath, 'aksKubectlCommand', 'akskubectlcommand.html');
     const data = {
       cssuri: styleUri,
-      name: commandRan,
+      name: commandRun,
       command: clusterdata.stdout,
     };
 
