@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKS Kubectl Commands</title>
+    <!-- Link to the css file -->
+    <link rel="stylesheet" href="{{cssuri}}">
+</head>
+
+<body>
+    <div class="heading">
+        <h2 class="content-header">AKS Kubectl Command Run for {{name}}</h2>
+    </div>
+
+    <div class="insight-container">
+        <div class="panel panel-default data-container">
+            <div class="panel-body data-container-body">
+
+                <div class="panel-body data-container-body allocatebody">
+                    <div class="panel-body">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <th>Command </th>
+                                    <th>Command Details</th>
+                                </tr>
+
+                                <tr>
+                                    <td>Command Run</td>
+                                    <td>kubectl {{name}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Command Output</td>
+                                    <td><pre>{{{breaklines command}}}</pre></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
