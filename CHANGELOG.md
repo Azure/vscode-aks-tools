@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.3.4]
+
+* Enable quick and easy way to run some kubectl commands on the selected AKS cluster.
+* Add issue templates for better feature and issue management.
+* AKS Periscope udpates and fixes.
+* Fix for Starter workflow polling mechanism.
+
+ Thanks to @rzhang628 and @peterbom. Special thanks to Scott Hanselman and folks who gave backed or gave idea for enabling kubectl commands as submenu.
+
 ## [1.3.3]
 
 * Enable AKS features for USGov Cloud feature.
