@@ -15,6 +15,7 @@
 * Show AKS cluster properties
 * Create AKS cluster from Azure Portal
 * Stop and Start the AKS cluster
+* Run Kubectl Commands from your AKS cluster
 
 ## Installation
 
@@ -35,6 +36,8 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 ![Cloud explorer extension menu](resources/right-click-menu.png)
 
 ![Cloud explorer extension menu](resources/right-click-menu-workflow.png)
+
+![Cloud explorer extension menu](resources/right-click-menu-kubectl.png)
 
 ![Cloud explorer extension menu](resources/right-click-subscription.png)
 
@@ -128,6 +131,16 @@ Right click on your AKS sunscription and click on **Create cluster from Azure Po
 Right click on your AKS cluster and click on **Show Properties** to display the AKS cluster properties, within the page there will be **Stop/Start Cluster** button to perform the start or stop the cluster operation.
 
 ![Start or Stop Cluster From Properties Webview](resources/aks-startstop-cluster.png)
+
+### Run Kubectl Commands from your AKS cluster
+
+Right click on your AKS cluster and click on **Run Kubectl Commands** to easily run few known kubectl commands on your cluster. Currently we have enable following kubectl commands for the AKS cluster:
+
+- Describe Services
+- Get All Pods
+- API Resources
+- Get Cluster Info
+- Get Node
 
 ## Telemetry
 
