@@ -18,6 +18,8 @@
             // https://code.visualstudio.com/api/extension-guides/webview#passing-messages-from-a-webview-to-an-extension
             const vscode = acquireVsCodeApi();
 
+            // Refresh upload status immediately, and then every 10 seconds
+            checkUploadStatus(vscode);
             refreshInterval = setInterval(() => checkUploadStatus(vscode), 10 * 1000);
 
             nodeRowsElem = document.getElementById('noderows');
@@ -43,7 +45,7 @@
         });
 
         function toggleChevron(elem) {
-            elem.getElementByClassName('fa')[0].classList.toggle('fa-rotate-180');
+            elem.getElementsByClassName('fa')[0].classList.toggle('fa-rotate-180');
         }
 
         function checkUploadStatus(vscode) {
@@ -51,6 +53,7 @@
         }
 
         function requestNodeLogs(vscode, nodeName) {
+            setNodeLogsOutput(nodeName, "");
             vscode.postMessage({ command: "node_logs_request", nodeName: nodeName });
         }
 
@@ -124,7 +127,7 @@
     <div class="container">
         <div class="panel panel-default data-container">
             <div class="panel-body data-container-body">
-                <i class="fa status-icon fa-check-circle" style="font-size:14px;color:green;padding-right:5px;padding-bottom:15px;"></i>
+                <i class="fa status-icon fa-check-circle" style="font-size:14px;color:green;padding-bottom:15px;"></i>
                 AKS Periscope has successfully started run <b>{{runId}}</b> on cluster <b>{{name}}</b>.
 
                 <div class="panel-body">
@@ -160,7 +163,7 @@
     <div class="container">
         <div class="panel panel-default data-container">
             <a id="togglenodelogs" style="padding-top:5px;color:black;">
-                <i class="fa fa-chevron-down" style="font-size:14px;padding-right:5px;;color:#605E5C;"></i>
+                <i class="fa fa-chevron-down" style="font-size:14px;color:#605E5C;"></i>
                 <span id="logsnodename"></span> Node Logs
             </a>
 

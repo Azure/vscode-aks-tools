@@ -74,6 +74,14 @@ label {
     cursor: pointer;
 }
 
+pre {
+    overflow: auto;
+}
+
+.fa {
+    padding-right: 5px;
+}
+
 .hidden {
     display: none;
 }
