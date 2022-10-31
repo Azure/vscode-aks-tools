@@ -245,22 +245,24 @@ export function getSuccessWebviewContent(
     return getRenderedContent(templateUri, data);
 }
 
-export function getFailureWebviewContent(aksExtensionPath: string, errorMessage: string): string {
+export function getFailureWebviewContent(aksExtensionPath: string, clusterName: string, errorMessage: string): string {
     const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
     const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'failure.html');
     const data = {
         cssuri: styleUri,
+        name: clusterName,
         error: errorMessage
     };
 
     return getRenderedContent(templateUri, data);
 }
 
-export function getNoDiagSettingWebviewContent(aksExtensionPath: string): string {
+export function getNoDiagSettingWebviewContent(aksExtensionPath: string, clusterName: string): string {
     const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
     const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'nodiagsetting.html');
     const data = {
-        cssuri: styleUri
+        cssuri: styleUri,
+        name: clusterName
     };
 
     return getRenderedContent(templateUri, data);
