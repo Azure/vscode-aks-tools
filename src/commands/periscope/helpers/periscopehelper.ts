@@ -245,13 +245,14 @@ export function getSuccessWebviewContent(
     return getRenderedContent(templateUri, data);
 }
 
-export function getFailureWebviewContent(aksExtensionPath: string, clusterName: string, errorMessage: string): string {
+export function getFailureWebviewContent(aksExtensionPath: string, clusterName: string, errorMessage: string, kustomizeConfig: KustomizeConfig): string {
     const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
     const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'failure.html');
     const data = {
         cssuri: styleUri,
         name: clusterName,
-        error: errorMessage
+        error: errorMessage,
+        config: kustomizeConfig
     };
 
     return getRenderedContent(templateUri, data);

@@ -10,18 +10,19 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const toggleOutputElem = document.getElementById('toggleoutput');
-            const outputElem = document.getElementById('periscopeoutput');
-
-            toggleOutputElem.addEventListener('click', function (e) {
-                e.preventDefault();
-                toggleChevron(toggleOutputElem);
-                outputElem.classList.toggle('hidden');
-            });
+            for (const elem of document.querySelectorAll('[data-togglecontainer]')) {
+                const controlElem = elem.querySelector('[data-togglecontrol');
+                const contentElem = elem.querySelector('[data-togglecontent]');
+                controlElem.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    toggleChevron(controlElem);
+                    contentElem.classList.toggle('hidden');
+                });
+            }
         });
 
         function toggleChevron(elem) {
-            elem.getElementByClassName('fa')[0].classList.toggle('fa-rotate-180');
+            elem.getElementsByClassName('fa')[0].classList.toggle('fa-rotate-180');
         }
     </script>
 </head>
@@ -39,15 +40,39 @@
         AKS Periscope failed to run on '{{name}}'. Please see the error below for more details.
     </div>
     <div class="container">
-        <div class="panel panel-default data-container">
-            <a id="toggleoutput" style="padding-top:5px;color:black;">
+        <div data-togglecontainer class="panel panel-default data-container">
+            <a data-togglecontrol style="padding-top:5px;color:black;">
+                <i class="fa fa-chevron-up" style="font-size:14px;padding-right:5px;;color:#605E5C;"></i>
+                Periscope settings (from VS Code Configuration)
+            </a>
+
+            <div data-togglecontent class="panel-body data-container-body">
+                {{#with config}}
+                <dl>
+                    <dt>GitHub organisation (containing aks-periscope repo with Kustomize base)</dt>
+                    <dd>{{repoOrg}}</dd>
+
+                    <dt>Container registry (containing Periscope image to deploy)</dt>
+                    <dd>{{containerRegistry}}</dd>
+
+                    <dt>Image version (tag for {{containerRegistry}}/aks/periscope image)</dt>
+                    <dd>{{imageVersion}}</dd>
+
+                    <dt>Release tag (for {{repoOrg}}/aks-periscope GitHub repo)</dt>
+                    <dd>{{releaseTag}}</dd>
+                </dl>
+                {{/with}}
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div data-togglecontainer class="panel panel-default data-container">
+            <a data-togglecontrol style="padding-top:5px;color:black;">
                 <i class="fa fa-chevron-up" style="font-size:14px;padding-right:5px;;color:#605E5C;"></i>
                 Error
             </a>
 
-            <div id="periscopeoutput" class="panel-body data-container-body">
-                {{error}}
-            </div>
+            <pre data-togglecontent class="panel-body data-container-body">{{error}}</pre>
         </div>
     </div>
 </body>
