@@ -276,7 +276,7 @@ export async function getNodeLogs(
     nodeName: string
 ): Promise<Errorable<PodLogs[]>> {
     const getPodsCommand =
-        `get po -n ${periscopeNamespace} --field-selector "spec.nodeName=${nodeName}" -o jsonpath="{.items[*].metadata.name}"`;
+        `get pods -n ${periscopeNamespace} --field-selector "spec.nodeName=${nodeName}" -o jsonpath="{.items[*].metadata.name}"`;
 
     // Run kubectl commands in parallel to gather some output about cluster features.
     return await tmpfile.withOptionalTempFile<Errorable<PodLogs[]>>(clusterKubeConfig, "YAML", async (kubeConfigFile) => {
