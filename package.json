@@ -44,7 +44,8 @@
         "onCommand:aks.aksKubectlGetClusterInfoCommands",
         "onCommand:aks.aksKubectlGetAPIResourcesCommands",
         "onCommand:aks.aksKubectlGetNodeCommands",
-        "onCommand:aks.aksKubectlDescribeServicesCommands"
+        "onCommand:aks.aksKubectlDescribeServicesCommands",
+        "onCommand:aks.aksKubectlGetEventsCommands"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -160,11 +161,15 @@
             },
             {
                 "command": "aks.aksKubectlGetNodeCommands",
-                "title": "Get Node"
+                "title": "Get Nodes"
             },
             {
                 "command": "aks.aksKubectlDescribeServicesCommands",
                 "title": "Describe Services"
+            },
+            {
+                "command": "aks.aksKubectlGetEventsCommands",
+                "title": "Get All Events"
             }
         ],
         "menus": {
@@ -282,6 +287,10 @@
                 },
                 {
                     "command": "aks.aksKubectlDescribeServicesCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKubectlGetEventsCommands",
                     "group": "navigation"
                 }
             ]
