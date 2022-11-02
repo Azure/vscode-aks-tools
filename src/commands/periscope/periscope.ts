@@ -10,16 +10,20 @@ import {
     chooseStorageAccount,
     getStorageInfo,
     prepareAKSPeriscopeKustomizeOverlay,
-    generateDownloadableLinks,
-    getWebviewContent,
-    getClusterFeatures
+    getNodeNames,
+    getSuccessWebviewContent,
+    getFailureWebviewContent,
+    getNoDiagSettingWebviewContent,
+    getClusterFeatures,
+    checkUploadStatus,
+    getNodeLogs
 } from './helpers/periscopehelper';
-import { PeriscopeStorage } from './models/storage';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView } from '../utils/webviews';
 import { Errorable, failed } from '../utils/errorable';
 import { invokeKubectlCommand } from '../utils/kubectl';
 import { getCloudType } from '../../azure-api-utils';
+import { PeriscopeStorage } from './models/storage';
 
 export default async function periscope(
     _context: IActionContext,
@@ -74,9 +78,16 @@ async function runAKSPeriscope(
         () => getClusterDiagnosticSettings(cluster)
     );
 
+    const extensionPath = getExtensionPath();
+    if (failed(extensionPath)) {
+        vscode.window.showErrorMessage(extensionPath.error);
+        return undefined;
+    }
+
     if (!clusterDiagnosticSettings || !clusterDiagnosticSettings.value?.length) {
         // If there is no storage account attached to diagnostic setting, don't move forward and at this point we will render webview with helpful content.
-        await createPeriscopeWebView(cluster.name, undefined, undefined, false);
+        const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
+        webview.html = getNoDiagSettingWebviewContent(extensionPath.result, clusterName);
         return undefined;
     }
 
@@ -121,16 +132,26 @@ async function runAKSPeriscope(
         return undefined;
     }
 
+    const nodeNames = await getNodeNames(kubectl, clusterKubeConfig);
+    if (failed(nodeNames)) {
+        vscode.window.showErrorMessage(nodeNames.error);
+        return undefined;
+    }
+
     const runCommandResult = await longRunning(`Deploying AKS Periscope to ${clusterName}.`,
         () => deployKustomizeOverlay(kubectl, aksDeploymentFile.result, clusterKubeConfig)
     );
 
     if (failed(runCommandResult)) {
-        vscode.window.showErrorMessage(runCommandResult.error);
+        // For a failure running the command result, we display the error in a webview.
+        const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
+        webview.html = getFailureWebviewContent(extensionPath.result, clusterName, runCommandResult.error, kustomizeConfig.result);
         return undefined;
     }
 
-    await createPeriscopeWebView(clusterName, runCommandResult.result, clusterStorageInfo.result);
+    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
+    webview.html = getSuccessWebviewContent(extensionPath.result, runId, clusterName, clusterStorageInfo.result, nodeNames.result);
+    handleMessages(webview, kubectl, clusterKubeConfig, clusterStorageInfo.result, 'aks-periscope', runId, nodeNames.result);
 }
 
 async function deployKustomizeOverlay(
@@ -151,45 +172,41 @@ async function deployKustomizeOverlay(
     });
 }
 
-async function createPeriscopeWebView(
-    clusterName: string,
-    outputResult: k8s.KubectlV1.ShellResult | undefined,
-    periscopeStorageInfo: PeriscopeStorage | undefined,
-    hasDiagnosticSettings = true
-): Promise<void | undefined> {
-    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
-
-    const extensionPath = getExtensionPath();
-    if (failed(extensionPath)) {
-        vscode.window.showErrorMessage(extensionPath.error);
-        return undefined;
-    }
-
-    if (!hasDiagnosticSettings) {
-        // In case of no diagnostic setting we serve user with helpful content in webview and
-        // a link as to how to attach the storage account to cluster's diagnostic settings.
-        webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, undefined, [], hasDiagnosticSettings);
-        return undefined;
-    }
-
-    if (periscopeStorageInfo) {
-        // For the case of successful run of the tool we render webview with the output information.
-        webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, periscopeStorageInfo, []);
-
-        webview.onDidReceiveMessage(
-            async (message) => {
-                if (message.command === "generateDownloadLink") {
-                    // Generate link mechanism is in place due to current behaviour of the aks-periscope tool. (which seems by design for now)
-                    // more detail here: https://github.com/Azure/aks-periscope/issues/30
-                    const downloadableAndShareableNodeLogsList = await longRunning(`Generating links to Periscope logs.`,
-                        () => generateDownloadableLinks(periscopeStorageInfo)
+function handleMessages(
+    webview: vscode.Webview,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    clusterKubeConfig: string,
+    storage: PeriscopeStorage,
+    periscopeNamespace: string,
+    runId: string,
+    nodeNames: string[]
+) {
+    webview.onDidReceiveMessage(
+        async (message) => {
+            switch (message.command) {
+                case "upload_status_request":
+                {
+                    const uploadStatuses = await checkUploadStatus(storage, runId, nodeNames);
+                    webview.postMessage({ command: 'upload_status_response', uploadStatuses });
+                    break;
+                }
+                case "node_logs_request":
+                {
+                    const nodeName = message.nodeName;
+                    const logs = await longRunning(`Getting logs for node ${nodeName}.`,
+                        () => getNodeLogs(kubectl, clusterKubeConfig, periscopeNamespace, nodeName)
                     );
 
-                    webview.html = getWebviewContent(clusterName, extensionPath.result, outputResult, periscopeStorageInfo, downloadableAndShareableNodeLogsList);
-                }
+                    if (failed(logs)) {
+                        vscode.window.showErrorMessage(logs.error);
+                        return;
+                    }
 
-            },
-            undefined
-        );
-    }
+                    webview.postMessage({ command: 'node_logs_response', nodeName, logs: logs.result });
+                    break;
+                }
+            }
+        },
+        undefined
+    );
 }

@@ -46,14 +46,15 @@ body {
 }
 
 .btn {
+    display: inline-block;
     background-color: DodgerBlue;
     border: none;
     color: white;
     padding: 10px 12px;
     font-size: 14px;
     cursor: pointer;
-  }
-  
+}
+
 /* Darker background on mouse-over */
 .btn:hover {
     background-color: RoyalBlue;
@@ -71,4 +72,31 @@ th {
 
 label {
     cursor: pointer;
+}
+
+pre {
+    overflow: auto;
+}
+
+dl {
+    display: flex;
+    flex-flow: row wrap;
+}
+
+dt {
+    flex-basis: 50%;
+    padding: 2px 4px;
+    font-weight: bold;
+}
+
+dd {
+    padding: 2px 4px;
+}
+
+.fa {
+    padding-right: 5px;
+}
+
+.hidden {
+    display: none;
 }
