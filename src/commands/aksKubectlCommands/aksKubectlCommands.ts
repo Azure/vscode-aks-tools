@@ -54,7 +54,7 @@ export async function aksKubectlGetEventsCommands(
   _context: IActionContext,
   target: any
 ): Promise<void> {
-  const command = `get events  --all-namespaces`;
+  const command = `get events --all-namespaces`;
   await aksKubectlCommands(_context, target, command);
 }
 

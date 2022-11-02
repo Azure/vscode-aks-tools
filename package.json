@@ -161,7 +161,7 @@
             },
             {
                 "command": "aks.aksKubectlGetNodeCommands",
-                "title": "Get Node"
+                "title": "Get Nodes"
             },
             {
                 "command": "aks.aksKubectlDescribeServicesCommands",
@@ -169,7 +169,7 @@
             },
             {
                 "command": "aks.aksKubectlGetEventsCommands",
-                "title": "Get Events"
+                "title": "Get All Events"
             }
         ],
         "menus": {
