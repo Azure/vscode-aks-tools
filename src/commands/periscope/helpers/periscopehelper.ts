@@ -3,7 +3,7 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import { getSASKey, LinkDuration } from '../../utils/azurestorage';
 import { parseResource } from '../../../azure-api-utils';
 import * as ast from '@azure/arm-storage';
-import { PeriscopeStorage, PeriscopeHTMLInterface } from '../models/storage';
+import { PeriscopeStorage, PodLogs, UploadStatus } from '../models/storage';
 import * as amon from '@azure/arm-monitor';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -11,18 +11,15 @@ import * as semver from 'semver';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
 import { getRenderedContent, getResourceUri } from '../../utils/webviews';
-import { Errorable, failed } from '../../utils/errorable';
+import { combine, Errorable, failed } from '../../utils/errorable';
 import { invokeKubectlCommand } from '../../utils/kubectl';
 import { KustomizeConfig } from '../models/kustomizeConfig';
 import { ClusterFeatures } from '../models/clusterFeatures';
 import { ContainerServiceClient } from '@azure/arm-containerservice';
 import { getWindowsNodePoolKubernetesVersions } from '../../utils/clusters';
+import { URL } from 'url';
+import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob';
 const tmp = require('tmp');
-
-const {
-    BlobServiceClient,
-    StorageSharedKeyCredential
-} = require("@azure/storage-blob");
 
 export async function getClusterDiagnosticSettings(
     cluster: AksClusterTreeItem
@@ -103,6 +100,12 @@ export async function getStorageInfo(
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         const storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
 
+        const acctProperties = await storageClient.storageAccounts.getProperties(resourceGroupName, accountName);
+        const blobEndpoint = acctProperties.primaryEndpoints?.blob;
+        if (blobEndpoint === undefined) {
+            return { succeeded: false, error: "Unable to retrieve blob endpoint from storage account." };
+        }
+
         // Get container name from cluster-info default behaviour was APIServerName without
         const containerName = await extractContainerName(kubectl, clusterKubeConfig);
         if (failed(containerName)) return containerName;
@@ -111,6 +114,7 @@ export async function getStorageInfo(
             containerName: containerName.result,
             storageName: accountName,
             storageKey: storageKey,
+            blobEndpoint,
             storageDeploymentSas: getSASKey(accountName, storageKey, LinkDuration.DownloadNow),
             sevenDaysSasKey: getSASKey(accountName, storageKey, LinkDuration.Shareable)
         };
@@ -178,85 +182,130 @@ configMapGenerator:
     }
 }
 
-export async function generateDownloadableLinks(
-    periscopeStorage: PeriscopeStorage
-): Promise<PeriscopeHTMLInterface[] | undefined> {
+export async function getNodeNames(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterKubeConfig: string): Promise<Errorable<string[]>> {
+    const runCommandResult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(
+        clusterKubeConfig,
+        "YAML",
+        (kubeConfigFile) => invokeKubectlCommand(kubectl, kubeConfigFile, 'get node -o jsonpath="{.items[*].metadata.name}"'));
 
-    try {
-        const storageAccount = periscopeStorage.storageName;
-        const storageKey = periscopeStorage.storageKey;
-        const sas = periscopeStorage.storageDeploymentSas;
-        const sevenDaySas = periscopeStorage.sevenDaysSasKey;
+    if (failed(runCommandResult)) return runCommandResult;
 
-        // Use SharedKeyCredential with storage account and account key
-        const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
-
-        const blobServiceClient = new BlobServiceClient(
-            `https://${storageAccount}.blob.core.windows.net`,
-            sharedKeyCredential
-        );
-
-        // Hide this all under single pupose funct which lik elike : getZipDir or get me dirname
-        const containerClient = blobServiceClient.getContainerClient(periscopeStorage.containerName);
-
-        // List all current blob.
-        const listCurrentUploadedFolders = [];
-        for await (const item of containerClient.listBlobsByHierarchy("/")) {
-            if (item.kind === "prefix") {
-                listCurrentUploadedFolders.push(item.name);
-            }
-        }
-
-        // Sort and get the latest uploaded folder under the container used by periscope.
-        const periscopeHtmlInterfaceList = [];
-        for await (const blob of containerClient.listBlobsFlat()) {
-            // Get the latest uploaded folder, then Identify the Zip files in the latest uploaded logs within that folder
-            // and extract *.zip files which are individual node logs.
-            const latestBlobUploadedByPeriscope = blob.name.indexOf(listCurrentUploadedFolders.sort().reverse()[0]);
-
-            if (latestBlobUploadedByPeriscope !== -1 && blob.name.indexOf('.zip') !== -1) {
-                const periscopeHTMLInterface = {
-                    storageTimeStamp: path.parse(blob.name).dir.split('/')[0],
-                    nodeLogFileName: path.parse(blob.name).name,
-                    downloadableZipFilename: `${path.parse(blob.name).name}-downloadable`,
-                    downloadableZipUrl: `${containerClient.url}/${blob.name}${sas}`,
-                    downloadableZipShareFilename: `${path.parse(blob.name).name}-share`,
-                    downloadableZipShareUrl: `${containerClient.url}/${blob.name}${sevenDaySas}`
-                };
-
-                periscopeHtmlInterfaceList.push(periscopeHTMLInterface);
-            }
-        }
-        return periscopeHtmlInterfaceList;
-    } catch (e) {
-        vscode.window.showErrorMessage(`Error generating downloadable link: ${e}`);
-        return undefined;
-    }
+    return { succeeded: true, result: runCommandResult.result.stdout.split(' ') };
 }
 
-export function getWebviewContent(
-    clustername: string,
+export async function checkUploadStatus(
+    periscopeStorage: PeriscopeStorage,
+    runId: string,
+    nodeNames: string[]
+): Promise<UploadStatus[]> {
+    const storageAccount = periscopeStorage.storageName;
+    const storageKey = periscopeStorage.storageKey;
+
+    // Use SharedKeyCredential with storage account and account key
+    const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
+
+    const blobServiceClient = new BlobServiceClient(
+        periscopeStorage.blobEndpoint,
+        sharedKeyCredential
+    );
+
+    const uploadStatuses = [];
+
+    const containerClient = blobServiceClient.getContainerClient(periscopeStorage.containerName);
+    for (const nodeName of nodeNames) {
+        const blobName = `${runId}/${nodeName}/${nodeName}.zip`;
+        const blobClient = containerClient.getBlobClient(blobName);
+        const isUploaded = await blobClient.exists();
+        uploadStatuses.push({nodeName, isUploaded});
+    }
+
+    return uploadStatuses;
+}
+
+export function getSuccessWebviewContent(
     aksExtensionPath: string,
-    output: k8s.KubectlV1.ShellResult | undefined,
-    periscopeStorageInfo: PeriscopeStorage | undefined,
-    downloadAndShareNodeLogsList: PeriscopeHTMLInterface[] | undefined,
-    hasDiagnosticSettings = true
+    runId: string,
+    clusterName: string,
+    periscopeStorageInfo: PeriscopeStorage,
+    nodeNames: string[]
 ): string {
     const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
-    const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.html');
+    const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'success.html');
 
-    const commandOutput = output ? output.stderr + output.stdout : undefined;
+    const containerUrl = new URL(periscopeStorageInfo.containerName, periscopeStorageInfo.blobEndpoint);
     const data = {
         cssuri: styleUri,
-        storageAccName: periscopeStorageInfo?.storageName,
-        name: clustername,
-        output: commandOutput,
-        outputCode: output?.code,
-        downloadAndShareNodeLogsList: downloadAndShareNodeLogsList,
-        noDiagnosticSettings: !hasDiagnosticSettings,
+        name: clusterName,
+        runId,
+        nodeNames,
+        containerUrl: containerUrl.href,
+        shareSas: periscopeStorageInfo.sevenDaysSasKey
     };
 
     return getRenderedContent(templateUri, data);
+}
+
+export function getFailureWebviewContent(aksExtensionPath: string, clusterName: string, errorMessage: string, kustomizeConfig: KustomizeConfig): string {
+    const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
+    const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'failure.html');
+    const data = {
+        cssuri: styleUri,
+        name: clusterName,
+        error: errorMessage,
+        config: kustomizeConfig
+    };
+
+    return getRenderedContent(templateUri, data);
+}
+
+export function getNoDiagSettingWebviewContent(aksExtensionPath: string, clusterName: string): string {
+    const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
+    const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'nodiagsetting.html');
+    const data = {
+        cssuri: styleUri,
+        name: clusterName
+    };
+
+    return getRenderedContent(templateUri, data);
+}
+
+export async function getNodeLogs(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    clusterKubeConfig: string,
+    periscopeNamespace: string,
+    nodeName: string
+): Promise<Errorable<PodLogs[]>> {
+    const getPodsCommand =
+        `get pods -n ${periscopeNamespace} --field-selector "spec.nodeName=${nodeName}" -o jsonpath="{.items[*].metadata.name}"`;
+
+    // Run kubectl commands in parallel to gather some output about cluster features.
+    return await tmpfile.withOptionalTempFile<Errorable<PodLogs[]>>(clusterKubeConfig, "YAML", async (kubeConfigFile) => {
+        const getPodsResult = await invokeKubectlCommand(kubectl, kubeConfigFile, getPodsCommand);
+        if (failed(getPodsResult)) {
+            return getPodsResult;
+        }
+
+        const podNames = getPodsResult.result.stdout.split(' ');
+
+        const podLogsResults = await Promise.all(podNames.map(getPodLogs));
+        const podLogs = combine(podLogsResults);
+        if (failed(podLogs)) {
+            return podLogs;
+        }
+
+        return { succeeded: true, result: podLogs.result };
+
+        async function getPodLogs(podName: string): Promise<Errorable<PodLogs>> {
+            const cmd = `logs -n ${periscopeNamespace} ${podName}`;
+            const cmdResult = await invokeKubectlCommand(kubectl, kubeConfigFile, cmd);
+            if (failed(cmdResult)) {
+                return cmdResult;
+            }
+
+            const result = { podName, logs: cmdResult.result.stdout };
+            return { succeeded: true, result };
+        }
+    });
 }
 
 async function extractContainerName(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterKubeConfig: string): Promise<Errorable<string>> {
