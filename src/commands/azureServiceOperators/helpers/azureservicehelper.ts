@@ -87,7 +87,7 @@ async function installOperator(
     kubectl: k8s.KubectlV1,
     clusterKubeConfig: string
 ): Promise<k8s.KubectlV1.ShellResult | undefined> {
-    const asoYamlFile = "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0-beta.0/azureserviceoperator_v2.0.0-beta.0.yaml";
+    const asoYamlFile = "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0-beta.3/azureserviceoperator_v2.0.0-beta.3.yaml";
     const command = `create -f ${asoYamlFile}`;
     const failureDescription = "Installing operator resoruce had following error";
 
