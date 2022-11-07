@@ -141,6 +141,7 @@ Right click on your AKS cluster and click on **Run Kubectl Commands** to easily 
 - API Resources
 - Get Cluster Info
 - Get Node
+- Get All Events
 
 ## Telemetry
 

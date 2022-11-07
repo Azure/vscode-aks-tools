@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.3.5]
+
+* Generate periscope links from run ID.
+* Kubectl get events feature.
+* Update ASO usage to latest.
+* Auto updates for Starter Workflow.
+
+ Thanks to @rzhang628 and @peterbom.
+
 ## [1.3.4]
 
 * Enable quick and easy way to run some kubectl commands on the selected AKS cluster.
