@@ -25,21 +25,24 @@ export function createASOWebView(
         installationResponse.clusterName,
         extensionPath,
         installationResponse,
-        getUserInput);
+        getUserInput,
+        webview);
 }
 
 function getWebviewContent(
     clustername: string,
     aksExtensionPath: string,
     installationResponse: InstallationResponse,
-    getUserInput: boolean
+    getUserInput: boolean,
+    webview: vscode.Webview
 ): string {
     const styleUri = getResourceUri(aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.css');
     const templateUri = getResourceUri(aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.html');
+    const webviewCss = webview.asWebviewUri(styleUri);
 
     const installHtmlResult = getOrganisedInstallResult(clustername, installationResponse);
     const data = {
-        cssuri: styleUri,
+        cssuri: webviewCss,
         name: clustername,
         mainMessage: installHtmlResult.mainMessage,
         resultLogs: installHtmlResult.logs,

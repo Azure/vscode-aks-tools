@@ -77,12 +77,12 @@ async function loadWebViewClusterProperties(
                 return;
               }
 
-              webview.html = getWebviewContent(clusterData.result, clusterState.result, extensionPath.result);
+              webview.html = getWebviewContent(clusterData.result, clusterState.result, extensionPath.result, webview);
           },
           undefined
       );
 
-        webview.html = getWebviewContent(clusterInfo, clusterStateResult, extensionPath.result);
+        webview.html = getWebviewContent(clusterInfo, clusterStateResult, extensionPath.result, webview);
       }
     );
 }
@@ -134,13 +134,15 @@ async function onReceivePerformOperations(
 function getWebviewContent(
     clusterdata: ClusterARMResponse,
     clusterState: string,
-    vscodeExtensionPath: string
+    vscodeExtensionPath: string,
+    webview: vscode.Webview
     ): string {
       const webviewClusterData = clusterdata?.properties;
       const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
+      const webviewCss = webview.asWebviewUri(styleUri);
       const templateUri = getResourceUri(vscodeExtensionPath, 'aksclusterproperties', 'clusterproperties.html');
       const data = {
-        cssuri: styleUri,
+        cssuri: webviewCss,
         name: clusterdata.name,
         clusterData: webviewClusterData,
         clusterState: clusterState

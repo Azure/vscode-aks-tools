@@ -44,20 +44,22 @@ async function loadNetworkConnectivityDetector(
       }
 
       const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`).webview;
-      webview.html = getWebviewContent(detectorInfo.result, extensionPath);
+      webview.html = getWebviewContent(detectorInfo.result, extensionPath, webview);
     }
   );
 }
 
 function getWebviewContent(
   clusterdata: AppLensARMResponse,
-  vscodeExtensionPath: string
+  vscodeExtensionPath: string,
+  webview: vscode.Webview
 ): string {
   const webviewClusterData = clusterdata?.properties;
   const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
+  const webviewCss = webview.asWebviewUri(styleUri);
   const templateUri = getResourceUri(vscodeExtensionPath, 'networkconnectivity', 'networkConnectivity.html');
   const data = {
-    cssuri: styleUri,
+    cssuri: webviewCss,
     name: webviewClusterData.metadata.name,
     description: webviewClusterData.metadata.description,
     portalUrl: getPortalUrl(clusterdata),

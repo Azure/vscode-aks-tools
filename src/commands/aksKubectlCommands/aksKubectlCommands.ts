@@ -111,7 +111,7 @@ async function loadKubectlCommandRun(
         return;
       }
       const webview = createWebView('AKS Kubectl Commands', `AKS Kubectl Command view for: ${clustername}`).webview;
-      webview.html = getWebviewContent(kubectlresult.result, command, extensionPath);
+      webview.html = getWebviewContent(kubectlresult.result, command, extensionPath, webview);
     }
   );
 }
@@ -119,12 +119,14 @@ async function loadKubectlCommandRun(
 function getWebviewContent(
   clusterdata: k8s.KubectlV1.ShellResult,
   commandRun: string,
-  vscodeExtensionPath: string
+  vscodeExtensionPath: string,
+  webview: vscode.Webview
   ): string {
     const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
+    const webviewCss = webview.asWebviewUri(styleUri);
     const templateUri = getResourceUri(vscodeExtensionPath, 'aksKubectlCommand', 'akskubectlcommand.html');
     const data = {
-      cssuri: styleUri,
+      cssuri: webviewCss,
       name: commandRun,
       command: clusterdata.stdout,
     };

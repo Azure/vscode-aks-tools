@@ -227,14 +227,16 @@ export function getSuccessWebviewContent(
     runId: string,
     clusterName: string,
     periscopeStorageInfo: PeriscopeStorage,
-    nodeNames: string[]
+    nodeNames: string[],
+    webview: vscode.Webview
 ): string {
     const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
     const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'success.html');
+    const webviewCss = webview.asWebviewUri(styleUri);
 
     const containerUrl = new URL(periscopeStorageInfo.containerName, periscopeStorageInfo.blobEndpoint);
     const data = {
-        cssuri: styleUri,
+        cssuri: webviewCss,
         name: clusterName,
         runId,
         nodeNames,
@@ -245,11 +247,13 @@ export function getSuccessWebviewContent(
     return getRenderedContent(templateUri, data);
 }
 
-export function getFailureWebviewContent(aksExtensionPath: string, clusterName: string, errorMessage: string, kustomizeConfig: KustomizeConfig): string {
+export function getFailureWebviewContent(aksExtensionPath: string, clusterName: string, errorMessage: string, kustomizeConfig: KustomizeConfig, webview: vscode.Webview): string {
     const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
     const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'failure.html');
+    const webviewCss = webview.asWebviewUri(styleUri);
+
     const data = {
-        cssuri: styleUri,
+        cssuri: webviewCss,
         name: clusterName,
         error: errorMessage,
         config: kustomizeConfig
@@ -258,11 +262,13 @@ export function getFailureWebviewContent(aksExtensionPath: string, clusterName: 
     return getRenderedContent(templateUri, data);
 }
 
-export function getNoDiagSettingWebviewContent(aksExtensionPath: string, clusterName: string): string {
+export function getNoDiagSettingWebviewContent(aksExtensionPath: string, clusterName: string, webview: vscode.Webview): string {
     const styleUri = getResourceUri(aksExtensionPath, 'periscope', 'periscope.css');
     const templateUri = getResourceUri(aksExtensionPath, 'periscope', 'nodiagsetting.html');
+    const webviewCss = webview.asWebviewUri(styleUri);
+
     const data = {
-        cssuri: styleUri,
+        cssuri: webviewCss,
         name: clusterName
     };
 
