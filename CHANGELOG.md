@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.3.6]
+
+* Fix for css custom uri to use asWebViewURI.
+
+ Thanks to @rzhang628 and @peterbom.
+
 ## [1.3.5]
 
 * Generate periscope links from run ID.
