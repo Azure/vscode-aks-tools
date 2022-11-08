@@ -138,11 +138,10 @@ function getWebviewContent(
     webview: vscode.Webview
     ): string {
       const webviewClusterData = clusterdata?.properties;
-      const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
-      const webviewCss = webview.asWebviewUri(styleUri);
-      const templateUri = getResourceUri(vscodeExtensionPath, 'aksclusterproperties', 'clusterproperties.html');
+      const styleUri = getResourceUri(webview, vscodeExtensionPath, 'common', 'detector.css');
+      const templateUri = getResourceUri(webview, vscodeExtensionPath, 'aksclusterproperties', 'clusterproperties.html');
       const data = {
-        cssuri: webviewCss,
+        cssuri: styleUri,
         name: clusterdata.name,
         clusterData: webviewClusterData,
         clusterState: clusterState

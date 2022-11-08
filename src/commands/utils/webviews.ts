@@ -79,10 +79,9 @@ export function createWebView(viewType: string, title: string): vscode.WebviewPa
     return panel;
 }
 
-export function getResourceUri(vscodeExtensionPath: string, folder: string, filename: string): vscode.Uri {
-    return vscode.Uri
-        .file(path.join(vscodeExtensionPath, 'resources', 'webviews', folder, filename))
-        .with({ scheme: 'vscode-resource' });
+export function getResourceUri(webview: vscode.Webview, vscodeExtensionPath: string, folder: string, filename: string): vscode.Uri {
+    const onDiskPath = vscode.Uri.file(path.join(vscodeExtensionPath, 'resources', 'webviews', folder, filename));
+    return webview.asWebviewUri(onDiskPath);
 }
 
 export function getRenderedContent(templateUri: vscode.Uri, data: object): string {

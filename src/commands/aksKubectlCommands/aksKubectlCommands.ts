@@ -122,11 +122,10 @@ function getWebviewContent(
   vscodeExtensionPath: string,
   webview: vscode.Webview
   ): string {
-    const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
-    const webviewCss = webview.asWebviewUri(styleUri);
-    const templateUri = getResourceUri(vscodeExtensionPath, 'aksKubectlCommand', 'akskubectlcommand.html');
+    const styleUri = getResourceUri(webview, vscodeExtensionPath, 'common', 'detector.css');
+    const templateUri = getResourceUri(webview, vscodeExtensionPath, 'aksKubectlCommand', 'akskubectlcommand.html');
     const data = {
-      cssuri: webviewCss,
+      cssuri: styleUri,
       name: commandRun,
       command: clusterdata.stdout,
     };

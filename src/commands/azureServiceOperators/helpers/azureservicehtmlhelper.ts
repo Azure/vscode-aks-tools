@@ -36,13 +36,12 @@ function getWebviewContent(
     getUserInput: boolean,
     webview: vscode.Webview
 ): string {
-    const styleUri = getResourceUri(aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.css');
-    const templateUri = getResourceUri(aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.html');
-    const webviewCss = webview.asWebviewUri(styleUri);
+    const styleUri = getResourceUri(webview, aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.css');
+    const templateUri = getResourceUri(webview, aksExtensionPath, 'azureserviceoperator', 'azureserviceoperator.html');
 
     const installHtmlResult = getOrganisedInstallResult(clustername, installationResponse);
     const data = {
-        cssuri: webviewCss,
+        cssuri: styleUri,
         name: clustername,
         mainMessage: installHtmlResult.mainMessage,
         resultLogs: installHtmlResult.logs,
