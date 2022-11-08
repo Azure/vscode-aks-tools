@@ -87,7 +87,7 @@ async function runAKSPeriscope(
     if (!clusterDiagnosticSettings || !clusterDiagnosticSettings.value?.length) {
         // If there is no storage account attached to diagnostic setting, don't move forward and at this point we will render webview with helpful content.
         const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
-        webview.html = getNoDiagSettingWebviewContent(extensionPath.result, clusterName);
+        webview.html = getNoDiagSettingWebviewContent(extensionPath.result, clusterName, webview);
         return undefined;
     }
 
@@ -145,12 +145,12 @@ async function runAKSPeriscope(
     if (failed(runCommandResult)) {
         // For a failure running the command result, we display the error in a webview.
         const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
-        webview.html = getFailureWebviewContent(extensionPath.result, clusterName, runCommandResult.error, kustomizeConfig.result);
+        webview.html = getFailureWebviewContent(extensionPath.result, clusterName, runCommandResult.error, kustomizeConfig.result, webview);
         return undefined;
     }
 
     const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
-    webview.html = getSuccessWebviewContent(extensionPath.result, runId, clusterName, clusterStorageInfo.result, nodeNames.result);
+    webview.html = getSuccessWebviewContent(extensionPath.result, runId, clusterName, clusterStorageInfo.result, nodeNames.result, webview);
     handleMessages(webview, kubectl, clusterKubeConfig, clusterStorageInfo.result, 'aks-periscope', runId, nodeNames.result);
 }
 
