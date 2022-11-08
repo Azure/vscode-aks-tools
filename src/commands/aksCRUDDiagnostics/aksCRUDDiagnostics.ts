@@ -49,7 +49,7 @@ async function loadDetector(
         }
 
         const webview = createWebView('AKS Diagnostics', `AKS diagnostics view for: ${clustername}`).webview;
-        webview.html = getWebviewContent(detectorInfo.result, detectorMap.result, extensionPath);
+        webview.html = getWebviewContent(detectorInfo.result, detectorMap.result, extensionPath, webview);
       }
     );
 }
@@ -57,11 +57,12 @@ async function loadDetector(
 function getWebviewContent(
   clusterdata: AppLensARMResponse,
   detectorMap: Map<string, AppLensARMResponse>,
-  vscodeExtensionPath: string
+  vscodeExtensionPath: string,
+  webview: vscode.Webview
   ): string {
     const webviewClusterData = clusterdata?.properties;
-    const styleUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.css');
-    const templateUri = getResourceUri(vscodeExtensionPath, 'common', 'detector.html');
+    const styleUri = getResourceUri(webview, vscodeExtensionPath, 'common', 'detector.css');
+    const templateUri = getResourceUri(webview, vscodeExtensionPath, 'common', 'detector.html');
     const data = {
       cssuri: styleUri,
       name: webviewClusterData.metadata.name,
