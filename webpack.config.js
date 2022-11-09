@@ -29,8 +29,8 @@ const config = {
     '@opentelemetry/tracing': '@opentelemetry/tracing'
   },
   plugins: [
-      new webpack.IgnorePlugin(/^electron$/),
-      new webpack.IgnorePlugin(/^\.\/locale$/, /handlebars$/),
+      new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /^electron$/}),
+      new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /handlebars$/ }),
       new fileManagerPlugin({
         events: {
           onEnd: {
