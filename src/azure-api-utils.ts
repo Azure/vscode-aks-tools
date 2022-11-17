@@ -1,6 +1,3 @@
-import { CloudType } from "./commands/utils/clusters";
-import AksClusterTreeItem from "./tree/aksClusterTreeItem";
-
 export interface PartialList<T> extends Array<T> {
     nextLink?: string;
 }
@@ -18,16 +15,6 @@ export function parseResource(armId: string): { resourceGroupName: string | unde
     const resourceGroupName = bitAfter(bits, 'resourceGroups');
     const name = bits[bits.length - 1];
     return { resourceGroupName, name };
-}
-
-export function getCloudType(target: AksClusterTreeItem): CloudType {
-    const location = target.resource.location;
-
-    if (location && location.includes("usgov")) {
-        return CloudType.USGov;
-    }
-
-    return CloudType.Public;
 }
 
 function bitAfter(bits: string[], after: string): string | undefined {

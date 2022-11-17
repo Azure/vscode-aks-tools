@@ -5,9 +5,7 @@ import * as fs from 'fs';
 import { getExtensionPath, longRunning } from '../../utils/host';
 import { OperatorSettings } from '../models/operatorSettings';
 import * as tmpfile from '../../utils/tempfile';
-import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import { InstallationResponse } from '../models/installationResponse';
-import * as clusters from '../../utils/clusters';
 import { createASOWebView } from './azureservicehtmlhelper';
 import { failed } from '../../utils/errorable';
 const tmp = require('tmp');
@@ -17,37 +15,30 @@ export async function startInstallation(
     extensionPath: string,
     kubectl: k8s.KubectlV1,
     installationResponse: InstallationResponse,
-    aksCluster: AksClusterTreeItem,
+    clusterKubeConfig: string,
     operatorSettingsInfo: OperatorSettings
 ): Promise<void | undefined> {
-
-    const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
-    if (failed(clusterKubeConfig)) {
-        vscode.window.showErrorMessage(clusterKubeConfig.error);
-        return undefined;
-    }
-
     // 1) Install Cert-Manager https://azure.github.io/azure-service-operator/.
     // Also, page to refer: https://operatorhub.io/operator/azure-service-operator (Click Install button as top of the page)
     installationResponse.installCertManagerResult = await longRunning(`Installing Cert-Manager resource...`,
-        () => installCertManager(kubectl, clusterKubeConfig.result)
+        () => installCertManager(kubectl, clusterKubeConfig)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installCertManagerResult, installationResponse)) return undefined;
 
     installationResponse.installOperatorResult = await longRunning(`Installing Opreator Namespace...`,
-        () => installOperator(kubectl, clusterKubeConfig.result)
+        () => installOperator(kubectl, clusterKubeConfig)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorResult, installationResponse)) return undefined;
 
     // 2) Run kubectl apply for azureoperatorsettings.yaml
     installationResponse.installOperatorSettingsResult = await longRunning(`Installing Azure Service Operator Settings...`,
-        () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig.result)
+        () => installOperatorSettings(kubectl, operatorSettingsInfo, clusterKubeConfig)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.installOperatorSettingsResult, installationResponse)) return undefined;
 
     // 3) Final step: Get the azure service operator pod. - kubectl get pods -n azureserviceoperator-system
     installationResponse.getOperatorsPodResult = await longRunning(`Getting Azure Service Operator Pod...`,
-        () => getOperatorsPod(kubectl, clusterKubeConfig.result)
+        () => getOperatorsPod(kubectl, clusterKubeConfig)
     );
     if (!isInstallationSuccessfull(webview, extensionPath, installationResponse.getOperatorsPodResult, installationResponse)) return undefined;
 

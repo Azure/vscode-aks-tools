@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as tmpfile from '../utils/tempfile';
-import { CloudType, getAksClusterTreeItem, getContainerClient, getKubeconfigYaml } from '../utils/clusters';
+import { getAksClusterTreeItem, getClusterProperties, getContainerClient, getKubeconfigYaml } from '../utils/clusters';
 import { getKustomizeConfig } from '../utils/config';
 import { getExtensionPath, longRunning } from '../utils/host';
 import {
@@ -22,8 +22,8 @@ import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView } from '../utils/webviews';
 import { Errorable, failed } from '../utils/errorable';
 import { invokeKubectlCommand } from '../utils/kubectl';
-import { getCloudType } from '../../azure-api-utils';
 import { PeriscopeStorage } from './models/storage';
+import { getCloud } from '../utils/clouds';
 
 export default async function periscope(
     _context: IActionContext,
@@ -44,26 +44,30 @@ export default async function periscope(
 
     // Once Periscope will support usgov endpoints all we need is to remove this check.
     // I have done background plumbing for vscode to fetch downlodable link from correct endpoint.
-    const cloudType = getCloudType(cluster.result);
-
-    switch (cloudType) {
-        case CloudType.USGov:
-          vscode.window.showInformationMessage(`Periscope is not supported in ${cloudType} cloud.`);
-          return;
-        case CloudType.Public:
-          break;
-        default:
-          vscode.window.showErrorMessage(`Unrecognised cloud type ${cloudType}.`);
-          return;
-      }
-
-    const clusterKubeConfig = await getKubeconfigYaml(cluster.result);
-    if (failed(clusterKubeConfig)) {
-        vscode.window.showErrorMessage(clusterKubeConfig.error);
+    const cloud = getCloud(cluster.result);
+    if (failed(cloud)) {
+        vscode.window.showErrorMessage(cloud.error);
         return;
     }
 
-    await runAKSPeriscope(kubectl, cluster.result, clusterKubeConfig.result);
+    if (!cloud.result.isPeriscopeSupported) {
+        vscode.window.showInformationMessage(`Periscope is not supported in ${cloud.result.name} cloud.`);
+        return;
+    }
+
+    const properties = await longRunning(`Getting properties for cluster ${cluster.result.name}.`, () => getClusterProperties(cluster.result));
+    if (failed(properties)) {
+        vscode.window.showErrorMessage(properties.error);
+        return undefined;
+    }
+
+    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${cluster.result.name}.`, () => getKubeconfigYaml(cluster.result, properties.result));
+    if (failed(kubeconfig)) {
+        vscode.window.showErrorMessage(kubeconfig.error);
+        return undefined;
+    }
+
+    await runAKSPeriscope(kubectl, cluster.result, kubeconfig.result);
 }
 
 async function runAKSPeriscope(
