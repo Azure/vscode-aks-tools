@@ -39,3 +39,10 @@ export function combine<T>(es: Errorable<T>[]): Errorable<T[]> {
         result: es.map(e => (e as Succeeded<T>).result)
     };
 }
+
+export function getErrorMessage(error: unknown) {
+    if (error instanceof Error) {
+       return error.message;
+    }
+    return String(error);
+ }

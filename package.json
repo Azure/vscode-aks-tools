@@ -75,6 +75,12 @@
                     "default": "0.0.11",
                     "title": "Periscope image version",
                     "description": "Docker image tag corresponding to the Periscope version."
+                },
+                "azure.kubelogin.releaseTag": {
+                    "type": "string",
+                    "default": "v0.0.22",
+                    "title": "Kubelogin repository release tag",
+                    "description": "Release tag for the stable kubelogin tool release."
                 }
             }
         },
@@ -329,6 +335,8 @@
         "@types/mocha": "^2.2.48",
         "@types/node": "^16.11.7",
         "@types/semver": "^7.3.11",
+        "@types/shelljs": "^0.8.11",
+        "@types/tmp": "^0.2.3",
         "@types/underscore": "^1.11.3",
         "@types/vscode": "^1.52.0",
         "chai": "^4.3.4",
@@ -357,6 +365,8 @@
         "@types/sinon": "^10.0.6",
         "@types/sinonjs__fake-timers": "^6.0.2",
         "ajv": "^6.12.6",
+        "decompress": "^4.2.1",
+        "download": "^8.0.0",
         "filemanager-webpack-plugin": "^7.0.0-beta.0",
         "handlebars": "^4.7.7",
         "js-yaml": "^3.14.0",
