@@ -4,7 +4,6 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath }  from '../utils/host';
 import { failed } from '../utils/errorable';
-import { getCloud } from '../utils/clouds';
 const meta = require('../../../package.json');
 
 export default async function aksNavToPortal(
@@ -25,12 +24,7 @@ export default async function aksNavToPortal(
       return;
     }
 
-    const cloud = getCloud(cluster.result);
-    if (failed(cloud)) {
-      vscode.window.showErrorMessage(cloud.error);
-      return;
-    }
-
     // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-    vscode.env.openExternal(vscode.Uri.parse(`${cloud.result.portalEndpoint}/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
+    const portalUrl = cluster.result.subscription.environment.portalUrl.replace(/\/$/, "");
+    vscode.env.openExternal(vscode.Uri.parse(`${portalUrl}/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`));
 }

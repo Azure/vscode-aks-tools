@@ -23,7 +23,6 @@ import { createWebView } from '../utils/webviews';
 import { Errorable, failed } from '../utils/errorable';
 import { invokeKubectlCommand } from '../utils/kubectl';
 import { PeriscopeStorage } from './models/storage';
-import { getCloud } from '../utils/clouds';
 
 export default async function periscope(
     _context: IActionContext,
@@ -44,14 +43,9 @@ export default async function periscope(
 
     // Once Periscope will support usgov endpoints all we need is to remove this check.
     // I have done background plumbing for vscode to fetch downlodable link from correct endpoint.
-    const cloud = getCloud(cluster.result);
-    if (failed(cloud)) {
-        vscode.window.showErrorMessage(cloud.error);
-        return;
-    }
-
-    if (!cloud.result.isPeriscopeSupported) {
-        vscode.window.showInformationMessage(`Periscope is not supported in ${cloud.result.name} cloud.`);
+    const cloudName = cluster.result.subscription.environment.name;
+    if (cloudName !== "AzureCloud") {
+        vscode.window.showInformationMessage(`Periscope is not supported in ${cloudName} cloud.`);
         return;
     }
 

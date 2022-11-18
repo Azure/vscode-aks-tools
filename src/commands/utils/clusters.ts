@@ -8,7 +8,6 @@ import { getAksAadAccessToken } from './authProvider';
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getCloud, PublicCloud } from './clouds';
 import { AuthenticationResult } from '@azure/msal-node';
 const tmp = require('tmp');
 
@@ -97,6 +96,7 @@ async function getAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.Contai
     let clusterUserCredentials: azcs.CredentialResults;
 
     try {
+        // For AAD clusters, force the credentials to be in 'exec' format.
         clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(cluster.resourceGroupName, cluster.name, { format: azcs.KnownFormat.Exec });
     } catch (e) {
         return { succeeded: false, error: `Failed to retrieve user credentials for AAD cluster ${cluster.name}: ${e}`};
@@ -108,6 +108,7 @@ async function getAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.Contai
         return unauthenticatedKubeconfig;
     }
 
+    // Parse the kubeconfig YAML into an object so that we can read and update exec options.
     let kubeconfigYaml: any;
     try {
         kubeconfigYaml = yaml.load(unauthenticatedKubeconfig.result);
@@ -119,24 +120,25 @@ async function getAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.Contai
     const execBlock = kubeconfigYaml.users[0].user.exec;
     const execOptions = readExecOptions(execBlock.args);
 
-    // Get a token to store in the cached credentials directory.
+    // We need to supply an access token that grants the user access to the cluster. The user running this will be authenticated,
+    // and we have access to their credentials here...
     const localToken = await cluster.subscription.credentials.getToken();
-    const cloud = getCloud(cluster);
-    if (failed(cloud)) {
-        return cloud;
-    }
 
-    const aadAccessToken = await getAksAadAccessToken(cloud.result, execOptions.serverId, localToken.refreshToken);
+    // But, the user's token is for VS Code, and instead we need a token whose audience is the AKS server ID.
+    // This can be obtained by exchanging the user's refresh token for one with the new audience.
+    const aadAccessToken = await getAksAadAccessToken(cluster.subscription.environment, execOptions.serverId, execOptions.tenantId, localToken.refreshToken);
     if (failed(aadAccessToken)) {
         return aadAccessToken;
     }
 
+    // Now we have a token the user can use to access their cluster, but kubelogin doesn't support that being passed as an
+    // argument directly. Instead, we can save it to a temp directory and instruct kubelogin to use that as its cache directory.
     const cacheDir = storeCachedAadToken(aadAccessToken.result, execOptions);
     if (failed(cacheDir)) {
         return cacheDir;
     }
 
-    // Update the kubeconfig YAML.
+    // Update the kubeconfig YAML with the new kubelogin options, and return the serialized output as a string.
     execBlock.args = buildExecOptionsWithCache(execOptions, cacheDir.result);
     const authenticatedKubeConfig = yaml.dump(kubeconfigYaml);
     return { succeeded: true, result: authenticatedKubeConfig };
@@ -334,7 +336,6 @@ export async function getWindowsNodePoolKubernetesVersions(
 }
 
 export function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
-    const cloudResult = getCloud(target);
-    const cloud = failed(cloudResult) ? PublicCloud : cloudResult.result;
-    return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint: cloud.armEndpoint});
+    const environment = target.subscription.environment;
+    return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint: environment.resourceManagerEndpointUrl});
 }
