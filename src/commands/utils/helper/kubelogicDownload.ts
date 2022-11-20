@@ -83,7 +83,7 @@ export async function downloadKubeloginBinary() {
       fs.unlinkSync(filePath);
 
       // Move file to more flatten structure.
-      await moveKubeloginToFlatDirStruct();
+      await moveKubeloginToFlatDirStruct(latestReleaseTag);
     })
     .catch((error: any) => {
         return {
@@ -93,12 +93,12 @@ export async function downloadKubeloginBinary() {
     });
    
    //If linux check -- make chmod 0755
-   fs.chmodSync(path.join(kubeloginPath, "kubelogin"), '0755');
+   fs.chmodSync(path.join(kubeloginPath, latestReleaseTag, "kubelogin"), '0755');
    return succeeded(downloadResult);
 
 }
 
-async function moveKubeloginToFlatDirStruct(){
+async function moveKubeloginToFlatDirStruct(latestReleaseTag: string){
    let architecture = os.arch();
    const operatingSystem = os.platform().toLocaleLowerCase();
 
@@ -108,7 +108,7 @@ async function moveKubeloginToFlatDirStruct(){
    const kubeloginPath = path.join(baseInstallFolder(), "kubelogin");
 
    const oldPath = path.join(kubeloginPath, "bin", `${operatingSystem}_${architecture}`, "kubelogin");
-   const newPath = path.join(kubeloginPath, "kubelogin");
+   const newPath = path.join(kubeloginPath, latestReleaseTag, "kubelogin");
 
    await moveFile(oldPath, newPath);
 }

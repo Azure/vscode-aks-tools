@@ -9,7 +9,6 @@ import * as clusters from '../utils/clusters';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 import { invokeKubectlCommand } from '../utils/kubectl';
-import { downloadKubeloginBinary } from '../utils/helper/kubelogicDownload';
 
 export async function aksKubectlGetPodsCommands(
   _context: IActionContext,
@@ -70,16 +69,6 @@ async function aksKubectlCommands(
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return undefined;
-    }
-
-    // Ensure kubelogin Binary
-    const downloadResult = await longRunning(`Downloading Kubelogin.`, () =>
-        downloadKubeloginBinary()
-    );
-
-    if (!downloadResult) {
-      vscode.window.showErrorMessage('Failed to download Kubelogin');
-      return undefined;
     }
 
     const cluster = getAksClusterTreeItem(target, cloudExplorer);
