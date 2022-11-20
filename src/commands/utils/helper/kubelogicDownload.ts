@@ -3,8 +3,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as download from '../download/download';
 import * as path from 'path';
-import {combine, Errorable, failed, succeeded} from '../errorable';
-import {shell} from '../.././utils/shell';
+import { combine, Errorable, failed, succeeded } from '../errorable';
+import { shell } from '../.././utils/shell';
+import { moveFile } from 'move-file';
 
 const {exec} = require('child_process');
 
@@ -48,10 +49,11 @@ export async function downloadKubeloginBinary() {
 
    const kubeloginBinaryFile = getKubeloginFileName();
 
+   const kubeloginPath = path.join(baseInstallFolder(), "kubelogin");
+
    // example latest release location: https://github.com/Azure/kubelogin/releases/tag/v0.0.20
    const destinationFile = path.join(
-      baseInstallFolder(),
-      latestReleaseTag,
+      kubeloginPath,
       kubeloginBinaryFile
    );
 
@@ -73,17 +75,42 @@ export async function downloadKubeloginBinary() {
    }
    const decompress = require("decompress");
 
-   decompress(destinationFile, path.join(baseInstallFolder(), latestReleaseTag))
+   await decompress(destinationFile, kubeloginPath)
+    .then(async () => {
+      // Remove zip.
+      var fs = require('fs');
+      var filePath = destinationFile; 
+      fs.unlinkSync(filePath);
+
+      // Move file to more flatten structure.
+      await moveKubeloginToFlatDirStruct();
+    })
     .catch((error: any) => {
         return {
             succeeded: false,
             error: [`Failed to unzip kubelogin binary: ${error}`]
          };
     });
-
+   
    //If linux check -- make chmod 0755
-   fs.chmodSync(destinationFile, '0755');
+   fs.chmodSync(path.join(kubeloginPath, "kubelogin"), '0755');
    return succeeded(downloadResult);
+
+}
+
+async function moveKubeloginToFlatDirStruct(){
+   let architecture = os.arch();
+   const operatingSystem = os.platform().toLocaleLowerCase();
+
+   if (architecture === 'x64') {
+      architecture = 'amd64';
+   }
+   const kubeloginPath = path.join(baseInstallFolder(), "kubelogin");
+
+   const oldPath = path.join(kubeloginPath, "bin", `${operatingSystem}_${architecture}`, "kubelogin");
+   const newPath = path.join(kubeloginPath, "kubelogin");
+
+   await moveFile(oldPath, newPath);
 }
 
 function getKubeloginFileName() {
