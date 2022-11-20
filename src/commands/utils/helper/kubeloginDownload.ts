@@ -4,22 +4,16 @@ import * as os from 'os';
 import * as download from '../download/download';
 import * as path from 'path';
 import { combine, Errorable, failed, succeeded } from '../errorable';
-import { shell } from '../.././utils/shell';
 import { moveFile } from 'move-file';
+import { longRunning } from '../host';
 
-const {exec} = require('child_process');
+let kubeloginBinaryPath: string;
 
-export interface KubeloginConfig {
+interface KubeloginConfig {
     releaseTag: string;
  }
 
-export function runCommand(command: string): string {
-   const cmdRun = exec(command).stdout;
-
-   return cmdRun;
-}
-
-export function baseInstallFolder(): string {
+function baseInstallFolder(): string {
    return path.join(os.homedir(), `.vs-kubernetes/tools`);
 }
 
@@ -37,19 +31,19 @@ function checkIfKubeloginBinaryExist(destinationFile: string): boolean {
    return fs.existsSync(destinationFile);
 }
 
-export async function downloadKubeloginBinary() {
+export async function getKubeloginBinaryPath(): Promise<Errorable<string>> {
    // 0. Get latest release tag.
    // 1: check if file already exist.
    // 2: if not Download latest.
    const latestReleaseTag = await getLatestKubeloginReleaseTag();
 
    if (!latestReleaseTag) {
-      return;
+      return {succeeded: false, error: "Could not get latest release tag."};
    }
 
    const kubeloginBinaryFile = getKubeloginFileName();
-
    const kubeloginPath = path.join(baseInstallFolder(), "kubelogin");
+   kubeloginBinaryPath = path.join(kubeloginPath, latestReleaseTag, "kubelogin");
 
    // example latest release location: https://github.com/Azure/kubelogin/releases/tag/v0.0.20
    const destinationFile = path.join(
@@ -58,7 +52,7 @@ export async function downloadKubeloginBinary() {
    );
 
    if (checkIfKubeloginBinaryExist(destinationFile)) {
-      return {succeeded: true};
+      return {succeeded: true, result: kubeloginBinaryPath};
    }
 
    const kubeloginDownloadUrl = `https://github.com/Azure/kubelogin/releases/download/${latestReleaseTag}/${kubeloginBinaryFile}.zip`;
@@ -70,7 +64,7 @@ export async function downloadKubeloginBinary() {
    if (failed(downloadResult)) {
       return {
          succeeded: false,
-         error: [`Failed to download kubelogin binary: ${downloadResult.error[0]}`]
+         error: `Failed to download kubelogin binary: ${downloadResult.error}`
       };
    }
    const decompress = require("decompress");
@@ -83,22 +77,21 @@ export async function downloadKubeloginBinary() {
       fs.unlinkSync(filePath);
 
       // Move file to more flatten structure.
-      await moveKubeloginToFlatDirStruct(latestReleaseTag);
+      await moveKubeloginToFlatDirStruct();
     })
     .catch((error: any) => {
         return {
             succeeded: false,
-            error: [`Failed to unzip kubelogin binary: ${error}`]
+            error: `Failed to unzip kubelogin binary: ${error}`
          };
     });
-   
-   //If linux check -- make chmod 0755
-   fs.chmodSync(path.join(kubeloginPath, latestReleaseTag, "kubelogin"), '0755');
-   return succeeded(downloadResult);
 
+   //If linux check -- make chmod 0755
+   fs.chmodSync(path.join(kubeloginBinaryPath), '0755');
+   return {succeeded: true, result: kubeloginBinaryPath};
 }
 
-async function moveKubeloginToFlatDirStruct(latestReleaseTag: string){
+async function moveKubeloginToFlatDirStruct(){
    let architecture = os.arch();
    const operatingSystem = os.platform().toLocaleLowerCase();
 
@@ -108,7 +101,7 @@ async function moveKubeloginToFlatDirStruct(latestReleaseTag: string){
    const kubeloginPath = path.join(baseInstallFolder(), "kubelogin");
 
    const oldPath = path.join(kubeloginPath, "bin", `${operatingSystem}_${architecture}`, "kubelogin");
-   const newPath = path.join(kubeloginPath, latestReleaseTag, "kubelogin");
+   const newPath = path.join(kubeloginBinaryPath);
 
    await moveFile(oldPath, newPath);
 }
@@ -130,31 +123,7 @@ function getKubeloginFileName() {
    return kubeloginBinaryFile;
 }
 
-export async function runKubeloginCommand(
-   command: string
-): Promise<[string, string]> {
-   const latestReleaseTag = await getLatestKubeloginReleaseTag();
-   if (!latestReleaseTag) {
-      return ['', ''];
-   }
-   const kubeloginBinaryFile = getKubeloginFileName();
-   const destinationBinaryFile = path.join(
-      baseInstallFolder(),
-      latestReleaseTag,
-      kubeloginBinaryFile
-   );
-   const runCommandOutput = await shell.exec(
-      `${destinationBinaryFile} ${command}`
-   );
-
-   if (failed(runCommandOutput)) {
-      return ['', ''];
-   }
-
-   return [runCommandOutput.result.stdout, runCommandOutput.result.stderr];
-}
-
-export function getKubeloginConfig(): Errorable<KubeloginConfig> {
+function getKubeloginConfig(): Errorable<KubeloginConfig> {
    const kubeloginConfig = vscode.workspace.getConfiguration('azure.kubelogin');
    const props = combine([getConfigValue(kubeloginConfig, 'releaseTag')]);
 

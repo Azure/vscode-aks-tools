@@ -335,7 +335,6 @@
         "@types/mocha": "^2.2.48",
         "@types/node": "^16.11.7",
         "@types/semver": "^7.3.11",
-        "@types/shelljs": "^0.8.11",
         "@types/tmp": "^0.2.3",
         "@types/underscore": "^1.11.3",
         "@types/vscode": "^1.52.0",

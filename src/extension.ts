@@ -23,8 +23,6 @@ import aksClusterProperties from './commands/aksClusterProperties/aksClusterProp
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectlGetAPIResourcesCommands, aksKubectlGetNodeCommands, aksKubectlDescribeServicesCommands, aksKubectlGetEventsCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
-import { downloadKubeloginBinary } from './commands/utils/helper/kubelogicDownload';
-import { longRunning } from './commands/utils/host';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -39,9 +37,6 @@ export async function activate(context: vscode.ExtensionContext) {
             outputChannel: createAzExtOutputChannel('Azure Identity', ''),
             prefix: ''
         };
-
-        // Download Kubelogin for AAD Enabled AKS Cluster.
-        await downloadKubelogin();
 
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
@@ -129,16 +124,4 @@ function telemetrise(command: string, callback: (context: IActionContext, target
 
         return callback(context, target);
     };
-}
-
-async function downloadKubelogin(): Promise<undefined | void> {
-    // Ensure kubelogin Binary
-    const downloadResult = await longRunning(`Downloading Kubelogin.`, () =>
-        downloadKubeloginBinary()
-    );
-
-    if (!downloadResult) {
-      vscode.window.showErrorMessage('Failed to download Kubelogin');
-      return undefined;
-    }
 }
