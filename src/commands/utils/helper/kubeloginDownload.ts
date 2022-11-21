@@ -3,9 +3,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as download from '../download/download';
 import * as path from 'path';
-import { combine, Errorable, failed, succeeded } from '../errorable';
+import { combine, Errorable, failed } from '../errorable';
 import { moveFile } from 'move-file';
-import { longRunning } from '../host';
 
 let kubeloginBinaryPath: string;
 
