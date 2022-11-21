@@ -6,11 +6,18 @@ import * as path from 'path';
 import { getKubeloginConfig } from '../config';
 import { Errorable, failed } from '../errorable';
 import { moveFile } from 'move-file';
+import { longRunning } from '../host';
 
-let kubeloginBinaryPath: string;
-
-function baseInstallFolder(): string {
+function getBaseInstallFolder(): string {
    return path.join(os.homedir(), `.vs-kubernetes/tools`);
+}
+
+function getKubeloginBinaryFolder(releaseTag: string): string {
+   return path.join(getBaseInstallFolder(), releaseTag);
+}
+
+function getDownloadFolder(): string {
+   return path.join(getBaseInstallFolder(), "download");
 }
 
 async function getLatestKubeloginReleaseTag() {
@@ -31,90 +38,100 @@ export async function getKubeloginBinaryPath(): Promise<Errorable<string>> {
    // 0. Get latest release tag.
    // 1: check if file already exist.
    // 2: if not Download latest.
-   const latestReleaseTag = await getLatestKubeloginReleaseTag();
+   const releaseTag = await getLatestKubeloginReleaseTag();
 
-   if (!latestReleaseTag) {
+   if (!releaseTag) {
       return {succeeded: false, error: "Could not get latest release tag."};
    }
 
-   const kubeloginBinaryFile = getKubeloginFileName();
-   const kubeloginPath = path.join(baseInstallFolder(), "kubelogin");
-   kubeloginBinaryPath = path.join(kubeloginPath, latestReleaseTag, "kubelogin");
+   const binaryFolder = getKubeloginBinaryFolder(releaseTag);
 
-   // example latest release location: https://github.com/Azure/kubelogin/releases/tag/v0.0.20
-   const destinationFile = path.join(
-      kubeloginPath,
-      kubeloginBinaryFile
+   const binaryFilePath = path.join(
+      binaryFolder,
+      getKubeloginExecutableFileName()
    );
 
-   if (checkIfKubeloginBinaryExist(destinationFile)) {
-      return {succeeded: true, result: kubeloginBinaryPath};
+   if (checkIfKubeloginBinaryExist(binaryFilePath)) {
+      return {succeeded: true, result: binaryFilePath};
    }
 
-   const kubeloginDownloadUrl = `https://github.com/Azure/kubelogin/releases/download/${latestReleaseTag}/${kubeloginBinaryFile}.zip`;
-   const downloadResult = await download.once(
-      kubeloginDownloadUrl,
-      destinationFile
-   );
+   return await longRunning(`Downloading kubelogin to ${binaryFilePath}.`, () => downloadKubelogin(binaryFilePath, releaseTag));
+}
 
+async function downloadKubelogin(binaryFilePath: string, releaseTag: string): Promise<Errorable<string>> {
+   const downloadFolder = getDownloadFolder();
+   const downloadFileName = getKubeloginZipFileName();
+   const downloadFilePath = path.join(downloadFolder, downloadFileName);
+
+   const kubeloginDownloadUrl = `https://github.com/Azure/kubelogin/releases/download/${releaseTag}/${downloadFileName}`;
+
+   const downloadResult = await download.once(kubeloginDownloadUrl, downloadFilePath);
    if (failed(downloadResult)) {
       return {
          succeeded: false,
-         error: `Failed to download kubelogin binary: ${downloadResult.error}`
+         error: `Failed to download kubelogin binary from ${kubeloginDownloadUrl}: ${downloadResult.error}`
       };
    }
    const decompress = require("decompress");
 
-   await decompress(destinationFile, kubeloginPath)
-    .then(async () => {
-      // Remove zip.
-      var fs = require('fs');
-      var filePath = destinationFile; 
-      fs.unlinkSync(filePath);
+   try {
+      await decompress(downloadFilePath, downloadFolder);
+   } catch (error) {
+      return {
+         succeeded: false,
+         error: `Failed to unzip kubelogin binary ${downloadFilePath} to ${downloadFolder}: ${error}`
+      };
+   }
 
-      // Move file to more flatten structure.
-      await moveKubeloginToFlatDirStruct();
-    })
-    .catch((error: any) => {
-        return {
-            succeeded: false,
-            error: `Failed to unzip kubelogin binary: ${error}`
-         };
-    });
+   // Remove zip.
+   fs.unlinkSync(downloadFilePath);
+
+   // Avoid `download.once()` thinking that the zip file is already downloaded the next time.
+   // If there's any failure after this, we *want* it to be downloaded again.
+   download.clear(downloadFilePath);
+
+   // Move file to more flatten structure.
+   const unzippedBinaryFilePath = getUnzippedKubeloginFilePath(downloadFolder);
+   await moveFile(unzippedBinaryFilePath, binaryFilePath);
 
    //If linux check -- make chmod 0755
-   fs.chmodSync(path.join(kubeloginBinaryPath), '0755');
-   return {succeeded: true, result: kubeloginBinaryPath};
+   fs.chmodSync(path.join(binaryFilePath), '0755');
+   return {succeeded: true, result: binaryFilePath};
 }
 
-async function moveKubeloginToFlatDirStruct(){
+function getUnzippedKubeloginFilePath(unzippedFolder: string) {
    let architecture = os.arch();
-   const operatingSystem = os.platform().toLocaleLowerCase();
+   let operatingSystem = os.platform().toLocaleLowerCase();
 
    if (architecture === 'x64') {
       architecture = 'amd64';
    }
-   const kubeloginPath = path.join(baseInstallFolder(), "kubelogin");
-
-   const oldPath = path.join(kubeloginPath, "bin", `${operatingSystem}_${architecture}`, "kubelogin");
-   const newPath = path.join(kubeloginBinaryPath);
-
-   await moveFile(oldPath, newPath);
-}
-
-function getKubeloginFileName() {
-   let architecture = os.arch();
-   const operatingSystem = os.platform().toLocaleLowerCase();
-
-   if (architecture === 'x64') {
-      architecture = 'amd64';
-   }
-   let kubeloginBinaryFile = `kubelogin-${operatingSystem}-${architecture}`;
 
    if (operatingSystem === 'win32') {
-      // Kubelogin release v0.0.22 the file name has exe associated with it.
-      kubeloginBinaryFile = `kubelogin-${operatingSystem}-${architecture}.exe`;
+      operatingSystem = 'windows';
    }
 
-   return kubeloginBinaryFile;
+   const unzippedBinaryFilename = getKubeloginExecutableFileName();
+   return path.join(unzippedFolder, "bin", `${operatingSystem}_${architecture}`, unzippedBinaryFilename);
+}
+
+function getKubeloginZipFileName() {
+   let architecture = os.arch();
+   let operatingSystem = os.platform().toLocaleLowerCase();
+
+   if (architecture === 'x64') {
+      architecture = 'amd64';
+   }
+
+   if (operatingSystem === 'win32') {
+      operatingSystem = 'win';
+   }
+
+   return `kubelogin-${operatingSystem}-${architecture}.zip`;
+}
+
+function getKubeloginExecutableFileName() {
+   const operatingSystem = os.platform().toLocaleLowerCase();
+   const extension = operatingSystem === 'win32' ? '.exe' : '';
+   return `kubelogin${extension}`;
 }

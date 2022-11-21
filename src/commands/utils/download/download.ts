@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as stream from 'stream';
-import * as tmp from 'tmp';
 import { succeeded, Errorable, getErrorMessage} from '../errorable';
 import { Dictionary } from '../dictionary';
 import { sleep } from '../sleep';
@@ -34,17 +33,6 @@ function ensureDownloadFunc() {
    }
 }
 
-export async function toTempFile(
-   sourceUrl: string
-): Promise<Errorable<string>> {
-   const tempFileObj = tmp.fileSync({prefix: 'vskubelogin-autoinstall-'});
-   const downloadResult = await to(sourceUrl, tempFileObj.name);
-   if (succeeded(downloadResult)) {
-      return {succeeded: true, result: tempFileObj.name};
-   }
-   return {succeeded: false, error: downloadResult.error};
-}
-
 export async function to(
    sourceUrl: string,
    destinationFile: string
@@ -76,14 +64,15 @@ export async function once(
    } else {
       while (true) {
          await sleep(100);
-         if (
-            DOWNLOAD_ONCE_STATUS[destinationFile] ===
-            DownloadOperationStatus.Completed
-         ) {
+         if (DOWNLOAD_ONCE_STATUS[destinationFile] === DownloadOperationStatus.Completed) {
             return {succeeded: true, result: null};
          } else {
             return await once(sourceUrl, destinationFile);
          }
       }
    }
+}
+
+export async function clear(downloadedFilePath: string) {
+   delete DOWNLOAD_ONCE_STATUS[downloadedFilePath];
 }
