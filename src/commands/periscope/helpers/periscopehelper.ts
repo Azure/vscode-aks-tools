@@ -13,7 +13,7 @@ import * as tmpfile from '../../utils/tempfile';
 import { getRenderedContent, getResourceUri } from '../../utils/webviews';
 import { combine, Errorable, failed } from '../../utils/errorable';
 import { invokeKubectlCommand } from '../../utils/kubectl';
-import { KustomizeConfig } from '../models/kustomizeConfig';
+import { KustomizeConfig } from '../models/config';
 import { ClusterFeatures } from '../models/clusterFeatures';
 import { ContainerServiceClient } from '@azure/arm-containerservice';
 import { getWindowsNodePoolKubernetesVersions } from '../../utils/clusters';

@@ -3,14 +3,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as download from '../download/download';
 import * as path from 'path';
-import { combine, Errorable, failed } from '../errorable';
+import { getKubeloginConfig } from '../config';
+import { Errorable, failed } from '../errorable';
 import { moveFile } from 'move-file';
 
 let kubeloginBinaryPath: string;
-
-interface KubeloginConfig {
-    releaseTag: string;
- }
 
 function baseInstallFolder(): string {
    return path.join(os.homedir(), `.vs-kubernetes/tools`);
@@ -120,40 +117,4 @@ function getKubeloginFileName() {
    }
 
    return kubeloginBinaryFile;
-}
-
-function getKubeloginConfig(): Errorable<KubeloginConfig> {
-   const kubeloginConfig = vscode.workspace.getConfiguration('azure.kubelogin');
-   const props = combine([getConfigValue(kubeloginConfig, 'releaseTag')]);
-
-   if (failed(props)) {
-      return {
-         succeeded: false,
-         error: `Failed to readazure.kubelogin configuration: ${props.error}`
-      };
-   }
-
-   const config = {
-      releaseTag: props.result[0]
-   };
-
-   return {succeeded: true, result: config};
-}
-
-function getConfigValue(
-   config: vscode.WorkspaceConfiguration,
-   key: string
-): Errorable<string> {
-   const value = config.get(key);
-   if (value === undefined) {
-      return {succeeded: false, error: `${key} not defined.`};
-   }
-   const result = value as string;
-   if (result === undefined) {
-      return {
-         succeeded: false,
-         error: `${key} value has type: ${typeof value}; expected string.`
-      };
-   }
-   return {succeeded: true, result: result};
 }

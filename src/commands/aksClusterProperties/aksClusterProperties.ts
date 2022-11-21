@@ -5,7 +5,8 @@ import { ClusterARMResponse, determineClusterState, getAksClusterTreeItem, getCl
 import { getExtensionPath, longRunning }  from '../utils/host';
 import { Errorable, failed } from '../utils/errorable';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { createWebView, delay, getRenderedContent, getResourceUri } from '../utils/webviews';
+import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
+import { sleep } from '../utils/sleep';
 
 export default async function aksClusterProperties(
     _context: IActionContext,
@@ -123,7 +124,7 @@ async function onReceivePerformOperations(
     }
     // This delay is deliberate for previous action to kick-in,
     // without delay if we call load data it is consistent to get old data from RP.
-    const clusterData = await longRunning(`Getting cluster data.`, async () => { await delay(10000); return getClusterData(cloudTarget); });
+    const clusterData = await longRunning(`Getting cluster data.`, async () => { await sleep(10000); return getClusterData(cloudTarget); });
     if (failed(clusterData)) {
       return { succeeded: false, error: clusterData.error };
     }

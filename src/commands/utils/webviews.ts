@@ -105,7 +105,3 @@ htmlhandlers.registerHelper('startStopClusterValue', (value: any): string => {
     }
     return "Stop";
 });
-
-export function delay(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
-}
