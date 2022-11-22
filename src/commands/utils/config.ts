@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { combine, failed, Errorable } from './errorable';
-import { KustomizeConfig } from '../periscope/models/kustomizeConfig';
+import { KubeloginConfig, KustomizeConfig } from '../periscope/models/config';
 import * as semver from "semver";
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
@@ -35,6 +35,24 @@ export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     return { succeeded: true, result: config };
 }
 
+export function getKubeloginConfig(): Errorable<KubeloginConfig> {
+    const kubeloginConfig = vscode.workspace.getConfiguration('azure.kubelogin');
+    const props = combine([getConfigValue(kubeloginConfig, 'releaseTag')]);
+ 
+    if (failed(props)) {
+       return {
+          succeeded: false,
+          error: `Failed to readazure.kubelogin configuration: ${props.error}`
+       };
+    }
+ 
+    const config = {
+       releaseTag: props.result[0]
+    };
+ 
+    return {succeeded: true, result: config};
+ }
+ 
 function getConfigValue(config: vscode.WorkspaceConfiguration, key: string): Errorable<string> {
     const value = config.get(key);
     if (value === undefined) {

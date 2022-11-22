@@ -4,3 +4,7 @@ export interface KustomizeConfig {
     releaseTag: string;
     imageVersion: string;
 }
+
+export interface KubeloginConfig {
+    releaseTag: string;
+ }
