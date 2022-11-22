@@ -9,7 +9,7 @@ import { moveFile } from 'move-file';
 import { longRunning } from '../host';
 
 function getBaseInstallFolder(): string {
-   return path.join(os.homedir(), `.vs-kubernetes/tools`);
+   return path.join(os.homedir(), `.vs-kubernetes/tools/kubelogin`);
 }
 
 function getKubeloginBinaryFolder(releaseTag: string): string {
