@@ -9,6 +9,7 @@ import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AuthenticationResult } from '@azure/msal-node';
+import { getKubeloginBinaryPath } from './helper/kubeloginDownload';
 const tmp = require('tmp');
 
 export interface ClusterARMResponse {
@@ -138,7 +139,16 @@ async function getAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.Contai
         return cacheDir;
     }
 
+    // This extension controls the version of kubelogin used, so that:
+    // 1. We don't need to rely on the user having previously downloaded it, and
+    // 2. This workflow doesn't get broken by kubelogin behaviour changes between versions
+    const kubeloginPath = await getKubeloginBinaryPath();
+    if (failed(kubeloginPath)) {
+        return kubeloginPath;
+    }
+
     // Update the kubeconfig YAML with the new kubelogin options, and return the serialized output as a string.
+    execBlock.command = kubeloginPath.result;
     execBlock.args = buildExecOptionsWithCache(execOptions, cacheDir.result);
     const authenticatedKubeConfig = yaml.dump(kubeconfigYaml);
     return { succeeded: true, result: authenticatedKubeConfig };
