@@ -168,6 +168,9 @@ function readExecOptions(execArgs: [string]): ExecOptions {
     const [subcommand, ...options] = execArgs;
 
     // Extract the options into an object for convenient lookup.
+    // The options look like "--<name1> <value1> --<name2> <value2> ...", so we iterate through the array in steps of 2, and at each stop:
+    // - extract the option name and value for that index
+    // - merge them into an object that we iteratively build up
     const optionLookup: { [name: string]: string } = options.reduce((result: { [name: string]: string }, _arg: string, index: number) => {
         return index % 2 === 0 ?
             { ...result, [options[index]]: options[index+1] } :
@@ -191,8 +194,9 @@ function buildExecOptionsWithCache(execOptions: ExecOptions, cacheDir: string) {
         "--server-id", execOptions.serverId,
         "--client-id", execOptions.clientId,
         "--tenant-id", execOptions.tenantId,
-        // In a non-interactive environment, 'devicecode' login now returns an error, see https://github.com/Azure/kubelogin/pull/145.
-        // Very counter-intuitively, 'interactive' login returns successfully here (and is not interactive because of the cached credential).
+        // Counter-intuitively, the most appropriate login-type here is 'interactive'. This will run silently with a cached credential, and
+        // if the credential is missing or expired it will launch a web-browser, which is more applicable to a GUI environment than a device
+        // code that needs to be copied from a command line.
         "--login", "interactive",
         "--token-cache-dir", cacheDir
     ];
