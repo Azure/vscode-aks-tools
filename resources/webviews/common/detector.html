@@ -63,12 +63,12 @@
 
                     <div class="panel-body subnet">
                         <table>
-                            <tbody> <tr>{{property}} </tr>
+                            <tbody> <tr>===>{{property}} </tr>
                                 {{#each property}}
                                 <tr>
-                                    <td class="table-key">---> {{{this}}} -- {{{this.[2]}}}</td>
+                                    <td class="table-key">--->{{{this.[2]}}}</td>
                                     <td class="table-value">
-                                        <p>{{#markdownHelper this}}{{/markdownHelper}}</p>
+                                        <p>{{#markdownHelper this.[3]}}{{/markdownHelper}}</p>
                                     </td>
                                 </tr>
                             {{/each}}
