@@ -28,7 +28,6 @@
     ],
     "activationEvents": [
         "onView:kubernetes.cloudExplorer",
-        "onCommand:aks.networkAndConnectivityDiagnostics",
         "onCommand:aks.periscope",
         "onCommand:aks.installAzureServiceOperator",
         "onCommand:aks.configureStarterWorkflow",
@@ -92,10 +91,6 @@
                     "dark": "resources/dark/filter.svg",
                     "light": "resources/light/filter.svg"
                 }
-            },
-            {
-                "command": "aks.networkAndConnectivityDiagnostics",
-                "title": "Network and Connectivity"
             },
             {
                 "command": "aks.periscope",
@@ -231,10 +226,6 @@
                 }
             ],
             "aks.detectorsSubMenu": [
-                {
-                    "command": "aks.networkAndConnectivityDiagnostics",
-                    "group": "navigation"
-                },
                 {
                     "command": "aks.aksCRUDDiagnostics",
                     "group": "navigation"

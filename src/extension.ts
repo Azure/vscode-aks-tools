@@ -4,7 +4,6 @@ import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
 import { createAzExtOutputChannel, AzExtTreeDataProvider, registerCommand, IActionContext } from '@microsoft/vscode-azext-utils';
 import selectSubscriptions from './commands/selectSubscriptions';
-import networkAndConnectivityDiagnostics from './commands/networkAndConnectivityDiagnostics/networkAndConnectivityDiagnostics';
 import periscope from './commands/periscope/periscope';
 import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
@@ -43,7 +42,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerAzureUtilsExtensionVariables(uiExtensionVariables);
 
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
-        registerCommandWithTelemetry('aks.networkAndConnectivityDiagnostics', networkAndConnectivityDiagnostics);
         registerCommandWithTelemetry('aks.periscope', periscope);
         registerCommandWithTelemetry('aks.installAzureServiceOperator', installAzureServiceOperator );
         registerCommandWithTelemetry('aks.configureStarterWorkflow', configureStarterWorkflow );
