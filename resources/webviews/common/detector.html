@@ -53,31 +53,6 @@
                     </div>
                 </div>
             </div>
-            {{else if (ifEquals value "SNAT Connection and Port Allocation")}}
-            <div class="insight-container">
-                <div class="panel panel-default insight-panel {{toLowerCase property.[0].[0]}}">
-                    <div class="panel-heading togglesubnet">
-                        <span class="fa status-icon fa-check-circle"></span>
-                        <h5 class="panel-title">{{value}}</h5>
-                    </div>
-
-                    <div class="panel-body subnet">
-                        <table>
-                            <tbody> <tr>===>{{property}} </tr>
-                                {{#each property}}
-                                <tr>
-                                    <td class="table-key">--->{{{this.[2]}}}</td>
-                                    <td class="table-value">
-                                        <p>{{#markdownHelper this.[3]}}{{/markdownHelper}}</p>
-                                    </td>
-                                </tr>
-                            {{/each}}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                </div>
-            </div>
             {{else}}
             <div class="insight-container">
                 <div class="panel panel-default insight-panel {{toLowerCase property.[0].[0]}}">

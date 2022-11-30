@@ -111,7 +111,7 @@
             },
             {
                 "command": "aks.aksCategoryConnectivity",
-                "title": "Network Connectivity Issue"
+                "title": "Network Connectivity Issues"
             },
             {
                 "command": "aks.aksBestPracticesDiagnostics",

@@ -29,7 +29,16 @@ htmlhandlers.registerHelper('markdownHelper', (htmltext: string) => {
 htmlhandlers.registerHelper('eachProperty', (context, options) => {
     let ret = "";
     context.forEach((element: any) => {
-        ret = ret + options.fn({ property: element.properties.dataset[0].table.rows, value: element.properties.metadata.name });
+        // Rather than using the first dataset, we use the first dataset that has 'type 7' in its rendering properties. 
+        // This appears to correspond to the 'summary' dataset, which we previously thought was always the first one, 
+        // but isn't always (as in snat-usage).
+        const summaryDatasets = element.properties.dataset.filter((d: any) => d.renderingProperties.type === 7);
+        if (summaryDatasets.length === 0) {
+            vscode.window.showErrorMessage(`No data set of type 7 for detector entity ${element.properties.metadata.name}`);
+            return;
+        }
+
+        ret = ret + options.fn({ property: summaryDatasets[0].table.rows, value: element.properties.metadata.name });
     });
     return ret;
 });
