@@ -44,7 +44,8 @@
         "onCommand:aks.aksKubectlGetAPIResourcesCommands",
         "onCommand:aks.aksKubectlGetNodeCommands",
         "onCommand:aks.aksKubectlDescribeServicesCommands",
-        "onCommand:aks.aksKubectlGetEventsCommands"
+        "onCommand:aks.aksKubectlGetEventsCommands",
+        "onCommand:aks.aksCategoryConnectivity"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -107,6 +108,10 @@
             {
                 "command": "aks.aksCRUDDiagnostics",
                 "title": "Create, Upgrade, Delete and Scale"
+            },
+            {
+                "command": "aks.aksCategoryConnectivity",
+                "title": "Network Connectivity Issues"
             },
             {
                 "command": "aks.aksBestPracticesDiagnostics",
@@ -244,6 +249,10 @@
                 },
                 {
                     "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksCategoryConnectivity",
                     "group": "navigation"
                 }
             ],
