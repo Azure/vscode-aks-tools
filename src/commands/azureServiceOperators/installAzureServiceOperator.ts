@@ -7,10 +7,9 @@ import {
     convertAzureCloudEnv,
     createASOWebView
 } from './helpers/azureservicehtmlhelper';
-import * as clusters from '../utils/clusters';
 import { InstallationResponse } from './models/installationResponse';
-import { getAksClusterTreeItem } from '../utils/clusters';
-import { getExtensionPath } from '../utils/host';
+import { getAksClusterTreeItem, getClusterProperties, getKubeconfigYaml } from '../utils/clusters';
+import { getExtensionPath, longRunning } from '../utils/host';
 import { createWebView } from '../utils/webviews';
 import { failed } from '../utils/errorable';
 
@@ -48,9 +47,15 @@ export async function install(
 ): Promise<void> {
     const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
 
-    const clusterKubeConfig = await clusters.getKubeconfigYaml(aksCluster);
-    if (failed(clusterKubeConfig)) {
-        vscode.window.showErrorMessage(clusterKubeConfig.error);
+    const properties = await longRunning(`Getting properties for cluster ${aksCluster.name}.`, () => getClusterProperties(aksCluster));
+    if (failed(properties)) {
+        vscode.window.showErrorMessage(properties.error);
+        return undefined;
+    }
+
+    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${aksCluster.name}.`, () => getKubeconfigYaml(aksCluster, properties.result));
+    if (failed(kubeconfig)) {
+        vscode.window.showErrorMessage(kubeconfig.error);
         return undefined;
     }
 
@@ -89,7 +94,7 @@ export async function install(
 
                 const installationResponse: InstallationResponse = { clusterName: aksCluster.name };
 
-                await startInstallation(webview, extensionPath.result, kubectl, installationResponse, aksCluster, operatorSettingsInfo);
+                await startInstallation(webview, extensionPath.result, kubectl, installationResponse, kubeconfig.result, operatorSettingsInfo);
             }
             return undefined;
         },

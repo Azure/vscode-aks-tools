@@ -42,7 +42,7 @@ export function getKubeloginConfig(): Errorable<KubeloginConfig> {
     if (failed(props)) {
        return {
           succeeded: false,
-          error: `Failed to readazure.kubelogin configuration: ${props.error}`
+          error: `Failed to read azure.kubelogin configuration: ${props.error}`
        };
     }
  

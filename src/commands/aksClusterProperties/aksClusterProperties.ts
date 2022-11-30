@@ -94,7 +94,7 @@ async function getClusterData(
 
     return await longRunning(`Loading ${cloudTarget.name} cluster data.`,
       async () => {
-        const clusterInfo = await getClusterProperties(cloudTarget, cloudTarget.name);
+        const clusterInfo = await getClusterProperties(cloudTarget);
         return clusterInfo;
       }
     );

@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterTreeItem } from '../utils/clusters';
+import { getAksClusterTreeItem, getClusterProperties, getKubeconfigYaml } from '../utils/clusters';
 import { getExtensionPath, longRunning }  from '../utils/host';
 import { Errorable, failed } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
-import * as clusters from '../utils/clusters';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 import { invokeKubectlCommand } from '../utils/kubectl';
@@ -84,13 +83,19 @@ async function aksKubectlCommands(
       return;
     }
 
-    const clusterKubeConfig = await clusters.getKubeconfigYaml(cluster.result);
-    if (failed(clusterKubeConfig)) {
-        vscode.window.showErrorMessage(clusterKubeConfig.error);
+    const properties = await longRunning(`Getting properties for cluster ${cluster.result.name}.`, () => getClusterProperties(cluster.result));
+    if (failed(properties)) {
+        vscode.window.showErrorMessage(properties.error);
         return undefined;
     }
 
-    await loadKubectlCommandRun(cluster.result, extensionPath.result, clusterKubeConfig.result, command, kubectl);
+    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${cluster.result.name}.`, () => getKubeconfigYaml(cluster.result, properties.result));
+    if (failed(kubeconfig)) {
+        vscode.window.showErrorMessage(kubeconfig.error);
+        return undefined;
+    }
+
+    await loadKubectlCommandRun(cluster.result, extensionPath.result, kubeconfig.result, command, kubectl);
 }
 
 async function loadKubectlCommandRun(
