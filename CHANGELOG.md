@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.3.7]
+
+* Kubelogin and AAD AKS Cluster support.
+* Delete network and connectivity detector.
+* Enable connectivity issues detector.
+
+ Thank you so much to @rzhang628, @peterbom and @squillace.
+
 ## [1.3.6]
 
 * Fix for css custom uri to use asWebViewURI.
