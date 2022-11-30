@@ -5,7 +5,6 @@ import AzureAccountTreeItem from './tree/azureAccountTreeItem';
 import { createAzExtOutputChannel, AzExtTreeDataProvider, registerCommand, IActionContext } from '@microsoft/vscode-azext-utils';
 import selectSubscriptions from './commands/selectSubscriptions';
 import periscope from './commands/periscope/periscope';
-import * as clusters from './commands/utils/clusters';
 import { Reporter, reporter } from './commands/utils/reporter';
 import installAzureServiceOperator  from './commands/azureServiceOperators/installAzureServiceOperator';
 import { AzureResourceNodeContributor } from './tree/azureResourceNodeContributor';
@@ -23,6 +22,8 @@ import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAz
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectlGetAPIResourcesCommands, aksKubectlGetNodeCommands, aksKubectlDescribeServicesCommands, aksKubectlGetEventsCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
 import aksCategoryConnectivity from './commands/aksCategoryConnectivity/aksCategoryConnectivity';
+import { longRunning } from './commands/utils/host';
+import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -102,7 +103,13 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 }
 
 async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
-    const kubeconfig = await clusters.getKubeconfigYaml(target);
+    const properties = await longRunning(`Getting properties for cluster ${target.name}.`, () => getClusterProperties(target));
+    if (failed(properties)) {
+        vscode.window.showErrorMessage(properties.error);
+        return undefined;
+    }
+
+    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${target.name}.`, () => getKubeconfigYaml(target, properties.result));
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);
         return undefined;
