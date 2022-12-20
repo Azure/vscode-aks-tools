@@ -1,0 +1,30 @@
+{{#if succeeded}}
+<div class="success">
+    <i class="fa status-icon fa-check-circle" style="font-size:14px;color:green;padding-right:5px;padding-bottom:15px;"></i>
+    {{message}}
+</div>
+{{else}}
+<div class="critical">
+    <i class="fa fa-times-circle" style="font-size:14px;color:red;padding-right:5px;padding-bottom:15px;"></i>
+    {{message}}
+</div>
+{{/if}}
+
+{{#if resultLogs.length}}
+<div data-togglecontainer class="panel panel-default data-container">
+    <a data-togglecontrol style="padding-top:5px;color:black;">
+        <i class="fa fa-chevron-down" style="font-size:14px;padding-right:5px;;color:#605E5C;"></i>
+        View Console Output
+    </a>
+
+    <div data-togglecontent class="panel-body data-container-body asooutput">
+        {{#each resultLogs}}
+        <div>
+            <b>{{title}}</b>
+            <br />
+            <pre>{{output}}</pre>
+        </div>
+        {{/each}}
+    </div>
+</div>
+{{/if}}

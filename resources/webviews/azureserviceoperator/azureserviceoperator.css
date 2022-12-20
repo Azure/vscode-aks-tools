@@ -52,11 +52,16 @@ body {
     padding: 10px 12px;
     font-size: 14px;
     cursor: pointer;
-  }
+}
   
 /* Darker background on mouse-over */
 .btn:hover {
     background-color: RoyalBlue;
+}
+
+.btn:disabled {
+    background-color: #bbb;
+    color: #333;
 }
 
 table {
@@ -71,4 +76,8 @@ th {
 
 label {
     cursor: pointer;
+}
+
+.hidden {
+    display: none;
 }

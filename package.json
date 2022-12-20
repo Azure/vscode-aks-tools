@@ -218,7 +218,7 @@
                 },
                 {
                     "command": "aks.installAzureServiceOperator",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i"
                 },
                 {
                     "submenu": "aks.ghWorkflowSubMenu",
@@ -368,6 +368,7 @@
         "webpack-cli": "^4.10.0"
     },
     "dependencies": {
+        "@azure/arm-authorization": "^8.4.1",
         "@azure/arm-containerservice": "^17.2.0",
         "@azure/arm-monitor": "^6.0.0",
         "@azure/arm-resources": "^3.0.0",
@@ -378,6 +379,7 @@
         "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/msal-node": "^1.14.3",
         "@azure/storage-blob": "^12.7.0",
+        "@microsoft/microsoft-graph-client": "^3.0.4",
         "@microsoft/vscode-azext-azureutils": "^0.3.1",
         "@microsoft/vscode-azext-utils": "^0.3.8",
         "@sinonjs/fake-timers": "^6.0.1",
@@ -385,6 +387,7 @@
         "@types/sinon": "^10.0.6",
         "@types/sinonjs__fake-timers": "^6.0.2",
         "ajv": "^6.12.6",
+        "cross-fetch": "^3.1.5",
         "decompress": "^4.2.1",
         "download": "^8.0.0",
         "electron": "^22.0.0",
