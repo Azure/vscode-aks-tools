@@ -235,7 +235,7 @@
                     "group": "9@1"
                 },
                 {
-                    "command": "aks.aksDeleteCluster",
+                    "submenu": "aks.managedClusterOperationSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
                 }
@@ -309,6 +309,12 @@
                     "command": "aks.aksKubectlGetEventsCommands",
                     "group": "navigation"
                 }
+            ],
+            "aks.managedClusterOperationSubMenu": [
+                {
+                    "command": "aks.aksDeleteCluster",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
@@ -323,6 +329,10 @@
             {
                 "id": "aks.runKubectlCmdSubMenu",
                 "label": "Run Kubectl Commands"
+            },
+            {
+                "id": "aks.managedClusterOperationSubMenu",
+                "label": "Managed Cluster Operations"
             }
         ]
     },
