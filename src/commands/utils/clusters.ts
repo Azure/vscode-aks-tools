@@ -353,3 +353,17 @@ export function getContainerClient(target: AksClusterTreeItem): azcs.ContainerSe
     const environment = target.subscription.environment;
     return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint: environment.resourceManagerEndpointUrl});
 }
+
+export async function deleteCluster(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<string>> {
+    try {
+        const containerClient = getContainerClient(target);
+        await containerClient.managedClusters.beginDeleteAndWait(target.resourceGroupName, clusterName)
+
+        return { succeeded: true, result: "Delete cluster succeeded." };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
+    }
+}
