@@ -24,6 +24,7 @@ import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectl
 import aksCategoryConnectivity from './commands/aksCategoryConnectivity/aksCategoryConnectivity';
 import { longRunning } from './commands/utils/host';
 import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
+import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -65,6 +66,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksKubectlDescribeServicesCommands', aksKubectlDescribeServicesCommands);
         registerCommandWithTelemetry('aks.aksKubectlGetEventsCommands', aksKubectlGetEventsCommands);
         registerCommandWithTelemetry('aks.aksCategoryConnectivity', aksCategoryConnectivity);
+        registerCommandWithTelemetry('aks.aksDeleteCluster', aksDeleteCluster);
 
         await registerAzureServiceNodes(context);
 

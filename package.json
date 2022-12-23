@@ -45,7 +45,8 @@
         "onCommand:aks.aksKubectlGetNodeCommands",
         "onCommand:aks.aksKubectlDescribeServicesCommands",
         "onCommand:aks.aksKubectlGetEventsCommands",
-        "onCommand:aks.aksCategoryConnectivity"
+        "onCommand:aks.aksCategoryConnectivity",
+        "onCommand:aks.aksDeleteCluster"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -176,6 +177,10 @@
             {
                 "command": "aks.aksKubectlGetEventsCommands",
                 "title": "Get All Events"
+            },
+            {
+                "command": "aks.aksDeleteCluster",
+                "title": "Delete Cluster"
             }
         ],
         "menus": {
@@ -228,6 +233,11 @@
                     "submenu": "aks.runKubectlCmdSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@1"
+                },
+                {
+                    "submenu": "aks.managedClusterOperationSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@3"
                 }
             ],
             "aks.detectorsSubMenu": [
@@ -299,6 +309,12 @@
                     "command": "aks.aksKubectlGetEventsCommands",
                     "group": "navigation"
                 }
+            ],
+            "aks.managedClusterOperationSubMenu": [
+                {
+                    "command": "aks.aksDeleteCluster",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
@@ -313,6 +329,10 @@
             {
                 "id": "aks.runKubectlCmdSubMenu",
                 "label": "Run Kubectl Commands"
+            },
+            {
+                "id": "aks.managedClusterOperationSubMenu",
+                "label": "Managed Cluster Operations"
             }
         ]
     },
@@ -348,7 +368,7 @@
         "webpack-cli": "^4.10.0"
     },
     "dependencies": {
-        "@azure/arm-containerservice": "^16.1.0",
+        "@azure/arm-containerservice": "^17.2.0",
         "@azure/arm-monitor": "^6.0.0",
         "@azure/arm-resources": "^3.0.0",
         "@azure/arm-resources-subscriptions": "^2.0.1",
