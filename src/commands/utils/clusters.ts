@@ -1,7 +1,7 @@
 import { API, CloudExplorerV1 } from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import * as azcs from '@azure/arm-containerservice';
-import { Errorable, failed } from './errorable';
+import { Errorable, failed, getErrorMessage } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
 import { getAksAadAccessToken } from './authProvider';
@@ -364,6 +364,6 @@ export async function deleteCluster(
 
         return { succeeded: true, result: "Delete cluster succeeded." };
     } catch (ex) {
-        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${getErrorMessage(ex)}` };
     }
 }
