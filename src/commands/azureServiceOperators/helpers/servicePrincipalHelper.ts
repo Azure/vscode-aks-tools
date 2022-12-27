@@ -71,7 +71,9 @@ async function getServicePrincipalInfo(sessions: AzureSession[], appId: string, 
 }
 
 async function getServicePrincipalInfoForSession(session: AzureSession, appId: string, appSecret: string): Promise<Errorable<ServicePrincipalInfo>> {
-    const baseUrl = getGraphClientBaseUrl(session.environment);
+    // Use the MS Graph API to retrieve the object ID and display name of the service principal,
+    // using its own password as the credential.
+    const baseUrl = getMicrosoftGraphClientBaseUrl(session.environment);
     const graphClientOptions: TokenCredentialAuthenticationProviderOptions = {
         scopes: [`${baseUrl}/.default`]
     };
@@ -105,7 +107,7 @@ async function getServicePrincipalInfoForSession(session: AzureSession, appId: s
     return { succeeded: true, result: spInfo };
 }
 
-function getGraphClientBaseUrl(environment: Environment): string {
+function getMicrosoftGraphClientBaseUrl(environment: Environment): string {
     // Environments are from here: https://github.com/Azure/ms-rest-azure-env/blob/6fa17ce7f36741af6ce64461735e6c7c0125f0ed/lib/azureEnvironment.ts#L266-L346
     // They do not contain the MS Graph endpoints, whose values are here:
     // https://github.com/microsoftgraph/msgraph-sdk-javascript/blob/d365ab1d68f90f2c38c67a5a7c7fe54acfc2584e/src/Constants.ts#L28

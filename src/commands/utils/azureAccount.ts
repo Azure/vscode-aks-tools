@@ -23,8 +23,8 @@ export interface AzureSession {
 }
 
 export interface AzureSubscription {
-	readonly session: AzureSession;
-	readonly subscription: Subscription;
+    readonly session: AzureSession;
+    readonly subscription: Subscription;
 }
 
 export function getAzureAccountExtensionApi(): Errorable<AzureAccountExtensionApi> {

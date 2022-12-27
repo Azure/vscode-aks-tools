@@ -78,6 +78,8 @@ export async function getKubernetesClusterInfo(commandTarget: any, cloudExplorer
 }
 
 function getPath(kubeconfigPath: ConfigurationV1.KubeconfigPath): string {
+    // Get the path of the kubeconfig file used by the cluster explorer.
+    // See: https://github.com/vscode-kubernetes-tools/vscode-kubernetes-tools/blob/master/docs/extending/configuration.md#detecting-the-kubernetes-configuration
     switch (kubeconfigPath.pathType) {
         case 'host':
             return kubeconfigPath.hostPath;
