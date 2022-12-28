@@ -1,7 +1,7 @@
-import { API, CloudExplorerV1 } from 'vscode-kubernetes-tools-api';
+import { API, APIAvailable, CloudExplorerV1, ClusterExplorerV1, ConfigurationV1, extension } from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import * as azcs from '@azure/arm-containerservice';
-import { Errorable, failed, getErrorMessage } from './errorable';
+import { Errorable, failed, getErrorMessage, succeeded } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
 import { getAksAadAccessToken } from './authProvider';
@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AuthenticationResult } from '@azure/msal-node';
 import { getKubeloginBinaryPath } from './helper/kubeloginDownload';
+import { longRunning } from './host';
 const tmp = require('tmp');
 
 export interface ClusterARMResponse {
@@ -26,6 +27,65 @@ export enum ClusterStartStopState {
     Starting = 'Starting',
     Stopped = 'Stopped',
     Stopping = 'Stopping'
+}
+
+export interface KubernetesClusterInfo {
+    readonly name: string,
+    readonly kubeconfigYaml: string
+}
+
+export async function getKubernetesClusterInfo(commandTarget: any, cloudExplorer: APIAvailable<CloudExplorerV1>, clusterExplorer: APIAvailable<ClusterExplorerV1>): Promise<Errorable<KubernetesClusterInfo>> {
+
+    // See if this is an AKS cluster, and if so, download the credentials for it.
+    const aksCluster = getAksClusterTreeItem(commandTarget, cloudExplorer);
+    if (succeeded(aksCluster)) {
+        const properties = await longRunning(`Getting properties for cluster ${aksCluster.result.name}.`, () => getClusterProperties(aksCluster.result));
+        if (failed(properties)) {
+            return properties;
+        }
+    
+        const kubeconfigYaml = await getKubeconfigYaml(aksCluster.result, properties.result);
+        if (failed(kubeconfigYaml)) {
+            return kubeconfigYaml;
+        }
+
+        const result = {
+            name: commandTarget.name,
+            kubeconfigYaml: kubeconfigYaml.result
+        };
+
+        return {succeeded: true, result };
+    }
+
+    const configuration = await extension.configuration.v1;
+    if (!configuration.available) {
+        return { succeeded: false, error: 'Unable to retrieve kubeconfig: configuration API unavailable.' };
+    }
+
+    // Not an AKS cluster. This should be a cluster-explorer node. Verify:
+    const explorerCluster = clusterExplorer.api.resolveCommandTarget(commandTarget) as ClusterExplorerV1.ClusterExplorerContextNode;
+    if (explorerCluster === undefined) {
+        return { succeeded: false, error: 'This command should only apply to active cluster nodes.' }
+    }
+
+    const kubeconfigPath = getPath(await configuration.api.getKubeconfigPath());
+    const result = {
+        name: explorerCluster.name,
+        kubeconfigYaml: fs.readFileSync(kubeconfigPath, 'utf8')
+    };
+
+    return { succeeded: true, result };
+}
+
+function getPath(kubeconfigPath: ConfigurationV1.KubeconfigPath): string {
+    // Get the path of the kubeconfig file used by the cluster explorer.
+    // See: https://github.com/vscode-kubernetes-tools/vscode-kubernetes-tools/blob/master/docs/extending/configuration.md#detecting-the-kubernetes-configuration
+    switch (kubeconfigPath.pathType) {
+        case 'host':
+            return kubeconfigPath.hostPath;
+        case 'wsl':
+            return kubeconfigPath.wslPath;
+    }
 }
 
 export function getAksClusterTreeItem(commandTarget: any, cloudExplorer: API<CloudExplorerV1>): Errorable<AksClusterTreeItem> {
