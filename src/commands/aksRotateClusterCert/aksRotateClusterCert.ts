@@ -21,8 +21,12 @@ export default async function aksRotateClusterCert(
 
   const answer = await vscode.window.showInformationMessage(`Do you want to rotate cluster ${clusterName} certificate?`, "Yes", "No");
 
+  if (answer !== "Yes") {
+    return;
+  }
+
   if (answer === "Yes") {
-    const result = await longRunning(`Rotating cluster certificate for ${clusterName}.`, async () => { return await rotateClusterCert(cluster.result, clusterName) });
+    const result = await longRunning(`Rotating cluster certificate for ${clusterName}.`, async () => rotateClusterCert(cluster.result, clusterName) );
 
     if (failed(result)) {
       vscode.window.showErrorMessage(result.error);

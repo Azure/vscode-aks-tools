@@ -434,7 +434,7 @@ export async function rotateClusterCert(
 ): Promise<Errorable<string>> {
     try {
         const containerClient = getContainerClient(target);
-        await containerClient.managedClusters.beginRotateClusterCertificatesAndWait(target.resourceGroupName, clusterName)
+        await containerClient.managedClusters.beginRotateClusterCertificatesAndWait(target.resourceGroupName, clusterName);
 
         return { succeeded: true, result: `Rotate cluster certificate for ${clusterName} succeeded.` };
     } catch (ex) {
