@@ -46,7 +46,8 @@
         "onCommand:aks.aksKubectlDescribeServicesCommands",
         "onCommand:aks.aksKubectlGetEventsCommands",
         "onCommand:aks.aksCategoryConnectivity",
-        "onCommand:aks.aksDeleteCluster"
+        "onCommand:aks.aksDeleteCluster",
+        "onCommand:aks.aksRotateClusterCert"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -181,6 +182,10 @@
             {
                 "command": "aks.aksDeleteCluster",
                 "title": "Delete Cluster"
+            },
+            {
+                "command": "aks.aksRotateClusterCert",
+                "title": "Rotate Cluster Certificate"
             }
         ],
         "menus": {
@@ -313,6 +318,10 @@
             "aks.managedClusterOperationSubMenu": [
                 {
                     "command": "aks.aksDeleteCluster",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksRotateClusterCert",
                     "group": "navigation"
                 }
             ]
