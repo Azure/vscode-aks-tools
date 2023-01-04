@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.3.8]
+
+* Managed cluster rotate certificate feature.
+* Support ASO for non-Azure clusters and allow subscription selection.
+* Enable delete cluster functionality.
+* Update vscode engine version and npm audit fix.
+
+Thank you so much to @rzhang628, @peterbom, @qike-ms, @gambtho and @squillace.
+
 ## [1.3.7]
 
 * Kubelogin and AAD AKS Cluster support.
