@@ -16,6 +16,7 @@
 * Create AKS cluster from Azure Portal
 * Stop and Start the AKS cluster
 * Run Kubectl Commands from your AKS cluster
+* Run Managed Cluster Operations from your AKS cluster
 
 ## Installation
 
@@ -38,6 +39,8 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 ![Cloud explorer extension menu](resources/right-click-menu-workflow.png)
 
 ![Cloud explorer extension menu](resources/right-click-menu-kubectl.png)
+
+![Cloud explorer extension menu](resources/right-click-menu-managedoperations.png)
 
 ![Cloud explorer extension menu](resources/right-click-subscription.png)
 
@@ -142,6 +145,13 @@ Right click on your AKS cluster and click on **Run Kubectl Commands** to easily 
 - Get Cluster Info
 - Get Node
 - Get All Events
+
+### Run Managed Cluster Operations from your AKS cluster
+
+Right click on your AKS cluster and click on **Managed Cluster Operations** to easily run few managed cluster operations on your cluster. Currently we have enable following operations:
+
+- Delete Cluster
+- Rotate Cluster Certificate
 
 ## Telemetry
 
