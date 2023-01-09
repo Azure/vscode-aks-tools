@@ -47,7 +47,10 @@
         "onCommand:aks.aksKubectlGetEventsCommands",
         "onCommand:aks.aksCategoryConnectivity",
         "onCommand:aks.aksDeleteCluster",
-        "onCommand:aks.aksRotateClusterCert"
+        "onCommand:aks.aksRotateClusterCert",
+        "onCommand:aks.aksKubectlK8sHealthzAPIEndpointCommands",
+        "onCommand:aks.aksKubectlK8sLivezAPIEndpointCommands",
+        "onCommand:aks.aksKubectlK8sReadyzAPIEndpointCommands"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -186,6 +189,18 @@
             {
                 "command": "aks.aksRotateClusterCert",
                 "title": "Rotate Cluster Certificate"
+            },
+            {
+                "command": "aks.aksKubectlK8sHealthzAPIEndpointCommands",
+                "title": "Healthz check"
+            },
+            {
+                "command": "aks.aksKubectlK8sLivezAPIEndpointCommands",
+                "title": "Livez check"
+            },
+            {
+                "command": "aks.aksKubectlK8sReadyzAPIEndpointCommands",
+                "title": "Readyz check"
             }
         ],
         "menus": {
@@ -241,6 +256,11 @@
                 },
                 {
                     "submenu": "aks.managedClusterOperationSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@3"
+                },
+                {
+                    "submenu": "aks.K8sAPIEndpointHealthCheck",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
                 }
@@ -324,6 +344,20 @@
                     "command": "aks.aksRotateClusterCert",
                     "group": "navigation"
                 }
+            ],
+            "aks.K8sAPIEndpointHealthCheck": [
+                {
+                    "command": "aks.aksKubectlK8sHealthzAPIEndpointCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKubectlK8sLivezAPIEndpointCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKubectlK8sReadyzAPIEndpointCommands",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
@@ -342,6 +376,10 @@
             {
                 "id": "aks.managedClusterOperationSubMenu",
                 "label": "Managed Cluster Operations"
+            },
+            {
+                "id": "aks.K8sAPIEndpointHealthCheck",
+                "label": "Kubernetes API Health Endpoints"
             }
         ]
     },
