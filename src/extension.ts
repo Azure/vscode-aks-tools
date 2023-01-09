@@ -20,7 +20,7 @@ import aksNavToPortal from './commands/aksNavToPortal/aksNavToPortal';
 import aksClusterProperties from './commands/aksClusterProperties/aksClusterProperties';
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectlGetAPIResourcesCommands, aksKubectlGetNodeCommands, aksKubectlDescribeServicesCommands, aksKubectlGetEventsCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
+import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectlGetAPIResourcesCommands, aksKubectlGetNodeCommands, aksKubectlDescribeServicesCommands, aksKubectlGetEventsCommands, aksKubectlK8sLivezAPIEndpointCommands, aksKubectlK8sHealthzAPIEndpointCommands, aksKubectlK8sReadyzAPIEndpointCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
 import aksCategoryConnectivity from './commands/aksCategoryConnectivity/aksCategoryConnectivity';
 import { longRunning } from './commands/utils/host';
 import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
@@ -69,6 +69,9 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksCategoryConnectivity', aksCategoryConnectivity);
         registerCommandWithTelemetry('aks.aksDeleteCluster', aksDeleteCluster);
         registerCommandWithTelemetry('aks.aksRotateClusterCert', aksRotateClusterCert);
+        registerCommandWithTelemetry('aks.aksKubectlK8sHealthzAPIEndpointCommands', aksKubectlK8sHealthzAPIEndpointCommands);
+        registerCommandWithTelemetry('aks.aksKubectlK8sLivezAPIEndpointCommands', aksKubectlK8sLivezAPIEndpointCommands);
+        registerCommandWithTelemetry('aks.aksKubectlK8sReadyzAPIEndpointCommands', aksKubectlK8sReadyzAPIEndpointCommands);
 
         await registerAzureServiceNodes(context);
 
