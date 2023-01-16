@@ -3,15 +3,15 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getKubernetesClusterInfo, KubernetesClusterInfo } from '../utils/clusters';
 import { longRunning } from '../utils/host';
-import { failed } from '../utils/errorable';
-import { invokeKubectlCommandOnCurrentCluster } from '../utils/kubectl';
-
+import { Errorable, failed } from '../utils/errorable';
+import { shell } from '../utils/shell';
+import * as tmpfile from '../utils/tempfile';
+import { getKubectlGadgetBinaryPath } from '../utils/helper/kubectlGadgetDownload';
 
 enum InspektorGadget {
     Deploy,
     Undeploy
 }
-
 
 export async function aksInspektorGadgetDeploy(
     _context: IActionContext,
@@ -58,85 +58,77 @@ async function gadgetDeployUndeploy(
         return undefined;
     }
 
-    await prepareInspektorGadgetInstall(clusterInfo.result, kubectl, gadget);
+    await prepareInspektorGadgetInstall(clusterInfo.result, gadget, clusterInfo.result.kubeconfigYaml);
 }
 
 async function prepareInspektorGadgetInstall(
     cloudTarget: KubernetesClusterInfo,
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
-    gadget: InspektorGadget
+    gadget: InspektorGadget,
+    kubeconfig: string
 ): Promise<void> {
     const clustername = cloudTarget.name;
 
-    // Is Krew present:
-    // If not display warning with instruciton link to download krew page.
-    // If yes then do the kubectl krew install gadget and then kubectl gadget deploy and on success show information otherwise warning.
-    // For undeploy do same check for krew and then kubectl gadget undeploy.
-    const isKrew = await isKrewInstalled(clustername, kubectl);
-
-    if (!isKrew) {
-        //https://github.com/microsoft/vscode/issues/158308
-        const contents = new vscode.MarkdownString(`Please follow following instructions to [install krew](https://krew.sigs.k8s.io/docs/user-guide/setup/install/) which is prerequisite for Inspektor Gadgte installation.`);
-        vscode.window.showInformationMessage(contents.value);
-        return;
-    }
-
     switch (gadget) {
         case InspektorGadget.Deploy:
-            // Install Gadget and then deploy gadget
-            const isGadgetInstalled = await installGadget(clustername, kubectl);
-            if (!isGadgetInstalled) {
-                return;
-            }
-            await deployGadget(clustername, kubectl);
+            await deployGadget(clustername, kubeconfig);
             return;
         case InspektorGadget.Undeploy:
             const answer = await vscode.window.showInformationMessage(`Do you want to undeploy gadget in selected cluster?`, "Yes", "No");
             if (answer === "Yes") {
-                await unDeployGadget(clustername, kubectl);
+                await unDeployGadget(clustername, kubeconfig);
             }
             return;
     }
 }
 
-async function isKrewInstalled(
+async function deployGadget(
+    clustername: string, 
+    clusterConfig: string) {
+    const command = "deploy";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig);
+}
+
+async function unDeployGadget(
+    clustername: string, 
+    clusterConfig: string) {
+    const command = "undeploy";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig);
+}
+
+async function runKubectlGadgetCommands(
     clustername: string,
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
-    const command = "krew version";
+    command: string,
+    clusterConfig: string) {
 
-    return await runKubectlCommands(clustername, command, kubectl);
-}
+    const kubectlGadgetPath = await getKubectlGadgetBinaryPath();
+    let kubetlGadgetBinaryPath = "";
 
-async function installGadget(clustername: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
-    const command = "krew install gadget";
+    if (failed(kubectlGadgetPath)) {
+        vscode.window.showWarningMessage(`Gadget path is not found ${kubectlGadgetPath.error}`);
+    }
 
-    return await runKubectlCommands(clustername, command, kubectl);
-}
-
-async function deployGadget(clustername: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
-    const command = "gadget deploy";
-
-    return await runKubectlCommands(clustername, command, kubectl);
-}
-
-async function unDeployGadget(clustername: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
-    const command = "gadget undeploy";
-
-    return await runKubectlCommands(clustername, command, kubectl);
-}
-
-async function runKubectlCommands(
-    clustername: string,
-    comand: string,
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    if (kubectlGadgetPath.succeeded) {
+        kubetlGadgetBinaryPath = kubectlGadgetPath.result;
+    }
 
     return await longRunning(`Loading ${clustername} kubectl command run.`,
         async () => {
-            const kubectlresult = await invokeKubectlCommandOnCurrentCluster(kubectl, comand);
+            const commandToRun = `${kubetlGadgetBinaryPath} ${command}`;
 
-            if (failed(kubectlresult)) {
-                vscode.window.showErrorMessage(kubectlresult.error);
-                return false;
+            const runCommandResult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(
+                clusterConfig,
+                "YAML",
+                (kubeConfigFile) => shell.exec(`${commandToRun} --kubeconfig=${kubeConfigFile}` ));
+
+            if (failed(runCommandResult)) {
+                vscode.window.showWarningMessage(`Gadget command failed with following error: ${runCommandResult.error}`)
+            }
+
+            if (runCommandResult.succeeded) {
+                console.log(runCommandResult.result.stdout);
+                vscode.window.showInformationMessage(`Gadget successfully ran ${command}.`)
             }
 
             return true;

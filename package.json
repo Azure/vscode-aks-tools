@@ -88,6 +88,12 @@
                     "default": "v0.0.22",
                     "title": "Kubelogin repository release tag",
                     "description": "Release tag for the stable kubelogin tool release."
+                },
+                "azure.kubectlgadget.releaseTag": {
+                    "type": "string",
+                    "default": "v0.12.0",
+                    "title": "Kubectl-gadger repository release tag",
+                    "description": "Release tag for the stable kubectl-gadget tool release."
                 }
             }
         },
@@ -276,7 +282,7 @@
                 },
                 {
                     "submenu": "aks.inspektorGadgetSubMenu",
-                    "when": "view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@4"
                 }
             ],
@@ -460,6 +466,7 @@
         "@microsoft/vscode-azext-utils": "^0.3.8",
         "@sinonjs/fake-timers": "^6.0.1",
         "@types/chai": "^4.2.21",
+        "@types/shelljs": "^0.8.11",
         "@types/sinon": "^10.0.6",
         "@types/sinonjs__fake-timers": "^6.0.2",
         "ajv": "^6.12.6",
@@ -473,6 +480,7 @@
         "move-file": "^3.0.0",
         "neverthrow": "^4.3.0",
         "semver": "^7.3.7",
+        "shelljs": "^0.8.5",
         "sinon": "^12.0.1",
         "tmp": "^0.2.1",
         "tslib": "^2.1.0",
