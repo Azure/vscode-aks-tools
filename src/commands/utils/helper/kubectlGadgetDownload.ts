@@ -14,7 +14,7 @@ function getBaseInstallFolder(): string {
 
 function getKubectlGadgetBinaryFolder(releaseTag: string): string {
    return path.join(getBaseInstallFolder(), releaseTag);
-} // getKubectlGadgetBinaryFolder
+}
 
 function getDownloadFolder(): string {
    return path.join(getBaseInstallFolder(), "download");
