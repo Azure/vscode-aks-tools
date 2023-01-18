@@ -6,10 +6,9 @@ import { getExtensionPath, longRunning } from '../utils/host';
 import { Errorable, failed } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
 import { getKubectlGadgetBinaryPath } from '../utils/helper/kubectlGadgetDownload';
-import { invokeKubectlGadgetCommand } from '../utils/kubectl';
+import { invokeKubectlCommand } from '../utils/kubectl';
 import path = require('path');
 import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
-// import * as dotenv from 'dotenv';
 
 enum InspektorGadget {
     Deploy,
@@ -133,12 +132,12 @@ async function runKubectlGadgetCommands(
             console.log(kubetlGadgetBinaryPath);
             const  binaryPathDir = path.dirname(kubetlGadgetBinaryPath);
             if (process.env.PATH !== undefined && (process.env.PATH.indexOf(binaryPathDir) < 0)){ 
-                process.env.PATH = `${binaryPathDir}:` + process.env.PATH;
+                process.env.PATH = binaryPathDir + path.delimiter + process.env.PATH;
             }
 
             const kubectlresult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(
                 clusterConfig, "YAML", async (kubeConfigFile) => {
-                    return await invokeKubectlGadgetCommand(kubectl, kubeConfigFile, commandToRun);
+                    return await invokeKubectlCommand(kubectl, kubeConfigFile, commandToRun);
                 });
 
             if (failed(kubectlresult)) {
@@ -148,7 +147,6 @@ async function runKubectlGadgetCommands(
             if (kubectlresult.succeeded) {
                 const webview = createWebView('AKS Kubectl Commands', `AKS Kubectl Command view for: ${clustername}`).webview;
                 webview.html = getWebviewContent(kubectlresult.result, command, extensionPath.result, webview);
-                vscode.window.showInformationMessage(`Gadget successfully ran ${command}.`)
             }
 
             return true;
