@@ -37,22 +37,40 @@ export function getKustomizeConfig(): Errorable<KustomizeConfig> {
 
 export function getKubeloginConfig(): Errorable<KubeloginConfig> {
     const kubeloginConfig = vscode.workspace.getConfiguration('azure.kubelogin');
-    const props = combine([getConfigValue(kubeloginConfig, 'releaseTag')]);
- 
-    if (failed(props)) {
-       return {
-          succeeded: false,
-          error: `Failed to read azure.kubelogin configuration: ${props.error}`
-       };
+    const config = getConfigValue(kubeloginConfig, 'releaseTag');
+
+    if (failed(config)) {
+        return {
+            succeeded: false,
+            error: `Failed to read azure.kubelogin configuration: ${config.error}`
+        };
     }
- 
-    const config = {
-       releaseTag: props.result[0]
+
+    const configresult = {
+        releaseTag: config.result
     };
- 
-    return {succeeded: true, result: config};
- }
- 
+
+    return { succeeded: true, result: configresult };
+}
+
+export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
+    const kubectlGadgetConfig = vscode.workspace.getConfiguration('azure.kubectlgadget');
+    const config = getConfigValue(kubectlGadgetConfig, 'releaseTag');
+
+    if (failed(config)) {
+        return {
+            succeeded: false,
+            error: `Failed to read azure.kubectlgadget configuration: ${config.error}`
+        };
+    }
+
+    const configresult = {
+        releaseTag: config.result
+    };
+
+    return { succeeded: true, result: configresult };
+}
+
 function getConfigValue(config: vscode.WorkspaceConfiguration, key: string): Errorable<string> {
     const value = config.get(key);
     if (value === undefined) {

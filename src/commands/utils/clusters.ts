@@ -50,7 +50,7 @@ export async function getKubernetesClusterInfo(commandTarget: any, cloudExplorer
         }
 
         const result = {
-            name: commandTarget.name,
+            name: aksCluster.result.name,
             kubeconfigYaml: kubeconfigYaml.result
         };
 
