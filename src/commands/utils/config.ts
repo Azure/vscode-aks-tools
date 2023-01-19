@@ -40,9 +40,9 @@ export function getKubeloginConfig(): Errorable<KubeloginConfig> {
     const config = getConfigValue(kubeloginConfig, 'releaseTag');
 
     if (failed(config)) {
-    return {
-        succeeded: false,
-        error: `Failed to read azure.kubelogin configuration: ${config.error}`
+        return {
+            succeeded: false,
+            error: `Failed to read azure.kubelogin configuration: ${config.error}`
         };
     }
 
@@ -58,9 +58,9 @@ export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
     const config = getConfigValue(kubectlGadgetConfig, 'releaseTag');
 
     if (failed(config)) {
-    return {
-        succeeded: false,
-        error: `Failed to read azure.kubectlgadget configuration: ${config.error}`
+        return {
+            succeeded: false,
+            error: `Failed to read azure.kubectlgadget configuration: ${config.error}`
         };
     }
 

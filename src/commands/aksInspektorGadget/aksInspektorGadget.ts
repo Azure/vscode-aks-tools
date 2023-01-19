@@ -38,7 +38,6 @@ async function gadgetDeployUndeploy(
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
 
-
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return undefined;
@@ -109,27 +108,23 @@ async function runKubectlGadgetCommands(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
 
     const kubectlGadgetPath = await getKubectlGadgetBinaryPath();
-    let kubetlGadgetBinaryPath = "";
 
     if (failed(kubectlGadgetPath)) {
         vscode.window.showWarningMessage(`Gadget path is not found ${kubectlGadgetPath.error}`);
         return;
     }
 
-    kubetlGadgetBinaryPath = kubectlGadgetPath.result;
-
     const extensionPath = getExtensionPath();
 
     if (failed(extensionPath)) {
-      vscode.window.showErrorMessage(extensionPath.error);
-      return;
+        vscode.window.showErrorMessage(extensionPath.error);
+        return;
     }
 
     return await longRunning(`Loading ${clustername} kubectl command run.`,
         async () => {
             const commandToRun = `gadget ${command}`;
-            console.log(kubetlGadgetBinaryPath);
-            const  binaryPathDir = path.dirname(kubetlGadgetBinaryPath);
+            const binaryPathDir = path.dirname(kubectlGadgetPath.result);
 
             if (process.env.PATH === undefined) {
                 process.env.PATH = binaryPathDir
@@ -143,15 +138,14 @@ async function runKubectlGadgetCommands(
                 });
 
             if (failed(kubectlresult)) {
-                vscode.window.showWarningMessage(`Gadget command failed with following error: ${kubectlresult.error}`)
+                vscode.window.showWarningMessage(`Gadget command failed with following error: ${kubectlresult.error}`);
+                return;
             }
 
             if (kubectlresult.succeeded) {
                 const webview = createWebView('AKS Kubectl Commands', `AKS Kubectl Command view for: ${clustername}`).webview;
                 webview.html = getWebviewContent(kubectlresult.result, command, extensionPath.result, webview);
             }
-
-            return true;
         }
     );
 }
@@ -161,15 +155,14 @@ function getWebviewContent(
     commandRun: string,
     vscodeExtensionPath: string,
     webview: vscode.Webview
-    ): string {
-      const styleUri = getResourceUri(webview, vscodeExtensionPath, 'common', 'detector.css');
-      const templateUri = getResourceUri(webview, vscodeExtensionPath, 'aksKubectlCommand', 'akskubectlcommand.html');
-      const data = {
+): string {
+    const styleUri = getResourceUri(webview, vscodeExtensionPath, 'common', 'detector.css');
+    const templateUri = getResourceUri(webview, vscodeExtensionPath, 'aksKubectlCommand', 'akskubectlcommand.html');
+    const data = {
         cssuri: styleUri,
         name: commandRun,
         command: clusterdata.stdout,
-      };
-  
-      return getRenderedContent(templateUri, data);
-  }
-  
+    };
+
+    return getRenderedContent(templateUri, data);
+}
