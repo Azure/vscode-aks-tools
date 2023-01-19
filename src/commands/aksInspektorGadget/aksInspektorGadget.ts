@@ -10,7 +10,7 @@ import { invokeKubectlCommand } from '../utils/kubectl';
 import path = require('path');
 import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 
-enum InspektorGadget {
+enum GadgetCommand {
     Deploy,
     Undeploy
 }
@@ -19,20 +19,20 @@ export async function aksInspektorGadgetDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, InspektorGadget.Deploy)
+    await gadgetDeployUndeploy(_context, target, GadgetCommand.Deploy)
 }
 
 export async function aksInspektorGadgetUnDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, InspektorGadget.Undeploy);
+    await gadgetDeployUndeploy(_context, target, GadgetCommand.Undeploy);
 }
 
 async function gadgetDeployUndeploy(
     _context: IActionContext,
     target: any,
-    gadget: InspektorGadget
+    gadget: GadgetCommand
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -60,23 +60,23 @@ async function gadgetDeployUndeploy(
         return undefined;
     }
 
-    await prepareInspektorGadgetInstall(clusterInfo.result, gadget, clusterInfo.result.kubeconfigYaml, kubectl);
+    await prepareInspektorGadgetInstall(clusterInfo.result, gadget, kubectl);
 }
 
 async function prepareInspektorGadgetInstall(
-    cloudTarget: KubernetesClusterInfo,
-    gadget: InspektorGadget,
-    kubeconfig: string,
+    clusterInfo: KubernetesClusterInfo,
+    gadget: GadgetCommand,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>
 ): Promise<void> {
-    const clustername = cloudTarget.name;
+    const clustername = clusterInfo.name;
+    const kubeconfig = clusterInfo.kubeconfigYaml;
 
     switch (gadget) {
-        case InspektorGadget.Deploy:
+        case GadgetCommand.Deploy:
             await deployGadget(clustername, kubeconfig, kubectl);
             return;
-        case InspektorGadget.Undeploy:
-            const answer = await vscode.window.showInformationMessage(`Do you want to undeploy gadget in selected cluster?`, "Yes", "No");
+        case GadgetCommand.Undeploy:
+            const answer = await vscode.window.showInformationMessage(`Do you want to undeploy gadget in ${clustername}?`, "Yes", "No");
             if (answer === "Yes") {
                 await unDeployGadget(clustername, kubeconfig, kubectl);
             }
@@ -113,11 +113,10 @@ async function runKubectlGadgetCommands(
 
     if (failed(kubectlGadgetPath)) {
         vscode.window.showWarningMessage(`Gadget path is not found ${kubectlGadgetPath.error}`);
+        return;
     }
 
-    if (kubectlGadgetPath.succeeded) {
-        kubetlGadgetBinaryPath = kubectlGadgetPath.result;
-    }
+    kubetlGadgetBinaryPath = kubectlGadgetPath.result;
 
     const extensionPath = getExtensionPath();
 
@@ -131,7 +130,10 @@ async function runKubectlGadgetCommands(
             const commandToRun = `gadget ${command}`;
             console.log(kubetlGadgetBinaryPath);
             const  binaryPathDir = path.dirname(kubetlGadgetBinaryPath);
-            if (process.env.PATH !== undefined && (process.env.PATH.indexOf(binaryPathDir) < 0)){ 
+
+            if (process.env.PATH === undefined) {
+                process.env.PATH = binaryPathDir
+            } else if (process.env.PATH.indexOf(binaryPathDir) < 0) {
                 process.env.PATH = binaryPathDir + path.delimiter + process.env.PATH;
             }
 
