@@ -4,22 +4,54 @@ import * as fs from 'fs';
 import { moveFile } from 'move-file';
 import { Errorable, failed } from "../errorable";
 import path = require("path");
+import { longRunning } from '../host';
 
-export async function downloadBinary(
+function getToolBaseInstallFolder(toolName: string): string {
+    return path.join(os.homedir(), `.vs-kubernetes/tools/${toolName}`);
+}
+
+function getToolBinaryFolder(toolName: string, version: string): string {
+    return path.join(getToolBaseInstallFolder(toolName), version);
+}
+
+function getToolDownloadFolder(toolName: string): string {
+    return path.join(getToolBaseInstallFolder(toolName), "download");
+}
+ 
+export async function getToolBinaryPath(
+    toolName: string,
+    version: string,
+    downloadUrl: string,
+    pathToBinaryInArchive: string,
+    binaryFilename: string,
+    ): Promise<Errorable<string>> {
+
+    const binaryFolder = getToolBinaryFolder(toolName, version);
+    const binaryFilePath = path.join(binaryFolder, binaryFilename);
+
+    if (fs.existsSync(binaryFilePath)) {
+       return {succeeded: true, result: binaryFilePath};
+    }
+ 
+    return await longRunning(`Downloading kubectl-gadget to ${binaryFilePath}.`, () => downloadBinary(toolName, binaryFilePath, downloadUrl, pathToBinaryInArchive));
+}
+
+async function downloadBinary(
+    toolName: string,
     binaryFilePath: string,
-    binaryName: string,
-    downloadFolder: string,
-    binaryDownloadUrl: string,
-    downloadFileName: string
+    downloadUrl: string,
+    pathToBinaryInArchive: string
 ): Promise<Errorable<string>> {
 
+    const downloadFileName = downloadUrl.substring(downloadUrl.lastIndexOf('/') + 1);
+    const downloadFolder = getToolDownloadFolder(toolName);
     const downloadFilePath = path.join(downloadFolder, downloadFileName);
 
-    const downloadResult = await download.once(binaryDownloadUrl, downloadFilePath);
+    const downloadResult = await download.once(downloadUrl, downloadFilePath);
     if (failed(downloadResult)) {
         return {
             succeeded: false,
-            error: `Failed to download binary from ${binaryDownloadUrl}: ${downloadResult.error}`
+            error: `Failed to download binary from ${downloadUrl}: ${downloadResult.error}`
         };
     }
     const decompress = require("decompress");
@@ -41,49 +73,11 @@ export async function downloadBinary(
     download.clear(downloadFilePath);
 
     // Move file to more flatten structure.
-    const unzippedBinaryFilePath = getUnzippedBinaryFilePath(downloadFolder, binaryName);
-
-    if (unzippedBinaryFilePath === undefined) {
-        return  { succeeded: false, error: `${binaryName} is not supported.` };
-    }
+    const unzippedBinaryFilePath = path.join(downloadFolder, pathToBinaryInArchive);
 
     await moveFile(unzippedBinaryFilePath, binaryFilePath);
 
     //If linux check -- make chmod 0755
     fs.chmodSync(path.join(binaryFilePath), '0755');
     return { succeeded: true, result: binaryFilePath };
-}
-
-export function getBinaryExecutableFileName(binaryName: string) {
-    const operatingSystem = os.platform().toLocaleLowerCase();
-    const extension = operatingSystem === 'win32' ? '.exe' : '';
-    return `${binaryName}${extension}`;
-}
-
-export function checkIfKubeloginBinaryExist(destinationFile: string): boolean {
-    return fs.existsSync(destinationFile);
- } 
-
-function getUnzippedBinaryFilePath(unzippedFolder: string, binaryName: string) {
-    let architecture = os.arch();
-    let operatingSystem = os.platform().toLocaleLowerCase();
-
-    if (architecture === 'x64') {
-        architecture = 'amd64';
-    }
-
-    if (operatingSystem === 'win32') {
-        operatingSystem = 'windows';
-    }
-
-    const unzippedBinaryFilename = getBinaryExecutableFileName(binaryName);
-
-    switch (binaryName) {
-        case "kubelogin":
-            return path.join(unzippedFolder, "bin", `${operatingSystem}_${architecture}`, unzippedBinaryFilename);
-        case "kubectl-gadget":
-            return path.join(unzippedFolder, unzippedBinaryFilename);
-    }
-
-    return;
 }

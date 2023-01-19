@@ -1,24 +1,9 @@
 import * as vscode from 'vscode';
 import * as os from 'os';
-import * as path from 'path';
+import path = require("path");
 import { getKubeloginConfig } from '../config';
 import { Errorable, failed } from '../errorable';
-import { longRunning } from '../host';
-import { checkIfKubeloginBinaryExist, downloadBinary, getBinaryExecutableFileName } from './binaryDownloadHelper';
-
-const KUBELOGIN_BINARY_NAME: string = "kubelogin";
-
-function getBaseInstallFolder(): string {
-   return path.join(os.homedir(), `.vs-kubernetes/tools/kubelogin`);
-}
-
-function getKubeloginBinaryFolder(releaseTag: string): string {
-   return path.join(getBaseInstallFolder(), releaseTag);
-}
-
-function getDownloadFolder(): string {
-   return path.join(getBaseInstallFolder(), "download");
-}
+import { getToolBinaryPath } from './binaryDownloadHelper';
 
 async function getLatestKubeloginReleaseTag() {
    const kubeloginConfig = getKubeloginConfig();
@@ -31,50 +16,47 @@ async function getLatestKubeloginReleaseTag() {
 }
 
 export async function getKubeloginBinaryPath(): Promise<Errorable<string>> {
-   // 0. Get latest release tag.
-   // 1: check if file already exist.
-   // 2: if not Download latest.
-   const releaseTag = await getLatestKubeloginReleaseTag();
+    const releaseTag = await getLatestKubeloginReleaseTag();
+    if (!releaseTag) {
+         return {succeeded: false, error: "Could not get latest release tag."};
+    }
 
-   if (!releaseTag) {
-      return {succeeded: false, error: "Could not get latest release tag."};
-   }
+    const archiveFilename = getArchiveFilename();
+    const downloadUrl = `https://github.com/Azure/kubelogin/releases/download/${releaseTag}/${archiveFilename}`;
+    const pathToBinaryInArchive = getPathToBinaryInArchive();
+    const binaryFilename = path.basename(pathToBinaryInArchive);
 
-   const binaryFolder = getKubeloginBinaryFolder(releaseTag);
-
-   const binaryFilePath = path.join(
-      binaryFolder,
-      getBinaryExecutableFileName(KUBELOGIN_BINARY_NAME)
-   );
-
-   if (checkIfKubeloginBinaryExist(binaryFilePath)) {
-      return {succeeded: true, result: binaryFilePath};
-   }
-
-   return await longRunning(`Downloading kubelogin to ${binaryFilePath}.`, () => downloadKubelogin(binaryFilePath, releaseTag));
+    return await getToolBinaryPath("kubelogin", releaseTag, downloadUrl, pathToBinaryInArchive, binaryFilename);
 }
 
-async function downloadKubelogin(binaryFilePath: string, releaseTag: string): Promise<Errorable<string>> {
-   const downloadFolder = getDownloadFolder();
-   const downloadFileName = getKubeloginZipFileName();
-   const kubeloginDownloadUrl = `https://github.com/Azure/kubelogin/releases/download/${releaseTag}/${downloadFileName}`;
+function getArchiveFilename() {
+    let architecture = os.arch();
+    let operatingSystem = os.platform().toLocaleLowerCase();
+    
+    if (architecture === 'x64') {
+        architecture = 'amd64';
+    }
 
-   const binaryFileDownloadResult = await downloadBinary(binaryFilePath, KUBELOGIN_BINARY_NAME, downloadFolder, kubeloginDownloadUrl, downloadFileName);
-   
-   return binaryFileDownloadResult;
+    if (operatingSystem === 'win32') {
+        operatingSystem = 'win';
+    }
+
+    return `kubelogin-${operatingSystem}-${architecture}.zip`;
 }
 
-function getKubeloginZipFileName() {
+function getPathToBinaryInArchive() {
    let architecture = os.arch();
    let operatingSystem = os.platform().toLocaleLowerCase();
 
    if (architecture === 'x64') {
-      architecture = 'amd64';
+       architecture = 'amd64';
    }
 
+   let extension = '';
    if (operatingSystem === 'win32') {
-      operatingSystem = 'win';
+       operatingSystem = 'windows';
+       extension = '.exe'
    }
 
-   return `kubelogin-${operatingSystem}-${architecture}.zip`;
+   return path.join('bin', `${operatingSystem}_${architecture}`, `kubelogin${extension}`);
 }
