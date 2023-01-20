@@ -62,7 +62,7 @@ export async function aksKubectlK8sHealthzAPIEndpointCommands(
   _context: IActionContext,
   target: any
 ): Promise<void> {
-  const command = `get --raw='/healthz?verbose'`;
+  const command = "get --raw /healthz?verbose";
   await aksKubectlCommands(_context, target, command);
 }
 
@@ -70,7 +70,7 @@ export async function aksKubectlK8sLivezAPIEndpointCommands(
   _context: IActionContext,
   target: any
 ): Promise<void> {
-  const command = `get --raw='/livez?verbose'`;
+  const command = "get --raw /livez?verbose";
   await aksKubectlCommands(_context, target, command);
 }
 
@@ -78,7 +78,7 @@ export async function aksKubectlK8sReadyzAPIEndpointCommands(
   _context: IActionContext,
   target: any
 ): Promise<void> {
-  const command = `get --raw='/readyz?verbose'`;
+  const command = "get --raw /readyz?verbose";
   await aksKubectlCommands(_context, target, command);
 }
 
