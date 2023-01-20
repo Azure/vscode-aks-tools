@@ -12,6 +12,8 @@
 * Stop and Start the AKS cluster
 * Run Kubectl Commands from your AKS cluster
 * Run Managed Cluster Operations from your AKS cluster
+* Run Kubernetes API Health Endpoints
+* Deploy and Undeploy InspektorGadget
 
 ## Installation
 
@@ -36,6 +38,10 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 ![Cloud explorer extension menu](resources/right-click-menu-kubectl.png)
 
 ![Cloud explorer extension menu](resources/right-click-menu-managedoperations.png)
+
+![Cloud explorer extension menu](resources/right-click-api-health-check-menu.png)
+
+![Cloud explorer extension menu](resources/right-click-inspektor-gadget.png)
 
 ![Cloud explorer extension menu](resources/right-click-subscription.png)
 
@@ -147,6 +153,18 @@ Right click on your AKS cluster and click on **Managed Cluster Operations** to e
 
 - Delete Cluster
 - Rotate Cluster Certificate
+
+### Run Kubernetes API Health Endpoints
+
+Right click on your AKS cluster and click on **Kubernetes API Health Endpoints** to easily run few [k8s cluster API endpoint health check](https://kubernetes.io/docs/reference/using-api/health-checks/). Currently we have enable following health check:
+
+- Healthz
+- Livez
+- Readyz
+
+### Deploy and Undeploy InspektorGadget
+
+Right click on your AKS cluster and click on **Inspektor Gadget** to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.
 
 ## Telemetry
 
