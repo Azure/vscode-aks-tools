@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.3.10]
+
+* Enable deploy/undeploy inspektor gadget.
+* Add k8s api healtch check submenu.
+
+Thank you so much to @rzhang628, @peterbom, and @blanquicet.
+
 ## [1.3.9]
 
 * Remove SVG Badges which Marketplace didn't like.
