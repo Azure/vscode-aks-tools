@@ -2,7 +2,6 @@
 
 ## [1.3.10]
 
-* Remove quotes around kubectl argument to avoid incorrect parsing on WSL.
 * Enable deploy/undeploy inspektor gadget.
 * Add k8s api healtch check submenu.
 
