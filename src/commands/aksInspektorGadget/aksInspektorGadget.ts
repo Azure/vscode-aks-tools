@@ -144,7 +144,7 @@ async function runKubectlGadgetCommands(
 
             if (kubectlresult.succeeded) {
                 const webview = createWebView('AKS Kubectl Commands', `AKS Kubectl Command view for: ${clustername}`).webview;
-                webview.html = getWebviewContent(kubectlresult.result, command, extensionPath.result, webview);
+                webview.html = getWebviewContent(kubectlresult.result, commandToRun, extensionPath.result, webview);
             }
         }
     );
