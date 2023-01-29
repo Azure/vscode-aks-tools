@@ -212,11 +212,11 @@
             },
             {
                 "command": "aks.aksInspektorGadgetDeploy",
-                "title": "Deploy Gadget"
+                "title": "Deploy"
             },
             {
                 "command": "aks.aksInspektorGadgetUnDeploy",
-                "title": "Undeploy Gadget"
+                "title": "Undeploy"
             }
         ],
         "menus": {
