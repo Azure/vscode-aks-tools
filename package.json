@@ -388,6 +388,16 @@
                 {
                     "command": "aks.aksInspektorGadgetUnDeploy",
                     "group": "navigation"
+                },
+                {
+                    "submenu": "aks.inspektorGadgetCommandsSubMenu",
+                    "group": "navigation"
+                }
+            ],
+            "aks.inspektorGadgetCommandsSubMenu": [
+                {
+                    "command": "aks.aksKubectlK8sReadyzAPIEndpointCommands",
+                    "group": "navigation"
                 }
             ]
         },
@@ -415,6 +425,10 @@
             {
                 "id": "aks.inspektorGadgetSubMenu",
                 "label": "Inspektor Gadget"
+            },
+            {
+                "id": "aks.inspektorGadgetCommandsSubMenu",
+                "label": "Trace Gadgets"
             }
         ]
     },
