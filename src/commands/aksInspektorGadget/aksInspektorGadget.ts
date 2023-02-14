@@ -40,49 +40,49 @@ export async function aksInspektorGadgetTopTCP(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.TopTCP);
+    await gadgetDeployUndeploy(_context, target, Command.TopTCP);
 }
 
 export async function aksInspektorGadgetTopEBPF(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.TopEBPF);
+    await gadgetDeployUndeploy(_context, target, Command.TopEBPF);
 }
 
 export async function aksInspektorGadgetTopBlockIO(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.TopBlockIO);
+    await gadgetDeployUndeploy(_context, target, Command.TopBlockIO);
 }
 
 export async function aksInspektorGadgetTopFile(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.TopFile);
+    await gadgetDeployUndeploy(_context, target, Command.TopFile);
 }
 
 export async function aksInspektorGadgetProfileCPU(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.ProfileCPU);
+    await gadgetDeployUndeploy(_context, target, Command.ProfileCPU);
 }
 
 export async function aksInspektorGadgetSnapshotProcess(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.SnapshotProcess);
+    await gadgetDeployUndeploy(_context, target, Command.SnapshotProcess);
 }
 
 export async function aksInspektorGadgetSnapshotSocket(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.SnapshotSocket);
+    await gadgetDeployUndeploy(_context, target, Command.SnapshotSocket);
 }
 
 async function gadgetDeployUndeploy(
@@ -136,25 +136,25 @@ async function prepareInspektorGadgetInstall(
                 await unDeployGadget(clustername, kubeconfig, kubectl);
             }
             return;
-        case GadgetCommand.TopTCP:
+        case Command.TopTCP:
             await topTCPGadget(clustername, kubeconfig, kubectl);
             return;
-        case GadgetCommand.TopEBPF:
+        case Command.TopEBPF:
             await topEBPFGadget(clustername, kubeconfig, kubectl);
             return;
-        case GadgetCommand.TopBlockIO:
+        case Command.TopBlockIO:
             await topBlockIOGadget(clustername, kubeconfig, kubectl);
             return;
-        case GadgetCommand.TopFile:
+        case Command.TopFile:
             await topFile(clustername, kubeconfig, kubectl);
             return;
-        case GadgetCommand.ProfileCPU:
+        case Command.ProfileCPU:
             await profileCPU(clustername, kubeconfig, kubectl);
             return;
-        case GadgetCommand.SnapshotProcess:
+        case Command.SnapshotProcess:
             await snapshotProcess(clustername, kubeconfig, kubectl);
             return;
-        case GadgetCommand.SnapshotSocket:
+        case Command.SnapshotSocket:
             await snapshotSocket(clustername, kubeconfig, kubectl);
             return;
     }
