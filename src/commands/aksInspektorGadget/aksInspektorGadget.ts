@@ -26,67 +26,66 @@ export async function aksInspektorGadgetDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.Deploy)
+    await gadgetDeployUndeploy(target, Command.Deploy)
 }
 
 export async function aksInspektorGadgetUnDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.Undeploy);
+    await gadgetDeployUndeploy(target, Command.Undeploy);
 }
 
 export async function aksInspektorGadgetTopTCP(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.TopTCP);
+    await gadgetDeployUndeploy(target, Command.TopTCP);
 }
 
 export async function aksInspektorGadgetTopEBPF(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.TopEBPF);
+    await gadgetDeployUndeploy(target, Command.TopEBPF);
 }
 
 export async function aksInspektorGadgetTopBlockIO(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.TopBlockIO);
+    await gadgetDeployUndeploy(target, Command.TopBlockIO);
 }
 
 export async function aksInspektorGadgetTopFile(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.TopFile);
+    await gadgetDeployUndeploy(target, Command.TopFile);
 }
 
 export async function aksInspektorGadgetProfileCPU(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.ProfileCPU);
+    await gadgetDeployUndeploy(target, Command.ProfileCPU);
 }
 
 export async function aksInspektorGadgetSnapshotProcess(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.SnapshotProcess);
+    await gadgetDeployUndeploy(target, Command.SnapshotProcess);
 }
 
 export async function aksInspektorGadgetSnapshotSocket(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.SnapshotSocket);
+    await gadgetDeployUndeploy(target, Command.SnapshotSocket);
 }
 
 async function gadgetDeployUndeploy(
-    _context: IActionContext,
     target: any,
     cmd: Command
 ): Promise<void> {

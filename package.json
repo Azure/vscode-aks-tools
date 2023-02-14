@@ -227,11 +227,11 @@
             },
             {
                 "command": "aks.aksInspektorGadgetTopTCP",
-                "title": "Top Tcp"
+                "title": "Top TCP"
             },
             {
                 "command": "aks.aksInspektorGadgetTopEBPF",
-                "title": "Top Ebpf"
+                "title": "Top eBPF"
             },
             {
                 "command": "aks.aksInspektorGadgetTopBlockIO",
@@ -251,7 +251,7 @@
             },
             {
                 "command": "aks.aksInspektorGadgetSnapshotSocket",
-                "title": "Sanpshot Socket"
+                "title": "Snapshot Socket"
             }
         ],
         "menus": {
