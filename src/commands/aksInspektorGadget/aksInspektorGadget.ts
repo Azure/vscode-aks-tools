@@ -26,66 +26,66 @@ export async function aksInspektorGadgetDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.Deploy)
+    await checkTargetAndRunGadgetCommand(target, Command.Deploy)
 }
 
 export async function aksInspektorGadgetUnDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.Undeploy);
+    await checkTargetAndRunGadgetCommand(target, Command.Undeploy);
 }
 
 export async function aksInspektorGadgetTopTCP(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.TopTCP);
+    await checkTargetAndRunGadgetCommand(target, Command.TopTCP);
 }
 
 export async function aksInspektorGadgetTopEBPF(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.TopEBPF);
+    await checkTargetAndRunGadgetCommand(target, Command.TopEBPF);
 }
 
 export async function aksInspektorGadgetTopBlockIO(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.TopBlockIO);
+    await checkTargetAndRunGadgetCommand(target, Command.TopBlockIO);
 }
 
 export async function aksInspektorGadgetTopFile(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.TopFile);
+    await checkTargetAndRunGadgetCommand(target, Command.TopFile);
 }
 
 export async function aksInspektorGadgetProfileCPU(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.ProfileCPU);
+    await checkTargetAndRunGadgetCommand(target, Command.ProfileCPU);
 }
 
 export async function aksInspektorGadgetSnapshotProcess(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.SnapshotProcess);
+    await checkTargetAndRunGadgetCommand(target, Command.SnapshotProcess);
 }
 
 export async function aksInspektorGadgetSnapshotSocket(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(target, Command.SnapshotSocket);
+    await checkTargetAndRunGadgetCommand(target, Command.SnapshotSocket);
 }
 
-async function gadgetDeployUndeploy(
+async function checkTargetAndRunGadgetCommand(
     target: any,
     cmd: Command
 ): Promise<void> {
@@ -114,10 +114,10 @@ async function gadgetDeployUndeploy(
         return undefined;
     }
 
-    await prepareInspektorGadgetInstall(clusterInfo.result, cmd, kubectl);
+    await runGadgetCommand(clusterInfo.result, cmd, kubectl);
 }
 
-async function prepareInspektorGadgetInstall(
+async function runGadgetCommand(
     clusterInfo: KubernetesClusterInfo,
     cmd: Command,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>
