@@ -26,7 +26,7 @@ import { longRunning } from './commands/utils/host';
 import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
 import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 import aksRotateClusterCert from './commands/aksRotateClusterCert/aksRotateClusterCert';
-import { aksInspektorGadgetDeploy, aksInspektorGadgetProfileBlockIO, aksInspektorGadgetProfileCPU, aksInspektorGadgetSnapshotProcess, aksInspektorGadgetSnapshotSocket, aksInspektorGadgetTopBlockIO, aksInspektorGadgetTopEBPF, aksInspektorGadgetTopFile, aksInspektorGadgetTopTCP, aksInspektorGadgetUnDeploy } from './commands/aksInspektorGadget/aksInspektorGadget';
+import { aksInspektorGadgetDeploy, aksInspektorGadgetProfileCPU, aksInspektorGadgetSnapshotProcess, aksInspektorGadgetSnapshotSocket, aksInspektorGadgetTopBlockIO, aksInspektorGadgetTopEBPF, aksInspektorGadgetTopFile, aksInspektorGadgetTopTCP, aksInspektorGadgetUnDeploy } from './commands/aksInspektorGadget/aksInspektorGadget';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -79,7 +79,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksInspektorGadgetTopEBPF', aksInspektorGadgetTopEBPF);
         registerCommandWithTelemetry('aks.aksInspektorGadgetTopBlockIO', aksInspektorGadgetTopBlockIO);
         registerCommandWithTelemetry('aks.aksInspektorGadgetTopFile', aksInspektorGadgetTopFile);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetProfileBlockIO', aksInspektorGadgetProfileBlockIO);
         registerCommandWithTelemetry('aks.aksInspektorGadgetProfileCPU', aksInspektorGadgetProfileCPU);
         registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotProcess', aksInspektorGadgetSnapshotProcess);
         registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotSocket', aksInspektorGadgetSnapshotSocket);

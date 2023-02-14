@@ -18,7 +18,6 @@ enum Command {
     TopBlockIO,
     TopFile,
     ProfileCPU,
-    ProfileBlockIO,
     SnapshotProcess,
     SnapshotSocket
 }
@@ -63,13 +62,6 @@ export async function aksInspektorGadgetTopFile(
     target: any
 ): Promise<void> {
     await gadgetDeployUndeploy(_context, target, GadgetCommand.TopFile);
-}
-
-export async function aksInspektorGadgetProfileBlockIO(
-    _context: IActionContext,
-    target: any
-): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, GadgetCommand.ProfileBlockIO);
 }
 
 export async function aksInspektorGadgetProfileCPU(
@@ -156,9 +148,6 @@ async function prepareInspektorGadgetInstall(
         case GadgetCommand.TopFile:
             await topFile(clustername, kubeconfig, kubectl);
             return;
-        case GadgetCommand.ProfileBlockIO:
-            await profileBlockIO(clustername, kubeconfig, kubectl);
-            return;
         case GadgetCommand.ProfileCPU:
             await profileCPU(clustername, kubeconfig, kubectl);
             return;
@@ -224,16 +213,6 @@ async function topFile(
 
     return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
 }
-
-async function profileBlockIO(
-    clustername: string,
-    clusterConfig: string,
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
-    const command = "profile block-io";
-
-    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
-}
-
 async function profileCPU(
     clustername: string,
     clusterConfig: string,
