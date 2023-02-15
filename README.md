@@ -172,7 +172,7 @@ Right click on your AKS cluster and click on **Inspektor Gadget** to easily depl
 
 ### Profile, Top and Snapshot Inspektor Gadget Commands
 
-After succefuly deploying Inspektor Gadget, Right click on your AKS cluster and click on **Inspektor Gadget** choose **Gadget Commands** to easily use non-interactive Top, Profile or Snapshot Inspektor Gadget for your cluster.
+After successfully deploying Inspektor Gadget, right-click on your AKS cluster and select **Inspektor Gadget** and choose **Gadget Commands** to easily use non-interactive Top, Profile or Snapshot commands for your cluster.
 
 ## Telemetry
 
