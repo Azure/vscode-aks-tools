@@ -26,7 +26,7 @@ import { longRunning } from './commands/utils/host';
 import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
 import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 import aksRotateClusterCert from './commands/aksRotateClusterCert/aksRotateClusterCert';
-import { aksInspektorGadgetDeploy, aksInspektorGadgetUnDeploy } from './commands/aksInspektorGadget/aksInspektorGadget';
+import { aksInspektorGadgetDeploy, aksInspektorGadgetProfileCPU, aksInspektorGadgetSnapshotProcess, aksInspektorGadgetSnapshotSocket, aksInspektorGadgetTopBlockIO, aksInspektorGadgetTopEBPF, aksInspektorGadgetTopFile, aksInspektorGadgetTopTCP, aksInspektorGadgetUnDeploy } from './commands/aksInspektorGadget/aksInspektorGadget';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -75,6 +75,13 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksKubectlK8sReadyzAPIEndpointCommands', aksKubectlK8sReadyzAPIEndpointCommands);
         registerCommandWithTelemetry('aks.aksInspektorGadgetDeploy', aksInspektorGadgetDeploy);
         registerCommandWithTelemetry('aks.aksInspektorGadgetUnDeploy', aksInspektorGadgetUnDeploy);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetTopTCP', aksInspektorGadgetTopTCP);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetTopEBPF', aksInspektorGadgetTopEBPF);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetTopBlockIO', aksInspektorGadgetTopBlockIO);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetTopFile', aksInspektorGadgetTopFile);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetProfileCPU', aksInspektorGadgetProfileCPU);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotProcess', aksInspektorGadgetSnapshotProcess);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotSocket', aksInspektorGadgetSnapshotSocket);
 
         await registerAzureServiceNodes(context);
 
