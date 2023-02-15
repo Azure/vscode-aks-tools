@@ -52,7 +52,14 @@
         "onCommand:aks.aksKubectlK8sLivezAPIEndpointCommands",
         "onCommand:aks.aksKubectlK8sReadyzAPIEndpointCommands",
         "onCommand:aks.aksInspektorGadgetDeploy",
-        "onCommand:aks.aksInspektorGadgetUnDeploy"
+        "onCommand:aks.aksInspektorGadgetUnDeploy",
+        "onCommand:aks.aksInspektorGadgetTopTCP",
+        "onCommand:aks.aksInspektorGadgetTopEBPF",
+        "onCommand:aks.aksInspektorGadgetTopBlockIO",
+        "onCommand:aks.aksInspektorGadgetTopFile",
+        "onCommand:aks.aksInspektorGadgetProfileCPU",
+        "onCommand:aks.aksInspektorGadgetSnapshotProcess",
+        "onCommand:aks.aksInspektorGadgetSnapshotSocket"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -217,6 +224,34 @@
             {
                 "command": "aks.aksInspektorGadgetUnDeploy",
                 "title": "Undeploy"
+            },
+            {
+                "command": "aks.aksInspektorGadgetTopTCP",
+                "title": "Top TCP"
+            },
+            {
+                "command": "aks.aksInspektorGadgetTopEBPF",
+                "title": "Top eBPF"
+            },
+            {
+                "command": "aks.aksInspektorGadgetTopBlockIO",
+                "title": "Top BlockIO"
+            },
+            {
+                "command": "aks.aksInspektorGadgetTopFile",
+                "title": "Top File"
+            },
+            {
+                "command": "aks.aksInspektorGadgetProfileCPU",
+                "title": "Profile CPU"
+            },
+            {
+                "command": "aks.aksInspektorGadgetSnapshotProcess",
+                "title": "Sanpshot Process"
+            },
+            {
+                "command": "aks.aksInspektorGadgetSnapshotSocket",
+                "title": "Snapshot Socket"
             }
         ],
         "menus": {
@@ -388,6 +423,58 @@
                 {
                     "command": "aks.aksInspektorGadgetUnDeploy",
                     "group": "navigation"
+                },
+                {
+                    "submenu": "aks.inspektorGadgetCommandsSubMenu",
+                    "group": "navigation"
+                }
+            ],
+            "aks.inspektorGadgetCommandsSubMenu": [
+                {
+                    "submenu": "aks.inspektorGadgetTopCommandSubMenu",
+                    "group": "navigation"
+                },
+                {
+                    "submenu": "aks.inspektorGadgetProfileCommandSubMenu",
+                    "group": "navigation"
+                },
+                {
+                    "submenu": "aks.inspektorGadgetSanpshotCommandSubMenu",
+                    "group": "navigation"
+                }
+            ],
+            "aks.inspektorGadgetTopCommandSubMenu": [
+                {
+                    "command": "aks.aksInspektorGadgetTopTCP",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetTopEBPF",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetTopBlockIO",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetTopFile",
+                    "group": "navigation"
+                }
+            ],
+            "aks.inspektorGadgetProfileCommandSubMenu": [
+                {
+                    "command": "aks.aksInspektorGadgetProfileCPU",
+                    "group": "navigation"
+                }
+            ],
+            "aks.inspektorGadgetSanpshotCommandSubMenu": [
+                {
+                    "command": "aks.aksInspektorGadgetSnapshotProcess",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetSnapshotSocket",
+                    "group": "navigation"
                 }
             ]
         },
@@ -415,6 +502,22 @@
             {
                 "id": "aks.inspektorGadgetSubMenu",
                 "label": "Inspektor Gadget"
+            },
+            {
+                "id": "aks.inspektorGadgetCommandsSubMenu",
+                "label": "Gadget Commands"
+            },
+            {
+                "id": "aks.inspektorGadgetTopCommandSubMenu",
+                "label": "Top Commands"
+            },
+            {
+                "id": "aks.inspektorGadgetProfileCommandSubMenu",
+                "label": "Profile Commands"
+            },
+            {
+                "id": "aks.inspektorGadgetSanpshotCommandSubMenu",
+                "label": "Sanpshot Commands"
             }
         ]
     },

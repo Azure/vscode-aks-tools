@@ -12,25 +12,80 @@ import { createWebView, getRenderedContent, getResourceUri } from '../utils/webv
 
 enum Command {
     Deploy,
-    Undeploy
+    Undeploy,
+    TopTCP,
+    TopEBPF,
+    TopBlockIO,
+    TopFile,
+    ProfileCPU,
+    SnapshotProcess,
+    SnapshotSocket
 }
 
 export async function aksInspektorGadgetDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.Deploy)
+    await checkTargetAndRunGadgetCommand(target, Command.Deploy)
 }
 
 export async function aksInspektorGadgetUnDeploy(
     _context: IActionContext,
     target: any
 ): Promise<void> {
-    await gadgetDeployUndeploy(_context, target, Command.Undeploy);
+    await checkTargetAndRunGadgetCommand(target, Command.Undeploy);
 }
 
-async function gadgetDeployUndeploy(
+export async function aksInspektorGadgetTopTCP(
     _context: IActionContext,
+    target: any
+): Promise<void> {
+    await checkTargetAndRunGadgetCommand(target, Command.TopTCP);
+}
+
+export async function aksInspektorGadgetTopEBPF(
+    _context: IActionContext,
+    target: any
+): Promise<void> {
+    await checkTargetAndRunGadgetCommand(target, Command.TopEBPF);
+}
+
+export async function aksInspektorGadgetTopBlockIO(
+    _context: IActionContext,
+    target: any
+): Promise<void> {
+    await checkTargetAndRunGadgetCommand(target, Command.TopBlockIO);
+}
+
+export async function aksInspektorGadgetTopFile(
+    _context: IActionContext,
+    target: any
+): Promise<void> {
+    await checkTargetAndRunGadgetCommand(target, Command.TopFile);
+}
+
+export async function aksInspektorGadgetProfileCPU(
+    _context: IActionContext,
+    target: any
+): Promise<void> {
+    await checkTargetAndRunGadgetCommand(target, Command.ProfileCPU);
+}
+
+export async function aksInspektorGadgetSnapshotProcess(
+    _context: IActionContext,
+    target: any
+): Promise<void> {
+    await checkTargetAndRunGadgetCommand(target, Command.SnapshotProcess);
+}
+
+export async function aksInspektorGadgetSnapshotSocket(
+    _context: IActionContext,
+    target: any
+): Promise<void> {
+    await checkTargetAndRunGadgetCommand(target, Command.SnapshotSocket);
+}
+
+async function checkTargetAndRunGadgetCommand(
     target: any,
     cmd: Command
 ): Promise<void> {
@@ -59,10 +114,10 @@ async function gadgetDeployUndeploy(
         return undefined;
     }
 
-    await prepareInspektorGadgetInstall(clusterInfo.result, cmd, kubectl);
+    await runGadgetCommand(clusterInfo.result, cmd, kubectl);
 }
 
-async function prepareInspektorGadgetInstall(
+async function runGadgetCommand(
     clusterInfo: KubernetesClusterInfo,
     cmd: Command,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>
@@ -79,6 +134,27 @@ async function prepareInspektorGadgetInstall(
             if (answer === "Yes") {
                 await unDeployGadget(clustername, kubeconfig, kubectl);
             }
+            return;
+        case Command.TopTCP:
+            await topTCPGadget(clustername, kubeconfig, kubectl);
+            return;
+        case Command.TopEBPF:
+            await topEBPFGadget(clustername, kubeconfig, kubectl);
+            return;
+        case Command.TopBlockIO:
+            await topBlockIOGadget(clustername, kubeconfig, kubectl);
+            return;
+        case Command.TopFile:
+            await topFile(clustername, kubeconfig, kubectl);
+            return;
+        case Command.ProfileCPU:
+            await profileCPU(clustername, kubeconfig, kubectl);
+            return;
+        case Command.SnapshotProcess:
+            await snapshotProcess(clustername, kubeconfig, kubectl);
+            return;
+        case Command.SnapshotSocket:
+            await snapshotSocket(clustername, kubeconfig, kubectl);
             return;
     }
 }
@@ -97,6 +173,68 @@ async function unDeployGadget(
     clusterConfig: string,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
     const command = "undeploy";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
+}
+
+async function topTCPGadget(
+    clustername: string,
+    clusterConfig: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    const command = "top tcp 30 --all-namespaces --timeout 30";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
+}
+
+async function topEBPFGadget(
+    clustername: string,
+    clusterConfig: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    const command = "top ebpf 30 --all-namespaces --sort cumulruntime --timeout 30";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
+}
+
+async function topBlockIOGadget(
+    clustername: string,
+    clusterConfig: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    const command = "top block-io 30 --all-namespaces --timeout 30";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
+}
+
+async function topFile(
+    clustername: string,
+    clusterConfig: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    const command = "top file 30 --timeout 30";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
+}
+async function profileCPU(
+    clustername: string,
+    clusterConfig: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    const command = "profile cpu --timeout 30";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
+}
+
+async function snapshotProcess(
+    clustername: string,
+    clusterConfig: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    const command = "snapshot process --all-namespaces 30 --timeout 30";
+
+    return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
+}
+
+async function snapshotSocket(
+    clustername: string,
+    clusterConfig: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
+    const command = "snapshot socket --all-namespaces 30 --timeout 30";
 
     return await runKubectlGadgetCommands(clustername, command, clusterConfig, kubectl);
 }
