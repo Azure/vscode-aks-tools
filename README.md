@@ -162,7 +162,7 @@ Right click on your AKS cluster and click on **Kubernetes API Health Endpoints**
 - Livez
 - Readyz
 
-### Deploy and Undeploy InspektorGadget
+### Deploy and Undeploy InspektorGadget test test
 
 Right click on your AKS cluster and click on **Inspektor Gadget** to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.
 
