@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  chatgptreview:
+  chatgpt-review:
     name: ChatGPT Review
     runs-on: ubuntu-latest
     steps:
