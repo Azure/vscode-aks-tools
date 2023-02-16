@@ -14,6 +14,7 @@
 * Run Managed Cluster Operations from your AKS cluster
 * Run Kubernetes API Health Endpoints
 * Deploy and Undeploy InspektorGadget
+* Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot
 
 ## Installation
 
@@ -43,7 +44,10 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 
 ![Cloud explorer extension menu](resources/right-click-inspektor-gadget.png)
 
+![Cloud explorer extension menu](resources/right-click-inspektor-gadget-command.png)
+
 ![Cloud explorer extension menu](resources/right-click-subscription.png)
+
 
 ### Merge into Kubeconfig
 
@@ -165,6 +169,10 @@ Right click on your AKS cluster and click on **Kubernetes API Health Endpoints**
 ### Deploy and Undeploy InspektorGadget
 
 Right click on your AKS cluster and click on **Inspektor Gadget** to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.
+
+### Profile, Top and Snapshot Inspektor Gadget Commands
+
+After successfully deploying Inspektor Gadget, right-click on your AKS cluster and select **Inspektor Gadget** and choose **Gadget Commands** to easily use non-interactive Top, Profile or Snapshot commands for your cluster.
 
 ## Telemetry
 
