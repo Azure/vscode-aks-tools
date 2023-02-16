@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.3.11]
+
+* Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot.
+* Enable ChatGPT review pipeline for the repo.
+
+Thank you so much to @rzhang628, @peterbom, @qike-ms, @gambtho, @squillace, @mauriciovasquezbernal and @blanquicet.
+
 ## [1.3.10]
 
 * Enable deploy/undeploy inspektor gadget.
