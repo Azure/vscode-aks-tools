@@ -8,7 +8,6 @@ import * as tmpfile from '../utils/tempfile';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import { createWebView, getRenderedContent, getResourceUri } from '../utils/webviews';
 import { invokeKubectlCommand } from '../utils/kubectl';
-import { getKubeloginBinaryPath } from '../utils/helper/kubeloginDownload';
 
 export async function aksKubectlGetPodsCommands(
   _context: IActionContext,
@@ -130,10 +129,6 @@ async function loadKubectlCommandRun(
   kubectl: k8s.APIAvailable<k8s.KubectlV1>) {
 
   const clustername = cloudTarget.name;
-  // Download and get Kubelogin path for AAD Enabled AKS Cluster.
-  // Sample use
-  const kubeloginPath = await getKubeloginBinaryPath();
-  console.log(kubeloginPath);
 
   await longRunning(`Loading ${clustername} kubectl command run.`,
     async () => {
