@@ -3,6 +3,8 @@
 out/**
 out/**/*.map
 src/**
+webview-ui/**
+!webview-ui/dist/assets
 .gitignore
 tsconfig.json
 vsc-extension-quickstart.md

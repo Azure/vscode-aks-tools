@@ -528,10 +528,11 @@
         "vscode:prepublish": "npm run webpack",
         "webpack": "npm run build:webview && webpack --mode production",
         "webpack-dev": "webpack --mode development --watch --info-verbosity verbose",
-        "test-compile": "tsc -p ./",
+        "test-compile": "npm run build:webview && tsc -p ./",
         "compile": "webpack --mode none",
         "watch": "tsc -watch -p ./",
-        "test": "mocha -V && npm run test-compile && node ./out/tests/runTests.js"
+        "pretest": "npm run test-compile",
+        "test": "node ./out/tests/runTests.js"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account",
@@ -547,7 +548,6 @@
         "@types/underscore": "^1.11.3",
         "@types/vscode": "^1.52.0",
         "chai": "^4.3.4",
-        "copy-webpack-plugin": "^11.0.0",
         "eslint": "^8.27.0",
         "mocha": "^9.0.2",
         "sinon": "^12.0.1",

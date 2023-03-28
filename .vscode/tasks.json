@@ -4,19 +4,34 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "dev:webview",
             "type": "npm",
-            "script": "watch",
+            "script": "dev:webview",
             "problemMatcher": [
-                "$tsc-watch",
-                "$ts-webpack-watch"
+                {
+                    "background": {
+                        "activeOnStart": false,
+                        "beginsPattern": "npm run dev",
+                        "endsPattern": "➜  Local:"
+                    },
+                    "pattern": [
+                        {
+                            "regexp": "(ERROR|WARNING)\\(TypeScript\\)  (.*)",
+                            "severity": 1,
+                            "message": 2
+                        },
+                        {
+                            "regexp": "^ FILE  (.*):(\\d*):(\\d*)$",
+                            "file": 1,
+                            "line": 2,
+                            "column": 3
+                        }
+                    ]
+                }
             ],
             "isBackground": true,
             "presentation": {
                 "reveal": "never"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
             }
         }
     ]

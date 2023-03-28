@@ -5,14 +5,11 @@
 const path = require('path');
 const webpack = require('webpack');
 const fileManagerPlugin = require('filemanager-webpack-plugin');
-const CopyPlugin = require("copy-webpack-plugin");
 
 /**@type {import('webpack').Configuration}*/
 const config = {
   target: 'node',
-  entry: {
-    extension: './src/extension.ts'
-  },
+  entry: './src/extension.ts',
   optimization: { 
     minimize: false
   },
@@ -45,14 +42,6 @@ const config = {
               ]
           }
       }
-    }),
-    new CopyPlugin({
-      patterns: [
-        {
-          from: path.join(__dirname, "webview-ui", "dist", "assets"),
-          to: path.join(__dirname, "dist", "webview-ui", "assets")
-        }
-      ]
     })
   ],
   resolve: {
