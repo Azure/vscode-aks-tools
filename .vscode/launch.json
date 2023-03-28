@@ -33,6 +33,13 @@
                 "${workspaceFolder}/out/test/**/*.js"
             ],
             "preLaunchTask": "npm: test-compile"
+        },
+        {
+            "name": "Webview UI",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/webview-ui"
         }
     ]
 }
