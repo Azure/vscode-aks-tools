@@ -4,25 +4,19 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as tmpfile from '../utils/tempfile';
 import { getAksClusterTreeItem, getClusterProperties, getContainerClient, getKubeconfigYaml } from '../utils/clusters';
 import { getKustomizeConfig } from '../utils/config';
-import { getExtensionPath, longRunning } from '../utils/host';
+import { getExtension, longRunning } from '../utils/host';
 import {
     getClusterDiagnosticSettings,
     chooseStorageAccount,
     getStorageInfo,
     prepareAKSPeriscopeKustomizeOverlay,
     getNodeNames,
-    getSuccessWebviewContent,
-    getFailureWebviewContent,
-    getNoDiagSettingWebviewContent,
-    getClusterFeatures,
-    checkUploadStatus,
-    getNodeLogs
+    getClusterFeatures
 } from './helpers/periscopehelper';
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { createWebView } from '../utils/webviews';
 import { Errorable, failed } from '../utils/errorable';
 import { invokeKubectlCommand } from '../utils/kubectl';
-import { PeriscopeStorage } from './models/storage';
+import { PeriscopeDataProvider, PeriscopePanel } from '../../panels/PeriscopePanel';
 
 export default async function periscope(
     _context: IActionContext,
@@ -76,37 +70,40 @@ async function runAKSPeriscope(
         () => getClusterDiagnosticSettings(cluster)
     );
 
-    const extensionPath = getExtensionPath();
-    if (failed(extensionPath)) {
-        vscode.window.showErrorMessage(extensionPath.error);
-        return undefined;
+    const extension = getExtension();
+    if (failed(extension)) {
+        vscode.window.showErrorMessage(extension.error);
+        return;
     }
+
+    const panel = new PeriscopePanel(extension.result.extensionUri);
 
     if (!clusterDiagnosticSettings || !clusterDiagnosticSettings.value?.length) {
         // If there is no storage account attached to diagnostic setting, don't move forward and at this point we will render webview with helpful content.
-        const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
-        webview.html = getNoDiagSettingWebviewContent(extensionPath.result, clusterName, webview);
-        return undefined;
+        const dataProvider = PeriscopeDataProvider.createForNoDiagnostics(cluster.name);
+        panel.show(dataProvider);
+        return;
     }
 
+    // TODO: It's possible to have diagnostics configured, but with no storage account. If that's the case,
+    // we'll fail silently at this point. Need to improve the UX here.
     const clusterStorageAccountId = await chooseStorageAccount(clusterDiagnosticSettings);
+    if (!clusterStorageAccountId) return;
 
     // Generate storage sas keys, manage aks persicope run.
-    if (!clusterStorageAccountId) return undefined;
-
     const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`,
         () => getStorageInfo(kubectl, cluster, clusterStorageAccountId, clusterKubeConfig)
     );
 
     if (failed(clusterStorageInfo)) {
         vscode.window.showErrorMessage(clusterStorageInfo.error);
-        return undefined;
+        return;
     }
 
     const kustomizeConfig = getKustomizeConfig();
     if (failed(kustomizeConfig)) {
         vscode.window.showErrorMessage(kustomizeConfig.error);
-        return undefined;
+        return;
     }
 
     const containerClient = getContainerClient(cluster);
@@ -115,7 +112,7 @@ async function runAKSPeriscope(
     const clusterFeatures = await getClusterFeatures(containerClient, cluster.resourceGroupName, cluster.name);
     if (failed(clusterFeatures)) {
         vscode.window.showErrorMessage(clusterFeatures.error);
-        return undefined;
+        return;
     }
 
     // Create a run ID of format: YYYY-MM-DDThh-mm-ssZ
@@ -127,29 +124,37 @@ async function runAKSPeriscope(
 
     if (failed(aksDeploymentFile)) {
         vscode.window.showErrorMessage(aksDeploymentFile.error);
-        return undefined;
+        return;
     }
 
     const nodeNames = await getNodeNames(kubectl, clusterKubeConfig);
     if (failed(nodeNames)) {
         vscode.window.showErrorMessage(nodeNames.error);
-        return undefined;
+        return;
     }
 
     const runCommandResult = await longRunning(`Deploying AKS Periscope to ${clusterName}.`,
         () => deployKustomizeOverlay(kubectl, aksDeploymentFile.result, clusterKubeConfig)
     );
 
+    const deploymentParameters = {
+        kubectl,
+        kustomizeConfig: kustomizeConfig.result,
+        storage: clusterStorageInfo.result,
+        clusterKubeConfig,
+        periscopeNamespace: 'aks-periscope'
+    };
+
     if (failed(runCommandResult)) {
         // For a failure running the command result, we display the error in a webview.
-        const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
-        webview.html = getFailureWebviewContent(extensionPath.result, clusterName, runCommandResult.error, kustomizeConfig.result, webview);
-        return undefined;
+        const dataProvider = PeriscopeDataProvider.createForDeploymentError(cluster.name, runId, runCommandResult.error, deploymentParameters);
+        panel.show(dataProvider);
+        return;
     }
 
-    const webview = createWebView('AKS Periscope', `AKS Periscope: ${clusterName}`).webview;
-    webview.html = getSuccessWebviewContent(extensionPath.result, runId, clusterName, clusterStorageInfo.result, nodeNames.result, webview);
-    handleMessages(webview, kubectl, clusterKubeConfig, clusterStorageInfo.result, 'aks-periscope', runId, nodeNames.result);
+    // Show the webview for successful deployment
+    const dataProvider = PeriscopeDataProvider.createForDeploymentSuccess(cluster.name, runId, nodeNames.result, deploymentParameters);
+    panel.show(dataProvider);
 }
 
 async function deployKustomizeOverlay(
@@ -168,43 +173,4 @@ async function deployKustomizeOverlay(
 
         return invokeKubectlCommand(kubectl, kubeConfigFile, 'cluster-info');
     });
-}
-
-function handleMessages(
-    webview: vscode.Webview,
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
-    clusterKubeConfig: string,
-    storage: PeriscopeStorage,
-    periscopeNamespace: string,
-    runId: string,
-    nodeNames: string[]
-) {
-    webview.onDidReceiveMessage(
-        async (message) => {
-            switch (message.command) {
-                case "upload_status_request":
-                {
-                    const uploadStatuses = await checkUploadStatus(storage, runId, nodeNames);
-                    webview.postMessage({ command: 'upload_status_response', uploadStatuses });
-                    break;
-                }
-                case "node_logs_request":
-                {
-                    const nodeName = message.nodeName;
-                    const logs = await longRunning(`Getting logs for node ${nodeName}.`,
-                        () => getNodeLogs(kubectl, clusterKubeConfig, periscopeNamespace, nodeName)
-                    );
-
-                    if (failed(logs)) {
-                        vscode.window.showErrorMessage(logs.error);
-                        return;
-                    }
-
-                    webview.postMessage({ command: 'node_logs_response', nodeName, logs: logs.result });
-                    break;
-                }
-            }
-        },
-        undefined
-    );
 }

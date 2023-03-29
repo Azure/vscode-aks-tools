@@ -6,6 +6,8 @@ import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelecto
 import * as ContractTypes from "../../src/webview-contract/webviewTypes";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { getTestStyleViewerScenarios } from "./TestStyleViewer/manualTest";
+import { getPeriscopeScenarios } from "./Periscope/manualTest";
+import { Periscope } from "./Periscope/Periscope";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -38,12 +40,14 @@ function getVsCodeContent(): JSX.Element | null {
     const vsCodeInitialState = JSON.parse(rootElem?.dataset.initialstate || "{}");
     switch (vscodeContentId) {
         case ContractTypes.TestStyleViewerTypes.contentId: return <TestStyleViewer {...vsCodeInitialState} />
+        case ContractTypes.PeriscopeTypes.contentId: return <Periscope {...vsCodeInitialState} />
         default: throw new Error(`Unexpected content ID: '${vscodeContentId}'`);
     }
 }
 
 const testScenarios = [
-    ...getTestStyleViewerScenarios()
+    ...getTestStyleViewerScenarios(),
+    ...getPeriscopeScenarios()
 ];
 
 const testScenarioNames = testScenarios.map(f => f.name);
