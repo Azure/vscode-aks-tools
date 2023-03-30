@@ -45,7 +45,7 @@ class StyleTestDataProvider implements PanelDataProvider<void, TestStyleViewerTy
     }
 
     getTitle(): string {
-        throw new Error('Method not implemented.');
+        return "Style Test";
     }
 
     getInitialState(): void {
