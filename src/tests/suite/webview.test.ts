@@ -26,13 +26,13 @@ describe('Webview Styles', () => {
     });
 });
 
-class StyleTestPanel extends BasePanel<void, TestStyleViewerTypes.ToWebViewCommands, TestStyleViewerTypes.ToVsCodeCommands> {
+class StyleTestPanel extends BasePanel<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewCommands, TestStyleViewerTypes.ToVsCodeCommands> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, TestStyleViewerTypes.contentId);
     }
 }
 
-class StyleTestDataProvider implements PanelDataProvider<void, TestStyleViewerTypes.ToWebViewCommands, TestStyleViewerTypes.ToVsCodeCommands> {
+class StyleTestDataProvider implements PanelDataProvider<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewCommands, TestStyleViewerTypes.ToVsCodeCommands> {
     readonly cssVarsPromise: Promise<string[]>;
     private _cssVarsResolve?: (cssVars: string[]) => void;
 
@@ -48,8 +48,8 @@ class StyleTestDataProvider implements PanelDataProvider<void, TestStyleViewerTy
         return "Style Test";
     }
 
-    getInitialState(): void {
-        return undefined;
+    getInitialState(): TestStyleViewerTypes.InitialState {
+        return { isVSCode: true };
     }
 
     createSubscriber(_webview: MessageSink<never>): MessageSubscriber<TestStyleViewerTypes.ToVsCodeCommands> | null {
