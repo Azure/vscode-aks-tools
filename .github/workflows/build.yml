@@ -23,8 +23,7 @@ jobs:
         version: 14
     - name: Build Extension
       run: |
-        npm install
-        npm run compile
+        npm run install:all
     - name: Smoke test (Linux)
       run: xvfb-run -a npm run test
       if: runner.os == 'Linux'

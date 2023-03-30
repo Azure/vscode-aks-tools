@@ -529,7 +529,6 @@
         "webpack": "npm run build:webview && webpack --mode production",
         "webpack-dev": "webpack --mode development --watch --info-verbosity verbose",
         "test-compile": "npm run build:webview && tsc -p ./",
-        "compile": "webpack --mode none",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run test-compile",
         "test": "node ./out/tests/runTests.js"
