@@ -8,6 +8,7 @@ import { longRunning } from "../commands/utils/host";
 import { MessageSink, MessageSubscriber } from "../webview-contract/messaging";
 import { PeriscopeTypes } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { URL } from "url";
 
 export class PeriscopePanel extends BasePanel<PeriscopeTypes.InitialState, PeriscopeTypes.ToWebViewCommands, PeriscopeTypes.ToVsCodeCommands> {
     constructor(extensionUri: Uri) {
