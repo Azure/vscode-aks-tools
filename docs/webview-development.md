@@ -8,6 +8,13 @@ Run `npm run install:all` to install package dependencies for both the extension
 
 ## Development/Debugging
 
+### File structure
+
+- Webview source files are under `/webview-ui/src`.
+- When built, bundled/minified webview assets are output to `/webview-ui/dist`.
+
+When the extension is run (both in development and production), the webview assets are read from `/webview-ui/dist`.
+
 ### Developing the UI
 
 If you like to use your browser development tools for debugging, or you wish to open the web application in an existing browser window:
