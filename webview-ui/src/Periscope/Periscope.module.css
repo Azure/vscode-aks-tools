@@ -19,10 +19,6 @@ table.nodelist td {
     justify-content: left;
 }
 
-.inlineIcon::before {
-    vertical-align: middle;
-}
-
 tr.selected {
     background-color: var(--vscode-list-activeSelectionBackground);
     color: var(--vscode-list-activeSelectionForeground);

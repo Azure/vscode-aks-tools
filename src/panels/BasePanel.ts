@@ -80,10 +80,9 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} https://use.fontawesome.com; script-src 'nonce-${nonce}' https://use.fontawesome.com; font-src 'self' https://use.fontawesome.com">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src 'self'">
                 <link rel="stylesheet" type="text/css" href="${stylesUri}">
                 <title>${title}</title>
-                <script src="https://use.fontawesome.com/7dddd54b5c.js"></script>
             </head>
             <body>
                 <div id="root" data-contentid=${this.contentId} data-initialstate=${initialStateJson}></div>

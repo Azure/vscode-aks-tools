@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
 import { NodeActions } from "./NodeActions";
 import { NodeLogs } from "./NodeLogs";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheckCircle } from '@fortawesome/free-regular-svg-icons';
 import styles from "./Periscope.module.css";
 
 export interface SuccessViewProps {
@@ -31,7 +33,7 @@ export function SuccessView(props: SuccessViewProps) {
     return (
         <>
             <p>
-                <i className={["fa", "status-icon", "fa-check-circle", styles.successIndicator].join(" ")}></i>
+                <FontAwesomeIcon className={styles.successIndicator} icon={faCheckCircle} />
                 AKS Periscope has successfully started run <b>{props.runId}</b> on cluster <b>{props.clusterName}</b>
             </p>
 
@@ -47,7 +49,7 @@ export function SuccessView(props: SuccessViewProps) {
                     {
                         props.uploadStatuses.map(status => (
                             <tr key={status.nodeName} onClick={() => props.onNodeClick(status.nodeName)} className={getNodeRowClassNames(status.nodeName)}>
-                                <td>{status.isUploaded ? <><i className={["fa", "fa-check-circle", styles.successIndicator].join(" ")}></i>Uploaded</> : <VSCodeProgressRing />}</td>
+                                <td>{status.isUploaded ? <><FontAwesomeIcon className={styles.successIndicator} icon={faCheckCircle} />Uploaded</> : <VSCodeProgressRing />}</td>
                                 <td>{status.nodeName}</td>
                                 <td className={styles.actionsContainer}>
                                     <NodeActions

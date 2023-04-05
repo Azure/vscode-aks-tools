@@ -1,5 +1,7 @@
 import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTimesCircle } from '@fortawesome/free-regular-svg-icons';
 import styles from "./Periscope.module.css";
 
 export interface ErrorViewProps {
@@ -11,7 +13,7 @@ export interface ErrorViewProps {
 export function ErrorView(props: ErrorViewProps) {
     return (
         <>
-            <i className={[styles.errorIndicator, "fa", "fa-times-circle"].join(" ")}></i>
+            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
             AKS Periscope failed to run on '{props.clusterName}'. Please see the error below for more details.
 
             <VSCodeDivider />
