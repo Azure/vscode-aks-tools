@@ -65,7 +65,7 @@ export function TestStyleViewer(props: TestStyleViewerTypes.InitialState) {
         if (props.isVSCode) {
             return document.getElementById('_defaultStyles');
         }
-        return document.querySelectorAll('style').item(0);
+        return [...document.querySelectorAll('style')].filter(e => (e.dataset.viteDevId || "").endsWith('main.css'))[0];
     }
 
     function showCssVars() {

@@ -65,8 +65,8 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
 
     private _getWebviewContent(webview: Webview, extensionUri: Uri, title: string, initialState: TInitialState | undefined) {
         // Get URIs for the React build output.
-        const stylesUri = getUri(webview, extensionUri, ["assets", "index.css"]);
-        const scriptUri = getUri(webview, extensionUri, ["assets", "index.js"]);
+        const stylesUri = getUri(webview, extensionUri, ["assets", "main.css"]);
+        const scriptUri = getUri(webview, extensionUri, ["assets", "main.js"]);
 
         // See: https://github.com/microsoft/vscode-webview-ui-toolkit/blob/main/docs/getting-started.md#enable-webview-scripts-and-improve-security
         const nonce = getNonce();

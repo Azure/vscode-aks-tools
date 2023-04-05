@@ -2,7 +2,7 @@ import { MessageSubscriber } from "../../../src/webview-contract/messaging";
 import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
 import { Scenario } from "../utilities/manualTest";
 import { getTestVscodeMessageContext } from "../utilities/vscode";
-import { Periscope } from "./Periscope";
+import { Periscope } from "../Periscope/Periscope";
 
 export function getPeriscopeScenarios() {
     const clusterName = "test-cluster";
