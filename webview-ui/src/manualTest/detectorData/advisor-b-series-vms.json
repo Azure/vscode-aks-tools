@@ -1,0 +1,148 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/advisor-b-series-vms",
+  "name": "advisor-b-series-vms",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Warning",
+              "Your cluster is using B-Series burstable VMs",
+              "Summary",
+              "<markdown>**Best practice guidance** - Your cluster has one or more node pools using a non-recommended burstable VM SKU. With burstable VMs you do not get the full vCPU capability 100% of the time. B-series VM's are particularly suited for `development` and `test environments` where performance requirements are bursts rather than consistent.</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Warning",
+              "Your cluster is using B-Series burstable VMs",
+              "Agent Pools",
+              "<markdown><table style='width:90%; max-width:100%;'>\r\n<tr>\r\n<th style='text-align:center;'>Pool</th><th style='text-align:center;'>SKU</th><th style='text-align:center;'>OS</th><th style='text-align:center;'>Size</th></tr>\r\n<tr>\r\n <td style='text-align:center;'> agentpool </td>  <td style='text-align:center;'> Standard_B4ms </td>  <td style='text-align:center;'> Linux </td>  <td style='text-align:center;'>  </td>\r\n</tr>\r\n</table>\r\n</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Warning",
+              "Your cluster is using B-Series burstable VMs",
+              "Recommendation",
+              "<markdown>AKS does not reccommend using B-Series VMs for node pools in production clusters where performance is a key factor.\n\n**Further reading:**\n- [B-series burstable Virtual Machine sizes](https://docs.microsoft.com/en-us/azure/virtual-machines/sizes-b-series-burstable)\n- [System and User node pools](https://docs.microsoft.com/en-us/azure/aks/use-system-pools#system-and-user-node-pools)</markdown>",
+              "True",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              false,
+              true,
+              "{\"MinScoreThreshold\":0.3,\"MaxResults\":10}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "Performance",
+      "analysisTypes": [
+        "Performance"
+      ],
+      "author": "",
+      "category": "Best Practices",
+      "description": "Checks for the non-recommended use of B-Series VMs.",
+      "id": "advisor-b-series-vms",
+      "name": "Node Pools Using B-Series VMs",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "313ad372-0b08-4f7d-82f4-161e8a3ebe47"
+    },
+    "status": {
+      "message": null,
+      "statusId": 1
+    },
+    "suggestedUtterances": null
+  }
+}

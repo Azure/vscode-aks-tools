@@ -1,0 +1,89 @@
+.detectorPanel {
+    border: solid;
+    border-width: 1px;
+    border-color: var(--vscode-panel-border);
+    border-left-width: 4px;
+    border-radius: 4px;
+    margin-top: 16px;
+}
+
+.detectorPanel.error {
+    border-left-color: var(--vscode-testing-iconFailed);
+}
+
+.detectorPanel.warning {
+    border-left-color: var(--vscode-notificationsWarningIcon-foreground);
+}
+
+.detectorPanel.success {
+    border-left-color: var(--vscode-testing-iconPassed);
+}
+
+.detectorPanelHeading {
+    padding: 10px;
+    background-color: var(--vscode-panelSectionHeader-background);
+}
+
+.detectorPanelHeading > * {
+    margin: 0;
+}
+
+.detectorPanelBody {
+    padding: 10px;
+    background-color: var(--vscode-panel-background);
+}
+
+.errorIndicator {
+    color: var(--vscode-testing-iconFailed);
+}
+
+.warningIndicator {
+    color: var(--vscode-notificationsWarningIcon-foreground);
+}
+
+.successIndicator {
+    color: var(--vscode-testing-iconPassed);
+}
+
+.infoIndicator {
+    color: var(--vscode-notificationsInfoIcon-foreground);
+}
+
+.insightTableRow {
+    display: table-row;
+}
+
+.insightTable {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.insightTable tbody {
+    display: table-row-group;
+}
+
+.insightTableCell {
+    display: table-cell;
+    vertical-align: text-top;
+    padding: 0;
+}
+
+.insightTableKey {
+    width: 10%;
+    padding-right: 10px;
+}
+
+.markdownTable {
+    border-spacing: 0;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.markdownTable th, .markdownTable td {
+    padding: 6px 13px;
+    border: 1px solid var(--vscode-panel-border);
+}
+
+.markdownTable tr:nth-child(2n) {
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+}

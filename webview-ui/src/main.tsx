@@ -5,6 +5,7 @@ import { decodeState } from "../../src/webview-contract/initialState";
 import * as ContractTypes from "../../src/webview-contract/webviewTypes";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { Periscope } from "./Periscope/Periscope";
+import { Detector } from "./Detector/Detector";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -32,6 +33,7 @@ function getVsCodeContent(): JSX.Element {
     switch (vscodeContentId) {
         case ContractTypes.TestStyleViewerTypes.contentId: return <TestStyleViewer {...vsCodeInitialState} />
         case ContractTypes.PeriscopeTypes.contentId: return <Periscope {...vsCodeInitialState} />
+        case ContractTypes.DetectorTypes.contentId: return <Detector {...vsCodeInitialState} />
         default: return <>`Error: Unexpected content ID: '${vscodeContentId}'`</>;
     }
 }

@@ -10,18 +10,20 @@ import installAzureServiceOperator  from './commands/azureServiceOperators/insta
 import { AzureResourceNodeContributor } from './tree/azureResourceNodeContributor';
 import { setAssetContext } from './assets';
 import { configureStarterWorkflow, configureHelmStarterWorkflow, configureKomposeStarterWorkflow, configureKustomizeStarterWorkflow } from './commands/aksStarterWorkflow/configureStarterWorkflow';
-import aksCRUDDiagnostics from './commands/aksCRUDDiagnostics/aksCRUDDiagnostics';
+import { 
+    aksCRUDDiagnostics,
+    aksBestPracticesDiagnostics,
+    aksIdentitySecurityDiagnostics,
+    aksNodeHealth,
+    aksKnownIssuesAvailabilityPerformanceDiagnostics,
+    aksCategoryConnectivity
+} from './commands/detectors/detectors';
 import { failed } from './commands/utils/errorable';
-import aksBestPracticesDiagnostics from './commands/aksBestPractices/aksBestPractices';
-import aksIdentitySecurityDiagnostics from './commands/aksIdentitySecurity/aksIdentitySecurity';
-import aksNodeHealth from './commands/aksNodeHealth/aksNodeHealth';
-import aksKnownIssuesAvailabilityPerformanceDiagnostics from './commands/aksKnownIssuesAvailabilityPerformance/aksKnownIssuesAvailabilityPerformance';
 import aksNavToPortal from './commands/aksNavToPortal/aksNavToPortal';
 import aksClusterProperties from './commands/aksClusterProperties/aksClusterProperties';
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectlGetAPIResourcesCommands, aksKubectlGetNodeCommands, aksKubectlDescribeServicesCommands, aksKubectlGetEventsCommands, aksKubectlK8sLivezAPIEndpointCommands, aksKubectlK8sHealthzAPIEndpointCommands, aksKubectlK8sReadyzAPIEndpointCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
-import aksCategoryConnectivity from './commands/aksCategoryConnectivity/aksCategoryConnectivity';
 import { longRunning } from './commands/utils/host';
 import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
 import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';

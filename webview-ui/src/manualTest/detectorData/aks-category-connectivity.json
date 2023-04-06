@@ -1,0 +1,246 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-category-connectivity",
+  "name": "aks-category-connectivity",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "additionalParams": "",
+          "description": null,
+          "detectorIds": [
+            "cluster-dns",
+            "cluster-subnet",
+            "aks-azure-cni-address-ranges",
+            "aks-private-ips-and-ranges",
+            "aks-reserved-address-ranges",
+            "advisor-cluster-loadbalancer",
+            "aks-subnet-sharing",
+            "advisor-shared-route-table",
+            "aksapiserverauthorizedranges2",
+            "private-cluster-dns",
+            "snat-usage",
+            "cluster-min-version",
+            "windowsregresionk8sv124",
+            "pod-subnet-full",
+            "user-defined-routing",
+            "clusterCertExpiredDetailed",
+            "aks-recommend-uptime-sla",
+            "aks-npm-breakingchange"
+          ],
+          "isVisible": true,
+          "messageIfCritical": null,
+          "resourceUri": "",
+          "title": null,
+          "type": 10
+        },
+        "table": {
+          "columns": [],
+          "rows": [],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Connectivity Issues",
+      "description": "Diagnose problems relating to networking configuration and connectivity issues with the cluster, including potential API server issues.",
+      "id": "aks-category-connectivity",
+      "name": "Connectivity Issues",
+      "score": 0,
+      "supportTopicList": [
+        {
+          "id": "32683763",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "b24a30ff-ee20-4118-17df-79787bd521a7"
+        },
+        {
+          "id": "32683764",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "9a388c6e-14d1-c3e2-9355-a01a7d251697"
+        },
+        {
+          "id": "32683765",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "ae9f5176-d657-a643-b87d-49c618c5d20b"
+        },
+        {
+          "id": "32683757",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "6782af9f-bbe9-eca3-47dd-4a70ca9eba09"
+        },
+        {
+          "id": "32683759",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "03438de8-bfca-6d8a-252e-7771971af25d"
+        },
+        {
+          "id": "32637174",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "2e3dd75f-7464-657d-7944-11a9fe37abf7"
+        },
+        {
+          "id": "32637189",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "a38e5af1-813c-3342-e862-30e1c6daa7e3"
+        },
+        {
+          "id": "32637209",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "6e9c6169-581f-1484-56da-95875b0bb445"
+        },
+        {
+          "id": "32637188",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "9086a249-61d9-3d2f-0e37-f1a31b1e0bef"
+        },
+        {
+          "id": "32637197",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "1ee50b26-4f9c-3135-4072-07929c55308d"
+        },
+        {
+          "id": "32637179",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": ""
+        },
+        {
+          "id": "32637198",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "e2052bfd-d38f-d8a2-f81f-55576862a68e"
+        },
+        {
+          "id": "32637207",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "ab87d8c2-c252-eaf9-1840-b45d0d70615c"
+        },
+        {
+          "id": "32637205",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": ""
+        },
+        {
+          "id": "32844693",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "1b37a94e-cb83-8871-2d11-ac35be29e3ae"
+        },
+        {
+          "id": "32844694",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "9391c080-ea3c-f776-0f1e-d13371f6c089"
+        },
+        {
+          "id": "32844699",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "69c6d4ff-65ca-ee28-07b4-b877318b64c3"
+        },
+        {
+          "id": "32844700",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "52b6b46d-b428-791e-eb7c-60b9526dce46"
+        },
+        {
+          "id": "32844701",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "1e4a29b0-5164-b111-0ea7-64079162652a"
+        },
+        {
+          "id": "32844726",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "b4c27878-1326-0ffb-f33c-321cc9b90cf6"
+        },
+        {
+          "id": "32844732",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "c52e4357-77fa-7491-96a2-62aa160e87cc"
+        },
+        {
+          "id": "32844747",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "75b842d4-e926-c1f5-28db-c33c151797f4"
+        }
+      ],
+      "type": "CategoryOverview",
+      "typeId": "7db6bdff-0ca7-4d5a-bc5e-3e9655e108a1"
+    },
+    "status": {
+      "message": null,
+      "statusId": 4
+    },
+    "suggestedUtterances": null
+  }
+}

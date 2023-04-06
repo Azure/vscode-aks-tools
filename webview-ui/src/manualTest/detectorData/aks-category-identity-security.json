@@ -1,0 +1,146 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-category-identity-security",
+  "name": "aks-category-identity-security",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "additionalParams": "",
+          "description": null,
+          "detectorIds": [
+            "aad-issues",
+            "clusterCertExpiredDetailed",
+            "reset-auth-profile",
+            "rotate-cluster-certificate",
+            "InvalidClientServicePrincipal",
+            "kms-issues",
+            "ProvisioningStatusNodePool",
+            "aks-cluster-put-failures"
+          ],
+          "isVisible": true,
+          "messageIfCritical": null,
+          "resourceUri": "",
+          "title": null,
+          "type": 10
+        },
+        "table": {
+          "columns": [],
+          "rows": [],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Identity and Security",
+      "description": "Checks for any issues with cluster certificates and service principals that could affect the normal operation of the cluster.",
+      "id": "aks-category-identity-security",
+      "name": "Identity and Security",
+      "score": 0,
+      "supportTopicList": [
+        {
+          "id": "32637172",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "91375c6e-8437-292d-4f8f-197bbddde298"
+        },
+        {
+          "id": "32637180",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "a13e1a9f-f971-d0f2-4c3f-f62fd71bcc19"
+        },
+        {
+          "id": "32637183",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "e4bccbc9-6808-f415-3e9d-f6558dc91973"
+        },
+        {
+          "id": "32637203",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "e3b629fe-2dee-cde3-ed77-9ee06b01089c"
+        },
+        {
+          "id": "32637210",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "7c0a5f0d-d2b4-b334-07ef-29d868ba839d"
+        },
+        {
+          "id": "32637212",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "d6131bf4-fed3-5d9c-d7c9-7610b02fa6d7"
+        },
+        {
+          "id": "32844724",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "83d81cd1-e1ba-1290-f2a9-168b0d0a7d96"
+        }
+      ],
+      "type": "CategoryOverview",
+      "typeId": "9098a8b1-bed7-4c31-a25b-38a9d7b8f7b8"
+    },
+    "status": {
+      "message": null,
+      "statusId": 4
+    },
+    "suggestedUtterances": null
+  }
+}
