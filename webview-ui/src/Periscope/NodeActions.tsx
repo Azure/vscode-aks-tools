@@ -1,7 +1,6 @@
 import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClone } from '@fortawesome/free-regular-svg-icons';
-import styles from "./Periscope.module.css";
+import { faClone, faDownload } from '@fortawesome/free-solid-svg-icons';
 
 export interface NodeActionsProps {
     runId: string
@@ -22,14 +21,15 @@ export function NodeActions(props: NodeActionsProps) {
     return (
         <>
             <VSCodeButton onClick={copyShareLink}>
-                <FontAwesomeIcon className={styles.inlineIcon} icon={faClone} />
+                <FontAwesomeIcon icon={faClone} />
                 &nbsp;Copy 7-Day Shareable Link
             </VSCodeButton>
             &nbsp;
             {
                 props.isUploaded && (
                     <VSCodeLink onClick={e => e.stopPropagation()} href={shareableLink} target="_blank">
-                        ⭳&nbsp;Download Zip
+                        <FontAwesomeIcon icon={faDownload} />
+                        &nbsp;Download Zip
                     </VSCodeLink>
                 )
             }

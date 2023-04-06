@@ -4,7 +4,7 @@ import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
 import { NodeActions } from "./NodeActions";
 import { NodeLogs } from "./NodeLogs";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheckCircle } from '@fortawesome/free-regular-svg-icons';
+import { faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import styles from "./Periscope.module.css";
 
 export interface SuccessViewProps {

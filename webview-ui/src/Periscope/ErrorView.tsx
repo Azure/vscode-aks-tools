@@ -1,7 +1,7 @@
 import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimesCircle } from '@fortawesome/free-regular-svg-icons';
+import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import styles from "./Periscope.module.css";
 
 export interface ErrorViewProps {
