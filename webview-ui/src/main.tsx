@@ -27,7 +27,9 @@ function getVsCodeContent(): JSX.Element {
         return <>Error: 'content-id' attribute is not set on root element.</>;
     }
 
-    const vsCodeInitialState = JSON.parse(rootElem?.dataset.initialstate || "{}");
+    const encodedInitialState = rootElem?.dataset.initialstate || "";
+    const initialStateJson = decodeURIComponent(encodedInitialState) || "{}";
+    const vsCodeInitialState = JSON.parse(initialStateJson);
     switch (vscodeContentId) {
         case ContractTypes.TestStyleViewerTypes.contentId: return <TestStyleViewer {...vsCodeInitialState} />
         case ContractTypes.PeriscopeTypes.contentId: return <Periscope {...vsCodeInitialState} />

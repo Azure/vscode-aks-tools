@@ -72,6 +72,7 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
         const nonce = getNonce();
 
         const initialStateJson = initialState ? JSON.stringify(initialState) : "";
+        const encodedInitialState = encodeURIComponent(initialStateJson);
 
         // Tip: Install the es6-string-html VS Code extension to enable code highlighting below
         return /*html*/ `
@@ -85,7 +86,7 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
                 <title>${title}</title>
             </head>
             <body>
-                <div id="root" data-contentid=${this.contentId} data-initialstate=${initialStateJson}></div>
+                <div id="root" data-contentid=${this.contentId} data-initialstate=${encodedInitialState}></div>
                 <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
             </body>
         </html>
