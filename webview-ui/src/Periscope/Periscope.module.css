@@ -12,12 +12,12 @@ table.nodelist td {
     padding: 5px;
 }
 
-table.nodelist tr.selected {
+table.nodelist tbody tr.selected {
     background-color: var(--vscode-list-activeSelectionBackground);
     color: var(--vscode-list-activeSelectionForeground);
 }
 
-table.nodelist tr:hover {
+table.nodelist tbody tr:hover {
     background-color: var(--vscode-list-hoverBackground);
     color: var(--vscode-list-hoverForeground);
     cursor: pointer;
