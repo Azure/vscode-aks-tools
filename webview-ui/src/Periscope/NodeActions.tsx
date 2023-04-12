@@ -27,7 +27,7 @@ export function NodeActions(props: NodeActionsProps) {
             &nbsp;
             {
                 props.isUploaded && (
-                    <VSCodeLink onClick={e => e.stopPropagation()} href={shareableLink} target="_blank">
+                    <VSCodeLink href={shareableLink} title={shareableLink} target="_blank">
                         <FontAwesomeIcon icon={faDownload} />
                         &nbsp;Download Zip
                     </VSCodeLink>

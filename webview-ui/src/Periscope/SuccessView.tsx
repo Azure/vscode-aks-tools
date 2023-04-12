@@ -30,6 +30,16 @@ export function SuccessView(props: SuccessViewProps) {
         return [props.selectedNode === nodeName && styles.selected].filter(s => s).join(' ');
     }
 
+    function handleRowClick(event: React.MouseEvent, nodeName: string) {
+        // If the event came from an anchor element, let it bubble up.
+        // The parent iframe needs to handle navigation events.
+        if (event.target instanceof HTMLElement && event.target.closest('a,vscode-link')) {
+            return;
+        }
+
+        props.onNodeClick(nodeName);
+    }
+
     return (
         <>
             <p>
@@ -48,7 +58,7 @@ export function SuccessView(props: SuccessViewProps) {
                 <tbody>
                     {
                         props.uploadStatuses.map(status => (
-                            <tr key={status.nodeName} onClick={() => props.onNodeClick(status.nodeName)} className={getNodeRowClassNames(status.nodeName)}>
+                            <tr key={status.nodeName} onClick={e => handleRowClick(e, status.nodeName)} className={getNodeRowClassNames(status.nodeName)}>
                                 <td>{status.isUploaded ? <><FontAwesomeIcon className={styles.successIndicator} icon={faCheckCircle} />Uploaded</> : <VSCodeProgressRing />}</td>
                                 <td>{status.nodeName}</td>
                                 <td className={styles.actionsContainer}>
