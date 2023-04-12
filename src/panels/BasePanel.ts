@@ -1,6 +1,7 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
 import { MessageContext, MessageSink, MessageSubscriber } from "../webview-contract/messaging";
 import { getNonce, getUri } from "./utilities/webview";
+import { encodeState } from "../webview-contract/initialState";
 
 const viewType = "aksVsCodeTools";
 
@@ -71,8 +72,7 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
         // See: https://github.com/microsoft/vscode-webview-ui-toolkit/blob/main/docs/getting-started.md#enable-webview-scripts-and-improve-security
         const nonce = getNonce();
 
-        const initialStateJson = initialState ? JSON.stringify(initialState) : "";
-        const encodedInitialState = encodeURIComponent(initialStateJson);
+        const encodedInitialState = encodeState(initialState);
 
         // Tip: Install the es6-string-html VS Code extension to enable code highlighting below
         return /*html*/ `

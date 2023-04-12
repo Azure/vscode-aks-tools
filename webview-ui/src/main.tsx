@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import ReactDOM from "react-dom";
 import './main.css';
+import { decodeState } from "../../src/webview-contract/initialState";
 import * as ContractTypes from "../../src/webview-contract/webviewTypes";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { Periscope } from "./Periscope/Periscope";
@@ -27,9 +28,7 @@ function getVsCodeContent(): JSX.Element {
         return <>Error: 'content-id' attribute is not set on root element.</>;
     }
 
-    const encodedInitialState = rootElem?.dataset.initialstate || "";
-    const initialStateJson = decodeURIComponent(encodedInitialState) || "{}";
-    const vsCodeInitialState = JSON.parse(initialStateJson);
+    const vsCodeInitialState = decodeState<any>(rootElem?.dataset.initialstate);
     switch (vscodeContentId) {
         case ContractTypes.TestStyleViewerTypes.contentId: return <TestStyleViewer {...vsCodeInitialState} />
         case ContractTypes.PeriscopeTypes.contentId: return <Periscope {...vsCodeInitialState} />
