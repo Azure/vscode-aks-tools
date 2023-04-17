@@ -18,7 +18,7 @@
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
             ],
-            "preLaunchTask": "npm: watch"
+            "preLaunchTask": "npm: webpack"
         },
         {
             "name": "Extension Tests",
@@ -27,12 +27,20 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test"
+                "--extensionTestsPath=${workspaceFolder}/out/tests/suite/index"
             ],
             "outFiles": [
-                "${workspaceFolder}/out/test/**/*.js"
+                "${workspaceFolder}/out/tests/**/*.js"
             ],
             "preLaunchTask": "npm: test-compile"
+        },
+        {
+            "name": "Webview UI",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/webview-ui",
+            "preLaunchTask": "dev:webview"
         }
     ]
 }

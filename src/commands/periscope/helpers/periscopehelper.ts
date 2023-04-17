@@ -10,14 +10,12 @@ import * as fs from 'fs';
 import * as semver from 'semver';
 import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
 import * as tmpfile from '../../utils/tempfile';
-import { getRenderedContent, getResourceUri } from '../../utils/webviews';
 import { combine, Errorable, failed } from '../../utils/errorable';
 import { invokeKubectlCommand } from '../../utils/kubectl';
 import { KustomizeConfig } from '../models/config';
 import { ClusterFeatures } from '../models/clusterFeatures';
 import { ContainerServiceClient } from '@azure/arm-containerservice';
 import { getWindowsNodePoolKubernetesVersions } from '../../utils/clusters';
-import { URL } from 'url';
 import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob';
 const tmp = require('tmp');
 
@@ -220,56 +218,6 @@ export async function checkUploadStatus(
     }
 
     return uploadStatuses;
-}
-
-export function getSuccessWebviewContent(
-    aksExtensionPath: string,
-    runId: string,
-    clusterName: string,
-    periscopeStorageInfo: PeriscopeStorage,
-    nodeNames: string[],
-    webview: vscode.Webview
-): string {
-    const styleUri = getResourceUri(webview, aksExtensionPath, 'periscope', 'periscope.css');
-    const templateUri = getResourceUri(webview, aksExtensionPath, 'periscope', 'success.html');
-
-    const containerUrl = new URL(periscopeStorageInfo.containerName, periscopeStorageInfo.blobEndpoint);
-    const data = {
-        cssuri: styleUri,
-        name: clusterName,
-        runId,
-        nodeNames,
-        containerUrl: containerUrl.href,
-        shareSas: periscopeStorageInfo.sevenDaysSasKey
-    };
-
-    return getRenderedContent(templateUri, data);
-}
-
-export function getFailureWebviewContent(aksExtensionPath: string, clusterName: string, errorMessage: string, kustomizeConfig: KustomizeConfig, webview: vscode.Webview): string {
-    const styleUri = getResourceUri(webview, aksExtensionPath, 'periscope', 'periscope.css');
-    const templateUri = getResourceUri(webview, aksExtensionPath, 'periscope', 'failure.html');
-
-    const data = {
-        cssuri: styleUri,
-        name: clusterName,
-        error: errorMessage,
-        config: kustomizeConfig
-    };
-
-    return getRenderedContent(templateUri, data);
-}
-
-export function getNoDiagSettingWebviewContent(aksExtensionPath: string, clusterName: string, webview: vscode.Webview): string {
-    const styleUri = getResourceUri(webview, aksExtensionPath, 'periscope', 'periscope.css');
-    const templateUri = getResourceUri(webview, aksExtensionPath, 'periscope', 'nodiagsetting.html');
-
-    const data = {
-        cssuri: styleUri,
-        name: clusterName
-    };
-
-    return getRenderedContent(templateUri, data);
 }
 
 export async function getNodeLogs(

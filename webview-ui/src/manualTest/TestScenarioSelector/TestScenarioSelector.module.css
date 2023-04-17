@@ -1,0 +1,30 @@
+.sidebar {
+    height: 100%;
+    width: 15rem;
+    position: fixed;
+    margin-top: 1rem;
+    padding: 0;
+    top: 0;
+    left: 0;
+    overflow-x: hidden;
+}
+
+.contentLink {
+    padding: 0.2rem 1rem;
+    text-decoration: none;
+    display: block;
+}
+
+.contentLink:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-list-hoverForeground);
+}
+
+.contentLink.selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.main {
+    margin-left: 15rem;
+}

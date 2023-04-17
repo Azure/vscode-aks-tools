@@ -15,10 +15,10 @@ jobs:
         node-version: 14
     # Run install dependencies
     - name: Install dependencies
-      run: npm install
-    # Run tests
+      run: npm run install:all
+    # Ensure project builds successfully before creating release
     - name: Build 
-      run: npm run compile
+      run: npm run webpack
     - name: Get current package version
       id: package_version
       uses: martinbeentjes/npm-get-version-action@v1.1.0

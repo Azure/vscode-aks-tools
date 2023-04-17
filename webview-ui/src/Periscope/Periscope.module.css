@@ -1,0 +1,56 @@
+table.nodelist {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.nodelist th {
+    height: 50px;
+    text-align: left;
+}
+
+table.nodelist td {
+    padding: 5px;
+}
+
+table.nodelist tbody tr.selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+table.nodelist tbody tr:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-list-hoverForeground);
+    cursor: pointer;
+}
+
+.actionsContainer {
+    display: flex;
+    margin: auto;
+    align-items: center;
+    justify-content: left;
+}
+
+.errorIndicator {
+    color: var(--vscode-testing-iconFailed);
+    padding-right: 5px;
+}
+
+.successIndicator {
+    color: var(--vscode-testing-iconPassed);
+    padding-right: 5px;
+}
+
+dl.settinglist {
+    display: flex;
+    flex-flow: row wrap;
+}
+
+dl.settinglist dt {
+    flex-basis: 50%;
+    padding: 2px 4px;
+    font-weight: bold;
+}
+
+dl.settinglist dd {
+    padding: 2px 4px;
+}
