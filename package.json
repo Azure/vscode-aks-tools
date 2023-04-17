@@ -522,13 +522,15 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "webpack --mode production",
-        "webpack": "webpack --mode production",
+        "install:all": "npm install && cd webview-ui && npm install",
+        "dev:webview": "cd webview-ui && npm run dev",
+        "build:webview": "cd webview-ui && npm run build",
+        "vscode:prepublish": "npm run webpack",
+        "webpack": "npm run build:webview && webpack --mode production",
         "webpack-dev": "webpack --mode development --watch --info-verbosity verbose",
-        "test-compile": "tsc -p ./",
-        "compile": "webpack --mode none",
+        "test-compile": "npm run build:webview && tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "test": "mocha -V && npm run test-compile && node ./out/tests/runTests.js"
+        "test": "npm run test-compile && node ./out/tests/runTests.js"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account",

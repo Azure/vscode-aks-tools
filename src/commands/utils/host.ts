@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Errorable } from './errorable';
+import { Errorable, map as errmap } from './errorable';
 
 const meta = require('../../../package.json');
 
@@ -11,12 +11,12 @@ export async function longRunning<T>(title: string, action: () => Promise<T>): P
     return await vscode.window.withProgress(options, (_) => action());
 }
 
-export function getExtensionPath(): Errorable<string> {
+export function getExtension(): Errorable<vscode.Extension<vscode.ExtensionContext>> {
     const publisherName = `${meta.publisher}.${meta.name}`;
-    const vscodeExtensionPath = vscode.extensions.getExtension(publisherName)?.extensionPath;
-    if (!vscodeExtensionPath) {
-        return { succeeded: false, error: 'No Extension path found.' };
-    }
+    const extension = vscode.extensions.getExtension(publisherName);
+    return extension ? { succeeded: true, result: extension } : { succeeded: false, error: `Extension not found for ${publisherName}` };
+}
 
-    return { succeeded: true, result: vscodeExtensionPath };
+export function getExtensionPath(): Errorable<string> {
+    return errmap(getExtension(), e => e.extensionPath);
 }
