@@ -141,6 +141,14 @@ export async function prepareAKSPeriscopeKustomizeOverlay(
         }
     }
 
+    // From 0.0.13 onwards, the image names are the same for Windows and Linux. Discussion linked to PR here:
+    // https://github.com/Azure/aks-periscope/pull/212
+    // Previously the Windows image was named 'periscope-win'.
+    let windowsImageName = "periscope";
+    if (semver.parse(kustomizeConfig.imageVersion) && semver.lt(kustomizeConfig.imageVersion, "0.0.13")) {
+        windowsImageName = "periscope-win";
+    }
+
     // Build a Kustomize overlay referencing a base for a known release, and using the images from MCR
     // for that release.
     const kustomizeContent = `
@@ -154,7 +162,7 @@ images:
   newName: ${kustomizeConfig.containerRegistry}/aks/periscope
   newTag: "${kustomizeConfig.imageVersion}"
 - name: periscope-windows
-  newName: ${kustomizeConfig.containerRegistry}/aks/periscope-win
+  newName: ${kustomizeConfig.containerRegistry}/aks/${windowsImageName}
   newTag: "${kustomizeConfig.imageVersion}"
 
 secretGenerator:
