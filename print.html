@@ -1,0 +1,482 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Visual Studio Code AKS Tools</title>
+        <meta name="robots" content="noindex" />
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Display Azure Kubernetes Services within VS Code">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="installation.html"><strong aria-hidden="true">2.</strong> Installation / Quick Start</a></li><li class="chapter-item expanded "><a href="development.html"><strong aria-hidden="true">3.</strong> Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="development/development.html"><strong aria-hidden="true">3.1.</strong> Development</a></li><li class="chapter-item expanded "><a href="development/webview-development.html"><strong aria-hidden="true">3.2.</strong> Webview Settings</a></li></ol></li><li class="chapter-item expanded "><a href="features/features.html"><strong aria-hidden="true">4.</strong> Features</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="features/merge-save-kubeconfig.html"><strong aria-hidden="true">4.1.</strong> Add AKS clusters to kubeconfig</a></li><li class="chapter-item expanded "><a href="features/aks-diagnostics.html"><strong aria-hidden="true">4.2.</strong> Perform AKS Diagnostics checks on your AKS cluster</a></li><li class="chapter-item expanded "><a href="features/aks-periscope.html"><strong aria-hidden="true">4.3.</strong> Run AKS Periscope within VS Code</a></li><li class="chapter-item expanded "><a href="features/install-azureserviceoperator.html"><strong aria-hidden="true">4.4.</strong> Install Azure Service Operator on your AKS cluster</a></li><li class="chapter-item expanded "><a href="features/create-gh-workflow.html"><strong aria-hidden="true">4.5.</strong> Create GitHub Workflow from your AKS cluster</a></li><li class="chapter-item expanded "><a href="features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.6.</strong> Show AKS cluster overview in Azure Portal</a></li><li class="chapter-item expanded "><a href="features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.7.</strong> Show AKS cluster properties</a></li><li class="chapter-item expanded "><a href="features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.8.</strong> Create AKS cluster from Azure Portal</a></li><li class="chapter-item expanded "><a href="features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.9.</strong> Stop and Start the AKS cluster</a></li><li class="chapter-item expanded "><a href="features/run-kubectl-command.html"><strong aria-hidden="true">4.10.</strong> Run Kubectl Commands from your AKS cluster</a></li><li class="chapter-item expanded "><a href="features/manage-cluster-operations.html"><strong aria-hidden="true">4.11.</strong> Run Managed Cluster Operations from your AKS cluster</a></li><li class="chapter-item expanded "><a href="features/k8s-api-health-points.html"><strong aria-hidden="true">4.12.</strong> Run Kubernetes API Health Endpoints</a></li><li class="chapter-item expanded "><a href="features/inspektor-gadget.html"><strong aria-hidden="true">4.13.</strong> Deploy and Undeploy InspektorGadget</a></li><li class="chapter-item expanded "><a href="features/inspektor-gadget.html"><strong aria-hidden="true">4.14.</strong> Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot</a></li></ol></li><li class="chapter-item expanded "><a href="release.html"><strong aria-hidden="true">5.</strong> Release</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="release/releasing.html"><strong aria-hidden="true">5.1.</strong> Releasing Information</a></li></ol></li><li class="chapter-item expanded "><a href="contributing.html"><strong aria-hidden="true">6.</strong> Contributing</a></li><li class="chapter-item expanded "><a href="telemetery.html"><strong aria-hidden="true">7.</strong> Telemetery</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Visual Studio Code AKS Tools</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/Azure/vscode-aks-tools" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="visual-studio-code-aks-tools"><a class="header" href="#visual-studio-code-aks-tools">Visual Studio Code AKS Tools</a></h1>
+<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<p>Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS developers with one-click quick to deploy features with in vscode eco-system.</p>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<ul>
+<li><a href="./features/merge-save-kubeconfig.html">Add AKS clusters to kubeconfig</a></li>
+<li><a href="./features/aks-diagnostics.html">Perform AKS Diagnostics checks on your AKS cluster</a></li>
+<li><a href="./features/aks-periscope.html">Run AKS Periscope within VS Code</a></li>
+<li><a href="./features/install-azureserviceoperator.html">Install Azure Service Operator on your AKS cluster</a></li>
+<li><a href="./features/create-gh-workflow.html">Create GitHub Workflow from your AKS cluster</a></li>
+<li><a href="./features/show-properties-azureportal-start-stop.html">Show AKS cluster overview in Azure Portal</a></li>
+<li><a href="./features/show-properties-azureportal-start-stop.html">Show AKS cluster properties</a></li>
+<li><a href="./features/show-properties-azureportal-start-stop.html">Create AKS cluster from Azure Portal</a></li>
+<li><a href="./features/show-properties-azureportal-start-stop.html">Stop and Start the AKS cluster</a></li>
+<li><a href="./features/run-kubectl-command.html">Run Kubectl Commands from your AKS cluster</a></li>
+<li><a href="./features/manage-cluster-operations.html">Run Managed Cluster Operations from your AKS cluster</a></li>
+<li><a href="./features/k8s-api-health-points.html">Run Kubernetes API Health Endpoints</a></li>
+<li><a href="./features/inspektor-gadget.html">Deploy and Undeploy InspektorGadget</a></li>
+<li><a href="./features/inspektor-gadget.html">Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot</a></li>
+</ul>
+<h2 id="development-and-release"><a class="header" href="#development-and-release">Development and Release</a></h2>
+<ul>
+<li><a href="./release/releasing.html">How to release</a></li>
+<li><a href="./development/development.html">Development</a></li>
+<li><a href="./development/webview-development.html">Webview Development</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
+<ol>
+<li>
+<p>Download and install the <a href="https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-aks-tools">Azure Kubernetes Service extension</a> for Visual Studio Code.</p>
+</li>
+<li>
+<p>Wait for the extension to finish installing then reload Visual Studio Code when prompted.</p>
+</li>
+<li>
+<p>Once the installation is complete, you’ll see a section named <strong>Azure</strong> under <strong>Clouds</strong>.</p>
+</li>
+<li>
+<p>Sign in to your Azure Account by clicking <strong>Sign in to Azure…</strong></p>
+</li>
+</ol>
+<p><img src="./resources/Sign-in.png" alt="Sign in to your Azure Account" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="development"><a class="header" href="#development">Development</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="package-scripts"><a class="header" href="#package-scripts">Package Scripts</a></h1>
+<p>This gives an overview of the <code>npm</code> scripts available for development and release of the extension. See the <code>scripts</code> block in <a href="development/../package.json">package.json</a>.</p>
+<p>These can all be run from the command line in the root of the repository (with <code>npm</code> installed), using <code>npm run {script-name}</code>.</p>
+<h2 id="environment-initialization"><a class="header" href="#environment-initialization">Environment Initialization</a></h2>
+<ul>
+<li><code>install:all</code>: Installs <code>npm</code> dependencies for both the main extension project and the <code>webview-ui</code> sub-project. It’s recommended to use this instead of <code>npm install</code>, which will only install dependencies for the main project.</li>
+</ul>
+<h2 id="development-and-testing"><a class="header" href="#development-and-testing">Development and Testing</a></h2>
+<ul>
+<li><a href="development/./webview-development.html#developing-the-ui"><code>dev-webview</code></a>: for concurrent development/debugging of webview UX.</li>
+<li><code>build-webview</code>: bundles and minifies the webview UX for consumption by the extension.</li>
+<li><code>webpack</code>: builds and packages the extension.</li>
+<li><code>test</code>: runs automated tests.</li>
+</ul>
+<h2 id="not-for-running-directly"><a class="header" href="#not-for-running-directly">Not for Running Directly</a></h2>
+<p>Some scripts are invoked by other scripts or tools, so need not be run directly, or are otherwise not required for general development tasks:</p>
+<ul>
+<li><code>vscode:prepublish</code>: used by the <code>vsce</code> command for packaging the extension into a <code>vsix</code> file for distribution.</li>
+<li><code>webpack-dev</code>: bundles the extension code in development mode. Since we currently have no conditional logic that depends on whether the extension is running in development or production, this may be redundant.</li>
+<li><code>test-compile</code>: compiles the extension typescript (after building the <code>webview-ui</code> project) without webpacking it. This is a prerequisite to running automated tests. It <em>could</em> be moved into <code>test</code>, but keeping it separate would allow it to be used in the future as a prelaunch task for debugging the extension without webpacking it.</li>
+<li><code>watch</code>: not currently used as part of any workflow I’m aware of, but could potentially be useful for editing while debugging.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="webview-development"><a class="header" href="#webview-development">Webview Development</a></h1>
+<p>For commands that require a webview (see <a href="https://code.visualstudio.com/api/extension-guides/webview#should-i-use-a-webview">guidance</a> on where this is appropriate), the <a href="development/../webview-ui/"><code>webview-ui</code></a> project provides the necessary tooling to develop the front end.</p>
+<h2 id="initial-setup"><a class="header" href="#initial-setup">Initial Setup</a></h2>
+<p>Run <code>npm run install:all</code> to install package dependencies for both the extension and webview project.</p>
+<h2 id="developmentdebugging"><a class="header" href="#developmentdebugging">Development/Debugging</a></h2>
+<h3 id="file-structure"><a class="header" href="#file-structure">File structure</a></h3>
+<ul>
+<li>Webview source files are under <code>/webview-ui/src</code>.</li>
+<li>When built, bundled/minified webview assets are output to <code>/webview-ui/dist</code>.</li>
+</ul>
+<p>When the extension is run (both in development and production), the webview assets are read from <code>/webview-ui/dist</code>.</p>
+<h3 id="developing-the-ui"><a class="header" href="#developing-the-ui">Developing the UI</a></h3>
+<p>If you like to use your browser development tools for debugging, or you wish to open the web application in an existing browser window:</p>
+<ol>
+<li>Run <code>npm run dev:webview</code> to start the development server.</li>
+<li>Navigate to <code>http://localhost:3000</code> in your browser.</li>
+</ol>
+<p>Alternatively, if you are developing in VS Code and wish to use the inbuilt debugging functionality:</p>
+<ol>
+<li>Hit <code>F5</code> to launch the <code>Webview UI</code> debug profile in a new browser window. This will automatically run the development server and attach a debugger.</li>
+</ol>
+<h3 id="developing-the-vs-code-commands-that-launch-the-ui"><a class="header" href="#developing-the-vs-code-commands-that-launch-the-ui">Developing the VS Code commands that launch the UI</a></h3>
+<p>To debug the extension itself, hit <code>F5</code> to launch the <code>Extension</code> debug profile in a new VS Code Window. This will automatically build, bundle and minify both the <code>webview-ui</code> project and the extension.</p>
+<p>The extension will not automatically update itself in response to code changes as you are debugging, so the best workflow here is to stop debugging, make changes, and launch the debugger again.</p>
+<h2 id="building-for-release"><a class="header" href="#building-for-release">Building for release</a></h2>
+<p>The process for this is unaffected by the webview setup. The <code>npm run webpack</code> and <code>vsce package</code> commands will ensure the <code>webpack-ui</code> project is built and bundled.</p>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="features-1"><a class="header" href="#features-1">Features</a></h2>
+<p>Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named <strong>Azure</strong>. You can right click on your AKS cluster and click a menu item to perform following actions.</p>
+<p><img src="features/../resources/right-click-menu.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/right-click-menu-workflow.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/right-click-menu-kubectl.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/right-click-menu-managedoperations.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/right-click-api-health-check-menu.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/right-click-inspektor-gadget.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/right-click-inspektor-gadget-command.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/right-click-subscription.png" alt="Cloud explorer extension menu" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="merge-and-save-into-kubeconfig"><a class="header" href="#merge-and-save-into-kubeconfig">Merge and Save Into Kubeconfig</a></h1>
+<h3 id="merge-into-kubeconfig"><a class="header" href="#merge-into-kubeconfig">Merge into Kubeconfig</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Merge into Kubeconfig</strong> to add the selected AKS cluster to the kubeconfig file.</p>
+<h3 id="save-kubeconfig"><a class="header" href="#save-kubeconfig">Save Kubeconfig</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Save Kubeconfig</strong> to save the kubeconfig of the selected AKS cluster.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="aks-diagnostics"><a class="header" href="#aks-diagnostics">AKS Diagnostics</a></h1>
+<h3 id="aks-diagnostics-1"><a class="header" href="#aks-diagnostics-1">AKS Diagnostics</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Run AKS Diagnostics</strong> to display diagnostics information based on your AKS cluster’s backend telemetry for:</p>
+<ul>
+<li>Best Practices</li>
+<li>Create, Upgrade, Delete and Scale issues</li>
+<li>Identity and Security</li>
+<li>Known Issues, Availability and Performance</li>
+<li>Network and Connectivity issues</li>
+<li>Node Health</li>
+</ul>
+<p>To perform further checks on your AKS cluster to troubleshoot and get recommended solutions, click on the AKS Diagnostics link at the top of the page to open it for the selected cluster. For more information on AKS Diagnostics, visit <a href="https://docs.microsoft.com/azure/aks/concepts-diagnostics">AKS Diagnostics Overview</a>. </p>
+<p><img src="features/../resources/aks-diagnostics-webview.png" alt="AKS Diagnostics Webview" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="aks-periscope"><a class="header" href="#aks-periscope">AKS Periscope</a></h1>
+<h3 id="aks-periscope-1"><a class="header" href="#aks-periscope-1">AKS Periscope</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Run AKS Periscope</strong> to collect node and pod logs for your AKS cluster and to export them to an Azure storage account. Upon selecting the option, a web view will load providing you the option to generate a downloadable link for the collected logs as well as a shareable link with 7-day expiry.</p>
+<blockquote>
+<p>If you are not seeing the logs for all the nodes, it is possible the logs were still uploading. Try clicking the <strong>Generate Link</strong> button again to load more logs.</p>
+</blockquote>
+<p>For more information, visit <a href="https://github.com/Azure/aks-periscope">AKS Periscope</a>.</p>
+<p><img src="features/../resources/aks-periscope-webview.png" alt="AKS Periscope Webview" /></p>
+<h4 id="configuring-storage-account"><a class="header" href="#configuring-storage-account">Configuring Storage Account</a></h4>
+<p>Running the AKS Periscope requires you to have a storage account associated with the Diagnostic settings of your AKS cluster. If you have only one storage account associated with the Diagnostic settings of your AKS cluster, the collected logs will be stored in the associated storage account by default. If you have more than one storage account associated with the Diagnostics settings of your AKS cluster, then the extension will prompt you to choose the storage account for saving collected logs. If you don’t have a storage account configured in the Diagnostic settings, please follow these instructions to enable it.</p>
+<ol>
+<li>
+<p>Navigate to your AKS cluster in the <a href="https://portal.azure.com/">Azure Portal</a>.</p>
+</li>
+<li>
+<p>Click on <strong>Diagnostic Settings</strong> under <strong>Monitoring</strong> in the left navigation.</p>
+</li>
+<li>
+<p>Click on <strong>Add diagnostic setting</strong>.</p>
+</li>
+<li>
+<p>Enter a name, such as myAKSClusterLogs, then select the option to <strong>Archive to a storage account</strong>.</p>
+</li>
+<li>
+<p>Select a storage account of your choice.</p>
+</li>
+<li>
+<p>In the list of available logs, select the logs you wish to enable.</p>
+<blockquote>
+<p>Note: The incurred cost is subject to your storage account usage and Azure Storage Policy.</p>
+</blockquote>
+</li>
+<li>
+<p>When ready, select <strong>Save</strong> to enable collection of the selected logs.</p>
+</li>
+</ol>
+<p>For more information on Diagnostics settings, visit <a href="https://docs.microsoft.com/azure/azure-monitor/platform/diagnostic-settings">Create diagnostic settings to send platform logs and metics to different destinations</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h3 id="install-azure-service-operator"><a class="header" href="#install-azure-service-operator">Install Azure Service Operator</a></h3>
+<h3 id="install-azure-service-operator-1"><a class="header" href="#install-azure-service-operator-1">Install Azure Service Operator</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Install Azure Service Operator</strong> to easily deploy the latest version of Azure Service Operator (ASO) on your AKS cluster and provision and connect applications to Azure resources within Kubernetes. When you select this option, you’ll be prompted for a service principal for ASO to use when performing Azure resource operations. This service principal must have appropriate permissions (typically Contributor at suitable scope). Fill out the service principal details and click <strong>Submit</strong> to kick off the installation of Azure Service Operator.</p>
+<blockquote>
+<p>Install Azure Service Operator can only be performed on an AKS cluster that has never had ASO installed before. If you have already initiated the installation manually, follow the instructions on <a href="https://azure.github.io/azure-service-operator/#installation">Azure Service Operator</a> to complete.</p>
+</blockquote>
+<p>For more information on Azure Service Operator, visit <a href="https://github.com/Azure/azure-service-operator">Azure Service Operator (for Kubernetes)</a>. If you are experiencing issues with Azure Service Operator, visit <a href="https://github.com/Azure/azure-service-operator/blob/master/docs/troubleshooting.md">Azure Service Operator (ASO) troubleshooting</a>.</p>
+<p><img src="features/../resources/azure-service-operator-screenshot.png" alt="Azure Service Operator Webview" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="create-github-workflow"><a class="header" href="#create-github-workflow">Create GitHub Workflow</a></h1>
+<h3 id="create-github-workflow-1"><a class="header" href="#create-github-workflow-1">Create GitHub Workflow</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Create GitHub Workflow</strong> to easily open and create a workflow starter template. This helps in quick generation of the workflow templates with pre populates resource and clustername for:</p>
+<ul>
+<li><a href="https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service.yml">Starter Workflow</a></li>
+<li><a href="https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-helm.yml">Helm Workflow</a></li>
+<li><a href="https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-kompose.yml">Kompose Workflow</a></li>
+<li><a href="https://github.com/actions/starter-workflows/blob/main/deployments/azure-kubernetes-service-kustomize.yml">Kustomize Workflow</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="show-properties-show-in-azure-portal"><a class="header" href="#show-properties-show-in-azure-portal">Show Properties, Show in Azure Portal</a></h1>
+<h3 id="show-in-azure-portal"><a class="header" href="#show-in-azure-portal">Show in Azure Portal</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show in Azure Portal</strong> to easily navigate to AKS cluster overview page in Azure Portal.</p>
+<h3 id="show-properties"><a class="header" href="#show-properties">Show Properties</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster and agent pool properties like provisioning state, fqdn, k8s version, along with node properties like node version, vm type, vm size, o/s type, o/s disk size and nodes provisioning state.</p>
+<h3 id="create-cluster-from-azure-portal"><a class="header" href="#create-cluster-from-azure-portal">Create cluster from Azure Portal</a></h3>
+<p>Right click on your AKS sunscription and click on <strong>Create cluster from Azure Portal</strong> to easily navigate to AKS create cluster page in Azure Portal.</p>
+<h3 id="start-or-stop-aks-cluster"><a class="header" href="#start-or-stop-aks-cluster">Start or Stop AKS cluster</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster properties, within the page there will be <strong>Stop/Start Cluster</strong> button to perform the start or stop the cluster operation.</p>
+<p><img src="features/../resources/aks-startstop-cluster.png" alt="Start or Stop Cluster From Properties Webview" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="show-properties-show-in-azure-portal-1"><a class="header" href="#show-properties-show-in-azure-portal-1">Show Properties, Show in Azure Portal</a></h1>
+<h3 id="show-in-azure-portal-1"><a class="header" href="#show-in-azure-portal-1">Show in Azure Portal</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show in Azure Portal</strong> to easily navigate to AKS cluster overview page in Azure Portal.</p>
+<h3 id="show-properties-1"><a class="header" href="#show-properties-1">Show Properties</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster and agent pool properties like provisioning state, fqdn, k8s version, along with node properties like node version, vm type, vm size, o/s type, o/s disk size and nodes provisioning state.</p>
+<h3 id="create-cluster-from-azure-portal-1"><a class="header" href="#create-cluster-from-azure-portal-1">Create cluster from Azure Portal</a></h3>
+<p>Right click on your AKS sunscription and click on <strong>Create cluster from Azure Portal</strong> to easily navigate to AKS create cluster page in Azure Portal.</p>
+<h3 id="start-or-stop-aks-cluster-1"><a class="header" href="#start-or-stop-aks-cluster-1">Start or Stop AKS cluster</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster properties, within the page there will be <strong>Stop/Start Cluster</strong> button to perform the start or stop the cluster operation.</p>
+<p><img src="features/../resources/aks-startstop-cluster.png" alt="Start or Stop Cluster From Properties Webview" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="show-properties-show-in-azure-portal-2"><a class="header" href="#show-properties-show-in-azure-portal-2">Show Properties, Show in Azure Portal</a></h1>
+<h3 id="show-in-azure-portal-2"><a class="header" href="#show-in-azure-portal-2">Show in Azure Portal</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show in Azure Portal</strong> to easily navigate to AKS cluster overview page in Azure Portal.</p>
+<h3 id="show-properties-2"><a class="header" href="#show-properties-2">Show Properties</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster and agent pool properties like provisioning state, fqdn, k8s version, along with node properties like node version, vm type, vm size, o/s type, o/s disk size and nodes provisioning state.</p>
+<h3 id="create-cluster-from-azure-portal-2"><a class="header" href="#create-cluster-from-azure-portal-2">Create cluster from Azure Portal</a></h3>
+<p>Right click on your AKS sunscription and click on <strong>Create cluster from Azure Portal</strong> to easily navigate to AKS create cluster page in Azure Portal.</p>
+<h3 id="start-or-stop-aks-cluster-2"><a class="header" href="#start-or-stop-aks-cluster-2">Start or Stop AKS cluster</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster properties, within the page there will be <strong>Stop/Start Cluster</strong> button to perform the start or stop the cluster operation.</p>
+<p><img src="features/../resources/aks-startstop-cluster.png" alt="Start or Stop Cluster From Properties Webview" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="show-properties-show-in-azure-portal-3"><a class="header" href="#show-properties-show-in-azure-portal-3">Show Properties, Show in Azure Portal</a></h1>
+<h3 id="show-in-azure-portal-3"><a class="header" href="#show-in-azure-portal-3">Show in Azure Portal</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show in Azure Portal</strong> to easily navigate to AKS cluster overview page in Azure Portal.</p>
+<h3 id="show-properties-3"><a class="header" href="#show-properties-3">Show Properties</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster and agent pool properties like provisioning state, fqdn, k8s version, along with node properties like node version, vm type, vm size, o/s type, o/s disk size and nodes provisioning state.</p>
+<h3 id="create-cluster-from-azure-portal-3"><a class="header" href="#create-cluster-from-azure-portal-3">Create cluster from Azure Portal</a></h3>
+<p>Right click on your AKS sunscription and click on <strong>Create cluster from Azure Portal</strong> to easily navigate to AKS create cluster page in Azure Portal.</p>
+<h3 id="start-or-stop-aks-cluster-3"><a class="header" href="#start-or-stop-aks-cluster-3">Start or Stop AKS cluster</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Show Properties</strong> to display the AKS cluster properties, within the page there will be <strong>Stop/Start Cluster</strong> button to perform the start or stop the cluster operation.</p>
+<p><img src="features/../resources/aks-startstop-cluster.png" alt="Start or Stop Cluster From Properties Webview" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="run-kubectl-commands"><a class="header" href="#run-kubectl-commands">Run Kubectl Commands</a></h1>
+<h3 id="run-kubectl-commands-from-your-aks-cluster"><a class="header" href="#run-kubectl-commands-from-your-aks-cluster">Run Kubectl Commands from your AKS cluster</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Run Kubectl Commands</strong> to easily run few known kubectl commands on your cluster. Currently we have enable following kubectl commands for the AKS cluster:</p>
+<ul>
+<li>Describe Services</li>
+<li>Get All Pods</li>
+<li>API Resources</li>
+<li>Get Cluster Info</li>
+<li>Get Node</li>
+<li>Get All Events</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="run-managed-cluster-operations"><a class="header" href="#run-managed-cluster-operations">Run Managed Cluster Operations</a></h1>
+<h3 id="run-managed-cluster-operations-from-your-aks-cluster"><a class="header" href="#run-managed-cluster-operations-from-your-aks-cluster">Run Managed Cluster Operations from your AKS cluster</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Managed Cluster Operations</strong> to easily run few managed cluster operations on your cluster. Currently we have enable following operations:</p>
+<ul>
+<li>Delete Cluster</li>
+<li>Rotate Cluster Certificate</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h3 id="kubernetes-api-health-endpoints"><a class="header" href="#kubernetes-api-health-endpoints">Kubernetes API Health Endpoints</a></h3>
+<h3 id="run-kubernetes-api-health-endpoints"><a class="header" href="#run-kubernetes-api-health-endpoints">Run Kubernetes API Health Endpoints</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Kubernetes API Health Endpoints</strong> to easily run few <a href="https://kubernetes.io/docs/reference/using-api/health-checks/">k8s cluster API endpoint health check</a>. Currently we have enable following health check:</p>
+<ul>
+<li>Healthz</li>
+<li>Livez</li>
+<li>Readyz</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h3 id="inspektor-gadget"><a class="header" href="#inspektor-gadget">Inspektor Gadget</a></h3>
+<h3 id="deploy-and-undeploy-inspektorgadget"><a class="header" href="#deploy-and-undeploy-inspektorgadget">Deploy and Undeploy InspektorGadget</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Inspektor Gadget</strong> to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.</p>
+<h3 id="profile-top-and-snapshot-inspektor-gadget-commands"><a class="header" href="#profile-top-and-snapshot-inspektor-gadget-commands">Profile, Top and Snapshot Inspektor Gadget Commands</a></h3>
+<p>After successfully deploying Inspektor Gadget, right-click on your AKS cluster and select <strong>Inspektor Gadget</strong> and choose <strong>Gadget Commands</strong> to easily use non-interactive Top, Profile or Snapshot commands for your cluster.</p>
+<div style="break-before: page; page-break-before: always;"></div><h3 id="inspektor-gadget-1"><a class="header" href="#inspektor-gadget-1">Inspektor Gadget</a></h3>
+<h3 id="deploy-and-undeploy-inspektorgadget-1"><a class="header" href="#deploy-and-undeploy-inspektorgadget-1">Deploy and Undeploy InspektorGadget</a></h3>
+<p>Right click on your AKS cluster and click on <strong>Inspektor Gadget</strong> to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.</p>
+<h3 id="profile-top-and-snapshot-inspektor-gadget-commands-1"><a class="header" href="#profile-top-and-snapshot-inspektor-gadget-commands-1">Profile, Top and Snapshot Inspektor Gadget Commands</a></h3>
+<p>After successfully deploying Inspektor Gadget, right-click on your AKS cluster and select <strong>Inspektor Gadget</strong> and choose <strong>Gadget Commands</strong> to easily use non-interactive Top, Profile or Snapshot commands for your cluster.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="release"><a class="header" href="#release">Release</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="how-to-release"><a class="header" href="#how-to-release">How to Release</a></h2>
+<p>To make a new release and publish it to the marketplace you have to follow the following steps.</p>
+<ol>
+<li>Create a branch <code>publish-x.y.z</code></li>
+<li>Update <code>package.json</code> with the new version </li>
+<li>Add a section to <code>CHANGELOG.md</code> with the header <code>## [x.y.z]</code> (N.B: make sure to write the new version in square brackets as the <code>changelog-reader</code> action only works if the <code>CHANGELOG.md</code> file follows the <a href="https://github.com/olivierlacan/keep-a-changelog">Keep a Changelog standard</a>)</li>
+<li>Create a new PR, get approval and merge</li>
+<li>Run the <code>Build &amp; Publish</code> workflow manually from the GH Actions tab</li>
+</ol>
+<h3 id="build--publish"><a class="header" href="#build--publish">Build &amp; Publish</a></h3>
+<p>The <code>Build &amp; Publish</code> workflow allows to create a new release, package it in a VSIX file and publish to the VSCode marketplace with a single click.</p>
+<p>The only requirement needed to run the workflow is to have a secret named <code>VS_MARKETPLACE_TOKEN</code> containing the Personal Access Token of the publisher. You can find more infos about how to create a publisher/token in the <a href="https://code.visualstudio.com/api/working-with-extensions/publishing-extension#create-a-publisher">official documentation</a></p>
+<p>Once everything is set up and you followed all first 4 steps in the previous section, you are ready to trigger the <code>Build &amp; Publish</code> workflow.
+This is what it actually does:</p>
+<ol>
+<li>Install all dependencies and build the project</li>
+<li>Check if the <code>CHANGELOG.md</code> contains a section related to the new version</li>
+<li>Create a new release</li>
+<li>Create the VSIX file and publish it to the marketplace</li>
+<li>Attach the VSIX file to the new release</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contributing"><a class="header" href="#contributing">Contributing</a></h1>
+<h2 id="contributing-1"><a class="header" href="#contributing-1">Contributing</a></h2>
+<p>This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit https://cla.microsoft.com.</p>
+<p>When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repos using our CLA.</p>
+<p>This project has adopted the <a href="https://opensource.microsoft.com/codeofconduct/">Microsoft Open Source Code of Conduct</a>.
+For more information see the <a href="https://opensource.microsoft.com/codeofconduct/faq/">Code of Conduct FAQ</a> or
+contact <a href="mailto:opencode@microsoft.com">opencode@microsoft.com</a> with any additional questions or comments.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="telemetry"><a class="header" href="#telemetry">Telemetry</a></h1>
+<h2 id="telemetry-1"><a class="header" href="#telemetry-1">Telemetry</a></h2>
+<p>This extension collects telemetry data to help us build a better experience for building applications with Azure Kubernetes Service and VS Code. We only collect the following data:</p>
+<ul>
+<li>Which commands are executed.</li>
+</ul>
+<p>We do not collect any information about image names, paths, etc. Read our <a href="https://privacy.microsoft.com/privacystatement">privacy statement</a> to learn more. If you don’t wish to send usage data to Microsoft, you can set the <code>telemetry.enableTelemetry</code> setting to <code>false</code>. Learn more in our <a href="https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting">FAQ</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
