@@ -1,0 +1,14 @@
+[book]
+authors = ["Tatsat Mishra"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Visual Studio Code AKS Tools"
+description = "Display Azure Kubernetes Services within VS Code"
+
+[preprocessor.toc]
+command = "mdbook-toc"
+
+[output.html]
+curly-quotes = true
+git-repository-url = "https://github.com/Azure/vscode-aks-tools"
