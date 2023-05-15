@@ -16,4 +16,4 @@ Right click on your AKS sunscription and click on **Create cluster from Azure Po
 
 Right click on your AKS cluster and click on **Show Properties** to display the AKS cluster properties, within the page there will be **Stop/Start Cluster** button to perform the start or stop the cluster operation.
 
-![Start or Stop Cluster From Properties Webview](../../../../resources/aks-startstop-cluster.png)
+![Start or Stop Cluster From Properties Webview](../../resources/aks-startstop-cluster.png)
