@@ -8,7 +8,7 @@ Right click on your AKS cluster and click on **Run AKS Periscope** to collect no
 
 For more information, visit [AKS Periscope](https://github.com/Azure/aks-periscope).
 
-![AKS Periscope Webview](../../resources/aks-periscope-webview.png)
+![AKS Periscope Webview](../resources/aks-periscope-webview.png)
 
 #### Configuring Storage Account
 
