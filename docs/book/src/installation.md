@@ -8,4 +8,4 @@
 
 4. Sign in to your Azure Account by clicking **Sign in to Azure…**
 
-![Sign in to your Azure Account](../../../resources/Sign-in.png)
+![Sign in to your Azure Account](./resources/Sign-in.png)

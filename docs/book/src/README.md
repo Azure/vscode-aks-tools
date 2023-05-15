@@ -1,6 +1,6 @@
 # Visual Studio Code AKS Tools
 
-## Introductions
+## Introduction
 
 Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS developers with one-click quick to deploy features with in vscode eco-system.
 
