@@ -1,40 +1,8 @@
 # Azure Kubernetes Service (AKS) Extension for Visual Studio Code
 
-* View your AKS clusters in the Kubernetes extension cloud explorer
-* Add AKS clusters to kubeconfig
-* Perform AKS Diagnostics checks on your AKS cluster 
-* Run AKS Periscope within VS Code
-* Install Azure Service Operator on your AKS cluster
-* Create GitHub Workflow from your AKS cluster
-* Show AKS cluster overview in Azure Portal
-* Show AKS cluster properties
-* Create AKS cluster from Azure Portal
-* Stop and Start the AKS cluster
-* Run Kubectl Commands from your AKS cluster
-* Run Managed Cluster Operations from your AKS cluster
-* Run Kubernetes API Health Endpoints
-* Deploy and Undeploy InspektorGadget
-* Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot
-
-## Documentation, Features and Development Information
-
-* [Introduction and Link to Github Pages  Documentation](https://azure.github.io/vscode-aks-tools/index.html)
+* [Introduction](https://azure.github.io/vscode-aks-tools/index.html)
 * [Installation](https://azure.github.io/vscode-aks-tools/installation.html#installation)
-* [Features](https://azure.github.io/vscode-aks-tools/features/features.html)
-  * [Add AKS clusters to kubeconfig](https://azure.github.io/vscode-aks-tools/features/merge-save-kubeconfig.html)
-  * [Perform AKS Diagnostics checks on your AKS cluster](https://azure.github.io/vscode-aks-tools/features/aks-diagnostics.html)
-  * [Run AKS Periscope within VS Code](https://azure.github.io/vscode-aks-tools/features/aks-periscope.html)
-  * [Install Azure Service Operator on your AKS cluster](https://azure.github.io/vscode-aks-tools/features/install-azureserviceoperator.html)
-  * [Create GitHub Workflow from your AKS cluster](https://azure.github.io/vscode-aks-tools/features/create-gh-workflow.html)
-  * [Show AKS cluster overview in Azure Portal](https://azure.github.io/vscode-aks-tools/features/show-properties-azureportal-start-stop.html)
-  * [Show AKS cluster properties](https://azure.github.io/vscode-aks-tools/features/show-properties-azureportal-start-stop.html)
-  * [Create AKS cluster from Azure Portal](https://azure.github.io/vscode-aks-tools/features/show-properties-azureportal-start-stop.html)
-  * [Stop and Start the AKS cluster](https://azure.github.io/vscode-aks-tools/features/show-properties-azureportal-start-stop.html)
-  * [Run Kubectl Commands from your AKS cluster](https://azure.github.io/vscode-aks-tools/features/run-kubectl-command.html)
-  * [Run Managed Cluster Operations from your AKS cluster](https://azure.github.io/vscode-aks-tools/features/manage-cluster-operations.html)
-  * [Run Kubernetes API Health Endpoints](https://azure.github.io/vscode-aks-tools/features/k8s-api-health-points.html)
-  * [Deploy and Undeploy InspektorGadget](https://azure.github.io/vscode-aks-tools/features/inspektor-gadget.html)
-  * [Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot](https://azure.github.io/vscode-aks-tools/features/inspektor-gadget.html)
+* [Feature List](https://azure.github.io/vscode-aks-tools/features/features.html)
 
 ## Telemetry
 
