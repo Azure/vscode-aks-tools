@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.3.12]
+
+* Remove unnecessary kubelogin download.
+* Allow development of VS Code-themed webviews using UI toolkit and React framework.
+* Update Periscope deployment to latest version.
+* Remove deprecated activation events.
+* Publish gh.io readme as a vscode documentation.
+* Link the GH pages to the Readme doc of this repo.
+
+Thank you so much to @rzhang628, @peterbom.
+
 ## [1.3.11]
 
 * Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot.
