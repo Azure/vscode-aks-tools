@@ -215,7 +215,7 @@
             },
             {
                 "command": "aks.aksInspektorGadgetSnapshotProcess",
-                "title": "Sanpshot Process"
+                "title": "Snapshot Process"
             },
             {
                 "command": "aks.aksInspektorGadgetSnapshotSocket",
@@ -407,7 +407,7 @@
                     "group": "navigation"
                 },
                 {
-                    "submenu": "aks.inspektorGadgetSanpshotCommandSubMenu",
+                    "submenu": "aks.inspektorGadgetSnapshotCommandSubMenu",
                     "group": "navigation"
                 }
             ],
@@ -435,7 +435,7 @@
                     "group": "navigation"
                 }
             ],
-            "aks.inspektorGadgetSanpshotCommandSubMenu": [
+            "aks.inspektorGadgetSnapshotCommandSubMenu": [
                 {
                     "command": "aks.aksInspektorGadgetSnapshotProcess",
                     "group": "navigation"
@@ -484,8 +484,8 @@
                 "label": "Profile Commands"
             },
             {
-                "id": "aks.inspektorGadgetSanpshotCommandSubMenu",
-                "label": "Sanpshot Commands"
+                "id": "aks.inspektorGadgetSnapshotCommandSubMenu",
+                "label": "Snapshot Commands"
             }
         ]
     },
