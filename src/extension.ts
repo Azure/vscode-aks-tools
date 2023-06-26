@@ -29,6 +29,7 @@ import { getClusterProperties, getKubeconfigYaml } from './commands/utils/cluste
 import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 import aksRotateClusterCert from './commands/aksRotateClusterCert/aksRotateClusterCert';
 import { aksInspektorGadgetDeploy, aksInspektorGadgetProfileCPU, aksInspektorGadgetSnapshotProcess, aksInspektorGadgetSnapshotSocket, aksInspektorGadgetTopBlockIO, aksInspektorGadgetTopEBPF, aksInspektorGadgetTopFile, aksInspektorGadgetTopTCP, aksInspektorGadgetUnDeploy } from './commands/aksInspektorGadget/aksInspektorGadget';
+import aksCreateCluster from './commands/aksCreateCluster/aksCreateCluster';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -84,6 +85,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksInspektorGadgetProfileCPU', aksInspektorGadgetProfileCPU);
         registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotProcess', aksInspektorGadgetSnapshotProcess);
         registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotSocket', aksInspektorGadgetSnapshotSocket);
+        registerCommandWithTelemetry('aks.createCluster', aksCreateCluster);
 
         await registerAzureServiceNodes(context);
 
