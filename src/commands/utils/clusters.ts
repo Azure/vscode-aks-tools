@@ -3,7 +3,7 @@ import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import * as azcs from '@azure/arm-containerservice';
 import { Errorable, failed, getErrorMessage, succeeded } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
-import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
+import SubscriptionTreeItem, { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
 import { getAksAadAccessToken } from './authProvider';
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
@@ -412,6 +412,11 @@ export async function getWindowsNodePoolKubernetesVersions(
 export function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
     const environment = target.subscription.environment;
     return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint: environment.resourceManagerEndpointUrl});
+}
+
+export function getContainerClientFromSubTreeNode(target: SubscriptionTreeItem): azcs.ContainerServiceClient {
+    const environment = target.subscription.environment;
+    return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId!, {endpoint: environment.resourceManagerEndpointUrl});
 }
 
 export async function deleteCluster(

@@ -1,6 +1,22 @@
 import { QuickPickItem, window, CancellationToken, QuickInputButton, Uri } from 'vscode';
 import { MultiStepInput } from '../../multistep-helper/multistep-helper';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { getAksClusterSubscriptionItem, getContainerClientFromSubTreeNode } from '../utils/clusters';
+import { failed } from '../utils/errorable';
+import * as vscode from 'vscode';
+import * as k8s from 'vscode-kubernetes-tools-api';
+import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
+
+interface State {
+    title: string;
+    step: number;
+    totalSteps: number;
+    resourceGroup: QuickPickItem | string;
+    name: string;
+    clustername: string;
+    subid: string | undefined;
+    runtime: QuickPickItem;
+}
 
 /**
  * A multi-step input using window.createQuickPick() and window.createInputBox().
@@ -11,6 +27,13 @@ export default async function aksCreateCluster(
     context: IActionContext,
     target: any
 ): Promise<void> {
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+
+    const cluster = getAksClusterSubscriptionItem(target, cloudExplorer);
+    if (failed(cluster)) {
+        vscode.window.showErrorMessage(cluster.error);
+        return;
+    }
 
     class MyButton implements QuickInputButton {
         constructor(public iconPath: { light: Uri; dark: Uri; }, public tooltip: string) { }
@@ -24,16 +47,6 @@ export default async function aksCreateCluster(
     const resourceGroups: QuickPickItem[] = ['vscode-data-function', 'vscode-appservice-microservices', 'vscode-appservice-monitor', 'vscode-appservice-preview', 'vscode-appservice-prod']
         .map(label => ({ label }));
 
-
-    interface State {
-        title: string;
-        step: number;
-        totalSteps: number;
-        resourceGroup: QuickPickItem | string;
-        name: string;
-        runtime: QuickPickItem;
-    }
-
     async function collectInputs() {
         const state = {} as Partial<State>;
         await MultiStepInput.run(input => inputClusterName(input, state));
@@ -43,11 +56,11 @@ export default async function aksCreateCluster(
     const title = 'Create AKS Cluster';
 
     async function inputClusterName(input: MultiStepInput, state: Partial<State>) {
-        state.resourceGroup = await input.showInputBox({
+        state.clustername = await input.showInputBox({
             title,
             step: 1,
             totalSteps: 5,
-            value: typeof state.resourceGroup === 'string' ? state.resourceGroup : '',
+            value: state.clustername || '',
             prompt: 'Choose a unique name for the AKS cluster \n (Valid cluster name is 1 to 63 in length consist of letters, numbers, dash and underscore)',
             validate: validateAKSClusterName,
             shouldResume: shouldResume
@@ -145,11 +158,11 @@ export default async function aksCreateCluster(
     }
 
     const state = await collectInputs();
+    state.subid = cluster.result.subscription.subscriptionId;
     window.showInformationMessage(`Creating Application Service '${state.name}'`);
+    // Call create cluster at this instance
+    createManagedClusterWithOssku(state, <SubscriptionTreeItem> cluster.result);
 }
-
-const { ContainerServiceClient } = require("@azure/arm-containerservice");
-const { DefaultAzureCredential } = require("@azure/identity");
 
 /**
  * This sample demonstrates how to Creates or updates a managed cluster.
@@ -157,56 +170,55 @@ const { DefaultAzureCredential } = require("@azure/identity");
  * @summary Creates or updates a managed cluster.
  * x-ms-original-file: specification/containerservice/resource-manager/Microsoft.ContainerService/aks/stable/2023-04-01/examples/ManagedClustersCreate_OSSKU.json
  */
-async function createManagedClusterWithOssku() {
-  const subscriptionId = process.env["CONTAINERSERVICE_SUBSCRIPTION_ID"] || "subid1";
-  const resourceGroupName = process.env["CONTAINERSERVICE_RESOURCE_GROUP"] || "rg1";
-  const resourceName = "clustername1";
-  const parameters = {
-    addonProfiles: {},
-    agentPoolProfiles: [
-      {
-        name: "nodepool1",
-        type: "VirtualMachineScaleSets",
-        count: 3,
-        enableNodePublicIP: true,
-        mode: "System",
-        osSKU: "AzureLinux",
-        osType: "Linux",
-        vmSize: "Standard_DS2_v2",
-      },
-    ],
-    autoScalerProfile: { scaleDownDelayAfterAdd: "15m", scanInterval: "20s" },
-    diskEncryptionSetID:
-      "/subscriptions/subid1/resourceGroups/rg1/providers/Microsoft.Compute/diskEncryptionSets/des",
-    dnsPrefix: "dnsprefix1",
-    enablePodSecurityPolicy: true,
-    enableRbac: true,
-    httpProxyConfig: {
-      httpProxy: "http://myproxy.server.com:8080",
-      httpsProxy: "https://myproxy.server.com:8080",
-      noProxy: ["localhost", "127.0.0.1"]
-    },
-    kubernetesVersion: "",
-    linuxProfile: {
-      adminUsername: "azureuser",
-      ssh: { publicKeys: [{ keyData: "keydata" }] },
-    },
-    location: "location1",
-    networkProfile: {
-      loadBalancerProfile: { managedOutboundIPs: { count: 2 } },
-      loadBalancerSku: "standard",
-      outboundType: "loadBalancer",
-    },
-    servicePrincipalProfile: { clientId: "clientid", secret: "secret" },
-    sku: { name: "Basic", tier: "Free" },
-    tags: { archv2: "", tier: "test" },
-  };
-  const credential = new DefaultAzureCredential();
-  const client = new ContainerServiceClient(credential, subscriptionId);
-  const result = await client.managedClusters.beginCreateOrUpdateAndWait(
-    resourceGroupName,
-    resourceName,
-    parameters
-  );
-  console.log(result);
+async function createManagedClusterWithOssku(state: State, subTreeNode: SubscriptionTreeItem) {
+    // const subscriptionId = state.subid;
+    const resourceGroupName = process.env["CONTAINERSERVICE_RESOURCE_GROUP"] || "tats_aso";
+    const resourceName = state.clustername; // "clustername1";
+    console.log(state);
+    const parameters = {
+        addonProfiles: {},
+        agentPoolProfiles: [
+            {
+                name: "nodepool1",
+                type: "VirtualMachineScaleSets",
+                count: 3,
+                enableNodePublicIP: true,
+                mode: "System",
+                osSKU: "AzureLinux",
+                osType: "Linux",
+                vmSize: "Standard_DS2_v2",
+            },
+        ],
+        autoScalerProfile: { scaleDownDelayAfterAdd: "15m", scanInterval: "20s" },
+        diskEncryptionSetID:
+            `/subscriptions/${subTreeNode.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.Compute/diskEncryptionSets/des`,
+            dnsPrefix: "dnsprefix1",
+            enablePodSecurityPolicy: false,
+            kubernetesVersion: "",
+            location: "eastus2",
+            networkProfile: {
+              loadBalancerProfile: { managedOutboundIPs: { count: 2 } },
+              loadBalancerSku: "standard",
+              outboundType: "loadBalancer",
+            },
+            servicePrincipalProfile: { clientId: "df88d5f7-657f-45c0-a5ea-986db77a7d4c", secret: "azh8Q~aiPiSh1MH1v76F~PvOimnd8tt-oGQ4gcyY" },
+            sku: { name: "Basic", tier: "Free" },
+            tags: { archv2: "", tier: "dev/test" }
+    };
+    // const credential = new DefaultAzureCredential();
+    const containerClient = getContainerClientFromSubTreeNode(subTreeNode);
+
+   //  const client = new ContainerServiceClient(credential, subscriptionId);
+    try {
+        const result = await containerClient.managedClusters.beginCreateOrUpdateAndWait(
+            resourceGroupName,
+            resourceName,
+            parameters
+        );
+        console.log(result);
+
+    } catch (e) {
+         console.log(e);
+    }
+    vscode.window.showInformationMessage('Yay we are done!!!');
 }
