@@ -1,0 +1,130 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-recommend-uptime-sla",
+  "name": "aks-recommend-uptime-sla",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "Cluster configured to use the Free tier control plane, has had no availability issues during the detection period.",
+              "",
+              "",
+              "False",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Known Issues, Availability and Performance",
+      "description": "Detects any issues with regards to using the Free tier control plane and recommends upgrading to the Standard tier for better cluster stability if required.",
+      "id": "aks-recommend-uptime-sla",
+      "name": "Upgrade to the Standard Tier",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "dd9457d0-87dc-4bfd-ba09-d00ed42bc2e6"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

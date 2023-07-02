@@ -1,0 +1,130 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/containerd-masquerading-ips",
+  "name": "containerd-masquerading-ips",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "Your cluster is not affected by this issue.",
+              "",
+              "",
+              "False",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              false,
+              true,
+              "{\"MinScoreThreshold\":0.3,\"MaxResults\":10}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Known Issues, Availability and Performance",
+      "description": "Checks the AKS cluster for the existence of Kubenet + ContainerD and a Node Image Version earlier than 2021-01-XX due to Pod IP SNAT/Masquerade behavior issue.",
+      "id": "containerd-masquerading-ips",
+      "name": "ContainerD and Kubenet and Masquerading IPs",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "38a9ae7d-4206-47ba-80a2-ad4915ca3222"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

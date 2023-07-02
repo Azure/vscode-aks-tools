@@ -1,0 +1,170 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-category-node-health",
+  "name": "aks-category-node-health",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "additionalParams": "",
+          "description": null,
+          "detectorIds": [
+            "oomkilled",
+            "aks-deprecated-node-labels",
+            "advisor-b-series-vms",
+            "aks-restricted-vm-skus",
+            "nodeperfcpu",
+            "NodeMemoryPressure",
+            "nodes-not-ready-alerts",
+            "node-pid-pressure-alerts",
+            "snat-usage",
+            "agentpool-image-upgrade-failures",
+            "NodeDiskPressure",
+            "aks-k8s-deprecations",
+            "cluster-stop-start-failures",
+            "aks-windows2019-deprecation"
+          ],
+          "isVisible": true,
+          "messageIfCritical": null,
+          "resourceUri": "",
+          "title": null,
+          "type": 10
+        },
+        "table": {
+          "columns": [],
+          "rows": [],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Node Health",
+      "description": "Checks for any node related issues in the AKS cluster. This includes issues with CPU, Memory, and Disk resource saturation, as well as general node availability issues.",
+      "id": "aks-category-node-health",
+      "name": "Node Health",
+      "score": 0,
+      "supportTopicList": [
+        {
+          "id": "32844717",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "262d28c2-4560-732e-2833-d223ef42471f"
+        },
+        {
+          "id": "32844715",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "93d8d099-83a7-2fd5-b839-d3ba35a758e0"
+        },
+        {
+          "id": "32844737",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "167672fd-29e9-943b-526d-b6a0c1c57195"
+        },
+        {
+          "id": "32844736",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "cf91e14a-fa47-5a47-2c97-db82544fce6c"
+        },
+        {
+          "id": "32844734",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "606ceab0-4fb2-9f49-9eab-bc60db28d3af"
+        },
+        {
+          "id": "32844729",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "5e612dee-3c96-7246-8cb6-f385c01592cc"
+        },
+        {
+          "id": "32844716",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "f37570c7-f242-0729-7ca6-4c2a8ef0d07c"
+        },
+        {
+          "id": "32844714",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "dcc7dbd1-2394-dcc2-7818-1490b8a6708f"
+        },
+        {
+          "id": "32844712",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "27ae1a43-9528-8221-753f-44d28137b014"
+        },
+        {
+          "id": "32844744",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "f37a1594-8743-b848-7a80-e7c2cfe97043"
+        }
+      ],
+      "type": "CategoryOverview",
+      "typeId": "917df6b5-3532-4f61-b5be-229218427935"
+    },
+    "status": {
+      "message": null,
+      "statusId": 4
+    },
+    "suggestedUtterances": null
+  }
+}

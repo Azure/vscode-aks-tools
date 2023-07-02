@@ -1,0 +1,162 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/incorrect-os-disk-configuration",
+  "name": "incorrect-os-disk-configuration",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Warning",
+              "Detected non-production-ready configuration of OS Disks",
+              "Summary",
+              "\n<markdown>\n**Best practice guidance** Your cluster has one or more node pools using an OS disk configuration not recommended for most Production environments. \n                \nEphemeral OS disks provide lower read/write latency, along with faster node scaling and cluster upgrades, and are a natural fit for stateless containerized workloads. \n\nSmall Managed OS disks <= 128GB in size have significantly reduced performance characteristics (see disk size links in 'Additional Reading'), and may suffer IO stalls or other problems even for workloads which do not require significant IO.\n\nUnless you are using Managed OS disks due to requiring a VM SKU which does not support Ephemeral OS disks, or wish to avoid the specific edge case scenario described in the addendum below, it is highly recommended to use Ephemeral OS disks for all production workloads.\n</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Warning",
+              "Detected non-production-ready configuration of OS Disks",
+              "Agent Pools",
+              "<markdown><table style='width:90%; max-width:100%;'>\r\n<tr>\r\n<th style='text-align:center;'>Severity</th><th style='text-align:center;'>Node Pool</th><th style='text-align:center;'>Storage Profile</th><th style='text-align:center;'>Disk SKU</th><th style='text-align:center;'>VM SKU</th></tr>\r\n<tr>\r\n <td style='text-align:center;'>  <span class='panel-title fa fa-exclamation-triangle warning-color' title=''></span> Warning </td>  <td style='text-align:center;'> agentpool </td>  <td style='text-align:center;'> ManagedDisks </td>  <td style='text-align:center;'> P10 128GB </td>  <td style='text-align:center;'> B4ms </td>\r\n</tr>\r\n</table>\r\n</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Warning",
+              "Detected non-production-ready configuration of OS Disks",
+              "Recommendation",
+              "\n<markdown>\nIt is recommended to use Ephemeral OS disks in production for System agent pools, and for any User node pools where IO latency could be a factor in application performance. \n                \nIf Managed OS Disks are required for User pools, they should be requested larger than 128GB, as this will instruct AKS to provision at least a P15 (Premium Storage supported VM family) or E15 disk (Non-premium storage supported VM family), which have significantly improved performance characteristics over the P10 / E10 and smaller disks. \n\nFor detailed Disk performance descriptions see the disk size tables linked in the additional reading section.\n</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Warning",
+              "Detected non-production-ready configuration of OS Disks",
+              "Additional Reading",
+              "\n<markdown>\n- [Configuring Ephemeral OS Disks](https://docs.microsoft.com/en-us/azure/aks/cluster-configuration#ephemeral-os)     \n- [Standard SSD Sizes](https://docs.microsoft.com/en-us/azure/virtual-machines/disks-types#standard-ssd-size)     \n- [Premium SSD Sizes](https://docs.microsoft.com/en-us/azure/virtual-machines/disks-types#premium-ssd-size)     \n- [Ultra Disk Sizes](https://docs.microsoft.com/en-us/azure/virtual-machines/disks-types#ultra-disk-size) \n</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Warning",
+              "Detected non-production-ready configuration of OS Disks",
+              "Addendum",
+              "\n<markdown> \nThere is a rare potential adverse scenario for Ephemeral OS disks when the workloads running on the VM require attaching multiple other Data Disks (Persistent Volumes). \n                \nThe placement option AKS uses for Ephemeral disks is CacheDisk, which places the OS disk on the dedicated VM cache for that SKU. The OS disk will initially be small, dynamically growing over time, and when it grows to the full cache size, it will cause cached Data Disk pages to be evicted to give room to the OS non-evictable cached writes - this will impact the performance of any attached Data Disks which can no longer use the cache and have to send their IO to the Disk in blob storage.\n</markdown>",
+              "True",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              false,
+              true,
+              "{\"MinScoreThreshold\":0.3,\"MaxResults\":10}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Best Practices",
+      "description": "Looks for node pools with non-production-ready OS disk configuration.",
+      "id": "incorrect-os-disk-configuration",
+      "name": "Non-Production-Ready OS Disk Configuration",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "5d94a507-d644-4a45-baee-ac8ebcd31409"
+    },
+    "status": {
+      "message": null,
+      "statusId": 1
+    },
+    "suggestedUtterances": null
+  }
+}

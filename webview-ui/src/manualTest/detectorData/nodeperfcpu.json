@@ -1,0 +1,130 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/nodeperfcpu",
+  "name": "nodeperfcpu",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "No nodes with CPU pressure were detected for the specified time range",
+              "",
+              "",
+              "False",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              false,
+              true,
+              "{\"MinScoreThreshold\":0.3,\"MaxResults\":10}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Node Health",
+      "description": "Checks cluster nodes for CPU pressure alerts which fire when the node uses over 95% of the available CPU.",
+      "id": "nodeperfcpu",
+      "name": "Node CPU Pressure",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "10abf18c-2dd9-4f6d-bd14-545dfabbc4a9"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

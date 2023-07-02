@@ -1,0 +1,203 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-category-crud",
+  "name": "aks-category-crud",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "additionalParams": "",
+          "description": null,
+          "detectorIds": [
+            "cluster-autoscaler-failures",
+            "aks-k8s-deprecations",
+            "aks-cluster-put-failures",
+            "aks-cluster-delete-failures",
+            "incorrect-pod-disruption-budgets",
+            "windowsregresionk8sv124",
+            "agentpool-put-failures",
+            "aks-nodepool-delete-failures",
+            "agentpool-image-upgrade-failures",
+            "cluster-stop-start-failures",
+            "ProvisioningStatusNodePool"
+          ],
+          "isVisible": true,
+          "messageIfCritical": null,
+          "resourceUri": "",
+          "title": null,
+          "type": 10
+        },
+        "table": {
+          "columns": [],
+          "rows": [],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Create, Upgrade, Delete and Scale",
+      "description": "Using this view you can diagnose Create, Upgrade, Delete and Scale issues for the cluster or node pool including stop/start issues.",
+      "id": "aks-category-crud",
+      "name": "Create, Upgrade, Delete and Scale",
+      "score": 0,
+      "supportTopicList": [
+        {
+          "id": "32637169",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "c74e88e1-5288-2134-d3d0-87e4a1dcf2e7"
+        },
+        {
+          "id": "32637185",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "6c8a0b29-eccf-6edc-c269-f9f169d7c5d5"
+        },
+        {
+          "id": "32637190",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "b251f092-8408-ba6b-dcdd-451076810f37"
+        },
+        {
+          "id": "32637191",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "a388e7d1-a453-62f5-0e99-cd72437b8b75"
+        },
+        {
+          "id": "32637201",
+          "pesId": "16450",
+          "sapProductId": "",
+          "sapSupportTopicId": ""
+        },
+        {
+          "id": "32683761",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "bfa18a37-eb40-d895-5ffc-670bea841f3b"
+        },
+        {
+          "id": "32683760",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "82db37f9-dbf3-ad2d-54ab-bed4dda47834"
+        },
+        {
+          "id": "32844683",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "3cd4bb92-c986-5186-3aee-21888fb67124"
+        },
+        {
+          "id": "32844684",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "2e977e8e-98ba-ee1a-586b-fd479c971b6c"
+        },
+        {
+          "id": "32844695",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "4f3573b1-8c08-77cb-33be-56e9a7384b2f"
+        },
+        {
+          "id": "32844706",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "f797c333-ee4c-af65-fe55-1a788e15e099"
+        },
+        {
+          "id": "32844709",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "03f08c95-7609-fad2-e190-36fb3d2e2ca3"
+        },
+        {
+          "id": "32844735",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "6de82e3f-e3ca-864b-f558-4e0f77faec42"
+        },
+        {
+          "id": "32844742",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "ea36976c-0616-1d12-4272-5a9863838538"
+        },
+        {
+          "id": "32844746",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "e58e8e9e-1e0f-fa89-36b2-2aefef01c780"
+        },
+        {
+          "id": "32844749",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "4c7705a4-8d8d-f87f-cdcc-792fa4632f81"
+        }
+      ],
+      "type": "CategoryOverview",
+      "typeId": "532ba69c-990f-4e52-a038-a3dfa62bb4e1"
+    },
+    "status": {
+      "message": null,
+      "statusId": 4
+    },
+    "suggestedUtterances": null
+  }
+}

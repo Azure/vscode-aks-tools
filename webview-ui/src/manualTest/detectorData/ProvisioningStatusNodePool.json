@@ -1,0 +1,146 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/ProvisioningStatusNodePool",
+  "name": "ProvisioningStatusNodePool",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "All cluster agent pools have a provisioning state of 'Succeeded'.",
+              "Summary",
+              "<markdown>Currently all cluster node pools are in a succeeded provisioning state.\n                \nThese provisioning states were found within the time range: 2023-04-04 22:15:00 **&rArr;** 2023-04-05 22:15:00 (UTC)</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "All cluster agent pools have a provisioning state of 'Succeeded'.",
+              "Cluster State",
+              "<markdown>Succeeded &nbsp;  <span class='panel-title fa fa-check-circle success-color' title='Succeeded'></span></markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "All cluster agent pools have a provisioning state of 'Succeeded'.",
+              "Node Pools",
+              "<markdown><table style='width:100%; max-width:100%;'>\r\n<tr>\r\n<th style='text-align:center;'>Name</th>\r\n<th style='text-align:center;'>Size</th>\r\n<th style='text-align:center;'>VM SKU</th>\r\n<th style='text-align:center;'>OS</th>\r\n<th style='text-align:center;'>Provisioning</th>\r\n<th style='text-align:center;'>State</th>\r\n</tr>\r\n<tr>\r\n<td style='text-align:center;'> agentpool </td>\r\n<td style='text-align:center;'> 2 </td>\r\n<td style='text-align:center;'> Standard_B4ms </td>\r\n<td style='text-align:center;'> Linux </td>\r\n<td style='text-align:center;'> Succeeded </td>\r\n<td style='text-align:center;'>  <span class='panel-title fa fa-check-circle success-color' title='Succeeded'></span> </td>\r\n</tr>\r\n</table>\r\n</markdown>",
+              "True",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Create, Upgrade, Delete and Scale",
+      "description": "Shows the provisioning state for the cluster nodepool(s) during the time range selected.",
+      "id": "ProvisioningStatusNodePool",
+      "name": "Node Pool Provisioning State",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "ac147b46-d402-4b1c-8c4f-ad046caab345"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

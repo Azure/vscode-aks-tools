@@ -1,0 +1,130 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/reset-auth-profile",
+  "name": "reset-auth-profile",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "No AAD or Service Principal reset operation issues were found that result from known client errors.",
+              "",
+              "",
+              "False",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Identity and Security",
+      "description": "Detects issues with resetting the AAD or Service Principal profile that may leave the cluster in a degraded state.",
+      "id": "reset-auth-profile",
+      "name": "Reset AAD or Service Principal Profile Issues",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "fc261bae-81c4-4acd-912f-46c0afbef1f0"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}
