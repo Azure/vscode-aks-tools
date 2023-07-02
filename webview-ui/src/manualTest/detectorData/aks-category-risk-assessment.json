@@ -1,0 +1,151 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-category-risk-assessment",
+  "name": "aks-category-risk-assessment",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "additionalParams": "",
+          "description": null,
+          "detectorIds": [
+            "advisor-autoscaling-clusters",
+            "advisor-cluster-loadbalancer",
+            "advisor-pod-security-policy",
+            "cluster-min-version",
+            "aks-private-ips-and-ranges",
+            "aks-reserved-address-ranges",
+            "aks-subnet-sharing",
+            "advisor-shared-route-table",
+            "advisor-b-series-vms",
+            "aks-restricted-vm-skus",
+            "aks-azure-cni-address-ranges",
+            "aks-cas-and-multiple-azs",
+            "incorrect-pod-disruption-budgets",
+            "aks-recommend-uptime-sla",
+            "incorrect-os-disk-configuration",
+            "pod-subnet-full",
+            "clusterCertExpiredDetailed",
+            "aks-k8s-deprecations",
+            "aksapiserverauthorizedranges2"
+          ],
+          "isVisible": true,
+          "messageIfCritical": null,
+          "resourceUri": "",
+          "title": null,
+          "type": 10
+        },
+        "table": {
+          "columns": [],
+          "rows": [],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Best Practices",
+      "description": "Checks that your cluster conforms to the current AKS best practices.",
+      "id": "aks-category-risk-assessment",
+      "name": "Best Practices",
+      "score": 0,
+      "supportTopicList": [
+        {
+          "id": "32844689",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "fb659389-7a76-5ac8-3705-2688e31302d4"
+        },
+        {
+          "id": "32844686",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "5306a42c-3ff3-50d4-f568-8effd661b7e6"
+        },
+        {
+          "id": "32844728",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "5ee4dc0c-7751-7fbb-a3f6-467b33bff4c8"
+        },
+        {
+          "id": "32844725",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "4fee1764-8a0d-45c2-78e4-c3984688dd37"
+        },
+        {
+          "id": "32844705",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "a96b4811-c944-a0c9-a803-4a4581d5faae"
+        },
+        {
+          "id": "32844698",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "40cf467f-002d-687b-95fa-18071bf67a23"
+        }
+      ],
+      "type": "CategoryOverview",
+      "typeId": "be6b86b4-42d5-4b02-9fcf-b9b74e741022"
+    },
+    "status": {
+      "message": null,
+      "statusId": 4
+    },
+    "suggestedUtterances": null
+  }
+}

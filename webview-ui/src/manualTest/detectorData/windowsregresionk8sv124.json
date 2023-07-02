@@ -1,0 +1,138 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/windowsregresionk8sv124",
+  "name": "windowsregresionk8sv124",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "Windows regresion issue has not been detected",
+              "Summary",
+              "<markdown>As at the 7th October 2022, the issue has been fixed in Kubernetes version: 1.24.6. Your cluster either has no Windows node pools, or no Windows pools between versions 1.24.0 and 1.24.6 and so are not affected by the issue.</markdown>",
+              "False",
+              "null"
+            ],
+            [
+              "Success",
+              "Windows regresion issue has not been detected",
+              "Windows Pools",
+              "<markdown><table style='width:90%; max-width:100%;'>\r\n<tr>\r\n<th style='text-align:center;'>Name</th><th style='text-align:center;'>Size</th><th style='text-align:center;'>VM SKU</th><th style='text-align:center;'>OS</th><th style='text-align:center;'>K8s Version</th><th style='text-align:center;'>Affected</th></tr>\r\n<tr>\r\n <td style='text-align:center;'> agentpool </td>  <td style='text-align:center;'>  </td>  <td style='text-align:center;'> Standard_B4ms </td>  <td style='text-align:center;'> Linux </td>  <td style='text-align:center;'> 1.24.9 </td>  <td style='text-align:center;'>  <span class='panel-title fa fa-check-circle success-color' title=''></span> </td>\r\n</tr>\r\n</table>\r\n</markdown>",
+              "False",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              false,
+              true,
+              "{\"MinScoreThreshold\":0.3,\"MaxResults\":10}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Known Issues, Availability and Performance",
+      "description": "There is a regression in v1.24.0 (and above) that causes stale HNS load balancer proxy rules anytime a backend pod is deleted. Each subsequent deletion will leave behind an additional external VIP load balancing rule that references endpoints which no longer exist.",
+      "id": "windowsregresionk8sv124",
+      "name": "Windows regresion for v1.24",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "164707c5-6369-44df-836e-4de46719290a"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

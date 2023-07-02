@@ -1,0 +1,146 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/kms-issues",
+  "name": "kms-issues",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "Your cluster is not configured to use Azure KeyVault KMS Integration",
+              "Summary",
+              "<markdown>Azure KeyVault KMS Integration enables encryption at rest for your Kubernetes data in etcd using Azure Key Vault with Key Management Service (KMS) plugin.</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "Your cluster is not configured to use Azure KeyVault KMS Integration",
+              "Details",
+              "<markdown><table style='width:90%; max-width:100%;'>\r\n<tr>\r\n<th style='text-align:center;'>Cluster</th><th style='text-align:center;'>K8s Version</th><th style='text-align:center;'>Azure KeyVault KMS</th></tr>\r\n<tr>\r\n <td style='text-align:center;'> pebomber-devtest </td>  <td style='text-align:center;'> 1.24.9 </td>  <td style='text-align:center;'> False </td>\r\n</tr>\r\n</table>\r\n</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "Your cluster is not configured to use Azure KeyVault KMS Integration",
+              "Further reading",
+              "\n<markdown>\n- [Azure KeyVault KMS Integration](https://docs.microsoft.com/en-us/azure/aks/use-kms-etcd-encryption)\n</markdown>",
+              "True",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              false,
+              true,
+              "{\"MinScoreThreshold\":0.3,\"MaxResults\":10}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Identity and Security",
+      "description": "Detects any issues with Azure KeyVault KMS integration for operator access.",
+      "id": "kms-issues",
+      "name": "Azure KeyVault KMS Integration Issues",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "aff2faea-095a-4abb-ad93-fadba53e865e"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

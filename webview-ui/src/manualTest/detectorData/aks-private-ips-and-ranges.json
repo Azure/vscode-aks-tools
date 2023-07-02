@@ -1,0 +1,146 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-private-ips-and-ranges",
+  "name": "aks-private-ips-and-ranges",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "Cluster is using recommended private IP/CIDR ranges",
+              "Summary",
+              "<markdown>AKS recommends using private IP/CIDR ranges for the `Pod CIDR`, `Service CIDR`, `Kube DNS Service IP` and `Docker Bridge Subnet` to avoid public IP routing conflicts. Using public IP/CIDR ranges can lead to connection failures if a service IP collides with an IP on the Internet.</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "Cluster is using recommended private IP/CIDR ranges",
+              "Network Plugin",
+              "Kubenet",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "Cluster is using recommended private IP/CIDR ranges",
+              "Address Ranges",
+              "<markdown><table style='width:90%; max-width:100%;'>\r\n<tr>\r\n<th style='text-align:center;'>Property</th><th style='text-align:center;'>Value</th><th style='text-align:center;'>Valid</th></tr>\r\n<tr>\r\n <td style='text-align:center;'> Pod CIDR </td>  <td style='text-align:center;'> 10.244.0.0/16 </td>  <td style='text-align:center;'>  <span class='panel-title fa fa-check-circle success-color' title='Pod CIDR is in a Private address range'></span> </td>\r\n</tr>\r\n<tr>\r\n <td style='text-align:center;'> Kubernetes Service CIDR </td>  <td style='text-align:center;'> 10.0.0.0/16 </td>  <td style='text-align:center;'>  <span class='panel-title fa fa-check-circle success-color' title='Service CIDR is in a Private address range'></span> </td>\r\n</tr>\r\n<tr>\r\n <td style='text-align:center;'> Kubernetes DNS Service IP </td>  <td style='text-align:center;'> 10.0.0.10 </td>  <td style='text-align:center;'>  <span class='panel-title fa fa-check-circle success-color' title='Kube DNS Service IP is in a Private address range'></span> </td>\r\n</tr>\r\n<tr>\r\n <td style='text-align:center;'> Docker Bridge Subnet </td>  <td style='text-align:center;'> 172.17.0.1/16 </td>  <td style='text-align:center;'>  <span class='panel-title fa fa-check-circle success-color' title='Docker Bridge Subnet is in a Private address range'></span> </td>\r\n</tr>\r\n</table>\r\n</markdown>",
+              "True",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              false,
+              true,
+              "{\"MinScoreThreshold\":0.3,\"MaxResults\":10}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Best Practices",
+      "description": "Checks if the AKS cluster is using Private IPs and CIDR Ranges for various configuration settings.",
+      "id": "aks-private-ips-and-ranges",
+      "name": "Private IPs and CIDR Ranges",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "c6a15081-1d33-4690-afa5-0661039c3b5b"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

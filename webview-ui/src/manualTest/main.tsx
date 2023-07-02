@@ -5,6 +5,7 @@ import '../main.css';
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
+import { getDetectorScenarios } from "./detectorTests";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -20,7 +21,8 @@ const rootElem = document.getElementById("root");
 
 const testScenarios = [
     ...getTestStyleViewerScenarios(),
-    ...getPeriscopeScenarios()
+    ...getPeriscopeScenarios(),
+    ...getDetectorScenarios()
 ];
 
 const testScenarioNames = testScenarios.map(f => f.name);

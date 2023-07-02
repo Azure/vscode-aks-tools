@@ -1,0 +1,290 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/Etcd",
+  "name": "Etcd",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 7
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "Status",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Message",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Name",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Data.Value",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Expanded",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "Solutions",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              "Success",
+              "We found no capacity or availability issues with Etcd.",
+              "Summary",
+              "<markdown>The cluster's Etcd database is currently at approximately **0.11%** capacity.</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "We found no capacity or availability issues with Etcd.",
+              "Detection Period",
+              "<markdown>2023-04-04 22:15:00 **&rArr;** 2023-04-05 22:15:00</markdown>",
+              "True",
+              "null"
+            ],
+            [
+              "Success",
+              "We found no capacity or availability issues with Etcd.",
+              "Top N Resources",
+              "<markdown><table style='width:100%; max-width:100%;'>\r\n<tr>\r\n<th style='text-align:center;'>Resource</th>\r\n<th style='text-align:center;'>Namespace</th>\r\n<th style='text-align:center;'>Max (MiB)</th>\r\n<th style='text-align:center;'>Max (%)</th>\r\n</tr>\r\n<tr>\r\n<td style='text-align:center;'> pods </td>\r\n<td style='text-align:center;'> aks-periscope </td>\r\n<td style='text-align:center;'> 0.13 </td>\r\n<td style='text-align:center;'> 0% </td>\r\n</tr>\r\n<tr>\r\n<td style='text-align:center;'> minions </td>\r\n<td style='text-align:center;'>  </td>\r\n<td style='text-align:center;'> 0.12 </td>\r\n<td style='text-align:center;'> 0% </td>\r\n</tr>\r\n<tr>\r\n<td style='text-align:center;'> customresourcedefinitions </td>\r\n<td style='text-align:center;'>  </td>\r\n<td style='text-align:center;'> 0.1 </td>\r\n<td style='text-align:center;'> 0% </td>\r\n</tr>\r\n<tr>\r\n<td style='text-align:center;'> clusterroles </td>\r\n<td style='text-align:center;'>  </td>\r\n<td style='text-align:center;'> 0.09 </td>\r\n<td style='text-align:center;'> 0% </td>\r\n</tr>\r\n<tr>\r\n<td style='text-align:center;'> leases </td>\r\n<td style='text-align:center;'> kube-node-lease </td>\r\n<td style='text-align:center;'> 0.07 </td>\r\n<td style='text-align:center;'> 0% </td>\r\n</tr>\r\n</table>\r\n</markdown>",
+              "True",
+              "null"
+            ]
+          ],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "defaultValue": 0,
+          "description": "<markdown>Etcd capacity is configured to **4096** mebibytes.</markdown>",
+          "endTimestampColumnName": null,
+          "eventStatusColumnName": null,
+          "graphOptions": {
+            "chart": {
+              "height": "300"
+            },
+            "xAxis": {
+              "gridLineWidth": 1,
+              "minorGridLineWidth": 0
+            },
+            "yAxis": {
+              "axisLabel": "Etcd Size",
+              "gridLineWidth": 1,
+              "minorGridLineWidth": 0
+            }
+          },
+          "graphType": 3,
+          "isVisible": true,
+          "metricType": 1,
+          "roleInstanceColumnName": null,
+          "seriesColumns": null,
+          "startTimestampColumnName": null,
+          "timestampColumnName": null,
+          "title": "Etcd size in MiB",
+          "type": 2
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "PreciseTimeStamp",
+              "columnType": null,
+              "dataType": "DateTime"
+            },
+            {
+              "columnName": "etcd_size",
+              "columnType": null,
+              "dataType": "Double"
+            }
+          ],
+          "rows": [
+            [
+              "2023-04-04T22:00:00Z",
+              4.69
+            ],
+            [
+              "2023-04-04T23:00:00Z",
+              4.43
+            ],
+            [
+              "2023-04-05T00:00:00Z",
+              4.8
+            ],
+            [
+              "2023-04-05T01:00:00Z",
+              4.84
+            ],
+            [
+              "2023-04-05T02:00:00Z",
+              4.95
+            ],
+            [
+              "2023-04-05T03:00:00Z",
+              4.46
+            ],
+            [
+              "2023-04-05T04:00:00Z",
+              4.7
+            ],
+            [
+              "2023-04-05T05:00:00Z",
+              4.5
+            ],
+            [
+              "2023-04-05T06:00:00Z",
+              4.68
+            ],
+            [
+              "2023-04-05T07:00:00Z",
+              4.41
+            ],
+            [
+              "2023-04-05T08:00:00Z",
+              4.71
+            ],
+            [
+              "2023-04-05T09:00:00Z",
+              4.73
+            ],
+            [
+              "2023-04-05T10:00:00Z",
+              4.73
+            ],
+            [
+              "2023-04-05T11:00:00Z",
+              4.55
+            ],
+            [
+              "2023-04-05T12:00:00Z",
+              4.68
+            ],
+            [
+              "2023-04-05T13:00:00Z",
+              4.61
+            ],
+            [
+              "2023-04-05T14:00:00Z",
+              6.88
+            ],
+            [
+              "2023-04-05T15:00:00Z",
+              4.55
+            ],
+            [
+              "2023-04-05T16:00:00Z",
+              4.72
+            ],
+            [
+              "2023-04-05T17:00:00Z",
+              4.64
+            ],
+            [
+              "2023-04-05T18:00:00Z",
+              4.72
+            ],
+            [
+              "2023-04-05T19:00:00Z",
+              4.52
+            ],
+            [
+              "2023-04-05T20:00:00Z",
+              4.83
+            ],
+            [
+              "2023-04-05T21:00:00Z",
+              4.64
+            ]
+          ],
+          "tableName": "Table_0"
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Known Issues, Availability and Performance",
+      "description": "Looks for potential issues with Etcd including capacity issues.",
+      "id": "Etcd",
+      "name": "Etcd Availability Issues",
+      "score": 0,
+      "supportTopicList": [],
+      "type": "Detector",
+      "typeId": "5f5c66c3-1e03-4d71-b6ae-ac28a9db61f5"
+    },
+    "status": {
+      "message": null,
+      "statusId": 3
+    },
+    "suggestedUtterances": null
+  }
+}

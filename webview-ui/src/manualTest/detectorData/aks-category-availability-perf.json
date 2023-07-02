@@ -1,0 +1,136 @@
+{
+  "id": "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/aks-category-availability-perf",
+  "name": "aks-category-availability-perf",
+  "type": "Microsoft.ContainerService/managedClusters/detectors",
+  "location": "eastus",
+  "properties": {
+    "appFilter": null,
+    "dataProvidersMetadata": null,
+    "dataset": [
+      {
+        "renderingProperties": {
+          "additionalParams": "",
+          "description": null,
+          "detectorIds": [
+            "oomkilled",
+            "customerthrottling",
+            "containerd-masquerading-ips",
+            "aks-deprecated-node-labels",
+            "aks-restricted-vm-skus",
+            "aks-recommend-uptime-sla",
+            "advisor-b-series-vms",
+            "aks-k8s-deprecations",
+            "windowsregresionk8sv124",
+            "aks-service-impacting-issues",
+            "clusterCertExpiredDetailed",
+            "aks-npm-breakingchange",
+            "aks-windows2019-deprecation",
+            "aks-windowsdocker-deprecation",
+            "Etcd",
+            "pod-subnet-full"
+          ],
+          "isVisible": true,
+          "messageIfCritical": null,
+          "resourceUri": "",
+          "title": null,
+          "type": 10
+        },
+        "table": {
+          "columns": [],
+          "rows": [],
+          "tableName": ""
+        }
+      },
+      {
+        "renderingProperties": {
+          "description": null,
+          "isVisible": true,
+          "title": null,
+          "type": 23
+        },
+        "table": {
+          "columns": [
+            {
+              "columnName": "DetectorSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "WebSearchEnabled",
+              "columnType": null,
+              "dataType": "Boolean"
+            },
+            {
+              "columnName": "DetectorSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "WebSearchConfiguration",
+              "columnType": null,
+              "dataType": "String"
+            },
+            {
+              "columnName": "CustomQueryString",
+              "columnType": null,
+              "dataType": "String"
+            }
+          ],
+          "rows": [
+            [
+              true,
+              true,
+              "{\"MinScoreThreshold\":0.5,\"MaxResults\":5}",
+              "{\"MaxResults\":5,\"UseStack\":true,\"PreferredSites\":[\"github.com/azure/aks\",\"kubernetes.io/docs\",\"kubernetes.io/blog\",\"stackoverflow.com\",\"learn.microsoft.com/en-us/azure/aks\"],\"ExcludedSites\":[]}",
+              ""
+            ]
+          ],
+          "tableName": ""
+        }
+      }
+    ],
+    "metadata": {
+      "analysisType": "",
+      "analysisTypes": null,
+      "author": "",
+      "category": "Known Issues, Availability and Performance",
+      "description": "Looks for any known issues, or issues that may affect the availability or performance of an AKS cluster and it's nodes.",
+      "id": "aks-category-availability-perf",
+      "name": "Known Issues, Availability and Performance",
+      "score": 0,
+      "supportTopicList": [
+        {
+          "id": "32844731",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "2049509c-fc7c-369b-679d-6d599ab0c243"
+        },
+        {
+          "id": "32844730",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "15a8173c-ab98-31e4-f143-2a139bc1e475"
+        },
+        {
+          "id": "32844740",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "bfb43657-9c35-6ddf-3ddb-43c6f82c87ca"
+        },
+        {
+          "id": "32844741",
+          "pesId": "16450",
+          "sapProductId": "5a3a423f-8667-9095-1770-0a554a934512",
+          "sapSupportTopicId": "7b7bfb22-f670-79a2-9bc1-a30bec5e0b49"
+        }
+      ],
+      "type": "CategoryOverview",
+      "typeId": "3ad43d2e-9be2-40ba-8c14-61891348a128"
+    },
+    "status": {
+      "message": null,
+      "statusId": 4
+    },
+    "suggestedUtterances": null
+  }
+}

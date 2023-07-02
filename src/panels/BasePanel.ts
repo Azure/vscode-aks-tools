@@ -86,7 +86,7 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
                 <title>${title}</title>
             </head>
             <body>
-                <div id="root" data-contentid=${this.contentId} data-initialstate=${encodedInitialState}></div>
+                <div id="root" data-contentid="${this.contentId}" data-initialstate="${encodedInitialState}"></div>
                 <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
             </body>
         </html>
