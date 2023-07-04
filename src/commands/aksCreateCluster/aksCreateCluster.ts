@@ -6,6 +6,7 @@ import { failed } from '../utils/errorable';
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
+import { ResourceIdentityType } from '@azure/arm-containerservice';
 
 interface State {
     title: string;
@@ -175,8 +176,13 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
     const resourceGroupName = process.env["CONTAINERSERVICE_RESOURCE_GROUP"] || "tats_aso";
     const resourceName = state.clustername; // "clustername1";
     console.log(state);
+    const foo: ResourceIdentityType = "SystemAssigned"
     const parameters = {
         addonProfiles: {},
+        location: "eastus2",
+        identity: { 
+            type: foo 
+        },
         agentPoolProfiles: [
             {
                 name: "nodepool1",
@@ -186,24 +192,25 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
                 mode: "System",
                 osSKU: "AzureLinux",
                 osType: "Linux",
-                vmSize: "Standard_DS2_v2",
+                vmSize: "Standard_DS2_v2"
             },
         ],
-        autoScalerProfile: { scaleDownDelayAfterAdd: "15m", scanInterval: "20s" },
-        diskEncryptionSetID:
-            `/subscriptions/${subTreeNode.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.Compute/diskEncryptionSets/des`,
-            dnsPrefix: "dnsprefix1",
-            enablePodSecurityPolicy: false,
-            kubernetesVersion: "",
-            location: "eastus2",
-            networkProfile: {
-              loadBalancerProfile: { managedOutboundIPs: { count: 2 } },
-              loadBalancerSku: "standard",
-              outboundType: "loadBalancer",
-            },
-            servicePrincipalProfile: { clientId: "df88d5f7-657f-45c0-a5ea-986db77a7d4c", secret: "azh8Q~aiPiSh1MH1v76F~PvOimnd8tt-oGQ4gcyY" },
-            sku: { name: "Basic", tier: "Free" },
-            tags: { archv2: "", tier: "dev/test" }
+        dnsPrefix : `${state.clustername}-dns`
+        // autoScalerProfile: { scaleDownDelayAfterAdd: "15m", scanInterval: "20s" },
+        // diskEncryptionSetID:
+        //     `/subscriptions/${subTreeNode.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.Compute/diskEncryptionSets/des`,
+        //     // dnsPrefix: "dnsprefix1",
+        //     enablePodSecurityPolicy: false,
+        //     kubernetesVersion: "",
+        //     location: "eastus2",
+        //     // networkProfile: {
+        //     //   loadBalancerProfile: { managedOutboundIPs: { count: 2 } },
+        //     //   loadBalancerSku: "standard",
+        //     //   outboundType: "loadBalancer",
+        //     // },
+        //     // servicePrincipalProfile: { clientId: "df88d5f7-657f-45c0-a5ea-986db77a7d4c", secret: "azh8Q~aiPiSh1MH1v76F~PvOimnd8tt-oGQ4gcyY" },
+        //     sku: { name: "Basic", tier: "Free" },
+        //     tags: { archv2: "", tier: "dev/test" }
     };
     // const credential = new DefaultAzureCredential();
     const containerClient = getContainerClientFromSubTreeNode(subTreeNode);
