@@ -1,12 +1,13 @@
-import { QuickPickItem, window, CancellationToken, QuickInputButton, Uri } from 'vscode';
+import { QuickPickItem } from 'vscode';
 import { MultiStepInput } from '../../multistep-helper/multistep-helper';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterSubscriptionItem, getContainerClientFromSubTreeNode } from '../utils/clusters';
+import { getAksClusterSubscriptionItem, getContainerClientFromSubTreeNode, getResourceGroupList } from '../utils/clusters';
 import { failed } from '../utils/errorable';
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
 import { ResourceIdentityType } from '@azure/arm-containerservice';
+import { longRunning } from '../utils/host';
 
 interface State {
     title: string;
@@ -36,18 +37,6 @@ export default async function aksCreateCluster(
         return;
     }
 
-    class MyButton implements QuickInputButton {
-        constructor(public iconPath: { light: Uri; dark: Uri; }, public tooltip: string) { }
-    }
-
-    // const createResourceGroupButton = new MyButton({
-    //     dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
-    //     light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
-    // }, 'Create Resource Group');
-
-    const resourceGroups: QuickPickItem[] = ['vscode-data-function', 'vscode-appservice-microservices', 'vscode-appservice-monitor', 'vscode-appservice-preview', 'vscode-appservice-prod']
-        .map(label => ({ label }));
-
     async function collectInputs() {
         const state = {} as Partial<State>;
         await MultiStepInput.run(input => inputClusterName(input, state));
@@ -60,7 +49,7 @@ export default async function aksCreateCluster(
         state.clustername = await input.showInputBox({
             title,
             step: 1,
-            totalSteps: 5,
+            totalSteps: 2,
             value: state.clustername || '',
             prompt: 'Choose a unique name for the AKS cluster \n (Valid cluster name is 1 to 63 in length consist of letters, numbers, dash and underscore)',
             validate: validateAKSClusterName,
@@ -70,78 +59,29 @@ export default async function aksCreateCluster(
         return (input: MultiStepInput) => pickResourceGroup(input, state);
     }
 
+    const resourceList = await getResourceGroupList(<SubscriptionTreeItem> cluster.result);
+    const resourceGroups: QuickPickItem[] = resourceList.succeeded? resourceList.result.map(label => ({ label })) : [] ;
+
     async function pickResourceGroup(input: MultiStepInput, state: Partial<State>) {
         const pick = await input.showQuickPick({
             title,
             step: 2,
-            totalSteps: 5,
+            totalSteps: 2,
             placeholder: 'Pick a resource group',
             items: resourceGroups,
             activeItem: typeof state.resourceGroup !== 'string' ? state.resourceGroup : undefined,
-            // buttons: [createResourceGroupButton],
             shouldResume: shouldResume
         });
-        if (pick instanceof MyButton) {
-            return (input: MultiStepInput) => inputResourceGroupName(input, state);
-        }
+
         state.resourceGroup = pick;
-        return (input: MultiStepInput) => inputName(input, state);
     }
 
-    async function inputResourceGroupName(input: MultiStepInput, state: Partial<State>) {
-        state.resourceGroup = await input.showInputBox({
-            title,
-            step: 3,
-            totalSteps: 5,
-            value: typeof state.resourceGroup === 'string' ? state.resourceGroup : '',
-            prompt: 'Choose a unique name for the resource group',
-            validate: validateNameIsUnique,
-            shouldResume: shouldResume
-        });
-        return (input: MultiStepInput) => inputName(input, state);
-    }
-
-    async function inputName(input: MultiStepInput, state: Partial<State>) {
-        const additionalSteps = typeof state.resourceGroup === 'string' ? 1 : 0;
-        // TODO: Remember current value when navigating back.
-        state.name = await input.showInputBox({
-            title,
-            step: 3 + additionalSteps,
-            totalSteps: 4 + additionalSteps,
-            value: state.name || '',
-            prompt: 'Choose a unique name for the Application Service',
-            validate: validateNameIsUnique,
-            shouldResume: shouldResume
-        });
-        return (input: MultiStepInput) => pickRuntime(input, state);
-    }
-
-    async function pickRuntime(input: MultiStepInput, state: Partial<State>) {
-        const additionalSteps = typeof state.resourceGroup === 'string' ? 1 : 0;
-        const runtimes = await getAvailableRuntimes(state.resourceGroup!, undefined /* TODO: token */);
-        // TODO: Remember currently active item when navigating back.
-        state.runtime = await input.showQuickPick({
-            title,
-            step: 3 + additionalSteps,
-            totalSteps: 3 + additionalSteps,
-            placeholder: 'Pick a runtime',
-            items: runtimes,
-            activeItem: state.runtime,
-            shouldResume: shouldResume
-        });
-    }
 
     function shouldResume() {
         // Could show a notification with the option to resume.
         return new Promise<boolean>((resolve, reject) => {
             // noop
         });
-    }
-
-    async function validateNameIsUnique(name: string) {
-        // ...validate...
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return name === 'vscode' ? 'Name not unique' : undefined;
     }
 
     async function validateAKSClusterName(name: string) {
@@ -151,16 +91,9 @@ export default async function aksCreateCluster(
         return !regexp.test(name) ? 'Invalid AKS Cluster Name' : undefined;;
     }
 
-    async function getAvailableRuntimes(resourceGroup: QuickPickItem | string, token?: CancellationToken): Promise<QuickPickItem[]> {
-        // ...retrieve...
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return ['Node 8.9', 'Node 6.11', 'Node 4.5']
-            .map(label => ({ label }));
-    }
-
     const state = await collectInputs();
     state.subid = cluster.result.subscription.subscriptionId;
-    window.showInformationMessage(`Creating Application Service '${state.name}'`);
+
     // Call create cluster at this instance
     createManagedClusterWithOssku(state, <SubscriptionTreeItem> cluster.result);
 }
@@ -174,14 +107,14 @@ export default async function aksCreateCluster(
 async function createManagedClusterWithOssku(state: State, subTreeNode: SubscriptionTreeItem) {
     // const subscriptionId = state.subid;
     const resourceGroupName = process.env["CONTAINERSERVICE_RESOURCE_GROUP"] || "tats_aso";
-    const resourceName = state.clustername; // "clustername1";
+    const clusterName = state.clustername;
     console.log(state);
-    const foo: ResourceIdentityType = "SystemAssigned"
+    const resourceIdentityType: ResourceIdentityType = "SystemAssigned"
     const parameters = {
         addonProfiles: {},
         location: "eastus2",
         identity: { 
-            type: foo 
+            type: resourceIdentityType 
         },
         agentPoolProfiles: [
             {
@@ -196,36 +129,22 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
             },
         ],
         dnsPrefix : `${state.clustername}-dns`
-        // autoScalerProfile: { scaleDownDelayAfterAdd: "15m", scanInterval: "20s" },
-        // diskEncryptionSetID:
-        //     `/subscriptions/${subTreeNode.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.Compute/diskEncryptionSets/des`,
-        //     // dnsPrefix: "dnsprefix1",
-        //     enablePodSecurityPolicy: false,
-        //     kubernetesVersion: "",
-        //     location: "eastus2",
-        //     // networkProfile: {
-        //     //   loadBalancerProfile: { managedOutboundIPs: { count: 2 } },
-        //     //   loadBalancerSku: "standard",
-        //     //   outboundType: "loadBalancer",
-        //     // },
-        //     // servicePrincipalProfile: { clientId: "df88d5f7-657f-45c0-a5ea-986db77a7d4c", secret: "azh8Q~aiPiSh1MH1v76F~PvOimnd8tt-oGQ4gcyY" },
-        //     sku: { name: "Basic", tier: "Free" },
-        //     tags: { archv2: "", tier: "dev/test" }
     };
-    // const credential = new DefaultAzureCredential();
     const containerClient = getContainerClientFromSubTreeNode(subTreeNode);
 
-   //  const client = new ContainerServiceClient(credential, subscriptionId);
     try {
-        const result = await containerClient.managedClusters.beginCreateOrUpdateAndWait(
-            resourceGroupName,
-            resourceName,
-            parameters
-        );
+        const result = await longRunning(`Creating cluster ${state.clustername}.`, async () => { 
+            return await containerClient.managedClusters.beginCreateOrUpdateAndWait(
+                resourceGroupName,
+                clusterName,
+                parameters
+            );
+        });
+         
         console.log(result);
-
+        vscode.window.showInformationMessage(`Create aks cluster ${result.provisioningState} for cluster ${result.name}`);
     } catch (e) {
          console.log(e);
+         vscode.window.showErrorMessage(`Creating cluster ${clusterName} failed with following error: ${e}`)
     }
-    vscode.window.showInformationMessage('Yay we are done!!!');
 }

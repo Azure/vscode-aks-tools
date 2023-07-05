@@ -315,6 +315,26 @@ export async function getClusterProperties(target: AksClusterTreeItem): Promise<
     }
 }
 
+export async function getResourceGroupList(target: SubscriptionTreeItem): Promise<Errorable<Array<string>>> {
+    try {
+        const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
+
+        const resourceGroups = await client.resourceGroups.list();
+        var resoruceLocationDictionary = [];
+        console.log("Resource Groups:");
+        for (const group of resourceGroups) {
+          console.log(` - ${group.name}`);
+          if (group.name) {
+            resoruceLocationDictionary.push(`${group.name} (${group.location})`) // group.location
+          }
+        }
+
+        return { succeeded: true, result: resoruceLocationDictionary };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${target.name} managed cluster: ${ex}` };
+    }
+}
+
 export async function determineClusterState(
     target: AksClusterTreeItem,
     clusterName: string

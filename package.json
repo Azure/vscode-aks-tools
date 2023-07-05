@@ -223,7 +223,7 @@
             },
             {
                 "command": "aks.createCluster",
-                "title": "Create Stadard Cluster"
+                "title": "Create Cluster (dev/test)"
             }
         ],
         "menus": {
