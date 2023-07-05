@@ -8,12 +8,14 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
 import { ResourceIdentityType } from '@azure/arm-containerservice';
 import { longRunning } from '../utils/host';
+import { ResourceGroupsListNextResponse } from '@azure/arm-resources/esm/models';
+
 
 interface State {
     title: string;
     step: number;
     totalSteps: number;
-    resourceGroup: QuickPickItem | string;
+    resourceGroup: QuickPickItem;
     name: string;
     clustername: string;
     subid: string | undefined;
@@ -60,7 +62,11 @@ export default async function aksCreateCluster(
     }
 
     const resourceList = await getResourceGroupList(<SubscriptionTreeItem> cluster.result);
-    const resourceGroups: QuickPickItem[] = resourceList.succeeded? resourceList.result.map(label => ({ label })) : [] ;
+    if (!resourceList.succeeded) {
+        return
+    }
+    const resourceNameGroupList = getResourceNameGroupList(resourceList.result);
+    const resourceGroups: QuickPickItem[] = resourceNameGroupList.map(label => ({ label }));
 
     async function pickResourceGroup(input: MultiStepInput, state: Partial<State>) {
         const pick = await input.showQuickPick({
@@ -98,6 +104,17 @@ export default async function aksCreateCluster(
     createManagedClusterWithOssku(state, <SubscriptionTreeItem> cluster.result);
 }
 
+function getResourceNameGroupList(resourceList: ResourceGroupsListNextResponse) {
+    var resourceLocationDictionary = [];
+    
+    for (const group of resourceList) {
+        if (group.name?.startsWith("MC_")) continue;
+        resourceLocationDictionary.push(`${group.name!} (${group.location})`);
+    }
+
+    return resourceLocationDictionary;
+}
+
 /**
  * This sample demonstrates how to Creates or updates a managed cluster.
  *
@@ -105,14 +122,13 @@ export default async function aksCreateCluster(
  * x-ms-original-file: specification/containerservice/resource-manager/Microsoft.ContainerService/aks/stable/2023-04-01/examples/ManagedClustersCreate_OSSKU.json
  */
 async function createManagedClusterWithOssku(state: State, subTreeNode: SubscriptionTreeItem) {
-    // const subscriptionId = state.subid;
-    const resourceGroupName = process.env["CONTAINERSERVICE_RESOURCE_GROUP"] || "tats_aso";
+    const resourceGroupName = state.resourceGroup.label.toString().split(' ')[0];
     const clusterName = state.clustername;
-    console.log(state);
+
     const resourceIdentityType: ResourceIdentityType = "SystemAssigned"
     const parameters = {
         addonProfiles: {},
-        location: "eastus2",
+        location: state.resourceGroup.label.toString().split(' ')[1].replace(/\(|\)/g,""),
         identity: { 
             type: resourceIdentityType 
         },

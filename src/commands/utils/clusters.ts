@@ -11,6 +11,7 @@ import * as path from 'path';
 import { AuthenticationResult } from '@azure/msal-node';
 import { getKubeloginBinaryPath } from './helper/kubeloginDownload';
 import { longRunning } from './host';
+import { ResourceGroupsListNextResponse } from '@azure/arm-resources/esm/models';
 const tmp = require('tmp');
 
 export interface ClusterARMResponse {
@@ -315,21 +316,13 @@ export async function getClusterProperties(target: AksClusterTreeItem): Promise<
     }
 }
 
-export async function getResourceGroupList(target: SubscriptionTreeItem): Promise<Errorable<Array<string>>> {
+export async function getResourceGroupList(target: SubscriptionTreeItem): Promise<Errorable<ResourceGroupsListNextResponse>> {
     try {
         const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
 
         const resourceGroups = await client.resourceGroups.list();
-        var resoruceLocationDictionary = [];
-        console.log("Resource Groups:");
-        for (const group of resourceGroups) {
-          console.log(` - ${group.name}`);
-          if (group.name) {
-            resoruceLocationDictionary.push(`${group.name} (${group.location})`) // group.location
-          }
-        }
 
-        return { succeeded: true, result: resoruceLocationDictionary };
+        return { succeeded: true, result: resourceGroups };
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${target.name} managed cluster: ${ex}` };
     }
