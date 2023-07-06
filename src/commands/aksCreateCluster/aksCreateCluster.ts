@@ -9,6 +9,7 @@ import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
 import { ResourceIdentityType } from '@azure/arm-containerservice';
 import { longRunning } from '../utils/host';
 import { ResourceGroupsListNextResponse } from '@azure/arm-resources/esm/models';
+const meta = require('../../../package.json');
 
 
 interface State {
@@ -61,7 +62,7 @@ export default async function aksCreateCluster(
         return (input: MultiStepInput) => pickResourceGroup(input, state);
     }
 
-    const resourceList = await getResourceGroupList(<SubscriptionTreeItem> cluster.result);
+    const resourceList = await getResourceGroupList(<SubscriptionTreeItem>cluster.result);
     if (!resourceList.succeeded) {
         return
     }
@@ -101,12 +102,12 @@ export default async function aksCreateCluster(
     state.subid = cluster.result.subscription.subscriptionId;
 
     // Call create cluster at this instance
-    createManagedClusterWithOssku(state, <SubscriptionTreeItem> cluster.result);
+    createManagedClusterWithOssku(state, <SubscriptionTreeItem>cluster.result);
 }
 
 function getResourceNameGroupList(resourceList: ResourceGroupsListNextResponse) {
     var resourceLocationDictionary = [];
-    
+
     for (const group of resourceList) {
         if (group.name?.startsWith("MC_")) continue;
         resourceLocationDictionary.push(`${group.name!} (${group.location})`);
@@ -128,9 +129,9 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
     const resourceIdentityType: ResourceIdentityType = "SystemAssigned"
     const parameters = {
         addonProfiles: {},
-        location: state.resourceGroup.label.toString().split(' ')[1].replace(/\(|\)/g,""),
-        identity: { 
-            type: resourceIdentityType 
+        location: state.resourceGroup.label.toString().split(' ')[1].replace(/\(|\)/g, ""),
+        identity: {
+            type: resourceIdentityType
         },
         agentPoolProfiles: [
             {
@@ -144,23 +145,34 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
                 vmSize: "Standard_DS2_v2"
             },
         ],
-        dnsPrefix : `${state.clustername}-dns`
+        dnsPrefix: `${state.clustername}-dns`
     };
     const containerClient = getContainerClientFromSubTreeNode(subTreeNode);
 
     try {
-        const result = await longRunning(`Creating cluster ${state.clustername}.`, async () => { 
+        const result = await longRunning(`Creating cluster ${state.clustername}.`, async () => {
             return await containerClient.managedClusters.beginCreateOrUpdateAndWait(
                 resourceGroupName,
                 clusterName,
                 parameters
             );
         });
-         
+
         console.log(result);
-        vscode.window.showInformationMessage(`Create aks cluster ${result.provisioningState} for cluster ${result.name}`);
+        // sample armId: '/subscriptions/<sub_id>/resourceGroups/<resource_group_name>/providers/Microsoft.ContainerService/managedClusters/<cluster_name>'
+        const portalUrl = subTreeNode.subscription.environment.portalUrl.replace(/\/$/, "");
+        const armId = `/subscriptions/${subTreeNode.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/${clusterName}`
+        const navToPortal = "Navigate to Portal"
+        vscode.window.showInformationMessage(`Create aks cluster ${result.provisioningState} for cluster ${result.name}`, navToPortal)
+            .then(selection => {
+                if (selection === navToPortal) {
+                    vscode.env.openExternal(
+                        vscode.Uri.parse(`${portalUrl}/#resource${armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`)
+                    );
+                }
+            });
     } catch (e) {
-         console.log(e);
-         vscode.window.showErrorMessage(`Creating cluster ${clusterName} failed with following error: ${e}`)
+        console.log(e);
+        vscode.window.showErrorMessage(`Creating cluster ${clusterName} failed with following error: ${e}`)
     }
 }
