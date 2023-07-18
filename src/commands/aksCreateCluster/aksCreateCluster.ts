@@ -76,6 +76,7 @@ export default async function aksCreateCluster(
             totalSteps: 2,
             placeholder: 'Pick a resource group',
             items: resourceGroups,
+            enabled: false,
             activeItem: typeof state.resourceGroup !== 'string' ? state.resourceGroup : undefined,
             shouldResume: shouldResume
         });
@@ -158,7 +159,6 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
             );
         });
 
-        console.log(result);
         // sample armId: '/subscriptions/<sub_id>/resourceGroups/<resource_group_name>/providers/Microsoft.ContainerService/managedClusters/<cluster_name>'
         const portalUrl = subTreeNode.subscription.environment.portalUrl.replace(/\/$/, "");
         const armId = `/subscriptions/${subTreeNode.subscription.subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/${clusterName}`
@@ -172,7 +172,6 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
                 }
             });
     } catch (e) {
-        console.log(e);
         vscode.window.showErrorMessage(`Creating cluster ${clusterName} failed with following error: ${e}`)
     }
 }
