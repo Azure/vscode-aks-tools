@@ -20,7 +20,6 @@ interface State {
     name: string;
     clustername: string;
     subid: string | undefined;
-    runtime: QuickPickItem;
 }
 
 /**
