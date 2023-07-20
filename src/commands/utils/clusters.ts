@@ -3,7 +3,7 @@ import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
 import * as azcs from '@azure/arm-containerservice';
 import { Errorable, failed, getErrorMessage, succeeded } from './errorable';
 import { ResourceManagementClient } from '@azure/arm-resources';
-import { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
+import SubscriptionTreeItem, { SubscriptionTreeNode } from '../../tree/subscriptionTreeItem';
 import { getAksAadAccessToken } from './authProvider';
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
@@ -11,6 +11,7 @@ import * as path from 'path';
 import { AuthenticationResult } from '@azure/msal-node';
 import { getKubeloginBinaryPath } from './helper/kubeloginDownload';
 import { longRunning } from './host';
+import { ResourceGroupsListNextResponse } from '@azure/arm-resources/esm/models';
 const tmp = require('tmp');
 
 export interface ClusterARMResponse {
@@ -315,6 +316,18 @@ export async function getClusterProperties(target: AksClusterTreeItem): Promise<
     }
 }
 
+export async function getResourceGroupList(target: SubscriptionTreeItem): Promise<Errorable<ResourceGroupsListNextResponse>> {
+    try {
+        const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
+
+        const resourceGroups = await client.resourceGroups.list();
+
+        return { succeeded: true, result: resourceGroups };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${target.name} managed cluster: ${ex}` };
+    }
+}
+
 export async function determineClusterState(
     target: AksClusterTreeItem,
     clusterName: string
@@ -412,6 +425,11 @@ export async function getWindowsNodePoolKubernetesVersions(
 export function getContainerClient(target: AksClusterTreeItem): azcs.ContainerServiceClient {
     const environment = target.subscription.environment;
     return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId, {endpoint: environment.resourceManagerEndpointUrl});
+}
+
+export function getContainerClientFromSubTreeNode(target: SubscriptionTreeItem): azcs.ContainerServiceClient {
+    const environment = target.subscription.environment;
+    return new azcs.ContainerServiceClient(target.subscription.credentials, target.subscription.subscriptionId!, {endpoint: environment.resourceManagerEndpointUrl});
 }
 
 export async function deleteCluster(
