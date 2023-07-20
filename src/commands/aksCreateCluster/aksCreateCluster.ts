@@ -1,25 +1,25 @@
 import { QuickPickItem } from 'vscode';
-import { MultiStepInput } from '../../multistep-helper/multistep-helper';
+import { createInputBoxStep, createQuickPickStep, runMultiStepInput } from '../../multistep-helper/multistep-helper';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getAksClusterSubscriptionItem, getContainerClientFromSubTreeNode, getResourceGroupList } from '../utils/clusters';
-import { failed } from '../utils/errorable';
+import { Errorable, failed } from '../utils/errorable';
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
 import { ResourceIdentityType } from '@azure/arm-containerservice';
 import { longRunning } from '../utils/host';
-import { ResourceGroupsListNextResponse } from '@azure/arm-resources/esm/models';
+import { ResourceGroup } from '@azure/arm-resources/esm/models';
 const meta = require('../../../package.json');
 
-
 interface State {
-    title: string;
-    step: number;
-    totalSteps: number;
-    resourceGroup: QuickPickItem;
-    name: string;
+    resourceGroup: ResourceGroupItem;
     clustername: string;
     subid: string | undefined;
+}
+
+interface ResourceGroupItem extends QuickPickItem {
+    name: string;
+    location: string;
 }
 
 /**
@@ -28,7 +28,7 @@ interface State {
  * This first part uses the helper class `MultiStepInput` that wraps the API for the multi-step case.
  */
 export default async function aksCreateCluster(
-    context: IActionContext,
+    _context: IActionContext,
     target: any
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -39,81 +39,63 @@ export default async function aksCreateCluster(
         return;
     }
 
-    async function collectInputs() {
-        const state = {} as Partial<State>;
-        await MultiStepInput.run(input => inputClusterName(input, state));
-        return state as State;
-    }
-
-    const title = 'Create AKS Cluster';
-
-    async function inputClusterName(input: MultiStepInput, state: Partial<State>) {
-        state.clustername = await input.showInputBox({
-            title,
-            step: 1,
-            totalSteps: 2,
-            value: state.clustername || '',
-            prompt: 'Choose a unique name for the AKS cluster \n (Valid cluster name is 1 to 63 in length consist of letters, numbers, dash and underscore)',
-            validate: validateAKSClusterName,
-            shouldResume: shouldResume
-        });
-
-        return (input: MultiStepInput) => pickResourceGroup(input, state);
-    }
-
     const resourceList = await getResourceGroupList(<SubscriptionTreeItem>cluster.result);
     if (!resourceList.succeeded) {
+        vscode.window.showErrorMessage(resourceList.error);
         return
     }
-    const resourceNameGroupList = getResourceNameGroupList(resourceList.result);
-    const resourceGroups: QuickPickItem[] = resourceNameGroupList.map(label => ({ label }));
 
-    async function pickResourceGroup(input: MultiStepInput, state: Partial<State>) {
-        const pick = await input.showQuickPick({
-            title,
-            step: 2,
-            totalSteps: 2,
-            placeholder: 'Pick a resource group',
-            items: resourceGroups,
-            enabled: false,
-            activeItem: typeof state.resourceGroup !== 'string' ? state.resourceGroup : undefined,
-            shouldResume: shouldResume
-        });
+    const resourceGroups = resourceList.result.filter(isValidResourceGroup).map<ResourceGroupItem>(g => ({
+        label: `${g.name!} (${g.location})`,
+        name: g.name!,
+        location: g.location
+    })).sort((a, b) => a.name > b.name ? 1 : -1);
 
-        state.resourceGroup = pick;
+    const clusterNameStep = createInputBoxStep<State>({
+        shouldResume: () => Promise.resolve(false),
+        getValue: state => state.clustername || '',
+        prompt: 'Choose a unique name for the AKS cluster \n (Valid cluster name is 1 to 63 in length consist of letters, numbers, dash and underscore)',
+        validate: validateAKSClusterName,
+        storeValue: (state, value) => ({...state, clustername: value})
+    });
+
+    const resourceGroupStep = createQuickPickStep<State, ResourceGroupItem>({
+        placeholder: 'Pick a resource group',
+        shouldResume: () => Promise.resolve(false),
+        items: resourceGroups,
+        getActiveItem: state => state.resourceGroup,
+        storeItem: (state, item) => ({...state, resourceGroup: item})
+    });
+
+    const initialState: Partial<State> = {
+        subid: cluster.result.subscription.subscriptionId
+    };
+
+    const state = await runMultiStepInput('Create AKS Cluster', initialState, clusterNameStep, resourceGroupStep);
+    if (!state) {
+        // Cancelled
+        return;
     }
-
-
-    function shouldResume() {
-        // Could show a notification with the option to resume.
-        return new Promise<boolean>((resolve, reject) => {
-            // noop
-        });
-    }
-
-    async function validateAKSClusterName(name: string) {
-        // ...validate...
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const regexp = new RegExp(/^([a-zA-Z0-9_-]){1,63}$/);
-        return !regexp.test(name) ? 'Invalid AKS Cluster Name' : undefined;;
-    }
-
-    const state = await collectInputs();
-    state.subid = cluster.result.subscription.subscriptionId;
 
     // Call create cluster at this instance
     createManagedClusterWithOssku(state, <SubscriptionTreeItem>cluster.result);
 }
 
-function getResourceNameGroupList(resourceList: ResourceGroupsListNextResponse) {
-    var resourceLocationDictionary = [];
-
-    for (const group of resourceList) {
-        if (group.name?.startsWith("MC_")) continue;
-        resourceLocationDictionary.push(`${group.name!} (${group.location})`);
+function isValidResourceGroup(group: ResourceGroup) {
+    if (group.name?.startsWith("MC_")) {
+        return false;
     }
 
-    return resourceLocationDictionary;
+    return true;
+}
+
+async function validateAKSClusterName(name: string): Promise<Errorable<void>> {
+    const regexp = new RegExp(/^([a-zA-Z0-9_-]){1,63}$/);
+    if (!regexp.test(name)) {
+        return { succeeded: false, error: 'Invalid AKS Cluster Name' };
+    }
+
+    return { succeeded: true, result: undefined };
 }
 
 /**
@@ -123,13 +105,13 @@ function getResourceNameGroupList(resourceList: ResourceGroupsListNextResponse) 
  * x-ms-original-file: specification/containerservice/resource-manager/Microsoft.ContainerService/aks/stable/2023-04-01/examples/ManagedClustersCreate_OSSKU.json
  */
 async function createManagedClusterWithOssku(state: State, subTreeNode: SubscriptionTreeItem) {
-    const resourceGroupName = state.resourceGroup.label.toString().split(' ')[0];
+    const resourceGroupName = state.resourceGroup.name;
     const clusterName = state.clustername;
 
     const resourceIdentityType: ResourceIdentityType = "SystemAssigned"
     const parameters = {
         addonProfiles: {},
-        location: state.resourceGroup.label.toString().split(' ')[1].replace(/\(|\)/g, ""),
+        location: state.resourceGroup.location,
         identity: {
             type: resourceIdentityType
         },
