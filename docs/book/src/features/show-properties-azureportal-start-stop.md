@@ -12,6 +12,18 @@ Right click on your AKS cluster and click on **Show Properties** to display the 
 
 Right click on your AKS sunscription and click on **Create cluster from Azure Portal** to easily navigate to AKS create cluster page in Azure Portal.
 
+### Create cluster
+
+Right click on your AKS subscription and click on **Create Cluster** and select **Create Standard Cluster** which will start a 2-step wizard for you to enter a valid cluster name and select an existing resource group. The VS Code experience will then notify user with the deployment progress and present you with the **Navigate to Portal** link when it completes successfully.
+
+![Step 1: Create Cluster Name](../resources/vscode-create-cluster-step-1.png)
+
+![Step 2: Select ResourceGroup Name](../resources/vscode-create-cluster-step-2.png)
+
+![Creation message notification](../resources/vscode-creating-notification.png)
+
+![Successful Creation](../resources/vscode-creation-successful.png)
+
 ### Start or Stop AKS cluster
 
 Right click on your AKS cluster and click on **Show Properties** to display the AKS cluster properties, within the page there will be **Stop/Start Cluster** button to perform the start or stop the cluster operation.

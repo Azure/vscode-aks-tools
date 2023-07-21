@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.3.13]
+
+* Enabling create cluster.
+* Add webview component for detectors.
+* Fix spelling of "snapshot" in menus.
+
+Thank you so much to @FineTralfazz, @rzhang628, @peterbom, @gambtho and @qpetraroia.
+
 ## [1.3.12]
 
 * Remove unnecessary kubelogin download.
