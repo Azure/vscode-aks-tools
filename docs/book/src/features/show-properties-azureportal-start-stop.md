@@ -14,7 +14,7 @@ Right click on your AKS sunscription and click on **Create cluster from Azure Po
 
 ### Create cluster
 
-Right click on your AKS subscription and click on **Create Cluster** and select **Create Standard Cluster** which will start a 2 step wizard to quick input: Valid cluster name and select existing resource group name, once selected the vscode exprience will notify user with the progress of the create cluster and present user with the **Navigate to Portal** link upon successful creation of the cluster.
+Right click on your AKS subscription and click on **Create Cluster** and select **Create Standard Cluster** which will start a 2-step wizard for you to enter a valid cluster name and select an existing resource group. The VS Code experience will then notify user with the deployment progress and present you with the **Navigate to Portal** link when it completes successfully.
 
 ![Step 1: Create Cluster Name](../resources/vscode-create-cluster-step-1.png)
 
