@@ -1,9 +1,8 @@
 import { SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { listAll } from '../azure-api-utils';
 import AksClusterTreeItem from './aksClusterTreeItem';
 import { Subscription } from '@azure/arm-subscriptions';
-import { ResourceManagementClient } from '@azure/arm-resources';
+import { getResourceManagementClient } from '../commands/utils/clusters';
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -28,8 +27,12 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const client = new ResourceManagementClient(this.subscription.credentials, this.subscription.subscriptionId);
-        const aksClusterResources = await listAll(client.resources, client.resources.list({ filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'" }));
+        const client = getResourceManagementClient(this);
+        const aksClusterResources = [];
+        const result = client.resources.list({ filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'" });
+        for await (const pageResources of result.byPage()) {
+            aksClusterResources.push(...pageResources);
+        }
 
         return aksClusterResources.map((aksClusterResource) => new AksClusterTreeItem(this, aksClusterResource));
     }

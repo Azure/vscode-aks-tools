@@ -1,9 +1,9 @@
-import { ResourceManagementClient } from "@azure/arm-resources";
 import { Errorable, combine, failed, getErrorMessage } from "./errorable";
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DetectorTypes } from "../../webview-contract/webviewTypes";
+import { getResourceManagementClient } from "./clusters";
 const tmp = require('tmp');
 const meta = require('../../../package.json');
 
@@ -72,9 +72,9 @@ export async function getDetectorInfo(
     detectorName: string
 ): Promise<Errorable<DetectorTypes.ARMResponse<any>>> {
     try {
-        const client = new ResourceManagementClient(target.subscription.credentials, target.subscription.subscriptionId, { noRetryPolicy: true });
-    // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-    const resourceGroup = target.armId.split("/")[4];
+        const client = getResourceManagementClient(target);
+        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
+        const resourceGroup = target.armId.split("/")[4];
         const detectorInfo = await client.resources.get(
             resourceGroup, target.resourceType,
             target.name, "detectors", detectorName, "2019-08-01");
