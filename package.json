@@ -60,7 +60,7 @@
                 },
                 "azure.kubelogin.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.22",
+                    "default": "v0.0.31",
                     "title": "Kubelogin repository release tag",
                     "description": "Release tag for the stable kubelogin tool release."
                 },
