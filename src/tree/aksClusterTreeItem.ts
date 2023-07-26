@@ -1,9 +1,9 @@
 import { AzExtParentTreeItem, AzExtTreeItem , ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { Subscription } from '@azure/arm-subscriptions';
-import { Resource } from "@azure/arm-resources/esm/models";
 import { assetUri } from "../assets";
 import { parseResource } from "../azure-api-utils";
+import { Resource } from "@azure/arm-resources";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.

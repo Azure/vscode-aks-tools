@@ -1,14 +1,14 @@
 import { QuickPickItem } from 'vscode';
 import { createInputBoxStep, createQuickPickStep, runMultiStepInput } from '../../multistep-helper/multistep-helper';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterSubscriptionItem, getContainerClientFromSubTreeNode, getResourceGroupList } from '../utils/clusters';
+import { getAksClusterSubscriptionItem, getContainerClient, getResourceGroupList, getResourceManagementClient } from '../utils/clusters';
 import { Errorable, failed } from '../utils/errorable';
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
 import { ResourceIdentityType } from '@azure/arm-containerservice';
 import { longRunning } from '../utils/host';
-import { ResourceGroup } from '@azure/arm-resources/esm/models';
+import { ResourceGroup } from '@azure/arm-resources';
 const meta = require('../../../package.json');
 
 interface State {
@@ -39,7 +39,9 @@ export default async function aksCreateCluster(
         return;
     }
 
-    const resourceList = await getResourceGroupList(<SubscriptionTreeItem>cluster.result);
+    const subscriptionTreeItem = <SubscriptionTreeItem>cluster.result;
+    const resourceManagementClient = getResourceManagementClient(subscriptionTreeItem);
+    const resourceList = await getResourceGroupList(resourceManagementClient);
     if (!resourceList.succeeded) {
         vscode.window.showErrorMessage(resourceList.error);
         return
@@ -78,7 +80,7 @@ export default async function aksCreateCluster(
     }
 
     // Call create cluster at this instance
-    createManagedClusterWithOssku(state, <SubscriptionTreeItem>cluster.result);
+    createManagedClusterWithOssku(state, subscriptionTreeItem);
 }
 
 function isValidResourceGroup(group: ResourceGroup) {
@@ -129,7 +131,7 @@ async function createManagedClusterWithOssku(state: State, subTreeNode: Subscrip
         ],
         dnsPrefix: `${state.clustername}-dns`
     };
-    const containerClient = getContainerClientFromSubTreeNode(subTreeNode);
+    const containerClient = getContainerClient(subTreeNode);
 
     try {
         const result = await longRunning(`Creating cluster ${state.clustername}.`, async () => {
