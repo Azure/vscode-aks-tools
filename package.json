@@ -31,6 +31,43 @@
     ],
     "main": "./dist/extension",
     "contributes": {
+        "walkthroughs": [
+            {
+              "id": "walkthrough",
+              "title": "Welcome to AKS Extesion",
+              "description": "Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS developers with one-click quick to deploy features with in vscode eco-system.",
+              "steps": [
+                {
+                  "id": "runcommand",
+                  "title": "Cluster Operation Command",
+                  "description": "This step will run a command and check off once it has been run.\n[Run Command](command:getting-started-sample.runCommand)",
+                  "media": { "image": "media/image.png", "altText": "Empty image" },
+                  "completionEvents": ["onCommand:getting-started-sample.runCommand"]
+                },
+                {
+                  "id": "developercommand",
+                  "title": "Developer Command",
+                  "description": "This step will run a command and check off once it has been run.\n[Run Command](command:getting-started-sample.runCommand)",
+                  "media": { "image": "media/image.png", "altText": "Empty image" },
+                  "completionEvents": ["onCommand:getting-started-sample.runCommand"]
+                },
+                {
+                  "id": "troubleshootingcommand",
+                  "title": "Troubleshooting Command",
+                  "description": "This step will run a command and check off once it has been run.\n[Run Command](command:getting-started-sample.runCommand)",
+                  "media": { "image": "media/image.png", "altText": "Empty image" },
+                  "completionEvents": ["onCommand:getting-started-sample.runCommand"]
+                },
+                {
+                  "id": "changesetting",
+                  "title": "Change Setting",
+                  "description": "This step will change a setting and check off when the setting has changed\n[Change Setting](command:getting-started-sample.changeSetting)",
+                  "media": { "markdown": "media/markdown.md" },
+                  "completionEvents": ["onSettingChanged:getting-started-sample.sampleSetting"]
+                }
+              ]
+            } 
+        ],
         "configuration": {
             "title": "AKS",
             "properties": {
