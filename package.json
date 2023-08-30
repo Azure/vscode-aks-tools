@@ -36,34 +36,51 @@
               "id": "walkthrough",
               "title": "Welcome to AKS Extesion",
               "description": "Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS developers with one-click quick to deploy features with in vscode eco-system.",
+              "media": {
+                "image": "./docs/book/src/features/features.md",
+                "altText": "AKS Extension"
+              },
               "steps": [
+                {
+                    "id": "summarycommand",
+                    "title": "All Features",
+                    "description": "Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.",
+                    "media": { 
+                      "markdown": "./docs/book/src/features/features.md"
+                    }
+                },
                 {
                   "id": "runcommand",
                   "title": "Cluster Operation Command",
-                  "description": "This step will run a command and check off once it has been run.\n[Run Command](command:getting-started-sample.runCommand)",
-                  "media": { "image": "media/image.png", "altText": "Empty image" },
-                  "completionEvents": ["onCommand:getting-started-sample.runCommand"]
+                  "description": "AKS Managed Cluster Operations supported by this extension, like create cluster, delete, start or stop cluster from show properties page, rotate cluster certificate, etc.",
+                  "media": { 
+                    "markdown": "./docs/book/src/features/manage-cluster-operations.md"
+                  }
                 },
                 {
                   "id": "developercommand",
                   "title": "Developer Command",
-                  "description": "This step will run a command and check off once it has been run.\n[Run Command](command:getting-started-sample.runCommand)",
-                  "media": { "image": "media/image.png", "altText": "Empty image" },
-                  "completionEvents": ["onCommand:getting-started-sample.runCommand"]
+                  "description": "This extension provides a set of commands to help developers to run kubectl commands against users AKS clusters.",
+                  "media": { 
+                    "markdown": "./docs/book/src/features/run-kubectl-command.md" 
+                  }
                 },
                 {
                   "id": "troubleshootingcommand",
                   "title": "Troubleshooting Command",
-                  "description": "This step will run a command and check off once it has been run.\n[Run Command](command:getting-started-sample.runCommand)",
-                  "media": { "image": "media/image.png", "altText": "Empty image" },
-                  "completionEvents": ["onCommand:getting-started-sample.runCommand"]
+                  "description": "This extension provides a set of commands to help developers to troubleshoot AKS clusters. Like quick run AKD Diagnostics using detectors, run AKS Periscope, run Inspektor Gadget, etc.",
+                  "media": { 
+                    "markdown": "./docs/book/src/features/aks-periscope.md" 
+                  }
                 },
                 {
-                  "id": "changesetting",
-                  "title": "Change Setting",
-                  "description": "This step will change a setting and check off when the setting has changed\n[Change Setting](command:getting-started-sample.changeSetting)",
-                  "media": { "markdown": "media/markdown.md" },
-                  "completionEvents": ["onSettingChanged:getting-started-sample.sampleSetting"]
+                  "id": "quickdeploymentcommand",
+                  "title": "Quick deployments",
+                  "description": "This extension also provides quick deployment features to help developers to quick deploy applications to AKS clusters like inspektor gadget, azure service operator, etc.",
+                  "media": {
+                    "markdown": "./docs/book/src/features/install-azureserviceoperator.md" 
+                     
+                }
                 }
               ]
             } 
