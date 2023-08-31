@@ -52,7 +52,7 @@
                 {
                   "id": "runcommand",
                   "title": "Cluster Operation Command",
-                  "description": "AKS Managed Cluster Operations supported by this extension, like create cluster, delete, start or stop cluster from show properties page, rotate cluster certificate, etc.",
+                  "description": "AKS Managed Cluster Operations supported by this extension, such as create cluster, delete, start or stop cluster from show properties page, rotate cluster certificate, etc.",
                   "media": { 
                     "markdown": "./docs/book/src/features/manage-cluster-operations.md"
                   }
@@ -60,7 +60,7 @@
                 {
                   "id": "developercommand",
                   "title": "Developer Command",
-                  "description": "This extension provides a set of commands to help developers to run kubectl commands against users AKS clusters.",
+                  "description": "This extension provides a set of commands to help developers to run kubectl commands against AKS clusters.",
                   "media": { 
                     "markdown": "./docs/book/src/features/run-kubectl-command.md" 
                   }
@@ -68,7 +68,7 @@
                 {
                   "id": "troubleshootingcommand",
                   "title": "Troubleshooting Command",
-                  "description": "This extension provides a set of commands to help developers to troubleshoot AKS clusters. Like quick run AKD Diagnostics using detectors, run AKS Periscope, run Inspektor Gadget, etc.",
+                  "description": "This extension provides a set of commands to help developers to troubleshoot AKS clusters such as quick run AKD Diagnostics using detectors, run AKS Periscope, run Inspektor Gadget, etc.",
                   "media": { 
                     "markdown": "./docs/book/src/features/aks-periscope.md" 
                   }
@@ -76,7 +76,7 @@
                 {
                   "id": "quickdeploymentcommand",
                   "title": "Quick deployments",
-                  "description": "This extension also provides quick deployment features to help developers to quick deploy applications to AKS clusters like inspektor gadget, azure service operator, etc.",
+                  "description": "This extension also provides quick deployment features to help developers to quick deploy applications to AKS clusters such as inspektor gadget, azure service operator, etc.",
                   "media": {
                     "markdown": "./docs/book/src/features/install-azureserviceoperator.md" 
                      
