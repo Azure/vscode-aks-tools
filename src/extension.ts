@@ -48,7 +48,10 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerAzureUtilsExtensionVariables(uiExtensionVariables);
-
+        vscode.commands.executeCommand(
+            'workbench.action.openWalkthrough', 
+            { category: 'ms-kubernetes-tools.vscode-aks-tools#walkthrough'}
+        );
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);
         registerCommandWithTelemetry('aks.periscope', periscope);
         registerCommandWithTelemetry('aks.installAzureServiceOperator', installAzureServiceOperator );
