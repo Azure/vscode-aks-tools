@@ -81,7 +81,7 @@ export async function aksKubectlK8sReadyzAPIEndpointCommands(
   await aksKubectlCommands(_context, target, command);
 }
 
-async function aksKubectlCommands(
+export async function aksKubectlCommands(
   _context: IActionContext,
   target: any,
   command: string
