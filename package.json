@@ -267,6 +267,10 @@
             {
                 "command": "aks.createCluster",
                 "title": "Create Standard Cluster"
+            },
+            {
+                "command": "aks.aksCustomKubectlCommand",
+                "title": "Run Custom Kubectl Command"
             }
         ],
         "menus": {
@@ -413,6 +417,10 @@
                 },
                 {
                     "command": "aks.aksKubectlGetEventsCommands",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksCustomKubectlCommand",
                     "group": "navigation"
                 }
             ],
