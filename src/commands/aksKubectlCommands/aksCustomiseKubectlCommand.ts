@@ -2,6 +2,7 @@ import { createInputBoxStep, runMultiStepInput } from '../../multistep-helper/mu
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { Errorable } from '../utils/errorable';
 import { aksKubectlCommands } from './aksKubectlCommands';
+import * as vscode from 'vscode';
 
 interface State {
     clusterkubectlcommand: string;
@@ -17,7 +18,7 @@ export default async function aksCustomKubectlCommand(
     const clusterKubectlCommandStep = createInputBoxStep<State>({
         shouldResume: () => Promise.resolve(false),
         getValue: () => '',
-        prompt: 'Please enter the Kubectl command to run against the cluster \n Please make sure only follwogin Arguments are progivded ratehr then typing kubectl for example if command is `kubectl get pods` then only type `get pods`',
+        prompt: 'Please enter the Kubectl command to run against the cluster. \n Please make sure only arguments following kubectl command are provivded rather then typing kubectl. \n For example if command is kubectl get pods then only type get pods',
         validate: validateAKSKubectlClusterCommand,
         storeValue: (state, value) => ({...state, clusterkubectlcommand: value})
     });
@@ -30,7 +31,11 @@ export default async function aksCustomKubectlCommand(
         return;
     }
 
-    aksKubectlCommands(_context, target, state.clusterkubectlcommand);
+    const answer = await vscode.window.showInformationMessage(`Do you want to run command: kubectl ${state.clusterkubectlcommand}, against your AKS cluster.`, "Yes", "No");
+
+    if (answer === "Yes") {
+        aksKubectlCommands(_context, target, state.clusterkubectlcommand);
+    }
 
 }
 
