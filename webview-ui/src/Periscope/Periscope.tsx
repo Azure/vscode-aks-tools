@@ -22,7 +22,7 @@ export function Periscope(props: PeriscopeTypes.InitialState) {
     }, []); // Empty list of dependencies to run only once: https://react.dev/reference/react/useEffect#useeffect
 
     function handleRequestUploadStatusCheck() {
-        vscode.postMessage({ command: "uploadStatusRequest", parameters: null });
+        vscode.postMessage({ command: "uploadStatusRequest", parameters: undefined });
     }
 
     function handleUploadStatusResponse(uploadStatuses: PeriscopeTypes.NodeUploadStatus[]) {

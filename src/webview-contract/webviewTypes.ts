@@ -56,7 +56,7 @@ export module PeriscopeTypes {
     }
 
     export type ToVsCodeMsgDef = {
-        uploadStatusRequest: null,
+        uploadStatusRequest: void,
         nodeLogsRequest: {
             nodeName: string
         }
