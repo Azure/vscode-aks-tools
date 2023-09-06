@@ -3,7 +3,7 @@ import { TestStyleViewerTypes } from "../../../src/webview-contract/webviewTypes
 import { getWebviewMessageContext } from "../utilities/vscode";
 
 export function TestStyleViewer(props: TestStyleViewerTypes.InitialState) {
-    const vscode = getWebviewMessageContext<TestStyleViewerTypes.ToVsCodeCommands, never>();
+    const vscode = getWebviewMessageContext<TestStyleViewerTypes.ToVsCodeMsgDef, TestStyleViewerTypes.ToWebViewMsgDef>();
 
     const [cssVars, setCssVars] = useState<string[]>([]);
     const [cssRules, setCssRules] = useState<TestStyleViewerTypes.CssRule[]>([]);
@@ -15,8 +15,8 @@ export function TestStyleViewer(props: TestStyleViewerTypes.InitialState) {
         const cssRules = getCssRules();
         setCssRules(cssRules);
 
-        vscode.postMessage({ command: "reportCssVars", cssVars });
-        vscode.postMessage({ command: "reportCssRules", rules: cssRules });
+        vscode.postMessage({ command: "reportCssVars", parameters: {cssVars} });
+        vscode.postMessage({ command: "reportCssRules", parameters: {rules: cssRules} });
     }, []);
 
     function getCssVarsForVsCode(): string[] {
