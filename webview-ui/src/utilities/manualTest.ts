@@ -1,4 +1,4 @@
-import { MessageHandler, MessageSource } from "../../../src/webview-contract/messaging";
+import { MessageDefinition, MessageHandler, MessageSource } from "../../../src/webview-contract/messaging";
 
 /**
  * Represents scenarios for manual testing webviews in a browser.
@@ -15,7 +15,7 @@ export class Scenario {
         return new Scenario(name, factory);
     }
 
-    withSubscription<TListenMsg>(context: MessageSource<TListenMsg>, handler: MessageHandler<TListenMsg>): Scenario {
+    withSubscription<TListenMsg extends MessageDefinition>(context: MessageSource<TListenMsg>, handler: MessageHandler<TListenMsg>): Scenario {
         const factory = () => {
             // Set up the subscription before creating the element
             context.subscribeToMessages(handler);

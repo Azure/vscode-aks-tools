@@ -1,5 +1,5 @@
 import type { WebviewApi } from "vscode-webview";
-import { Message, MessageContext, MessageHandler, isValidMessage } from "../../../src/webview-contract/messaging";
+import { Message, MessageContext, MessageDefinition, MessageHandler, isValidMessage } from "../../../src/webview-contract/messaging";
 
 const vsCodeApi: WebviewApi<unknown> | undefined = (typeof acquireVsCodeApi === "function") ? acquireVsCodeApi() : undefined;
 
@@ -20,8 +20,8 @@ const interceptorEventTarget: NamedEventTarget = { target: new EventTarget(), na
 let windowEventListener: EventListenerWithCommands | null = null;
 let interceptorEventListener: EventListenerWithCommands | null = null;
 
-class WebviewMessageContext<TToVsCodeMsgDef, TToWebviewMsgDef> implements MessageContext<TToVsCodeMsgDef, TToWebviewMsgDef> {
-    postMessage(message: Message<TToVsCodeMsgDef>) {
+class WebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition> implements MessageContext<TToVsCode, TToWebview> {
+    postMessage(message: Message<TToVsCode>) {
         if (vsCodeApi) {
             vsCodeApi.postMessage(message);
         } else {
@@ -30,7 +30,7 @@ class WebviewMessageContext<TToVsCodeMsgDef, TToWebviewMsgDef> implements Messag
         }
     }
 
-    subscribeToMessages(handler: MessageHandler<TToWebviewMsgDef>) {
+    subscribeToMessages(handler: MessageHandler<TToWebview>) {
         windowEventListener = subscribeToMessages(windowEventTarget, windowEventListener, handler, 'message');
     }
 }
@@ -39,17 +39,17 @@ class WebviewMessageContext<TToVsCodeMsgDef, TToWebviewMsgDef> implements Messag
  * @returns the `MessageContext` used by the webviews, i.e. that post messages to the VS Code extension
  * and listen to messages from the VS Code extension.
  */
-export function getWebviewMessageContext<TToVsCodeMsgDef, TToWebviewMsgDef>(): MessageContext<TToVsCodeMsgDef, TToWebviewMsgDef> {
-    return new WebviewMessageContext<TToVsCodeMsgDef, TToWebviewMsgDef>();
+export function getWebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition>(): MessageContext<TToVsCode, TToWebview> {
+    return new WebviewMessageContext<TToVsCode, TToWebview>();
 }
 
-class VscodeInterceptorMessageContext<TToWebviewMsgDef, TToVsCodeMsgDef> implements MessageContext<TToWebviewMsgDef, TToVsCodeMsgDef> {
-    postMessage(message: Message<TToWebviewMsgDef>) {
+class VscodeInterceptorMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> implements MessageContext<TToWebview, TToVsCode> {
+    postMessage(message: Message<TToWebview>) {
         console.log(`Dispatching ${JSON.stringify(message)} to '${windowEventTarget.name}'`);
         windowEventTarget.target.dispatchEvent(new MessageEvent('message', { data: message }));
     }
 
-    subscribeToMessages(handler: MessageHandler<TToVsCodeMsgDef>) {
+    subscribeToMessages(handler: MessageHandler<TToVsCode>) {
         interceptorEventListener = subscribeToMessages(interceptorEventTarget, interceptorEventListener, handler, 'vscode-message');
     }
 }
@@ -59,11 +59,11 @@ class VscodeInterceptorMessageContext<TToWebviewMsgDef, TToVsCodeMsgDef> impleme
  * React application code acts as the VS Code extension, intercepting messages from the Webview
  * and posting back its own messages.
  */
-export function getTestVscodeMessageContext<TToWebviewMsgDef, TToVsCodeMsgDef>(): MessageContext<TToWebviewMsgDef, TToVsCodeMsgDef> {
-    return new VscodeInterceptorMessageContext<TToWebviewMsgDef, TToVsCodeMsgDef>();
+export function getTestVscodeMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition>(): MessageContext<TToWebview, TToVsCode> {
+    return new VscodeInterceptorMessageContext<TToWebview, TToVsCode>();
 }
 
-function subscribeToMessages<TMsgDef>(
+function subscribeToMessages<TMsgDef extends MessageDefinition>(
     eventTarget: NamedEventTarget,
     currentEventListener: EventListenerWithCommands | null,
     handler: MessageHandler<TMsgDef>,
