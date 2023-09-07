@@ -1,8 +1,8 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
-import { DetectorTypes } from "../../../src/webview-contract/webviewTypes";
+import { InitialState } from "../../../src/webview-contract/webviewDefinitions/detector";
 import { SingleDetector } from './SingleDetector';
 
-export function Detector(props: DetectorTypes.InitialState) {
+export function Detector(props: InitialState) {
     const portalUrl = `https://portal.azure.com/#resource${props.clusterArmId}aksDiagnostics?referrer_source=vscode&referrer_context=${props.portalReferrerContext}`;
 
     return (

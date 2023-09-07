@@ -6,6 +6,8 @@ import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelecto
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getDetectorScenarios } from "./detectorTests";
+import { ContentId } from "../../../src/webview-contract/webviewTypes";
+import { Scenario } from "../utilities/manualTest";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -19,11 +21,13 @@ import { getDetectorScenarios } from "./detectorTests";
 
 const rootElem = document.getElementById("root");
 
-const testScenarios = [
-    ...getTestStyleViewerScenarios(),
-    ...getPeriscopeScenarios(),
-    ...getDetectorScenarios()
-];
+const contentTestScenarios: Record<ContentId, Scenario[]> = {
+    style: getTestStyleViewerScenarios(),
+    periscope: getPeriscopeScenarios(),
+    detector: getDetectorScenarios()
+};
+
+const testScenarios = Object.values(contentTestScenarios).flatMap(s => s);
 
 const testScenarioNames = testScenarios.map(f => f.name);
 

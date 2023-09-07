@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { MessageHandler, MessageSink } from '../../webview-contract/messaging';
-import { TestStyleViewerTypes } from '../../webview-contract/webviewTypes';
+import { CssRule, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from '../../webview-contract/webviewDefinitions/testStyleViewer';
 import { BasePanel, PanelDataProvider } from '../../panels/BasePanel';
 import { getExtensionPath } from '../../commands/utils/host';
 import { map as errmap, Succeeded, succeeded } from '../../commands/utils/errorable';
@@ -26,18 +26,18 @@ describe('Webview Styles', () => {
     });
 });
 
-class StyleTestPanel extends BasePanel<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewMsgDef, TestStyleViewerTypes.ToVsCodeMsgDef> {
+class StyleTestPanel extends BasePanel<"style"> {
     constructor(extensionUri: vscode.Uri) {
-        super(extensionUri, TestStyleViewerTypes.contentId);
+        super(extensionUri, "style");
     }
 }
 
-class StyleTestDataProvider implements PanelDataProvider<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewMsgDef, TestStyleViewerTypes.ToVsCodeMsgDef> {
+class StyleTestDataProvider implements PanelDataProvider<"style"> {
     readonly cssVarsPromise: Promise<string[]>;
     private _cssVarsResolve?: (cssVars: string[]) => void;
 
-    readonly rulesPromise: Promise<TestStyleViewerTypes.CssRule[]>;
-    private _rulesResolve?: (rules: TestStyleViewerTypes.CssRule[]) => void;
+    readonly rulesPromise: Promise<CssRule[]>;
+    private _rulesResolve?: (rules: CssRule[]) => void;
 
     constructor() {
         this.cssVarsPromise = new Promise(resolve => this._cssVarsResolve = resolve);
@@ -48,11 +48,11 @@ class StyleTestDataProvider implements PanelDataProvider<TestStyleViewerTypes.In
         return "Style Test";
     }
 
-    getInitialState(): TestStyleViewerTypes.InitialState {
+    getInitialState(): InitialState {
         return { isVSCode: true };
     }
 
-    getMessageHandler(_webview: MessageSink<TestStyleViewerTypes.ToWebViewMsgDef>): MessageHandler<TestStyleViewerTypes.ToVsCodeMsgDef> {
+    getMessageHandler(_webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             reportCssRules: args => this._rulesResolve && this._rulesResolve(args.rules),
             reportCssVars: args => this._cssVarsResolve && this._cssVarsResolve(args.cssVars)

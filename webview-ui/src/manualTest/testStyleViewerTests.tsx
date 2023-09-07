@@ -1,12 +1,12 @@
 import { MessageHandler } from "../../../src/webview-contract/messaging";
-import { TestStyleViewerTypes } from "../../../src/webview-contract/webviewTypes";
+import { CssRule, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
 import { Scenario } from "./../utilities/manualTest";
 import { getTestVscodeMessageContext } from "./../utilities/vscode";
 import { TestStyleViewer } from "./../TestStyleViewer/TestStyleViewer";
 
 export function getTestStyleViewerScenarios() {
-    const webview = getTestVscodeMessageContext<TestStyleViewerTypes.ToWebViewMsgDef, TestStyleViewerTypes.ToVsCodeMsgDef>();
-    const messageHandler: MessageHandler<TestStyleViewerTypes.ToVsCodeMsgDef> = {
+    const webview = getTestVscodeMessageContext<ToWebViewMsgDef, ToVsCodeMsgDef>();
+    const messageHandler: MessageHandler<ToVsCodeMsgDef> = {
         reportCssRules: args => handleReportCssRules(args.rules),
         reportCssVars: args => handleReportCssVars(args.cssVars)
     };
@@ -15,15 +15,15 @@ export function getTestStyleViewerScenarios() {
         console.log(cssVars.join('\n'));
     }
 
-    function handleReportCssRules(rules: TestStyleViewerTypes.CssRule[]) {
+    function handleReportCssRules(rules: CssRule[]) {
         console.log(rules.map(r => r.text).join('\n'));
     }
 
-    const initialState: TestStyleViewerTypes.InitialState = {
+    const initialState: InitialState = {
         isVSCode: false
     };
 
     return [
-        Scenario.create(TestStyleViewerTypes.contentId, () => <TestStyleViewer {...initialState} />).withSubscription(webview, messageHandler)
+        Scenario.create("Test Style Viewer", () => <TestStyleViewer {...initialState} />).withSubscription(webview, messageHandler)
     ];
 }

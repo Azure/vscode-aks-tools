@@ -1,8 +1,8 @@
-import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes"
+import { PodLogs } from "../../../src/webview-contract/webviewDefinitions/periscope";
 
 export interface NodeLogsProps {
     node: string
-    podLogs: PeriscopeTypes.PodLogs[]
+    podLogs: PodLogs[]
 }
 
 export function NodeLogs(props: NodeLogsProps) {

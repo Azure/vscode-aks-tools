@@ -1,17 +1,17 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { useEffect, useState } from "react";
-import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
+import { InitialState, NodeUploadStatus, PodLogs, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { ErrorView } from "./ErrorView";
 import { NoDiagnosticSettingView } from "./NoDiagnosticSettingView";
 import { SuccessView } from "./SuccessView";
 
-export function Periscope(props: PeriscopeTypes.InitialState) {
-    const vscode = getWebviewMessageContext<PeriscopeTypes.ToVsCodeMsgDef, PeriscopeTypes.ToWebViewMsgDef>();
+export function Periscope(props: InitialState) {
+    const vscode = getWebviewMessageContext<ToVsCodeMsgDef, ToWebViewMsgDef>();
 
-    const [nodeUploadStatuses, setNodeUploadStatuses] = useState<PeriscopeTypes.NodeUploadStatus[]>(props.nodes.map(n => ({ nodeName: n, isUploaded: false })));
+    const [nodeUploadStatuses, setNodeUploadStatuses] = useState<NodeUploadStatus[]>(props.nodes.map(n => ({ nodeName: n, isUploaded: false })));
     const [selectedNode, setSelectedNode] = useState<string>("");
-    const [nodePodLogs, setNodePodLogs] = useState<PeriscopeTypes.PodLogs[] | null>(null);
+    const [nodePodLogs, setNodePodLogs] = useState<PodLogs[] | null>(null);
 
     useEffect(() => {
         vscode.subscribeToMessages({
@@ -25,7 +25,7 @@ export function Periscope(props: PeriscopeTypes.InitialState) {
         vscode.postMessage({ command: "uploadStatusRequest", parameters: undefined });
     }
 
-    function handleUploadStatusResponse(uploadStatuses: PeriscopeTypes.NodeUploadStatus[]) {
+    function handleUploadStatusResponse(uploadStatuses: NodeUploadStatus[]) {
         setNodeUploadStatuses(uploadStatuses);
     }
 
@@ -35,7 +35,7 @@ export function Periscope(props: PeriscopeTypes.InitialState) {
         vscode.postMessage({ command: "nodeLogsRequest", parameters: {nodeName: node} });
     }
 
-    function handleNodeLogsResponse(logs: PeriscopeTypes.PodLogs[]) {
+    function handleNodeLogsResponse(logs: PodLogs[]) {
         setNodePodLogs(logs);
     }
 
