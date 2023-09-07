@@ -1,4 +1,4 @@
-import { MessageSubscriber } from "../../../src/webview-contract/messaging";
+import { MessageHandler } from "../../../src/webview-contract/messaging";
 import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
 import { Scenario } from "../utilities/manualTest";
 import { getTestVscodeMessageContext } from "../utilities/vscode";
@@ -51,38 +51,43 @@ export function getPeriscopeScenarios() {
         shareableSas
     };
 
-    const webview = getTestVscodeMessageContext<PeriscopeTypes.ToWebViewCommands, PeriscopeTypes.ToVsCodeCommands>();
-    const subscriber = MessageSubscriber.create<PeriscopeTypes.ToVsCodeCommands>()
-        .withHandler("uploadStatusRequest", handleUploadStatusRequest)
-        .withHandler("nodeLogsRequest", handleNodeLogsRequest);
+    const webview = getTestVscodeMessageContext<PeriscopeTypes.ToWebViewMsgDef, PeriscopeTypes.ToVsCodeMsgDef>();
+    const messageHandler: MessageHandler<PeriscopeTypes.ToVsCodeMsgDef> = {
+        nodeLogsRequest: args => handleNodeLogsRequest(args.nodeName),
+        uploadStatusRequest: handleUploadStatusRequest
+    };
 
     let uploadStatusCallCount = 0;
-    function handleUploadStatusRequest(_message: PeriscopeTypes.UploadStatusRequest) {
+    function handleUploadStatusRequest() {
         uploadStatusCallCount += 1;
         webview.postMessage({
             command: "uploadStatusResponse",
-            uploadStatuses: testNodes.map((n, nodeIndex) => ({
-                nodeName: n,
-                isUploaded: uploadStatusCallCount >= (nodeIndex * 3)
-            }))
+            parameters: {
+                uploadStatuses: testNodes.map((n, nodeIndex) => ({
+                    nodeName: n,
+                    isUploaded: uploadStatusCallCount >= (nodeIndex * 3)
+                }))
+            }
         });
     }
 
-    async function handleNodeLogsRequest(message: PeriscopeTypes.NodeLogsRequest): Promise<void> {
+    async function handleNodeLogsRequest(nodeName: string): Promise<void> {
         await new Promise(resolve => setTimeout(resolve, 1000));
         webview.postMessage({
             command: "nodeLogsResponse",
-            nodeName: message.nodeName,
-            logs: ["aks-periscope-pod", "diag-collector-pod"].map(podName => ({
-                podName,
-                logs: Array.from({ length: Math.floor(Math.random() * 500) }, (_, i) => `${new Date(startDate.getTime() + i * 200).toISOString()} Doing thing ${i + 1}`).join('\n')
-            }))
+            parameters: {
+                nodeName,
+                logs: ["aks-periscope-pod", "diag-collector-pod"].map(podName => ({
+                    podName,
+                    logs: Array.from({ length: Math.floor(Math.random() * 500) }, (_, i) => `${new Date(startDate.getTime() + i * 200).toISOString()} Doing thing ${i + 1}`).join('\n')
+                }))
+            }
         })
     }
 
     return [
         Scenario.create(`${PeriscopeTypes.contentId} (no diagnostics)`, () => <Periscope {...noDiagnosticsState} />),
         Scenario.create(`${PeriscopeTypes.contentId} (error)`, () => <Periscope {...errorState} />),
-        Scenario.create(`${PeriscopeTypes.contentId} (deployed)`, () => <Periscope {...successState} />).withSubscription(webview, subscriber)
+        Scenario.create(`${PeriscopeTypes.contentId} (deployed)`, () => <Periscope {...successState} />).withSubscription(webview, messageHandler)
     ]
 }

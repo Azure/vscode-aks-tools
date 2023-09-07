@@ -1,26 +1,25 @@
 /**
- * The type of any command that's passed between the VS Code extension
- * and a Webview.
- * 
- * For each Webview, the `command` property uniquely determines the
- * kind of message, and what handler will subscribe to it.
+ * A type for defining a set of related messages (all messages going to or from a particular webview).
+ * The keys are the command names, and the values are the types of the parameters.
  */
-export interface Command<TName extends string> { command: TName };
+export type MessageDefinition = {
+    [commandName: string]: any
+};
 
 /**
  * A component that messages can be sent to. Both Webviews and the
  * VS Code extension can act as `MessageSink` instances.
  */
-export interface MessageSink<TPostMsg> {
-    postMessage(message: TPostMsg): void
+export interface MessageSink<TPostMsgDef extends MessageDefinition> {
+    postMessage(message: Message<TPostMsgDef>): void
 }
 
 /**
  * A component that emits messages that can be subscribed to. Both
  * Webviews and the VS Code extension can act as `MessageSink` instances.
  */
-export interface MessageSource<TListenMsg> {
-    subscribeToMessages(subscriber: MessageSubscriber<TListenMsg>): void
+export interface MessageSource<TListenMsgDef extends MessageDefinition> {
+    subscribeToMessages(handler: MessageHandler<TListenMsgDef>): void
 }
 
 /**
@@ -28,46 +27,28 @@ export interface MessageSource<TListenMsg> {
  * can both send and receive messages. Both Webviews and the VS Code
  * extension can be instances of a `MessageContext`.
  */
-export type MessageContext<TPostMsg, TListenMsg> = MessageSink<TPostMsg> & MessageSource<TListenMsg>;
+export type MessageContext<TPostMsgDef extends MessageDefinition, TListenMsgDef extends MessageDefinition> = MessageSink<TPostMsgDef> & MessageSource<TListenMsgDef>;
 
-type MessageHandlers<TMessage> = {
-    [command: string]: (message: TMessage) => void
-};
+// Shortcut type for creating mapped types using only the `string` keys of object types (to exclude symbols).
+type StringProperties<T> = Extract<keyof T, string>;
 
 /**
- * A holder for all the handlers of a collection of commands.
- * 
- * `TMessage` is expected to be a union type containing all the command
- * types for a particular `MessageSource`.
- * 
- * It can be instantiated using `create()` and chaining `withHandler()`
- * methods for each command type.
+ * A discriminated union of the message types produced from the message definition `TMsgDef`.
  */
-export class MessageSubscriber<TMessage> {
-    private constructor(
-        private readonly handlers: MessageHandlers<TMessage>
-    ) { }
-
-    static create<TMessage>(): MessageSubscriber<TMessage> {
-        return new MessageSubscriber({});
+export type Message<TMsgDef extends MessageDefinition> = {
+    [P in StringProperties<TMsgDef>]: {
+        command: P,
+        parameters: TMsgDef[P]
     }
+}[StringProperties<TMsgDef>];
 
-    getCommands() {
-        return Object.keys(this.handlers);
-    }
+/**
+ * The handler type for all the messages defined in `TMsgDef`.
+ */
+export type MessageHandler<TMsgDef extends MessageDefinition> = {
+    [P in keyof TMsgDef]: (args: TMsgDef[P]) => void
+};
 
-    getHandler(command: string): (message: TMessage) => void {
-        const handler = this.handlers[command];
-        if (!handler) {
-            throw new Error(`No handler found for command ${command}`);
-        }
-        return handler;
-    }
-
-    withHandler<TCommand extends string>(command: TCommand, fn: (message: (Command<TCommand> & TMessage)) => void) {
-        let newHandler: MessageHandlers<TMessage> = {};
-        newHandler[command] = msg => fn(msg as Command<TCommand> & TMessage);
-        const mergedHandlers = { ...this.handlers, ...newHandler };
-        return new MessageSubscriber<TMessage>(mergedHandlers);
-    }
+export function isValidMessage<TMsgDef extends MessageDefinition>(message: any): message is Message<TMsgDef> {
+    return message && !!message.command;
 }

@@ -1,5 +1,3 @@
-import { Command } from "./messaging";
-
 export module TestStyleViewerTypes {
     export const contentId = "style";
 
@@ -7,21 +5,21 @@ export module TestStyleViewerTypes {
         isVSCode: boolean
     }
 
-    export interface ReportCssVars extends Command<"reportCssVars"> {
-        cssVars: string[]
-    }
-
-    export interface ReportCssRules extends Command<"reportCssRules"> {
-        rules: CssRule[]
-    }
-
     export interface CssRule {
         selector: string,
         text: string
     }
 
-    export type ToVsCodeCommands = ReportCssVars | ReportCssRules;
-    export type ToWebViewCommands = never;
+    export type ToVsCodeMsgDef = {
+        reportCssVars: {
+            cssVars: string[]
+        },
+        reportCssRules: {
+            rules: CssRule[]
+        }
+    };
+
+    export type ToWebViewMsgDef = {};
 }
 
 export module PeriscopeTypes {
@@ -57,23 +55,22 @@ export module PeriscopeTypes {
         shareableSas: string
     }
 
-    export interface UploadStatusRequest extends Command<"uploadStatusRequest"> { }
-
-    export interface NodeLogsRequest extends Command<"nodeLogsRequest"> {
-        nodeName: string
-    }
-
-    export interface UploadStatusResponse extends Command<"uploadStatusResponse"> {
-        uploadStatuses: NodeUploadStatus[]
+    export type ToVsCodeMsgDef = {
+        uploadStatusRequest: void,
+        nodeLogsRequest: {
+            nodeName: string
+        }
     };
 
-    export interface NodeLogsResponse extends Command<"nodeLogsResponse"> {
-        nodeName: string
-        logs: PodLogs[]
-    }
-
-    export type ToVsCodeCommands = UploadStatusRequest | NodeLogsRequest;
-    export type ToWebViewCommands = UploadStatusResponse | NodeLogsResponse;
+    export type ToWebViewMsgDef = {
+        uploadStatusResponse: {
+            uploadStatuses: NodeUploadStatus[]
+        },
+        nodeLogsResponse: {
+            nodeName: string,
+            logs: PodLogs[]
+        }
+    };
 }
 
 export module DetectorTypes {
@@ -148,4 +145,7 @@ export module DetectorTypes {
     export function isCategoryDataset(dataset: CategoryDataset | SingleDataset): dataset is CategoryDataset {
         return (dataset as CategoryDataset).renderingProperties.detectorIds !== undefined;
     }
+
+    export type ToVsCodeMsgDef = {};
+    export type ToWebViewMsgDef = {};
 }

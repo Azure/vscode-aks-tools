@@ -1,5 +1,5 @@
 import type { WebviewApi } from "vscode-webview";
-import { MessageContext, MessageSubscriber } from "../../../src/webview-contract/messaging";
+import { Message, MessageContext, MessageDefinition, MessageHandler, isValidMessage } from "../../../src/webview-contract/messaging";
 
 const vsCodeApi: WebviewApi<unknown> | undefined = (typeof acquireVsCodeApi === "function") ? acquireVsCodeApi() : undefined;
 
@@ -20,8 +20,8 @@ const interceptorEventTarget: NamedEventTarget = { target: new EventTarget(), na
 let windowEventListener: EventListenerWithCommands | null = null;
 let interceptorEventListener: EventListenerWithCommands | null = null;
 
-class WebviewMessageContext<TToVsCodeCommands, TToWebviewCommands> implements MessageContext<TToVsCodeCommands, TToWebviewCommands> {
-    postMessage(message: TToVsCodeCommands) {
+class WebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition> implements MessageContext<TToVsCode, TToWebview> {
+    postMessage(message: Message<TToVsCode>) {
         if (vsCodeApi) {
             vsCodeApi.postMessage(message);
         } else {
@@ -30,8 +30,8 @@ class WebviewMessageContext<TToVsCodeCommands, TToWebviewCommands> implements Me
         }
     }
 
-    subscribeToMessages(subscriber: MessageSubscriber<TToWebviewCommands>) {
-        windowEventListener = subscribeToMessages(windowEventTarget, windowEventListener, subscriber, 'message');
+    subscribeToMessages(handler: MessageHandler<TToWebview>) {
+        windowEventListener = subscribeToMessages(windowEventTarget, windowEventListener, handler, 'message');
     }
 }
 
@@ -39,18 +39,18 @@ class WebviewMessageContext<TToVsCodeCommands, TToWebviewCommands> implements Me
  * @returns the `MessageContext` used by the webviews, i.e. that post messages to the VS Code extension
  * and listen to messages from the VS Code extension.
  */
-export function getWebviewMessageContext<TToVsCodeCommands, TToWebviewCommands>(): MessageContext<TToVsCodeCommands, TToWebviewCommands> {
-    return new WebviewMessageContext<TToVsCodeCommands, TToWebviewCommands>();
+export function getWebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition>(): MessageContext<TToVsCode, TToWebview> {
+    return new WebviewMessageContext<TToVsCode, TToWebview>();
 }
 
-class VscodeInterceptorMessageContext<TToWebviewCommands, TToVsCodeCommands> implements MessageContext<TToWebviewCommands, TToVsCodeCommands> {
-    postMessage(message: TToWebviewCommands) {
+class VscodeInterceptorMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> implements MessageContext<TToWebview, TToVsCode> {
+    postMessage(message: Message<TToWebview>) {
         console.log(`Dispatching ${JSON.stringify(message)} to '${windowEventTarget.name}'`);
         windowEventTarget.target.dispatchEvent(new MessageEvent('message', { data: message }));
     }
 
-    subscribeToMessages(subscriber: MessageSubscriber<TToVsCodeCommands>) {
-        interceptorEventListener = subscribeToMessages(interceptorEventTarget, interceptorEventListener, subscriber, 'vscode-message');
+    subscribeToMessages(handler: MessageHandler<TToVsCode>) {
+        interceptorEventListener = subscribeToMessages(interceptorEventTarget, interceptorEventListener, handler, 'vscode-message');
     }
 }
 
@@ -59,14 +59,14 @@ class VscodeInterceptorMessageContext<TToWebviewCommands, TToVsCodeCommands> imp
  * React application code acts as the VS Code extension, intercepting messages from the Webview
  * and posting back its own messages.
  */
-export function getTestVscodeMessageContext<TToWebviewCommands, TToVsCodeCommands>(): MessageContext<TToWebviewCommands, TToVsCodeCommands> {
-    return new VscodeInterceptorMessageContext<TToWebviewCommands, TToVsCodeCommands>();
+export function getTestVscodeMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition>(): MessageContext<TToWebview, TToVsCode> {
+    return new VscodeInterceptorMessageContext<TToWebview, TToVsCode>();
 }
 
-function subscribeToMessages<TMessage>(
+function subscribeToMessages<TMsgDef extends MessageDefinition>(
     eventTarget: NamedEventTarget,
     currentEventListener: EventListenerWithCommands | null,
-    subscriber: MessageSubscriber<TMessage>,
+    handler: MessageHandler<TMsgDef>,
     eventType: string
 ): EventListenerWithCommands {
     if (currentEventListener) {
@@ -74,16 +74,20 @@ function subscribeToMessages<TMessage>(
         eventTarget.target.removeEventListener(eventType, currentEventListener.listener);
     }
 
-    const commands = subscriber.getCommands();
-    const newListener = (message: any) => {
-        const command = message.data.command;
-        if (!command) {
+    const commands = Object.keys(handler);
+    const newListener = (messageEvent: any) => {
+        const message = messageEvent.data;
+        if (!isValidMessage<TMsgDef>(message)) {
             return;
         }
 
-        console.log(`'${eventTarget.name}' is handling command '${command}' (able to handle [${commands.join(',')}])`);
-        const handler = subscriber.getHandler(command);
-        handler(message.data);
+        console.log(`'${eventTarget.name}' is handling command '${message.command}' (able to handle [${commands.join(',')}])`);
+        const action = handler[message.command];
+        if (action) {
+            action(message.parameters);
+        } else {
+            console.error(`No handler found for command ${message.command}`);
+        }
     };
 
     console.log(`Adding listeners for [${commands.join(',')}] to '${eventTarget.name}'`);

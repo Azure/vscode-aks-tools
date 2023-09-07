@@ -1,16 +1,16 @@
 import { Uri } from "vscode";
-import { MessageSink, MessageSubscriber } from "../webview-contract/messaging";
+import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { DetectorTypes } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 const meta = require('../../package.json');
 
-export class DetectorPanel extends BasePanel<DetectorTypes.InitialState, never, never> {
+export class DetectorPanel extends BasePanel<DetectorTypes.InitialState, DetectorTypes.ToWebViewMsgDef, DetectorTypes.ToVsCodeMsgDef> {
     constructor(extensionUri: Uri) {
         super(extensionUri, DetectorTypes.contentId);
     }
 }
 
-export class DetectorDataProvider implements PanelDataProvider<DetectorTypes.InitialState, never, never> {
+export class DetectorDataProvider implements PanelDataProvider<DetectorTypes.InitialState, DetectorTypes.ToWebViewMsgDef, DetectorTypes.ToVsCodeMsgDef> {
     public constructor(
         readonly clusterName: string,
         readonly categoryDetector: DetectorTypes.CategoryDetectorARMResponse,
@@ -39,8 +39,8 @@ export class DetectorDataProvider implements PanelDataProvider<DetectorTypes.Ini
         };
     }
 
-    createSubscriber(_webview: MessageSink<never>): MessageSubscriber<never> | null {
-        return null;
+    getMessageHandler(_webview: MessageSink<DetectorTypes.ToWebViewMsgDef>): MessageHandler<DetectorTypes.ToVsCodeMsgDef> {
+        return {};
     }
 }
 
