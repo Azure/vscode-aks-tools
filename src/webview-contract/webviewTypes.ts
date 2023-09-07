@@ -1,14 +1,21 @@
-import { Message, MessageContext, MessageDefinition, MessageHandler } from "./messaging";
+import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink } from "./messaging";
 import { DetectorDefinition } from "./webviewDefinitions/detector";
 import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
 
+/**
+ * Groups all the related types for a single webview.
+ */
 export type WebviewDefinition<TInitialState extends object, TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition> = {
     initialState: TInitialState,
     toVsCodeMsgDef: TToVsCode,
     toWebviewMsgDef: TToWebview
 };
 
+/**
+ * Defines all the types for all the Webviews. All content IDs and common types for all webviews
+ * are defined here.
+ */
 type AllWebviewDefinitions = {
     style: TestStyleViewerDefinition,
     periscope: PeriscopeDefinition,
@@ -19,14 +26,21 @@ type ContentIdLookup = {
     [id in keyof AllWebviewDefinitions]: id
 };
 
+/**
+ * A union of all possible content ID values (the identifier for each Webview).
+ */
 export type ContentId = ContentIdLookup[keyof ContentIdLookup];
 
+// Shortcuts for types for each webview...
 export type InitialState<T extends ContentId> = AllWebviewDefinitions[T]["initialState"];
 export type ToVsCodeMsgDef<T extends ContentId> = AllWebviewDefinitions[T]["toVsCodeMsgDef"];
 export type ToWebviewMsgDef<T extends ContentId> = AllWebviewDefinitions[T]["toWebviewMsgDef"];
 
 export type ToVsCodeMessageHandler<T extends ContentId> = MessageHandler<ToVsCodeMsgDef<T>>;
 export type ToWebviewMessageHandler<T extends ContentId> = MessageHandler<ToWebviewMsgDef<T>>;
+
+export type ToVsCodeMessageSink<T extends ContentId> = MessageSink<ToVsCodeMsgDef<T>>;
+export type ToWebviewMessageSink<T extends ContentId> = MessageSink<ToWebviewMsgDef<T>>;
 
 export type ToVsCodeMessage<T extends ContentId> = Message<ToVsCodeMsgDef<T>>;
 export type ToWebviewMessage<T extends ContentId> = Message<ToWebviewMsgDef<T>>;

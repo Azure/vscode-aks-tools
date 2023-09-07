@@ -1,8 +1,8 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
-import { MessageDefinition, MessageHandler, MessageSink, isValidMessage } from "../webview-contract/messaging";
+import { MessageDefinition, MessageHandler, isValidMessage } from "../webview-contract/messaging";
 import { getNonce, getUri } from "./utilities/webview";
 import { encodeState } from "../webview-contract/initialState";
-import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToVsCodeMsgDef, ToWebviewMessage, ToWebviewMsgDef, VsCodeMessageContext } from "../webview-contract/webviewTypes";
+import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToWebviewMessage, ToWebviewMessageSink, VsCodeMessageContext } from "../webview-contract/webviewTypes";
 
 const viewType = "aksVsCodeTools";
 
@@ -14,17 +14,11 @@ const viewType = "aksVsCodeTools";
 export interface PanelDataProvider<TContent extends ContentId> {
     getTitle(): string
     getInitialState(): InitialState<TContent>
-    getMessageHandler(webview: MessageSink<ToWebviewMsgDef<TContent>>): MessageHandler<ToVsCodeMsgDef<TContent>>
+    getMessageHandler(webview: ToWebviewMessageSink<TContent>): ToVsCodeMessageHandler<TContent>
 }
 
 /**
  * Common base class for VS Code Webview panels.
- * 
- * The generic types are:
- * - TInitialState: The initial state object (passed as `props` to the corresponding React component),
- *   or `void` if not required.
- * - TToWebview: A definition of the `Command` types that will be posted to the Webview.
- * - TToVsCode: A definition of the `Command` types that the extension will listen for from the Webview.
  */
 export abstract class BasePanel<TContent extends ContentId> {
     protected constructor(
