@@ -9,14 +9,15 @@
             "script": "dev:webview",
             "problemMatcher": [
                 {
+                    "fileLocation": "absolute",
                     "background": {
-                        "activeOnStart": false,
-                        "beginsPattern": "npm run dev",
-                        "endsPattern": "➜  Local:"
+                        "activeOnStart": true,
+                        "beginsPattern": "^.* page reload .*",
+                        "endsPattern": "^.*\\[TypeScript\\].*"
                     },
                     "pattern": [
                         {
-                            "regexp": "(ERROR|WARNING)\\(TypeScript\\)  (.*)",
+                            "regexp": "^ (ERROR|WARNING)\\(TypeScript\\)  (.*)",
                             "severity": 1,
                             "message": 2
                         },
