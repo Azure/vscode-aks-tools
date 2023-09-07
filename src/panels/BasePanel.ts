@@ -1,5 +1,5 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
-import { MessageContext, MessageSink, MessageSubscriber } from "../webview-contract/messaging";
+import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink, isValidMessage } from "../webview-contract/messaging";
 import { getNonce, getUri } from "./utilities/webview";
 import { encodeState } from "../webview-contract/initialState";
 
@@ -10,10 +10,10 @@ const viewType = "aksVsCodeTools";
  * - supplying it with initial data
  * - handling messages from the webview and posting messages back
  */
-export interface PanelDataProvider<TInitialState, TToWebviewCommands, TToVsCodeCommands> {
+export interface PanelDataProvider<TInitialState, TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> {
     getTitle(): string
     getInitialState(): TInitialState
-    createSubscriber(webview: MessageSink<TToWebviewCommands>): MessageSubscriber<TToVsCodeCommands> | null
+    getMessageHandler(webview: MessageSink<TToWebview>): MessageHandler<TToVsCode>
 }
 
 /**
@@ -22,18 +22,16 @@ export interface PanelDataProvider<TInitialState, TToWebviewCommands, TToVsCodeC
  * The generic types are:
  * - TInitialState: The initial state object (passed as `props` to the corresponding React component),
  *   or `void` if not required.
- * - TToWebviewCommands: A union of the `Command` types that will be posted to the Webview,
- *   or `never` if no messages will be posted.
- * - TToVsCodeCommands: A union of the `Command` types that the extension will listen for from the Webview,
- *   or `never` if no messages will be received.
+ * - TToWebview: A definition of the `Command` types that will be posted to the Webview.
+ * - TToVsCode: A definition of the `Command` types that the extension will listen for from the Webview.
  */
-export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeCommands> {
+export abstract class BasePanel<TInitialState, TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> {
     protected constructor(
         readonly extensionUri: Uri,
         readonly contentId: string
     ) { }
 
-    show(dataProvider: PanelDataProvider<TInitialState, TToWebviewCommands, TToVsCodeCommands>) {
+    show(dataProvider: PanelDataProvider<TInitialState, TToWebview, TToVsCode>, ...disposables: Disposable[]) {
         const panelOptions = {
             enableScripts: true,
             // Restrict the webview to only load resources from the `webview-ui/dist` directory
@@ -43,14 +41,11 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
         const title = dataProvider.getTitle();
 
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
-        const disposables: Disposable[] = [];
 
         // Set up messaging between VSCode and the webview.
-        const messageContext = new WebviewMessageContext<TToWebviewCommands, TToVsCodeCommands>(panel.webview, disposables);
-        const subscriber = dataProvider.createSubscriber(messageContext);
-        if (subscriber) {
-            messageContext.subscribeToMessages(subscriber);
-        }
+        const messageContext = new WebviewMessageContext<TToWebview, TToVsCode>(panel.webview, disposables);
+        const messageHandler = dataProvider.getMessageHandler(messageContext);
+        messageContext.subscribeToMessages(messageHandler);
 
         // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
         // the panel or when the panel is closed programmatically)
@@ -97,27 +92,28 @@ export abstract class BasePanel<TInitialState, TToWebviewCommands, TToVsCodeComm
 /**
  * A `MessageContext` that represents the Webview.
  */
-class WebviewMessageContext<TToWebviewCommands, TToVsCodeCommands> implements MessageContext<TToWebviewCommands, TToVsCodeCommands> {
+class WebviewMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> implements MessageContext<TToWebview, TToVsCode> {
     constructor(
         private readonly _webview: Webview,
         private readonly _disposables: Disposable[]
     ) { }
 
-    postMessage(message: TToWebviewCommands) {
+    postMessage(message: Message<TToWebview>) {
         this._webview.postMessage(message);
     }
 
-    subscribeToMessages(subscriber: MessageSubscriber<TToVsCodeCommands>) {
+    subscribeToMessages(handler: MessageHandler<TToVsCode>) {
         this._webview.onDidReceiveMessage(
             (message: any) => {
-                const command = message.command;
-                if (!command) {
-                    throw new Error(`No 'command' property for message ${JSON.stringify(message)}`);
+                if (!isValidMessage<TToVsCode>(message)) {
+                    throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                 }
 
-                const handler = subscriber.getHandler(command);
-                if (handler) {
-                    handler(message);
+                const action = handler[message.command];
+                if (action) {
+                    action(message.parameters);
+                } else {
+                    window.showErrorMessage(`No handler found for command ${message.command}`);
                 }
             },
             undefined,

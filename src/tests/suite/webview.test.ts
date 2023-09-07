@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { MessageSink, MessageSubscriber } from '../../webview-contract/messaging';
+import { MessageHandler, MessageSink } from '../../webview-contract/messaging';
 import { TestStyleViewerTypes } from '../../webview-contract/webviewTypes';
 import { BasePanel, PanelDataProvider } from '../../panels/BasePanel';
 import { getExtensionPath } from '../../commands/utils/host';
@@ -26,13 +26,13 @@ describe('Webview Styles', () => {
     });
 });
 
-class StyleTestPanel extends BasePanel<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewCommands, TestStyleViewerTypes.ToVsCodeCommands> {
+class StyleTestPanel extends BasePanel<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewMsgDef, TestStyleViewerTypes.ToVsCodeMsgDef> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, TestStyleViewerTypes.contentId);
     }
 }
 
-class StyleTestDataProvider implements PanelDataProvider<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewCommands, TestStyleViewerTypes.ToVsCodeCommands> {
+class StyleTestDataProvider implements PanelDataProvider<TestStyleViewerTypes.InitialState, TestStyleViewerTypes.ToWebViewMsgDef, TestStyleViewerTypes.ToVsCodeMsgDef> {
     readonly cssVarsPromise: Promise<string[]>;
     private _cssVarsResolve?: (cssVars: string[]) => void;
 
@@ -52,9 +52,10 @@ class StyleTestDataProvider implements PanelDataProvider<TestStyleViewerTypes.In
         return { isVSCode: true };
     }
 
-    createSubscriber(_webview: MessageSink<never>): MessageSubscriber<TestStyleViewerTypes.ToVsCodeCommands> | null {
-        return MessageSubscriber.create<TestStyleViewerTypes.ToVsCodeCommands>()
-            .withHandler("reportCssVars", msg => this._cssVarsResolve && this._cssVarsResolve(msg.cssVars))
-            .withHandler("reportCssRules", msg => this._rulesResolve && this._rulesResolve(msg.rules));
+    getMessageHandler(_webview: MessageSink<TestStyleViewerTypes.ToWebViewMsgDef>): MessageHandler<TestStyleViewerTypes.ToVsCodeMsgDef> {
+        return {
+            reportCssRules: args => this._rulesResolve && this._rulesResolve(args.rules),
+            reportCssVars: args => this._cssVarsResolve && this._cssVarsResolve(args.cssVars)
+        };
     }
 }

@@ -1,6 +1,5 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { useEffect, useState } from "react";
-import { MessageSubscriber } from "../../../src/webview-contract/messaging";
 import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { ErrorView } from "./ErrorView";
@@ -8,39 +7,36 @@ import { NoDiagnosticSettingView } from "./NoDiagnosticSettingView";
 import { SuccessView } from "./SuccessView";
 
 export function Periscope(props: PeriscopeTypes.InitialState) {
-    const vscode = getWebviewMessageContext<PeriscopeTypes.ToVsCodeCommands, PeriscopeTypes.ToWebViewCommands>();
+    const vscode = getWebviewMessageContext<PeriscopeTypes.ToVsCodeMsgDef, PeriscopeTypes.ToWebViewMsgDef>();
 
     const [nodeUploadStatuses, setNodeUploadStatuses] = useState<PeriscopeTypes.NodeUploadStatus[]>(props.nodes.map(n => ({ nodeName: n, isUploaded: false })));
     const [selectedNode, setSelectedNode] = useState<string>("");
     const [nodePodLogs, setNodePodLogs] = useState<PeriscopeTypes.PodLogs[] | null>(null);
 
     useEffect(() => {
-        vscode.subscribeToMessages(createMessageSubscriber());
+        vscode.subscribeToMessages({
+            nodeLogsResponse: args => handleNodeLogsResponse(args.logs),
+            uploadStatusResponse: args => handleUploadStatusResponse(args.uploadStatuses)
+        });
         handleRequestUploadStatusCheck();
     }, []); // Empty list of dependencies to run only once: https://react.dev/reference/react/useEffect#useeffect
 
-    function createMessageSubscriber(): MessageSubscriber<PeriscopeTypes.ToWebViewCommands> {
-        return MessageSubscriber.create<PeriscopeTypes.ToWebViewCommands>()
-            .withHandler("uploadStatusResponse", handleUploadStatusResponse)
-            .withHandler("nodeLogsResponse", handleNodeLogsResponse);
-    }
-
     function handleRequestUploadStatusCheck() {
-        vscode.postMessage({ command: "uploadStatusRequest" });
+        vscode.postMessage({ command: "uploadStatusRequest", parameters: undefined });
     }
 
-    function handleUploadStatusResponse(message: PeriscopeTypes.UploadStatusResponse) {
-        setNodeUploadStatuses(message.uploadStatuses);
+    function handleUploadStatusResponse(uploadStatuses: PeriscopeTypes.NodeUploadStatus[]) {
+        setNodeUploadStatuses(uploadStatuses);
     }
 
     function handleNodeClick(node: string) {
         setSelectedNode(node);
         setNodePodLogs(null);
-        vscode.postMessage({ command: "nodeLogsRequest", nodeName: node });
+        vscode.postMessage({ command: "nodeLogsRequest", parameters: {nodeName: node} });
     }
 
-    function handleNodeLogsResponse(message: PeriscopeTypes.NodeLogsResponse) {
-        setNodePodLogs(message.logs);
+    function handleNodeLogsResponse(logs: PeriscopeTypes.PodLogs[]) {
+        setNodePodLogs(logs);
     }
 
     return (

@@ -5,12 +5,12 @@ import { KustomizeConfig } from "../commands/periscope/models/config";
 import { PeriscopeStorage } from "../commands/periscope/models/storage";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
-import { MessageSink, MessageSubscriber } from "../webview-contract/messaging";
+import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { PeriscopeTypes } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { URL } from "url";
 
-export class PeriscopePanel extends BasePanel<PeriscopeTypes.InitialState, PeriscopeTypes.ToWebViewCommands, PeriscopeTypes.ToVsCodeCommands> {
+export class PeriscopePanel extends BasePanel<PeriscopeTypes.InitialState, PeriscopeTypes.ToWebViewMsgDef, PeriscopeTypes.ToVsCodeMsgDef> {
     constructor(extensionUri: Uri) {
         super(extensionUri, PeriscopeTypes.contentId);
     }
@@ -24,7 +24,7 @@ export interface DeploymentParameters {
     periscopeNamespace: string
 }
 
-export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.InitialState, PeriscopeTypes.ToWebViewCommands, PeriscopeTypes.ToVsCodeCommands> {
+export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.InitialState, PeriscopeTypes.ToWebViewMsgDef, PeriscopeTypes.ToVsCodeMsgDef> {
     private constructor(
         readonly clusterName: string,
         readonly deploymentState: PeriscopeTypes.DeploymentState,
@@ -66,34 +66,28 @@ export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.I
         };
     }
 
-    createSubscriber(webview: MessageSink<PeriscopeTypes.ToWebViewCommands>) {
-        const subscriber = MessageSubscriber.create<PeriscopeTypes.ToVsCodeCommands>();
-        if (this.deploymentState !== "success") {
-            // No need to handle messages if deployment was unsuccessful.
-            return subscriber;
-        }
-
-        return subscriber
-            .withHandler("uploadStatusRequest", msg => this._handleUploadStatusRequest(msg, webview))
-            .withHandler("nodeLogsRequest", msg => this._handleNodeLogsRequest(msg, webview));
+    getMessageHandler(webview: MessageSink<PeriscopeTypes.ToWebViewMsgDef>): MessageHandler<PeriscopeTypes.ToVsCodeMsgDef> {
+        return {
+            nodeLogsRequest: args => this._handleNodeLogsRequest(args.nodeName, webview),
+            uploadStatusRequest: () => this._handleUploadStatusRequest(webview)
+        };
     }
 
-    private async _handleUploadStatusRequest(_message: PeriscopeTypes.UploadStatusRequest, webview: MessageSink<PeriscopeTypes.ToWebViewCommands>) {
+    private async _handleUploadStatusRequest(webview: MessageSink<PeriscopeTypes.ToWebViewMsgDef>) {
         if (!this.deploymentParameters) {
             throw new Error('Node upload statuses cannot be checked when deployment parameters are not configured');
         }
 
         const uploadStatuses = await checkUploadStatus(this.deploymentParameters.storage, this.runId, this.nodes);
-        webview.postMessage({ command: 'uploadStatusResponse', uploadStatuses });
+        webview.postMessage({ command: 'uploadStatusResponse', parameters: {uploadStatuses} });
     }
 
-    private async _handleNodeLogsRequest(message: PeriscopeTypes.NodeLogsRequest, webview: MessageSink<PeriscopeTypes.ToWebViewCommands>): Promise<void> {
+    private async _handleNodeLogsRequest(nodeName: string, webview: MessageSink<PeriscopeTypes.ToWebViewMsgDef>): Promise<void> {
         const deploymentParameters = this.deploymentParameters;
         if (!deploymentParameters) {
             throw new Error('Node logs cannot be retrieved when deployment parameters are not configured');
         }
 
-        const nodeName = message.nodeName;
         const logs = await longRunning(`Getting logs for node ${nodeName}.`, () => {
             return getNodeLogs(deploymentParameters.kubectl, deploymentParameters.clusterKubeConfig, deploymentParameters.periscopeNamespace, nodeName);
         });
@@ -103,6 +97,6 @@ export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.I
             return;
         }
 
-        webview.postMessage({ command: 'nodeLogsResponse', nodeName, logs: logs.result });
+        webview.postMessage({ command: 'nodeLogsResponse', parameters: {nodeName, logs: logs.result} });
     }
 }
