@@ -1,13 +1,13 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { useEffect, useState } from "react";
-import { InitialState, NodeUploadStatus, PodLogs, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
+import { InitialState, NodeUploadStatus, PodLogs } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { ErrorView } from "./ErrorView";
 import { NoDiagnosticSettingView } from "./NoDiagnosticSettingView";
 import { SuccessView } from "./SuccessView";
 
 export function Periscope(props: InitialState) {
-    const vscode = getWebviewMessageContext<ToVsCodeMsgDef, ToWebViewMsgDef>();
+    const vscode = getWebviewMessageContext<"periscope">();
 
     const [nodeUploadStatuses, setNodeUploadStatuses] = useState<NodeUploadStatus[]>(props.nodes.map(n => ({ nodeName: n, isUploaded: false })));
     const [selectedNode, setSelectedNode] = useState<string>("");

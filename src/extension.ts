@@ -28,7 +28,7 @@ import { longRunning } from './commands/utils/host';
 import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
 import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 import aksRotateClusterCert from './commands/aksRotateClusterCert/aksRotateClusterCert';
-import { aksInspektorGadgetDeploy, aksInspektorGadgetProfileCPU, aksInspektorGadgetSnapshotProcess, aksInspektorGadgetSnapshotSocket, aksInspektorGadgetTopBlockIO, aksInspektorGadgetTopEBPF, aksInspektorGadgetTopFile, aksInspektorGadgetTopTCP, aksInspektorGadgetUnDeploy } from './commands/aksInspektorGadget/aksInspektorGadget';
+import { aksInspektorGadgetShow } from './commands/aksInspektorGadget/aksInspektorGadget';
 import aksCreateCluster from './commands/aksCreateCluster/aksCreateCluster';
 import aksCustomKubectlCommand from './commands/aksKubectlCommands/aksCustomiseKubectlCommand';
 
@@ -80,15 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksKubectlK8sHealthzAPIEndpointCommands', aksKubectlK8sHealthzAPIEndpointCommands);
         registerCommandWithTelemetry('aks.aksKubectlK8sLivezAPIEndpointCommands', aksKubectlK8sLivezAPIEndpointCommands);
         registerCommandWithTelemetry('aks.aksKubectlK8sReadyzAPIEndpointCommands', aksKubectlK8sReadyzAPIEndpointCommands);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetDeploy', aksInspektorGadgetDeploy);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetUnDeploy', aksInspektorGadgetUnDeploy);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetTopTCP', aksInspektorGadgetTopTCP);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetTopEBPF', aksInspektorGadgetTopEBPF);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetTopBlockIO', aksInspektorGadgetTopBlockIO);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetTopFile', aksInspektorGadgetTopFile);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetProfileCPU', aksInspektorGadgetProfileCPU);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotProcess', aksInspektorGadgetSnapshotProcess);
-        registerCommandWithTelemetry('aks.aksInspektorGadgetSnapshotSocket', aksInspektorGadgetSnapshotSocket);
+        registerCommandWithTelemetry('aks.aksInspektorGadgetShow', aksInspektorGadgetShow);
         registerCommandWithTelemetry('aks.createCluster', aksCreateCluster);
         registerCommandWithTelemetry('aks.aksCustomKubectlCommand', aksCustomKubectlCommand);
 

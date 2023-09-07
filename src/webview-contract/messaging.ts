@@ -29,24 +29,26 @@ export interface MessageSource<TListenMsgDef extends MessageDefinition> {
  */
 export type MessageContext<TPostMsgDef extends MessageDefinition, TListenMsgDef extends MessageDefinition> = MessageSink<TPostMsgDef> & MessageSource<TListenMsgDef>;
 
-// Shortcut type for creating mapped types using only the `string` keys of object types (to exclude symbols).
-type StringProperties<T> = Extract<keyof T, string>;
+/**
+ * A discriminated union of the command names produced from the message definition `TMsgDef`.
+ */
+export type Command<T> = Extract<keyof T, string>;
 
 /**
  * A discriminated union of the message types produced from the message definition `TMsgDef`.
  */
 export type Message<TMsgDef extends MessageDefinition> = {
-    [P in StringProperties<TMsgDef>]: {
+    [P in Command<TMsgDef>]: {
         command: P,
         parameters: TMsgDef[P]
     }
-}[StringProperties<TMsgDef>];
+}[Command<TMsgDef>];
 
 /**
  * The handler type for all the messages defined in `TMsgDef`.
  */
 export type MessageHandler<TMsgDef extends MessageDefinition> = {
-    [P in keyof TMsgDef]: (args: TMsgDef[P]) => void
+    [P in keyof TMsgDef]: (args: TMsgDef[P], command: P) => void
 };
 
 export function isValidMessage<TMsgDef extends MessageDefinition>(message: any): message is Message<TMsgDef> {

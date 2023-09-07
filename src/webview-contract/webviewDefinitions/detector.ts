@@ -74,4 +74,4 @@ export type ToWebViewMsgDef = {};
 
 export type ToVsCodeMsgDef = {};
 
-export type DetectorDefinition = WebviewDefinition<InitialState, ToWebViewMsgDef, ToVsCodeMsgDef>;
+export type DetectorDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

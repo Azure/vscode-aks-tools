@@ -1,5 +1,5 @@
 import { MessageHandler } from "../../../src/webview-contract/messaging";
-import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
+import { InitialState, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { Scenario } from "../utilities/manualTest";
 import { getTestVscodeMessageContext } from "../utilities/vscode";
 import { Periscope } from "../Periscope/Periscope";
@@ -51,7 +51,7 @@ export function getPeriscopeScenarios() {
         shareableSas
     };
 
-    const webview = getTestVscodeMessageContext<ToWebViewMsgDef, ToVsCodeMsgDef>();
+    const webview = getTestVscodeMessageContext<"periscope">();
     const messageHandler: MessageHandler<ToVsCodeMsgDef> = {
         nodeLogsRequest: args => handleNodeLogsRequest(args.nodeName),
         uploadStatusRequest: handleUploadStatusRequest
