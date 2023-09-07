@@ -1,10 +1,10 @@
-import { DetectorTypes } from "../../../src/webview-contract/webviewTypes";
+import { SingleDataset, SingleDetectorARMResponse } from "../../../src/webview-contract/webviewDefinitions/detector";
 import { InsightsRenderer } from "./renderers/InsightsRenderer";
 import { MarkdownRenderer } from "./renderers/MarkdownRenderer";
 import { Status, getOverallStatus } from "./utils";
 import styles from "./Detector.module.css";
 
-export function SingleDetector(detector: DetectorTypes.SingleDetectorARMResponse) {
+export function SingleDetector(detector: SingleDetectorARMResponse) {
     const status = getOverallStatus(detector);
     const panelClassNames = getPanelClassNames(status);
 
@@ -20,7 +20,7 @@ export function SingleDetector(detector: DetectorTypes.SingleDetectorARMResponse
     )
 }
 
-function getRenderer(dataset: DetectorTypes.SingleDataset, index: number) {
+function getRenderer(dataset: SingleDataset, index: number) {
     switch (dataset.renderingProperties.type) {
         case 7: return <InsightsRenderer key={index} {...dataset} />
         case 9: return <MarkdownRenderer key={index} {...dataset} />

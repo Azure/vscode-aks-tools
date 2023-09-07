@@ -1,11 +1,11 @@
 import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
-import { DetectorTypes } from "../../../../src/webview-contract/webviewTypes";
+import { SingleDataset } from '../../../../src/webview-contract/webviewDefinitions/detector';
 import { getMarkdownComponents } from './common';
 
 const markdownComponents = getMarkdownComponents();
 
-export function MarkdownRenderer(props: DetectorTypes.SingleDataset) {
+export function MarkdownRenderer(props: SingleDataset) {
     return (
     <>
         <h4>{props.renderingProperties.title}</h4>

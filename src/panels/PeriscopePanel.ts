@@ -6,13 +6,13 @@ import { PeriscopeStorage } from "../commands/periscope/models/storage";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { PeriscopeTypes } from "../webview-contract/webviewTypes";
+import { DeploymentState, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/periscope";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { URL } from "url";
 
-export class PeriscopePanel extends BasePanel<PeriscopeTypes.InitialState, PeriscopeTypes.ToWebViewMsgDef, PeriscopeTypes.ToVsCodeMsgDef> {
+export class PeriscopePanel extends BasePanel<"periscope"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, PeriscopeTypes.contentId);
+        super(extensionUri, "periscope");
     }
 }
 
@@ -24,10 +24,10 @@ export interface DeploymentParameters {
     periscopeNamespace: string
 }
 
-export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.InitialState, PeriscopeTypes.ToWebViewMsgDef, PeriscopeTypes.ToVsCodeMsgDef> {
+export class PeriscopeDataProvider implements PanelDataProvider<"periscope"> {
     private constructor(
         readonly clusterName: string,
-        readonly deploymentState: PeriscopeTypes.DeploymentState,
+        readonly deploymentState: DeploymentState,
         readonly runId: string,
         readonly nodes: string[],
         readonly message: string,
@@ -50,7 +50,7 @@ export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.I
         return `AKS Periscope ${this.clusterName}`;
     }
 
-    getInitialState(): PeriscopeTypes.InitialState {
+    getInitialState(): InitialState {
         const storage = this.deploymentParameters?.storage;
         const containerUrl = storage ? new URL(storage.containerName, storage.blobEndpoint).href : "";
         const shareableSas = storage ? storage.sevenDaysSasKey : "";
@@ -66,14 +66,14 @@ export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.I
         };
     }
 
-    getMessageHandler(webview: MessageSink<PeriscopeTypes.ToWebViewMsgDef>): MessageHandler<PeriscopeTypes.ToVsCodeMsgDef> {
+    getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             nodeLogsRequest: args => this._handleNodeLogsRequest(args.nodeName, webview),
             uploadStatusRequest: () => this._handleUploadStatusRequest(webview)
         };
     }
 
-    private async _handleUploadStatusRequest(webview: MessageSink<PeriscopeTypes.ToWebViewMsgDef>) {
+    private async _handleUploadStatusRequest(webview: MessageSink<ToWebViewMsgDef>) {
         if (!this.deploymentParameters) {
             throw new Error('Node upload statuses cannot be checked when deployment parameters are not configured');
         }
@@ -82,7 +82,7 @@ export class PeriscopeDataProvider implements PanelDataProvider<PeriscopeTypes.I
         webview.postMessage({ command: 'uploadStatusResponse', parameters: {uploadStatuses} });
     }
 
-    private async _handleNodeLogsRequest(nodeName: string, webview: MessageSink<PeriscopeTypes.ToWebViewMsgDef>): Promise<void> {
+    private async _handleNodeLogsRequest(nodeName: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const deploymentParameters = this.deploymentParameters;
         if (!deploymentParameters) {
             throw new Error('Node logs cannot be retrieved when deployment parameters are not configured');

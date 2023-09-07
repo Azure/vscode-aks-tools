@@ -1,4 +1,3 @@
-import { DetectorTypes } from "../../../src/webview-contract/webviewTypes";
 import { Scenario } from "../utilities/manualTest";
 import { Detector } from "../Detector/Detector";
 
@@ -63,12 +62,13 @@ import * as rotateClusterCertificate from "./detectorData/rotate-cluster-certifi
 import * as snatUsage from "./detectorData/snat-usage.json"
 import * as userDefinedRouting from "./detectorData/user-defined-routing.json"
 import * as windowsRegressionK8sv124 from "./detectorData/windowsregresionk8sv124.json"
+import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, isCategoryDataset } from "../../../src/webview-contract/webviewDefinitions/detector";
 
 type DetectorDataMap = {
-    [detectorId: string]: DetectorTypes.SingleDetectorARMResponse
+    [detectorId: string]: SingleDetectorARMResponse
 };
 
-const categoryDetectors: DetectorTypes.CategoryDetectorARMResponse[] = [
+const categoryDetectors: CategoryDetectorARMResponse[] = [
     aksCategoryAvailabilityPerf,
     aksCategoryConnectivity,
     aksCategoryCrud,
@@ -77,7 +77,7 @@ const categoryDetectors: DetectorTypes.CategoryDetectorARMResponse[] = [
     aksCategoryRiskAssessment
 ];
 
-const singleDetectors: DetectorTypes.SingleDetectorARMResponse[] = [
+const singleDetectors: SingleDetectorARMResponse[] = [
     aadIssues,
     advisorAutoscalingClusters,
     advisorBSeriesVms,
@@ -140,8 +140,8 @@ const singleDetectorLookup: DetectorDataMap = singleDetectors.reduce((result: De
 
 export function getDetectorScenarios() {
     return categoryDetectors.map(categoryDetector => {
-        const detectorIds = categoryDetector.properties.dataset.filter(DetectorTypes.isCategoryDataset)[0].renderingProperties.detectorIds;
-        const initialState: DetectorTypes.InitialState = {
+        const detectorIds = categoryDetector.properties.dataset.filter(isCategoryDataset)[0].renderingProperties.detectorIds;
+        const initialState: InitialState = {
             name: categoryDetector.properties.metadata.name,
             description: categoryDetector.properties.metadata.description,
             clusterArmId: getClusterArmId(categoryDetector),
@@ -149,10 +149,10 @@ export function getDetectorScenarios() {
             detectors: detectorIds.map(id => singleDetectorLookup[id])
         };
 
-        return Scenario.create(`${DetectorTypes.contentId} (${initialState.name})`, () => <Detector {...initialState} />);
+        return Scenario.create(`Detectors (${initialState.name})`, () => <Detector {...initialState} />);
     });
 }
 
-function getClusterArmId(response: DetectorTypes.ARMResponse<any>): string {
+function getClusterArmId(response: ARMResponse<any>): string {
     return response.id.split('detectors')[0];
 }

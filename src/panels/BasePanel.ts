@@ -1,7 +1,8 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
-import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink, isValidMessage } from "../webview-contract/messaging";
+import { MessageDefinition, MessageHandler, isValidMessage } from "../webview-contract/messaging";
 import { getNonce, getUri } from "./utilities/webview";
 import { encodeState } from "../webview-contract/initialState";
+import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToWebviewMessage, ToWebviewMessageSink, VsCodeMessageContext } from "../webview-contract/webviewTypes";
 
 const viewType = "aksVsCodeTools";
 
@@ -10,28 +11,22 @@ const viewType = "aksVsCodeTools";
  * - supplying it with initial data
  * - handling messages from the webview and posting messages back
  */
-export interface PanelDataProvider<TInitialState, TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> {
+export interface PanelDataProvider<TContent extends ContentId> {
     getTitle(): string
-    getInitialState(): TInitialState
-    getMessageHandler(webview: MessageSink<TToWebview>): MessageHandler<TToVsCode>
+    getInitialState(): InitialState<TContent>
+    getMessageHandler(webview: ToWebviewMessageSink<TContent>): ToVsCodeMessageHandler<TContent>
 }
 
 /**
  * Common base class for VS Code Webview panels.
- * 
- * The generic types are:
- * - TInitialState: The initial state object (passed as `props` to the corresponding React component),
- *   or `void` if not required.
- * - TToWebview: A definition of the `Command` types that will be posted to the Webview.
- * - TToVsCode: A definition of the `Command` types that the extension will listen for from the Webview.
  */
-export abstract class BasePanel<TInitialState, TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> {
+export abstract class BasePanel<TContent extends ContentId> {
     protected constructor(
         readonly extensionUri: Uri,
-        readonly contentId: string
+        readonly contentId: TContent
     ) { }
 
-    show(dataProvider: PanelDataProvider<TInitialState, TToWebview, TToVsCode>, ...disposables: Disposable[]) {
+    show(dataProvider: PanelDataProvider<TContent>, ...disposables: Disposable[]) {
         const panelOptions = {
             enableScripts: true,
             // Restrict the webview to only load resources from the `webview-ui/dist` directory
@@ -43,7 +38,7 @@ export abstract class BasePanel<TInitialState, TToWebview extends MessageDefinit
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
 
         // Set up messaging between VSCode and the webview.
-        const messageContext = new WebviewMessageContext<TToWebview, TToVsCode>(panel.webview, disposables);
+        const messageContext = new MessageContext<TContent>(panel.webview, disposables);
         const messageHandler = dataProvider.getMessageHandler(messageContext);
         messageContext.subscribeToMessages(messageHandler);
 
@@ -59,7 +54,7 @@ export abstract class BasePanel<TInitialState, TToWebview extends MessageDefinit
         panel.webview.html = this._getWebviewContent(panel.webview, this.extensionUri, title, initialState);
     }
 
-    private _getWebviewContent(webview: Webview, extensionUri: Uri, title: string, initialState: TInitialState | undefined) {
+    private _getWebviewContent(webview: Webview, extensionUri: Uri, title: string, initialState: InitialState<TContent> | undefined) {
         // Get URIs for the React build output.
         const stylesUri = getUri(webview, extensionUri, ["assets", "main.css"]);
         const scriptUri = getUri(webview, extensionUri, ["assets", "main.js"]);
@@ -90,26 +85,27 @@ export abstract class BasePanel<TInitialState, TToWebview extends MessageDefinit
 }
 
 /**
- * A `MessageContext` that represents the Webview.
+ * A `MessageContext` that represents the VSCode end of the communication,
+ * i.e. it posts messages to the webview, and listens to messages to VS Code.
  */
-class WebviewMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> implements MessageContext<TToWebview, TToVsCode> {
+class MessageContext<TContent extends ContentId> implements VsCodeMessageContext<TContent> {
     constructor(
         private readonly _webview: Webview,
         private readonly _disposables: Disposable[]
     ) { }
 
-    postMessage(message: Message<TToWebview>) {
+    postMessage(message: ToWebviewMessage<TContent>) {
         this._webview.postMessage(message);
     }
 
-    subscribeToMessages(handler: MessageHandler<TToVsCode>) {
+    subscribeToMessages(handler: ToVsCodeMessageHandler<TContent>) {
         this._webview.onDidReceiveMessage(
             (message: any) => {
-                if (!isValidMessage<TToVsCode>(message)) {
+                if (!isValidMessage<ToVsCodeMessage<TContent>>(message)) {
                     throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                 }
 
-                const action = handler[message.command];
+                const action = (handler as MessageHandler<MessageDefinition>)[message.command];
                 if (action) {
                     action(message.parameters);
                 } else {
