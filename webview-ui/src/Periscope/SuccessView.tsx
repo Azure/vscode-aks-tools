@@ -1,6 +1,6 @@
 import { VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useEffect } from "react";
-import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
+import { NodeUploadStatus, PodLogs } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { NodeActions } from "./NodeActions";
 import { NodeLogs } from "./NodeLogs";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -10,11 +10,11 @@ import styles from "./Periscope.module.css";
 export interface SuccessViewProps {
     runId: string
     clusterName: string
-    uploadStatuses: PeriscopeTypes.NodeUploadStatus[]
+    uploadStatuses: NodeUploadStatus[]
     onRequestUploadStatusCheck: () => void
     onNodeClick: (node: string) => void
     selectedNode: string
-    nodePodLogs: PeriscopeTypes.PodLogs[] | null
+    nodePodLogs: PodLogs[] | null
     containerUrl: string
     shareableSas: string
 }

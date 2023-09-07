@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { TestStyleViewerTypes } from "../../../src/webview-contract/webviewTypes";
+import { CssRule, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
 import { getWebviewMessageContext } from "../utilities/vscode";
 
-export function TestStyleViewer(props: TestStyleViewerTypes.InitialState) {
-    const vscode = getWebviewMessageContext<TestStyleViewerTypes.ToVsCodeMsgDef, TestStyleViewerTypes.ToWebViewMsgDef>();
+export function TestStyleViewer(props: InitialState) {
+    const vscode = getWebviewMessageContext<ToVsCodeMsgDef, ToWebViewMsgDef>();
 
     const [cssVars, setCssVars] = useState<string[]>([]);
-    const [cssRules, setCssRules] = useState<TestStyleViewerTypes.CssRule[]>([]);
+    const [cssRules, setCssRules] = useState<CssRule[]>([]);
 
     useEffect(() => {
         const cssVars = props.isVSCode ? getCssVarsForVsCode() : getCssVarsForWebview();
@@ -48,7 +48,7 @@ export function TestStyleViewer(props: TestStyleViewerTypes.InitialState) {
         return styleProperties.split(';').map(s => s.trim()).filter(s => s.startsWith('--vscode-')).sort();
     }
 
-    function getCssRules(): TestStyleViewerTypes.CssRule[] {
+    function getCssRules(): CssRule[] {
         const defaultStyleSheetNode = getStyleSheetNode();
         let [defaultStyleSheet] = [...document.styleSheets].filter(s => s.ownerNode === defaultStyleSheetNode);
         if (!defaultStyleSheet) {

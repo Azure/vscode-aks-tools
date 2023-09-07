@@ -2,7 +2,7 @@ import { Errorable, combine, failed, getErrorMessage } from "./errorable";
 import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DetectorTypes } from "../../webview-contract/webviewTypes";
+import { ARMResponse, CategoryDetectorARMResponse, SingleDetectorARMResponse, isCategoryDataset } from "../../webview-contract/webviewDefinitions/detector";
 import { getResourceManagementClient } from "./clusters";
 const tmp = require('tmp');
 const meta = require('../../../package.json');
@@ -16,7 +16,7 @@ export async function saveAllDetectorResponses(
 ) {
     const outputDirObj = tmp.dirSync();
 
-    function saveDetector(detector: DetectorTypes.ARMResponse<any>) {
+    function saveDetector(detector: ARMResponse<any>) {
         const detectorFilePath = path.join(outputDirObj.name, `${detector.name}.json`);
         // Anonymize the data.
         detector.id = "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/" + detector.name;
@@ -44,15 +44,15 @@ export async function saveAllDetectorResponses(
 
 export async function getDetectorListData(
     cloudTarget: AksClusterTreeItem,
-    categoryDetector: DetectorTypes.CategoryDetectorARMResponse
-): Promise<Errorable<DetectorTypes.SingleDetectorARMResponse[]>> {
+    categoryDetector: CategoryDetectorARMResponse
+): Promise<Errorable<SingleDetectorARMResponse[]>> {
 
-    const detectorIds = categoryDetector.properties.dataset.filter(DetectorTypes.isCategoryDataset)[0].renderingProperties.detectorIds;
+    const detectorIds = categoryDetector.properties.dataset.filter(isCategoryDataset)[0].renderingProperties.detectorIds;
     if (detectorIds.length === 0) {
         return { succeeded: false, error: `No detectors found in AppLens response for ${categoryDetector.name}` };
     }
 
-    let results: Errorable<DetectorTypes.SingleDetectorARMResponse>[] = [];
+    let results: Errorable<SingleDetectorARMResponse>[] = [];
     try {
         const promiseResults = await Promise.all(detectorIds.map(name => getDetectorInfo(cloudTarget, name)));
         // Line below is added to handle edge case of applens detector list with missing implementation,
@@ -70,7 +70,7 @@ export async function getDetectorListData(
 export async function getDetectorInfo(
     target: AksClusterTreeItem,
     detectorName: string
-): Promise<Errorable<DetectorTypes.ARMResponse<any>>> {
+): Promise<Errorable<ARMResponse<any>>> {
     try {
         const client = getResourceManagementClient(target);
         // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
@@ -79,12 +79,12 @@ export async function getDetectorInfo(
             resourceGroup, target.resourceType,
             target.name, "detectors", detectorName, "2019-08-01");
 
-        return { succeeded: true, result: <DetectorTypes.ARMResponse<any>>detectorInfo };
+        return { succeeded: true, result: <ARMResponse<any>>detectorInfo };
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${detectorName} detector: ${ex}` };
     }
 }
 
-export function getPortalUrl(clusterdata: DetectorTypes.ARMResponse<any>) {
+export function getPortalUrl(clusterdata: ARMResponse<any>) {
     return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics?referrer_source=vscode&referrer_context=${meta.name}`;
 }

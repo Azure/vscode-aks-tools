@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleCheck, faCircleXmark, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
-import { DetectorTypes } from "../../../../src/webview-contract/webviewTypes";
+import { SingleDataset } from '../../../../src/webview-contract/webviewDefinitions/detector';
 import { Error } from "./Error";
 import { Status, getStatusForInsightDataset, isInsightResult } from '../utils';
 import styles from "../Detector.module.css";
@@ -10,7 +10,7 @@ import { getMarkdownComponents } from './common';
 
 const markdownComponents = getMarkdownComponents();
 
-export function InsightsRenderer(props: DetectorTypes.SingleDataset) {
+export function InsightsRenderer(props: SingleDataset) {
     const statusResult = getStatusForInsightDataset(props);
     if (!isInsightResult(statusResult)) {
         return Error({ message: statusResult.error, data: statusResult.data });
@@ -43,7 +43,7 @@ export function InsightsRenderer(props: DetectorTypes.SingleDataset) {
     );
 }
 
-function hasExtraData(dataset: DetectorTypes.SingleDataset) {
+function hasExtraData(dataset: SingleDataset) {
     return dataset.table.rows.filter(r => r[2] || r[3]).length > 0;
 }
 

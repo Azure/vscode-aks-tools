@@ -1,20 +1,20 @@
 import { Uri } from "vscode";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { DetectorTypes } from "../webview-contract/webviewTypes";
+import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/detector";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 const meta = require('../../package.json');
 
-export class DetectorPanel extends BasePanel<DetectorTypes.InitialState, DetectorTypes.ToWebViewMsgDef, DetectorTypes.ToVsCodeMsgDef> {
+export class DetectorPanel extends BasePanel<"detector"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, DetectorTypes.contentId);
+        super(extensionUri, "detector");
     }
 }
 
-export class DetectorDataProvider implements PanelDataProvider<DetectorTypes.InitialState, DetectorTypes.ToWebViewMsgDef, DetectorTypes.ToVsCodeMsgDef> {
+export class DetectorDataProvider implements PanelDataProvider<"detector"> {
     public constructor(
         readonly clusterName: string,
-        readonly categoryDetector: DetectorTypes.CategoryDetectorARMResponse,
-        readonly detectors: DetectorTypes.SingleDetectorARMResponse[]
+        readonly categoryDetector: CategoryDetectorARMResponse,
+        readonly detectors: SingleDetectorARMResponse[]
     ) {
         this.detectorName = categoryDetector.properties.metadata.name;
         this.detectorDescription = categoryDetector.properties.metadata.description;
@@ -29,7 +29,7 @@ export class DetectorDataProvider implements PanelDataProvider<DetectorTypes.Ini
         return `${this.detectorName} diagnostics for ${this.clusterName}`;
     }
 
-    getInitialState(): DetectorTypes.InitialState {
+    getInitialState(): InitialState {
         return {
             name: this.clusterName,
             description: this.detectorDescription,
@@ -39,11 +39,11 @@ export class DetectorDataProvider implements PanelDataProvider<DetectorTypes.Ini
         };
     }
 
-    getMessageHandler(_webview: MessageSink<DetectorTypes.ToWebViewMsgDef>): MessageHandler<DetectorTypes.ToVsCodeMsgDef> {
+    getMessageHandler(_webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {};
     }
 }
 
-function getClusterArmId(response: DetectorTypes.ARMResponse<any>): string {
+function getClusterArmId(response: ARMResponse<any>): string {
     return response.id.split('detectors')[0];
 }

@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom";
 import './main.css';
 import { decodeState } from "../../src/webview-contract/initialState";
-import * as ContractTypes from "../../src/webview-contract/webviewTypes";
+import { ContentId } from "../../src/webview-contract/webviewTypes";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { Periscope } from "./Periscope/Periscope";
 import { Detector } from "./Detector/Detector";
@@ -24,18 +24,19 @@ function getVsCodeContent(): JSX.Element {
     if (!rootElem) {
         return <>Error: Element with ID 'root' is not found.</>;
     }
-    const vscodeContentId = rootElem?.dataset.contentid;
+    const vscodeContentId = rootElem?.dataset.contentid as ContentId;
     if (!vscodeContentId) {
         return <>Error: 'content-id' attribute is not set on root element.</>;
     }
 
     const vsCodeInitialState = decodeState<any>(rootElem?.dataset.initialstate);
-    switch (vscodeContentId) {
-        case ContractTypes.TestStyleViewerTypes.contentId: return <TestStyleViewer {...vsCodeInitialState} />
-        case ContractTypes.PeriscopeTypes.contentId: return <Periscope {...vsCodeInitialState} />
-        case ContractTypes.DetectorTypes.contentId: return <Detector {...vsCodeInitialState} />
-        default: return <>`Error: Unexpected content ID: '${vscodeContentId}'`</>;
-    }
+    const rendererLookup: Record<ContentId, () => JSX.Element> = {
+        style: () => <TestStyleViewer {...vsCodeInitialState} />,
+        periscope: () => <Periscope {...vsCodeInitialState} />,
+        detector: () => <Detector {...vsCodeInitialState} />
+    };
+
+    return rendererLookup[vscodeContentId]();
 }
 
 ReactDOM.render(

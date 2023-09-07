@@ -1,5 +1,5 @@
 import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
-import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
+import { KustomizeConfig } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import styles from "./Periscope.module.css";
@@ -7,7 +7,7 @@ import styles from "./Periscope.module.css";
 export interface ErrorViewProps {
     clusterName: string
     message: string
-    config: PeriscopeTypes.KustomizeConfig
+    config: KustomizeConfig
 }
 
 export function ErrorView(props: ErrorViewProps) {

@@ -1,12 +1,12 @@
 import { MessageHandler } from "../../../src/webview-contract/messaging";
-import { PeriscopeTypes } from "../../../src/webview-contract/webviewTypes";
+import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { Scenario } from "../utilities/manualTest";
 import { getTestVscodeMessageContext } from "../utilities/vscode";
 import { Periscope } from "../Periscope/Periscope";
 
 export function getPeriscopeScenarios() {
     const clusterName = "test-cluster";
-    const noDiagnosticsState: PeriscopeTypes.InitialState = {
+    const noDiagnosticsState: InitialState = {
         state: "noDiagnosticsConfigured",
         clusterName,
         runId: "",
@@ -29,7 +29,7 @@ export function getPeriscopeScenarios() {
     const blobContainerUrl = `https://teststgaccount.net/${clusterName}-logs`;
     const shareableSas = "?saskey";
 
-    const errorState: PeriscopeTypes.InitialState = {
+    const errorState: InitialState = {
         state: "error",
         clusterName,
         runId,
@@ -40,7 +40,7 @@ export function getPeriscopeScenarios() {
         shareableSas
     }
 
-    const successState: PeriscopeTypes.InitialState = {
+    const successState: InitialState = {
         state: "success",
         clusterName,
         runId,
@@ -51,8 +51,8 @@ export function getPeriscopeScenarios() {
         shareableSas
     };
 
-    const webview = getTestVscodeMessageContext<PeriscopeTypes.ToWebViewMsgDef, PeriscopeTypes.ToVsCodeMsgDef>();
-    const messageHandler: MessageHandler<PeriscopeTypes.ToVsCodeMsgDef> = {
+    const webview = getTestVscodeMessageContext<ToWebViewMsgDef, ToVsCodeMsgDef>();
+    const messageHandler: MessageHandler<ToVsCodeMsgDef> = {
         nodeLogsRequest: args => handleNodeLogsRequest(args.nodeName),
         uploadStatusRequest: handleUploadStatusRequest
     };
@@ -86,8 +86,8 @@ export function getPeriscopeScenarios() {
     }
 
     return [
-        Scenario.create(`${PeriscopeTypes.contentId} (no diagnostics)`, () => <Periscope {...noDiagnosticsState} />),
-        Scenario.create(`${PeriscopeTypes.contentId} (error)`, () => <Periscope {...errorState} />),
-        Scenario.create(`${PeriscopeTypes.contentId} (deployed)`, () => <Periscope {...successState} />).withSubscription(webview, messageHandler)
+        Scenario.create(`Periscope (no diagnostics)`, () => <Periscope {...noDiagnosticsState} />),
+        Scenario.create(`Periscope (error)`, () => <Periscope {...errorState} />),
+        Scenario.create(`Periscope (deployed)`, () => <Periscope {...successState} />).withSubscription(webview, messageHandler)
     ]
 }

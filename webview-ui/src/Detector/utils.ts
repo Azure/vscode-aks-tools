@@ -1,4 +1,4 @@
-import { DetectorTypes } from "../../../src/webview-contract/webviewTypes";
+import { SingleDataset, SingleDetectorARMResponse } from "../../../src/webview-contract/webviewDefinitions/detector";
 
 const insightDatasetType = 7;
 
@@ -17,7 +17,7 @@ export enum Status {
     Error
 }
 
-export function getOverallStatus(response: DetectorTypes.SingleDetectorARMResponse): Status {
+export function getOverallStatus(response: SingleDetectorARMResponse): Status {
     const statuses = response.properties.dataset
         .filter(d => d.renderingProperties.type === insightDatasetType)
         .map(getStatusForInsightDataset)
@@ -41,7 +41,7 @@ export function isInsightResult(result: InsightResult | ErrorInfo): result is In
     return (result as InsightResult).status !== undefined;
 }
 
-export function getStatusForInsightDataset(dataset: DetectorTypes.SingleDataset): InsightResult | ErrorInfo {
+export function getStatusForInsightDataset(dataset: SingleDataset): InsightResult | ErrorInfo {
     // One insight has a single overall `Status` and `Message`, even if it contains several rows.
     if (dataset.table.rows.length === 0) {
         return {
