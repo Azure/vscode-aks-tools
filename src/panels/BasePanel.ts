@@ -107,7 +107,7 @@ class MessageContext<TContent extends ContentId> implements VsCodeMessageContext
 
                 const action = (handler as MessageHandler<MessageDefinition>)[message.command];
                 if (action) {
-                    action(message.parameters);
+                    action(message.parameters, message.command);
                 } else {
                     window.showErrorMessage(`No handler found for command ${message.command}`);
                 }

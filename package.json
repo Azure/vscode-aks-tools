@@ -109,7 +109,7 @@
                 },
                 "azure.kubectlgadget.releaseTag": {
                     "type": "string",
-                    "default": "v0.12.1",
+                    "default": "v0.19.0",
                     "title": "Kubectl-gadget repository release tag",
                     "description": "Release tag for the stable kubectl-gadget tool."
                 }
@@ -229,40 +229,8 @@
                 "title": "Readyz check"
             },
             {
-                "command": "aks.aksInspektorGadgetDeploy",
-                "title": "Deploy"
-            },
-            {
-                "command": "aks.aksInspektorGadgetUnDeploy",
-                "title": "Undeploy"
-            },
-            {
-                "command": "aks.aksInspektorGadgetTopTCP",
-                "title": "Top TCP"
-            },
-            {
-                "command": "aks.aksInspektorGadgetTopEBPF",
-                "title": "Top eBPF"
-            },
-            {
-                "command": "aks.aksInspektorGadgetTopBlockIO",
-                "title": "Top BlockIO"
-            },
-            {
-                "command": "aks.aksInspektorGadgetTopFile",
-                "title": "Top File"
-            },
-            {
-                "command": "aks.aksInspektorGadgetProfileCPU",
-                "title": "Profile CPU"
-            },
-            {
-                "command": "aks.aksInspektorGadgetSnapshotProcess",
-                "title": "Snapshot Process"
-            },
-            {
-                "command": "aks.aksInspektorGadgetSnapshotSocket",
-                "title": "Snapshot Socket"
+                "command": "aks.aksInspektorGadgetShow",
+                "title": "Show Inspektor Gadget"
             },
             {
                 "command": "aks.createCluster",
@@ -335,7 +303,7 @@
                     "group": "9@3"
                 },
                 {
-                    "submenu": "aks.inspektorGadgetSubMenu",
+                    "command": "aks.aksInspektorGadgetShow",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
                     "group": "9@4"
                 }
@@ -447,68 +415,6 @@
                     "command": "aks.aksKubectlK8sReadyzAPIEndpointCommands",
                     "group": "navigation"
                 }
-            ],
-            "aks.inspektorGadgetSubMenu": [
-                {
-                    "command": "aks.aksInspektorGadgetDeploy",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksInspektorGadgetUnDeploy",
-                    "group": "navigation"
-                },
-                {
-                    "submenu": "aks.inspektorGadgetCommandsSubMenu",
-                    "group": "navigation"
-                }
-            ],
-            "aks.inspektorGadgetCommandsSubMenu": [
-                {
-                    "submenu": "aks.inspektorGadgetTopCommandSubMenu",
-                    "group": "navigation"
-                },
-                {
-                    "submenu": "aks.inspektorGadgetProfileCommandSubMenu",
-                    "group": "navigation"
-                },
-                {
-                    "submenu": "aks.inspektorGadgetSnapshotCommandSubMenu",
-                    "group": "navigation"
-                }
-            ],
-            "aks.inspektorGadgetTopCommandSubMenu": [
-                {
-                    "command": "aks.aksInspektorGadgetTopTCP",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksInspektorGadgetTopEBPF",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksInspektorGadgetTopBlockIO",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksInspektorGadgetTopFile",
-                    "group": "navigation"
-                }
-            ],
-            "aks.inspektorGadgetProfileCommandSubMenu": [
-                {
-                    "command": "aks.aksInspektorGadgetProfileCPU",
-                    "group": "navigation"
-                }
-            ],
-            "aks.inspektorGadgetSnapshotCommandSubMenu": [
-                {
-                    "command": "aks.aksInspektorGadgetSnapshotProcess",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksInspektorGadgetSnapshotSocket",
-                    "group": "navigation"
-                }
             ]
         },
         "submenus": [
@@ -531,26 +437,6 @@
             {
                 "id": "aks.K8sAPIEndpointHealthCheck",
                 "label": "Kubernetes API Health Endpoints"
-            },
-            {
-                "id": "aks.inspektorGadgetSubMenu",
-                "label": "Inspektor Gadget"
-            },
-            {
-                "id": "aks.inspektorGadgetCommandsSubMenu",
-                "label": "Gadget Commands"
-            },
-            {
-                "id": "aks.inspektorGadgetTopCommandSubMenu",
-                "label": "Top Commands"
-            },
-            {
-                "id": "aks.inspektorGadgetProfileCommandSubMenu",
-                "label": "Profile Commands"
-            },
-            {
-                "id": "aks.inspektorGadgetSnapshotCommandSubMenu",
-                "label": "Snapshot Commands"
             },
             {
                 "id": "aks.createClusterSubMenu",
@@ -587,7 +473,7 @@
         "mocha": "^9.0.2",
         "sinon": "^12.0.1",
         "ts-loader": "^9.4.1",
-        "typescript": "^3.9.10",
+        "typescript": "^4.9.5",
         "webpack": "^5.75.0",
         "webpack-cli": "^4.10.0"
     },
@@ -620,6 +506,7 @@
         "js-yaml": "^3.14.0",
         "move-file": "^3.0.0",
         "neverthrow": "^4.3.0",
+        "rxjs": "^7.8.0",
         "semver": "^7.3.7",
         "sinon": "^12.0.1",
         "tmp": "^0.2.1",

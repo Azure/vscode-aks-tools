@@ -1,11 +1,11 @@
 import { MessageHandler } from "../../../src/webview-contract/messaging";
-import { CssRule, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
+import { CssRule, InitialState, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
 import { Scenario } from "./../utilities/manualTest";
 import { getTestVscodeMessageContext } from "./../utilities/vscode";
 import { TestStyleViewer } from "./../TestStyleViewer/TestStyleViewer";
 
 export function getTestStyleViewerScenarios() {
-    const webview = getTestVscodeMessageContext<ToWebViewMsgDef, ToVsCodeMsgDef>();
+    const webview = getTestVscodeMessageContext<"style">();
     const messageHandler: MessageHandler<ToVsCodeMsgDef> = {
         reportCssRules: args => handleReportCssRules(args.rules),
         reportCssVars: args => handleReportCssVars(args.cssVars)

@@ -1,5 +1,6 @@
 import type { WebviewApi } from "vscode-webview";
-import { Message, MessageContext, MessageDefinition, MessageHandler, isValidMessage } from "../../../src/webview-contract/messaging";
+import { MessageDefinition, MessageHandler, isValidMessage } from "../../../src/webview-contract/messaging";
+import { ContentId, ToVsCodeMessage, ToVsCodeMessageHandler, ToWebviewMessage, ToWebviewMessageHandler, VsCodeMessageContext, WebviewMessageContext } from "../../../src/webview-contract/webviewTypes";
 
 const vsCodeApi: WebviewApi<unknown> | undefined = (typeof acquireVsCodeApi === "function") ? acquireVsCodeApi() : undefined;
 
@@ -20,8 +21,8 @@ const interceptorEventTarget: NamedEventTarget = { target: new EventTarget(), na
 let windowEventListener: EventListenerWithCommands | null = null;
 let interceptorEventListener: EventListenerWithCommands | null = null;
 
-class WebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition> implements MessageContext<TToVsCode, TToWebview> {
-    postMessage(message: Message<TToVsCode>) {
+class WebviewMessageContextImpl<T extends ContentId> implements WebviewMessageContext<T> {
+    postMessage(message: ToVsCodeMessage<T>) {
         if (vsCodeApi) {
             vsCodeApi.postMessage(message);
         } else {
@@ -30,7 +31,7 @@ class WebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview exte
         }
     }
 
-    subscribeToMessages(handler: MessageHandler<TToWebview>) {
+    subscribeToMessages(handler: ToWebviewMessageHandler<T>) {
         windowEventListener = subscribeToMessages(windowEventTarget, windowEventListener, handler, 'message');
     }
 }
@@ -39,17 +40,17 @@ class WebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview exte
  * @returns the `MessageContext` used by the webviews, i.e. that post messages to the VS Code extension
  * and listen to messages from the VS Code extension.
  */
-export function getWebviewMessageContext<TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition>(): MessageContext<TToVsCode, TToWebview> {
-    return new WebviewMessageContext<TToVsCode, TToWebview>();
+export function getWebviewMessageContext<T extends ContentId>(): WebviewMessageContext<T> {
+    return new WebviewMessageContextImpl<T>();
 }
 
-class VscodeInterceptorMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition> implements MessageContext<TToWebview, TToVsCode> {
-    postMessage(message: Message<TToWebview>) {
+class VscodeInterceptorMessageContext<T extends ContentId> implements VsCodeMessageContext<T> {
+    postMessage(message: ToWebviewMessage<T>) {
         console.log(`Dispatching ${JSON.stringify(message)} to '${windowEventTarget.name}'`);
         windowEventTarget.target.dispatchEvent(new MessageEvent('message', { data: message }));
     }
 
-    subscribeToMessages(handler: MessageHandler<TToVsCode>) {
+    subscribeToMessages(handler: ToVsCodeMessageHandler<T>) {
         interceptorEventListener = subscribeToMessages(interceptorEventTarget, interceptorEventListener, handler, 'vscode-message');
     }
 }
@@ -59,8 +60,8 @@ class VscodeInterceptorMessageContext<TToWebview extends MessageDefinition, TToV
  * React application code acts as the VS Code extension, intercepting messages from the Webview
  * and posting back its own messages.
  */
-export function getTestVscodeMessageContext<TToWebview extends MessageDefinition, TToVsCode extends MessageDefinition>(): MessageContext<TToWebview, TToVsCode> {
-    return new VscodeInterceptorMessageContext<TToWebview, TToVsCode>();
+export function getTestVscodeMessageContext<T extends ContentId>(): VsCodeMessageContext<T> {
+    return new VscodeInterceptorMessageContext<T>();
 }
 
 function subscribeToMessages<TMsgDef extends MessageDefinition>(
@@ -84,7 +85,7 @@ function subscribeToMessages<TMsgDef extends MessageDefinition>(
         console.log(`'${eventTarget.name}' is handling command '${message.command}' (able to handle [${commands.join(',')}])`);
         const action = handler[message.command];
         if (action) {
-            action(message.parameters);
+            action(message.parameters, message.command);
         } else {
             console.error(`No handler found for command ${message.command}`);
         }

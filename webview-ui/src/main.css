@@ -84,3 +84,9 @@ kbd {
 ::highlight(current-find-highlight) {
   background-color: var(--vscode-editor-findMatchBackground);
 }
+
+dialog {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  border-color: var(--vscode-editorGroup-border);
+}
