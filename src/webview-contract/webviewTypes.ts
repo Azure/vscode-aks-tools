@@ -1,5 +1,6 @@
 import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink } from "./messaging";
 import { DetectorDefinition } from "./webviewDefinitions/detector";
+import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget";
 import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
 
@@ -19,7 +20,8 @@ export type WebviewDefinition<TInitialState extends object, TToVsCode extends Me
 type AllWebviewDefinitions = {
     style: TestStyleViewerDefinition,
     periscope: PeriscopeDefinition,
-    detector: DetectorDefinition
+    detector: DetectorDefinition,
+    gadget: InspektorGadgetDefinition
 };
 
 type ContentIdLookup = {

@@ -6,6 +6,7 @@ import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelecto
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getDetectorScenarios } from "./detectorTests";
+import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
 import { ContentId } from "../../../src/webview-contract/webviewTypes";
 import { Scenario } from "../utilities/manualTest";
 
@@ -24,7 +25,8 @@ const rootElem = document.getElementById("root");
 const contentTestScenarios: Record<ContentId, Scenario[]> = {
     style: getTestStyleViewerScenarios(),
     periscope: getPeriscopeScenarios(),
-    detector: getDetectorScenarios()
+    detector: getDetectorScenarios(),
+    gadget: getInspektorGadgetScenarios()
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap(s => s);

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { CssRule, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
+import { CssRule, InitialState } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
 import { getWebviewMessageContext } from "../utilities/vscode";
 
 export function TestStyleViewer(props: InitialState) {
-    const vscode = getWebviewMessageContext<ToVsCodeMsgDef, ToWebViewMsgDef>();
+    const vscode = getWebviewMessageContext<"style">();
 
     const [cssVars, setCssVars] = useState<string[]>([]);
     const [cssRules, setCssRules] = useState<CssRule[]>([]);

@@ -1,0 +1,129 @@
+.tab {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.propertyList {
+    width: 100%;
+}
+
+.propertyList dt {
+    float: left;
+    clear: left;
+    padding: 2px 4px;
+    font-weight: bold;
+    width: 10rem;
+}
+
+.propertyList dd {
+    padding: 2px 4px;
+}
+
+table.tracelist {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+table.tracelist th {
+    height: 50px;
+    text-align: left;
+}
+
+table.tracelist td {
+    padding: 5px;
+}
+
+table.tracelist td > * {
+    vertical-align: middle;
+}
+
+table.tracelist tbody tr.selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+table.tracelist tbody tr:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-list-hoverForeground);
+    cursor: pointer;
+}
+
+table.traceoutput {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.traceoutput th {
+    height: 50px;
+    text-align: left;
+    padding: 0 0.5rem 0 0.5rem;
+}
+
+table.traceoutput td {
+    padding: 5px;
+}
+
+.label {
+    margin-bottom: 0.2rem;
+}
+
+.control {
+    margin-bottom: 0.8rem;
+    min-width: 15rem;
+}
+
+ul.hierarchyList {
+    list-style-type: none;
+    padding: 0;
+    padding-left: 0;
+    margin: 0;
+}
+
+ul.hierarchyList li {
+    display: grid;
+    grid-template-columns: 1rem auto;
+    grid-gap: 0;
+    grid-column-gap: 0.5rem;
+    align-items: center;
+}
+
+ul.hierarchyList li .expander {
+    grid-column: 1 / 2;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+ul.hierarchyList li * {
+    grid-column: 2 / 3;
+}
+
+.inputContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: top;
+    align-items: flex-start;
+    min-width: 20rem;
+}
+
+.buttonContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.5rem;
+}
+
+.panelContent {
+    display: grid;
+    grid-template-rows: fit-content(0) auto;
+    gap: 1rem;
+}
+
+.panelContent .side {
+    grid-column: 1 / 2;
+}
+
+.panelContent .main {
+    grid-column: 2 / 3;
+}

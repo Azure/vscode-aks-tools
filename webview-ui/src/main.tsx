@@ -6,6 +6,7 @@ import { ContentId } from "../../src/webview-contract/webviewTypes";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { Periscope } from "./Periscope/Periscope";
 import { Detector } from "./Detector/Detector";
+import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -33,7 +34,8 @@ function getVsCodeContent(): JSX.Element {
     const rendererLookup: Record<ContentId, () => JSX.Element> = {
         style: () => <TestStyleViewer {...vsCodeInitialState} />,
         periscope: () => <Periscope {...vsCodeInitialState} />,
-        detector: () => <Detector {...vsCodeInitialState} />
+        detector: () => <Detector {...vsCodeInitialState} />,
+	gadget: () => <InspektorGadget {...vsCodeInitialState} />
     };
 
     return rendererLookup[vscodeContentId]();
