@@ -9,13 +9,6 @@ import { ClusterStartStopState } from './clusters';
 // they are registered one time, rather than each time they are used.
 //
 
-htmlhandlers.registerHelper('breaklines', (text: any): any => {
-    if (text) {
-        text = text.replace(/(\r\n|\n|\r)/gm, '<br>');
-    }
-    return text;
-});
-
 export function createWebView(viewType: string, title: string): vscode.WebviewPanel {
     const panel = vscode.window.createWebviewPanel(
         viewType,

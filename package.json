@@ -112,6 +112,26 @@
                     "default": "v0.19.0",
                     "title": "Kubectl-gadget repository release tag",
                     "description": "Release tag for the stable kubectl-gadget tool."
+                },
+                "azure.customkubectl.commands": {
+                    "type": "array",
+                    "title": "Custom Kubectl commands",
+                    "items": {
+                        "type": "object",
+                        "title": "A kubectl command",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Name for the command"
+                            },
+                            "command": {
+                                "type": "string",
+                                "description": "The command (minus 'kubectl' prefix)"
+                            }
+                        }
+                    },
+                    "default": [],
+                    "description": "All the custom kubectl commands"
                 }
             }
         },
@@ -185,30 +205,6 @@
                 "title": "Create Cluster From Azure Portal"
             },
             {
-                "command": "aks.aksKubectlGetPodsCommands",
-                "title": "Get All Pods"
-            },
-            {
-                "command": "aks.aksKubectlGetClusterInfoCommands",
-                "title": "Get Cluster Info"
-            },
-            {
-                "command": "aks.aksKubectlGetAPIResourcesCommands",
-                "title": "Get API Resources"
-            },
-            {
-                "command": "aks.aksKubectlGetNodeCommands",
-                "title": "Get Nodes"
-            },
-            {
-                "command": "aks.aksKubectlDescribeServicesCommands",
-                "title": "Describe Services"
-            },
-            {
-                "command": "aks.aksKubectlGetEventsCommands",
-                "title": "Get All Events"
-            },
-            {
                 "command": "aks.aksDeleteCluster",
                 "title": "Delete Cluster"
             },
@@ -217,28 +213,16 @@
                 "title": "Rotate Cluster Certificate"
             },
             {
-                "command": "aks.aksKubectlK8sHealthzAPIEndpointCommands",
-                "title": "Healthz check"
-            },
-            {
-                "command": "aks.aksKubectlK8sLivezAPIEndpointCommands",
-                "title": "Livez check"
-            },
-            {
-                "command": "aks.aksKubectlK8sReadyzAPIEndpointCommands",
-                "title": "Readyz check"
-            },
-            {
                 "command": "aks.aksInspektorGadgetShow",
                 "title": "Show Inspektor Gadget"
             },
             {
-                "command": "aks.createCluster",
-                "title": "Create Standard Cluster"
+                "command": "aks.aksRunKubectlCommands",
+                "title": "Run Kubectl Commands"
             },
             {
-                "command": "aks.aksCustomKubectlCommand",
-                "title": "Run Custom Kubectl Command"
+                "command": "aks.createCluster",
+                "title": "Create Standard Cluster"
             }
         ],
         "menus": {
@@ -288,18 +272,13 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
                 },
                 {
-                    "submenu": "aks.runKubectlCmdSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "9@1"
-                },
-                {
                     "submenu": "aks.managedClusterOperationSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
                 },
                 {
-                    "submenu": "aks.K8sAPIEndpointHealthCheck",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "command": "aks.aksRunKubectlCommands",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
                     "group": "9@3"
                 },
                 {
@@ -362,36 +341,6 @@
                     "group": "navigation"
                 }
             ],
-            "aks.runKubectlCmdSubMenu": [
-                {
-                    "command": "aks.aksKubectlGetPodsCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksKubectlGetClusterInfoCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksKubectlGetAPIResourcesCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksKubectlGetNodeCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksKubectlDescribeServicesCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksKubectlGetEventsCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksCustomKubectlCommand",
-                    "group": "navigation"
-                }
-            ],
             "aks.managedClusterOperationSubMenu": [
                 {
                     "command": "aks.aksDeleteCluster",
@@ -399,20 +348,6 @@
                 },
                 {
                     "command": "aks.aksRotateClusterCert",
-                    "group": "navigation"
-                }
-            ],
-            "aks.K8sAPIEndpointHealthCheck": [
-                {
-                    "command": "aks.aksKubectlK8sHealthzAPIEndpointCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksKubectlK8sLivezAPIEndpointCommands",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksKubectlK8sReadyzAPIEndpointCommands",
                     "group": "navigation"
                 }
             ]
@@ -427,16 +362,8 @@
                 "label": "Create GitHub Workflow"
             },
             {
-                "id": "aks.runKubectlCmdSubMenu",
-                "label": "Run Kubectl Commands"
-            },
-            {
                 "id": "aks.managedClusterOperationSubMenu",
                 "label": "Managed Cluster Operations"
-            },
-            {
-                "id": "aks.K8sAPIEndpointHealthCheck",
-                "label": "Kubernetes API Health Endpoints"
             },
             {
                 "id": "aks.createClusterSubMenu",

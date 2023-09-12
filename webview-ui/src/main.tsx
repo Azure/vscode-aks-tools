@@ -7,6 +7,7 @@ import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { Periscope } from "./Periscope/Periscope";
 import { Detector } from "./Detector/Detector";
 import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
+import { Kubectl } from "./Kubectl/Kubectl";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -35,7 +36,8 @@ function getVsCodeContent(): JSX.Element {
         style: () => <TestStyleViewer {...vsCodeInitialState} />,
         periscope: () => <Periscope {...vsCodeInitialState} />,
         detector: () => <Detector {...vsCodeInitialState} />,
-	gadget: () => <InspektorGadget {...vsCodeInitialState} />
+        gadget: () => <InspektorGadget {...vsCodeInitialState} />,
+        kubectl: () => <Kubectl {...vsCodeInitialState} />
     };
 
     return rendererLookup[vscodeContentId]();

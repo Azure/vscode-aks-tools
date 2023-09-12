@@ -12,7 +12,7 @@
                     "fileLocation": "absolute",
                     "background": {
                         "activeOnStart": true,
-                        "beginsPattern": "^.* page reload .*",
+                        "beginsPattern": "^(?:.* page reload |\\[TypeScript\\]).*",
                         "endsPattern": "^.*\\[TypeScript\\].*"
                     },
                     "pattern": [
