@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.3.14]
+
+* Update Kubelogin version to use latest.
+* Upgrade ARM resources library.
+* Feature welcome workflow.
+* Feature customise kubectl command.
+* Simplify definitions of messages and handlers for webviews.
+* Fix debug background task problem matcher.
+* Reorganize type structure of webview definitions.
+* Move all Inspektor Gadget commands to single Webview.
+
+Thank you so much to @peterbom, @hsubramanianaks and @qpetraroia.
+
 ## [1.3.13]
 
 * Enabling create cluster.
