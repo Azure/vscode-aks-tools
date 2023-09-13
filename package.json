@@ -87,6 +87,12 @@
         "configuration": {
             "title": "AKS",
             "properties": {
+                "aks.openai.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "title": "Open AI API Key",
+                    "description": "API Key from the OpenAI API keys profile."
+                },
                 "aks.periscope.repoOrg": {
                     "type": "string",
                     "default": "azure",

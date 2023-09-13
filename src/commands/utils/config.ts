@@ -3,6 +3,30 @@ import { combine, failed, Errorable } from './errorable';
 import { KubeloginConfig, KustomizeConfig } from '../periscope/models/config';
 import * as semver from "semver";
 import { CommandCategory, PresetCommand } from '../../webview-contract/webviewDefinitions/kubectl';
+import { OpenAIConfig } from './helper/openaiConfig';
+
+export function getOpenAIConfig(): Errorable<OpenAIConfig> {
+    const openaiConfig = vscode.workspace.getConfiguration('aks.openai');
+    const config = getConfigValue(openaiConfig, 'apiKey');
+
+    if (failed(config)) {
+        return {
+            succeeded: false,
+            error: `Failed to read aks.openai configuration: ${config.error}`
+        };
+    } else if (!config.result) {
+        return {
+            succeeded: false,
+            error: `OpenAI key is not specified in aks.openai configuration. AI function will be disabled.`
+        };
+    }
+
+    const configresult = {
+        apiKey: config.result
+    };
+
+    return { succeeded: true, result: configresult };
+}
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration('aks.periscope');
