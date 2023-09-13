@@ -32,13 +32,16 @@ export function getKubectlScenarios() {
             webview.postMessage({
                 command: "runCommandResponse",
                 parameters: {
-                    output: Array.from({length: 20}, (_, i) => `This is the output of "kubectl ${command}" line ${i + 1}`).join('\n')
+                    output: Array.from({length: 20}, (_, i) => `This is the output of "kubectl ${command}" line ${i + 1}`).join('\n'),
+                    errorMessage: "",
+                    explanation: null
                 }
             });
         } else {
             webview.postMessage({
                 command: "runCommandResponse",
                 parameters: {
+                    output: null,
                     errorMessage: "Something went wrong and this is the error.",
                     explanation: "And here's a natural language explanation of what went wrong."
                 }

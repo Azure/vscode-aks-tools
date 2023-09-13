@@ -1,21 +1,18 @@
 import OpenAI from 'openai';
+import { ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat';
 
 const openai = new OpenAI({
-  apiKey: process.env["OPENAI_API_KEY"]
+    apiKey: process.env["OPENAI_API_KEY"]
 });
 
-export async function openaiHelper(error: any): Promise<string | null | undefined> {
-  if (!error) {
-    return;
-  }
-  let content = error;
+export async function openaiHelper(error: string): Promise<string> {
+    const body: ChatCompletionCreateParamsNonStreaming = {
+        messages: [{ role: 'user', content: error }],
+        model: 'gpt-3.5-turbo'
+    };
 
-  if (error?.error) {
-    content = error?.error;
-  }
-  const response = await openai.chat.completions.create({ messages: [{ role: 'user', content: content }], model: 'gpt-3.5-turbo' }, {
-    timeout: 30000,
-  });
-  console.log(response);
-  return response.choices[0]?.message?.content || '';
+    const options = { timeout: 30000 };
+    const response = await openai.chat.completions.create(body, options);
+
+    return response.choices[0]?.message?.content || '';
 }

@@ -12,9 +12,9 @@ interface KubectlState {
     allCommands: PresetCommand[]
     selectedCommand: string | null
     isCommandRunning: boolean
-    output?: string
-    errorMessage?: string
-    explanation?: string
+    output: string | null
+    errorMessage: string | null
+    explanation: string | null
     isSaveDialogShown: boolean
 }
 
@@ -25,6 +25,9 @@ export function Kubectl(props: InitialState) {
         allCommands: [...presetCommands, ...props.customCommands],
         selectedCommand: null,
         isCommandRunning: false,
+        output: null,
+        errorMessage: null,
+        explanation: null,
         isSaveDialogShown: false
     });
 
@@ -35,7 +38,7 @@ export function Kubectl(props: InitialState) {
     });
 
     function handleCommandSelectionChanged(command: PresetCommand) {
-        setState({...state, selectedCommand: command.command, output: undefined, errorMessage: undefined, explanation: undefined});
+        setState({...state, selectedCommand: command.command, output: null, errorMessage: null, explanation: null});
     }
 
     function handleCommandDelete(commandName: string) {
@@ -49,7 +52,7 @@ export function Kubectl(props: InitialState) {
     }
 
     function handleRunCommand(command: string) {
-        setState({...state, isCommandRunning: true, output: undefined, errorMessage: undefined, explanation: undefined});
+        setState({...state, isCommandRunning: true, output: null, errorMessage: null, explanation: null});
         vscode.postMessage({ command: "runCommandRequest", parameters: {command: command.trim()} });
     }
 

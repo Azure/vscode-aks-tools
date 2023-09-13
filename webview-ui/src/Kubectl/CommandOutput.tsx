@@ -3,9 +3,9 @@ import styles from "./Kubectl.module.css";
 
 export interface CommandOutputProps {
     isCommandRunning: boolean
-    output?: string
-    errorMessage?: string
-    explanation?: string
+    output: string | null
+    errorMessage: string | null
+    explanation: string | null
 }
 
 export function CommandOutput(props: CommandOutputProps) {
@@ -18,7 +18,7 @@ export function CommandOutput(props: CommandOutputProps) {
         {props.isCommandRunning && <VSCodeProgressRing />}
         {hasOutput && <pre>{props.output}</pre>}
         {hasError && <pre className={styles.error}>{props.errorMessage}</pre>}
-        {hasExplanation && <pre className={styles.warning}>{props.explanation}</pre>}
+        {hasExplanation && <pre className={styles.explanation}>{props.explanation}</pre>}
     </>
     );
 }

@@ -50,9 +50,9 @@ export type ToVsCodeMsgDef = {
 
 export type ToWebViewMsgDef = {
     runCommandResponse: {
-        output?: string
-        errorMessage?: string
-        explanation?: string
+        output: string | null
+        errorMessage: string | null
+        explanation: string | null
     }
 };
 

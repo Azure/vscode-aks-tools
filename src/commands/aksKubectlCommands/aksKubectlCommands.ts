@@ -7,7 +7,6 @@ import { failed } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
 import { KubectlDataProvider, KubectlPanel } from '../../panels/KubectlPanel';
 import { getKubectlCustomCommands } from '../utils/config';
-// import { openaiHelper } from '../utils/helper/openaiHelper';
 
 export async function aksRunKubectlCommands(_context: IActionContext, target: any) {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -42,8 +41,6 @@ export async function aksRunKubectlCommands(_context: IActionContext, target: an
     }
 
     const customCommands = getKubectlCustomCommands();
-    // test sake only.
-    // await openaiHelper('How can use kubectl?');
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
     const dataProvider = new KubectlDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, customCommands);
     const panel = new KubectlPanel(extension.result.extensionUri);
