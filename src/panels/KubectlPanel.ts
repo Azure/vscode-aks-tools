@@ -6,6 +6,7 @@ import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { InitialState, PresetCommand, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kubectl";
 import { addKubectlCustomCommand, deleteKubectlCustomCommand } from "../commands/utils/config";
+import { openaiHelper } from "../commands/utils/helper/openaiHelper";
 
 export class KubectlPanel extends BasePanel<"kubectl"> {
     constructor(extensionUri: Uri) {
@@ -44,15 +45,25 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
 
         if (failed(kubectlresult)) {
-            // TODO: Run some kind of AI processing over the command and error to generate an explanation.
-            const explanation = undefined;
+            const aiMsg = await openaiHelper(kubectlresult);
+            const explanation = aiMsg ? `OpenAI GPT-3 Suggestion: ${aiMsg}` : undefined;
             webview.postMessage({
                 command: "runCommandResponse", parameters: {
                     errorMessage: kubectlresult.error,
                     explanation
                 }
             });
+            return;
+        }
 
+        if (kubectlresult.result.stderr !== "" || kubectlresult.result.stdout === "") {
+            const explanation = undefined;
+            webview.postMessage({
+                command: "runCommandResponse", parameters: {
+                    errorMessage: kubectlresult.result.stderr,
+                    explanation
+                }
+            });
             return;
         }
 

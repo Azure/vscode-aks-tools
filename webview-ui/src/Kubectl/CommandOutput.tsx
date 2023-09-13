@@ -18,7 +18,7 @@ export function CommandOutput(props: CommandOutputProps) {
         {props.isCommandRunning && <VSCodeProgressRing />}
         {hasOutput && <pre>{props.output}</pre>}
         {hasError && <pre className={styles.error}>{props.errorMessage}</pre>}
-        {hasExplanation && <pre>{props.explanation}</pre>}
+        {hasExplanation && <pre className={styles.warning}>{props.explanation}</pre>}
     </>
     );
 }

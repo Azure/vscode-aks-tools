@@ -49,7 +49,7 @@ export function Kubectl(props: InitialState) {
     }
 
     function handleRunCommand(command: string) {
-        setState({...state, isCommandRunning: true, output: undefined, errorMessage: undefined});
+        setState({...state, isCommandRunning: true, output: undefined, errorMessage: undefined, explanation: undefined});
         vscode.postMessage({ command: "runCommandRequest", parameters: {command: command.trim()} });
     }
 
@@ -93,7 +93,7 @@ export function Kubectl(props: InitialState) {
         <div className={styles.mainContent}>
             <CommandInput command={state.selectedCommand || ''} matchesExisting={matchesExisting} onCommandUpdate={handleCommandUpdate} onRunCommand={handleRunCommand} onSaveRequest={handleSaveRequest} />
             <VSCodeDivider />
-            <CommandOutput isCommandRunning={state.isCommandRunning} output={state.output} errorMessage={state.errorMessage} />
+            <CommandOutput isCommandRunning={state.isCommandRunning} output={state.output} errorMessage={state.errorMessage} explanation={state.explanation}/>
         </div>
 
         <SaveCommandDialog isShown={state.isSaveDialogShown} existingNames={allCommandNames} onCancel={handleSaveDialogCancel} onAccept={handleSaveDialogAccept} />

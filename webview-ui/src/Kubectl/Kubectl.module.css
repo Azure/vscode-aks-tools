@@ -111,3 +111,7 @@ ul.commandList .commandDelete:hover {
 pre.error {
     color: var(--vscode-testing-iconFailed);
 }
+
+pre.explanation {
+    color: var(--vscode-editor-foreground);
+}
