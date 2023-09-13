@@ -14,6 +14,4 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 
 ![Cloud explorer extension menu](../resources/right-click-inspektor-gadget.png)
 
-![Cloud explorer extension menu](../resources/right-click-inspektor-gadget-command.png)
-
 ![Cloud explorer extension menu](../resources/right-click-subscription.png)
