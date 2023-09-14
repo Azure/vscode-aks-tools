@@ -18,11 +18,19 @@ export function CommandInput(props: CommandInputProps) {
         props.onCommandUpdate(input.value);
     }
 
+    function onKeyPress(e: any) {
+        if (e.nativeEvent instanceof KeyboardEvent) {
+            if (e.code == 'Enter') {
+                props.onRunCommand(props.command);
+            }
+        }
+    }
+
     const canRun = props.command.trim().length > 0;
     return (
         <div className={styles.inputContainer}>
             <label htmlFor="command-input" className={styles.label}>Command</label>
-            <VSCodeTextField id="command-input" className={styles.control} value={props.command} onInput={handleCommandChange} />
+            <VSCodeTextField id="command-input" className={styles.control} value={props.command} onInput={handleCommandChange} onKeyUp={onKeyPress} />
             <div className={styles.commands}>
                 <VSCodeButton disabled={!canRun} onClick={() => props.onRunCommand(props.command)}>Run</VSCodeButton>
                 {!props.matchesExisting && <VSCodeButton onClick={props.onSaveRequest}>Save</VSCodeButton>}

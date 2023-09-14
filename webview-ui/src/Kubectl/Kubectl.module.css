@@ -114,6 +114,7 @@ pre.error {
 
 pre.explanation {
     color: var(--vscode-editor-foreground);
+    white-space: pre-wrap;
 }
 
 .labelTextButton {

@@ -49,7 +49,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
     }
 
     private async _handleRunCommandRequest(command: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+                const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
 
         if (failed(kubectlresult)) {
             await this._sendResponse(webview, this.openAIConfig, command, null, kubectlresult.error);
@@ -70,7 +70,8 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         errorMessage: string | null
     ) {
         let aiResponse: Observable<string> | null = null;
-        if (errorMessage !== null) {
+        // checking errorMessage != null passed for empty string and was giving AI suggestions for non error responses. 
+        if (errorMessage) {
             if (failed(openAIConfig)) {
                 this._updateAIKeyStatus(AIKeyStatus.Missing, null, webview);
             } else {
