@@ -115,3 +115,10 @@ pre.error {
 pre.explanation {
     color: var(--vscode-editor-foreground);
 }
+
+.labelTextButton {
+    display: grid;
+    grid-template-columns: 4rem 20rem 4rem;
+    grid-gap: 0.5rem;
+    align-items: center;
+}

@@ -35,7 +35,15 @@ export interface InitialState {
     customCommands: PresetCommand[]
 }
 
+export enum AIKeyStatus {
+    Missing,
+    Unverified,
+    Invalid,
+    Valid
+}
+
 export type ToVsCodeMsgDef = {
+    getAIKeyStatus: void,
     runCommandRequest: {
         command: string
     },
@@ -45,6 +53,9 @@ export type ToVsCodeMsgDef = {
     },
     deleteCustomCommandRequest: {
         name: string
+    },
+    updateAIKeyRequest: {
+        apiKey: string
     }
 };
 
@@ -52,7 +63,18 @@ export type ToWebViewMsgDef = {
     runCommandResponse: {
         output: string | null
         errorMessage: string | null
-        explanation: string | null
+    },
+    startExplanation: void,
+    errorStreamingExplanation: {
+        error: string
+    }
+    appendExplanation: {
+        chunk: string
+    },
+    completeExplanation: void,
+    updateAIKeyStatus: {
+        keyStatus: AIKeyStatus,
+        invalidKey: string | null
     }
 };
 

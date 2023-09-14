@@ -28,6 +28,10 @@ export function getOpenAIConfig(): Errorable<OpenAIConfig> {
     return { succeeded: true, result: configresult };
 }
 
+export async function setOpenAIConfigApiKey(apiKey: string) {
+    await vscode.workspace.getConfiguration().update('aks.openai.apiKey', apiKey, vscode.ConfigurationTarget.Global, true);
+}
+
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration('aks.periscope');
     const props = combine([
