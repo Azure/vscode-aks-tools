@@ -23,14 +23,13 @@ import aksNavToPortal from './commands/aksNavToPortal/aksNavToPortal';
 import aksClusterProperties from './commands/aksClusterProperties/aksClusterProperties';
 import aksCreateClusterNavToAzurePortal from './commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { aksKubectlGetPodsCommands, aksKubectlGetClusterInfoCommands, aksKubectlGetAPIResourcesCommands, aksKubectlGetNodeCommands, aksKubectlDescribeServicesCommands, aksKubectlGetEventsCommands, aksKubectlK8sLivezAPIEndpointCommands, aksKubectlK8sHealthzAPIEndpointCommands, aksKubectlK8sReadyzAPIEndpointCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
+import { aksRunKubectlCommands } from './commands/aksKubectlCommands/aksKubectlCommands';
 import { longRunning } from './commands/utils/host';
 import { getClusterProperties, getKubeconfigYaml } from './commands/utils/clusters';
 import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 import aksRotateClusterCert from './commands/aksRotateClusterCert/aksRotateClusterCert';
 import { aksInspektorGadgetShow } from './commands/aksInspektorGadget/aksInspektorGadget';
 import aksCreateCluster from './commands/aksCreateCluster/aksCreateCluster';
-import aksCustomKubectlCommand from './commands/aksKubectlCommands/aksCustomiseKubectlCommand';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -68,21 +67,12 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.showInPortal', aksNavToPortal );
         registerCommandWithTelemetry('aks.clusterProperties', aksClusterProperties);
         registerCommandWithTelemetry('aks.createClusterNavToAzurePortal', aksCreateClusterNavToAzurePortal);
-        registerCommandWithTelemetry('aks.aksKubectlGetPodsCommands', aksKubectlGetPodsCommands);
-        registerCommandWithTelemetry('aks.aksKubectlGetClusterInfoCommands', aksKubectlGetClusterInfoCommands);
-        registerCommandWithTelemetry('aks.aksKubectlGetAPIResourcesCommands', aksKubectlGetAPIResourcesCommands);
-        registerCommandWithTelemetry('aks.aksKubectlGetNodeCommands', aksKubectlGetNodeCommands);
-        registerCommandWithTelemetry('aks.aksKubectlDescribeServicesCommands', aksKubectlDescribeServicesCommands);
-        registerCommandWithTelemetry('aks.aksKubectlGetEventsCommands', aksKubectlGetEventsCommands);
+        registerCommandWithTelemetry('aks.aksRunKubectlCommands', aksRunKubectlCommands);
         registerCommandWithTelemetry('aks.aksCategoryConnectivity', aksCategoryConnectivity);
         registerCommandWithTelemetry('aks.aksDeleteCluster', aksDeleteCluster);
         registerCommandWithTelemetry('aks.aksRotateClusterCert', aksRotateClusterCert);
-        registerCommandWithTelemetry('aks.aksKubectlK8sHealthzAPIEndpointCommands', aksKubectlK8sHealthzAPIEndpointCommands);
-        registerCommandWithTelemetry('aks.aksKubectlK8sLivezAPIEndpointCommands', aksKubectlK8sLivezAPIEndpointCommands);
-        registerCommandWithTelemetry('aks.aksKubectlK8sReadyzAPIEndpointCommands', aksKubectlK8sReadyzAPIEndpointCommands);
         registerCommandWithTelemetry('aks.aksInspektorGadgetShow', aksInspektorGadgetShow);
         registerCommandWithTelemetry('aks.createCluster', aksCreateCluster);
-        registerCommandWithTelemetry('aks.aksCustomKubectlCommand', aksCustomKubectlCommand);
 
         await registerAzureServiceNodes(context);
 

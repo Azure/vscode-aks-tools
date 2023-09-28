@@ -1,5 +1,6 @@
 import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink } from "./messaging";
 import { DetectorDefinition } from "./webviewDefinitions/detector";
+import { KubectlDefinition } from "./webviewDefinitions/kubectl";
 import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget";
 import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
@@ -21,7 +22,8 @@ type AllWebviewDefinitions = {
     style: TestStyleViewerDefinition,
     periscope: PeriscopeDefinition,
     detector: DetectorDefinition,
-    gadget: InspektorGadgetDefinition
+    gadget: InspektorGadgetDefinition,
+    kubectl: KubectlDefinition
 };
 
 type ContentIdLookup = {

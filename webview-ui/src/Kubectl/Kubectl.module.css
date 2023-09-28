@@ -1,0 +1,113 @@
+.wrapper {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-areas:
+        "header header"
+        "nav    content";
+    grid-template-columns: 1fr 3fr;
+}
+
+.mainHeading {
+    grid-area: header;
+}
+
+.commandNav {
+    grid-area: nav;
+}
+
+.mainContent {
+    grid-area: content;
+}
+
+ul.commandCategoryList {
+    list-style-type: none;
+    padding: 0;
+    padding-left: 0;
+    margin: 0;
+}
+
+ul.commandCategoryList > li {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.6rem;
+}
+
+ul.commandCategoryList h3,h4 {
+    margin: 0;
+    margin-top: 0.2rem;
+    margin-bottom: 0.2rem;
+}
+
+ul.commandList {
+    list-style-type: none;
+    padding: 0;
+    padding-left: 1rem;
+    margin: 0;
+}
+
+ul.commandList > li {
+    display: grid;
+    grid-template-columns: auto 2rem;
+    grid-gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    align-items: center;
+}
+
+ul.commandList > li.selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+ul.commandList > li:hover {
+    cursor: pointer;
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-list-hoverForeground);
+}
+
+ul.commandList pre {
+    margin: 0;
+    font-size: 0.8rem;
+}
+
+ul.commandList .commandDelete {
+    cursor: pointer;
+}
+
+ul.commandList .commandDelete:hover {
+    cursor: pointer;
+    color: var(--vscode-notificationsWarningIcon-foreground);
+}
+
+.inputContainer {
+    display: grid;
+    grid-template-columns: auto 10rem;
+    grid-gap: 0;
+    grid-column-gap: 0.5rem;
+    align-items: center;
+}
+
+.inputContainer .label {
+    grid-column: 1 / 2;
+    margin-bottom: 0.2rem;
+}
+
+.inputContainer .control, .commands {
+    margin-bottom: 0.8rem;
+    min-width: 20rem;
+}
+
+.inputContainer .control {
+    grid-column: 1 / 1;
+}
+
+.inputContainer .commands {
+    grid-column: 2 / 2;
+}
+
+.inputContainer .commands > * {
+    margin-right: 0.5rem;
+}
+
+pre.error {
+    color: var(--vscode-testing-iconFailed);
+}
