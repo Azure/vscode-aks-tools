@@ -19,7 +19,6 @@ export function Kubectl(props: InitialState) {
     useEffect(() => {
         if (!state.initializationStarted) {
             dispatch({ command: "setInitializing" });
-            vscode.postMessage({ command: "getAIKeyStatus", parameters: undefined });
         }
 
         const msgHandler = getMessageHandler<ToWebViewMsgDef>(dispatch, vscodeMessageHandler);
@@ -92,10 +91,6 @@ export function Kubectl(props: InitialState) {
                 isCommandRunning={state.isCommandRunning}
                 output={state.output}
                 errorMessage={state.errorMessage}
-                explanation={state.aiResponse}
-                isExplanationStreaming={state.isAIResponseStreaming}
-                aiKeyStatus={state.aiKeyStatus}
-                invalidAIKey={state.invalidAIKey}
                 userMessageHandlers={userMessageEventHandlers}
             />
         </div>

@@ -1,8 +1,7 @@
 import { Message } from "../../../../src/webview-contract/messaging"
 import { PresetCommand } from "../../../../src/webview-contract/webviewDefinitions/kubectl"
-import { AIUserMsgDef } from "../../utilities/openai"
 
-export type UserMsgDef = AIUserMsgDef & {
+export type UserMsgDef = {
     setInitializing: void,
     setSelectedCommand: {
         command: string
