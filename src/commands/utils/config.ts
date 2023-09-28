@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { combine, failed, Errorable } from './errorable';
 import { KubeloginConfig, KustomizeConfig } from '../periscope/models/config';
 import * as semver from "semver";
+import { CommandCategory, PresetCommand } from '../../webview-contract/webviewDefinitions/kubectl';
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration('aks.periscope');
@@ -81,4 +82,30 @@ function getConfigValue(config: vscode.WorkspaceConfiguration, key: string): Err
         return { succeeded: false, error: `${key} value has type: ${typeof value}; expected string.` }
     }
     return { succeeded: true, result: result };
+}
+
+export function getKubectlCustomCommands(): PresetCommand[] {
+    const config = vscode.workspace.getConfiguration('azure.customkubectl');
+    const value = config.get('commands');
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value.filter(isCommand).map(item => ({...item, category: CommandCategory.Custom}));
+
+    function isCommand(value: any): value is PresetCommand {
+        return (value.constructor.name === 'Object') && (value as PresetCommand).command && (value as PresetCommand).name ? true : false;
+    }
+}
+
+export async function addKubectlCustomCommand(name: string, command: string) {
+    const currentCommands = getKubectlCustomCommands().map(cmd => ({name: cmd.name, command: cmd.command}));
+    const commands = [...currentCommands, {name, command}].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    await vscode.workspace.getConfiguration().update('azure.customkubectl.commands', commands, vscode.ConfigurationTarget.Global, true);
+}
+
+export async function deleteKubectlCustomCommand(name: string) {
+    const currentCommands = getKubectlCustomCommands().map(cmd => ({name: cmd.name, command: cmd.command}));
+    const commands = currentCommands.filter(cmd => cmd.name !== name);
+    await vscode.workspace.getConfiguration().update('azure.customkubectl.commands', commands, vscode.ConfigurationTarget.Global, true);
 }

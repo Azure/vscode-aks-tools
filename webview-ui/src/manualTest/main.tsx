@@ -7,6 +7,7 @@ import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getDetectorScenarios } from "./detectorTests";
 import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
+import { getKubectlScenarios } from "./kubectlTests";
 import { ContentId } from "../../../src/webview-contract/webviewTypes";
 import { Scenario } from "../utilities/manualTest";
 
@@ -26,7 +27,8 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     style: getTestStyleViewerScenarios(),
     periscope: getPeriscopeScenarios(),
     detector: getDetectorScenarios(),
-    gadget: getInspektorGadgetScenarios()
+    gadget: getInspektorGadgetScenarios(),
+    kubectl: getKubectlScenarios()
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap(s => s);
