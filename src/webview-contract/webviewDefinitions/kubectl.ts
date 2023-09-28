@@ -1,4 +1,5 @@
 import { WebviewDefinition } from "../webviewTypes";
+import { AIToVsCodeMsgDef, AIToWebViewMsgDef } from "./shared";
 
 export enum CommandCategory {
     Resources,
@@ -35,15 +36,7 @@ export interface InitialState {
     customCommands: PresetCommand[]
 }
 
-export enum AIKeyStatus {
-    Missing,
-    Unverified,
-    Invalid,
-    Valid
-}
-
-export type ToVsCodeMsgDef = {
-    getAIKeyStatus: void,
+export type ToVsCodeMsgDef = AIToVsCodeMsgDef & {
     runCommandRequest: {
         command: string
     },
@@ -53,28 +46,13 @@ export type ToVsCodeMsgDef = {
     },
     deleteCustomCommandRequest: {
         name: string
-    },
-    updateAIKeyRequest: {
-        apiKey: string
     }
 };
 
-export type ToWebViewMsgDef = {
+export type ToWebViewMsgDef = AIToWebViewMsgDef & {
     runCommandResponse: {
         output: string | null
         errorMessage: string | null
-    },
-    startExplanation: void,
-    errorStreamingExplanation: {
-        error: string
-    }
-    appendExplanation: {
-        chunk: string
-    },
-    completeExplanation: void,
-    updateAIKeyStatus: {
-        keyStatus: AIKeyStatus,
-        invalidKey: string | null
     }
 };
 

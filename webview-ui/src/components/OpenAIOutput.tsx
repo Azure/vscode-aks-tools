@@ -1,24 +1,23 @@
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
-import styles from "./Kubectl.module.css";
+import styles from "./OpenAIOutput.module.css";
 import { FormEvent, useState } from "react";
-import { getWebviewMessageContext } from "../utilities/vscode";
-import { AIKeyStatus } from "../../../src/webview-contract/webviewDefinitions/kubectl";
+import { AIKeyStatus, AIToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/shared";
 import { EventHandlers } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { AIUserMsgDef } from "../utilities/openai";
+import { MessageSink } from "../../../src/webview-contract/messaging";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface OpenAIOutputProps {
+    vscode: MessageSink<AIToVsCodeMsgDef>
     explanation: string | null
-    isExplanationStreaming: boolean
+    isOutputStreaming: boolean
     aiKeyStatus: AIKeyStatus
     invalidAIKey: string | null
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    userMessageHandlers: EventHandlers<AIUserMsgDef>
 }
 
 export function OpenAIOutput(props: OpenAIOutputProps) {
-    const vscode = getWebviewMessageContext<"kubectl">();
-
     const [apiKey, setApiKey] = useState<string>("");
 
     function handleAPIKeyChange(e: ChangeEvent) {
@@ -27,7 +26,7 @@ export function OpenAIOutput(props: OpenAIOutputProps) {
     }
 
     function handleUpdateClick() {
-        vscode.postMessage({ command: "updateAIKeyRequest", parameters: {apiKey} });
+        props.vscode.postMessage({ command: "updateAIKeyRequest", parameters: {apiKey} });
         props.userMessageHandlers.onSetAPIKeySaved();
     }
 

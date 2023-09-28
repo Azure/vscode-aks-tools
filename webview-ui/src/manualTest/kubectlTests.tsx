@@ -1,5 +1,6 @@
 import { MessageHandler } from "../../../src/webview-contract/messaging";
-import { AIKeyStatus, CommandCategory, InitialState, PresetCommand, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/kubectl";
+import { CommandCategory, InitialState, PresetCommand, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/kubectl";
+import { AIKeyStatus } from "../../../src/webview-contract/webviewDefinitions/shared";
 import { Kubectl } from "../Kubectl/Kubectl";
 import { Scenario } from "../utilities/manualTest";
 import { getTestVscodeMessageContext } from "../utilities/vscode";
@@ -65,7 +66,7 @@ export function getKubectlScenarios() {
                 for (const word of explanation.split(" ").map((w, i) => `${i > 0 ? ' ': ''}${w}`)) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                     webview.postMessage({
-                        command: "appendExplanation",
+                        command: "appendAIResponse",
                         parameters: {
                             chunk: word
                         }
@@ -73,7 +74,7 @@ export function getKubectlScenarios() {
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
                 webview.postMessage({
-                    command: "completeExplanation",
+                    command: "completeAIResponse",
                     parameters: undefined
                 });
             }

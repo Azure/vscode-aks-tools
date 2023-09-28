@@ -2,7 +2,7 @@ import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { CommandCategory, InitialState, PresetCommand, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kubectl";
 import styles from "./Kubectl.module.css";
 import { getWebviewMessageContext } from "../utilities/vscode";
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer } from "react";
 import { CommandList } from "./CommandList";
 import { CommandInput } from "./CommandInput";
 import { CommandOutput } from "./CommandOutput";
@@ -92,8 +92,8 @@ export function Kubectl(props: InitialState) {
                 isCommandRunning={state.isCommandRunning}
                 output={state.output}
                 errorMessage={state.errorMessage}
-                explanation={state.explanation}
-                isExplanationStreaming={state.isExplanationStreaming}
+                explanation={state.aiResponse}
+                isExplanationStreaming={state.isAIResponseStreaming}
                 aiKeyStatus={state.aiKeyStatus}
                 invalidAIKey={state.invalidAIKey}
                 userMessageHandlers={userMessageEventHandlers}
