@@ -87,6 +87,12 @@
         "configuration": {
             "title": "AKS",
             "properties": {
+                "aks.openai.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "title": "Open AI API Key",
+                    "description": "API Key from the OpenAI API keys profile."
+                },
                 "aks.periscope.repoOrg": {
                     "type": "string",
                     "default": "azure",
@@ -443,6 +449,7 @@
         "js-yaml": "^3.14.0",
         "move-file": "^3.0.0",
         "neverthrow": "^4.3.0",
+        "openai": "^4.6.0",
         "rxjs": "^7.8.0",
         "semver": "^7.3.7",
         "sinon": "^12.0.1",
