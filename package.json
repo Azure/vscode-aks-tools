@@ -33,13 +33,9 @@
     "contributes": {
         "walkthroughs": [
             {
-                "id": "walkthrough",
+                "id": "aksvscodewalkthrough",
                 "title": "Welcome to AKS Extension",
                 "description": "Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS developers with single click feature deployment within VS Code ecosystem.",
-                "media": {
-                    "image": "./docs/book/src/features/features.md",
-                    "altText": "AKS Extension"
-                },
                 "steps": [
                     {
                         "id": "summarycommand",
