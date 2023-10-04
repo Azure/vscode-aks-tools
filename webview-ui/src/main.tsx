@@ -8,6 +8,7 @@ import { Periscope } from "./Periscope/Periscope";
 import { Detector } from "./Detector/Detector";
 import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
 import { Kubectl } from "./Kubectl/Kubectl";
+import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperator";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -37,7 +38,8 @@ function getVsCodeContent(): JSX.Element {
         periscope: () => <Periscope {...vsCodeInitialState} />,
         detector: () => <Detector {...vsCodeInitialState} />,
         gadget: () => <InspektorGadget {...vsCodeInitialState} />,
-        kubectl: () => <Kubectl {...vsCodeInitialState} />
+        kubectl: () => <Kubectl {...vsCodeInitialState} />,
+        aso: () => <AzureServiceOperator {...vsCodeInitialState} />
     };
 
     return rendererLookup[vscodeContentId]();

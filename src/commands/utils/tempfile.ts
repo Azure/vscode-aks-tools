@@ -16,6 +16,7 @@ export async function withOptionalTempFile<T>(
 }
 
 export async function createTempFile(content: string, extension: string): Promise<TempFile> {
+    // TODO: try/catch and return errorable?
     const tempFile = tmp.fileSync({ prefix: "aks-periscope-", postfix: `.${extension}` });
     await fs.writeFile(tempFile.name, content);
     return new TempFile(tempFile);
