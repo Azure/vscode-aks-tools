@@ -77,7 +77,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     }
 
     private async _handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const asoCrdYamlFile = "https://github.com/jetstack/cert-manager/releases/download/v1.7.1/cert-manager.yaml";
+        const asoCrdYamlFile = "https://github.com/jetstack/cert-manager/releases/download/v1.12.1/cert-manager.yaml";
         const kubectlArgs = `create -f ${asoCrdYamlFile}`;
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
         if (failed(shellOutput)) {
@@ -140,10 +140,14 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     }
 
     private async _handleInstallOperatorRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const asoYamlFile = "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0-beta.3/azureserviceoperator_v2.0.0-beta.3.yaml";
+        const asoYamlFile = "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0/azureserviceoperator_v2.0.0.yaml";
 
         // Use a larger-than-default request timeout here, because cert-manager sometimes does some certificate re-issuing
         // when ASO resources are created, and it takes time for the inject reconciler (cert-manager-cainjector) to update the resources.
+        // NOTE: We use 'create' here, and not 'apply' as suggested in the documentation, because we want to be cautious and avoid
+        // updating an existing installation. Instead we will use create to fail if it is already installed.
+        // This also means we don't need the '--server-side=true' argument, which affects change tracking (there will be no changes if
+        // the operator does not exist).
         const kubectlArgs = `create -f ${asoYamlFile} --request-timeout 120s`;
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
         if (failed(shellOutput)) {
