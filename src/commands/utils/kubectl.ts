@@ -3,18 +3,28 @@ import { Errorable, failed, getErrorMessage, map } from './errorable';
 import { OutputStream } from './commands';
 import { Observable, concat, of } from 'rxjs';
 
-export async function invokeKubectlCommand(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string, command: string): Promise<Errorable<KubectlV1.ShellResult>> {
-    // Note: kubeconfig is the last argument because kubectl plugins will not work with kubeconfig in start.
-    const shellResult = await kubectl.api.invokeCommand(`${command} --kubeconfig="${kubeConfigFile}"`);
-    if (shellResult === undefined) {
-        return { succeeded: false, error: `Failed to run kubectl command: ${command}` };
-    }
+export enum NonZeroExitCodeBehaviour {
+    Succeed,
+    Fail
+}
 
-    if (shellResult.code !== 0) {
-        return { succeeded: false, error: `Kubectl returned error ${shellResult.code} for ${command}\nError: ${shellResult.stderr}` };
-    }
+export async function invokeKubectlCommand(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string, command: string, exitCodeBehaviour?: NonZeroExitCodeBehaviour): Promise<Errorable<KubectlV1.ShellResult>> {
+    try {
+        // Note: kubeconfig is the last argument because kubectl plugins will not work with kubeconfig in start.
+        const shellResult = await kubectl.api.invokeCommand(`${command} --kubeconfig="${kubeConfigFile}"`);
+        if (shellResult === undefined) {
+            return { succeeded: false, error: `Failed to run kubectl command "${command}"` };
+        }
 
-    return { succeeded: true, result: shellResult };
+        exitCodeBehaviour = (exitCodeBehaviour === undefined) ? NonZeroExitCodeBehaviour.Fail : NonZeroExitCodeBehaviour.Succeed;
+        if (shellResult.code !== 0 && exitCodeBehaviour === NonZeroExitCodeBehaviour.Fail) {
+            return { succeeded: false, error: `Kubectl returned error ${shellResult.code} for ${command}\nError: ${shellResult.stderr}` };
+        }
+    
+        return { succeeded: true, result: shellResult };
+    } catch (e) {
+        return { succeeded: false, error: `Error running kubectl command "${command}": ${getErrorMessage(e)}` };
+    }
 }
 
 export async function getKubectlJsonResult<T>(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string, command: string): Promise<Errorable<T>> {

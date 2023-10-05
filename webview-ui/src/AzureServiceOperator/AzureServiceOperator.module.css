@@ -1,0 +1,87 @@
+.content {
+    display: grid;
+    grid-template-columns: 30rem auto;
+    grid-gap: 0;
+    grid-column-gap: 0.5rem;
+    align-items: normal;
+}
+
+.content .inputPane {
+    grid-column: 1 / 2;
+}
+
+.content .progressPane {
+    grid-column: 2 / 3;
+}
+
+.inputContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: top;
+    align-items: flex-start;
+    min-width: 20rem;
+}
+
+.label {
+    margin-bottom: 0.2rem;
+}
+
+.control {
+    margin-bottom: 0.8rem;
+    min-width: 15rem;
+}
+
+.successHeadingIcon, .errorHeadingIcon {
+    padding-right: 0.5rem;
+}
+
+.progressStep {
+    display: grid;
+    grid-template-columns: 1rem auto;
+    grid-gap: 0;
+    grid-column-gap: 0.5rem;
+    align-items: center;
+}
+
+.infoIndicator {
+    color: var(--vscode-editorInfo-foreground);
+    padding-right: 5px;
+}
+
+.progressIndicator {
+    width: 1rem;
+}
+
+.errorIndicator {
+    color: var(--vscode-testing-iconFailed);
+    padding-right: 5px;
+}
+
+.successIndicator {
+    color: var(--vscode-testing-iconPassed);
+    padding-right: 5px;
+}
+
+.stepErrorMessage {
+    margin: 0;
+    margin-bottom: 0.5rem;
+    grid-column: 2 / 3;
+    color: var(--vscode-testing-iconFailed);
+}
+
+.shellOutput {
+    grid-column: 2 / 3;
+    margin: 0;
+    line-height: 1.2rem;
+    background-color: var(--vscode-terminal-background);
+    color: var(--vscode-terminal-foreground);
+    font-family: var(--vscode-editor-font-family);
+}
+
+.shellOutput .stderr {
+    color: var(--vscode-terminal-ansiRed);
+}
+
+.shellOutput .stdout {
+    color: var(--vscode-terminal-ansiBrightBlue);
+}
