@@ -30,7 +30,7 @@ export abstract class BasePanel<TContent extends ContentId> {
         const panelOptions = {
             enableScripts: true,
             // Restrict the webview to only load resources from the `webview-ui/dist` directory
-            localResourceRoots: [Uri.joinPath(this.extensionUri, "webview-ui/dist")]
+            localResourceRoots: [Uri.joinPath(this.extensionUri, "webview-ui/dist")],
         };
 
         const title = dataProvider.getTitle();
