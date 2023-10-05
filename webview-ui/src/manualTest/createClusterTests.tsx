@@ -21,8 +21,7 @@ export function getCreateClusterScenarios() {
     const messageHandler: ToVsCodeMessageHandler<"createCluster"> = {
         getLocationsRequest: handleGetLocationsRequest,
         getResourceGroupsRequest: handleGetResourceGroupsRequest,
-        createClusterRequest: args => handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name),
-        createClusterSuccess: args => console.log(`Cluster ${args} was created successfully`),
+        createClusterRequest: args => handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name)
     };
 
     async function handleGetLocationsRequest() {

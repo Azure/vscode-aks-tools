@@ -40,8 +40,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         return {
             getLocationsRequest: _ => this._handleGetLocationsRequest(webview),
             getResourceGroupsRequest: _ => this._handleGetResourceGroupsRequest(webview),
-            createClusterRequest: args => this._handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview),
-            createClusterSuccess: args => this._handleCreateClusterSuccess(args),
+            createClusterRequest: args => this._handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview)
         };
     }
     _handleCreateClusterSuccess(name: any) {
@@ -165,6 +164,7 @@ async function createCluster(
                 }
             });
         } else if (state.error) {
+            window.showErrorMessage(`Error creating AKS cluster ${name}: ${getErrorMessage(state.error)}`);
             webview.postMessage({
                 command: "progressUpdate",
                 parameters: {
@@ -174,6 +174,7 @@ async function createCluster(
                 }
             });
         } else if (state.isCompleted) {
+            window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
             webview.postMessage({
                 command: "progressUpdate",
                 parameters: {

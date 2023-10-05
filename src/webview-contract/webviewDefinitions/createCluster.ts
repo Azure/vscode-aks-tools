@@ -29,8 +29,7 @@ export interface CreateClusterParams {
 export type ToVsCodeMsgDef = {
     getLocationsRequest: void,
     getResourceGroupsRequest: void,
-    createClusterRequest: CreateClusterParams,
-    createClusterSuccess: string
+    createClusterRequest: CreateClusterParams
 };
 
 export type ToWebViewMsgDef = {

@@ -54,8 +54,7 @@ export function CreateCluster(props: InitialState) {
                 </>
                 );
             case Stage.Succeeded:
-                vscode.postMessage({command: "createClusterSuccess", parameters: state.createParams!.name});
-                return (
+               return (
                     <Success
                         portalUrl={props.portalUrl}
                         portalReferrerContext={props.portalReferrerContext}
