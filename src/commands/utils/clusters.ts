@@ -447,6 +447,20 @@ export async function deleteCluster(
     }
 }
 
+export async function abortLastOperationInCluster(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<string>> {
+    try {
+        const containerClient = getContainerClient(target);
+        await containerClient.managedClusters.beginAbortLatestOperationAndWait(target.resourceGroupName, clusterName)
+
+        return { succeeded: true, result: "Abort last operation in cluster succeeded." };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${getErrorMessage(ex)}` };
+    }
+}
+
 export async function rotateClusterCert(
     target: AksClusterTreeItem,
     clusterName: string
