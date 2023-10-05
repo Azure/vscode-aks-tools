@@ -138,7 +138,13 @@
                     },
                     "default": [],
                     "description": "All the custom kubectl commands"
-                }
+                },
+                "aks.drafttool.releaseTag": {
+                    "type": "string",
+                    "default": "v0.0.30",
+                    "title": "Draft repository release tag",
+                    "description": "Release tag for the stable Draft tool release."
+                 }
             }
         },
         "commands": [

@@ -22,7 +22,7 @@ export async function getToolBinaryPath(
     toolName: string,
     version: string,
     downloadUrl: string,
-    pathToBinaryInArchive: string,
+    pathToBinaryInArchive: string | undefined,
     binaryFilename: string,
     ): Promise<Errorable<string>> {
 
@@ -32,8 +32,10 @@ export async function getToolBinaryPath(
     if (fs.existsSync(binaryFilePath)) {
        return {succeeded: true, result: binaryFilePath};
     }
- 
-    return await longRunning(`Downloading kubectl-gadget to ${binaryFilePath}.`, () => downloadBinary(toolName, binaryFilePath, downloadUrl, pathToBinaryInArchive));
+    if (pathToBinaryInArchive === undefined) {
+        return await longRunning(`Downloading ${toolName} to ${binaryFilePath}.`, () => downloadBinaryWithoutArchive(toolName, binaryFilePath, downloadUrl));
+    }
+    return await longRunning(`Downloading ${toolName} to ${binaryFilePath}.`, () => downloadBinary(toolName, binaryFilePath, downloadUrl, pathToBinaryInArchive));
 }
 
 async function downloadBinary(
@@ -76,6 +78,25 @@ async function downloadBinary(
     const unzippedBinaryFilePath = path.join(downloadFolder, pathToBinaryInArchive);
 
     await moveFile(unzippedBinaryFilePath, binaryFilePath);
+
+    //If linux check -- make chmod 0755
+    fs.chmodSync(path.join(binaryFilePath), '0755');
+    return { succeeded: true, result: binaryFilePath };
+}
+
+async function downloadBinaryWithoutArchive(
+    toolName: string,
+    binaryFilePath: string,
+    downloadUrl: string
+): Promise<Errorable<string>> {
+
+    const downloadResult = await download.once(downloadUrl, binaryFilePath);
+    if (failed(downloadResult)) {
+        return {
+            succeeded: false,
+            error: `Failed to download binary from ${downloadUrl}: ${downloadResult.error}`
+        };
+    }
 
     //If linux check -- make chmod 0755
     fs.chmodSync(path.join(binaryFilePath), '0755');
