@@ -4,6 +4,11 @@
     grid-gap: 1rem;
 }
 
+.infoIndicator {
+    color: var(--vscode-notificationsInfoIcon-foreground);
+    padding-right: 0.5rem;
+}
+
 .label {
     grid-column: 1 / 2;
 }

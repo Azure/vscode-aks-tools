@@ -1,6 +1,6 @@
-import { VSCodeButton, VSCodeDivider, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton, VSCodeDivider, VSCodeDropdown, VSCodeLink, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+import { faInfoCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import styles from "./CreateCluster.module.css";
 import { FormEvent, useState } from "react";
 import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
@@ -71,6 +71,12 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     <>
         <form className={styles.createForm} onSubmit={handleSubmit}>
             <div className={styles.inputContainer}>
+                <span className={styles.fullWidth}>
+                    <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
+                    This will create a <i>Standard</i> cluster. See
+                    &nbsp;<VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/quotas-skus-regions#cluster-configuration-presets-in-the-azure-portal">Presets</VSCodeLink>&nbsp;
+                    for more information.
+                </span>
                 <VSCodeDivider className={styles.fullWidth}/>
 
                 <label htmlFor="existing-resource-group-dropdown" className={styles.label}>Resource Group</label>
