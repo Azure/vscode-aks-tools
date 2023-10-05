@@ -6,6 +6,7 @@ import { InitialState, ToWebViewMsgDef } from "../../../src/webview-contract/web
 import { Stage, createState, updateState, userMessageHandler, vscodeMessageHandler } from "./helpers/state";
 import { getEventHandlers, getMessageHandler } from "../utilities/state";
 import { UserMsgDef } from "./helpers/userCommands";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 
 export function CreateCluster(props: InitialState) {
     const vscode = getWebviewMessageContext<"createCluster">();
@@ -39,7 +40,12 @@ export function CreateCluster(props: InitialState) {
             case Stage.CollectingInput:
                 return <CreateClusterInput locations={state.locations!} resourceGroups={state.resourceGroups!} userMessageHandlers={userMessageEventHandlers} vscode={vscode} />;
             case Stage.Creating:
-                return <p>Status: {state.message}</p>;
+                return (
+                <>
+                    <h3>Creating Cluster {state.createParams!.name} in {state.createParams!.location}</h3>
+                    <VSCodeProgressRing />
+                </>
+                )
             case Stage.Failed:
                 return (
                 <>
@@ -48,6 +54,7 @@ export function CreateCluster(props: InitialState) {
                 </>
                 );
             case Stage.Succeeded:
+                vscode.postMessage({command: "createClusterSuccess", parameters: state.createParams!.name});
                 return (
                     <Success
                         portalUrl={props.portalUrl}
