@@ -40,8 +40,13 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         return {
             getLocationsRequest: _ => this._handleGetLocationsRequest(webview),
             getResourceGroupsRequest: _ => this._handleGetResourceGroupsRequest(webview),
-            createClusterRequest: args => this._handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview)
+            createClusterRequest: args => this._handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview),
+            createClusterSuccess: args => this._handleCreateClusterSuccess(args),
         };
+    }
+    _handleCreateClusterSuccess(name: any) {
+        window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
+        return;
     }
 
     private async _handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
