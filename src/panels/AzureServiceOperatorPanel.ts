@@ -77,6 +77,8 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     }
 
     private async _handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+        // From installation instructions:
+        // https://azure.github.io/azure-service-operator/#installation
         const asoCrdYamlFile = "https://github.com/jetstack/cert-manager/releases/download/v1.12.1/cert-manager.yaml";
         const kubectlArgs = `create -f ${asoCrdYamlFile}`;
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
