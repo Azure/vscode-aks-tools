@@ -1,4 +1,5 @@
 import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink } from "./messaging";
+import { CreateClusterDefinition } from "./webviewDefinitions/createCluster";
 import { DetectorDefinition } from "./webviewDefinitions/detector";
 import { KubectlDefinition } from "./webviewDefinitions/kubectl";
 import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget";
@@ -22,6 +23,7 @@ export type WebviewDefinition<TInitialState extends object, TToVsCode extends Me
 type AllWebviewDefinitions = {
     style: TestStyleViewerDefinition,
     periscope: PeriscopeDefinition,
+    createCluster: CreateClusterDefinition,
     detector: DetectorDefinition,
     gadget: InspektorGadgetDefinition,
     kubectl: KubectlDefinition,

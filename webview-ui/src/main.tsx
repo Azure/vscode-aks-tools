@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom";
 import './main.css';
 import { decodeState } from "../../src/webview-contract/initialState";
+import { CreateCluster } from "./CreateCluster/CreateCluster";
 import { ContentId } from "../../src/webview-contract/webviewTypes";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { Periscope } from "./Periscope/Periscope";
@@ -34,6 +35,7 @@ function getVsCodeContent(): JSX.Element {
 
     const vsCodeInitialState = decodeState<any>(rootElem?.dataset.initialstate);
     const rendererLookup: Record<ContentId, () => JSX.Element> = {
+        createCluster: () => <CreateCluster {...vsCodeInitialState} />,
         style: () => <TestStyleViewer {...vsCodeInitialState} />,
         periscope: () => <Periscope {...vsCodeInitialState} />,
         detector: () => <Detector {...vsCodeInitialState} />,

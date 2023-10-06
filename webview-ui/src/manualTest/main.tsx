@@ -4,6 +4,7 @@ import './vars.css';
 import '../main.css';
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
+import { getCreateClusterScenarios } from "./createClusterTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getDetectorScenarios } from "./detectorTests";
 import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
@@ -26,6 +27,7 @@ const rootElem = document.getElementById("root");
 
 const contentTestScenarios: Record<ContentId, Scenario[]> = {
     style: getTestStyleViewerScenarios(),
+    createCluster: getCreateClusterScenarios(),
     periscope: getPeriscopeScenarios(),
     detector: getDetectorScenarios(),
     gadget: getInspektorGadgetScenarios(),
