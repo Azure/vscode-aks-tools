@@ -43,10 +43,6 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             createClusterRequest: args => this._handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview)
         };
     }
-    _handleCreateClusterSuccess(name: any) {
-        window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
-        return;
-    }
 
     private async _handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         const provider = await this.resourceManagementClient.providers.get("Microsoft.ContainerService");
