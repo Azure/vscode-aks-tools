@@ -25,8 +25,8 @@ export default async function aksAbortLastOperation(
     return;
   }
 
-  if (clusterProvisioingState.succeeded && clusterProvisioingState.result === "Succeeded") {
-    vscode.window.showInformationMessage(`Cluster provisioning state is ${clusterProvisioingState} and there is no operation to abort.`);
+  if (clusterProvisioingState.result === "Succeeded" || clusterProvisioingState.result === "Canceled") {
+    vscode.window.showInformationMessage(`Cluster provisioning state is ${clusterProvisioingState.result} and there is no operation to abort.`);
     return;
   }
   const answer = await vscode.window.showInformationMessage(`Do you want to abort last operation in cluster ${clusterName}?`, "Yes", "No");
