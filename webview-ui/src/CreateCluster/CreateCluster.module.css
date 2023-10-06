@@ -1,0 +1,47 @@
+.inputContainer {
+    display: grid;
+    grid-template-columns: 8rem 20rem 8rem;
+    grid-gap: 1rem;
+}
+
+.infoIndicator {
+    color: var(--vscode-notificationsInfoIcon-foreground);
+    padding-right: 0.5rem;
+}
+
+.label {
+    grid-column: 1 / 2;
+}
+
+.midControl {
+    grid-column: 2 / 3;
+}
+
+.longControl {
+    grid-column: 2 / 4;
+}
+
+.sideControl {
+    grid-column: 3 / 4;
+}
+
+.validationMessage {
+    grid-column: 2 / 4;
+    margin-top: -1rem;
+}
+
+.fullWidth {
+    grid-column: 1 / 4
+}
+
+.errorIndicator {
+    color: var(--vscode-testing-iconFailed);
+    padding-right: 5px;
+}
+
+.buttonContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.5rem;
+}

@@ -211,6 +211,10 @@
                 "title": "Create Cluster From Azure Portal"
             },
             {
+                "command": "aks.createCluster",
+                "title": "Create Cluster From VS Code"
+            },
+            {
                 "command": "aks.aksDeleteCluster",
                 "title": "Delete Cluster"
             },
@@ -225,10 +229,6 @@
             {
                 "command": "aks.aksRunKubectlCommands",
                 "title": "Run Kubectl Commands"
-            },
-            {
-                "command": "aks.createCluster",
-                "title": "Create Standard Cluster"
             }
         ],
         "menus": {
