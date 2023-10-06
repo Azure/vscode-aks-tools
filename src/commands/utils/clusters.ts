@@ -338,6 +338,21 @@ export async function determineClusterState(
     }
 }
 
+export async function determineProvisioningState(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<string>> {
+    try {
+        const containerClient = getContainerClient(target);
+        const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
+
+        return { succeeded: true, result:  clusterInfo.provisioningState ?? "" };
+
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
+    }
+}
+
 export async function startCluster(
     target: AksClusterTreeItem,
     clusterName: string,

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { abortLastOperationInCluster, getAksClusterTreeItem } from '../utils/clusters';
+import { abortLastOperationInCluster, determineProvisioningState, getAksClusterTreeItem } from '../utils/clusters';
 import { failed, succeeded } from '../utils/errorable';
 import { longRunning } from '../utils/host';
 
@@ -18,7 +18,17 @@ export default async function aksAbortLastOperation(
   }
 
   const clusterName = cluster.result.name;
+  
+  const clusterProvisioingState = await determineProvisioningState(cluster.result, clusterName);
+  if (failed(clusterProvisioingState)) {
+    vscode.window.showErrorMessage(clusterProvisioingState.error);
+    return;
+  }
 
+  if (clusterProvisioingState.succeeded && clusterProvisioingState.result === "Succeeded") {
+    vscode.window.showInformationMessage(`Cluster provisioning state is ${clusterProvisioingState} and there is no operation to abort.`);
+    return;
+  }
   const answer = await vscode.window.showInformationMessage(`Do you want to abort last operation in cluster ${clusterName}?`, "Yes", "No");
 
   if (answer === "Yes") {
