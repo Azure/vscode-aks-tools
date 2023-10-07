@@ -75,7 +75,7 @@ export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
 
 export function getDraftConfig(): Errorable<DraftConfig> {
     const draftConfig = vscode.workspace.getConfiguration('aks.drafttool');
-    const props = combine([getConfigValue(draftConfig, 'releaseTag')]);
+    const props = getConfigValue(draftConfig, 'releaseTag');
  
     if (failed(props)) {
        return {
@@ -85,7 +85,7 @@ export function getDraftConfig(): Errorable<DraftConfig> {
     }
  
     const config = {
-       releaseTag: props.result[0]
+       releaseTag: props.result
     };
  
     return {succeeded: true, result: config};
