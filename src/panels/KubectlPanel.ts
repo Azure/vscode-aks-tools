@@ -6,6 +6,7 @@ import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { InitialState, PresetCommand, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kubectl";
 import { addKubectlCustomCommand, deleteKubectlCustomCommand } from "../commands/utils/config";
+import { OpenAIHelper } from "./utilities/openai";
 
 export class KubectlPanel extends BasePanel<"kubectl"> {
     constructor(extensionUri: Uri) {
@@ -14,6 +15,8 @@ export class KubectlPanel extends BasePanel<"kubectl"> {
 }
 
 export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
+    openAIHelper = new OpenAIHelper();
+
     constructor(
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
@@ -36,7 +39,8 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         return {
             runCommandRequest: args => this._handleRunCommandRequest(args.command, webview),
             addCustomCommandRequest: args => this._handleAddCustomCommandRequest(args.name, args.command),
-            deleteCustomCommandRequest: args => this._handleDeleteCustomCommandRequest(args.name)
+            deleteCustomCommandRequest: args => this._handleDeleteCustomCommandRequest(args.name),
+            ...this.openAIHelper.getMessageHandler(webview)
         };
     }
 
@@ -66,6 +70,12 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
                 errorMessage
             }
         });
+
+        // checking errorMessage != null passed for empty string and was giving AI suggestions for non error responses. 
+        if (errorMessage) {
+            const prompt = `I encountered the following error message when running 'kubectl ${command}': \n\n${errorMessage}\n\nWhat does this error mean, and how can I fix it?`;
+            await this.openAIHelper.runOpenAIRequest(prompt, webview);
+        }
     }
 
     private async _handleAddCustomCommandRequest(name: string, command: string) {

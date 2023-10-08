@@ -1,4 +1,5 @@
 import { WebviewDefinition } from "../webviewTypes";
+import { AIToVsCodeMsgDef, AIToWebViewMsgDef } from "./shared";
 
 export enum CommandCategory {
     Resources,
@@ -35,7 +36,7 @@ export interface InitialState {
     customCommands: PresetCommand[]
 }
 
-export type ToVsCodeMsgDef = {
+export type ToVsCodeMsgDef = AIToVsCodeMsgDef & {
     runCommandRequest: {
         command: string
     },
@@ -48,7 +49,7 @@ export type ToVsCodeMsgDef = {
     }
 };
 
-export type ToWebViewMsgDef = {
+export type ToWebViewMsgDef = AIToWebViewMsgDef & {
     runCommandResponse: {
         output: string | null
         errorMessage: string | null

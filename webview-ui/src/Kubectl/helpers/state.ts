@@ -1,8 +1,9 @@
 import { PresetCommand, ToWebViewMsgDef, presetCommands } from "../../../../src/webview-contract/webviewDefinitions/kubectl"
+import { AIState, createAIState, getAIUserMessageHandler, getAIVscodeMessageHandler } from "../../utilities/openai"
 import { StateMessageHandler, chainStateUpdaters, toStateUpdater } from "../../utilities/state"
 import { UserMsgDef } from "./userCommands"
 
-export interface KubectlState {
+export interface KubectlState extends AIState {
     initializationStarted: boolean
     allCommands: PresetCommand[]
     selectedCommand: string | null
@@ -20,12 +21,14 @@ export function createState(customCommands: PresetCommand[]): KubectlState {
         isCommandRunning: false,
         output: null,
         errorMessage: null,
-        isSaveDialogShown: false
+        isSaveDialogShown: false,
+        ...createAIState()
     };
 }
 
 export const vscodeMessageHandler: StateMessageHandler<ToWebViewMsgDef, KubectlState> = {
-    runCommandResponse: (state, args) => ({...state, output: args.output, errorMessage: args.errorMessage, explanation: null, isCommandRunning: false})
+    runCommandResponse: (state, args) => ({...state, output: args.output, errorMessage: args.errorMessage, explanation: null, isCommandRunning: false}),
+    ...getAIVscodeMessageHandler()
 }
 
 export const userMessageHandler: StateMessageHandler<UserMsgDef, KubectlState> = {
@@ -33,7 +36,8 @@ export const userMessageHandler: StateMessageHandler<UserMsgDef, KubectlState> =
     setSelectedCommand: (state, args) => ({...state, selectedCommand: args.command, output: null, errorMessage: null, explanation: null}),
     setAllCommands: (state, args) => ({...state, allCommands: args.allCommands}),
     setCommandRunning: (state, _args) => ({...state, isCommandRunning: true, output: null, errorMessage: null, explanation: null}),
-    setSaveDialogVisibility: (state, args) => ({...state, isSaveDialogShown: args.shown})
+    setSaveDialogVisibility: (state, args) => ({...state, isSaveDialogShown: args.shown}),
+    ...getAIUserMessageHandler()
 }
 
 export const updateState = chainStateUpdaters(
