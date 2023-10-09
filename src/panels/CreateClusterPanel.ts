@@ -150,7 +150,7 @@ async function createCluster(
     const poller = await containerServiceClient.managedClusters.beginCreateOrUpdate(group.name, name, clusterSpec);
 
     poller.onProgress(state => {
-        if (state.isCancelled) {
+        if (state.status === "canceled") {
             webview.postMessage({
                 command: "progressUpdate",
                 parameters: {
@@ -159,17 +159,18 @@ async function createCluster(
                     errorMessage: null
                 }
             });
-        } else if (state.error) {
-            window.showErrorMessage(`Error creating AKS cluster ${name}: ${getErrorMessage(state.error)}`);
+        } else if (state.status === "failed") {
+            const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+            window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
             webview.postMessage({
                 command: "progressUpdate",
                 parameters: {
                     event: ProgressEventType.Failed,
                     operationDescription,
-                    errorMessage: getErrorMessage(state.error)
+                    errorMessage
                 }
             });
-        } else if (state.isCompleted) {
+        } else if (state.status === "succeeded") {
             window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
             webview.postMessage({
                 command: "progressUpdate",
