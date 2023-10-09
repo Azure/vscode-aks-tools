@@ -338,6 +338,21 @@ export async function determineClusterState(
     }
 }
 
+export async function determineProvisioningState(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<string>> {
+    try {
+        const containerClient = getContainerClient(target);
+        const clusterInfo = (await containerClient.managedClusters.get(target.resourceGroupName, clusterName));
+
+        return { succeeded: true, result:  clusterInfo.provisioningState ?? "" };
+
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
+    }
+}
+
 export async function startCluster(
     target: AksClusterTreeItem,
     clusterName: string,
@@ -442,6 +457,20 @@ export async function deleteCluster(
         await containerClient.managedClusters.beginDeleteAndWait(target.resourceGroupName, clusterName)
 
         return { succeeded: true, result: "Delete cluster succeeded." };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${getErrorMessage(ex)}` };
+    }
+}
+
+export async function abortLastOperationInCluster(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<string>> {
+    try {
+        const containerClient = getContainerClient(target);
+        await containerClient.managedClusters.beginAbortLatestOperationAndWait(target.resourceGroupName, clusterName)
+
+        return { succeeded: true, result: "Abort last operation in cluster succeeded." };
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${getErrorMessage(ex)}` };
     }

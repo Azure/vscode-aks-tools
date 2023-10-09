@@ -30,6 +30,7 @@ import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 import aksRotateClusterCert from './commands/aksRotateClusterCert/aksRotateClusterCert';
 import { aksInspektorGadgetShow } from './commands/aksInspektorGadget/aksInspektorGadget';
 import aksCreateCluster from './commands/aksCreateCluster/aksCreateCluster';
+import aksAbortLastOperation from './commands/aksAbortLastOperation/aksAbortLastOperation';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -71,6 +72,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksCategoryConnectivity', aksCategoryConnectivity);
         registerCommandWithTelemetry('aks.aksDeleteCluster', aksDeleteCluster);
         registerCommandWithTelemetry('aks.aksRotateClusterCert', aksRotateClusterCert);
+        registerCommandWithTelemetry('aks.aksAbortLastOperationInCluster', aksAbortLastOperation);
         registerCommandWithTelemetry('aks.aksInspektorGadgetShow', aksInspektorGadgetShow);
         registerCommandWithTelemetry('aks.createCluster', aksCreateCluster);
 
