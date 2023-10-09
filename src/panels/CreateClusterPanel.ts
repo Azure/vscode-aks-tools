@@ -150,7 +150,7 @@ async function createCluster(
     const poller = await containerServiceClient.managedClusters.beginCreateOrUpdate(group.name, name, clusterSpec);
 
     poller.onProgress(state => {
-        if (state.isCancelled) {
+        if (state.status === "canceled") {
             webview.postMessage({
                 command: "progressUpdate",
                 parameters: {
@@ -169,7 +169,7 @@ async function createCluster(
                     errorMessage: getErrorMessage(state.error)
                 }
             });
-        } else if (state.isCompleted) {
+        } else if (state.status === "succeeded") {
             window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
             webview.postMessage({
                 command: "progressUpdate",
