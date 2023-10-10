@@ -32,7 +32,7 @@ export function getKubectlScenarios() {
             webview.postMessage({
                 command: "runCommandResponse",
                 parameters: {
-                    output: Array.from({length: 20}, (_, i) => `This is the output of "kubectl ${command}" line ${i + 1}`).join('\n'),
+                    output: Array.from({length: 20}, (_, i) => `This is the output of "kubectl ${command}" line ${i + 1} and it's quite a long line so that we can adequately test whether the output scrolls or wraps correctly.`).join('\n'),
                     errorMessage: ""
                 }
             });

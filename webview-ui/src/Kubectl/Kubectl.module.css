@@ -4,7 +4,8 @@
     grid-template-areas:
         "header header"
         "nav    content";
-    grid-template-columns: 1fr 3fr;
+    /* https://css-tricks.com/preventing-a-grid-blowout/ */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
 }
 
 .mainHeading {
@@ -17,6 +18,11 @@
 
 .mainContent {
     grid-area: content;
+}
+
+.mainContent pre {
+    /* Prevent <pre> elements from pushing out the width of the containing page */
+    overflow-x: auto;
 }
 
 ul.commandCategoryList {
