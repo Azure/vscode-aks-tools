@@ -47,4 +47,4 @@ export type ToWebViewMsgDef = {
     }
 };
 
-export type KubectlDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
+export type TCPDumpDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

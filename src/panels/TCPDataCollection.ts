@@ -7,13 +7,13 @@ import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { InitialState, TCPPresetCommand, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/tcpDump";
 import { addKubectlCustomCommand, deleteKubectlCustomCommand } from "../commands/utils/config";
 
-export class TCPDataCollection extends BasePanel<"kubectl"> {
+export class TCPDataCollection extends BasePanel<"tcpDump"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "kubectl");
+        super(extensionUri, "tcpDump");
     }
 }
 
-export class TCPDataCollectionDataProvider implements PanelDataProvider<"kubectl"> {
+export class TCPDataCollectionDataProvider implements PanelDataProvider<"tcpDump"> {
     constructor(
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
