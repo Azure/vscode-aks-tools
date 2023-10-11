@@ -1,5 +1,20 @@
 # Change Log
 
+## [1.3.15]
+
+* Avoid lengthy kubectl output changing the layout of containing elements.
+* Handle explicit state for poller.
+* Abort last operation on cluster.
+* Remove the unsed method.
+* Implement Create Cluster as WebView.
+* Add state management.
+* Update ASO version and move to webview-ui project.
+* Fix comon id issue.
+* Default branch is now main.
+* Move kubectl commands to webview.
+
+Thank you so much to @peterbom, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Yi, Tom, Indu, Sri, Prabha, Chase, Thank you all for your ideas! 
+
 ## [1.3.14]
 
 * Update Kubelogin version to use latest.
