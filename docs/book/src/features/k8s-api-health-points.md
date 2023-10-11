@@ -2,7 +2,7 @@
 
 ### Run Kubernetes API Health Endpoints
 
-Right click on your AKS cluster and click on **Run Kubectl Command** and as shown in the image below user can easily run health checks by selecting on in the new kubectl run command panel. Currently we have enable following health check:
+Right click on your AKS cluster and click on **Run Kubectl Commands**. Select and run health check commands from the *Health* section as shown in the image below. Currently we provide:
 
 - Healthz
 - Livez
