@@ -10,3 +10,9 @@ Right click on your AKS cluster and click on **Run Kubectl Commands** to easily 
 - Get Cluster Info
 - Get Node
 - Get All Events
+
+User can also run the custom command by typing the kubectl command parameter in the text area and click `Run`.
+
+![Kubectl commad](../resources/right-click-menu-kubectl.png)
+
+![Kubectl command panel](../resources/kubectl-command-panel.png)
