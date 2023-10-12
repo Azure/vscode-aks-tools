@@ -10,8 +10,12 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 
 ![Cloud explorer extension menu](../resources/right-click-menu-managedoperations.png)
 
-![Cloud explorer extension menu](../resources/right-click-api-health-check-menu.png)
-
 ![Cloud explorer extension menu](../resources/right-click-inspektor-gadget.png)
 
 ![Cloud explorer extension menu](../resources/right-click-subscription.png)
+
+![Cloud explorer health check panel](../resources/kubectl-command-panel.png)
+
+![Cloud explorer new inspektor gadget panel](../resources/inspector-gadget-1.png)
+
+![Cloud explorer create cluster webview](../resources/create-cluster-webview.png)
