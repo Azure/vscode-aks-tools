@@ -46,7 +46,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         e => e.currentTarget as HTMLInputElement,
         elem => elem.value || null,
         elem => elem.checkValidity(),
-        elem => elem.validity.patternMismatch ? "Cluster name must consist only of letters, numbers, dashes and underscores."
+        elem => elem.validity.patternMismatch ? "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number."
             : elem.validity.tooShort ? "Cluster name must be at least 1 character long."
             : elem.validity.tooLong ? "Cluster name must be at most 63 characters long."
             : elem.validity.valueMissing ? "Cluster name is required."
@@ -126,7 +126,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     required
                     minlength={1}
                     maxlength={63}
-                    pattern="[a-zA-Z0-9_\-]+"
+                    pattern="^[a-zA-Z0-9][a-zA-Z0-9_\-]+[a-zA-Z0-9]$"
                     onBlur={handleNameChange}
                     onInput={handleNameChange}
                 />
