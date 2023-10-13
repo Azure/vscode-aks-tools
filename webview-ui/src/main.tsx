@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import './main.css';
 import { decodeState } from "../../src/webview-contract/initialState";
 import { CreateCluster } from "./CreateCluster/CreateCluster";
@@ -23,6 +23,7 @@ import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperato
 //   and will respond using `Webview.postMessage`.
 
 const rootElem = document.getElementById("root");
+const root = createRoot(rootElem!);
 
 function getVsCodeContent(): JSX.Element {
     if (!rootElem) {
@@ -47,9 +48,8 @@ function getVsCodeContent(): JSX.Element {
     return rendererLookup[vscodeContentId]();
 }
 
-ReactDOM.render(
+root.render(
     <StrictMode>
         {getVsCodeContent()}
-    </StrictMode>,
-    rootElem
+    </StrictMode>
 );

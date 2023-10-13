@@ -13,7 +13,7 @@ export function getMarkdownComponents(): Components {
         span: ({node, ...props}) => {
             return (
                 <>
-                    {getIcons(node.properties?.className as string[] || [])}
+                    {getIcons(node?.properties?.className as string[] || [])}
                     <span {...props} />
                 </>
             );
