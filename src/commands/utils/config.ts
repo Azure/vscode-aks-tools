@@ -87,7 +87,7 @@ export function getDraftConfig(): Errorable<DraftConfig> {
     const config = {
        releaseTag: props.result
     };
- 
+
     return {succeeded: true, result: config};
  }
 
