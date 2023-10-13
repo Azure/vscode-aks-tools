@@ -26,7 +26,7 @@ export async function getKubeloginBinaryPath(): Promise<Errorable<string>> {
     const pathToBinaryInArchive = getPathToBinaryInArchive();
     const binaryFilename = path.basename(pathToBinaryInArchive);
 
-    return await getToolBinaryPath("kubelogin", releaseTag, downloadUrl, pathToBinaryInArchive, binaryFilename);
+    return await getToolBinaryPath("kubelogin", releaseTag, binaryFilename, {downloadUrl, isCompressed: true, pathToBinaryInArchive});
 }
 
 function getArchiveFilename() {
