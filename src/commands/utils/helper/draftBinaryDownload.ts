@@ -30,7 +30,7 @@ async function getLatestDraftReleaseTag() {
    const downloadUrl = `https://github.com/Azure/draft/releases/download/${releaseTag}/${draftBinaryFile}`;
    const binaryFilename = path.basename(draftBinaryFile);
 
-   return await getToolBinaryPath("draft", releaseTag, downloadUrl, undefined, binaryFilename);
+   return await getToolBinaryPath("draft", releaseTag, binaryFilename, {downloadUrl, isCompressed: false});
  }
 
  function getBinaryFileName() {
