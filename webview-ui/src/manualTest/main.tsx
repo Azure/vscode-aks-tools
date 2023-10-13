@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import './vars.css';
 import '../main.css';
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
@@ -24,6 +24,7 @@ import { getASOScenarios } from "./asoTests";
 //   dispatching `message` events to the `window` object so that application components can listen to them in the same way.
 
 const rootElem = document.getElementById("root");
+const root = createRoot(rootElem!);
 
 const contentTestScenarios: Record<ContentId, Scenario[]> = {
     style: getTestStyleViewerScenarios(),
@@ -39,11 +40,10 @@ const testScenarios = Object.values(contentTestScenarios).flatMap(s => s);
 
 const testScenarioNames = testScenarios.map(f => f.name);
 
-ReactDOM.render(
+root.render(
     <StrictMode>
         <TestScenarioSelector testScenarioNames={testScenarioNames} onTestScenarioChange={handleTestScenarioChange} />
-    </StrictMode>,
-    rootElem
+    </StrictMode>
 );
 
 function handleTestScenarioChange(name: string): JSX.Element {
