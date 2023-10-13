@@ -28,7 +28,7 @@ export async function getKubectlGadgetBinaryPath(): Promise<Errorable<string>> {
     // so we can't simply extract it from the path within the archive.
     const binaryFilename = getBinaryFilename();
 
-    return await getToolBinaryPath("kubectl-gadget", releaseTag, downloadUrl, pathToBinaryInArchive, binaryFilename);
+    return await getToolBinaryPath("kubectl-gadget", releaseTag, binaryFilename, {downloadUrl, isCompressed: true, pathToBinaryInArchive});
 }
 
 function getArchiveFilename(releaseTag: string) {

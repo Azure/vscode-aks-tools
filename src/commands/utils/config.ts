@@ -3,6 +3,7 @@ import { combine, failed, Errorable } from './errorable';
 import { KubeloginConfig, KustomizeConfig } from '../periscope/models/config';
 import * as semver from "semver";
 import { CommandCategory, PresetCommand } from '../../webview-contract/webviewDefinitions/kubectl';
+import { DraftConfig } from '../periscope/models/DraftConfig';
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration('aks.periscope');
@@ -71,6 +72,24 @@ export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
 
     return { succeeded: true, result: configresult };
 }
+
+export function getDraftConfig(): Errorable<DraftConfig> {
+    const draftConfig = vscode.workspace.getConfiguration('aks.drafttool');
+    const props = getConfigValue(draftConfig, 'releaseTag');
+ 
+    if (failed(props)) {
+       return {
+          succeeded: false,
+          error: `Failed to read aks.draft configuration: ${props.error}`
+       };
+    }
+ 
+    const config = {
+       releaseTag: props.result
+    };
+
+    return {succeeded: true, result: config};
+ }
 
 function getConfigValue(config: vscode.WorkspaceConfiguration, key: string): Errorable<string> {
     const value = config.get(key);
