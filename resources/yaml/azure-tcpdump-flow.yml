@@ -1,0 +1,50 @@
+# # Variables
+# node=aks-agentpool-31737175-vmss000000
+# nodecapfile=/tmp/nodeuniquename.cap
+# localcapfile=/tmp/localuniquename.cap
+
+# # Create the pod (containing tcpdump)
+# kubectl apply -f - << EOF
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: debug-${node}
+#   namespace: default
+# spec:
+#   containers:
+#   - args: ["-c", "sleep infinity"]
+#     command: ["/bin/sh"]
+#     image: docker.io/corfr/tcpdump
+#     imagePullPolicy: IfNotPresent
+#     name: debug
+#     resources: {}
+#     securityContext:
+#       privileged: true
+#       runAsUser: 0
+#     volumeMounts:
+#     - mountPath: /host
+#       name: host-volume
+#   volumes:
+#   - name: host-volume
+#     hostPath:
+#       path: /
+#   dnsPolicy: ClusterFirst
+#   nodeSelector:
+#     kubernetes.io/hostname: ${node}
+#   restartPolicy: Never
+#   securityContext: {}
+#   hostIPC: true
+#   hostNetwork: true
+#   hostPID: true
+# EOF
+
+# # Start the capture
+# kubectl exec debug-$node -- /bin/sh -c "tcpdump --snapshot-length=0 -vvv -w $nodecapfile 1>/dev/null 2>&1 &"
+
+# # Stop the capture
+# kubectl exec debug-$node -- /bin/sh -c "pkill tcpdump"
+
+# # Download the capture file
+# kubectl cp debug-$node:$nodecapfile $localcapfile
+
+

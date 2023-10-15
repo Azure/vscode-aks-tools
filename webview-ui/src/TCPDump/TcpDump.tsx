@@ -15,7 +15,9 @@ import * as vscodefoo from 'vscode';
 
 export function TcpDump(props: InitialState) {
     const vscode = getWebviewMessageContext<"kubectl">();
-
+    const node="aks-agentpool-52310376-vmss000008"
+    const nodecapfile=`/tmp/nodeuniquename.cap`;
+    const localcapfile=`/tmp/localuniquename.cap`;
     const [state, dispatch] = useReducer(updateState, createState(props.customCommands));
 
     useEffect(() => {
@@ -36,7 +38,7 @@ export function TcpDump(props: InitialState) {
     function handleCommandDelete(commandName: string) {
         const allCommands = state.allCommands.filter(cmd => cmd.name !== commandName);
         userMessageEventHandlers.onSetAllCommands({ allCommands });
-        vscode.postMessage({ command: "deleteCustomCommandRequest", parameters: {name: commandName} });
+        vscode.postMessage({ command: "deleteCustomCommandRequest", parameters: { name: commandName } });
     }
 
     function handleCommandUpdate(command: string) {
@@ -45,14 +47,81 @@ export function TcpDump(props: InitialState) {
 
     function handleRunCommand(command: string) {
         userMessageEventHandlers.onSetCommandRunning();
-        vscode.postMessage({ command: "runCommandRequest", parameters: {command: command.trim()} });
+        vscode.postMessage({ command: "runCommandRequest", parameters: { command: command.trim() } });
     }
 
     function handleTerminalRunCommand() {
         // let t = vscodefoo.window.createTerminal("testt");
         // new line is added by default to execute
         // t.sendText(`kubectl get pods`); 
-        vscode.postMessage({ command: "runCommandRequest", parameters: {command: `debug node/aks-agentpool-52310376-vmss000008 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0`} })
+        vscode.postMessage({
+            command: "runCommandRequest", parameters: {
+                command: `apply -f - << EOF
+                apiVersion: v1
+                kind: Pod
+                metadata:
+                  name: debug-${node}
+                  namespace: default
+                spec:
+                  containers:
+                  - args: ["-c", "sleep infinity"]
+                    command: ["/bin/sh"]
+                    image: docker.io/corfr/tcpdump
+                    imagePullPolicy: IfNotPresent
+                    name: debug
+                    resources: {}
+                    securityContext:
+                      privileged: true
+                      runAsUser: 0
+                    volumeMounts:
+                    - mountPath: /host
+                      name: host-volume
+                  volumes:
+                  - name: host-volume
+                    hostPath:
+                      path: /
+                  dnsPolicy: ClusterFirst
+                  nodeSelector:
+                      kubernetes.io/hostname: ${node}
+                  restartPolicy: Never
+                  securityContext: {}
+                  hostIPC: true
+                  hostNetwork: true
+                  hostPID: true
+                EOF`}
+        })
+    }
+
+    function handleTerminalRunCommandPlay() {
+        // let t = vscodefoo.window.createTerminal("testt");
+        // new line is added by default to execute
+        // t.sendText(`kubectl get pods`); 
+        
+        vscode.postMessage({
+            command: "runCommandRequest", parameters: {
+                command: `exec debug-${node} -- /bin/sh -c "tcpdump --snapshot-length=0 -vvv -w ${nodecapfile} 1>/dev/null 2>&1 &"`}
+        })
+    }
+
+    function handleTerminalRunCommandStop() {
+        // let t = vscodefoo.window.createTerminal("testt");
+        // new line is added by default to execute
+        // t.sendText(`kubectl get pods`); 
+
+        vscode.postMessage({
+            command: "runCommandRequest", parameters: {
+                command: `exec debug-${node} -- /bin/sh -c "pkill tcpdump"`}
+        })
+    }
+
+    function handleTerminalRunCommandCopy() {
+        // let t = vscodefoo.window.createTerminal("testt");
+        // new line is added by default to execute
+        // t.sendText(`kubectl get pods`); 
+        vscode.postMessage({
+            command: "runCommandRequest", parameters: {
+                command: `cp debug-$node:${nodecapfile} ${localcapfile}`}
+        })
     }
 
     function handleSaveRequest() {
@@ -85,27 +154,30 @@ export function TcpDump(props: InitialState) {
     const matchesExisting = state.selectedCommand != null ? state.selectedCommand.trim() in commandLookup : false;
 
     return (
-    <div className={styles.wrapper}>
-        <header className={styles.mainHeading}>
-            <h2>Kubectl Command Run for TESTT {props.clusterName}</h2>
-            <VSCodeDivider />
-        </header>
-        <nav className={styles.commandNav}>
-            <CommandList commands={state.allCommands} selectedCommand={state.selectedCommand} onSelectionChanged={handleCommandSelectionChanged} onCommandDelete={handleCommandDelete} />
-        </nav>
-        <div className={styles.mainContent}>
-            <CommandInput command={state.selectedCommand || ''} matchesExisting={matchesExisting} onCommandUpdate={handleCommandUpdate} onRunCommand={handleRunCommand} onSaveRequest={handleSaveRequest} />
-            <VSCodeDivider />
-            <CommandOutput
-                isCommandRunning={state.isCommandRunning}
-                output={state.output}
-                errorMessage={state.errorMessage}
-                userMessageHandlers={userMessageEventHandlers}
-            />
-        </div>
+        <div className={styles.wrapper}>
+            <header className={styles.mainHeading}>
+                <h2>Kubectl Command Run for TESTT {props.clusterName}</h2>
+                <VSCodeDivider />
+            </header>
+            <nav className={styles.commandNav}>
+                <CommandList commands={state.allCommands} selectedCommand={state.selectedCommand} onSelectionChanged={handleCommandSelectionChanged} onCommandDelete={handleCommandDelete} />
+            </nav>
+            <div className={styles.mainContent}>
+                <CommandInput command={state.selectedCommand || ''} matchesExisting={matchesExisting} onCommandUpdate={handleCommandUpdate} onRunCommand={handleRunCommand} onSaveRequest={handleSaveRequest} />
+                <VSCodeDivider />
+                <CommandOutput
+                    isCommandRunning={state.isCommandRunning}
+                    output={state.output}
+                    errorMessage={state.errorMessage}
+                    userMessageHandlers={userMessageEventHandlers}
+                />
+            </div>
 
-        <SaveCommandDialog isShown={state.isSaveDialogShown} existingNames={allCommandNames} onCancel={handleSaveDialogCancel} onAccept={handleSaveDialogAccept} />
-        <a href="" onClick={(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => handleTerminalRunCommand()}>Get Node Dump</a>
-    </div>
+            <SaveCommandDialog isShown={state.isSaveDialogShown} existingNames={allCommandNames} onCancel={handleSaveDialogCancel} onAccept={handleSaveDialogAccept} />
+            <a href="" onClick={(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => handleTerminalRunCommand()}>Get Node Dump</a>
+            <a href="" onClick={(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => handleTerminalRunCommandPlay()}>Play</a>
+            <a href="" onClick={(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => handleTerminalRunCommandStop()}>Stop</a>
+            <a href="" onClick={(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => handleTerminalRunCommandCopy()}>Copy</a>
+        </div>
     );;
 }
