@@ -40,9 +40,8 @@ export async function aksTCPDumpFromLinux(_context: IActionContext, target: any)
         return;
     }
 
-    const customCommands = getKubectlCustomCommands();
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const dataProvider = new TCPDataCollectionDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, customCommands);
+    const dataProvider = new TCPDataCollectionDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name);
     const panel = new TCPDataCollection(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);

@@ -1,46 +1,27 @@
 import { WebviewDefinition } from "../webviewTypes";
 
-export enum CommandCategory {
-    Resources,
-    Health,
-    Custom
-}
-
-const presetCommandItems: [string, string, CommandCategory][] = [
-    ["Get All nodes", "get nodes --output wide", CommandCategory.Resources]
-];
-
-export const tcpPresetCommands: TCPPresetCommand[] = presetCommandItems.map(cmd => ({
-    name: cmd[0],
-    command: cmd[1],
-    category: cmd[2]
-}));
-
-export interface TCPPresetCommand {
-    name: string,
-    command: string
-    category: CommandCategory
-}
-
 export interface InitialState {
-    clusterName: string,
-    customCommands: TCPPresetCommand[]
+    clusterName: string
 }
 
 export type ToVsCodeMsgDef = {
-    runCommandRequest: {
-        command: string
+    startDebugPod: {
+        node: string
     },
-    addCustomCommandRequest: {
-        name: string,
-        command: string
+    startTcpDump: {
+        node: string
     },
-    deleteCustomCommandRequest: {
-        name: string
+    endTcpDump: {
+        node: string
+    },
+    downloadCaptureFile: {
+        node: string,
+        localcapfile: string
     }
 };
 
 export type ToWebViewMsgDef = {
+    // TODO : Delete
     runCommandResponse: {
         output: string | null
         errorMessage: string | null

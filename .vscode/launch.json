@@ -35,10 +35,18 @@
             "preLaunchTask": "npm: test-compile"
         },
         {
-            "name": "Webview UI",
+            "name": "Webview UI (Edge)",
             "type": "msedge",
             "request": "launch",
-            "url": "http://localhost:3000",
+            "url": "http://localhost:3002",
+            "webRoot": "${workspaceFolder}/webview-ui",
+            "preLaunchTask": "dev:webview"
+        },
+        {
+            "name": "Webview UI (Chrome)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3002",
             "webRoot": "${workspaceFolder}/webview-ui",
             "preLaunchTask": "dev:webview"
         }
