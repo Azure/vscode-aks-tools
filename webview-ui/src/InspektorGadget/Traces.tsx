@@ -10,8 +10,8 @@ import { GadgetConfiguration, TraceGadget, getGadgetMetadata, toGadgetArguments 
 import { GadgetCategory } from "./helpers/gadgets/types";
 import { TraceOutput } from "./TraceOutput";
 import { NamespaceFilter, NamespaceSelection } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
-import { UserMsgDef } from "./helpers/userCommands";
 import { EventHandlers } from "../utilities/state";
+import { EventDef } from "./helpers/state";
 
 export interface TracesProps {
     category: GadgetCategory
@@ -19,7 +19,7 @@ export interface TracesProps {
     nodes: Nodes
     resources: ClusterResources
     onRequestTraceId: () => number
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    eventHandlers: EventHandlers<EventDef>
 }
 
 const streamingCategories: GadgetCategory[] = ["top", "trace"];
@@ -73,7 +73,7 @@ export function Traces(props: TracesProps) {
             setSelectedTraceId(null);
         }
 
-        props.userMessageHandlers.onDeleteTraces({traceIds: checkedTraceIds});
+        props.eventHandlers.onDeleteTraces({traceIds: checkedTraceIds});
         setCheckedTraceIds([]);
     }
 
@@ -92,7 +92,7 @@ export function Traces(props: TracesProps) {
             vscode.postMessage({ command: "runBlockingTraceRequest", parameters: {arguments: gadgetArguments, traceId} });
         }
 
-        props.userMessageHandlers.onCreateTrace({trace});
+        props.eventHandlers.onCreateTrace({trace});
         setSelectedTraceId(traceId);
 
         if (isStreamingTrace) {
@@ -182,7 +182,7 @@ export function Traces(props: TracesProps) {
             gadgetCategory={props.category}
             nodes={props.nodes}
             resources={props.resources}
-            userMessageHandlers={props.userMessageHandlers}
+            eventHandlers={props.eventHandlers}
             onCancel={handleNewTraceDialogCancel}
             onAccept={handleNewTraceDialogAccept}
         />

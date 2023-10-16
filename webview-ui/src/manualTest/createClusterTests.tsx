@@ -1,8 +1,7 @@
 import { Scenario } from "../utilities/manualTest";
 import { CreateCluster } from "../CreateCluster/CreateCluster";
-import { getTestVscodeMessageContext } from "../utilities/vscode";
-import { InitialState, ProgressEventType, ResourceGroup } from "../../../src/webview-contract/webviewDefinitions/createCluster";
-import { ToVsCodeMessageHandler } from "../../../src/webview-contract/webviewTypes";
+import { InitialState, ProgressEventType, ResourceGroup, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
 
 const failLocationMarker = "thiswillfail";
 const cancelLocationMarker = "thiswillbecancelled";
@@ -17,14 +16,15 @@ export function getCreateClusterScenarios() {
         subscriptionName: "Test Sub"
     };
 
-    const webview = getTestVscodeMessageContext<"createCluster">();
-    const messageHandler: ToVsCodeMessageHandler<"createCluster"> = {
-        getLocationsRequest: handleGetLocationsRequest,
-        getResourceGroupsRequest: handleGetResourceGroupsRequest,
-        createClusterRequest: args => handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name)
-    };
+    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+        return {
+            getLocationsRequest: () => handleGetLocationsRequest(webview),
+            getResourceGroupsRequest: () => handleGetResourceGroupsRequest(webview),
+            createClusterRequest: args => handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview)
+        };
+    }
 
-    async function handleGetLocationsRequest() {
+    async function handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         webview.postMessage({
             command: "getLocationsResponse",
@@ -32,7 +32,7 @@ export function getCreateClusterScenarios() {
         });
     }
 
-    async function handleGetResourceGroupsRequest() {
+    async function handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         webview.postMessage({
             command: "getResourceGroupsResponse",
@@ -40,7 +40,7 @@ export function getCreateClusterScenarios() {
         });
     }
 
-    async function handleCreateClusterRequest(isNewResourceGroup: boolean, group: ResourceGroup, location: string, name: string) {
+    async function handleCreateClusterRequest(isNewResourceGroup: boolean, group: ResourceGroup, location: string, name: string, webview: MessageSink<ToWebViewMsgDef>) {
         if (isNewResourceGroup) {
             webview.postMessage({
                 command: "progressUpdate",
@@ -65,7 +65,7 @@ export function getCreateClusterScenarios() {
         webview.postMessage({
             command: "progressUpdate",
             parameters: {
-                operationDescription: "Creating Cluster",
+                operationDescription: `Creating Cluster ${name}`,
                 event: ProgressEventType.InProgress,
                 errorMessage: null
             }
@@ -95,6 +95,6 @@ export function getCreateClusterScenarios() {
     }
 
     return [
-        Scenario.create("Create Cluster", () => <CreateCluster {...initialState} />).withSubscription(webview, messageHandler)
+        Scenario.create("createCluster", "", () => <CreateCluster {...initialState} />, getMessageHandler)
     ];
 }

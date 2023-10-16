@@ -1,7 +1,6 @@
 import { VSCodeButton, VSCodeDropdown, VSCodeLink, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
-import { ASOState, InstallStepStatus } from "./helpers/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { ASOState, EventDef, InstallStepStatus } from "./helpers/state";
 import { EventHandlers } from "../utilities/state";
 import { FormEvent } from "react";
 import { ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
@@ -14,7 +13,7 @@ type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface InputsProps {
     state: ASOState
-    handlers: EventHandlers<UserMsgDef>
+    handlers: EventHandlers<EventDef>
     vscode: MessageSink<ToVsCodeMsgDef>
 }
 

@@ -1,19 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { CssRule, InitialState } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
 import { getWebviewMessageContext } from "../utilities/vscode";
+import { WebviewStateUpdater, getStateManagement } from "../utilities/state";
 
-export function TestStyleViewer(props: InitialState) {
+type State = InitialState & {
+    cssVars: string[],
+    cssRules: CssRule[]
+};
+
+type EventDef = {
+    cssVarsUpdate: string[],
+    cssRulesUpdate: CssRule[]
+};
+
+const stateUpdater: WebviewStateUpdater<"style", EventDef, State> = {
+    createState: initialState => ({
+        ...initialState,
+        cssVars: [],
+        cssRules: []
+    }),
+    vscodeMessageHandler: {},
+    eventHandler: {
+        cssVarsUpdate: (state, cssVars) => ({...state, cssVars}),
+        cssRulesUpdate: (state, cssRules) => ({...state, cssRules})
+    }
+};
+
+export function TestStyleViewer(initialState: InitialState) {
     const vscode = getWebviewMessageContext<"style">();
-
-    const [cssVars, setCssVars] = useState<string[]>([]);
-    const [cssRules, setCssRules] = useState<CssRule[]>([]);
+    const {state, eventHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
-        const cssVars = props.isVSCode ? getCssVarsForVsCode() : getCssVarsForWebview();
-        setCssVars(cssVars);
+        const cssVars = state.isVSCode ? getCssVarsForVsCode() : getCssVarsForWebview();
+        eventHandlers.onCssVarsUpdate(cssVars);
 
         const cssRules = getCssRules();
-        setCssRules(cssRules);
+        eventHandlers.onCssRulesUpdate(cssRules);
 
         vscode.postMessage({ command: "reportCssVars", parameters: {cssVars} });
         vscode.postMessage({ command: "reportCssRules", parameters: {rules: cssRules} });
@@ -62,18 +84,18 @@ export function TestStyleViewer(props: InitialState) {
     }
 
     function getStyleSheetNode(): HTMLElement | null {
-        if (props.isVSCode) {
+        if (state.isVSCode) {
             return document.getElementById('_defaultStyles');
         }
         return [...document.querySelectorAll('style')].filter(e => (e.dataset.viteDevId || "").endsWith('main.css'))[0];
     }
 
     function showCssVars() {
-        return `:root {\n${cssVars.map(s => `  ${s};`).join('\n')}\n}`;
+        return `:root {\n${state.cssVars.map(s => `  ${s};`).join('\n')}\n}`;
     }
 
     function showRules() {
-        return cssRules.map(r => r.text).join('\n');
+        return state.cssRules.map(r => r.text).join('\n');
     }
 
     return (

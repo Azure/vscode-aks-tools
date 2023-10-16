@@ -319,6 +319,6 @@ export function getInspektorGadgetScenarios() {
     const initialState: InitialState = {};
 
     return [
-        Scenario.create("Inspektor Gadget", () => <InspektorGadget {...initialState} />).withSubscription(webview, messageHandler)
+        Scenario.create("gadget", "", () => <InspektorGadget {...initialState} />, () => messageHandler)
     ];
 }

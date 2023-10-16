@@ -1,8 +1,7 @@
-import { MessageHandler } from "../../../src/webview-contract/messaging";
-import { CommandCategory, InitialState, PresetCommand, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/kubectl";
+import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { CommandCategory, InitialState, PresetCommand, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kubectl";
 import { Kubectl } from "../Kubectl/Kubectl";
 import { Scenario } from "../utilities/manualTest";
-import { getTestVscodeMessageContext } from "../utilities/vscode";
 
 const customCommands: PresetCommand[] = [
     {name: "Test 1", command: "get things", category: CommandCategory.Custom},
@@ -16,17 +15,15 @@ export function getKubectlScenarios() {
         customCommands
     }
 
-    const webview = getTestVscodeMessageContext<"kubectl">();
-
-    function getMessageHandler(succeeding: boolean): MessageHandler<ToVsCodeMsgDef> {
+    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>, succeeding: boolean): MessageHandler<ToVsCodeMsgDef> {
         return {
-            runCommandRequest: args => handleRunCommandRequest(args.command, succeeding),
+            runCommandRequest: args => handleRunCommandRequest(args.command, succeeding, webview),
             addCustomCommandRequest: _ => undefined,
             deleteCustomCommandRequest: _ => undefined
         }
     }
 
-    async function handleRunCommandRequest(command: string, succeeding: boolean) {
+    async function handleRunCommandRequest(command: string, succeeding: boolean, webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         if (succeeding) {
             webview.postMessage({
@@ -48,7 +45,7 @@ export function getKubectlScenarios() {
     }
 
     return [
-        Scenario.create(`Kubectl (succeeding)`, () => <Kubectl {...initialState} />).withSubscription(webview, getMessageHandler(true)),
-        Scenario.create(`Kubectl (failing)`, () => <Kubectl {...initialState} />).withSubscription(webview, getMessageHandler(false))
+        Scenario.create("kubectl", "succeeding", () => <Kubectl {...initialState} />, webview => getMessageHandler(webview, true)),
+        Scenario.create("kubectl", "failing", () => <Kubectl {...initialState} />, webview => getMessageHandler(webview, false))
     ];
 }

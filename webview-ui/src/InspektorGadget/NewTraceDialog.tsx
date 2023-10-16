@@ -12,8 +12,8 @@ import { GadgetSelector } from "./GadgetSelector";
 import { NodeSelector } from "./NodeSelector";
 import { GadgetCategory, GadgetExtraProperties, SortSpecifier, toExtraPropertyObject } from "./helpers/gadgets/types";
 import { NamespaceSelection } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
-import { UserMsgDef } from "./helpers/userCommands";
 import { EventHandlers } from "../utilities/state";
+import { EventDef } from "./helpers/state";
 
 const defaultTimeoutInSeconds = 30;
 const defaultMaxItemCount = 20;
@@ -23,7 +23,7 @@ export interface NewTraceDialogProps {
     gadgetCategory: GadgetCategory
     nodes: Nodes
     resources: ClusterResources
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    eventHandlers: EventHandlers<EventDef>
     onCancel: () => void
     onAccept: (trace: GadgetConfiguration) => void
 }
@@ -33,11 +33,11 @@ export function NewTraceDialog (props: NewTraceDialogProps) {
 
     useEffect(() => {
         if (props.isShown && isNotLoaded(props.nodes)) {
-            props.userMessageHandlers.onSetNodesLoading();
+            props.eventHandlers.onSetNodesLoading();
             vscode.postMessage({ command: "getNodesRequest", parameters: undefined });
         }
         if (props.isShown && isNotLoaded(props.resources)) {
-            props.userMessageHandlers.onSetNamespacesLoading();
+            props.eventHandlers.onSetNamespacesLoading();
             vscode.postMessage({ command: "getNamespacesRequest", parameters: undefined });
         }
     });
@@ -104,8 +104,8 @@ export function NewTraceDialog (props: NewTraceDialogProps) {
         props.onAccept(traceConfig);
 
         // TODO: Make this an on-demand refresh, not on every submit.
-        props.userMessageHandlers.onSetNodesNotLoaded();
-        props.userMessageHandlers.onSetNamespacesNotLoaded();
+        props.eventHandlers.onSetNodesNotLoaded();
+        props.eventHandlers.onSetNamespacesNotLoaded();
     }
 
     function handleSortSpecifiersChange(sortSpecifiers: SortSpecifier<string>[]): void {
@@ -144,7 +144,7 @@ export function NewTraceDialog (props: NewTraceDialogProps) {
                 <>
                     <label htmlFor="resource-selector" className={styles.label}>Resource</label>
                     {isLoaded(props.resources) ?
-                        (<ResourceSelector id="resource-selector" resources={props.resources.value} onSelectionChanged={handleResourceSelectionChanged} userMessageHandlers={props.userMessageHandlers} />) :
+                        (<ResourceSelector id="resource-selector" resources={props.resources.value} onSelectionChanged={handleResourceSelectionChanged} userMessageHandlers={props.eventHandlers} />) :
                         <VSCodeProgressRing />}
                 </>
                 )}

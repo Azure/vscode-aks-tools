@@ -5,24 +5,24 @@ import styles from "./InspektorGadget.module.css";
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { GadgetVersion } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { EventHandlers } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { EventDef } from "./helpers/state";
 
 export interface OverviewProps {
     status: string
     version: GadgetVersion | null
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    eventHandlers: EventHandlers<EventDef>
 }
 
 export function Overview(props: OverviewProps) {
     const vscode = getWebviewMessageContext<"gadget">();
 
     function handleDeploy() {
-        props.userMessageHandlers.onDeploy();
+        props.eventHandlers.onDeploy();
         vscode.postMessage({ command: "deployRequest", parameters: undefined });
     }
 
     function handleUndeploy() {
-        props.userMessageHandlers.onUndeploy();
+        props.eventHandlers.onUndeploy();
         vscode.postMessage({ command: "undeployRequest", parameters: undefined });
     }
 

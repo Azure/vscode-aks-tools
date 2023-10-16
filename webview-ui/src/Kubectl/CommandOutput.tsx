@@ -1,13 +1,13 @@
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./Kubectl.module.css";
 import { EventHandlers } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { EventDef } from "./helpers/state";
 
 export interface CommandOutputProps {
     isCommandRunning: boolean
     output: string | null
     errorMessage: string | null
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    eventHandlers: EventHandlers<EventDef>
 }
 
 export function CommandOutput(props: CommandOutputProps) {

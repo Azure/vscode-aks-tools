@@ -1,42 +1,54 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { InitialState, NodeUploadStatus, PodLogs } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { ErrorView } from "./ErrorView";
 import { NoDiagnosticSettingView } from "./NoDiagnosticSettingView";
 import { SuccessView } from "./SuccessView";
+import { WebviewStateUpdater, getStateManagement } from "../utilities/state";
 
-export function Periscope(props: InitialState) {
+type PeriscopeState = InitialState & {
+    nodeUploadStatuses: NodeUploadStatus[],
+    selectedNode: string,
+    nodePodLogs: PodLogs[] | null
+};
+
+type EventDef = {
+    setSelectedNode: string
+};
+
+const stateUpdater: WebviewStateUpdater<"periscope", EventDef, PeriscopeState> = {
+    createState: initialState => ({
+        ...initialState,
+        nodeUploadStatuses: initialState.nodes.map(n => ({ nodeName: n, isUploaded: false })),
+        selectedNode: "",
+        nodePodLogs: null
+    }),
+    vscodeMessageHandler: {
+        nodeLogsResponse: (state, args) => ({...state, nodePodLogs: args.logs}),
+        uploadStatusResponse: (state, args) => ({...state, nodeUploadStatuses: args.uploadStatuses})
+    },
+    eventHandler: {
+        setSelectedNode: (state, node) => ({...state, selectedNode: node, nodePodLogs: null})
+    }
+};
+
+export function Periscope(initialState: InitialState) {
     const vscode = getWebviewMessageContext<"periscope">();
-
-    const [nodeUploadStatuses, setNodeUploadStatuses] = useState<NodeUploadStatus[]>(props.nodes.map(n => ({ nodeName: n, isUploaded: false })));
-    const [selectedNode, setSelectedNode] = useState<string>("");
-    const [nodePodLogs, setNodePodLogs] = useState<PodLogs[] | null>(null);
+    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
-        vscode.subscribeToMessages({
-            nodeLogsResponse: args => handleNodeLogsResponse(args.logs),
-            uploadStatusResponse: args => handleUploadStatusResponse(args.uploadStatuses)
-        });
-        handleRequestUploadStatusCheck();
+        vscode.subscribeToMessages(vsCodeMessageHandlers);
+        sendUploadStatusRequest();
     }, []); // Empty list of dependencies to run only once: https://react.dev/reference/react/useEffect#useeffect
 
-    function handleRequestUploadStatusCheck() {
+    function sendUploadStatusRequest() {
         vscode.postMessage({ command: "uploadStatusRequest", parameters: undefined });
     }
 
-    function handleUploadStatusResponse(uploadStatuses: NodeUploadStatus[]) {
-        setNodeUploadStatuses(uploadStatuses);
-    }
-
     function handleNodeClick(node: string) {
-        setSelectedNode(node);
-        setNodePodLogs(null);
+        eventHandlers.onSetSelectedNode(node);
         vscode.postMessage({ command: "nodeLogsRequest", parameters: {nodeName: node} });
-    }
-
-    function handleNodeLogsResponse(logs: PodLogs[]) {
-        setNodePodLogs(logs);
     }
 
     return (
@@ -51,21 +63,21 @@ export function Periscope(props: InitialState) {
             <VSCodeDivider />
             {
                 {
-                    error: <ErrorView clusterName={props.clusterName} message={props.message} config={props.kustomizeConfig!} />,
-                    noDiagnosticsConfigured: <NoDiagnosticSettingView clusterName={props.clusterName} />,
+                    error: <ErrorView clusterName={state.clusterName} message={state.message} config={state.kustomizeConfig!} />,
+                    noDiagnosticsConfigured: <NoDiagnosticSettingView clusterName={state.clusterName} />,
                     success: (
                         <SuccessView
-                            runId={props.runId}
-                            clusterName={props.clusterName}
-                            uploadStatuses={nodeUploadStatuses}
-                            onRequestUploadStatusCheck={handleRequestUploadStatusCheck}
+                            runId={state.runId}
+                            clusterName={state.clusterName}
+                            uploadStatuses={state.nodeUploadStatuses}
+                            onRequestUploadStatusCheck={sendUploadStatusRequest}
                             onNodeClick={handleNodeClick}
-                            selectedNode={selectedNode}
-                            nodePodLogs={nodePodLogs}
-                            containerUrl={props.blobContainerUrl}
-                            shareableSas={props.shareableSas}
+                            selectedNode={state.selectedNode}
+                            nodePodLogs={state.nodePodLogs}
+                            containerUrl={state.blobContainerUrl}
+                            shareableSas={state.shareableSas}
                         />)
-                }[props.state]
+                }[state.state]
             }
         </>
     )

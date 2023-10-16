@@ -8,7 +8,7 @@ import { Lazy, isLoaded, isNotLoaded, map as lazyMap, orDefault } from "../utili
 import { VSCodeProgressRing, VSCodeRadio } from "@vscode/webview-ui-toolkit/react";
 import { Lookup, asLookup, exclude, intersection } from "../utilities/array";
 import { EventHandlers } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { EventDef } from "./helpers/state";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -79,7 +79,7 @@ export interface ResourceSelectorProps {
     className?: React.HTMLAttributes<any>['className']
     resources: NamespaceResources[]
     onSelectionChanged: (selection: {namespace?: string, podName?: string, container?: string}) => void
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    userMessageHandlers: EventHandlers<EventDef>
 }
 
 export function ResourceSelector(props: ResourceSelectorProps) {
