@@ -5,7 +5,6 @@ import { getKubernetesClusterInfo } from '../utils/clusters';
 import { getExtension } from '../utils/host';
 import { failed } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
-import { getKubectlCustomCommands } from '../utils/config';
 import { TCPDataCollection, TCPDataCollectionDataProvider } from '../../panels/TCPDataCollection';
 
 export async function aksTCPDumpFromLinux(_context: IActionContext, target: any) {
