@@ -51,24 +51,24 @@ metadata:
 spec:
     containers:
     - args: ["-c", "sleep infinity"]
-    command: ["/bin/sh"]
-    image: docker.io/corfr/tcpdump
-    imagePullPolicy: IfNotPresent
-    name: debug
-    resources: {}
-    securityContext:
-        privileged: true
-        runAsUser: 0
-    volumeMounts:
-    - mountPath: /host
+      command: ["/bin/sh"]
+      image: docker.io/corfr/tcpdump
+      imagePullPolicy: IfNotPresent
+      name: debug
+      resources: {}
+      securityContext:
+          privileged: true
+          runAsUser: 0
+      volumeMounts:
+      - mountPath: /host
         name: host-volume
     volumes:
     - name: host-volume
-    hostPath:
+      hostPath:
         path: /
     dnsPolicy: ClusterFirst
     nodeSelector:
-    kubernetes.io/hostname: ${node}
+      kubernetes.io/hostname: ${node}
     restartPolicy: Never
     securityContext: {}
     hostIPC: true
@@ -104,7 +104,7 @@ spec:
     }
 
     private async _handleDownloadCaptureFile(node: string, localcapfile: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `cp debug-$node:${nodecapfile} ${localcapfile}`;
+        const command = `cp debug-${node}:${nodecapfile} ${localcapfile}`;
         await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
     }
 }
