@@ -9,7 +9,9 @@ import { addKubectlCustomCommand, deleteKubectlCustomCommand } from "../commands
 
 export class KubectlPanel extends BasePanel<"kubectl"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "kubectl");
+        super(extensionUri, "kubectl", {
+            runCommandResponse: null
+        });
     }
 }
 
@@ -60,12 +62,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         output: string | null,
         errorMessage: string | null
     ) {
-        webview.postMessage({
-            command: "runCommandResponse", parameters: {
-                output,
-                errorMessage
-            }
-        });
+        webview.postRunCommandResponse({output, errorMessage});
     }
 
     private async _handleAddCustomCommandRequest(name: string, command: string) {

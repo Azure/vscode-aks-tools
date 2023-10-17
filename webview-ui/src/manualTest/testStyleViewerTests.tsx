@@ -2,6 +2,7 @@ import { MessageHandler } from "../../../src/webview-contract/messaging";
 import { CssRule, InitialState, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
 import { Scenario } from "./../utilities/manualTest";
 import { TestStyleViewer } from "./../TestStyleViewer/TestStyleViewer";
+import { stateUpdater } from "../TestStyleViewer/state";
 
 export function getTestStyleViewerScenarios() {
     const messageHandler: MessageHandler<ToVsCodeMsgDef> = {
@@ -22,6 +23,6 @@ export function getTestStyleViewerScenarios() {
     };
 
     return [
-        Scenario.create("style", "", () => <TestStyleViewer {...initialState} />, () => messageHandler)
+        Scenario.create("style", "", () => <TestStyleViewer {...initialState} />, () => messageHandler, stateUpdater.vscodeMessageHandler)
     ];
 }

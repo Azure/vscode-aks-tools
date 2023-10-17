@@ -1,40 +1,13 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { useEffect } from "react";
-import { InitialState, NodeUploadStatus, PodLogs } from "../../../src/webview-contract/webviewDefinitions/periscope";
-import { getWebviewMessageContext } from "../utilities/vscode";
+import { InitialState } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { ErrorView } from "./ErrorView";
 import { NoDiagnosticSettingView } from "./NoDiagnosticSettingView";
 import { SuccessView } from "./SuccessView";
-import { WebviewStateUpdater, getStateManagement } from "../utilities/state";
-
-type PeriscopeState = InitialState & {
-    nodeUploadStatuses: NodeUploadStatus[],
-    selectedNode: string,
-    nodePodLogs: PodLogs[] | null
-};
-
-type EventDef = {
-    setSelectedNode: string
-};
-
-const stateUpdater: WebviewStateUpdater<"periscope", EventDef, PeriscopeState> = {
-    createState: initialState => ({
-        ...initialState,
-        nodeUploadStatuses: initialState.nodes.map(n => ({ nodeName: n, isUploaded: false })),
-        selectedNode: "",
-        nodePodLogs: null
-    }),
-    vscodeMessageHandler: {
-        nodeLogsResponse: (state, args) => ({...state, nodePodLogs: args.logs}),
-        uploadStatusResponse: (state, args) => ({...state, nodeUploadStatuses: args.uploadStatuses})
-    },
-    eventHandler: {
-        setSelectedNode: (state, node) => ({...state, selectedNode: node, nodePodLogs: null})
-    }
-};
+import { getStateManagement } from "../utilities/state";
+import { stateUpdater, vscode } from "./state";
 
 export function Periscope(initialState: InitialState) {
-    const vscode = getWebviewMessageContext<"periscope">();
     const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
@@ -43,12 +16,12 @@ export function Periscope(initialState: InitialState) {
     }, []); // Empty list of dependencies to run only once: https://react.dev/reference/react/useEffect#useeffect
 
     function sendUploadStatusRequest() {
-        vscode.postMessage({ command: "uploadStatusRequest", parameters: undefined });
+        vscode.postUploadStatusRequest();
     }
 
     function handleNodeClick(node: string) {
         eventHandlers.onSetSelectedNode(node);
-        vscode.postMessage({ command: "nodeLogsRequest", parameters: {nodeName: node} });
+        vscode.postNodeLogsRequest({nodeName: node});
     }
 
     return (

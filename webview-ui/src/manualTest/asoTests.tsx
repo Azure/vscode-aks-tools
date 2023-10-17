@@ -1,6 +1,7 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
 import { AzureCloudName, CommandResult, InitialState, InstallStepResult, Subscription, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
 import { AzureServiceOperator } from "../AzureServiceOperator/AzureServiceOperator";
+import { stateUpdater } from "../AzureServiceOperator/helpers/state";
 import { Scenario } from "../utilities/manualTest";
 
 type App = {
@@ -59,61 +60,49 @@ export function getASOScenarios() {
         await new Promise(resolve => setTimeout(resolve, 2000));
         const matchingApp = apps.find(app => app.id === appId);
         if (!matchingApp) {
-            webview.postMessage({
-                command: "checkSPResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: `App ${appId} not found. Known app IDs are: ${apps.map(app => app.id).join(", ")}`,
-                    commandResults: [],
-                    cloudName: null,
-                    tenantId: null,
-                    subscriptions: []
-                }
+            webview.postCheckSPResponse({
+                succeeded: false,
+                errorMessage: `App ${appId} not found. Known app IDs are: ${apps.map(app => app.id).join(", ")}`,
+                commandResults: [],
+                cloudName: null,
+                tenantId: null,
+                subscriptions: []
             });
             return;
         }
 
         if (matchingApp.secret !== appSecret) {
-            webview.postMessage({
-                command: "checkSPResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: `Incorrect secret for ${appId}. The actual secret is "${matchingApp.secret}"`,
-                    commandResults: [],
-                    cloudName: null,
-                    tenantId: null,
-                    subscriptions: []
-                }
+            webview.postCheckSPResponse({
+                succeeded: false,
+                errorMessage: `Incorrect secret for ${appId}. The actual secret is "${matchingApp.secret}"`,
+                commandResults: [],
+                cloudName: null,
+                tenantId: null,
+                subscriptions: []
             });
             return;
         }
 
         const subscriptions = appSubscriptions.get(appId) || [];
         if (subscriptions.length === 0) {
-            webview.postMessage({
-                command: "checkSPResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: `App ${appId} does not have permission to access any subscriptions.`,
-                    commandResults: [],
-                    cloudName: "AzureCloud",
-                    tenantId: "tenant",
-                    subscriptions: []
-                }
+            webview.postCheckSPResponse({
+                succeeded: false,
+                errorMessage: `App ${appId} does not have permission to access any subscriptions.`,
+                commandResults: [],
+                cloudName: "AzureCloud",
+                tenantId: "tenant",
+                subscriptions: []
             });
             return;
         }
 
-        webview.postMessage({
-            command: "checkSPResponse",
-            parameters: {
-                succeeded: true,
-                errorMessage: null,
-                commandResults: [],
-                cloudName: "AzureCloud",
-                tenantId: "tenant",
-                subscriptions
-            }
+        webview.postCheckSPResponse({
+            succeeded: true,
+            errorMessage: null,
+            commandResults: [],
+            cloudName: "AzureCloud",
+            tenantId: "tenant",
+            subscriptions
         });
     }
 
@@ -150,35 +139,35 @@ export function getASOScenarios() {
     async function handleInstallCertManagerRequest(hasError: boolean, webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         const commands = ["kubectl install cert-manager"];
-        webview.postMessage({ command: "installCertManagerResponse", parameters: getInstallStepResult(hasError, "install cert-manager", commands) });
+        webview.postInstallCertManagerResponse(getInstallStepResult(hasError, "install cert-manager", commands));
     }
 
     async function handleWaitForCertManagerRequest(hasError: boolean, webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 3000));
         const commands = ['cert-manager', 'cert-manager-cainjector', 'cert-manager-webhook'].map(c => `kubectl check deployment ${c}`);
-        webview.postMessage({ command: "waitForCertManagerResponse", parameters: getInstallStepResult(hasError, "wait for cert-manager", commands) });
+        webview.postWaitForCertManagerResponse(getInstallStepResult(hasError, "wait for cert-manager", commands));
     }
 
     async function handleInstallOperatorRequest(hasError: boolean, webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         const commands = ["kubectl install ASO operator"];
-        webview.postMessage({ command: "installOperatorResponse", parameters: getInstallStepResult(hasError, "install operator", commands) });
+        webview.postInstallOperatorResponse(getInstallStepResult(hasError, "install operator", commands));
     }
 
     async function handleInstallOperatorSettingsRequest(hasError: boolean, tenantId: string, subscriptionId: string, appId: string, appSecret: string, cloudName: AzureCloudName, webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         const commands = [`kubectl create secret [tenantId=${tenantId}, subId=${subscriptionId}, appId=${appId}, secret=${appSecret}, cloud=${cloudName}]`];
-        webview.postMessage({ command: "installOperatorSettingsResponse", parameters: getInstallStepResult(hasError, "install settings secret", commands) });
+        webview.postInstallOperatorSettingsResponse(getInstallStepResult(hasError, "install settings secret", commands));
     }
 
     async function handleWaitForControllerManagerRequest(hasError: boolean, webview: MessageSink<ToWebViewMsgDef>) {
         await new Promise(resolve => setTimeout(resolve, 3000));
         const commands = ["kubectl wait for controller-manager"];
-        webview.postMessage({ command: "waitForControllerManagerResponse", parameters: getInstallStepResult(hasError, "wait for controller manager", commands) });
+        webview.postWaitForControllerManagerResponse(getInstallStepResult(hasError, "wait for controller manager", commands));
     }
 
     return [
-        Scenario.create("aso", "successful", () => <AzureServiceOperator {...initialState} />, webview => getMessageHandler(webview, false)),
-        Scenario.create("aso", "with errors", () => <AzureServiceOperator {...initialState} />, webview => getMessageHandler(webview, true))
+        Scenario.create("aso", "successful", () => <AzureServiceOperator {...initialState} />, webview => getMessageHandler(webview, false), stateUpdater.vscodeMessageHandler),
+        Scenario.create("aso", "with errors", () => <AzureServiceOperator {...initialState} />, webview => getMessageHandler(webview, true), stateUpdater.vscodeMessageHandler)
     ];
 }

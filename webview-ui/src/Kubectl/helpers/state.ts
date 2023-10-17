@@ -1,5 +1,6 @@
 import { InitialState, PresetCommand, presetCommands } from "../../../../src/webview-contract/webviewDefinitions/kubectl";
 import { WebviewStateUpdater } from "../../utilities/state";
+import { getWebviewMessageContext } from "../../utilities/vscode";
 
 export type KubectlState = InitialState & {
     allCommands: PresetCommand[]
@@ -43,3 +44,9 @@ export const stateUpdater: WebviewStateUpdater<"kubectl", EventDef, KubectlState
         setSaveDialogVisibility: (state, args) => ({...state, isSaveDialogShown: args.shown})
     }
 };
+
+export const vscode = getWebviewMessageContext<"kubectl">({
+    addCustomCommandRequest: null,
+    deleteCustomCommandRequest: null,
+    runCommandRequest: null
+});

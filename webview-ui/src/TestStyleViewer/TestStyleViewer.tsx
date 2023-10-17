@@ -1,33 +1,9 @@
 import { useEffect } from "react";
 import { CssRule, InitialState } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
-import { getWebviewMessageContext } from "../utilities/vscode";
-import { WebviewStateUpdater, getStateManagement } from "../utilities/state";
-
-type State = InitialState & {
-    cssVars: string[],
-    cssRules: CssRule[]
-};
-
-type EventDef = {
-    cssVarsUpdate: string[],
-    cssRulesUpdate: CssRule[]
-};
-
-const stateUpdater: WebviewStateUpdater<"style", EventDef, State> = {
-    createState: initialState => ({
-        ...initialState,
-        cssVars: [],
-        cssRules: []
-    }),
-    vscodeMessageHandler: {},
-    eventHandler: {
-        cssVarsUpdate: (state, cssVars) => ({...state, cssVars}),
-        cssRulesUpdate: (state, cssRules) => ({...state, cssRules})
-    }
-};
+import { getStateManagement } from "../utilities/state";
+import { stateUpdater, vscode } from "./state";
 
 export function TestStyleViewer(initialState: InitialState) {
-    const vscode = getWebviewMessageContext<"style">();
     const {state, eventHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
@@ -37,8 +13,8 @@ export function TestStyleViewer(initialState: InitialState) {
         const cssRules = getCssRules();
         eventHandlers.onCssRulesUpdate(cssRules);
 
-        vscode.postMessage({ command: "reportCssVars", parameters: {cssVars} });
-        vscode.postMessage({ command: "reportCssRules", parameters: {rules: cssRules} });
+        vscode.postReportCssVars({cssVars});
+        vscode.postReportCssRules({rules: cssRules});
     }, []);
 
     function getCssVarsForVsCode(): string[] {

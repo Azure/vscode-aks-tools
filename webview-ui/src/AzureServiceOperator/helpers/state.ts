@@ -1,5 +1,6 @@
 import { AzureCloudName, InitialState, InstallStepResult, Subscription } from "../../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
 import { WebviewStateUpdater } from "../../utilities/state";
+import { getWebviewMessageContext } from "../../utilities/vscode";
 
 export enum InstallStepStatus {
     NotStarted,
@@ -95,3 +96,12 @@ export const stateUpdater: WebviewStateUpdater<"aso", EventDef, ASOState> = {
         setWaitForControllerManagerStarted: (state, _args) => ({ ...state, waitForControllerManagerStep: inProgressStep() })
     }
 };
+
+export const vscode = getWebviewMessageContext<"aso">({
+    checkSPRequest: null,
+    installCertManagerRequest: null,
+    installOperatorRequest: null,
+    installOperatorSettingsRequest: null,
+    waitForCertManagerRequest: null,
+    waitForControllerManagerRequest: null
+});

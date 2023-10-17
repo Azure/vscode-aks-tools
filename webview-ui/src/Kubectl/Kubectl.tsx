@@ -1,18 +1,15 @@
 import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { CommandCategory, InitialState, PresetCommand } from "../../../src/webview-contract/webviewDefinitions/kubectl";
 import styles from "./Kubectl.module.css";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { useEffect } from "react";
 import { CommandList } from "./CommandList";
 import { CommandInput } from "./CommandInput";
 import { CommandOutput } from "./CommandOutput";
 import { SaveCommandDialog } from "./SaveCommandDialog";
 import { getStateManagement } from "../utilities/state";
-import { stateUpdater } from "./helpers/state";
+import { stateUpdater, vscode } from "./helpers/state";
 
 export function Kubectl(initialState: InitialState) {
-    const vscode = getWebviewMessageContext<"kubectl">();
-
     const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
@@ -26,7 +23,7 @@ export function Kubectl(initialState: InitialState) {
     function handleCommandDelete(commandName: string) {
         const allCommands = state.allCommands.filter(cmd => cmd.name !== commandName);
         eventHandlers.onSetAllCommands({ allCommands });
-        vscode.postMessage({ command: "deleteCustomCommandRequest", parameters: {name: commandName} });
+        vscode.postDeleteCustomCommandRequest({name: commandName});
     }
 
     function handleCommandUpdate(command: string) {
@@ -35,7 +32,7 @@ export function Kubectl(initialState: InitialState) {
 
     function handleRunCommand(command: string) {
         eventHandlers.onSetCommandRunning();
-        vscode.postMessage({ command: "runCommandRequest", parameters: {command: command.trim()} });
+        vscode.postRunCommandRequest({command: command.trim()});
     }
 
     function handleSaveRequest() {
@@ -60,7 +57,7 @@ export function Kubectl(initialState: InitialState) {
 
         const allCommands = [...state.allCommands, newCommand].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
         eventHandlers.onSetAllCommands({ allCommands });
-        vscode.postMessage({ command: "addCustomCommandRequest", parameters: newCommand });
+        vscode.postAddCustomCommandRequest(newCommand);
     }
 
     const allCommandNames = state.allCommands.map(cmd => cmd.name);

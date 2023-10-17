@@ -1,8 +1,8 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
-import { MessageDefinition, MessageHandler, isValidMessage } from "../webview-contract/messaging";
+import { CommandKeys, MessageDefinition, MessageHandler, asMessageSink, isValidMessage } from "../webview-contract/messaging";
 import { getNonce, getUri } from "./utilities/webview";
 import { encodeState } from "../webview-contract/initialState";
-import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToWebviewMessage, ToWebviewMessageSink, VsCodeMessageContext } from "../webview-contract/webviewTypes";
+import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToWebviewMessage, ToWebviewMessageSink, ToWebviewMsgDef, VsCodeMessageContext } from "../webview-contract/webviewTypes";
 
 const viewType = "aksVsCodeTools";
 
@@ -23,7 +23,8 @@ export interface PanelDataProvider<TContent extends ContentId> {
 export abstract class BasePanel<TContent extends ContentId> {
     protected constructor(
         readonly extensionUri: Uri,
-        readonly contentId: TContent
+        readonly contentId: TContent,
+        readonly webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>
     ) { }
 
     show(dataProvider: PanelDataProvider<TContent>, ...disposables: Disposable[]) {
@@ -40,7 +41,8 @@ export abstract class BasePanel<TContent extends ContentId> {
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
 
         // Set up messaging between VSCode and the webview.
-        const messageContext = new MessageContext<TContent>(panel.webview, disposables);
+        const messageContextImpl = new MessageContextImpl<TContent>(panel.webview, disposables);
+        const messageContext: VsCodeMessageContext<TContent> = {...asMessageSink(messageContextImpl, this.webviewCommandKeys), subscribeToMessages: messageContextImpl.subscribeToMessages};
         const messageHandler = dataProvider.getMessageHandler(messageContext);
         messageContext.subscribeToMessages(messageHandler);
 
@@ -90,7 +92,7 @@ export abstract class BasePanel<TContent extends ContentId> {
  * A `MessageContext` that represents the VSCode end of the communication,
  * i.e. it posts messages to the webview, and listens to messages to VS Code.
  */
-class MessageContext<TContent extends ContentId> implements VsCodeMessageContext<TContent> {
+class MessageContextImpl<TContent extends ContentId> {
     constructor(
         private readonly _webview: Webview,
         private readonly _disposables: Disposable[]

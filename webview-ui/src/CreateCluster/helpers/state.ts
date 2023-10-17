@@ -1,5 +1,6 @@
 import { CreateClusterParams, InitialState, ProgressEventType, ResourceGroup } from "../../../../src/webview-contract/webviewDefinitions/createCluster";
 import { WebviewStateUpdater } from "../../utilities/state";
+import { getWebviewMessageContext } from "../../utilities/vscode";
 
 export enum Stage {
     Uninitialized,
@@ -59,3 +60,9 @@ function getStageAndMessage(operationDescription: string, event: ProgressEventTy
             return { stage: Stage.Succeeded, message: null };
     }
 }
+
+export const vscode = getWebviewMessageContext<"createCluster">({
+    createClusterRequest: null,
+    getLocationsRequest: null,
+    getResourceGroupsRequest: null
+});

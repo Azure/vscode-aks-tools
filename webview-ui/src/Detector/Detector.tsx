@@ -1,22 +1,8 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/detector";
 import { SingleDetector } from './SingleDetector';
-import { WebviewStateUpdater, getStateManagement } from "../utilities/state";
-
-type EventDef = {};
-
-type DetectorState = InitialState & {
-    portalUrl: string
-};
-
-const stateUpdater: WebviewStateUpdater<"detector", EventDef, DetectorState> = {
-    createState: initialState => ({
-        ...initialState,
-        portalUrl: `https://portal.azure.com/#resource${initialState.clusterArmId}aksDiagnostics?referrer_source=vscode&referrer_context=${initialState.portalReferrerContext}`
-    }),
-    vscodeMessageHandler: {},
-    eventHandler: {}
-};
+import { getStateManagement } from "../utilities/state";
+import { stateUpdater } from "./state";
 
 export function Detector(initialState: InitialState) {
     const {state} = getStateManagement(stateUpdater, initialState);

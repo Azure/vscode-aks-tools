@@ -35,7 +35,7 @@ export function Inputs(props: InputsProps) {
             return;
         }
 
-        props.vscode.postMessage({ command: "checkSPRequest", parameters: {appId, appSecret} });
+        props.vscode.postCheckSPRequest({appId, appSecret});
         props.handlers.onSetCheckingSP();
     }
 
@@ -48,7 +48,7 @@ export function Inputs(props: InputsProps) {
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
         e.stopPropagation();
-        props.vscode.postMessage({ command: "installCertManagerRequest", parameters: undefined });
+        props.vscode.postInstallCertManagerRequest();
         props.handlers.onSetInstallCertManagerStarted();
     }
 

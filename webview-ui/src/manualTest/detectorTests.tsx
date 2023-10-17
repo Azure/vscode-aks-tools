@@ -64,6 +64,7 @@ import * as userDefinedRouting from "./detectorData/user-defined-routing.json"
 import * as windowsRegressionK8sv124 from "./detectorData/windowsregresionk8sv124.json"
 import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef, ToWebViewMsgDef, isCategoryDataset } from "../../../src/webview-contract/webviewDefinitions/detector";
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { stateUpdater } from "../Detector/state";
 
 type DetectorDataMap = {
     [detectorId: string]: SingleDetectorARMResponse
@@ -154,7 +155,7 @@ export function getDetectorScenarios() {
             detectors: detectorIds.map(id => singleDetectorLookup[id])
         };
 
-        return Scenario.create("detector", initialState.name, () => <Detector {...initialState} />, getMessageHandler);
+        return Scenario.create("detector", initialState.name, () => <Detector {...initialState} />, getMessageHandler, stateUpdater.vscodeMessageHandler);
     });
 }
 

@@ -12,7 +12,14 @@ import { createTempFile } from "../commands/utils/tempfile";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
     constructor(extensionUri: vscode.Uri) {
-        super(extensionUri, "aso");
+        super(extensionUri, "aso", {
+            checkSPResponse: null,
+            installCertManagerResponse: null,
+            installOperatorResponse: null,
+            installOperatorSettingsResponse: null,
+            waitForCertManagerResponse: null,
+            waitForControllerManagerResponse: null
+        });
     }
 }
 
@@ -49,30 +56,24 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     private async _handleCheckSPRequest(appId: string, appSecret: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const servicePrincipalAccess = await getServicePrincipalAccess(this.azAccount, appId, appSecret);
         if (failed(servicePrincipalAccess)) {
-            webview.postMessage({
-                command: "checkSPResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: servicePrincipalAccess.error,
-                    commandResults: [],
-                    cloudName: null,
-                    subscriptions: [],
-                    tenantId: null
-                }
+            webview.postCheckSPResponse({
+                succeeded: false,
+                errorMessage: servicePrincipalAccess.error,
+                commandResults: [],
+                cloudName: null,
+                subscriptions: [],
+                tenantId: null
             });
             return;
         }
 
-        webview.postMessage({
-            command: "checkSPResponse",
-            parameters: {
-                succeeded: true,
-                errorMessage: null,
-                commandResults: [],
-                cloudName: servicePrincipalAccess.result.cloudName as AzureCloudName,
-                subscriptions: servicePrincipalAccess.result.subscriptions,
-                tenantId: servicePrincipalAccess.result.tenantId
-            }
+        webview.postCheckSPResponse({
+            succeeded: true,
+            errorMessage: null,
+            commandResults: [],
+            cloudName: servicePrincipalAccess.result.cloudName as AzureCloudName,
+            subscriptions: servicePrincipalAccess.result.subscriptions,
+            tenantId: servicePrincipalAccess.result.tenantId
         });
     }
 
@@ -83,13 +84,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const kubectlArgs = `create -f ${asoCrdYamlFile}`;
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
         if (failed(shellOutput)) {
-            webview.postMessage({
-                command: "installCertManagerResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: shellOutput.error,
-                    commandResults: []
-                }
+            webview.postInstallCertManagerResponse({
+                succeeded: false,
+                errorMessage: shellOutput.error,
+                commandResults: []
             });
             return;
         }
@@ -98,13 +96,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const errorMessage = succeeded ? null : "Installing cert-manager failed, see error output.";
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
-        webview.postMessage({
-            command: "installCertManagerResponse",
-            parameters: {
-                succeeded,
-                errorMessage,
-                commandResults: [{ command, stdout, stderr }]
-            }
+        webview.postInstallCertManagerResponse({
+            succeeded,
+            errorMessage,
+            commandResults: [{ command, stdout, stderr }]
         });
     }
 
@@ -117,13 +112,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         }));
         const shellResults = combine(promiseResults);
         if (failed(shellResults)) {
-            webview.postMessage({
-                command: "waitForCertManagerResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: shellResults.error,
-                    commandResults: []
-                }
+            webview.postWaitForCertManagerResponse({
+                succeeded: false,
+                errorMessage: shellResults.error,
+                commandResults: []
             });
             return;
         }
@@ -131,13 +123,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         // There was no error running the commands, but there may have been a non-zero exit code.
         const succeeded = !shellResults.result.some(r => r.code !== 0);
         const errorMessage = succeeded ? null : "Waiting for cert-manager failed, see error output.";
-        webview.postMessage({
-            command: "waitForCertManagerResponse",
-            parameters: {
-                succeeded,
-                errorMessage,
-                commandResults: shellResults.result.map(r => ({command: r.command, stdout: r.stdout, stderr: r.stderr}))
-            }
+        webview.postWaitForCertManagerResponse({
+            succeeded,
+            errorMessage,
+            commandResults: shellResults.result.map(r => ({command: r.command, stdout: r.stdout, stderr: r.stderr}))
         });
     }
 
@@ -153,13 +142,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const kubectlArgs = `create -f ${asoYamlFile} --request-timeout 120s`;
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
         if (failed(shellOutput)) {
-            webview.postMessage({
-                command: "installOperatorResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: shellOutput.error,
-                    commandResults: []
-                }
+            webview.postInstallOperatorResponse({
+                succeeded: false,
+                errorMessage: shellOutput.error,
+                commandResults: []
             });
             return;
         }
@@ -168,13 +154,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const errorMessage = succeeded ? null : "Installing operator resource failed, see error output.";
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
-        webview.postMessage({
-            command: "installOperatorResponse",
-            parameters: {
-                succeeded,
-                errorMessage,
-                commandResults: [{ command, stdout, stderr }]
-            }
+        webview.postInstallOperatorResponse({
+            succeeded,
+            errorMessage,
+            commandResults: [{ command, stdout, stderr }]
         });
     }
 
@@ -186,13 +169,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         try {
             settingsTemplate = await fs.readFile(yamlPathOnDisk.fsPath, 'utf8');
         } catch (e) {
-            webview.postMessage({
-                command: "installOperatorSettingsResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: `Failed to read settings template from ${yamlPathOnDisk.fsPath}: ${getErrorMessage(e)}`,
-                    commandResults: []
-                }
+            webview.postInstallOperatorSettingsResponse({
+                succeeded: false,
+                errorMessage: `Failed to read settings template from ${yamlPathOnDisk.fsPath}: ${getErrorMessage(e)}`,
+                commandResults: []
             });
             return;
         }
@@ -210,13 +190,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const kubectlArgs = `apply -f ${templateYamlFile.filePath} --request-timeout 120s`;
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
         if (failed(shellOutput)) {
-            webview.postMessage({
-                command: "installOperatorSettingsResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: shellOutput.error,
-                    commandResults: []
-                }
+            webview.postInstallOperatorSettingsResponse({
+                succeeded: false,
+                errorMessage: shellOutput.error,
+                commandResults: []
             });
             return;
         }
@@ -225,13 +202,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const errorMessage = succeeded ? null : "Installing operator settings failed, see error output.";
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
-        webview.postMessage({
-            command: "installOperatorSettingsResponse",
-            parameters: {
-                succeeded,
-                errorMessage,
-                commandResults: [{ command, stdout, stderr }]
-            }
+        webview.postInstallOperatorSettingsResponse({
+            succeeded,
+            errorMessage,
+            commandResults: [{ command, stdout, stderr }]
         });
     }
 
@@ -239,13 +213,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const kubectlArgs = "rollout status -n azureserviceoperator-system deploy/azureserviceoperator-controller-manager --timeout=240s";
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
         if (failed(shellOutput)) {
-            webview.postMessage({
-                command: "waitForControllerManagerResponse",
-                parameters: {
-                    succeeded: false,
-                    errorMessage: shellOutput.error,
-                    commandResults: []
-                }
+            webview.postWaitForControllerManagerResponse({
+                succeeded: false,
+                errorMessage: shellOutput.error,
+                commandResults: []
             });
             return;
         }
@@ -254,13 +225,10 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const errorMessage = succeeded ? null : "Waiting for ASO Controller Manager failed, see error output.";
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
-        webview.postMessage({
-            command: "waitForControllerManagerResponse",
-            parameters: {
-                succeeded,
-                errorMessage,
-                commandResults: [{ command, stdout, stderr }]
-            }
+        webview.postWaitForControllerManagerResponse({
+            succeeded,
+            errorMessage,
+            commandResults: [{ command, stdout, stderr }]
         });
     }
 }

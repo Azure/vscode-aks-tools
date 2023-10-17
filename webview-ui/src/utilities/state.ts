@@ -1,5 +1,5 @@
 import { useReducer } from "react";
-import { Command, MessageDefinition, MessageHandler } from "../../../src/webview-contract/messaging";
+import { Command, CommandKeys, MessageDefinition, MessageHandler } from "../../../src/webview-contract/messaging";
 import { ContentId, InitialState, ToWebviewMsgDef } from "../../../src/webview-contract/webviewTypes";
 
 export interface WebviewStateUpdater<T extends ContentId, TEventDef extends MessageDefinition, TState> {
@@ -80,13 +80,6 @@ function chainStateUpdaters<TState>(...stateUpdaters: StateUpdater<TState>[]): S
  */
 export type EventHandlers<TMsgDef extends MessageDefinition> = {
     [P in Command<TMsgDef> as `on${Capitalize<P>}`]: (args: TMsgDef[P]) => void
-};
-
-/**
- * Any object containing all the keys (commands) for a message definition.
- */
-type CommandKeys<TMsgDef> = {
-    [P in Command<TMsgDef>]: any
 };
 
 /**

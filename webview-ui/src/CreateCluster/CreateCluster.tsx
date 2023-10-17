@@ -1,20 +1,18 @@
 import { useEffect } from "react";
 import { CreateClusterInput } from "./CreateClusterInput";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { Success } from "./Success";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/createCluster";
-import { Stage, stateUpdater } from "./helpers/state";
+import { Stage, stateUpdater, vscode } from "./helpers/state";
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { getStateManagement } from "../utilities/state";
 
 export function CreateCluster(initialState: InitialState) {
-    const vscode = getWebviewMessageContext<"createCluster">();
     const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
         if (state.stage === Stage.Uninitialized) {
-            vscode.postMessage({command: "getLocationsRequest", parameters: undefined});
-            vscode.postMessage({command: "getResourceGroupsRequest", parameters: undefined});
+            vscode.postGetLocationsRequest();
+            vscode.postGetResourceGroupsRequest();
             eventHandlers.onSetInitializing();
         }
 
