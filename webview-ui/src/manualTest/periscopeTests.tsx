@@ -2,6 +2,7 @@ import { MessageHandler, MessageSink } from "../../../src/webview-contract/messa
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { Scenario } from "../utilities/manualTest";
 import { Periscope } from "../Periscope/Periscope";
+import { stateUpdater } from "../Periscope/state";
 
 export function getPeriscopeScenarios() {
     const clusterName = "test-cluster";
@@ -55,35 +56,29 @@ export function getPeriscopeScenarios() {
         return {
             async nodeLogsRequest(args) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                webview.postMessage({
-                    command: "nodeLogsResponse",
-                    parameters: {
-                        nodeName: args.nodeName,
-                        logs: ["aks-periscope-pod", "diag-collector-pod"].map(podName => ({
-                            podName,
-                            logs: Array.from({ length: Math.floor(Math.random() * 500) }, (_, i) => `${new Date(startDate.getTime() + i * 200).toISOString()} Doing thing ${i + 1}`).join('\n')
-                        }))
-                    }
+                webview.postNodeLogsResponse({
+                    nodeName: args.nodeName,
+                    logs: ["aks-periscope-pod", "diag-collector-pod"].map(podName => ({
+                        podName,
+                        logs: Array.from({ length: Math.floor(Math.random() * 500) }, (_, i) => `${new Date(startDate.getTime() + i * 200).toISOString()} Doing thing ${i + 1}`).join('\n')
+                    }))
                 })
             },
             uploadStatusRequest() {
                 const secondsSinceStart = (Date.now() - startTime) / 1000;
-                webview.postMessage({
-                    command: "uploadStatusResponse",
-                    parameters: {
-                        uploadStatuses: testNodes.map((n, nodeIndex) => ({
-                            nodeName: n,
-                            isUploaded: secondsSinceStart >= (nodeIndex * 10 + 5)
-                        }))
-                    }
+                webview.postUploadStatusResponse({
+                    uploadStatuses: testNodes.map((n, nodeIndex) => ({
+                        nodeName: n,
+                        isUploaded: secondsSinceStart >= (nodeIndex * 10 + 5)
+                    }))
                 });
             }
         };
     }
 
     return [
-        Scenario.create("periscope", "no diagnostics", () => <Periscope {...noDiagnosticsState} />, getMessageHandler),
-        Scenario.create("periscope", "error", () => <Periscope {...errorState} />, getMessageHandler),
-        Scenario.create("periscope", "deployed", () => <Periscope {...successState} />, getMessageHandler)
+        Scenario.create("periscope", "no diagnostics", () => <Periscope {...noDiagnosticsState} />, getMessageHandler, stateUpdater.vscodeMessageHandler),
+        Scenario.create("periscope", "error", () => <Periscope {...errorState} />, getMessageHandler, stateUpdater.vscodeMessageHandler),
+        Scenario.create("periscope", "deployed", () => <Periscope {...successState} />, getMessageHandler, stateUpdater.vscodeMessageHandler)
     ];
 }

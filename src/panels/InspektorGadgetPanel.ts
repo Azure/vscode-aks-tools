@@ -8,7 +8,14 @@ import { GadgetArguments, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef, TraceOu
 
 export class InspektorGadgetPanel extends BasePanel<"gadget"> {
     constructor(extensionUri: vscode.Uri) {
-        super(extensionUri, "gadget");
+        super(extensionUri, "gadget", {
+            getContainersResponse: null,
+            getNamespacesResponse: null,
+            getNodesResponse: null,
+            getPodsResponse: null,
+            runTraceResponse: null,
+            updateVersion: null
+        });
     }
 }
 
@@ -49,7 +56,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "updateVersion", parameters: version.result });
+        webview.postUpdateVersion(version.result);
     }
 
     private async _handleDeployRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -59,7 +66,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "updateVersion", parameters: version.result });
+        webview.postUpdateVersion(version.result);
     }
 
     private async _handleUndeployRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -69,11 +76,11 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "updateVersion", parameters: version.result });
+        webview.postUpdateVersion(version.result);
     }
 
     private async _handleRunStreamingTraceRequest(traceId: number, args: GadgetArguments, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const outputItemsHandler = (items: TraceOutputItem[]) => webview.postMessage({ command: "runTraceResponse", parameters: {traceId, items} });
+        const outputItemsHandler = (items: TraceOutputItem[]) => webview.postRunTraceResponse({traceId, items});
 
         await this.traceWatcher.watch(args, outputItemsHandler, e => vscode.window.showErrorMessage(getErrorMessage(e)));
     }
@@ -85,7 +92,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "runTraceResponse", parameters: {traceId, items: items.result} });
+        webview.postRunTraceResponse({traceId, items: items.result});
     }
 
     private async _handleStopStreamingTraceRequest(): Promise<void> {
@@ -99,7 +106,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "getNodesResponse", parameters: {nodes: nodes.result} });
+        webview.postGetNodesResponse({nodes: nodes.result});
     }
 
     private async _handleGetNamespacesRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -109,7 +116,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "getNamespacesResponse", parameters: {namespaces: namespaces.result} });
+        webview.postGetNamespacesResponse({namespaces: namespaces.result});
     }
 
     private async _handleGetPodsRequest(namespace: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -119,7 +126,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "getPodsResponse", parameters: {namespace, podNames: pods.result} });
+        webview.postGetPodsResponse({namespace, podNames: pods.result});
     }
 
     private async _handleGetContainersRequest(namespace: string, podName: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -129,6 +136,6 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postMessage({ command: "getContainersResponse", parameters: {namespace, podName, containerNames: containers.result} });
+        webview.postGetContainersResponse({namespace, podName, containerNames: containers.result});
     }
 }

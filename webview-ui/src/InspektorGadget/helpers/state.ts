@@ -3,6 +3,7 @@ import { newLoading, newNotLoaded } from "../../utilities/lazy";
 import { TraceGadget, enrich, enrichSortAndFilter } from "./gadgets";
 import { GadgetVersion, TraceOutputItem } from "../../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { WebviewStateUpdater } from "../../utilities/state";
+import { getWebviewMessageContext } from "../../utilities/vscode";
 
 // TODO: Make configurable?
 const maxTraceOutputLength = 1000;
@@ -90,3 +91,16 @@ function getUpdatedTraces(traces: TraceGadget[], traceId: number, items: TraceOu
     const newTrace = { ...trace, output: newItems };
     return [...traces.slice(0, traceIndex), newTrace, ...traces.slice(traceIndex + 1)];
 }
+
+export const vscode = getWebviewMessageContext<"gadget">({
+    deployRequest: null,
+    getContainersRequest: null,
+    getNamespacesRequest: null,
+    getNodesRequest: null,
+    getPodsRequest: null,
+    getVersionRequest: null,
+    runBlockingTraceRequest: null,
+    runStreamingTraceRequest: null,
+    stopStreamingTraceRequest: null,
+    undeployRequest: null
+});

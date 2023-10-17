@@ -2,10 +2,9 @@ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEraser, faRocket } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { GadgetVersion } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { EventHandlers } from "../utilities/state";
-import { EventDef } from "./helpers/state";
+import { EventDef, vscode } from "./helpers/state";
 
 export interface OverviewProps {
     status: string
@@ -14,16 +13,14 @@ export interface OverviewProps {
 }
 
 export function Overview(props: OverviewProps) {
-    const vscode = getWebviewMessageContext<"gadget">();
-
     function handleDeploy() {
         props.eventHandlers.onDeploy();
-        vscode.postMessage({ command: "deployRequest", parameters: undefined });
+        vscode.postDeployRequest();
     }
 
     function handleUndeploy() {
         props.eventHandlers.onUndeploy();
-        vscode.postMessage({ command: "undeployRequest", parameters: undefined });
+        vscode.postUndeployRequest();
     }
 
     return (

@@ -1,16 +1,14 @@
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { useEffect } from "react";
-import { InstallStepStatus, stateUpdater } from "./helpers/state";
+import { InstallStepStatus, stateUpdater, vscode } from "./helpers/state";
 import { Progress, StepWithDescription } from "./Progress";
 import { getStateManagement } from "../utilities/state";
 import { Inputs } from "./Inputs";
 import { getRequiredInputs } from "./helpers/inputs";
 
 export function AzureServiceOperator(initialState: InitialState) {
-    const vscode = getWebviewMessageContext<"aso">();
     const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
@@ -21,24 +19,24 @@ export function AzureServiceOperator(initialState: InitialState) {
         // The first step is triggered by a button press.
         // The following is for the subsequent steps, which are triggered by state changes.
         if (state.installCertManagerStep.status === InstallStepStatus.Succeeded && state.waitForCertManagerStep.status === InstallStepStatus.NotStarted) {
-            vscode.postMessage({ command: "waitForCertManagerRequest", parameters: undefined });
+            vscode.postWaitForCertManagerRequest();
             eventHandlers.onSetWaitForCertManagerStarted();
         }
 
         if (state.waitForCertManagerStep.status === InstallStepStatus.Succeeded && state.installOperatorStep.status === InstallStepStatus.NotStarted) {
-            vscode.postMessage({ command: "installOperatorRequest", parameters: undefined });
+            vscode.postInstallOperatorRequest();
             eventHandlers.onSetInstallOperatorStarted();
         }
 
         if (state.installOperatorStep.status === InstallStepStatus.Succeeded && state.installOperatorSettingsStep.status === InstallStepStatus.NotStarted) {
             const parameters = getRequiredInputs(state);
             if (!parameters) throw new Error(`Missing setting in state: ${JSON.stringify(state)}`);
-            vscode.postMessage({ command: "installOperatorSettingsRequest", parameters });
+            vscode.postInstallOperatorSettingsRequest(parameters);
             eventHandlers.onSetInstallOperatorSettingsStarted();
         }
 
         if (state.installOperatorSettingsStep.status === InstallStepStatus.Succeeded && state.waitForControllerManagerStep.status === InstallStepStatus.NotStarted) {
-            vscode.postMessage({ command: "waitForControllerManagerRequest", parameters: undefined });
+            vscode.postWaitForControllerManagerRequest();
             eventHandlers.onSetWaitForControllerManagerStarted();
         }
     });

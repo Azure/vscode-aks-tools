@@ -5,7 +5,6 @@ import { FormEvent, useEffect, useState, ChangeEvent as InputChangeEvent } from 
 import { ResourceSelector } from './ResourceSelector';
 import { ClusterResources, Nodes } from './helpers/clusterResources';
 import { isLoaded, isNotLoaded } from "../utilities/lazy";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { TraceItemSortSelector } from "./TraceItemSortSelector";
 import { GadgetConfiguration, configuredGadgetResources, getGadgetMetadata } from "./helpers/gadgets";
 import { GadgetSelector } from "./GadgetSelector";
@@ -13,7 +12,7 @@ import { NodeSelector } from "./NodeSelector";
 import { GadgetCategory, GadgetExtraProperties, SortSpecifier, toExtraPropertyObject } from "./helpers/gadgets/types";
 import { NamespaceSelection } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { EventHandlers } from "../utilities/state";
-import { EventDef } from "./helpers/state";
+import { EventDef, vscode } from "./helpers/state";
 
 const defaultTimeoutInSeconds = 30;
 const defaultMaxItemCount = 20;
@@ -29,16 +28,14 @@ export interface NewTraceDialogProps {
 }
 
 export function NewTraceDialog (props: NewTraceDialogProps) {
-    const vscode = getWebviewMessageContext<"gadget">();
-
     useEffect(() => {
         if (props.isShown && isNotLoaded(props.nodes)) {
             props.eventHandlers.onSetNodesLoading();
-            vscode.postMessage({ command: "getNodesRequest", parameters: undefined });
+            vscode.postGetNodesRequest();
         }
         if (props.isShown && isNotLoaded(props.resources)) {
             props.eventHandlers.onSetNamespacesLoading();
-            vscode.postMessage({ command: "getNamespacesRequest", parameters: undefined });
+            vscode.postGetNamespacesRequest();
         }
     });
 

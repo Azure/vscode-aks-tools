@@ -3,16 +3,13 @@ import { Overview } from "./Overview";
 import { Traces, TracesProps } from "./Traces";
 import styles from "./InspektorGadget.module.css";
 import { useEffect } from "react";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { GadgetCategory } from "./helpers/gadgets/types";
 import { isNotLoaded } from "../utilities/lazy";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { getStateManagement } from "../utilities/state";
-import { stateUpdater } from "./helpers/state";
+import { stateUpdater, vscode } from "./helpers/state";
 
 export function InspektorGadget(initialState: InitialState) {
-    const vscode = getWebviewMessageContext<"gadget">();
-
     const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
@@ -22,17 +19,17 @@ export function InspektorGadget(initialState: InitialState) {
     useEffect(() => {
         if (!state.initializationStarted) {
             eventHandlers.onSetInitializing();
-            vscode.postMessage({ command: "getVersionRequest", parameters: undefined });
+            vscode.postGetVersionRequest();
         }
 
         if (isNotLoaded(state.nodes)) {
             eventHandlers.onSetNodesLoading();
-            vscode.postMessage({ command: "getNodesRequest", parameters: undefined });
+            vscode.postGetNodesRequest();
         }
 
         if (isNotLoaded(state.resources)) {
             eventHandlers.onSetNamespacesLoading();
-            vscode.postMessage({ command: "getNamespacesRequest", parameters: undefined });
+            vscode.postGetNamespacesRequest();
         }
     });
 

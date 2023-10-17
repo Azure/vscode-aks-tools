@@ -63,7 +63,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
             name: name.value!
         };
 
-        props.vscode.postMessage({ command: "createClusterRequest", parameters });
+        props.vscode.postCreateClusterRequest(parameters);
         props.eventHandlers.onSetCreating({parameters});
     }
 

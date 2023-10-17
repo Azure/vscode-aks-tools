@@ -28,7 +28,7 @@ describe('Webview Styles', () => {
 
 class StyleTestPanel extends BasePanel<"style"> {
     constructor(extensionUri: vscode.Uri) {
-        super(extensionUri, "style");
+        super(extensionUri, "style", {});
     }
 }
 

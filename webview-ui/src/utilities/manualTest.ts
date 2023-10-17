@@ -1,4 +1,4 @@
-import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { CommandKeys, MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
 import { ContentId, ToVsCodeMsgDef, ToWebviewMsgDef } from "../../../src/webview-contract/webviewTypes";
 import { getTestVscodeMessageContext } from "./vscode";
 
@@ -13,10 +13,16 @@ export class Scenario {
         readonly factory: () => JSX.Element
     ) { }
 
-    static create<T extends ContentId>(contentId: T, description: string, factory: () => JSX.Element, getHandler: (webview: MessageSink<ToWebviewMsgDef<T>>) => MessageHandler<ToVsCodeMsgDef<T>>): Scenario {
+    static create<T extends ContentId>(
+        contentId: T,
+        description: string,
+        factory: () => JSX.Element,
+        getHandler: (webview: MessageSink<ToWebviewMsgDef<T>>) => MessageHandler<ToVsCodeMsgDef<T>>,
+        cmdKeys: CommandKeys<ToWebviewMsgDef<T>>
+    ): Scenario {
         const name = description ? `${contentId} (${description})` : contentId;
         return new Scenario(name, () => {
-            const context = getTestVscodeMessageContext<T>();
+            const context = getTestVscodeMessageContext<T>(cmdKeys);
             // Set up the subscription before creating the element
             context.subscribeToMessages(getHandler(context));
             return factory();
