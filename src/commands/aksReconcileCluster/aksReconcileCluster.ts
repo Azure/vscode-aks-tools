@@ -25,10 +25,6 @@ export default async function aksReconcileCluster(
     return;
   }
 
-  if (clusterProvisioingState.result === "Succeeded" || clusterProvisioingState.result === "Canceled") {
-    vscode.window.showInformationMessage(`Cluster provisioning state is ${clusterProvisioingState.result} and there is no operation to reconcile.`);
-    return;
-  }
   const answer = await vscode.window.showInformationMessage(`Do you want to reconcile/update operation on cluster ${clusterName}?`, "Yes", "No");
 
   if (answer === "Yes") {
