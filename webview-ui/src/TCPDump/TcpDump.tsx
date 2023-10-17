@@ -1,7 +1,7 @@
 import { InitialState, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import styles from "./TcpDump.module.css";
 import { getWebviewMessageContext } from "../utilities/vscode";
-import { useEffect, useReducer } from "react";
+import React, { useEffect, useReducer } from "react";
 import { StateMessageHandler, chainStateUpdaters, getEventHandlers, getMessageHandler, toStateUpdater } from "../utilities/state";
 import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import * as vscodefoo from 'vscode';
@@ -9,13 +9,11 @@ import * as vscodefoo from 'vscode';
 type UserMsgDef = {};
 
 interface TcpDumpState {
-    allNodes: string[]
     selectedNode: string
 }
 
 function createState(): TcpDumpState {
     return {
-        allNodes: [],
         selectedNode: "test-node"
     };
 }
@@ -34,7 +32,6 @@ export const updateState = chainStateUpdaters(
 
 export function TcpDump(props: InitialState) {
     const vscode = getWebviewMessageContext<"tcpDump">();
-    const node="aks-agentpool-52310376-vmss000008"
     const localcapfile=`/tmp/localuniquename.cap`;
     const [state, dispatch] = useReducer(updateState, createState());
 
@@ -52,7 +49,7 @@ export function TcpDump(props: InitialState) {
         event.preventDefault();
         vscode.postMessage({
             command: "startDebugPod", parameters: {
-                node: node
+                node: state.selectedNode
             }
         })
     }
@@ -66,7 +63,7 @@ export function TcpDump(props: InitialState) {
         vscode.postMessage({
             command: "startTcpDump",
             parameters: {
-                node: node
+                node: state.selectedNode
             }
         })
     }
@@ -80,7 +77,7 @@ export function TcpDump(props: InitialState) {
         vscode.postMessage({
             command: "endTcpDump",
             parameters: {
-                node: node
+                node: state.selectedNode
             }
         })
     }
@@ -93,22 +90,33 @@ export function TcpDump(props: InitialState) {
         vscode.postMessage({
             command: "downloadCaptureFile",
             parameters: {
-                node: node,
+                node: state.selectedNode,
                 localcapfile: localcapfile
             }
         })
     }
 
+    function handleSelectChange(event: React.ChangeEvent<HTMLSelectElement>) {
+        state.selectedNode = event.target.value;
+    }
+
     return (
         <div className={styles.wrapper}>
             <header className={styles.mainHeading}>
-                <h2>TCP Dump from Linux Node TESTT {props.clusterName}</h2>
+                <h2>TCP Dump from Linux Node {props.clusterName}</h2>
                 <VSCodeDivider />
             </header>
-            <a href="" onClick={handleCreateDebugPod}>Create Debug Pod</a>
-            <a href="" onClick={handleStartCapture}>Play</a>
-            <a href="" onClick={handleStopCapture}>Stop</a>
-            <a href="" onClick={handleDownloadCaptureFile}>Download</a>
+            <label htmlFor="nodes">Choose a Node for tcpdump:</label>
+
+            <select name="nodes1" id="nodes1" onChange={handleSelectChange} >
+                {props.allNodes.map((nodename) => (
+                    <option key={nodename} value={nodename}>{nodename}</option>
+                ))}
+            </select> <br/>
+            <a href="" onClick={handleCreateDebugPod}>Create Debug Pod</a> <br/>
+            <a href="" onClick={handleStartCapture}>Play</a> <br/>
+            <a href="" onClick={handleStopCapture}>Stop</a> <br/>
+            <a href="" onClick={handleDownloadCaptureFile}>Download</a> <br/>
         </div>
     );;
 }

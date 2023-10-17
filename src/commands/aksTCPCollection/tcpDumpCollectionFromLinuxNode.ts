@@ -6,6 +6,7 @@ import { getExtension } from '../utils/host';
 import { failed } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
 import { TCPDataCollection, TCPDataCollectionDataProvider } from '../../panels/TCPDataCollection';
+import { invokeKubectlCommand } from '../utils/kubectl';
 
 export async function aksTCPDumpFromLinux(_context: IActionContext, target: any) {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -40,7 +41,12 @@ export async function aksTCPDumpFromLinux(_context: IActionContext, target: any)
     }
 
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const dataProvider = new TCPDataCollectionDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name);
+    const linuxNodesList = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `get nodes -o jsonpath='{range .items[*]}{.metadata.name}{","}{end}'`);
+    if (failed(linuxNodesList)) {
+        vscode.window.showErrorMessage(linuxNodesList.error);
+        return;
+    }
+    const dataProvider = new TCPDataCollectionDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, linuxNodesList.result.stdout.split(",") || []);
     const panel = new TCPDataCollection(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);

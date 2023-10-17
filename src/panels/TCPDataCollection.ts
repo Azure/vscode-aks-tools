@@ -19,7 +19,8 @@ export class TCPDataCollectionDataProvider implements PanelDataProvider<"tcpDump
     constructor(
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
-        readonly clusterName: string
+        readonly clusterName: string,
+        readonly linuxNodesList: string[]
     ) { }
 
     getTitle(): string {
@@ -28,7 +29,8 @@ export class TCPDataCollectionDataProvider implements PanelDataProvider<"tcpDump
 
     getInitialState(): InitialState {
         return {
-            clusterName: this.clusterName
+            clusterName: this.clusterName,
+            allNodes: this.linuxNodesList,
         };
     }
 

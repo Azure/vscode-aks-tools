@@ -7,7 +7,8 @@ import { getTestVscodeMessageContext } from "../utilities/vscode";
 export function getTCPDumpScenarios() {
     const clusterName = "test-cluster";
     const initialState: InitialState = {
-        clusterName
+        clusterName,
+        allNodes: ["test-node"],
     }
 
     const webview = getTestVscodeMessageContext<"tcpDump">();

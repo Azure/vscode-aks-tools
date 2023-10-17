@@ -1,7 +1,8 @@
 import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
-    clusterName: string
+    clusterName: string,
+    allNodes: string[]
 }
 
 export type ToVsCodeMsgDef = {
