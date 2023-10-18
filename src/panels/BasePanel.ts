@@ -1,8 +1,8 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
-import { CommandKeys, MessageDefinition, MessageHandler, asMessageSink, isValidMessage } from "../webview-contract/messaging";
+import { CommandKeys, MessageDefinition, MessageHandler, MessageSource, PostMessageImpl, asMessageSink, isValidMessage } from "../webview-contract/messaging";
 import { getNonce, getUri } from "./utilities/webview";
 import { encodeState } from "../webview-contract/initialState";
-import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToWebviewMessage, ToWebviewMessageSink, ToWebviewMsgDef, VsCodeMessageContext } from "../webview-contract/webviewTypes";
+import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToVsCodeMsgDef, ToWebviewMessageSink, ToWebviewMsgDef, VsCodeMessageContext } from "../webview-contract/webviewTypes";
 
 const viewType = "aksVsCodeTools";
 
@@ -41,8 +41,7 @@ export abstract class BasePanel<TContent extends ContentId> {
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
 
         // Set up messaging between VSCode and the webview.
-        const messageContextImpl = new MessageContextImpl<TContent>(panel.webview, disposables);
-        const messageContext: VsCodeMessageContext<TContent> = {...asMessageSink(messageContextImpl, this.webviewCommandKeys), subscribeToMessages: messageContextImpl.subscribeToMessages};
+        const messageContext = getMessageContext(panel.webview, this.webviewCommandKeys, disposables);
         const messageHandler = dataProvider.getMessageHandler(messageContext);
         messageContext.subscribeToMessages(messageHandler);
 
@@ -88,36 +87,29 @@ export abstract class BasePanel<TContent extends ContentId> {
     }
 }
 
-/**
- * A `MessageContext` that represents the VSCode end of the communication,
- * i.e. it posts messages to the webview, and listens to messages to VS Code.
- */
-class MessageContextImpl<TContent extends ContentId> {
-    constructor(
-        private readonly _webview: Webview,
-        private readonly _disposables: Disposable[]
-    ) { }
+function getMessageContext<TContent extends ContentId>(webview: Webview, webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>, disposables: Disposable[]): VsCodeMessageContext<TContent> {
+    const postMessageImpl: PostMessageImpl<ToWebviewMsgDef<TContent>> = message => webview.postMessage(message);
+    const sink = asMessageSink(postMessageImpl, webviewCommandKeys);
+    const source: MessageSource<ToVsCodeMsgDef<TContent>> = {
+        subscribeToMessages(handler) {
+            webview.onDidReceiveMessage(
+                (message: any) => {
+                    if (!isValidMessage<ToVsCodeMessage<TContent>>(message)) {
+                        throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
+                    }
+    
+                    const action = (handler as MessageHandler<MessageDefinition>)[message.command];
+                    if (action) {
+                        action(message.parameters, message.command);
+                    } else {
+                        window.showErrorMessage(`No handler found for command ${message.command}`);
+                    }
+                },
+                undefined,
+                disposables
+            );
+        },
+    };
 
-    postMessage(message: ToWebviewMessage<TContent>) {
-        this._webview.postMessage(message);
-    }
-
-    subscribeToMessages(handler: ToVsCodeMessageHandler<TContent>) {
-        this._webview.onDidReceiveMessage(
-            (message: any) => {
-                if (!isValidMessage<ToVsCodeMessage<TContent>>(message)) {
-                    throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
-                }
-
-                const action = (handler as MessageHandler<MessageDefinition>)[message.command];
-                if (action) {
-                    action(message.parameters, message.command);
-                } else {
-                    window.showErrorMessage(`No handler found for command ${message.command}`);
-                }
-            },
-            undefined,
-            this._disposables
-        );
-    }
+    return {...sink, ...source};
 }

@@ -1,6 +1,6 @@
 import type { WebviewApi } from "vscode-webview";
-import { asMessageSink, MessageDefinition, MessageHandler, isValidMessage, CommandKeys } from "../../../src/webview-contract/messaging";
-import { ContentId, ToVsCodeMessage, ToVsCodeMessageHandler, ToVsCodeMsgDef, ToWebviewMessage, ToWebviewMessageHandler, ToWebviewMsgDef, VsCodeMessageContext, WebviewMessageContext } from "../../../src/webview-contract/webviewTypes";
+import { asMessageSink, MessageDefinition, MessageHandler, isValidMessage, CommandKeys, PostMessageImpl, MessageSource } from "../../../src/webview-contract/messaging";
+import { ContentId, ToVsCodeMsgDef, ToWebviewMsgDef, VsCodeMessageContext, WebviewMessageContext } from "../../../src/webview-contract/webviewTypes";
 
 const vsCodeApi: WebviewApi<unknown> | undefined = (typeof acquireVsCodeApi === "function") ? acquireVsCodeApi() : undefined;
 
@@ -21,39 +21,28 @@ const interceptorEventTarget: NamedEventTarget = { target: new EventTarget(), na
 let windowEventListener: EventListenerWithCommands | null = null;
 let interceptorEventListener: EventListenerWithCommands | null = null;
 
-class WebviewMessageContextImpl<T extends ContentId> {
-    postMessage(message: ToVsCodeMessage<T>) {
+/**
+ * @returns the `MessageContext` used by the webviews, i.e. that post messages to the VS Code extension
+ * and listen to messages from the VS Code extension.
+ */
+export function getWebviewMessageContext<T extends ContentId>(toVsCodeCmdKeys: CommandKeys<ToVsCodeMsgDef<T>>): WebviewMessageContext<T> {
+    const postMessageImpl: PostMessageImpl<ToVsCodeMsgDef<T>> = message => {
         if (vsCodeApi) {
             vsCodeApi.postMessage(message);
         } else {
             console.log(`Dispatching ${JSON.stringify(message)} to '${interceptorEventTarget.name}'`);
             interceptorEventTarget.target.dispatchEvent(new MessageEvent('vscode-message', { data: message }));
         }
-    }
+    };
 
-    subscribeToMessages(handler: ToWebviewMessageHandler<T>) {
-        windowEventListener = subscribeToMessages(windowEventTarget, windowEventListener, handler, 'message');
-    }
-}
+    const sink = asMessageSink(postMessageImpl, toVsCodeCmdKeys);
+    const source: MessageSource<ToWebviewMsgDef<T>> = {
+        subscribeToMessages(handler) {
+            windowEventListener = subscribeToMessages(windowEventTarget, windowEventListener, handler, 'message');
+        }
+    };
 
-/**
- * @returns the `MessageContext` used by the webviews, i.e. that post messages to the VS Code extension
- * and listen to messages from the VS Code extension.
- */
-export function getWebviewMessageContext<T extends ContentId>(cmdKeys: CommandKeys<ToVsCodeMsgDef<T>>): WebviewMessageContext<T> {
-    const webviewMessageContextImpl = new WebviewMessageContextImpl<T>();
-    return {...asMessageSink(webviewMessageContextImpl, cmdKeys), subscribeToMessages: webviewMessageContextImpl.subscribeToMessages};
-}
-
-class VscodeInterceptorMessageContextImpl<T extends ContentId> {
-    postMessage(message: ToWebviewMessage<T>) {
-        console.log(`Dispatching ${JSON.stringify(message)} to '${windowEventTarget.name}'`);
-        windowEventTarget.target.dispatchEvent(new MessageEvent('message', { data: message }));
-    }
-
-    subscribeToMessages(handler: ToVsCodeMessageHandler<T>) {
-        interceptorEventListener = subscribeToMessages(interceptorEventTarget, interceptorEventListener, handler, 'vscode-message');
-    }
+    return {...sink, ...source};
 }
 
 /**
@@ -61,9 +50,20 @@ class VscodeInterceptorMessageContextImpl<T extends ContentId> {
  * React application code acts as the VS Code extension, intercepting messages from the Webview
  * and posting back its own messages.
  */
-export function getTestVscodeMessageContext<T extends ContentId>(cmdKeys: CommandKeys<ToWebviewMsgDef<T>>): VsCodeMessageContext<T> {
-    const vscodeMessageContextImpl = new VscodeInterceptorMessageContextImpl<T>();
-    return {...asMessageSink(vscodeMessageContextImpl, cmdKeys), subscribeToMessages: vscodeMessageContextImpl.subscribeToMessages};
+export function getTestVscodeMessageContext<T extends ContentId>(toWebviewCmdKeys: CommandKeys<ToWebviewMsgDef<T>>): VsCodeMessageContext<T> {
+    const postMessageImpl: PostMessageImpl<ToWebviewMsgDef<T>> = message => {
+        console.log(`Dispatching ${JSON.stringify(message)} to '${windowEventTarget.name}'`);
+        windowEventTarget.target.dispatchEvent(new MessageEvent('message', { data: message }));
+    };
+
+    const sink = asMessageSink(postMessageImpl, toWebviewCmdKeys);
+    const source: MessageSource<ToVsCodeMsgDef<T>> = {
+        subscribeToMessages(handler) {
+            interceptorEventListener = subscribeToMessages(interceptorEventTarget, interceptorEventListener, handler, 'vscode-message');
+        }
+    };
+
+    return {...sink, ...source};
 }
 
 function subscribeToMessages<TMsgDef extends MessageDefinition>(

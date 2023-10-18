@@ -21,13 +21,11 @@ export type MessageSink<TMsgDef extends MessageDefinition> = {
     [P in Command<TMsgDef> as `post${Capitalize<P>}`]: (args: TMsgDef[P]) => void
 };
 
-type MessageSinkImpl<TPostMsgDef extends MessageDefinition> = {
-    postMessage(message: Message<TPostMsgDef>): void
-};
+export type PostMessageImpl<TPostMsgDef extends MessageDefinition> = (message: Message<TPostMsgDef>) => void;
 
-export function asMessageSink<TPostMsgDef extends MessageDefinition>(sinkImpl: MessageSinkImpl<TPostMsgDef>, keys: CommandKeys<TPostMsgDef>): MessageSink<TPostMsgDef> {
-    const entries = Object.keys(keys).map(command => [asPostFunction(command), (parameters: any) => sinkImpl.postMessage({command, parameters} as Message<TPostMsgDef>)]);
-    return {...sinkImpl, ...Object.fromEntries(entries)};
+export function asMessageSink<TPostMsgDef extends MessageDefinition>(postImpl: PostMessageImpl<TPostMsgDef>, keys: CommandKeys<TPostMsgDef>): MessageSink<TPostMsgDef> {
+    const entries = Object.keys(keys).map(command => [asPostFunction(command), (parameters: any) => postImpl({command, parameters} as Message<TPostMsgDef>)]);
+    return Object.fromEntries(entries);
 }
 
 function asPostFunction(str: string) {
