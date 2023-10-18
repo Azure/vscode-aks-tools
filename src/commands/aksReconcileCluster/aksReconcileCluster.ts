@@ -19,12 +19,6 @@ export default async function aksReconcileCluster(
 
   const clusterName = cluster.result.name;
 
-  const clusterProvisioingState = await determineProvisioningState(cluster.result, clusterName);
-  if (failed(clusterProvisioingState)) {
-    vscode.window.showErrorMessage(clusterProvisioingState.error);
-    return;
-  }
-
   const answer = await vscode.window.showInformationMessage(`Do you want to reconcile/update operation on cluster ${clusterName}?`, "Yes", "No");
 
   if (answer === "Yes") {
