@@ -11,7 +11,12 @@ const nodecapfile = "/tmp/vscodecap.cap";
 
 export class TCPDataCollection extends BasePanel<"tcpDump"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "tcpDump");
+        super(extensionUri, "tcpDump", {
+            startDebugPodResponse: null,
+            startTcpDumpResponse: null,
+            endTcpDumpResponse: null,
+            downloadCaptureFileResponse: null
+        });
     }
 }
 
@@ -90,23 +95,28 @@ spec:
 
         // TODO: Send message back to webview to indicate successfully created pod.
         // Also: should we wait until pod is in ready state? Probably
-        //webview.postMessage(message: "")
+        // TODO: Capture and return errors
+        webview.postStartDebugPodResponse({succeeded: true, errorMessage: null});
     }
 
     private async _handleStartTcpDump(node: string, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `exec debug-${node} -- /bin/sh -c "tcpdump --snapshot-length=0 -vvv -w ${nodecapfile} 1>/dev/null 2>&1 &"`;
         await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-        // TODO: Send message back saying capture has started
+        // TODO: Capture and return errors
+        webview.postStartTcpDumpResponse({succeeded: true, errorMessage: null});
     }
 
     private async _handleEndTcpDump(node: string, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `exec debug-${node} -- /bin/sh -c "pkill tcpdump"`;
         await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-        // TODO: Send message back saying capture has stopped?
+        // TODO: Capture and return errors
+        webview.postEndTcpDumpResponse({succeeded: true, errorMessage: null});
     }
 
     private async _handleDownloadCaptureFile(node: string, localcapfile: string, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `cp debug-${node}:${nodecapfile} ${localcapfile}`;
         await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        // TODO: Capture and return errors
+        webview.postDownloadCaptureFileResponse({succeeded: true, errorMessage: null});
     }
 }

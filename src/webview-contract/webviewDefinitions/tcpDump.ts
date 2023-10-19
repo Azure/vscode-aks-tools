@@ -21,12 +21,16 @@ export type ToVsCodeMsgDef = {
     }
 };
 
+export type CommandResult = {
+    succeeded: boolean,
+    errorMessage: string | null
+};
+
 export type ToWebViewMsgDef = {
-    // TODO : Delete
-    runCommandResponse: {
-        output: string | null
-        errorMessage: string | null
-    }
+    startDebugPodResponse: CommandResult,
+    startTcpDumpResponse: CommandResult,
+    endTcpDumpResponse: CommandResult,
+    downloadCaptureFileResponse: CommandResult
 };
 
 export type TCPDumpDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
