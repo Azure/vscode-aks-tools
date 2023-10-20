@@ -1,0 +1,22 @@
+.content {
+    display: grid;
+    grid-template-columns: 6rem 30rem;
+    grid-gap: 1rem;
+    align-items: center;
+}
+
+.content .label {
+    grid-column: 1 / 2;
+}
+
+.content .control {
+    grid-column: 2 / 3;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+    min-width: 20rem;
+}

@@ -5,32 +5,56 @@ export interface InitialState {
     allNodes: string[]
 }
 
-export type ToVsCodeMsgDef = {
-    startDebugPod: {
-        node: string
-    },
-    startTcpDump: {
-        node: string
-    },
-    endTcpDump: {
-        node: string
-    },
-    downloadCaptureFile: {
-        node: string,
-        localcapfile: string
-    }
+export type NodeName = string;
+export type CaptureName = string;
+
+export type NodeCommand = {
+    node: NodeName
 };
+
+export type NodeCaptureCommand = NodeCommand & {
+    capture: CaptureName
+}
 
 export type CommandResult = {
     succeeded: boolean,
     errorMessage: string | null
 };
 
+export type NodeCommandResult = CommandResult & {
+    node: NodeName
+};
+
+export type NodeCaptureCommandResult = NodeCommandResult & {
+    captureName: CaptureName
+}
+
+export type NodeCheckResult = NodeCommandResult & {
+    isDebugPodRunning: boolean,
+    isCaptureRunning: boolean,
+    completedCaptures: CaptureName[]
+};
+
+export type NodeCaptureDownloadResult = NodeCaptureCommandResult & {
+    localCapturePath: string
+};
+
+export type ToVsCodeMsgDef = {
+    checkNodeState: NodeCommand,
+    startDebugPod: NodeCommand,
+    startCapture: NodeCaptureCommand,
+    stopCapture: NodeCommand,
+    downloadCaptureFile: NodeCaptureCommand,
+    deleteDebugPod: NodeCommand
+};
+
 export type ToWebViewMsgDef = {
-    startDebugPodResponse: CommandResult,
-    startTcpDumpResponse: CommandResult,
-    endTcpDumpResponse: CommandResult,
-    downloadCaptureFileResponse: CommandResult
+    checkNodeStateResponse: NodeCheckResult,
+    startDebugPodResponse: NodeCommandResult,
+    startCaptureResponse: NodeCommandResult,
+    stopCaptureResponse: NodeCommandResult,
+    downloadCaptureFileResponse: NodeCaptureDownloadResult,
+    deleteDebugPodResponse: NodeCommandResult
 };
 
 export type TCPDumpDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
