@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { reconcileUsingUpdateInCluster, determineProvisioningState, getAksClusterTreeItem } from '../utils/clusters';
+import { reconcileUsingUpdateInCluster, getAksClusterTreeItem } from '../utils/clusters';
 import { failed, succeeded } from '../utils/errorable';
 import { longRunning } from '../utils/host';
 
