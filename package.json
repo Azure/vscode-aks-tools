@@ -234,7 +234,7 @@
             },
             {
                 "command": "aks.aksReconcileCluster",
-                "title": "Reconcile Operation"
+                "title": "Reconcile Cluster"
             },
             {
                 "command": "aks.aksInspektorGadgetShow",
