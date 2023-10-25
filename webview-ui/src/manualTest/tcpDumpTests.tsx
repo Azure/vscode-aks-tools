@@ -6,21 +6,20 @@ import { Scenario } from "../utilities/manualTest";
 
 type TestNodeState = {
     isDebugPodRunning: boolean,
-    currentCaptureName: CaptureName | null,
-    isCaptureRunning: boolean,
+    runningCapture: CaptureName | null,
     completedCaptures: CaptureName[]
 };
 
 function getInitialNodeState(): TestNodeState {
     return {
         isDebugPodRunning: false,
-        currentCaptureName: null,
-        isCaptureRunning: false,
+        runningCapture: null,
         completedCaptures: []
     };
 }
 
 const goodNode = "good-node";
+const nodeWithRunningDebugPod = "node-with-running-debug-pod";
 const nodeThatFailsToCreateDebugPod = "node-that-fails-to-create-debug-pod";
 const nodeThatFailsToDeleteDebugPod = "node-that-fails-to-delete-debug-pod";
 const nodeThatFailsToStartCapture = "node-that-fails-to-start-capture";
@@ -31,6 +30,11 @@ export function getTCPDumpScenarios() {
     const clusterName = "test-cluster";
     let nodeStates: {[node: NodeName]: TestNodeState} = {
         [goodNode]: getInitialNodeState(),
+        [nodeWithRunningDebugPod]: {
+            isDebugPodRunning: true,
+            runningCapture: null,
+            completedCaptures: ["001", "002", "003", "004"]
+        },
         [nodeThatFailsToCreateDebugPod]: getInitialNodeState(),
         [nodeThatFailsToDeleteDebugPod]: getInitialNodeState(),
         [nodeThatFailsToStartCapture]: getInitialNodeState(),
@@ -47,8 +51,8 @@ export function getTCPDumpScenarios() {
             checkNodeState: args => handleCheckNodeState(args.node),
             startDebugPod: args => handleStartDebugPod(args.node),
             deleteDebugPod: args => handleDeleteDebugPod(args.node),
-            startCapture: args => handleStartCapture(args.node),
-            stopCapture: args => handleStopCapture(args.node),
+            startCapture: args => handleStartCapture(args.node, args.capture),
+            stopCapture: args => handleStopCapture(args.node, args.capture),
             downloadCaptureFile: args => handleDownloadCaptureFile(args.node, args.capture)
         }
 
@@ -68,8 +72,7 @@ export function getTCPDumpScenarios() {
             if (succeeded) {
                 nodeStates[node] = {
                     isDebugPodRunning: succeeded,
-                    currentCaptureName: null,
-                    isCaptureRunning: false,
+                    runningCapture: null,
                     completedCaptures: []
                 };
             }
@@ -95,11 +98,11 @@ export function getTCPDumpScenarios() {
             });
         }
     
-        async function handleStartCapture(node: NodeName) {
+        async function handleStartCapture(node: NodeName, capture: CaptureName) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             const succeeded = node !== nodeThatFailsToStartCapture;
             if (succeeded) {
-                nodeStates[node] = {...nodeStates[node], isCaptureRunning: true};
+                nodeStates[node] = {...nodeStates[node], runningCapture: capture};
             }
 
             webview.postStartCaptureResponse({
@@ -109,13 +112,13 @@ export function getTCPDumpScenarios() {
             });
         }
     
-        async function handleStopCapture(node: NodeName) {
+        async function handleStopCapture(node: NodeName, capture: CaptureName) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             const nodeState = nodeStates[node];
 
             const succeeded = node !== nodeThatFailsToStartCapture;
-            if (succeeded && nodeState.currentCaptureName) {
-                nodeStates[node] = {...nodeState, isCaptureRunning: false, completedCaptures: [...nodeState.completedCaptures, nodeState.currentCaptureName]};
+            if (succeeded) {
+                nodeStates[node] = {...nodeState, runningCapture: null, completedCaptures: [...nodeState.completedCaptures, capture]};
             }
 
             webview.postStopCaptureResponse({
@@ -132,7 +135,7 @@ export function getTCPDumpScenarios() {
                 succeeded: true,
                 errorMessage: null,
                 captureName: capture,
-                localCapturePath: `/path/to/${capture}.cap`
+                localCapturePath: `/reasonably/long/path/to/eventually/get/to/${capture}.cap`
             });
         }
     }

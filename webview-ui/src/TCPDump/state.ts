@@ -85,9 +85,16 @@ function ensureNodeStateExists(nodeStates: NodeStates, node: NodeName | null): N
 function getNodeStatesFromCheck(nodeStates: NodeStates, result: NodeCheckResult): NodeStates {
     const status =
         !result.isDebugPodRunning ? NodeStatus.Clean :
-        result.isCaptureRunning ? NodeStatus.CaptureRunning :
-        NodeStatus.Clean;
-    const nodeState = {...nodeStates[result.node], status};
+        result.runningCapture === null ? NodeStatus.DebugPodRunning :
+        NodeStatus.CaptureRunning;
+
+    const completedCaptures = result.completedCaptures.map<NodeCapture>(c => ({
+        name: c,
+        status: CaptureStatus.Completed,
+        downloadedFilePath: null
+    }));
+
+    const nodeState: NodeState = {...nodeStates[result.node], status, completedCaptures};
     return {...nodeStates, [result.node]: nodeState};
 }
 

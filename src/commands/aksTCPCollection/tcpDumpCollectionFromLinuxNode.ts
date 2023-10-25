@@ -3,7 +3,7 @@ import * as k8s from 'vscode-kubernetes-tools-api';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getKubernetesClusterInfo } from '../utils/clusters';
 import { getExtension } from '../utils/host';
-import { failed } from '../utils/errorable';
+import { Errorable, failed, map as errmap } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
 import { TCPDataCollection, TCPDataCollectionDataProvider } from '../../panels/TCPDataCollection';
 import { invokeKubectlCommand } from '../utils/kubectl';
@@ -41,13 +41,20 @@ export async function aksTCPDumpFromLinux(_context: IActionContext, target: any)
     }
 
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const linuxNodesList = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `get nodes -o jsonpath='{range .items[*]}{.metadata.name}{","}{end}'`);
+    const linuxNodesList = await getLinuxNodes(kubectl, kubeConfigFile.filePath);
     if (failed(linuxNodesList)) {
         vscode.window.showErrorMessage(linuxNodesList.error);
         return;
     }
-    const dataProvider = new TCPDataCollectionDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, linuxNodesList.result.stdout.split(",") || []);
+
+    const dataProvider = new TCPDataCollectionDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, linuxNodesList.result);
     const panel = new TCPDataCollection(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);
+}
+
+async function getLinuxNodes(kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFile: string): Promise<Errorable<string[]>> {
+    const command = `get node -l kubernetes.io/os=linux --no-headers -o custom-columns=":metadata.name"`;
+    const commandResult = await invokeKubectlCommand(kubectl, kubeConfigFile, command);
+    return errmap(commandResult, sr => sr.stdout.trim().split("\n"));
 }

@@ -5,6 +5,8 @@ import { VSCodeButton, VSCodeDivider, VSCodeProgressRing } from "@vscode/webview
 import { getStateManagement } from "../utilities/state";
 import { CaptureStatus, NodeStatus, stateUpdater, vscode } from "./state";
 import { NodeSelector } from "../components/NodeSelector";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCopy, faDownload, faPlay, faPlus, faSpinner, faStop, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export function TcpDump(initialState: InitialState) {
     const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
@@ -38,7 +40,7 @@ export function TcpDump(initialState: InitialState) {
         if (!state.selectedNode) return;
         const nodeState = state.nodeStates[state.selectedNode];
         if (nodeState.status !== NodeStatus.DebugPodRunning) return;
-        const captureName = new Date().toISOString().replaceAll(":", "-").replace("T", "_");
+        const captureName = new Date().toISOString().slice(0,-5).replaceAll(":", "-").replace("T", "_");
         vscode.postStartCapture({node: state.selectedNode, capture: captureName});
         eventHandlers.onStartingNodeCapture({node: state.selectedNode, capture: captureName});
     }
@@ -47,7 +49,8 @@ export function TcpDump(initialState: InitialState) {
         if (!state.selectedNode) return;
         const nodeState = state.nodeStates[state.selectedNode];
         if (nodeState.status !== NodeStatus.CaptureRunning) return;
-        vscode.postStopCapture({node: state.selectedNode});
+        if (!nodeState.currentCaptureName) return;
+        vscode.postStopCapture({node: state.selectedNode, capture: nodeState.currentCaptureName});
         eventHandlers.onStoppingNodeCapture({node: state.selectedNode});
     }
 
@@ -57,8 +60,8 @@ export function TcpDump(initialState: InitialState) {
         eventHandlers.onDownloadingNodeCapture({node: state.selectedNode, capture: captureName});
     }
 
-    function handleOpenFile(filePath: string) {
-        console.log(`Opening file ${filePath}`);
+    function handleCopyDownloadPathClick(path: string) {
+        navigator.clipboard.writeText(path);
     }
 
     const nodeState = state.selectedNode ? state.nodeStates[state.selectedNode] : null;
@@ -74,62 +77,75 @@ export function TcpDump(initialState: InitialState) {
             </header>
             <div className={styles.content}>
                 <label htmlFor="node-dropdown" className={styles.label}>Node:</label>
-                <NodeSelector nodes={state.allNodes} onNodeChanged={eventHandlers.onSetSelectedNode} id="node-dropdown" className={styles.control} />
-            </div>
-            <div className={styles.buttons}>
-                {hasStatus(NodeStatus.Checking) && <><VSCodeProgressRing />Checking Node</>}
+                <NodeSelector nodes={state.allNodes} onNodeChanged={eventHandlers.onSetSelectedNode} id="node-dropdown" className={styles.controlDropdown} />
+
+                {hasStatus(NodeStatus.Checking) &&
+                <div className={styles.control} style={{display: "flex"}}>
+                    <VSCodeProgressRing style={{height: "1rem"}} />
+                    Checking Node
+                </div>
+                }
+
+                <label className={styles.label}>Debug Pod</label>
                 {hasStatus(NodeStatus.Clean, NodeStatus.CreatingDebugPod) &&
-                    <VSCodeButton onClick={handleCreateDebugPod} disabled={hasStatus(NodeStatus.CreatingDebugPod)}>
-                        {hasStatus(NodeStatus.CreatingDebugPod) && <VSCodeProgressRing />}
-                        Create Debug Pod
+                    <VSCodeButton onClick={handleCreateDebugPod} disabled={!hasStatus(NodeStatus.Clean)} className={styles.controlButton} >
+                        {hasStatus(NodeStatus.CreatingDebugPod) && <span slot="start"><FontAwesomeIcon icon={faSpinner} className="fa-spin" /></span>}
+                        {!hasStatus(NodeStatus.CreatingDebugPod) && <span slot="start"><FontAwesomeIcon icon={faPlus} /></span>}
+                        Create
+                    </VSCodeButton>
+                }
+                {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.DeletingDebugPod, NodeStatus.CaptureStarting, NodeStatus.CaptureRunning, NodeStatus.CaptureStopping) &&
+                    <VSCodeButton onClick={handleRemoveDebugPod} disabled={!hasStatus(NodeStatus.DebugPodRunning)} className={styles.controlButton} appearance="secondary" >
+                        {hasStatus(NodeStatus.DeletingDebugPod) && <span slot="start"><FontAwesomeIcon icon={faSpinner} className="fa-spin" /></span>}
+                        {!hasStatus(NodeStatus.DeletingDebugPod) && <span slot="start"><FontAwesomeIcon icon={faTrash} /></span>}
+                        Delete
                     </VSCodeButton>
                 }
 
-                {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.DeletingDebugPod) &&
-                    <VSCodeButton onClick={handleRemoveDebugPod} disabled={hasStatus(NodeStatus.DeletingDebugPod)}>
-                        {hasStatus(NodeStatus.DeletingDebugPod) && <VSCodeProgressRing />}
-                        Remove Debug Pod
-                    </VSCodeButton>
-                }
-
+                <label className={styles.label}>Capture</label>
                 {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) &&
-                    <VSCodeButton onClick={handleStartCapture} disabled={hasStatus(NodeStatus.CaptureStarting)}>
-                        {hasStatus(NodeStatus.CaptureStarting) && <VSCodeProgressRing />}
-                        Start Capture
+                    <VSCodeButton onClick={handleStartCapture} disabled={!hasStatus(NodeStatus.DebugPodRunning)} className={styles.controlButton} >
+                        {hasStatus(NodeStatus.CaptureStarting) && <span slot="start"><FontAwesomeIcon icon={faSpinner} className="fa-spin" /></span>}
+                        {!hasStatus(NodeStatus.CaptureStarting) && <span slot="start"><FontAwesomeIcon icon={faPlay} /></span>}
+                        Start
                     </VSCodeButton>
                 }
-
                 {hasStatus(NodeStatus.CaptureRunning, NodeStatus.CaptureStopping) &&
-                    <VSCodeButton onClick={handleStopCapture} disabled={hasStatus(NodeStatus.CaptureStopping)}>
-                        {hasStatus(NodeStatus.CaptureStopping) && <VSCodeProgressRing />}
-                        Stop Capture
+                    <VSCodeButton onClick={handleStopCapture} disabled={!hasStatus(NodeStatus.CaptureRunning)} className={styles.controlButton} >
+                        {hasStatus(NodeStatus.CaptureStopping) && <span slot="start"><FontAwesomeIcon icon={faSpinner} className="fa-spin" /></span>}
+                        {!hasStatus(NodeStatus.CaptureStopping) && <span slot="start"><FontAwesomeIcon icon={faStop} /></span>}
+                        Stop
                     </VSCodeButton>
                 }
 
-                {hasStatus(NodeStatus.DebugPodRunning) && nodeState && nodeState.completedCaptures.length > 0 && (
-                    <table>
+                <label className={styles.label}>Saved Captures</label>
+                {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting, NodeStatus.CaptureRunning, NodeStatus.CaptureStopping) && nodeState && nodeState.completedCaptures.length > 0 && (
+                    <table className={[styles.control, styles.capturelist].join(' ')} >
                         <thead>
                             <tr>
                                 <th>Capture</th>
-                                <th>Operation</th>
+                                <th>Local Path</th>
                             </tr>
                         </thead>
                         <tbody>
                             {nodeState.completedCaptures.map(c => (
-                                <tr>
+                                <tr key={c.name}>
                                     <td>{c.name}</td>
                                     <td>
                                         {!c.downloadedFilePath &&
-                                            <VSCodeButton onClick={() => handleStartDownload(c.name)} disabled={c.status === CaptureStatus.Downloaded}>
-                                                {c.status === CaptureStatus.Downloading && <VSCodeProgressRing />}
+                                            <VSCodeButton onClick={() => handleStartDownload(c.name)} disabled={c.status !== CaptureStatus.Completed} appearance="secondary">
+                                                {c.status === CaptureStatus.Downloading && <span slot="start"><FontAwesomeIcon icon={faSpinner} className="fa-spin" /></span>}
+                                                {c.status === CaptureStatus.Completed && <span slot="start"><FontAwesomeIcon icon={faDownload} /></span>}
                                                 Download
                                             </VSCodeButton>
                                         }
 
                                         {c.downloadedFilePath &&
-                                            <VSCodeButton onClick={() => handleOpenFile(c.downloadedFilePath!)}>
-                                                Open
-                                            </VSCodeButton>
+                                            <div style={{display: "flex"}}>
+                                                <span>{c.downloadedFilePath}</span>
+                                                &nbsp;
+                                                <VSCodeButton appearance="icon" title="Copy Path"><FontAwesomeIcon icon={faCopy} onClick={() => handleCopyDownloadPathClick(c.downloadedFilePath!)} /></VSCodeButton>
+                                            </div>
                                         }
                                     </td>
                                 </tr>
@@ -137,6 +153,13 @@ export function TcpDump(initialState: InitialState) {
                         </tbody>
                     </table>
                 )}
+
+                {nodeState?.errorMessage &&
+                <>
+                    <label className={styles.label}>Error:</label>
+                    <pre className={styles.control}>{nodeState?.errorMessage}</pre>
+                </>
+                }
             </div>
         </>
     );;

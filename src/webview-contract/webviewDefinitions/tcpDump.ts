@@ -31,7 +31,7 @@ export type NodeCaptureCommandResult = NodeCommandResult & {
 
 export type NodeCheckResult = NodeCommandResult & {
     isDebugPodRunning: boolean,
-    isCaptureRunning: boolean,
+    runningCapture: CaptureName | null,
     completedCaptures: CaptureName[]
 };
 
@@ -43,7 +43,7 @@ export type ToVsCodeMsgDef = {
     checkNodeState: NodeCommand,
     startDebugPod: NodeCommand,
     startCapture: NodeCaptureCommand,
-    stopCapture: NodeCommand,
+    stopCapture: NodeCaptureCommand,
     downloadCaptureFile: NodeCaptureCommand,
     deleteDebugPod: NodeCommand
 };

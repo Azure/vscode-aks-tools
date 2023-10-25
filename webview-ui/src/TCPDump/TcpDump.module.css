@@ -1,6 +1,6 @@
 .content {
     display: grid;
-    grid-template-columns: 6rem 30rem;
+    grid-template-columns: 6rem 50rem;
     grid-gap: 1rem;
     align-items: center;
 }
@@ -13,10 +13,26 @@
     grid-column: 2 / 3;
 }
 
-.buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-start;
-    min-width: 20rem;
+.content .controlDropdown {
+    grid-column: 2 / 3;
+    max-width: 30rem;
+}
+
+.content .controlButton {
+    grid-column: 2 / 3;
+    max-width: 8rem;
+}
+
+table.capturelist {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.capturelist th {
+    height: 50px;
+    text-align: left;
+}
+
+table.capturelist td {
+    padding: 5px;
 }
