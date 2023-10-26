@@ -233,6 +233,10 @@
                 "title": "Abort Last Operation"
             },
             {
+                "command": "aks.aksReconcileCluster",
+                "title": "Reconcile Cluster"
+            },
+            {
                 "command": "aks.aksInspektorGadgetShow",
                 "title": "Show Inspektor Gadget"
             },
@@ -368,6 +372,10 @@
                 }, 
                 {
                     "command": "aks.aksAbortLastOperationInCluster",
+                    "group": "navigation"
+                }, 
+                {
+                    "command": "aks.aksReconcileCluster",
                     "group": "navigation"
                 }
             ]

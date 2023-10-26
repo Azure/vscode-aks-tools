@@ -476,6 +476,24 @@ export async function abortLastOperationInCluster(
     }
 }
 
+export async function reconcileUsingUpdateInCluster(
+    target: AksClusterTreeItem,
+    clusterName: string
+): Promise<Errorable<string>> {
+    try {
+        // Pleaset note: here is in the only place this way of reconcile is documented: https://learn.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest#az-aks-update()-examples
+        const containerClient = getContainerClient(target);
+        const getClusterInfo = await containerClient.managedClusters.get(target.resourceGroupName, clusterName);
+        await containerClient.managedClusters.beginCreateOrUpdateAndWait(target.resourceGroupName, clusterName, {
+            location: getClusterInfo.location,
+        })
+
+        return { succeeded: true, result: "Reconcile/Update cluster succeeded." };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${getErrorMessage(ex)}` };
+    }
+}
+
 export async function rotateClusterCert(
     target: AksClusterTreeItem,
     clusterName: string
