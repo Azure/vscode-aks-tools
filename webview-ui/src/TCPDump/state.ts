@@ -59,8 +59,8 @@ export const stateUpdater: WebviewStateUpdater<"tcpDump", EventDef, TcpDumpState
     }),
     vscodeMessageHandler: {
         checkNodeStateResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromCheck(state.nodeStates, args)}),
-        startDebugPodResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromCommand(state.nodeStates, args, NodeStatus.DebugPodRunning, NodeStatus.Unknown)}),
-        deleteDebugPodResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromCommand(state.nodeStates, args, NodeStatus.Clean, NodeStatus.Unknown)}),
+        startDebugPodResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromPodCreation(state.nodeStates, args)}),
+        deleteDebugPodResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromPodDeletion(state.nodeStates, args)}),
         startCaptureResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromCaptureStartResult(state.nodeStates, args)}),
         stopCaptureResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromCaptureStopResult(state.nodeStates, args)}),
         downloadCaptureFileResponse: (state, args) => ({...state, nodeStates: getNodeStatesFromDownloadResult(state.nodeStates, args)})
@@ -100,14 +100,22 @@ function getNodeStatesFromCheck(nodeStates: NodeStates, result: NodeCheckResult)
     return {...nodeStates, [result.node]: nodeState};
 }
 
-function getNodeStatesFromCommand(nodeStates: NodeStates, result: NodeCommandResult, statusIfSucceeded: NodeStatus, statusIfFailed: NodeStatus): NodeStates {
-    const status = result.succeeded ? statusIfSucceeded : statusIfFailed;
+function getNodeStatesFromStatus(nodeStates: NodeStates, node: NodeName, newStatus: NodeStatus): NodeStates {
+    return updateNodeState(nodeStates, node, state => ({...state, status: newStatus}));
+}
+
+function getNodeStatesFromPodCreation(nodeStates: NodeStates, result: NodeCommandResult): NodeStates {
     const errorMessage = result.succeeded ? null : result.errorMessage;
+    const status = result.succeeded ? NodeStatus.DebugPodRunning : NodeStatus.Unknown;
     return updateNodeState(nodeStates, result.node, state => ({...state, status, errorMessage}));
 }
 
-function getNodeStatesFromStatus(nodeStates: NodeStates, node: NodeName, newStatus: NodeStatus): NodeStates {
-    return updateNodeState(nodeStates, node, state => ({...state, status: newStatus}));
+function getNodeStatesFromPodDeletion(nodeStates: NodeStates, result: NodeCommandResult): NodeStates {
+    const errorMessage = result.succeeded ? null : result.errorMessage;
+    const status = result.succeeded ? NodeStatus.Clean : NodeStatus.Unknown;
+    const currentCaptureName = null;
+    const completedCaptures: NodeCapture[] = [];
+    return updateNodeState(nodeStates, result.node, state => ({...state, status, errorMessage, currentCaptureName, completedCaptures}));
 }
 
 function getNodeStatesFromCaptureStarting(nodeStates: NodeStates, node: NodeName, capture: CaptureName): NodeStates {

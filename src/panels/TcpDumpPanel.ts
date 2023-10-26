@@ -226,10 +226,29 @@ spec:
     private async _handleDeleteDebugPod(node: string, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `delete pod -n ${debugPodNamespace} ${getPodName(node)}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        if (failed(output)) {
+            webview.postDeleteDebugPodResponse({
+                node,
+                succeeded: false,
+                errorMessage: `Failed to delete ${getPodName(node)}:\n${output.error}`
+            });
+            return;
+        }
+
+        const waitResult = await this._waitForPodDeleted(node);
+        if (failed(waitResult)) {
+            webview.postStartDebugPodResponse({
+                node,
+                succeeded: false,
+                errorMessage: `Pod ${getPodName(node)} was not deleted:\n${waitResult.error}`
+            });
+            return;
+        }
+
         webview.postDeleteDebugPodResponse({
             node,
-            succeeded: output.succeeded,
-            errorMessage: failed(output) ? output.error : null
+            succeeded: true,
+            errorMessage: null
         });
     }
 
@@ -320,6 +339,12 @@ spec:
 
     private async _waitForPodReady(node: string): Promise<Errorable<void>> {
         const waitCommand = `wait pod -n ${debugPodNamespace} --for=condition=ready --timeout=300s ${getPodName(node)}`;
+        const waitOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, waitCommand);
+        return errmap(waitOutput, _ => undefined);
+    }
+
+    private async _waitForPodDeleted(node: string): Promise<Errorable<void>> {
+        const waitCommand = `wait pod -n ${debugPodNamespace} --for=delete --timeout=300s ${getPodName(node)}`;
         const waitOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, waitCommand);
         return errmap(waitOutput, _ => undefined);
     }
