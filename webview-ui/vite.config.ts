@@ -14,7 +14,7 @@ export default defineConfig({
     checker({typescript: true})
   ],
   server: {
-    port: 3002
+    port: 3000
   },
   build: {
     rollupOptions: {
