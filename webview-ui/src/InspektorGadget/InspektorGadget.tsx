@@ -2,46 +2,39 @@ import { VSCodeLink, VSCodePanelTab, VSCodePanelView, VSCodePanels } from "@vsco
 import { Overview } from "./Overview";
 import { Traces, TracesProps } from "./Traces";
 import styles from "./InspektorGadget.module.css";
-import { useEffect, useReducer } from "react";
-import { getWebviewMessageContext } from "../utilities/vscode";
-import { createState, updateState, userMessageHandler, vscodeMessageHandler } from "./helpers/state";
+import { useEffect } from "react";
 import { GadgetCategory } from "./helpers/gadgets/types";
 import { isNotLoaded } from "../utilities/lazy";
-import { InitialState, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
-import { UserMsgDef } from "./helpers/userCommands";
-import { getEventHandlers, getMessageHandler } from "../utilities/state";
+import { InitialState } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
+import { getStateManagement } from "../utilities/state";
+import { stateUpdater, vscode } from "./helpers/state";
 
-export function InspektorGadget(_props: InitialState) {
-    const vscode = getWebviewMessageContext<"gadget">();
-
-    const [state, dispatch] = useReducer(updateState, createState());
+export function InspektorGadget(initialState: InitialState) {
+    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
-        const msgHandler = getMessageHandler<ToWebViewMsgDef>(dispatch, vscodeMessageHandler);
-        vscode.subscribeToMessages(msgHandler);
+        vscode.subscribeToMessages(vsCodeMessageHandlers);
     });
 
     useEffect(() => {
         if (!state.initializationStarted) {
-            dispatch({ command: "setInitializing" });
-            vscode.postMessage({ command: "getVersionRequest", parameters: undefined });
+            eventHandlers.onSetInitializing();
+            vscode.postGetVersionRequest();
         }
 
         if (isNotLoaded(state.nodes)) {
-            dispatch({ command: "setNodesLoading" });
-            vscode.postMessage({ command: "getNodesRequest", parameters: undefined });
+            eventHandlers.onSetNodesLoading();
+            vscode.postGetNodesRequest();
         }
 
         if (isNotLoaded(state.resources)) {
-            dispatch({ command: "setNamespacesLoading" });
-            vscode.postMessage({ command: "getNamespacesRequest", parameters: undefined });
+            eventHandlers.onSetNamespacesLoading();
+            vscode.postGetNamespacesRequest();
         }
     });
 
-    const userMessageEventHandlers = getEventHandlers<UserMsgDef>(dispatch, userMessageHandler);
-
     function handleRequestTraceId(): number {
-        userMessageEventHandlers.onIncrementTraceId();
+        eventHandlers.onIncrementTraceId();
         return state.nextTraceId;
     }
 
@@ -53,7 +46,7 @@ export function InspektorGadget(_props: InitialState) {
             nodes: state.nodes,
             resources: state.resources,
             onRequestTraceId: handleRequestTraceId,
-            userMessageHandlers: userMessageEventHandlers
+            eventHandlers: eventHandlers
         };
     }
 
@@ -74,7 +67,7 @@ export function InspektorGadget(_props: InitialState) {
             {isDeployed && <VSCodePanelTab>SNAPSHOTS</VSCodePanelTab>}
             {isDeployed && <VSCodePanelTab>PROFILE</VSCodePanelTab>}
 
-            <VSCodePanelView className={styles.tab}><Overview status={state.overviewStatus} version={state.version} userMessageHandlers={userMessageEventHandlers} /></VSCodePanelView>
+            <VSCodePanelView className={styles.tab}><Overview status={state.overviewStatus} version={state.version} eventHandlers={eventHandlers} /></VSCodePanelView>
             {isDeployed && <VSCodePanelView className={styles.tab}><Traces {...getTracesProps("trace")} /></VSCodePanelView>}
             {isDeployed && <VSCodePanelView className={styles.tab}><Traces {...getTracesProps("top")} /></VSCodePanelView>}
             {isDeployed && <VSCodePanelView className={styles.tab}><Traces {...getTracesProps("snapshot")} /></VSCodePanelView>}

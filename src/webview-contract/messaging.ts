@@ -7,11 +7,29 @@ export type MessageDefinition = {
 };
 
 /**
+ * Any object containing all the keys (commands) for a message definition.
+ */
+export type CommandKeys<TMsgDef> = {
+    [P in Command<TMsgDef>]: any
+};
+
+/**
  * A component that messages can be sent to. Both Webviews and the
  * VS Code extension can act as `MessageSink` instances.
  */
-export interface MessageSink<TPostMsgDef extends MessageDefinition> {
-    postMessage(message: Message<TPostMsgDef>): void
+export type MessageSink<TMsgDef extends MessageDefinition> = {
+    [P in Command<TMsgDef> as `post${Capitalize<P>}`]: (args: TMsgDef[P]) => void
+};
+
+export type PostMessageImpl<TPostMsgDef extends MessageDefinition> = (message: Message<TPostMsgDef>) => void;
+
+export function asMessageSink<TPostMsgDef extends MessageDefinition>(postImpl: PostMessageImpl<TPostMsgDef>, keys: CommandKeys<TPostMsgDef>): MessageSink<TPostMsgDef> {
+    const entries = Object.keys(keys).map(command => [asPostFunction(command), (parameters: any) => postImpl({command, parameters} as Message<TPostMsgDef>)]);
+    return Object.fromEntries(entries);
+}
+
+function asPostFunction(str: string) {
+    return "post" + str[0].toUpperCase() + str.slice(1);
 }
 
 /**

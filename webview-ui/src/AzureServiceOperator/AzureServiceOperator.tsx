@@ -1,50 +1,43 @@
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
-import { InitialState, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
-import { getWebviewMessageContext } from "../utilities/vscode";
-import { useEffect, useReducer } from "react";
-import { InstallStepStatus, createState, updateState, userMessageHandler, vscodeMessageHandler } from "./helpers/state";
+import { InitialState } from "../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
+import { useEffect } from "react";
+import { InstallStepStatus, stateUpdater, vscode } from "./helpers/state";
 import { Progress, StepWithDescription } from "./Progress";
-import { getEventHandlers, getMessageHandler } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { getStateManagement } from "../utilities/state";
 import { Inputs } from "./Inputs";
 import { getRequiredInputs } from "./helpers/inputs";
 
-export function AzureServiceOperator(props: InitialState) {
-    const vscode = getWebviewMessageContext<"aso">();
-
-    const [state, dispatch] = useReducer(updateState, createState());
-
-    const userMessageEventHandlers = getEventHandlers<UserMsgDef>(dispatch, userMessageHandler);
+export function AzureServiceOperator(initialState: InitialState) {
+    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
-        const msgHandler = getMessageHandler<ToWebViewMsgDef>(dispatch, vscodeMessageHandler);
-        vscode.subscribeToMessages(msgHandler);
+        vscode.subscribeToMessages(vsCodeMessageHandlers);
     }, []);
 
     useEffect(() => {
         // The first step is triggered by a button press.
         // The following is for the subsequent steps, which are triggered by state changes.
         if (state.installCertManagerStep.status === InstallStepStatus.Succeeded && state.waitForCertManagerStep.status === InstallStepStatus.NotStarted) {
-            vscode.postMessage({ command: "waitForCertManagerRequest", parameters: undefined });
-            userMessageEventHandlers.onSetWaitForCertManagerStarted();
+            vscode.postWaitForCertManagerRequest();
+            eventHandlers.onSetWaitForCertManagerStarted();
         }
 
         if (state.waitForCertManagerStep.status === InstallStepStatus.Succeeded && state.installOperatorStep.status === InstallStepStatus.NotStarted) {
-            vscode.postMessage({ command: "installOperatorRequest", parameters: undefined });
-            userMessageEventHandlers.onSetInstallOperatorStarted();
+            vscode.postInstallOperatorRequest();
+            eventHandlers.onSetInstallOperatorStarted();
         }
 
         if (state.installOperatorStep.status === InstallStepStatus.Succeeded && state.installOperatorSettingsStep.status === InstallStepStatus.NotStarted) {
             const parameters = getRequiredInputs(state);
             if (!parameters) throw new Error(`Missing setting in state: ${JSON.stringify(state)}`);
-            vscode.postMessage({ command: "installOperatorSettingsRequest", parameters });
-            userMessageEventHandlers.onSetInstallOperatorSettingsStarted();
+            vscode.postInstallOperatorSettingsRequest(parameters);
+            eventHandlers.onSetInstallOperatorSettingsStarted();
         }
 
         if (state.installOperatorSettingsStep.status === InstallStepStatus.Succeeded && state.waitForControllerManagerStep.status === InstallStepStatus.NotStarted) {
-            vscode.postMessage({ command: "waitForControllerManagerRequest", parameters: undefined });
-            userMessageEventHandlers.onSetWaitForControllerManagerStarted();
+            vscode.postWaitForControllerManagerRequest();
+            eventHandlers.onSetWaitForControllerManagerStarted();
         }
     });
 
@@ -59,14 +52,14 @@ export function AzureServiceOperator(props: InitialState) {
 
     return (
     <>
-        <h2>Azure Service Operator on {props.clusterName}</h2>
+        <h2>Azure Service Operator on {state.clusterName}</h2>
         <p>
             The Azure Service Operator helps you provision Azure resources and connect your applications to them from within Kubernetes.
             <VSCodeLink href="https://aka.ms/aks/aso">&nbsp;Learn more</VSCodeLink>
         </p>
         <div className={styles.content}>
             <div className={styles.inputPane}>
-                <Inputs state={state} handlers={userMessageEventHandlers} vscode={vscode} />
+                <Inputs state={state} handlers={eventHandlers} vscode={vscode} />
             </div>
             <div className={styles.progressPane}>
                 <Progress steps={steps} />

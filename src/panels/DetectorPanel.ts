@@ -6,7 +6,7 @@ const meta = require('../../package.json');
 
 export class DetectorPanel extends BasePanel<"detector"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "detector");
+        super(extensionUri, "detector", {});
     }
 }
 

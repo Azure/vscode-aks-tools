@@ -12,7 +12,10 @@ import { URL } from "url";
 
 export class PeriscopePanel extends BasePanel<"periscope"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "periscope");
+        super(extensionUri, "periscope", {
+            nodeLogsResponse: null,
+            uploadStatusResponse: null
+        });
     }
 }
 
@@ -79,7 +82,7 @@ export class PeriscopeDataProvider implements PanelDataProvider<"periscope"> {
         }
 
         const uploadStatuses = await checkUploadStatus(this.deploymentParameters.storage, this.runId, this.nodes);
-        webview.postMessage({ command: 'uploadStatusResponse', parameters: {uploadStatuses} });
+        webview.postUploadStatusResponse({uploadStatuses});
     }
 
     private async _handleNodeLogsRequest(nodeName: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -97,6 +100,6 @@ export class PeriscopeDataProvider implements PanelDataProvider<"periscope"> {
             return;
         }
 
-        webview.postMessage({ command: 'nodeLogsResponse', parameters: {nodeName, logs: logs.result} });
+        webview.postNodeLogsResponse({nodeName, logs: logs.result});
     }
 }

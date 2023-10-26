@@ -10,7 +10,11 @@ const meta = require('../../package.json');
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "createCluster");
+        super(extensionUri, "createCluster", {
+            getLocationsResponse: null,
+            getResourceGroupsResponse: null,
+            progressUpdate: null
+        });
     }
 }
 
@@ -58,19 +62,16 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             return;
         }
 
-        webview.postMessage({ command: "getLocationsResponse", parameters: {locations: resourceType.locations} });
+        webview.postGetLocationsResponse({locations: resourceType.locations});
     }
 
     private async _handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         const groups = await getResourceGroupList(this.resourceManagementClient);
         if (failed(groups)) {
-            webview.postMessage({
-                command: "progressUpdate",
-                parameters: {
-                    event: ProgressEventType.Failed,
-                    operationDescription: "Retrieving resource groups",
-                    errorMessage: groups.error
-                }
+            webview.postProgressUpdate({
+                event: ProgressEventType.Failed,
+                operationDescription: "Retrieving resource groups",
+                errorMessage: groups.error
             });
             return;
         }
@@ -81,7 +82,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             location: g.location
         })).sort((a, b) => a.name > b.name ? 1 : -1);
 
-        webview.postMessage({ command: "getResourceGroupsResponse", parameters: {groups: usableGroups} });
+        webview.postGetResourceGroupsResponse({groups: usableGroups});
     }
 
     private async _handleCreateClusterRequest(isNewResourceGroup: boolean, group: WebviewResourceGroup, location: string, name: string, webview: MessageSink<ToWebViewMsgDef>) {
@@ -106,25 +107,19 @@ async function createResourceGroup(
     resourceManagementClient: ResourceManagementClient
 ) {
     const operationDescription = `Creating resource group ${group.name}`;
-    webview.postMessage({
-        command: "progressUpdate",
-        parameters: {
-            event: ProgressEventType.InProgress,
-            operationDescription,
-            errorMessage: null
-        }
+    webview.postProgressUpdate({
+        event: ProgressEventType.InProgress,
+        operationDescription,
+        errorMessage: null
     });
 
     try {
         await resourceManagementClient.resourceGroups.createOrUpdate(group.name, group);
     } catch (ex) {
-        webview.postMessage({
-            command: "progressUpdate",
-            parameters: {
-                event: ProgressEventType.Failed,
-                operationDescription,
-                errorMessage: getErrorMessage(ex)
-            }
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription,
+            errorMessage: getErrorMessage(ex)
         });
     }
 }
@@ -137,13 +132,10 @@ async function createCluster(
     containerServiceClient: ContainerServiceClient
 ) {
     const operationDescription = `Creating cluster ${name}`;
-    webview.postMessage({
-        command: "progressUpdate",
-        parameters: {
-            event: ProgressEventType.InProgress,
-            operationDescription,
-            errorMessage: null
-        }
+    webview.postProgressUpdate({
+        event: ProgressEventType.InProgress,
+        operationDescription,
+        errorMessage: null
     });
 
     const clusterSpec = getManagedClusterSpec(location, name);
@@ -152,34 +144,25 @@ async function createCluster(
         const poller = await containerServiceClient.managedClusters.beginCreateOrUpdate(group.name, name, clusterSpec);
         poller.onProgress(state => {
             if (state.status === "canceled") {
-                webview.postMessage({
-                    command: "progressUpdate",
-                    parameters: {
-                        event: ProgressEventType.Cancelled,
-                        operationDescription,
-                        errorMessage: null
-                    }
+                webview.postProgressUpdate({
+                    event: ProgressEventType.Cancelled,
+                    operationDescription,
+                    errorMessage: null
                 });
             } else if (state.status === "failed") {
                 const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                 window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
-                webview.postMessage({
-                    command: "progressUpdate",
-                    parameters: {
-                        event: ProgressEventType.Failed,
-                        operationDescription,
-                        errorMessage
-                    }
+                webview.postProgressUpdate({
+                    event: ProgressEventType.Failed,
+                    operationDescription,
+                    errorMessage
                 });
             } else if (state.status === "succeeded") {
                 window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
-                webview.postMessage({
-                    command: "progressUpdate",
-                    parameters: {
-                        event: ProgressEventType.Success,
-                        operationDescription,
-                        errorMessage: null
-                    }
+                webview.postProgressUpdate({
+                    event: ProgressEventType.Success,
+                    operationDescription,
+                    errorMessage: null
                 });
             }
         });
@@ -188,13 +171,10 @@ async function createCluster(
     } catch (ex) {
         const errorMessage = getErrorMessage(ex);
         window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
-        webview.postMessage({
-            command: "progressUpdate",
-            parameters: {
-                event: ProgressEventType.Failed,
-                operationDescription,
-                errorMessage
-            }
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription,
+            errorMessage
         });
     }
 }

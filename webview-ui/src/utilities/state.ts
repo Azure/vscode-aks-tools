@@ -1,4 +1,33 @@
-import { Command, MessageDefinition, MessageHandler } from "../../../src/webview-contract/messaging";
+import { useReducer } from "react";
+import { Command, CommandKeys, MessageDefinition, MessageHandler } from "../../../src/webview-contract/messaging";
+import { ContentId, InitialState, ToWebviewMsgDef } from "../../../src/webview-contract/webviewTypes";
+
+export interface WebviewStateUpdater<T extends ContentId, TEventDef extends MessageDefinition, TState> {
+    createState: (initialState: InitialState<T>) => TState,
+    vscodeMessageHandler: StateMessageHandler<ToWebviewMsgDef<T>, TState>,
+    eventHandler: StateMessageHandler<TEventDef, TState>
+}
+
+export type StateManagement<T extends ContentId, TEventDef extends MessageDefinition, TState> = {
+    state: TState,
+    eventHandlers: EventHandlers<TEventDef>,
+    vsCodeMessageHandlers: MessageHandler<ToWebviewMsgDef<T>>
+};
+
+export function getStateManagement<T extends ContentId, TEventDef extends MessageDefinition, TState>(
+    stateUpdater: WebviewStateUpdater<T, TEventDef, TState>,
+    initialState: InitialState<T>
+): StateManagement<T, TEventDef, TState> {
+    const updateState = chainStateUpdaters(
+        toStateUpdater(stateUpdater.vscodeMessageHandler),
+        toStateUpdater(stateUpdater.eventHandler));
+
+    const [state, dispatch] = useReducer(updateState, stateUpdater.createState(initialState));
+    const eventHandlers = getEventHandlers<TEventDef>(dispatch, stateUpdater.eventHandler);
+    const vsCodeMessageHandlers = getMessageHandler<ToWebviewMsgDef<T>>(dispatch, stateUpdater.vscodeMessageHandler);
+
+    return {state, eventHandlers, vsCodeMessageHandlers};
+}
 
 /**
  * The type used to define handlers for messages that change the state of a component
@@ -20,13 +49,13 @@ export type StateMessage = {
  * A reducer type that uses the `StateMessage` action. This is a function that applies an action
  * to a state to return another state.
  */
-export type StateUpdater<TState> = React.Reducer<TState, StateMessage>;
+type StateUpdater<TState> = React.Reducer<TState, StateMessage>;
 
 /**
  * Takes a message handler for updating state and creates a reducer that can be used in the
  * `useReducer` function.
  */
-export function toStateUpdater<TMsgDef extends MessageDefinition, TState>(handler: StateMessageHandler<TMsgDef, TState>): StateUpdater<TState> {
+function toStateUpdater<TMsgDef extends MessageDefinition, TState>(handler: StateMessageHandler<TMsgDef, TState>): StateUpdater<TState> {
     return (state, msg) => {
         if (msg.command in handler) {
             return handler[msg.command](state, msg.args);
@@ -39,7 +68,7 @@ export function toStateUpdater<TMsgDef extends MessageDefinition, TState>(handle
 /**
  * Allows multiple reducers to be combined into a single one (used when processing different types of message).
  */
-export function chainStateUpdaters<TState>(...stateUpdaters: StateUpdater<TState>[]): StateUpdater<TState> {
+function chainStateUpdaters<TState>(...stateUpdaters: StateUpdater<TState>[]): StateUpdater<TState> {
     return stateUpdaters.reduce((prev, curr) => {
         return (state, msg) => curr(prev(state, msg), msg);
     }, state => state);
@@ -54,17 +83,10 @@ export type EventHandlers<TMsgDef extends MessageDefinition> = {
 };
 
 /**
- * Any object containing all the keys (commands) for a message definition.
- */
-export type CommandKeys<TMsgDef> = {
-    [P in Command<TMsgDef>]: any
-};
-
-/**
  * Creates event handlers for a message definition which forward calls to the `dispatch` function
  * (https://react.dev/reference/react/useReducer#dispatch)
  */
-export function getEventHandlers<TMsgDef extends MessageDefinition>(dispatch: React.Dispatch<StateMessage>, keys: CommandKeys<TMsgDef>): EventHandlers<TMsgDef> {
+function getEventHandlers<TMsgDef extends MessageDefinition>(dispatch: React.Dispatch<StateMessage>, keys: CommandKeys<TMsgDef>): EventHandlers<TMsgDef> {
     const entries = Object.keys(keys).map(command => [asEvent(command), (args: any) => dispatch({command: command, args})]);
     return Object.fromEntries(entries);
 }
@@ -77,7 +99,7 @@ function asEvent(str: string) {
  * Creates a handler for a message definition which can be used by a message subscriber, and which
  * forwards invocations to the `dispatch` function.
  */
-export function getMessageHandler<TMsgDef extends MessageDefinition>(dispatch: React.Dispatch<StateMessage>, keys: CommandKeys<TMsgDef>): MessageHandler<TMsgDef> {
+function getMessageHandler<TMsgDef extends MessageDefinition>(dispatch: React.Dispatch<StateMessage>, keys: CommandKeys<TMsgDef>): MessageHandler<TMsgDef> {
     const entries = Object.keys(keys).map(command => [command, (args: any) => dispatch({command: command, args})]);
     return Object.fromEntries(entries);
 }

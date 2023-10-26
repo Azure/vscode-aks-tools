@@ -1,34 +1,27 @@
-import { useEffect, useReducer } from "react";
+import { useEffect } from "react";
 import { CreateClusterInput } from "./CreateClusterInput";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { Success } from "./Success";
-import { InitialState, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/createCluster";
-import { Stage, createState, updateState, userMessageHandler, vscodeMessageHandler } from "./helpers/state";
-import { getEventHandlers, getMessageHandler } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { InitialState } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { Stage, stateUpdater, vscode } from "./helpers/state";
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { getStateManagement } from "../utilities/state";
 
-export function CreateCluster(props: InitialState) {
-    const vscode = getWebviewMessageContext<"createCluster">();
-
-    const [state, dispatch] = useReducer(updateState, createState());
-
-    const userMessageEventHandlers = getEventHandlers<UserMsgDef>(dispatch, userMessageHandler);
+export function CreateCluster(initialState: InitialState) {
+    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
         if (state.stage === Stage.Uninitialized) {
-            vscode.postMessage({command: "getLocationsRequest", parameters: undefined});
-            vscode.postMessage({command: "getResourceGroupsRequest", parameters: undefined});
-            userMessageEventHandlers.onSetInitializing();
+            vscode.postGetLocationsRequest();
+            vscode.postGetResourceGroupsRequest();
+            eventHandlers.onSetInitializing();
         }
 
-        const msgHandler = getMessageHandler<ToWebViewMsgDef>(dispatch, vscodeMessageHandler);
-        vscode.subscribeToMessages(msgHandler);
+        vscode.subscribeToMessages(vsCodeMessageHandlers);
     });
 
     useEffect(() => {
         if (state.stage === Stage.Loading && state.locations !== null && state.resourceGroups !== null) {
-            userMessageEventHandlers.onSetInitialized();
+            eventHandlers.onSetInitialized();
         }
     }, [state.stage, state.locations, state.resourceGroups]);
 
@@ -38,7 +31,7 @@ export function CreateCluster(props: InitialState) {
             case Stage.Loading:
                 return <p>Loading...</p>
             case Stage.CollectingInput:
-                return <CreateClusterInput locations={state.locations!} resourceGroups={state.resourceGroups!} userMessageHandlers={userMessageEventHandlers} vscode={vscode} />;
+                return <CreateClusterInput locations={state.locations!} resourceGroups={state.resourceGroups!} eventHandlers={eventHandlers} vscode={vscode} />;
             case Stage.Creating:
                 return (
                 <>
@@ -56,9 +49,9 @@ export function CreateCluster(props: InitialState) {
             case Stage.Succeeded:
                return (
                     <Success
-                        portalUrl={props.portalUrl}
-                        portalReferrerContext={props.portalReferrerContext}
-                        subscriptionId={props.subscriptionId}
+                        portalUrl={state.portalUrl}
+                        portalReferrerContext={state.portalReferrerContext}
+                        subscriptionId={state.subscriptionId}
                         resourceGroup={state.createParams!.resourceGroup.name}
                         name={state.createParams!.name}
                     />
@@ -70,7 +63,7 @@ export function CreateCluster(props: InitialState) {
 
     return (
         <>
-            <h2>Create Cluster in {props.subscriptionName}</h2>
+            <h2>Create Cluster in {state.subscriptionName}</h2>
             {getBody()}
         </>
     );

@@ -6,16 +6,16 @@ import { FormEvent, useState } from "react";
 import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
 import { CreateResourceGroupDialog } from "./CreateResourceGroup";
 import { EventHandlers } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
 import { CreateClusterParams, ResourceGroup, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { MessageSink } from "../../../src/webview-contract/messaging";
+import { EventDef } from "./helpers/state";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 interface CreateClusterInputProps {
     locations: string[]
     resourceGroups: ResourceGroup[]
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    eventHandlers: EventHandlers<EventDef>
     vscode: MessageSink<ToVsCodeMsgDef>
 }
 
@@ -63,8 +63,8 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
             name: name.value!
         };
 
-        props.vscode.postMessage({ command: "createClusterRequest", parameters });
-        props.userMessageHandlers.onSetCreating({parameters});
+        props.vscode.postCreateClusterRequest(parameters);
+        props.eventHandlers.onSetCreating({parameters});
     }
 
     return (

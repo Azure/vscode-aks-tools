@@ -62,7 +62,9 @@ import * as rotateClusterCertificate from "./detectorData/rotate-cluster-certifi
 import * as snatUsage from "./detectorData/snat-usage.json"
 import * as userDefinedRouting from "./detectorData/user-defined-routing.json"
 import * as windowsRegressionK8sv124 from "./detectorData/windowsregresionk8sv124.json"
-import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, isCategoryDataset } from "../../../src/webview-contract/webviewDefinitions/detector";
+import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef, ToWebViewMsgDef, isCategoryDataset } from "../../../src/webview-contract/webviewDefinitions/detector";
+import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { stateUpdater } from "../Detector/state";
 
 type DetectorDataMap = {
     [detectorId: string]: SingleDetectorARMResponse
@@ -138,6 +140,10 @@ const singleDetectorLookup: DetectorDataMap = singleDetectors.reduce((result: De
     return newResult;
 }, {});
 
+function getMessageHandler(_webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+    return {};
+}
+
 export function getDetectorScenarios() {
     return categoryDetectors.map(categoryDetector => {
         const detectorIds = categoryDetector.properties.dataset.filter(isCategoryDataset)[0].renderingProperties.detectorIds;
@@ -149,7 +155,7 @@ export function getDetectorScenarios() {
             detectors: detectorIds.map(id => singleDetectorLookup[id])
         };
 
-        return Scenario.create(`Detectors (${initialState.name})`, () => <Detector {...initialState} />);
+        return Scenario.create("detector", initialState.name, () => <Detector {...initialState} />, getMessageHandler, stateUpdater.vscodeMessageHandler);
     });
 }
 

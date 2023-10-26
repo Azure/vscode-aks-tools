@@ -1,18 +1,20 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/detector";
 import { SingleDetector } from './SingleDetector';
+import { getStateManagement } from "../utilities/state";
+import { stateUpdater } from "./state";
 
-export function Detector(props: InitialState) {
-    const portalUrl = `https://portal.azure.com/#resource${props.clusterArmId}aksDiagnostics?referrer_source=vscode&referrer_context=${props.portalReferrerContext}`;
+export function Detector(initialState: InitialState) {
+    const {state} = getStateManagement(stateUpdater, initialState);
 
     return (
     <>
-        <h2>{props.name}</h2>
-        {props.description && props.description !== "test" && <p>{props.description}</p>}
-        To perform more checks on your cluster, visit <VSCodeLink href={portalUrl}>AKS Diagnostics</VSCodeLink>.
+        <h2>{state.name}</h2>
+        {state.description && state.description !== "test" && <p>{state.description}</p>}
+        To perform more checks on your cluster, visit <VSCodeLink href={state.portalUrl}>AKS Diagnostics</VSCodeLink>.
         <VSCodeDivider style={{marginTop: "16px"}} />
 
-        {props.detectors.map(detector => (
+        {state.detectors.map(detector => (
             <SingleDetector key={detector.name} {...detector}></SingleDetector>
         ))}
     </>

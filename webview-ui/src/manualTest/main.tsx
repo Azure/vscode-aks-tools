@@ -38,19 +38,8 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
 
 const testScenarios = Object.values(contentTestScenarios).flatMap(s => s);
 
-const testScenarioNames = testScenarios.map(f => f.name);
-
 root.render(
     <StrictMode>
-        <TestScenarioSelector testScenarioNames={testScenarioNames} onTestScenarioChange={handleTestScenarioChange} />
+        <TestScenarioSelector scenarios={testScenarios} />
     </StrictMode>
 );
-
-function handleTestScenarioChange(name: string): JSX.Element {
-    const scenario = testScenarios.find(f => f.name === name);
-    if (!scenario) {
-        throw new Error(`Test scenario '${name}' not found.`);
-    }
-
-    return scenario.factory();
-}
