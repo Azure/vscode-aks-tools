@@ -1,6 +1,6 @@
 import { platform } from "os";
 import { relative } from "path";
-import { Uri, window } from "vscode";
+import { Uri, commands, window, workspace } from "vscode";
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { failed, map as errmap, Errorable } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -10,24 +10,24 @@ import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contra
 import { withOptionalTempFile } from "../commands/utils/tempfile";
 
 const debugPodNamespace = "default";
-const tcpDumpArgs = "--snapshot-length=0 -vvv";
+const tcpDumpCommandBase = "tcpdump --snapshot-length=0 -vvv";
 const captureDir = "/tmp";
 const captureFilePrefix = "vscodenodecap_";
 const captureFileBasePath = `${captureDir}/${captureFilePrefix}`;
-const captureFilePathRegex = `${captureFileBasePath.replace(/\//g, '\\$&')}(.*)\.cap`;
+const captureFilePathRegex = `${captureFileBasePath.replace(/\//g, '\\$&')}(.*)\.cap`; // Matches the part of the filename after the prefix
 
 function getPodName(node: string) {
     return `debug-${node}`;
 }
 
 function getTcpDumpCommand(capture: string): string {
-    return `tcpdump ${tcpDumpArgs} -w ${captureFileBasePath}${capture}.cap`;
+    return `${tcpDumpCommandBase} -w ${captureFileBasePath}${capture}.cap`;
 }
 
-function getCaptureFromCommand(command: string, args: string): string | null {
+function getCaptureFromCommand(command: string, commandWithArgs: string): string | null {
     if (command !== "tcpdump") return null;
-    if (!args.startsWith(tcpDumpArgs)) return null;
-    const fileMatch = args.match(new RegExp(`\-w ${captureFilePathRegex}`));
+    if (!commandWithArgs.startsWith(tcpDumpCommandBase)) return null;
+    const fileMatch = commandWithArgs.match(new RegExp(`\-w ${captureFilePathRegex}`));
     return fileMatch && fileMatch[1];
 }
 
@@ -76,7 +76,8 @@ export class TCPDataCollectionDataProvider implements PanelDataProvider<"tcpDump
             deleteDebugPod: args => this._handleDeleteDebugPod(args.node, webview),
             startCapture: args => this._handleStartCapture(args.node, args.capture, webview),
             stopCapture: args => this._handleStopCapture(args.node, args.capture, webview),
-            downloadCaptureFile: args => this._handleDownloadCaptureFile(args.node, args.capture, webview)
+            downloadCaptureFile: args => this._handleDownloadCaptureFile(args.node, args.capture, webview),
+            openFolder: args => this._handleOpenFolder(args)
         };
     }
 
@@ -307,6 +308,10 @@ spec:
         });
     }
 
+    private _handleOpenFolder(path: string) {
+        commands.executeCommand('revealFileInOS', Uri.file(path));
+    }
+
     private async _getPodNames(): Promise<Errorable<string[]>> {
         const command = `get pod -n ${debugPodNamespace} --no-headers -o custom-columns=":metadata.name"`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
@@ -320,7 +325,8 @@ spec:
     }
 
     private async _getRunningCaptures(node: string): Promise<Errorable<TcpDumpProcess[]>> {
-        const podCommand = "ps -eo pid,comm,args";
+        // List all processes without header columns, including PID, command and args (which contains the command)
+        const podCommand = "ps -e -o pid= -o comm= -o args=";
         const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
         return errmap(output, sr => sr.stdout.trim().split("\n").map(asProcess).filter(isTcpDump));
 
@@ -365,11 +371,14 @@ function getLocalKubectlCpPath(fileUri: Uri): string {
         return fileUri.fsPath;
     }
 
-    // TODO: Investigate why the working directory seems to be something other than `process.cwd()`
-    //       when running `kubectl cp`.
-
     // Use a relative path to work around Windows path issues:
     // - https://github.com/kubernetes/kubernetes/issues/77310
     // - https://github.com/kubernetes/kubernetes/issues/110120
-    return relative(process.cwd(), fileUri.fsPath);
+    // To use a relative path we need to know the current working directory.
+    // This should be `process.cwd()` but it actually seems to be that of the first workspace folder, if any exist.
+    // TODO: Investigate why, and look at alternative ways of getting the working directory, or working around
+    //       the need to to this altogether by allowing absolute paths.
+    const workingDirectory = (workspace.workspaceFolders && workspace.workspaceFolders?.length > 0) ? workspace.workspaceFolders[0].uri.fsPath : process.cwd();
+
+    return relative(workingDirectory, fileUri.fsPath);
 }

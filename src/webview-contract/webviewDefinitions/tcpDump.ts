@@ -45,7 +45,8 @@ export type ToVsCodeMsgDef = {
     startCapture: NodeCaptureCommand,
     stopCapture: NodeCaptureCommand,
     downloadCaptureFile: NodeCaptureCommand,
-    deleteDebugPod: NodeCommand
+    deleteDebugPod: NodeCommand,
+    openFolder: string
 };
 
 export type ToWebViewMsgDef = {

@@ -53,7 +53,8 @@ export function getTCPDumpScenarios() {
             deleteDebugPod: args => handleDeleteDebugPod(args.node),
             startCapture: args => handleStartCapture(args.node, args.capture),
             stopCapture: args => handleStopCapture(args.node, args.capture),
-            downloadCaptureFile: args => handleDownloadCaptureFile(args.node, args.capture)
+            downloadCaptureFile: args => handleDownloadCaptureFile(args.node, args.capture),
+            openFolder: args => handleOpenFolder(args)
         }
 
         async function handleCheckNodeState(node: NodeName) {
@@ -137,6 +138,10 @@ export function getTCPDumpScenarios() {
                 captureName: capture,
                 localCapturePath: `/reasonably/long/path/to/eventually/get/to/${capture}.cap`
             });
+        }
+
+        function handleOpenFolder(path: string) {
+            alert(`VS Code would launch an OS file system browser here:\n${path}`);
         }
     }
 

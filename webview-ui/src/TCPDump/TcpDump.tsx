@@ -6,7 +6,7 @@ import { getStateManagement } from "../utilities/state";
 import { CaptureStatus, NodeStatus, stateUpdater, vscode } from "./state";
 import { NodeSelector } from "../components/NodeSelector";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCopy, faDownload, faPlay, faPlus, faSpinner, faStop, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faDownload, faFolderOpen, faPlay, faPlus, faSpinner, faStop, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export function TcpDump(initialState: InitialState) {
     const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
@@ -62,6 +62,10 @@ export function TcpDump(initialState: InitialState) {
 
     function handleCopyDownloadPathClick(path: string) {
         navigator.clipboard.writeText(path);
+    }
+
+    function handleOpenFolderClick(path: string) {
+        vscode.postOpenFolder(path);
     }
 
     const nodeState = state.selectedNode ? state.nodeStates[state.selectedNode] : null;
@@ -145,6 +149,7 @@ export function TcpDump(initialState: InitialState) {
                                                 <span>{c.downloadedFilePath}</span>
                                                 &nbsp;
                                                 <VSCodeButton appearance="icon" title="Copy Path"><FontAwesomeIcon icon={faCopy} onClick={() => handleCopyDownloadPathClick(c.downloadedFilePath!)} /></VSCodeButton>
+                                                <VSCodeButton appearance="icon" title="Open Folder"><FontAwesomeIcon icon={faFolderOpen} onClick={() => handleOpenFolderClick(c.downloadedFilePath!)} /></VSCodeButton>
                                             </div>
                                         }
                                     </td>

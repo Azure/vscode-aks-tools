@@ -88,13 +88,15 @@ function getNodeStatesFromCheck(nodeStates: NodeStates, result: NodeCheckResult)
         result.runningCapture === null ? NodeStatus.DebugPodRunning :
         NodeStatus.CaptureRunning;
 
+    const currentCaptureName = result.runningCapture;
+
     const completedCaptures = result.completedCaptures.map<NodeCapture>(c => ({
         name: c,
         status: CaptureStatus.Completed,
         downloadedFilePath: null
     }));
 
-    const nodeState: NodeState = {...nodeStates[result.node], status, completedCaptures};
+    const nodeState: NodeState = {...nodeStates[result.node], status, currentCaptureName, completedCaptures};
     return {...nodeStates, [result.node]: nodeState};
 }
 
@@ -162,5 +164,6 @@ export const vscode = getWebviewMessageContext<"tcpDump">({
     startCapture: null,
     stopCapture: null,
     downloadCaptureFile: null,
+    openFolder: null,
     deleteDebugPod: null
 });
