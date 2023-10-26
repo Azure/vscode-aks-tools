@@ -37,7 +37,7 @@ function getCaptureFromFilePath(filePath: string): string | null {
     return fileMatch && fileMatch[1];
 }
 
-export class TCPDataCollection extends BasePanel<"tcpDump"> {
+export class TcpDumpPanel extends BasePanel<"tcpDump"> {
     constructor(extensionUri: Uri) {
         super(extensionUri, "tcpDump", {
             checkNodeStateResponse: null,
@@ -50,7 +50,7 @@ export class TCPDataCollection extends BasePanel<"tcpDump"> {
     }
 }
 
-export class TCPDataCollectionDataProvider implements PanelDataProvider<"tcpDump"> {
+export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
     constructor(
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
@@ -59,7 +59,7 @@ export class TCPDataCollectionDataProvider implements PanelDataProvider<"tcpDump
     ) { }
 
     getTitle(): string {
-        return `TCP Data Collection ${this.clusterName} for Linux Node`;
+        return `TCP Capture on ${this.clusterName}`;
     }
 
     getInitialState(): InitialState {

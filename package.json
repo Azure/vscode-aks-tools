@@ -245,8 +245,8 @@
                 "title": "Run Kubectl Commands"
             },
             {
-                "command": "aks.aksTCPDumpFromLinux",
-                "title": "Collect TCP Dump from Linux Node"
+                "command": "aks.aksTCPDump",
+                "title": "Collect TCP Dumps"
             }
         ],
         "menus": {
@@ -311,15 +311,9 @@
                     "group": "9@4"
                 },
                 {
-                    "submenu": "aks.tcpDataCollectionSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "command": "aks.aksTCPDump",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
                     "group": "9@5"
-                }
-            ],
-            "aks.tcpDataCollectionSubMenu": [
-                {
-                    "command": "aks.aksTCPDumpFromLinux",
-                    "group": "navigation"
                 }
             ],
             "aks.createClusterSubMenu": [

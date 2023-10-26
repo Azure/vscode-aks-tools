@@ -5,10 +5,10 @@ import { getKubernetesClusterInfo } from '../utils/clusters';
 import { getExtension } from '../utils/host';
 import { Errorable, failed, map as errmap } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
-import { TCPDataCollection, TCPDataCollectionDataProvider } from '../../panels/TCPDataCollection';
+import { TcpDumpDataProvider, TcpDumpPanel } from '../../panels/TcpDumpPanel';
 import { invokeKubectlCommand } from '../utils/kubectl';
 
-export async function aksTCPDumpFromLinux(_context: IActionContext, target: any) {
+export async function aksTCPDump(_context: IActionContext, target: any) {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
@@ -47,8 +47,8 @@ export async function aksTCPDumpFromLinux(_context: IActionContext, target: any)
         return;
     }
 
-    const dataProvider = new TCPDataCollectionDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, linuxNodesList.result);
-    const panel = new TCPDataCollection(extension.result.extensionUri);
+    const dataProvider = new TcpDumpDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, linuxNodesList.result);
+    const panel = new TcpDumpPanel(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);
 }

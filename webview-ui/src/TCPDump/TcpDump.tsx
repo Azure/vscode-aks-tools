@@ -76,7 +76,7 @@ export function TcpDump(initialState: InitialState) {
     return (
         <>
             <header>
-                <h2>TCP Dump from Linux Node {state.clusterName}</h2>
+                <h2>TCP Capture on {state.clusterName}</h2>
                 <VSCodeDivider />
             </header>
             <div className={styles.content}>

@@ -32,7 +32,7 @@ import { aksInspektorGadgetShow } from './commands/aksInspektorGadget/aksInspekt
 import aksCreateCluster from './commands/aksCreateCluster/aksCreateCluster';
 import aksAbortLastOperation from './commands/aksAbortLastOperation/aksAbortLastOperation';
 import aksReconcileCluster from './commands/aksReconcileCluster/aksReconcileCluster';
-import { aksTCPDumpFromLinux } from './commands/aksTCPCollection/tcpDumpCollectionFromLinuxNode';
+import { aksTCPDump } from './commands/aksTCPCollection/tcpDumpCollection';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -78,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksReconcileCluster', aksReconcileCluster);
         registerCommandWithTelemetry('aks.aksInspektorGadgetShow', aksInspektorGadgetShow);
         registerCommandWithTelemetry('aks.createCluster', aksCreateCluster);
-        registerCommandWithTelemetry('aks.aksTCPDumpFromLinux', aksTCPDumpFromLinux);
+        registerCommandWithTelemetry('aks.aksTCPDump', aksTCPDump);
 
         await registerAzureServiceNodes(context);
 
