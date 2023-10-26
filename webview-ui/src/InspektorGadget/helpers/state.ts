@@ -1,9 +1,9 @@
 import { ClusterResources, Nodes, setContainersLoading, setPodsLoading, updateContainersForCluster, updateNamespacesForCluster, updateNodesForCluster, updatePodsForCluster } from "./clusterResources";
-import { UserMsgDef } from "./userCommands";
 import { newLoading, newNotLoaded } from "../../utilities/lazy";
 import { TraceGadget, enrich, enrichSortAndFilter } from "./gadgets";
-import { GadgetVersion, ToWebViewMsgDef, TraceOutputItem } from "../../../../src/webview-contract/webviewDefinitions/inspektorGadget";
-import { StateMessageHandler, chainStateUpdaters, toStateUpdater } from "../../utilities/state";
+import { GadgetVersion, TraceOutputItem } from "../../../../src/webview-contract/webviewDefinitions/inspektorGadget";
+import { WebviewStateUpdater } from "../../utilities/state";
+import { getWebviewMessageContext } from "../../utilities/vscode";
 
 // TODO: Make configurable?
 const maxTraceOutputLength = 1000;
@@ -18,8 +18,32 @@ export interface InspektorGadgetState {
     allTraces: TraceGadget[]
 }
 
-export function createState(): InspektorGadgetState {
-    return {
+export type EventDef = {
+    setInitializing: void,
+    deploy: void,
+    undeploy: void,
+    incrementTraceId: void,
+    createTrace: {
+        trace: TraceGadget
+    },
+    deleteTraces: {
+        traceIds: number[]
+    },
+    setNodesLoading: void,
+    setNamespacesLoading: void,
+    setPodsLoading: {
+        namespace: string
+    },
+    setContainersLoading: {
+        namespace: string,
+        podName: string
+    },
+    setNodesNotLoaded: void,
+    setNamespacesNotLoaded: void
+};
+
+export const stateUpdater: WebviewStateUpdater<"gadget", EventDef, InspektorGadgetState> = {
+    createState: () => ({
         initializationStarted: false,
         nextTraceId: 0,
         version: null,
@@ -27,75 +51,30 @@ export function createState(): InspektorGadgetState {
         resources: newNotLoaded(),
         overviewStatus: "Initializing",
         allTraces: []
-    };
-}
-
-export const vscodeMessageHandler: StateMessageHandler<ToWebViewMsgDef, InspektorGadgetState> = {
-    updateVersion: (state, args) => {
-        return { ...state, overviewStatus: "", version: args };
+    }),
+    vscodeMessageHandler: {
+        updateVersion: (state, args) => ({ ...state, overviewStatus: "", version: args }),
+        runTraceResponse: (state, args) => ({ ...state, allTraces: getUpdatedTraces(state.allTraces, args.traceId, args.items) }),
+        getNodesResponse: (state, args) => ({ ...state, nodes: updateNodesForCluster(args.nodes) }),
+        getNamespacesResponse: (state, args) => ({ ...state, resources: updateNamespacesForCluster(args.namespaces) }),
+        getPodsResponse: (state, args) => ({ ...state, resources: updatePodsForCluster(state.resources, args.namespace, args.podNames) }),
+        getContainersResponse: (state, args) => ({ ...state, resources: updateContainersForCluster(state.resources, args.namespace, args.podName, args.containerNames) })
     },
-    runTraceResponse: (state, args) => {
-        const allTraces = getUpdatedTraces(state.allTraces, args.traceId, args.items);
-        return { ...state, allTraces };
-    },
-    getNodesResponse: (state, args) => {
-        return { ...state, nodes: updateNodesForCluster(args.nodes) };
-    },
-    getNamespacesResponse: (state, args) => {
-        return { ...state, resources: updateNamespacesForCluster(args.namespaces) };
-    },
-    getPodsResponse: (state, args) => {
-        return { ...state, resources: updatePodsForCluster(state.resources, args.namespace, args.podNames) };
-    },
-    getContainersResponse: (state, args) => {
-        return { ...state, resources: updateContainersForCluster(state.resources, args.namespace, args.podName, args.containerNames) };
+    eventHandler: {
+        setInitializing: (state) => ({ ...state, initializationStarted: true }),
+        deploy: (state) => ({ ...state, overviewStatus: "Deploying Inspektor Gadget", version: null }),
+        undeploy: (state) => ({ ...state, overviewStatus: "Undeploying Inspektor Gadget", version: null }),
+        incrementTraceId: (state) => ({ ...state, nextTraceId: state.nextTraceId + 1 }),
+        createTrace: (state, args) => ({ ...state, allTraces: [...state.allTraces, args.trace] }),
+        deleteTraces: (state, args) => ({ ...state, allTraces: state.allTraces.filter(t => !args.traceIds.includes(t.traceId)) }),
+        setNodesLoading: (state) => ({ ...state, nodes: newLoading() }),
+        setNamespacesLoading: (state) => ({ ...state, resources: newLoading() }),
+        setPodsLoading: (state, args) => ({ ...state, resources: setPodsLoading(state.resources, args.namespace) }),
+        setContainersLoading: (state, args) => ({ ...state, resources: setContainersLoading(state.resources, args.namespace, args.podName) }),
+        setNodesNotLoaded: (state) => ({ ...state, nodes: newNotLoaded() }),
+        setNamespacesNotLoaded: (state) => ({ ...state, resources: newNotLoaded() })
     }
 };
-
-export const userMessageHandler: StateMessageHandler<UserMsgDef, InspektorGadgetState> = {
-    setInitializing: (state) => {
-        return { ...state, initializationStarted: true };
-    },
-    deploy: (state) => {
-        return { ...state, overviewStatus: "Deploying Inspektor Gadget", version: null };
-    },
-    undeploy: (state) => {
-        return { ...state, overviewStatus: "Undeploying Inspektor Gadget", version: null };
-    },
-    incrementTraceId: (state) => {
-        return { ...state, nextTraceId: state.nextTraceId + 1 };
-    },
-    createTrace: (state, args) => {
-        const allTraces = [...state.allTraces, args.trace];
-        return { ...state, allTraces };
-    },
-    deleteTraces: (state, args) => {
-        const allTraces = state.allTraces.filter(t => !args.traceIds.includes(t.traceId));
-        return { ...state, allTraces };
-    },
-    setNodesLoading: (state) => {
-        return { ...state, nodes: newLoading() };
-    },
-    setNamespacesLoading: (state) => {
-        return { ...state, resources: newLoading() };
-    },
-    setPodsLoading: (state, args) => {
-        return { ...state, resources: setPodsLoading(state.resources, args.namespace) };
-    },
-    setContainersLoading: (state, args) => {
-        return { ...state, resources: setContainersLoading(state.resources, args.namespace, args.podName) };
-    },
-    setNodesNotLoaded: (state) => {
-        return { ...state, nodes: newNotLoaded() };
-    },
-    setNamespacesNotLoaded: (state) => {
-        return { ...state, resources: newNotLoaded() };
-    }
-};
-
-export const updateState = chainStateUpdaters(
-    toStateUpdater(vscodeMessageHandler),
-    toStateUpdater(userMessageHandler));
 
 function getUpdatedTraces(traces: TraceGadget[], traceId: number, items: TraceOutputItem[]): TraceGadget[] {
     const traceIndex = traces.findIndex(t => t.traceId === traceId);
@@ -112,3 +91,16 @@ function getUpdatedTraces(traces: TraceGadget[], traceId: number, items: TraceOu
     const newTrace = { ...trace, output: newItems };
     return [...traces.slice(0, traceIndex), newTrace, ...traces.slice(traceIndex + 1)];
 }
+
+export const vscode = getWebviewMessageContext<"gadget">({
+    deployRequest: null,
+    getContainersRequest: null,
+    getNamespacesRequest: null,
+    getNodesRequest: null,
+    getPodsRequest: null,
+    getVersionRequest: null,
+    runBlockingTraceRequest: null,
+    runStreamingTraceRequest: null,
+    stopStreamingTraceRequest: null,
+    undeployRequest: null
+});

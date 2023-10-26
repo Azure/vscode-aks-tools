@@ -3,15 +3,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrashCan, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
 import { FormEvent, useState } from "react";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { NewTraceDialog } from "./NewTraceDialog";
 import { ClusterResources, Nodes } from "./helpers/clusterResources";
 import { GadgetConfiguration, TraceGadget, getGadgetMetadata, toGadgetArguments } from "./helpers/gadgets";
 import { GadgetCategory } from "./helpers/gadgets/types";
 import { TraceOutput } from "./TraceOutput";
 import { NamespaceFilter, NamespaceSelection } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
-import { UserMsgDef } from "./helpers/userCommands";
 import { EventHandlers } from "../utilities/state";
+import { EventDef, vscode } from "./helpers/state";
 
 export interface TracesProps {
     category: GadgetCategory
@@ -19,14 +18,12 @@ export interface TracesProps {
     nodes: Nodes
     resources: ClusterResources
     onRequestTraceId: () => number
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    eventHandlers: EventHandlers<EventDef>
 }
 
 const streamingCategories: GadgetCategory[] = ["top", "trace"];
 
 export function Traces(props: TracesProps) {
-    const vscode = getWebviewMessageContext<"gadget">();
-
     const [isNewTraceDialogShown, setIsTraceDialogShown] = useState(false);
     const [checkedTraceIds, setCheckedTraceIds] = useState<number[]>([]);
     const [selectedTraceId, setSelectedTraceId] = useState<number | null>(null);
@@ -56,9 +53,9 @@ export function Traces(props: TracesProps) {
         }
 
         if (isWatching) {
-            vscode.postMessage({ command: "stopStreamingTraceRequest", parameters: undefined });
+            vscode.postStopStreamingTraceRequest();
         } else {
-            vscode.postMessage({ command: "runStreamingTraceRequest", parameters: {arguments: toGadgetArguments(trace), traceId: trace.traceId} });
+            vscode.postRunStreamingTraceRequest({arguments: toGadgetArguments(trace), traceId: trace.traceId});
         }
 
         setIsWatching(!isWatching);
@@ -67,13 +64,13 @@ export function Traces(props: TracesProps) {
     function handleDelete() {
         if (selectedTraceId !== null && checkedTraceIds.includes(selectedTraceId)) {
             if (isWatching && isStreamingTrace) {
-                vscode.postMessage({ command: "stopStreamingTraceRequest", parameters: undefined });
+                vscode.postStopStreamingTraceRequest();
             }
 
             setSelectedTraceId(null);
         }
 
-        props.userMessageHandlers.onDeleteTraces({traceIds: checkedTraceIds});
+        props.eventHandlers.onDeleteTraces({traceIds: checkedTraceIds});
         setCheckedTraceIds([]);
     }
 
@@ -87,12 +84,12 @@ export function Traces(props: TracesProps) {
         const traceId = props.onRequestTraceId();
         const trace: TraceGadget = { ...traceConfig, traceId, output: null };
         if (isStreamingTrace) {
-            vscode.postMessage({ command: "runStreamingTraceRequest", parameters: {arguments: gadgetArguments, traceId} });
+            vscode.postRunStreamingTraceRequest({arguments: gadgetArguments, traceId});
         } else {
-            vscode.postMessage({ command: "runBlockingTraceRequest", parameters: {arguments: gadgetArguments, traceId} });
+            vscode.postRunBlockingTraceRequest({arguments: gadgetArguments, traceId});
         }
 
-        props.userMessageHandlers.onCreateTrace({trace});
+        props.eventHandlers.onCreateTrace({trace});
         setSelectedTraceId(traceId);
 
         if (isStreamingTrace) {
@@ -106,14 +103,14 @@ export function Traces(props: TracesProps) {
 
     function handleRowClick(trace: TraceGadget) {
         if (isWatching && isStreamingTrace) {
-            vscode.postMessage({ command: "stopStreamingTraceRequest", parameters: undefined });
+            vscode.postStopStreamingTraceRequest();
         }
 
         const isNewTraceSelected = selectedTraceId !== trace.traceId;
 
         if (isWatching && isStreamingTrace && isNewTraceSelected) {
             const gadgetArguments = toGadgetArguments(trace);
-            vscode.postMessage({ command: "runStreamingTraceRequest", parameters: {arguments: gadgetArguments, traceId: trace.traceId} });
+            vscode.postRunStreamingTraceRequest({arguments: gadgetArguments, traceId: trace.traceId});
         }
 
         setSelectedTraceId(isNewTraceSelected ? trace.traceId : null);
@@ -182,7 +179,7 @@ export function Traces(props: TracesProps) {
             gadgetCategory={props.category}
             nodes={props.nodes}
             resources={props.resources}
-            userMessageHandlers={props.userMessageHandlers}
+            eventHandlers={props.eventHandlers}
             onCancel={handleNewTraceDialogCancel}
             onAccept={handleNewTraceDialogAccept}
         />

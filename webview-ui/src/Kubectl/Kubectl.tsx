@@ -1,61 +1,50 @@
 import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
-import { CommandCategory, InitialState, PresetCommand, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kubectl";
+import { CommandCategory, InitialState, PresetCommand } from "../../../src/webview-contract/webviewDefinitions/kubectl";
 import styles from "./Kubectl.module.css";
-import { getWebviewMessageContext } from "../utilities/vscode";
-import { useEffect, useReducer } from "react";
+import { useEffect } from "react";
 import { CommandList } from "./CommandList";
 import { CommandInput } from "./CommandInput";
 import { CommandOutput } from "./CommandOutput";
 import { SaveCommandDialog } from "./SaveCommandDialog";
-import { createState, updateState, userMessageHandler, vscodeMessageHandler } from "./helpers/state";
-import { getEventHandlers, getMessageHandler } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { getStateManagement } from "../utilities/state";
+import { stateUpdater, vscode } from "./helpers/state";
 
-export function Kubectl(props: InitialState) {
-    const vscode = getWebviewMessageContext<"kubectl">();
-
-    const [state, dispatch] = useReducer(updateState, createState(props.customCommands));
+export function Kubectl(initialState: InitialState) {
+    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
 
     useEffect(() => {
-        if (!state.initializationStarted) {
-            dispatch({ command: "setInitializing" });
-        }
-
-        const msgHandler = getMessageHandler<ToWebViewMsgDef>(dispatch, vscodeMessageHandler);
-        vscode.subscribeToMessages(msgHandler);
+        vscode.subscribeToMessages(vsCodeMessageHandlers);
     });
 
-    const userMessageEventHandlers = getEventHandlers<UserMsgDef>(dispatch, userMessageHandler);
-
     function handleCommandSelectionChanged(command: PresetCommand) {
-        userMessageEventHandlers.onSetSelectedCommand({ command: command.command });
+        eventHandlers.onSetSelectedCommand({ command: command.command });
     }
 
     function handleCommandDelete(commandName: string) {
         const allCommands = state.allCommands.filter(cmd => cmd.name !== commandName);
-        userMessageEventHandlers.onSetAllCommands({ allCommands });
-        vscode.postMessage({ command: "deleteCustomCommandRequest", parameters: {name: commandName} });
+        eventHandlers.onSetAllCommands({ allCommands });
+        vscode.postDeleteCustomCommandRequest({name: commandName});
     }
 
     function handleCommandUpdate(command: string) {
-        userMessageEventHandlers.onSetSelectedCommand({ command });
+        eventHandlers.onSetSelectedCommand({ command });
     }
 
     function handleRunCommand(command: string) {
-        userMessageEventHandlers.onSetCommandRunning();
-        vscode.postMessage({ command: "runCommandRequest", parameters: {command: command.trim()} });
+        eventHandlers.onSetCommandRunning();
+        vscode.postRunCommandRequest({command: command.trim()});
     }
 
     function handleSaveRequest() {
-        userMessageEventHandlers.onSetSaveDialogVisibility({ shown: true });
+        eventHandlers.onSetSaveDialogVisibility({ shown: true });
     }
 
     function handleSaveDialogCancel() {
-        userMessageEventHandlers.onSetSaveDialogVisibility({ shown: false });
+        eventHandlers.onSetSaveDialogVisibility({ shown: false });
     }
 
     function handleSaveDialogAccept(commandName: string) {
-        userMessageEventHandlers.onSetSaveDialogVisibility({ shown: false });
+        eventHandlers.onSetSaveDialogVisibility({ shown: false });
         if (!state.selectedCommand) {
             return;
         }
@@ -67,8 +56,8 @@ export function Kubectl(props: InitialState) {
         };
 
         const allCommands = [...state.allCommands, newCommand].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
-        userMessageEventHandlers.onSetAllCommands({ allCommands });
-        vscode.postMessage({ command: "addCustomCommandRequest", parameters: newCommand });
+        eventHandlers.onSetAllCommands({ allCommands });
+        vscode.postAddCustomCommandRequest(newCommand);
     }
 
     const allCommandNames = state.allCommands.map(cmd => cmd.name);
@@ -78,7 +67,7 @@ export function Kubectl(props: InitialState) {
     return (
     <div className={styles.wrapper}>
         <header className={styles.mainHeading}>
-            <h2>Kubectl Command Run for {props.clusterName}</h2>
+            <h2>Kubectl Command Run for {state.clusterName}</h2>
             <VSCodeDivider />
         </header>
         <nav className={styles.commandNav}>
@@ -91,7 +80,7 @@ export function Kubectl(props: InitialState) {
                 isCommandRunning={state.isCommandRunning}
                 output={state.output}
                 errorMessage={state.errorMessage}
-                userMessageHandlers={userMessageEventHandlers}
+                eventHandlers={eventHandlers}
             />
         </div>
 

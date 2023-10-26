@@ -1,8 +1,8 @@
-import { MessageHandler } from "../../../src/webview-contract/messaging";
-import { InitialState, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
+import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { Scenario } from "../utilities/manualTest";
-import { getTestVscodeMessageContext } from "../utilities/vscode";
 import { Periscope } from "../Periscope/Periscope";
+import { stateUpdater } from "../Periscope/state";
 
 export function getPeriscopeScenarios() {
     const clusterName = "test-cluster";
@@ -51,43 +51,34 @@ export function getPeriscopeScenarios() {
         shareableSas
     };
 
-    const webview = getTestVscodeMessageContext<"periscope">();
-    const messageHandler: MessageHandler<ToVsCodeMsgDef> = {
-        nodeLogsRequest: args => handleNodeLogsRequest(args.nodeName),
-        uploadStatusRequest: handleUploadStatusRequest
-    };
-
-    let uploadStatusCallCount = 0;
-    function handleUploadStatusRequest() {
-        uploadStatusCallCount += 1;
-        webview.postMessage({
-            command: "uploadStatusResponse",
-            parameters: {
-                uploadStatuses: testNodes.map((n, nodeIndex) => ({
-                    nodeName: n,
-                    isUploaded: uploadStatusCallCount >= (nodeIndex * 3)
-                }))
+    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+        const startTime = Date.now();
+        return {
+            async nodeLogsRequest(args) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                webview.postNodeLogsResponse({
+                    nodeName: args.nodeName,
+                    logs: ["aks-periscope-pod", "diag-collector-pod"].map(podName => ({
+                        podName,
+                        logs: Array.from({ length: Math.floor(Math.random() * 500) }, (_, i) => `${new Date(startDate.getTime() + i * 200).toISOString()} Doing thing ${i + 1}`).join('\n')
+                    }))
+                })
+            },
+            uploadStatusRequest() {
+                const secondsSinceStart = (Date.now() - startTime) / 1000;
+                webview.postUploadStatusResponse({
+                    uploadStatuses: testNodes.map((n, nodeIndex) => ({
+                        nodeName: n,
+                        isUploaded: secondsSinceStart >= (nodeIndex * 10 + 5)
+                    }))
+                });
             }
-        });
-    }
-
-    async function handleNodeLogsRequest(nodeName: string): Promise<void> {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        webview.postMessage({
-            command: "nodeLogsResponse",
-            parameters: {
-                nodeName,
-                logs: ["aks-periscope-pod", "diag-collector-pod"].map(podName => ({
-                    podName,
-                    logs: Array.from({ length: Math.floor(Math.random() * 500) }, (_, i) => `${new Date(startDate.getTime() + i * 200).toISOString()} Doing thing ${i + 1}`).join('\n')
-                }))
-            }
-        })
+        };
     }
 
     return [
-        Scenario.create(`Periscope (no diagnostics)`, () => <Periscope {...noDiagnosticsState} />),
-        Scenario.create(`Periscope (error)`, () => <Periscope {...errorState} />),
-        Scenario.create(`Periscope (deployed)`, () => <Periscope {...successState} />).withSubscription(webview, messageHandler)
-    ]
+        Scenario.create("periscope", "no diagnostics", () => <Periscope {...noDiagnosticsState} />, getMessageHandler, stateUpdater.vscodeMessageHandler),
+        Scenario.create("periscope", "error", () => <Periscope {...errorState} />, getMessageHandler, stateUpdater.vscodeMessageHandler),
+        Scenario.create("periscope", "deployed", () => <Periscope {...successState} />, getMessageHandler, stateUpdater.vscodeMessageHandler)
+    ];
 }

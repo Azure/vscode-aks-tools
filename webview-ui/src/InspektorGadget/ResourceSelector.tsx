@@ -2,13 +2,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import styles from "./InspektorGadget.module.css";
-import { getWebviewMessageContext } from "../utilities/vscode";
 import { NamespaceResources, PodResources } from "./helpers/clusterResources";
 import { Lazy, isLoaded, isNotLoaded, map as lazyMap, orDefault } from "../utilities/lazy";
 import { VSCodeProgressRing, VSCodeRadio } from "@vscode/webview-ui-toolkit/react";
 import { Lookup, asLookup, exclude, intersection } from "../utilities/array";
 import { EventHandlers } from "../utilities/state";
-import { UserMsgDef } from "./helpers/userCommands";
+import { EventDef, vscode } from "./helpers/state";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -79,12 +78,10 @@ export interface ResourceSelectorProps {
     className?: React.HTMLAttributes<any>['className']
     resources: NamespaceResources[]
     onSelectionChanged: (selection: {namespace?: string, podName?: string, container?: string}) => void
-    userMessageHandlers: EventHandlers<UserMsgDef>
+    userMessageHandlers: EventHandlers<EventDef>
 }
 
 export function ResourceSelector(props: ResourceSelectorProps) {
-    const vscode = getWebviewMessageContext<"gadget">();
-
     const [status, setStatus] = useState<AllNamespaceItemStatuses>({});
     const [selectedResource, setSelectedResource] = useState<SelectedResource>({});
 
@@ -176,7 +173,7 @@ export function ResourceSelector(props: ResourceSelectorProps) {
             const nsResources = asLookup(props.resources, ns => ns.name);
             if (isNotLoaded(nsResources[namespace].children)) {
                 props.userMessageHandlers.onSetPodsLoading({namespace});
-                vscode.postMessage({ command: "getPodsRequest", parameters: {namespace} });
+                vscode.postGetPodsRequest({namespace});
             }
         }
     }
@@ -195,7 +192,7 @@ export function ResourceSelector(props: ResourceSelectorProps) {
             const podResources = lazyAsLookup(nsResources[namespace].children, pod => pod.name);
             if (isNotLoaded(podResources[podName].children)) {
                 props.userMessageHandlers.onSetContainersLoading({namespace, podName});
-                vscode.postMessage({ command: "getContainersRequest", parameters: {namespace, podName} });
+                vscode.postGetContainersRequest({namespace, podName});
             }
         }
     }

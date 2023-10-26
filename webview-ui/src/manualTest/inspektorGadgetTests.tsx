@@ -1,11 +1,11 @@
-import { GadgetArguments, GadgetVersion, InitialState, TraceOutputItem } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
-import { ToVsCodeMessageHandler } from "../../../src/webview-contract/webviewTypes";
+import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { GadgetArguments, GadgetVersion, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef, TraceOutputItem } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { InspektorGadget } from "../InspektorGadget/InspektorGadget";
 import { getGadgetMetadata } from "../InspektorGadget/helpers/gadgets";
 import { GadgetCategory, isDerivedProperty } from "../InspektorGadget/helpers/gadgets/types";
+import { stateUpdater } from "../InspektorGadget/helpers/state";
 import { distinct, exclude } from "../utilities/array";
 import { Scenario } from "../utilities/manualTest";
-import { getTestVscodeMessageContext } from "../utilities/vscode";
 
 type ContainerInfo = { name: string, pid: number, mountNsId: number, comm: string, ppid: number, tids: number[] };
 type PodContainers = { [podName: string]: ContainerInfo[] };
@@ -67,92 +67,93 @@ export function getInspektorGadgetScenarios() {
     let version: GadgetVersion = {client: "1.0.0", server: "1.0.0" };
     let watchTimer: NodeJS.Timer;
 
-    const webview = getTestVscodeMessageContext<"gadget">();
-    const messageHandler: ToVsCodeMessageHandler<"gadget"> = {
-        getVersionRequest: handleGetVersionRequest,
-        deployRequest: handleDeployRequest,
-        undeployRequest: handleUndeployRequest,
-        runStreamingTraceRequest: args => handleRunStreamingTraceRequest(args.traceId, args.arguments),
-        runBlockingTraceRequest: args => handleRunBlockingTraceRequest(args.traceId, args.arguments),
-        stopStreamingTraceRequest: handleStopWatchingTraceRequest,
-        getNodesRequest: handleGetNodesRequest,
-        getNamespacesRequest: handleGetNamespacesRequest,
-        getPodsRequest: args => handleGetPodsRequest(args.namespace),
-        getContainersRequest: args => handleGetContainersRequest(args.namespace, args.podName)
-    };
+    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+        return {
+            getVersionRequest: handleGetVersionRequest,
+            deployRequest: handleDeployRequest,
+            undeployRequest: handleUndeployRequest,
+            runStreamingTraceRequest: args => handleRunStreamingTraceRequest(args.traceId, args.arguments),
+            runBlockingTraceRequest: args => handleRunBlockingTraceRequest(args.traceId, args.arguments),
+            stopStreamingTraceRequest: handleStopWatchingTraceRequest,
+            getNodesRequest: handleGetNodesRequest,
+            getNamespacesRequest: handleGetNamespacesRequest,
+            getPodsRequest: args => handleGetPodsRequest(args.namespace),
+            getContainersRequest: args => handleGetContainersRequest(args.namespace, args.podName)
+        };
 
-    async function handleGetVersionRequest() {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        webview.postMessage({ command: "updateVersion", parameters: version });
-    }
-
-    async function handleDeployRequest() {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        version = { client: "1.0.0", server: "1.0.0" };
-        webview.postMessage({ command: "updateVersion", parameters: version });
-    }
-
-    async function handleUndeployRequest() {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        version = { client: "1.0.0", server: null };
-        webview.postMessage({ command: "updateVersion", parameters: version });
-    }
-
-    function handleRunStreamingTraceRequest(traceId: number, args: GadgetArguments) {
-        if (watchTimer) {
-            clearInterval(watchTimer);
+        async function handleGetVersionRequest() {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            webview.postUpdateVersion(version);
         }
-
-        const refreshIntervalMs = (args.interval || 1) * 1000;
-        watchTimer = setInterval(() => emitTraceOutput(args, traceId), refreshIntervalMs);
-    }
-
-    async function handleRunBlockingTraceRequest(traceId: number, args: GadgetArguments) {
-        const useSpecifiedTimeout = args.gadgetCategory === "profile" && args.timeout;
-        const waitTime = useSpecifiedTimeout ? args.timeout! * 1000 : 2000;
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        const items = Array.from({ length: 10 }, _ => getTraceItem(args));
-        webview.postMessage({ command: "runTraceResponse", parameters: {items, traceId} });
-    }
-
-    function handleStopWatchingTraceRequest() {
-        if (watchTimer) {
-            clearInterval(watchTimer);
+    
+        async function handleDeployRequest() {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            version = { client: "1.0.0", server: "1.0.0" };
+            webview.postUpdateVersion(version);
         }
-    }
-
-    async function handleGetNodesRequest() {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        webview.postMessage({ command: "getNodesResponse", parameters: {nodes} });
-    }
-
-    async function handleGetNamespacesRequest() {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const namespaces = distinct(nodes.flatMap(node => getNamespaces(node)));
-        webview.postMessage({ command: "getNamespacesResponse", parameters: {namespaces} });
-    }
-
-    async function handleGetPodsRequest(namespace: string) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const podNames = distinct(nodes.flatMap(node => getPodNames(node, namespace)));
-        webview.postMessage({ command: "getPodsResponse", parameters: {namespace, podNames} });
-    }
-
-    async function handleGetContainersRequest(namespace: string, podName: string) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const containerNames = distinct(nodes.flatMap(node => getContainers(node, namespace, podName)));
-        webview.postMessage({ command: "getContainersResponse", parameters: {namespace, podName, containerNames} });
-    }
-
-    function emitTraceOutput(config: GadgetArguments, traceId: number) {
-        const isTopTrace = config.gadgetCategory === "top";
-        if (isTopTrace) {
-            const maxRows = config.maxRows!;
-            const items = Array.from({ length: maxRows }, _ => getTraceItem(config));
-            webview.postMessage({ command: "runTraceResponse", parameters: {items, traceId}  });
-        } else {
-            const items = [getTraceItem(config)];
-            webview.postMessage({ command: "runTraceResponse", parameters: {items, traceId} });
+    
+        async function handleUndeployRequest() {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            version = { client: "1.0.0", server: null };
+            webview.postUpdateVersion(version);
+        }
+    
+        function handleRunStreamingTraceRequest(traceId: number, args: GadgetArguments) {
+            if (watchTimer) {
+                clearInterval(watchTimer);
+            }
+    
+            const refreshIntervalMs = (args.interval || 1) * 1000;
+            watchTimer = setInterval(() => emitTraceOutput(args, traceId), refreshIntervalMs);
+        }
+    
+        async function handleRunBlockingTraceRequest(traceId: number, args: GadgetArguments) {
+            const useSpecifiedTimeout = args.gadgetCategory === "profile" && args.timeout;
+            const waitTime = useSpecifiedTimeout ? args.timeout! * 1000 : 2000;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            const items = Array.from({ length: 10 }, _ => getTraceItem(args));
+            webview.postRunTraceResponse({items, traceId});
+        }
+    
+        function handleStopWatchingTraceRequest() {
+            if (watchTimer) {
+                clearInterval(watchTimer);
+            }
+        }
+    
+        async function handleGetNodesRequest() {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            webview.postGetNodesResponse({nodes});
+        }
+    
+        async function handleGetNamespacesRequest() {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const namespaces = distinct(nodes.flatMap(node => getNamespaces(node)));
+            webview.postGetNamespacesResponse({namespaces});
+        }
+    
+        async function handleGetPodsRequest(namespace: string) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const podNames = distinct(nodes.flatMap(node => getPodNames(node, namespace)));
+            webview.postGetPodsResponse({namespace, podNames});
+        }
+    
+        async function handleGetContainersRequest(namespace: string, podName: string) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const containerNames = distinct(nodes.flatMap(node => getContainers(node, namespace, podName)));
+            webview.postGetContainersResponse({namespace, podName, containerNames});
+        }
+    
+        function emitTraceOutput(config: GadgetArguments, traceId: number) {
+            const isTopTrace = config.gadgetCategory === "top";
+            if (isTopTrace) {
+                const maxRows = config.maxRows!;
+                const items = Array.from({ length: maxRows }, _ => getTraceItem(config));
+                webview.postRunTraceResponse({items, traceId});
+            } else {
+                const items = [getTraceItem(config)];
+                webview.postRunTraceResponse({items, traceId});
+            }
         }
     }
 
@@ -319,6 +320,6 @@ export function getInspektorGadgetScenarios() {
     const initialState: InitialState = {};
 
     return [
-        Scenario.create("Inspektor Gadget", () => <InspektorGadget {...initialState} />).withSubscription(webview, messageHandler)
+        Scenario.create("gadget", "", () => <InspektorGadget {...initialState} />, getMessageHandler, stateUpdater.vscodeMessageHandler)
     ];
 }
