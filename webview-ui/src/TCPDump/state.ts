@@ -1,4 +1,4 @@
-import { InitialState, NodeName, NodeCommandResult, CaptureName, NodeCheckResult, NodeCaptureDownloadResult, NodeCaptureCommandResult } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
+import { InitialState, NodeName, NodeCommandResult, CaptureName, NodeCheckResult, NodeCaptureDownloadResult, NodeCaptureStopResult } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { replaceItem } from "../utilities/array";
 import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
@@ -33,6 +33,7 @@ type NodeStates = {[name: NodeName]: NodeState};
 type NodeCapture = {
     name: CaptureName,
     status: CaptureStatus,
+    sizeInKB: number,
     downloadedFilePath: string | null
 }
 
@@ -91,7 +92,8 @@ function getNodeStatesFromCheck(nodeStates: NodeStates, result: NodeCheckResult)
     const currentCaptureName = result.runningCapture;
 
     const completedCaptures = result.completedCaptures.map<NodeCapture>(c => ({
-        name: c,
+        name: c.name,
+        sizeInKB: c.sizeInKB,
         status: CaptureStatus.Completed,
         downloadedFilePath: null
     }));
@@ -131,13 +133,12 @@ function getNodeStatesFromCaptureStartResult(nodeStates: NodeStates, result: Nod
     });
 }
 
-function getNodeStatesFromCaptureStopResult(nodeStates: NodeStates, result: NodeCommandResult): NodeStates {
+function getNodeStatesFromCaptureStopResult(nodeStates: NodeStates, result: NodeCaptureStopResult): NodeStates {
     const errorMessage = result.succeeded ? null : result.errorMessage;
     const status = result.succeeded ? NodeStatus.DebugPodRunning : NodeStatus.Unknown;
     return updateNodeState(nodeStates, result.node, state => {
-        const completedCaptures: NodeCapture[] =
-            state.currentCaptureName && result.succeeded ? [...state.completedCaptures, {name: state.currentCaptureName, status: CaptureStatus.Completed, downloadedFilePath: null}]
-            : state.completedCaptures;
+        const newCapture: NodeCapture | null = result.succeeded && result.capture ? {name: result.capture.name, sizeInKB: result.capture.sizeInKB, status: CaptureStatus.Completed, downloadedFilePath: null} : null;
+        const completedCaptures: NodeCapture[] = newCapture ? [...state.completedCaptures, newCapture] : state.completedCaptures;
         return {...state, status, errorMessage, completedCaptures};
     });
 }

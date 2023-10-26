@@ -6,7 +6,7 @@ import { failed, map as errmap, Errorable } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { getExecOutput, invokeKubectlCommand } from "../commands/utils/kubectl";
-import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/tcpDump";
+import { CompletedCapture, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/tcpDump";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
 
 const debugPodNamespace = "default";
@@ -169,7 +169,7 @@ spec:
     containers:
     - args: ["-c", "sleep infinity"]
       command: ["/bin/sh"]
-      image: docker.io/corfr/tcpdump
+      image: mcr.microsoft.com/dotnet/runtime-deps:6.0
       imagePullPolicy: IfNotPresent
       name: debug
       resources: {}
@@ -212,6 +212,16 @@ spec:
                 node,
                 succeeded: false,
                 errorMessage: `Pod ${getPodName(node)} is not ready:\n${waitResult.error}`
+            });
+            return;
+        }
+
+        const installResult = await this._installDebugTools(node);
+        if (failed(installResult)) {
+            webview.postStartDebugPodResponse({
+                node,
+                succeeded: false,
+                errorMessage: `Installing debug tools failed on ${getPodName(node)}:\n${installResult.error}`
             });
             return;
         }
@@ -268,7 +278,8 @@ spec:
             webview.postStopCaptureResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to determine running captures:\n${runningCaptures.error}`
+                errorMessage: `Failed to determine running captures:\n${runningCaptures.error}`,
+                capture: null
             });
             return;
         }
@@ -278,17 +289,51 @@ spec:
             webview.postStopCaptureResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Unable to find running capture ${capture}. Found: ${runningCaptures.result.map(p => p.capture).join(",")}`
+                errorMessage: `Unable to find running capture ${capture}. Found: ${runningCaptures.result.map(p => p.capture).join(",")}`,
+                capture: null
             });
             return;
         }
 
         const podCommand = `/bin/sh -c "kill ${captureProcess.pid}"`;
-        const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
+        const killOutput = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
+        if (failed(killOutput)) {
+            webview.postStopCaptureResponse({
+                node,
+                succeeded: false,
+                errorMessage: `Failed to kill tcpdump process ${captureProcess.pid}:\n${killOutput.error}`,
+                capture: null
+            });
+            return;
+        }
+
+        const completedCaptures = await this._getCompletedCaptures(node, []);
+        if (failed(completedCaptures)) {
+            webview.postStopCaptureResponse({
+                node,
+                succeeded: false,
+                errorMessage: `Failed to read completed captures:\n${completedCaptures.error}`,
+                capture: null
+            });
+            return;
+        }
+
+        const stoppedCapture = completedCaptures.result.find(c => c.name === capture);
+        if (!stoppedCapture) {
+            webview.postStopCaptureResponse({
+                node,
+                succeeded: false,
+                errorMessage: `Cannot find capture file for ${capture}`,
+                capture: null
+            });
+            return;
+        }
+
         webview.postStopCaptureResponse({
             node,
-            succeeded: output.succeeded,
-            errorMessage: failed(output) ? output.error : null
+            succeeded: true,
+            errorMessage: null,
+            capture: stoppedCapture
         });
     }
 
@@ -338,15 +383,21 @@ spec:
     }
 
     private async _waitForPodReady(node: string): Promise<Errorable<void>> {
-        const waitCommand = `wait pod -n ${debugPodNamespace} --for=condition=ready --timeout=300s ${getPodName(node)}`;
-        const waitOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, waitCommand);
-        return errmap(waitOutput, _ => undefined);
+        const command = `wait pod -n ${debugPodNamespace} --for=condition=ready --timeout=300s ${getPodName(node)}`;
+        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        return errmap(output, _ => undefined);
     }
 
     private async _waitForPodDeleted(node: string): Promise<Errorable<void>> {
-        const waitCommand = `wait pod -n ${debugPodNamespace} --for=delete --timeout=300s ${getPodName(node)}`;
-        const waitOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, waitCommand);
-        return errmap(waitOutput, _ => undefined);
+        const command = `wait pod -n ${debugPodNamespace} --for=delete --timeout=300s ${getPodName(node)}`;
+        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        return errmap(output, _ => undefined);
+    }
+
+    private async _installDebugTools(node: string): Promise<Errorable<void>> {
+        const podCommand = `/bin/sh -c "apt-get update && apt-get install -y tcpdump procps"`;
+        const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
+        return errmap(output, _ => undefined);
     }
 
     private async _getRunningCaptures(node: string): Promise<Errorable<TcpDumpProcess[]>> {
@@ -367,11 +418,25 @@ spec:
         }
     }
 
-    private async _getCompletedCaptures(node: string, runningCaptures: string[]): Promise<Errorable<string[]>> {
+    private async _getCompletedCaptures(node: string, runningCaptures: string[]): Promise<Errorable<CompletedCapture[]>> {
         // Use 'find' rather than 'ls' (http://mywiki.wooledge.org/ParsingLs)
-        const podCommand = `find ${captureDir} -type f -name ${captureFilePrefix}*.cap`;
+        const podCommand = `find ${captureDir} -type f -name ${captureFilePrefix}*.cap -printf "%p\\t%k\\n"`;
         const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
-        return errmap(output, sr => sr.stdout.trim().split("\n").map(getCaptureFromFilePath).filter(c => c !== null && !runningCaptures.includes(c)) as string[]);
+        return errmap(output, sr => sr.stdout.trim().split("\n").map(asCompletedCapture).filter(cap => !runningCaptures.some(c => cap.name === c)));
+
+        function asCompletedCapture(findOutputLine: string): CompletedCapture {
+            const parts = findOutputLine.trim().split("\t");
+            const filePath = parts[0];
+            const sizeInKB = parseInt(parts[1]);
+            const name = getCaptureFromFilePath(filePath);
+            if (name === null) {
+                const errorMessage = `Error extracting capture name from ${findOutputLine}`;
+                window.showErrorMessage(errorMessage);
+                throw new Error(errorMessage);
+            }
+
+            return {name, sizeInKB};
+        }
     }
 }
 

@@ -8,13 +8,18 @@ export interface InitialState {
 export type NodeName = string;
 export type CaptureName = string;
 
+export type CompletedCapture = {
+    name: CaptureName,
+    sizeInKB: number
+};
+
 export type NodeCommand = {
     node: NodeName
 };
 
 export type NodeCaptureCommand = NodeCommand & {
     capture: CaptureName
-}
+};
 
 export type CommandResult = {
     succeeded: boolean,
@@ -25,14 +30,18 @@ export type NodeCommandResult = CommandResult & {
     node: NodeName
 };
 
+export type NodeCaptureStopResult = NodeCommandResult & {
+    capture: CompletedCapture | null
+};
+
 export type NodeCaptureCommandResult = NodeCommandResult & {
     captureName: CaptureName
-}
+};
 
 export type NodeCheckResult = NodeCommandResult & {
     isDebugPodRunning: boolean,
     runningCapture: CaptureName | null,
-    completedCaptures: CaptureName[]
+    completedCaptures: CompletedCapture[]
 };
 
 export type NodeCaptureDownloadResult = NodeCaptureCommandResult & {
@@ -53,7 +62,7 @@ export type ToWebViewMsgDef = {
     checkNodeStateResponse: NodeCheckResult,
     startDebugPodResponse: NodeCommandResult,
     startCaptureResponse: NodeCommandResult,
-    stopCaptureResponse: NodeCommandResult,
+    stopCaptureResponse: NodeCaptureStopResult,
     downloadCaptureFileResponse: NodeCaptureDownloadResult,
     deleteDebugPodResponse: NodeCommandResult
 };

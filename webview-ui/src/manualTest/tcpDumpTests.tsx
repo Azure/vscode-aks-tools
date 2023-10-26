@@ -1,5 +1,5 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import { CaptureName, InitialState, NodeName, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
+import { CaptureName, CompletedCapture, InitialState, NodeName, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { TcpDump } from "../TCPDump/TcpDump";
 import { stateUpdater } from "../TCPDump/state";
 import { Scenario } from "../utilities/manualTest";
@@ -7,7 +7,7 @@ import { Scenario } from "../utilities/manualTest";
 type TestNodeState = {
     isDebugPodRunning: boolean,
     runningCapture: CaptureName | null,
-    completedCaptures: CaptureName[]
+    completedCaptures: CompletedCapture[]
 };
 
 function getInitialNodeState(): TestNodeState {
@@ -26,6 +26,8 @@ const nodeThatFailsToStartCapture = "node-that-fails-to-start-capture";
 const nodeThatFailsToStopCapture = "node-that-fails-to-stop-capture";
 const nodeWhereDownloadsFail = "node-where-downloads-fail";
 
+const randomFileSize = () => ~~(Math.random() * 5000);
+
 export function getTCPDumpScenarios() {
     const clusterName = "test-cluster";
     let nodeStates: {[node: NodeName]: TestNodeState} = {
@@ -33,7 +35,7 @@ export function getTCPDumpScenarios() {
         [nodeWithRunningDebugPod]: {
             isDebugPodRunning: true,
             runningCapture: null,
-            completedCaptures: ["001", "002", "003", "004"]
+            completedCaptures: Array.from({length: 8}, (_, i) => ({name: String(i + 1).padStart(4, '0'), sizeInKB: randomFileSize()}))
         },
         [nodeThatFailsToCreateDebugPod]: getInitialNodeState(),
         [nodeThatFailsToDeleteDebugPod]: getInitialNodeState(),
@@ -118,14 +120,17 @@ export function getTCPDumpScenarios() {
             const nodeState = nodeStates[node];
 
             const succeeded = node !== nodeThatFailsToStartCapture;
+            let stoppedCapture = null;
             if (succeeded) {
-                nodeStates[node] = {...nodeState, runningCapture: null, completedCaptures: [...nodeState.completedCaptures, capture]};
+                stoppedCapture = {name: capture, sizeInKB: randomFileSize()};
+                nodeStates[node] = {...nodeState, runningCapture: null, completedCaptures: [...nodeState.completedCaptures, stoppedCapture]};
             }
 
             webview.postStopCaptureResponse({
                 node,
                 succeeded,
-                errorMessage: succeeded ? null : "Stopping the capture didn't work. Sorry."
+                errorMessage: succeeded ? null : "Stopping the capture didn't work. Sorry.",
+                capture: stoppedCapture
             });
         }
     

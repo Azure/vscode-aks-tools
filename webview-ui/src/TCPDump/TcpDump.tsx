@@ -77,8 +77,10 @@ export function TcpDump(initialState: InitialState) {
         <>
             <header>
                 <h2>TCP Capture on {state.clusterName}</h2>
-                <VSCodeDivider />
             </header>
+
+            <VSCodeDivider style={{marginBottom: "1rem"}} />
+
             <div className={styles.content}>
                 <label htmlFor="node-dropdown" className={styles.label}>Node:</label>
                 <NodeSelector nodes={state.allNodes} onNodeChanged={eventHandlers.onSetSelectedNode} id="node-dropdown" className={styles.controlDropdown} />
@@ -121,51 +123,53 @@ export function TcpDump(initialState: InitialState) {
                         Stop
                     </VSCodeButton>
                 }
-
-                <label className={styles.label}>Saved Captures</label>
-                {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting, NodeStatus.CaptureRunning, NodeStatus.CaptureStopping) && nodeState && nodeState.completedCaptures.length > 0 && (
-                    <table className={[styles.control, styles.capturelist].join(' ')} >
-                        <thead>
-                            <tr>
-                                <th>Capture</th>
-                                <th>Local Path</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {nodeState.completedCaptures.map(c => (
-                                <tr key={c.name}>
-                                    <td>{c.name}</td>
-                                    <td>
-                                        {!c.downloadedFilePath &&
-                                            <VSCodeButton onClick={() => handleStartDownload(c.name)} disabled={c.status !== CaptureStatus.Completed} appearance="secondary">
-                                                {c.status === CaptureStatus.Downloading && <span slot="start"><FontAwesomeIcon icon={faSpinner} className="fa-spin" /></span>}
-                                                {c.status === CaptureStatus.Completed && <span slot="start"><FontAwesomeIcon icon={faDownload} /></span>}
-                                                Download
-                                            </VSCodeButton>
-                                        }
-
-                                        {c.downloadedFilePath &&
-                                            <div style={{display: "flex"}}>
-                                                <span>{c.downloadedFilePath}</span>
-                                                &nbsp;
-                                                <VSCodeButton appearance="icon" title="Copy Path"><FontAwesomeIcon icon={faCopy} onClick={() => handleCopyDownloadPathClick(c.downloadedFilePath!)} /></VSCodeButton>
-                                                <VSCodeButton appearance="icon" title="Open Folder"><FontAwesomeIcon icon={faFolderOpen} onClick={() => handleOpenFolderClick(c.downloadedFilePath!)} /></VSCodeButton>
-                                            </div>
-                                        }
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-
-                {nodeState?.errorMessage &&
-                <>
-                    <label className={styles.label}>Error:</label>
-                    <pre className={styles.control}>{nodeState?.errorMessage}</pre>
-                </>
-                }
             </div>
+            <VSCodeDivider style={{marginTop: "1rem"}} />
+            <h3>Completed Captures</h3>
+            {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting, NodeStatus.CaptureRunning, NodeStatus.CaptureStopping) && nodeState && nodeState.completedCaptures.length > 0 && (
+                <table className={styles.capturelist} >
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Size (kB)</th>
+                            <th>Local Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {nodeState.completedCaptures.map(c => (
+                            <tr key={c.name}>
+                                <td>{c.name}</td>
+                                <td>{c.sizeInKB}</td>
+                                <td>
+                                    {!c.downloadedFilePath &&
+                                        <VSCodeButton onClick={() => handleStartDownload(c.name)} disabled={c.status !== CaptureStatus.Completed} appearance="secondary">
+                                            {c.status === CaptureStatus.Downloading && <span slot="start"><FontAwesomeIcon icon={faSpinner} className="fa-spin" /></span>}
+                                            {c.status === CaptureStatus.Completed && <span slot="start"><FontAwesomeIcon icon={faDownload} /></span>}
+                                            Download
+                                        </VSCodeButton>
+                                    }
+
+                                    {c.downloadedFilePath &&
+                                        <div style={{display: "flex"}}>
+                                            <span>{c.downloadedFilePath}</span>
+                                            &nbsp;
+                                            <VSCodeButton appearance="icon" title="Copy Path"><FontAwesomeIcon icon={faCopy} onClick={() => handleCopyDownloadPathClick(c.downloadedFilePath!)} /></VSCodeButton>
+                                            <VSCodeButton appearance="icon" title="Open Folder"><FontAwesomeIcon icon={faFolderOpen} onClick={() => handleOpenFolderClick(c.downloadedFilePath!)} /></VSCodeButton>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+
+            {nodeState?.errorMessage &&
+            <>
+                <label className={styles.label}>Error:</label>
+                <pre className={styles.control}>{nodeState?.errorMessage}</pre>
+            </>
+            }
         </>
     );;
 }
