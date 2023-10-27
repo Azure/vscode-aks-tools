@@ -2,10 +2,11 @@ import { platform } from "os";
 import { relative } from "path";
 import { Uri, commands, window, workspace } from "vscode";
 import * as k8s from 'vscode-kubernetes-tools-api';
+import * as semver from 'semver';
 import { failed, map as errmap, Errorable } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { getExecOutput, invokeKubectlCommand } from "../commands/utils/kubectl";
+import { KubectlVersion, getExecOutput, invokeKubectlCommand } from "../commands/utils/kubectl";
 import { CompletedCapture, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/tcpDump";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
 
@@ -54,6 +55,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
     constructor(
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
+        readonly kubectlVersion: KubectlVersion,
         readonly clusterName: string,
         readonly linuxNodesList: string[]
     ) { }
@@ -350,7 +352,15 @@ spec:
         }
 
         const localCpPath = getLocalKubectlCpPath(localCaptureUri);
-        const command = `cp -n ${debugPodNamespace} ${getPodName(node)}:${captureFileBasePath}${captureName}.cap ${localCpPath}`;
+
+        // `kubectl cp` can fail with an EOF error for large files, and there's currently no good workaround:
+        // See: https://github.com/kubernetes/kubernetes/issues/60140
+        // The best advice I can see is to use the 'retries' option if it is supported, and the
+        // 'request-timeout' option otherwise.
+        const clientVersion = this.kubectlVersion.clientVersion.gitVersion.replace(/^v/, "");
+        const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
+        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
+        const command = `cp -n ${debugPodNamespace} ${getPodName(node)}:${captureFileBasePath}${captureName}.cap ${localCpPath} ${cpEOFAvoidanceFlag}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         if (failed(output)) {
             webview.postDownloadCaptureFileResponse({

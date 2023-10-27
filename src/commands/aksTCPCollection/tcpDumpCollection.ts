@@ -6,7 +6,7 @@ import { getExtension } from '../utils/host';
 import { Errorable, failed, map as errmap } from '../utils/errorable';
 import * as tmpfile from '../utils/tempfile';
 import { TcpDumpDataProvider, TcpDumpPanel } from '../../panels/TcpDumpPanel';
-import { invokeKubectlCommand } from '../utils/kubectl';
+import { getVersion, invokeKubectlCommand } from '../utils/kubectl';
 
 export async function aksTCPDump(_context: IActionContext, target: any) {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -47,7 +47,13 @@ export async function aksTCPDump(_context: IActionContext, target: any) {
         return;
     }
 
-    const dataProvider = new TcpDumpDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, linuxNodesList.result);
+    const kubectlVersion = await getVersion(kubectl, kubeConfigFile.filePath);
+    if (failed(kubectlVersion)) {
+        vscode.window.showErrorMessage(kubectlVersion.error);
+        return;
+    }
+
+    const dataProvider = new TcpDumpDataProvider(kubectl, kubeConfigFile.filePath, kubectlVersion.result, clusterInfo.result.name, linuxNodesList.result);
     const panel = new TcpDumpPanel(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);

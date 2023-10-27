@@ -14,6 +14,22 @@ type KubeconfigCommandConfig = {
     exitCodeBehaviour: NonZeroExitCodeBehaviour
 };
 
+export type K8sVersion = {
+    major: string,
+    minor: string,
+    gitVersion: string,
+    buildDate: string
+};
+
+export type KubectlVersion = {
+    clientVersion: K8sVersion,
+    serverVersion: K8sVersion
+};
+
+export function getVersion(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string): Promise<Errorable<KubectlVersion>> {
+    return getKubectlJsonResult(kubectl, kubeConfigFile, "version -o json");
+}
+
 export async function getExecOutput(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string, namespace: string, pod: string, podCommand: string): Promise<Errorable<KubectlV1.ShellResult>> {
     const plainCommand = `exec -n ${namespace} ${pod} -- ${podCommand}`;
     const config: KubeconfigCommandConfig = {
