@@ -10,6 +10,7 @@ import { Detector } from "./Detector/Detector";
 import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
 import { Kubectl } from "./Kubectl/Kubectl";
 import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperator";
+import { ClusterProperties } from "./ClusterProperties/ClusterProperties";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -38,6 +39,7 @@ function getVsCodeContent(): JSX.Element {
     const rendererLookup: Record<ContentId, () => JSX.Element> = {
         createCluster: () => <CreateCluster {...vsCodeInitialState} />,
         style: () => <TestStyleViewer {...vsCodeInitialState} />,
+        clusterProperties: () => <ClusterProperties {...vsCodeInitialState} />,
         periscope: () => <Periscope {...vsCodeInitialState} />,
         detector: () => <Detector {...vsCodeInitialState} />,
         gadget: () => <InspektorGadget {...vsCodeInitialState} />,
