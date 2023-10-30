@@ -12,6 +12,7 @@ import { getKubectlScenarios } from "./kubectlTests";
 import { ContentId } from "../../../src/webview-contract/webviewTypes";
 import { Scenario } from "../utilities/manualTest";
 import { getASOScenarios } from "./asoTests";
+import { getClusterPropertiesScenarios } from "./clusterPropertiesTests";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -28,6 +29,7 @@ const root = createRoot(rootElem!);
 
 const contentTestScenarios: Record<ContentId, Scenario[]> = {
     style: getTestStyleViewerScenarios(),
+    clusterProperties: getClusterPropertiesScenarios(),
     createCluster: getCreateClusterScenarios(),
     periscope: getPeriscopeScenarios(),
     detector: getDetectorScenarios(),
