@@ -1,0 +1,51 @@
+.propertyList {
+    width: 100%;
+}
+
+.propertyList dt {
+    float: left;
+    clear: left;
+    padding: 2px 4px;
+    font-weight: bold;
+    width: 10rem;
+}
+
+.propertyList dd {
+    padding: 2px 0;
+}
+
+.inlineButtonContainer {
+    display: flex;
+    align-items: center;
+}
+
+.infoIndicator {
+    color: var(--vscode-notificationsInfoIcon-foreground);
+    padding-right: 0.5rem;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 20rem;
+    background-color: var(--vscode-editorHoverWidget-background);
+    color: var(--vscode-editorHoverWidget-foreground);
+    border-color: var(--vscode-editorHoverWidget-border);
+    border-width: 1px;
+    border-style: solid;
+    text-align: center;
+    padding: 0.5rem;
+
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
