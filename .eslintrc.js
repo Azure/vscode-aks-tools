@@ -23,8 +23,7 @@ module.exports = {
     },
     "plugins": [
         "eslint-plugin-prefer-arrow",
-        "@typescript-eslint",
-        "@typescript-eslint/tslint"
+        "@typescript-eslint"
     ],
     "root": true,
     "rules": {
@@ -87,6 +86,7 @@ module.exports = {
         ],
         "id-match": "warn",
         "no-debugger": "warn",
+        "no-fallthrough": "warn",
         "no-multiple-empty-lines": "warn",
         "no-trailing-spaces": "warn",
         "no-underscore-dangle": "warn",
@@ -112,27 +112,6 @@ module.exports = {
                 "markers": [
                     "/"
                 ]
-            }
-        ],
-        "@typescript-eslint/tslint/config": [
-            "error",
-            {
-                "rules": {
-                    "skipLibCheck": true,
-                    "switch-final-break": [
-                        true,
-                        "always"
-                    ],
-                    "whitespace": [
-                        true,
-                        "check-branch",
-                        "check-decl",
-                        "check-module",
-                        "check-separator",
-                        "check-type",
-                        "check-preblock"
-                    ]
-                }
             }
         ]
     }
