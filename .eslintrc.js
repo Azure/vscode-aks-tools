@@ -16,8 +16,10 @@ module.exports = {
         "es6": true,
         "node": true
     },
+    "ignorePatterns": ["/webview-ui/*", "*.js"],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
+        "project": "./tsconfig.json",
         "sourceType": "module"
     },
     "plugins": [
@@ -59,10 +61,6 @@ module.exports = {
             "always"
         ],
         "@typescript-eslint/type-annotation-spacing": "warn",
-        "arrow-parens": [
-            "warn",
-            "always"
-        ],
         "curly": [
             "warn",
             "multi-line"

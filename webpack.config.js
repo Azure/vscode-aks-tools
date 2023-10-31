@@ -1,10 +1,7 @@
-//@ts-check
-
 'use strict';
 
 const path = require('path');
-const webpack = require('webpack');
-const fileManagerPlugin = require('filemanager-webpack-plugin');
+const FileManagerPlugin = require('filemanager-webpack-plugin');
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -29,9 +26,7 @@ const config = {
     '@opentelemetry/tracing': '@opentelemetry/tracing'
   },
   plugins: [
-      new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /^electron$/}),
-      new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /handlebars$/ }),
-      new fileManagerPlugin({
+      new FileManagerPlugin({
         events: {
           onEnd: {
               copy: [
@@ -45,10 +40,7 @@ const config = {
     })
   ],
   resolve: {
-    extensions: ['.ts', '.js', '.json'],
-    alias: {
-      'handlebars' : 'handlebars/dist/handlebars.js',
-    },
+    extensions: ['.ts', '.js', '.json']
   },
   module: {
     rules: [

@@ -7,7 +7,7 @@ import { ASOCloudName, AzureCloudName, CommandResult, InitialState, ToVsCodeMsgD
 import { AzureAccountExtensionApi, getServicePrincipalAccess } from "../commands/utils/azureAccount";
 import { NonZeroExitCodeBehaviour, invokeKubectlCommand } from "../commands/utils/kubectl";
 import path = require("path");
-import { fs } from "../commands/utils/fs";
+import * as fs from "fs/promises";
 import { createTempFile } from "../commands/utils/tempfile";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
