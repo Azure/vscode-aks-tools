@@ -1,0 +1,38 @@
+.content {
+    display: grid;
+    grid-template-columns: 6rem 50rem;
+    grid-gap: 1rem;
+    align-items: center;
+}
+
+.content .label {
+    grid-column: 1 / 2;
+}
+
+.content .control {
+    grid-column: 2 / 3;
+}
+
+.content .controlDropdown {
+    grid-column: 2 / 3;
+    max-width: 30rem;
+}
+
+.content .controlButton {
+    grid-column: 2 / 3;
+    max-width: 8rem;
+}
+
+table.capturelist {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.capturelist th {
+    height: 50px;
+    text-align: left;
+}
+
+table.capturelist td {
+    padding: 5px;
+}

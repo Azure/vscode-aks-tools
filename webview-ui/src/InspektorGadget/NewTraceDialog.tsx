@@ -8,7 +8,7 @@ import { isLoaded, isNotLoaded } from "../utilities/lazy";
 import { TraceItemSortSelector } from "./TraceItemSortSelector";
 import { GadgetConfiguration, configuredGadgetResources, getGadgetMetadata } from "./helpers/gadgets";
 import { GadgetSelector } from "./GadgetSelector";
-import { NodeSelector } from "./NodeSelector";
+import { NodeSelector } from "../components/NodeSelector";
 import { GadgetCategory, GadgetExtraProperties, SortSpecifier, toExtraPropertyObject } from "./helpers/gadgets/types";
 import { NamespaceSelection } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { EventHandlers } from "../utilities/state";
