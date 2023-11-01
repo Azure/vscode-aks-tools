@@ -2,7 +2,7 @@
 
 ### Collect TCP Dumps
 
-Right click on your AKS cluster and click on **Collect TCP Dumps** to easily select the Node from the drop down for TCP Dump Ccollection and Download it to the host machine with ease. Currently we have enable for linux nodes in your AKS cluster.
+Right click on your AKS cluster and select **Collect TCP Dumps** to capture TCP dumps for any Linux node and download them to your local machine with ease.
 
 ![Step 1: Menu](../resources/right-click-tcp-dump-collect.png)
 
