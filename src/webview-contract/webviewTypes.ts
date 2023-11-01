@@ -7,6 +7,7 @@ import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget"
 import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
 import { ASODefinition } from "./webviewDefinitions/azureServiceOperator";
+import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 
 /**
  * Groups all the related types for a single webview.
@@ -29,7 +30,8 @@ type AllWebviewDefinitions = {
     detector: DetectorDefinition,
     gadget: InspektorGadgetDefinition,
     kubectl: KubectlDefinition,
-    aso: ASODefinition
+    aso: ASODefinition,
+    tcpDump: TCPDumpDefinition
 };
 
 type ContentIdLookup = {

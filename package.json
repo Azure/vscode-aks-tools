@@ -243,6 +243,10 @@
             {
                 "command": "aks.aksRunKubectlCommands",
                 "title": "Run Kubectl Commands"
+            },
+            {
+                "command": "aks.aksTCPDump",
+                "title": "Collect TCP Dumps"
             }
         ],
         "menus": {
@@ -305,6 +309,11 @@
                     "command": "aks.aksInspektorGadgetShow",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
                     "group": "9@4"
+                },
+                {
+                    "command": "aks.aksTCPDump",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
+                    "group": "9@5"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -396,6 +405,10 @@
             {
                 "id": "aks.createClusterSubMenu",
                 "label": "Create Cluster"
+            },
+            {
+                "id": "aks.tcpDataCollectionSubMenu",
+                "label": "Collect TCP Dump"
             }
         ]
     },
