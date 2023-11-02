@@ -20,6 +20,7 @@
   - [Run Kubernetes API Health Endpoints](./features/k8s-api-health-points.md)
   - [Deploy and Undeploy InspektorGadget](./features/inspektor-gadget.md)
   - [Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot](./features/inspektor-gadget.md)
+  - [Collect TCP Dump](./features/tcp-dumps.md)
 - [Release](./release.md)
   - [Releasing Information](./release/releasing.md)
 - [Contributing](./contributing.md)

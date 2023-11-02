@@ -6,4 +6,5 @@ Right click on your AKS cluster and click on **Managed Cluster Operations** to e
 
 - Abort Last Operation
 - Delete Cluster
+- Reconcile Cluster
 - Rotate Cluster Certificate
