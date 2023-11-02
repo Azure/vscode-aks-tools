@@ -19,6 +19,7 @@ Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS
 * [Run Managed Cluster Operations from your AKS cluster](./features/manage-cluster-operations.md)
 * [Run Kubernetes API Health Endpoints](./features/k8s-api-health-points.md)
 * [Run Inspektor Gadget Commands](./features/inspektor-gadget.md)
+* [Collect TCP Dumps](./features/tcp-dumps.md)
 
 ## Development and Release
 

@@ -1,5 +1,17 @@
 # Change Log
 
+## [1.3.16]
+
+* Collect TCP Dump.
+* Move last webview (cluster properties) to webview project.
+* Simplify state management for new webviews.
+* Reconcile cluster using update.
+* Download Draft Binaries PR.
+* Remove deprecated React function call and update webview-ui dependencies.
+* Dependent bot updates.
+
+Thank you so much to @peterbom, @sprab, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Suli, Yi, Tom, Indu, Sri, Prabha, Thank you all for your ideas and collaboration! 
+
 ## [1.3.15]
 
 * Avoid lengthy kubectl output changing the layout of containing elements.
