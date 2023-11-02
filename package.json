@@ -441,7 +441,7 @@
         "@types/vscode": "^1.52.0",
         "@typescript-eslint/eslint-plugin": "^6.9.1",
         "@typescript-eslint/parser": "^6.9.1",
-	"@vscode/test-electron": "^2.3.6",
+        "@vscode/test-electron": "^2.3.6",
         "chai": "^4.3.4",
         "eslint": "^8.52.0",
         "eslint-plugin-prefer-arrow": "^1.2.3",
