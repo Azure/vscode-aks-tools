@@ -20,7 +20,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v1
       with:
-        version: 14
+        version: 16
     - name: Build Extension
       run: |
         npm run install:all
