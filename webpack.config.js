@@ -1,9 +1,8 @@
-//@ts-check
-
 'use strict';
 
 const path = require('path');
 const webpack = require('webpack');
+const FileManagerPlugin = require('filemanager-webpack-plugin');
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -30,7 +29,19 @@ const config = {
   plugins: [
     // Prevent webpack from trying to bundle electron, or require it as a direct dependency:
     // https://github.com/sindresorhus/got/issues/345#issuecomment-329939488
-    new webpack.IgnorePlugin({ resourceRegExp: /^electron$/ })
+    new webpack.IgnorePlugin({ resourceRegExp: /^electron$/ }),
+    new FileManagerPlugin({
+      events: {
+        onEnd: {
+          copy: [
+            {
+              source: path.join(__dirname, 'node_modules', '@microsoft', 'vscode-azext-azureutils', 'resources', '**'),
+              destination: path.join(__dirname, 'dist', 'node_modules', '@microsoft', 'vscode-azext-azureutils', 'resources')
+            }
+          ]
+        }
+      }
+    })
   ],
   resolve: {
     extensions: ['.ts', '.js', '.json']
