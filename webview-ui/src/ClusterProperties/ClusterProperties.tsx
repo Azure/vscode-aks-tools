@@ -31,7 +31,7 @@ export function ClusterProperties(initialState: InitialState) {
 
         {isLoaded(state.clusterInfo) && state.clusterInfo.value.agentPoolProfiles.map(ap => (
             <>
-                <h3>Agent Pool: {ap.name}</h3>
+                <h3>Agent Pool: {ap.name}</h3> 
                 <AgentPoolDisplay profileInfo={ap} />
             </>
         ))}

@@ -398,6 +398,21 @@ export async function abortLastOperationInCluster(
     }
 }
 
+export async function abortLastOperationInAgentPool(
+    target: AksClusterTreeItem,
+    clusterName: string,
+    agentPoolName: string
+): Promise<Errorable<string>> {
+    try {
+        const containerClient = getContainerClient(target);
+        await containerClient.agentPools.beginAbortLatestOperationAndWait(target.resourceGroupName, clusterName, agentPoolName)
+
+        return { succeeded: true, result: "Abort last operation for agent pool in cluster succeeded." };
+    } catch (ex) {
+        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster for agent pool ${agentPoolName}: ${getErrorMessage(ex)}` };
+    }
+}
+
 export async function reconcileUsingUpdateInCluster(
     target: AksClusterTreeItem,
     clusterName: string
