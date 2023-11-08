@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { fs } from './fs';
+import * as fs from 'fs/promises';
 const tmp = require('tmp');
 
 export async function withOptionalTempFile<T>(

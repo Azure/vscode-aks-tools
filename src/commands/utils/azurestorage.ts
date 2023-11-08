@@ -1,4 +1,4 @@
-import storage = require("@azure/storage-blob");
+import { AccountSASPermissions, AccountSASResourceTypes, AccountSASServices, SASProtocol, StorageSharedKeyCredential, generateAccountSASQueryParameters } from "@azure/storage-blob";
 
 export enum LinkDuration {
     StartTime,
@@ -43,13 +43,13 @@ export function getSASKey(
 
     // The Azure storage client doesn't export constants.
     // The ones we declare here are copied from https://github.com/Azure/azure-storage-node/blob/c4226315f037f2791f7c938e900b3497c9c0a67a/lib/common/util/constants.js#L179
-    const creds = new storage.StorageSharedKeyCredential(storageAccount, storageKey);
-    const accountSharedAccessSignature = storage.generateAccountSASQueryParameters({
+    const creds = new StorageSharedKeyCredential(storageAccount, storageKey);
+    const accountSharedAccessSignature = generateAccountSASQueryParameters({
         expiresOn : expiryDate,
-        permissions: storage.AccountSASPermissions.parse(permissionsForSas),
-        protocol: storage.SASProtocol.Https,
-        resourceTypes: storage.AccountSASResourceTypes.parse("sco").toString(),
-        services: storage.AccountSASServices.parse("b").toString(),
+        permissions: AccountSASPermissions.parse(permissionsForSas),
+        protocol: SASProtocol.Https,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("b").toString(),
         startsOn: startDate
     }, creds).toString();
 
