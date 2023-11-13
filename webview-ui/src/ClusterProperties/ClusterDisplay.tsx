@@ -43,9 +43,6 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
             <dt>Provisioning State</dt>
             <dd>{props.clusterInfo.provisioningState}</dd>
 
-            <dt>FQDN</dt><dd>{props.clusterInfo.fqdn}</dd>
-            <dt>Kubernetes Version</dt><dd>{props.clusterInfo.kubernetesVersion}</dd>
-
             <dt>Power State</dt>
             <dd className={styles.inlineButtonContainer}>
                 {props.clusterInfo.powerStateCode}
@@ -68,6 +65,10 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                 {startStopState === "Stopped" && <VSCodeButton disabled={props.clusterOperationRequested} onClick={handleStartCluster}>Start Cluster</VSCodeButton>}
                 {(startStopState === "Starting" || startStopState === "Stopping") && `Cluster is in ${startStopState} state`}
             </dd>
+
+            <dt>FQDN</dt><dd>{props.clusterInfo.fqdn}</dd>
+            <dt>Kubernetes Version</dt><dd>{props.clusterInfo.kubernetesVersion}</dd>
+
         </dl>
      );
 }
