@@ -1,10 +1,11 @@
 import styles from "./ClusterProperties.module.css";
-import { AgentPoolProfileInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
+import { AgentPoolProfileInfo, ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { EventDef, vscode } from "./state";
 import { EventHandlers } from "../utilities/state";
 
 export interface AgentPoolDisplayProps {
+    clusterInfo: ClusterInfo;
     profileInfo: AgentPoolProfileInfo;
     eventHandlers: EventHandlers<EventDef>;
     clusterOperationRequested: boolean;
@@ -17,7 +18,9 @@ type ProvisionState = "CapturingSecurityVHDSnapshot" | "Creating" | "Deleting" |
                     | "Upgrading" | "UpgradingNodeImageVersion";
 
 export function AgentPoolDisplay(props: AgentPoolDisplayProps) {
-    const showAbortButton = !["Canceled", "Failed", "Succeeded"].includes(props.profileInfo.provisioningState);
+    const isProvisioningStateFromCluster = props.clusterInfo.provisioningState === props.profileInfo.provisioningState;
+    const isOperationInProgress = !["Canceled", "Failed", "Succeeded"].includes(props.profileInfo.provisioningState);
+    const showAbortButton = !isProvisioningStateFromCluster && isOperationInProgress;
 
     function handleAbortClick(agentPoolName: string) {
         vscode.postAbortAgentPoolOperation(agentPoolName);
