@@ -12,14 +12,11 @@ export interface AgentPoolDisplayProps {
 }
 
 // Abort on anything except: Canceled, Failed, Succeeded
-// Check about deleting
-type ProvisionState = "CapturingSecurityVHDSnapshot" | "Creating" | "Deleting" | "RefreshingServicePrincipalProfile"
-                    | "RotatingClusterCertificates" | "Scaling" | "Starting" | "Stopping" | "Succeeded" | "Updating" 
-                    | "Upgrading" | "UpgradingNodeImageVersion";
+const terminalProvisioningStates = ["Canceled", "Failed", "Succeeded"];
 
 export function AgentPoolDisplay(props: AgentPoolDisplayProps) {
     const isProvisioningStateFromCluster = props.clusterInfo.provisioningState === props.profileInfo.provisioningState;
-    const isOperationInProgress = !["Canceled", "Failed", "Succeeded"].includes(props.profileInfo.provisioningState);
+    const isOperationInProgress = !terminalProvisioningStates.includes(props.profileInfo.provisioningState);
     const showAbortButton = !isProvisioningStateFromCluster && isOperationInProgress;
 
     function handleAbortClick(agentPoolName: string) {

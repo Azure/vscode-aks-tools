@@ -125,7 +125,6 @@ export function getClusterPropertiesScenarios() {
             }
 
             const agentPoolProfile = testClusterInfo.agentPoolProfiles.find(p => p.name === agentPoolName)!;
-            agentPoolProfile.provisioningState = "Canceling";
             webview.postGetPropertiesResponse(testClusterInfo);
 
             await new Promise(resolve => setTimeout(resolve, 10000));
