@@ -61,8 +61,8 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                     </span>
                 </span>
 
-                {startStopState === "Started" && <VSCodeButton disabled={props.clusterOperationRequested} onClick={handleStopCluster}  className={styles.controlButton} appearance="primary">Stop Cluster</VSCodeButton>}
-                {startStopState === "Stopped" && <VSCodeButton disabled={props.clusterOperationRequested} onClick={handleStartCluster}  className={styles.controlButton} appearance="primary">Start Cluster</VSCodeButton>}
+                {startStopState === "Started" && <VSCodeButton disabled={props.clusterOperationRequested} onClick={handleStopCluster}  className={styles.controlButton} appearance="secondary">Stop Cluster</VSCodeButton>}
+                {startStopState === "Stopped" && <VSCodeButton disabled={props.clusterOperationRequested} onClick={handleStartCluster}  className={styles.controlButton} appearance="secondary">Start Cluster</VSCodeButton>}
                 {(startStopState === "Starting" || startStopState === "Stopping") && `Cluster is in ${startStopState} state`}
             </dd>
 
