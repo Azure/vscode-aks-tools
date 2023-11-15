@@ -28,6 +28,7 @@ export type ToVsCodeMsgDef = {
     stopClusterRequest: void
     startClusterRequest: void
     abortAgentPoolOperation: string
+    abortClusterOperation: void
 };
 
 export type ToWebViewMsgDef = {

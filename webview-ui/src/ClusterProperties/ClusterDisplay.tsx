@@ -14,6 +14,8 @@ export interface ClusterDisplayProps {
 
 type StartStopState = "Started" | "Starting" | "Stopped" | "Stopping";
 
+const terminalProvisioningStates = ["Canceled", "Failed", "Succeeded"];
+
 export function determineStartStopState(clusterInfo: ClusterInfo): StartStopState {
     if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerStateCode === "Stopped") ) {
         return "Stopped";
@@ -37,11 +39,26 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
         props.eventHandlers.onSetClusterOperationRequested();
     }
 
+    function handleAbortClick() {
+        vscode.postAbortClusterOperation();
+        props.eventHandlers.onSetClusterOperationRequested();
+    }
+
     const startStopState = determineStartStopState(props.clusterInfo);
+    const showAbortButton = !terminalProvisioningStates.includes(props.clusterInfo.provisioningState);
+
     return (
         <dl className={styles.propertyList}>
             <dt>Provisioning State</dt>
-            <dd>{props.clusterInfo.provisioningState}</dd>
+            <dd>
+                {props.clusterInfo.provisioningState}
+                {showAbortButton &&
+                <>
+                    &nbsp;
+                    <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleAbortClick()} appearance="secondary">Abort</VSCodeButton>
+                </>
+                }
+            </dd>
 
             <dt>Power State</dt>
             <dd className={styles.inlineButtonContainer}>

@@ -59,7 +59,8 @@ export function getClusterPropertiesScenarios() {
             getPropertiesRequest: () => handleGetPropertiesRequest(),
             stopClusterRequest: () => handleStopClusterRequest(withErrors && sometimes()),
             startClusterRequest: () => handleStartClusterRequest(withErrors && sometimes()),
-            abortAgentPoolOperation: (agentPoolName: string) => handleAbortAgentPoolOperation(agentPoolName, withErrors && sometimes())
+            abortAgentPoolOperation: (agentPoolName: string) => handleAbortAgentPoolOperation(agentPoolName, withErrors && sometimes()),
+            abortClusterOperation: () => handleAbortClusterOperation(withErrors && sometimes())
         };
 
         async function handleGetPropertiesRequest() {
@@ -129,6 +130,31 @@ export function getClusterPropertiesScenarios() {
 
             await new Promise(resolve => setTimeout(resolve, 10000));
             agentPoolProfile.provisioningState = "Canceled";
+            webview.postGetPropertiesResponse(testClusterInfo);
+        }
+
+        async function handleAbortClusterOperation(hasError: boolean) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (hasError) {
+                webview.postErrorNotification("Sorry, I wasn't quite able to abort the operation.");
+                return;
+            }
+
+            testClusterInfo.provisioningState = "Succeeded";
+            testClusterInfo.powerStateCode = "Stopped";
+            testClusterInfo.agentPoolProfiles.forEach(p => {
+                p.provisioningState = "Succeeded";
+                p.powerStateCode = "Stopped"
+            });
+            webview.postGetPropertiesResponse(testClusterInfo);
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            testClusterInfo.provisioningState = "Succeeded";
+            testClusterInfo.powerStateCode = "Stopped";
+            testClusterInfo.agentPoolProfiles.forEach(p => {
+                p.provisioningState = "Canceled";
+                p.powerStateCode = "Stopped"
+            });
             webview.postGetPropertiesResponse(testClusterInfo);
         }
     }
