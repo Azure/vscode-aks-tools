@@ -32,7 +32,7 @@ export function AgentPoolDisplay(props: AgentPoolDisplayProps) {
                 {showAbortButton &&
                 <>
                     &nbsp;
-                    <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleAbortClick(props.profileInfo.name)}>Abort</VSCodeButton>
+                    <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleAbortClick(props.profileInfo.name)} appearance="primary">Abort</VSCodeButton>
                 </>
                 }
             </dd>
