@@ -21,18 +21,23 @@ export function ClusterProperties(initialState: InitialState) {
         }
     });
 
+    const clusterInfo = isLoaded(state.clusterInfo) && state.clusterInfo.value;
     return (
     <>
         <h2>AKS Cluster Properties of {state.clusterName}</h2>
-        {isLoaded(state.clusterInfo) ?
-            <ClusterDisplay clusterInfo={state.clusterInfo.value} clusterOperationRequested={state.clusterOperationRequested} eventHandlers={eventHandlers} /> :
+        {clusterInfo ?
+            <ClusterDisplay clusterInfo={clusterInfo} clusterOperationRequested={state.clusterOperationRequested} eventHandlers={eventHandlers} /> :
             <VSCodeProgressRing />
         }
 
-        {isLoaded(state.clusterInfo) && state.clusterInfo.value.agentPoolProfiles.map(ap => (
+        {clusterInfo && clusterInfo.agentPoolProfiles.map(ap => (
             <>
                 <h3>Agent Pool: {ap.name}</h3>
-                <AgentPoolDisplay profileInfo={ap} />
+                <AgentPoolDisplay
+                    eventHandlers={eventHandlers}
+                    clusterInfo={clusterInfo}
+                    profileInfo={ap}
+                    clusterOperationRequested={state.clusterOperationRequested} />
             </>
         ))}
     </>

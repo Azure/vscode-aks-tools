@@ -34,5 +34,6 @@ export const stateUpdater: WebviewStateUpdater<"clusterProperties", EventDef, Cr
 export const vscode = getWebviewMessageContext<"clusterProperties">({
     getPropertiesRequest: null,
     stopClusterRequest: null,
-    startClusterRequest: null
+    startClusterRequest: null,
+    abortAgentPoolOperation: null
 });
