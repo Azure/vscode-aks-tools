@@ -229,10 +229,6 @@
                 "title": "Rotate Cluster Certificate"
             },
             {
-                "command": "aks.aksAbortLastOperationInCluster",
-                "title": "Abort Last Operation"
-            },
-            {
                 "command": "aks.aksReconcileCluster",
                 "title": "Reconcile Cluster"
             },
@@ -377,10 +373,6 @@
                 },
                 {
                     "command": "aks.aksRotateClusterCert",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksAbortLastOperationInCluster",
                     "group": "navigation"
                 },
                 {
