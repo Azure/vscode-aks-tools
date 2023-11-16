@@ -60,7 +60,8 @@ export function getClusterPropertiesScenarios() {
             stopClusterRequest: () => handleStopClusterRequest(withErrors && sometimes()),
             startClusterRequest: () => handleStartClusterRequest(withErrors && sometimes()),
             abortAgentPoolOperation: (agentPoolName: string) => handleAbortAgentPoolOperation(agentPoolName, withErrors && sometimes()),
-            abortClusterOperation: () => handleAbortClusterOperation(withErrors && sometimes())
+            abortClusterOperation: () => handleAbortClusterOperation(withErrors && sometimes()),
+            reconcileClusterRequest: () => { }
         };
 
         async function handleGetPropertiesRequest() {

@@ -44,8 +44,14 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
         props.eventHandlers.onSetClusterOperationRequested();
     }
 
+    function handleReconcileClick() {
+        vscode.postReconcileClusterRequest();
+        props.eventHandlers.onSetClusterOperationRequested();
+    }
+
     const startStopState = determineStartStopState(props.clusterInfo);
     const showAbortButton = !terminalProvisioningStates.includes(props.clusterInfo.provisioningState);
+    const showReconcileButton = (props.clusterInfo.provisioningState === "Canceled") && (props.clusterInfo.powerStateCode === "Running");
 
     return (
         <dl className={styles.propertyList}>
@@ -56,6 +62,13 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                 <>
                     &nbsp;
                     <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleAbortClick()} appearance="secondary">Abort</VSCodeButton>
+                </>
+                }
+                {
+                showReconcileButton &&
+                <>
+                    &nbsp;
+                    <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleReconcileClick()} appearance="secondary">Reconcile</VSCodeButton>
                 </>
                 }
             </dd>
