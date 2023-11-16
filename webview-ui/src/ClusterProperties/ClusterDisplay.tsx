@@ -14,7 +14,7 @@ export interface ClusterDisplayProps {
 
 type StartStopState = "Started" | "Starting" | "Stopped" | "Stopping";
 
-const terminalProvisioningStates = ["Canceled", "Failed", "Succeeded"];
+const terminalProvisioningStates = ["Canceled", "Failed", "Succeeded", "Starting", "Stopping"];
 
 export function determineStartStopState(clusterInfo: ClusterInfo): StartStopState {
     if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerStateCode === "Stopped") ) {
