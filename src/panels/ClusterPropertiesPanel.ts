@@ -44,7 +44,6 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
     private async _handleAbortAgentPoolOperation(webview: MessageSink<ToWebViewMsgDef>, poolName: string) {
         try {
-            await this._readAndPostClusterProperties(webview);
             const poller = await this.client.agentPools.beginAbortLatestOperation(this.resourceGroup, this.clusterName, poolName);
 
             poller.onProgress(state => {
@@ -67,7 +66,6 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
     private async _handleAbortClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
         try {
-            await this._readAndPostClusterProperties(webview);
             const poller = await this.client.managedClusters.beginAbortLatestOperation(this.resourceGroup, this.clusterName);
 
             poller.onProgress(state => {
