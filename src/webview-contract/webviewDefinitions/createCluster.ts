@@ -24,6 +24,7 @@ export interface CreateClusterParams {
     resourceGroup: ResourceGroup
     location: string
     name: string
+    preset: string
 }
 
 export type ToVsCodeMsgDef = {
