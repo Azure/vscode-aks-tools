@@ -63,7 +63,8 @@ export function CreateCluster(initialState: InitialState) {
 
     return (
         <>
-            <h2>Create Cluster in {state.subscriptionName}</h2>
+            <h1>Create Cluster</h1>
+            <label>Subscription: {state.subscriptionName}</label>
             {getBody()}
         </>
     );

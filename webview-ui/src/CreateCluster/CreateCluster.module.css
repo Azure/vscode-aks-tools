@@ -4,6 +4,22 @@
     grid-gap: 1rem;
 }
 
+.presetContainer {
+    display: flex;
+    gap: 1rem;
+}
+
+.preset {
+    color: var(--base-base-01, #FFF);
+
+    /* az-text-/header 2 */
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 22px;
+    /* 137.5% */
+}
+
 .infoIndicator {
     color: var(--vscode-notificationsInfoIcon-foreground);
     padding-right: 0.5rem;
