@@ -48,6 +48,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             const poller = await this.client.agentPools.beginAbortLatestOperation(this.resourceGroup, this.clusterName, poolName);
 
             poller.onProgress(state => {
+                // Note: not handling 'canceled' here because this is a cancel operation.
                 if (state.status === "failed") {
                     const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                     webview.postErrorNotification(errorMessage);
@@ -70,6 +71,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             const poller = await this.client.managedClusters.beginAbortLatestOperation(this.resourceGroup, this.clusterName);
 
             poller.onProgress(state => {
+                // Note: not handling 'canceled' here because this is a cancel operation.
                 if (state.status === "failed") {
                     const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                     webview.postErrorNotification(errorMessage);
@@ -94,8 +96,10 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
                 location: getClusterInfo.location
             });
 
-            poller.onProgress((state) => {
-                if (state.status === "failed") {
+            poller.onProgress(state => {
+                if (state.status === "canceled") {
+                    webview.postErrorNotification(`Reconcile Cluster operation on ${this.clusterName} was cancelled.`);
+                } else if (state.status === "failed") {
                     const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                     webview.postErrorNotification(errorMessage);
                 }

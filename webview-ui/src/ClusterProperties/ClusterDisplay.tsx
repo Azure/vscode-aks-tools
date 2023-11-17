@@ -14,7 +14,9 @@ export interface ClusterDisplayProps {
 
 type StartStopState = "Started" | "Starting" | "Stopped" | "Stopping";
 
-const terminalProvisioningStates = ["Canceled", "Failed", "Succeeded", "Starting", "Stopping"];
+// Note: Starting and Stopping state mixed with Abort leads to weird cases where the
+//       cluster is in a state that it can't be started or stopped.
+const unabortableProvisioningStates = ["Canceled", "Failed", "Succeeded", "Starting", "Stopping"];
 
 export function determineStartStopState(clusterInfo: ClusterInfo): StartStopState {
     if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerStateCode === "Stopped") ) {
@@ -50,7 +52,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
     }
 
     const startStopState = determineStartStopState(props.clusterInfo);
-    const showAbortButton = !terminalProvisioningStates.includes(props.clusterInfo.provisioningState);
+    const showAbortButton = !unabortableProvisioningStates.includes(props.clusterInfo.provisioningState);
     const showReconcileButton = (props.clusterInfo.provisioningState === "Canceled") && (props.clusterInfo.powerStateCode === "Running");
 
     return (
