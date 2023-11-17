@@ -37,17 +37,69 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             getPropertiesRequest: () => this._handleGetPropertiesRequest(webview),
             stopClusterRequest: () => this._handleStopClusterRequest(webview),
             startClusterRequest: () => this._handleStartClusterRequest(webview),
-            abortAgentPoolOperation: (poolName: string) => this._handleAbortAgentPoolOperation(webview, poolName)
+            abortAgentPoolOperation: (poolName: string) => this._handleAbortAgentPoolOperation(webview, poolName),
+            abortClusterOperation: () => this._handleAbortClusterOperation(webview),
+            reconcileClusterRequest: () => this._handleReconcileClusterOperation(webview)
         };
     }
 
     private async _handleAbortAgentPoolOperation(webview: MessageSink<ToWebViewMsgDef>, poolName: string) {
         try {
-            await this._readAndPostClusterProperties(webview);
             const poller = await this.client.agentPools.beginAbortLatestOperation(this.resourceGroup, this.clusterName, poolName);
 
             poller.onProgress(state => {
+                // Note: not handling 'canceled' here because this is a cancel operation.
                 if (state.status === "failed") {
+                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    webview.postErrorNotification(errorMessage);
+                }
+            });
+
+            // Update the cluster properties now the operation has started.
+            await this._readAndPostClusterProperties(webview);
+
+            // Wait until operation completes.
+            await poller.pollUntilDone();
+        } catch (ex) {
+            const errorMessage = getErrorMessage(ex);
+            webview.postErrorNotification(errorMessage);
+        }
+    }
+
+    private async _handleAbortClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
+        try {
+            const poller = await this.client.managedClusters.beginAbortLatestOperation(this.resourceGroup, this.clusterName);
+
+            poller.onProgress(state => {
+                // Note: not handling 'canceled' here because this is a cancel operation.
+                if (state.status === "failed") {
+                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    webview.postErrorNotification(errorMessage);
+                }
+            });
+
+            // Update the cluster properties now the operation has started.
+            await this._readAndPostClusterProperties(webview);
+
+            // Wait until operation completes.
+            await poller.pollUntilDone();
+        } catch (ex) {
+            const errorMessage = getErrorMessage(ex);
+            webview.postErrorNotification(errorMessage);
+        }
+    }
+
+    private async _handleReconcileClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
+        try {
+            const getClusterInfo = await this.client.managedClusters.get(this.resourceGroup, this.clusterName);
+            const poller = await this.client.managedClusters.beginCreateOrUpdate(this.resourceGroup, this.clusterName, {
+                location: getClusterInfo.location
+            });
+
+            poller.onProgress(state => {
+                if (state.status === "canceled") {
+                    webview.postErrorNotification(`Reconcile Cluster operation on ${this.clusterName} was cancelled.`);
+                } else if (state.status === "failed") {
                     const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                     webview.postErrorNotification(errorMessage);
                 }

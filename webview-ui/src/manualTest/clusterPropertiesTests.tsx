@@ -41,7 +41,7 @@ let testWindows2022Pool: AgentPoolProfileInfo = {
     osType: "Windows"
 };
 
-let testClusterInfo: ClusterInfo = {
+let runningClusterInfo: ClusterInfo = {
     provisioningState: "Succeeded",
     fqdn: "testcluster-w-testrg-4340d4fda1c9.hcp.eastus.azmk8s.io",
     kubernetesVersion: "1.24.6",
@@ -49,17 +49,28 @@ let testClusterInfo: ClusterInfo = {
     agentPoolProfiles: [testSystemPool, testWindows2019Pool, testWindows2022Pool]
 };
 
+let abortedClusterInfo: ClusterInfo = {
+    ...runningClusterInfo,
+    provisioningState: "Canceled",
+    agentPoolProfiles: runningClusterInfo.agentPoolProfiles.map(poolProfile => ({
+        ...poolProfile,
+        provisioningState: "Canceled"
+    }))
+};
+
 export function getClusterPropertiesScenarios() {
     const initialState: InitialState = {
         clusterName: "test-cluster"
     };
 
-    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>, withErrors: boolean): MessageHandler<ToVsCodeMsgDef> {
+    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>, withErrors: boolean, testClusterInfo: ClusterInfo): MessageHandler<ToVsCodeMsgDef> {
         return {
             getPropertiesRequest: () => handleGetPropertiesRequest(),
             stopClusterRequest: () => handleStopClusterRequest(withErrors && sometimes()),
             startClusterRequest: () => handleStartClusterRequest(withErrors && sometimes()),
-            abortAgentPoolOperation: (agentPoolName: string) => handleAbortAgentPoolOperation(agentPoolName, withErrors && sometimes())
+            abortAgentPoolOperation: (agentPoolName: string) => handleAbortAgentPoolOperation(agentPoolName, withErrors && sometimes()),
+            abortClusterOperation: () => handleAbortClusterOperation(withErrors && sometimes()),
+            reconcileClusterRequest: () => handleReconcileClusterRequest(withErrors && sometimes())
         };
 
         async function handleGetPropertiesRequest() {
@@ -131,10 +142,51 @@ export function getClusterPropertiesScenarios() {
             agentPoolProfile.provisioningState = "Canceled";
             webview.postGetPropertiesResponse(testClusterInfo);
         }
+
+        async function handleAbortClusterOperation(hasError: boolean) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (hasError) {
+                webview.postErrorNotification("Sorry, I wasn't quite able to abort the operation.");
+                return;
+            }
+            // Nore: provisioning state doesnt change immidiately after abort request.
+            webview.postGetPropertiesResponse(testClusterInfo);
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            testClusterInfo.provisioningState = "Canceled";
+            testClusterInfo.agentPoolProfiles.forEach(p => {
+                p.provisioningState = "Canceled";
+            });
+            webview.postGetPropertiesResponse(testClusterInfo);
+        }
+
+        async function handleReconcileClusterRequest(hasError: boolean) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (hasError) {
+                webview.postErrorNotification("Sorry, I wasn't quite able to reconcile the cluster.");
+                return;
+            }
+
+            testClusterInfo.provisioningState = "Updating";
+            testClusterInfo.agentPoolProfiles.forEach(p => {
+                p.provisioningState = "Updating";
+            });
+            webview.postGetPropertiesResponse(testClusterInfo);
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            testClusterInfo.provisioningState = "Succeeded";
+            testClusterInfo.powerStateCode = "Running";
+            testClusterInfo.agentPoolProfiles.forEach(p => {
+                p.provisioningState = "Succeeded";
+                p.powerStateCode = "Running"
+            });
+            webview.postGetPropertiesResponse(testClusterInfo);
+        }
     }
 
     return [
-        Scenario.create("clusterProperties", "succeeding", () => <ClusterProperties {...initialState} />, (webview) => getMessageHandler(webview, false), stateUpdater.vscodeMessageHandler),
-        Scenario.create("clusterProperties", "with errors", () => <ClusterProperties {...initialState} />, (webview) => getMessageHandler(webview, true), stateUpdater.vscodeMessageHandler)
+        Scenario.create("clusterProperties", "succeeding", () => <ClusterProperties {...initialState} />, (webview) => getMessageHandler(webview, false, runningClusterInfo), stateUpdater.vscodeMessageHandler),
+        Scenario.create("clusterProperties", "aborted", () => <ClusterProperties {...initialState} />, (webview) => getMessageHandler(webview, false, abortedClusterInfo), stateUpdater.vscodeMessageHandler),
+        Scenario.create("clusterProperties", "with errors", () => <ClusterProperties {...initialState} />, (webview) => getMessageHandler(webview, true, runningClusterInfo), stateUpdater.vscodeMessageHandler)
     ];
 }

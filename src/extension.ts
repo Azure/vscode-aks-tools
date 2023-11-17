@@ -30,7 +30,6 @@ import aksDeleteCluster from './commands/aksDeleteCluster/aksDeleteCluster';
 import aksRotateClusterCert from './commands/aksRotateClusterCert/aksRotateClusterCert';
 import { aksInspektorGadgetShow } from './commands/aksInspektorGadget/aksInspektorGadget';
 import aksCreateCluster from './commands/aksCreateCluster/aksCreateCluster';
-import aksAbortLastOperation from './commands/aksAbortLastOperation/aksAbortLastOperation';
 import aksReconcileCluster from './commands/aksReconcileCluster/aksReconcileCluster';
 import { aksTCPDump } from './commands/aksTCPCollection/tcpDumpCollection';
 
@@ -74,7 +73,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry('aks.aksCategoryConnectivity', aksCategoryConnectivity);
         registerCommandWithTelemetry('aks.aksDeleteCluster', aksDeleteCluster);
         registerCommandWithTelemetry('aks.aksRotateClusterCert', aksRotateClusterCert);
-        registerCommandWithTelemetry('aks.aksAbortLastOperationInCluster', aksAbortLastOperation);
         registerCommandWithTelemetry('aks.aksReconcileCluster', aksReconcileCluster);
         registerCommandWithTelemetry('aks.aksInspektorGadgetShow', aksInspektorGadgetShow);
         registerCommandWithTelemetry('aks.createCluster', aksCreateCluster);

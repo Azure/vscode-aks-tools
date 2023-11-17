@@ -14,6 +14,10 @@ export interface ClusterDisplayProps {
 
 type StartStopState = "Started" | "Starting" | "Stopped" | "Stopping";
 
+// Note: Starting and Stopping state mixed with Abort leads to weird cases where the
+//       cluster is in a state that it can't be started or stopped.
+const unabortableProvisioningStates = ["Canceled", "Failed", "Succeeded", "Starting", "Stopping"];
+
 export function determineStartStopState(clusterInfo: ClusterInfo): StartStopState {
     if ( clusterInfo.provisioningState !== "Stopping" && clusterInfo.agentPoolProfiles?.every((nodePool) => nodePool.powerStateCode === "Stopped") ) {
         return "Stopped";
@@ -37,11 +41,39 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
         props.eventHandlers.onSetClusterOperationRequested();
     }
 
+    function handleAbortClick() {
+        vscode.postAbortClusterOperation();
+        props.eventHandlers.onSetClusterOperationRequested();
+    }
+
+    function handleReconcileClick() {
+        vscode.postReconcileClusterRequest();
+        props.eventHandlers.onSetClusterOperationRequested();
+    }
+
     const startStopState = determineStartStopState(props.clusterInfo);
+    const showAbortButton = !unabortableProvisioningStates.includes(props.clusterInfo.provisioningState);
+    const showReconcileButton = (props.clusterInfo.provisioningState === "Canceled") && (props.clusterInfo.powerStateCode === "Running");
+
     return (
         <dl className={styles.propertyList}>
             <dt>Provisioning State</dt>
-            <dd>{props.clusterInfo.provisioningState}</dd>
+            <dd>
+                {props.clusterInfo.provisioningState}
+                {showAbortButton &&
+                <>
+                    &nbsp;
+                    <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleAbortClick()} appearance="secondary">Abort</VSCodeButton>
+                </>
+                }
+                {
+                showReconcileButton &&
+                <>
+                    &nbsp;
+                    <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleReconcileClick()} appearance="secondary">Reconcile</VSCodeButton>
+                </>
+                }
+            </dd>
 
             <dt>Power State</dt>
             <dd className={styles.inlineButtonContainer}>
