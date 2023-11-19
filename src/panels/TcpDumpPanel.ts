@@ -432,7 +432,7 @@ spec:
         // Use 'find' rather than 'ls' (http://mywiki.wooledge.org/ParsingLs)
         const podCommand = `find ${captureDir} -type f -name ${captureFilePrefix}*.cap -printf "%p\\t%k\\n"`;
         const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
-        return errmap(output, sr => sr.stdout.trim().split("\n").map(asCompletedCapture).filter(cap => !runningCaptures.some(c => cap.name === c)));
+        return errmap(output, sr => sr.stdout.trim().split("\n").filter(line => line.length > 0).map(asCompletedCapture).filter(cap => !runningCaptures.some(c => cap.name === c)));
 
         function asCompletedCapture(findOutputLine: string): CompletedCapture {
             const parts = findOutputLine.trim().split("\t");
