@@ -17,8 +17,8 @@ type DerivedCpuProfileKey = typeof derivedCpuProfileKeys[number];
 const allCpuProfileProperties: ItemProperty<CpuProfileKey | DerivedCpuProfileKey>[] = [
     ...getLiteralProperties(cpuProfileKeyMetadata),
     getDerivedProperty("Stack", "stack", item => {
-        const kernelStack = item.kernelStack ? JSON.parse(item.kernelStack) : [];
-        const userStack = item.userStack ? JSON.parse(item.userStack) : [];
+        const kernelStack = item.kernelStack && typeof item.kernelStack === "string" ? JSON.parse(item.kernelStack) : [];
+        const userStack = item.userStack && typeof item.userStack === "string" ? JSON.parse(item.userStack) : [];
         return [...kernelStack, ...userStack].join('\n');
     }, ValueType.StackTrace)
 ];

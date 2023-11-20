@@ -42,8 +42,8 @@ export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, Create
         progressUpdate: (state, args) => ({ ...state, ...getStageAndMessage(args.operationDescription, args.event, args.errorMessage) })
     },
     eventHandler: {
-        setInitializing: (state, _args) => ({ ...state, stage: Stage.Loading }),
-        setInitialized: (state, _args) => ({ ...state, stage: Stage.CollectingInput }),
+        setInitializing: (state) => ({ ...state, stage: Stage.Loading }),
+        setInitialized: (state) => ({ ...state, stage: Stage.CollectingInput }),
         setCreating: (state, args) => ({ ...state, createParams: args.parameters, message: "Sending create cluster request" })
     }
 };

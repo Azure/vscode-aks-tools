@@ -6,7 +6,7 @@ import { configuredGadgetResources } from "./helpers/gadgets";
 export interface GadgetSelectorProps {
     category: GadgetCategory
     id: string
-    className: React.HTMLAttributes<any>['className']
+    className?: string
     required?: boolean
     onResourceChanged: (resource: string | null) => void
 }

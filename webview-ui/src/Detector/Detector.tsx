@@ -1,11 +1,11 @@
 import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/detector";
 import { SingleDetector } from './SingleDetector';
-import { getStateManagement } from "../utilities/state";
-import { stateUpdater } from "./state";
+import { useStateManagement } from "../utilities/state";
+import { stateUpdater, vscode } from "./state";
 
 export function Detector(initialState: InitialState) {
-    const {state} = getStateManagement(stateUpdater, initialState);
+    const {state} = useStateManagement(stateUpdater, initialState, vscode);
 
     return (
     <>

@@ -8,7 +8,7 @@ function sometimes() {
     return ~~(Math.random() * 3) === 0;
 }
 
-let testSystemPool: AgentPoolProfileInfo = {
+const testSystemPool: AgentPoolProfileInfo = {
     name: "systempool",
     nodeImageVersion: "AKSUbuntu-1804gen2containerd-202309.06.0",
     powerStateCode: "Running",
@@ -19,7 +19,7 @@ let testSystemPool: AgentPoolProfileInfo = {
     osType: "Linux"
 };
 
-let testWindows2019Pool: AgentPoolProfileInfo = {
+const testWindows2019Pool: AgentPoolProfileInfo = {
     name: "win2019",
     nodeImageVersion: "AKSWindows-2019-containerd-17763.4851.230914",
     powerStateCode: "Running",
@@ -30,7 +30,7 @@ let testWindows2019Pool: AgentPoolProfileInfo = {
     osType: "Windows"
 };
 
-let testWindows2022Pool: AgentPoolProfileInfo = {
+const testWindows2022Pool: AgentPoolProfileInfo = {
     name: "win2022",
     nodeImageVersion: "AKSWindows-2022-containerd-20348.1970.230914",
     powerStateCode: "Running",
@@ -41,7 +41,7 @@ let testWindows2022Pool: AgentPoolProfileInfo = {
     osType: "Windows"
 };
 
-let runningClusterInfo: ClusterInfo = {
+const runningClusterInfo: ClusterInfo = {
     provisioningState: "Succeeded",
     fqdn: "testcluster-w-testrg-4340d4fda1c9.hcp.eastus.azmk8s.io",
     kubernetesVersion: "1.24.6",
@@ -49,7 +49,7 @@ let runningClusterInfo: ClusterInfo = {
     agentPoolProfiles: [testSystemPool, testWindows2019Pool, testWindows2022Pool]
 };
 
-let abortedClusterInfo: ClusterInfo = {
+const abortedClusterInfo: ClusterInfo = {
     ...runningClusterInfo,
     provisioningState: "Canceled",
     agentPoolProfiles: runningClusterInfo.agentPoolProfiles.map(poolProfile => ({

@@ -53,7 +53,7 @@ export type ItemKeyMetadata = {
 
 export type ItemMetadata<TKey extends string> = { [key in TKey]: ItemKeyMetadata };
 
-export type DataItem<TKey extends string> = { [key in TKey]: any };
+export type DataItem<TKey extends string> = { [key in TKey]: unknown };
 
 export enum ValueType {
     Bytes,
@@ -80,12 +80,12 @@ export type SortSpecifier<TKey extends string> = {
     direction: SortDirection
 };
 
-export function toSortString(sortSpecifiers: SortSpecifier<any>[]): string {
+export function toSortString(sortSpecifiers: SortSpecifier<string>[]): string {
     return sortSpecifiers.map(s => `${s.direction === SortDirection.Descending ? '-' : ''}${s.property.identifier}`).join(',');
 }
 
-export function fromSortString(sortString: string, allProperties: ItemProperty<any>[]): SortSpecifier<any>[] {
-    function asSortSpecifier(sortStringItem: string): SortSpecifier<any> | null {
+export function fromSortString(sortString: string, allProperties: ItemProperty<string>[]): SortSpecifier<string>[] {
+    function asSortSpecifier(sortStringItem: string): SortSpecifier<string> | null {
         let key = sortStringItem.trim();
         let direction = SortDirection.Ascending;
         if (key.startsWith('-')) {
@@ -101,11 +101,11 @@ export function fromSortString(sortString: string, allProperties: ItemProperty<a
         return { property, direction };
     }
 
-    return sortString.split(',').map(asSortSpecifier).filter(s => s !== null) as SortSpecifier<any>[];
+    return sortString.split(',').map(asSortSpecifier).filter(s => s !== null) as SortSpecifier<string>[];
 }
 
 export interface DerivedItemProperty<TKey extends string, TDerivedKey extends string> extends ItemProperty<TKey | TDerivedKey> {
-    valueGetter: (item: DataItem<TKey>) => any
+    valueGetter: (item: DataItem<TKey>) => unknown
 }
 
 export function isDerivedProperty<TKey extends string, TDerivedKey extends string>(gadgetProperty: ItemProperty<TKey | TDerivedKey>): gadgetProperty is DerivedItemProperty<TKey, TDerivedKey> {
@@ -121,7 +121,7 @@ export function getLiteralProperties<TKey extends string>(metadata: ItemMetadata
     }));
 }
 
-export function getDerivedProperty<TKey extends string, TDerivedKey extends string>(name: string, key: TDerivedKey, valueGetter: (item: DataItem<TKey>) => any, valueType?: ValueType): DerivedItemProperty<TKey, TDerivedKey> {
+export function getDerivedProperty<TKey extends string, TDerivedKey extends string>(name: string, key: TDerivedKey, valueGetter: (item: DataItem<TKey>) => unknown, valueType?: ValueType): DerivedItemProperty<TKey, TDerivedKey> {
     return {name, identifier: key, key, valueGetter, valueType};
 }
 

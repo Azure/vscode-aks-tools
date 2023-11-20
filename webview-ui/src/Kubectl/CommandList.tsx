@@ -6,7 +6,7 @@ import { MouseEvent as ReactMouseEvent } from "react";
 
 export interface CommandListProps {
     id?: string
-    className?: React.HTMLAttributes<any>['className']
+    className?: string
     commands: PresetCommand[]
     selectedCommand: string | null,
     onSelectionChanged: (command: PresetCommand) => void

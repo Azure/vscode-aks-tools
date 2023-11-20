@@ -6,11 +6,11 @@ type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface TraceItemSortSelectorProps {
     id: string
-    className: React.HTMLAttributes<any>['className']
+    className?: string
     required?: boolean
-    sortSpecifiers: SortSpecifier<any>[]
-    allProperties: ItemProperty<any>[]
-    onSortSpecifiersChange: (sortSpecifiers: SortSpecifier<any>[]) => void
+    sortSpecifiers: SortSpecifier<string>[]
+    allProperties: ItemProperty<string>[]
+    onSortSpecifiersChange: (sortSpecifiers: SortSpecifier<string>[]) => void
 }
 
 export function TraceItemSortSelector(props: TraceItemSortSelectorProps) {

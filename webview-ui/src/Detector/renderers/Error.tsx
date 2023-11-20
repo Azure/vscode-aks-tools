@@ -1,6 +1,6 @@
 export interface ErrorProps {
     message: string
-    data: any
+    data: unknown
 }
 
 export function Error(props: ErrorProps) {

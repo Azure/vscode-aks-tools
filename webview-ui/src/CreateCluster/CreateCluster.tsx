@@ -4,10 +4,10 @@ import { Success } from "./Success";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { Stage, stateUpdater, vscode } from "./helpers/state";
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 
 export function CreateCluster(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
         if (state.stage === Stage.Uninitialized) {
@@ -15,15 +15,13 @@ export function CreateCluster(initialState: InitialState) {
             vscode.postGetResourceGroupsRequest();
             eventHandlers.onSetInitializing();
         }
-
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
     });
 
     useEffect(() => {
         if (state.stage === Stage.Loading && state.locations !== null && state.resourceGroups !== null) {
             eventHandlers.onSetInitialized();
         }
-    }, [state.stage, state.locations, state.resourceGroups]);
+    }, [state.stage, state.locations, state.resourceGroups, eventHandlers]);
 
     function getBody() {
         switch (state.stage) {

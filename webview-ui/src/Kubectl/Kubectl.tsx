@@ -1,20 +1,15 @@
 import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { CommandCategory, InitialState, PresetCommand } from "../../../src/webview-contract/webviewDefinitions/kubectl";
 import styles from "./Kubectl.module.css";
-import { useEffect } from "react";
 import { CommandList } from "./CommandList";
 import { CommandInput } from "./CommandInput";
 import { CommandOutput } from "./CommandOutput";
 import { SaveCommandDialog } from "./SaveCommandDialog";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
 
 export function Kubectl(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
-
-    useEffect(() => {
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
-    });
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     function handleCommandSelectionChanged(command: PresetCommand) {
         eventHandlers.onSetSelectedCommand({ command: command.command });

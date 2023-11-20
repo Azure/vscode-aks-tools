@@ -35,7 +35,7 @@ export function CreateResourceGroupDialog (props: CreateResourceGroupDialogProps
         e => e.currentTarget as HTMLSelectElement,
         elem => elem.selectedIndex <= 0 ? null : props.locations[elem.selectedIndex - 1], 
         elem => elem.checkValidity(),
-        _ => "Location is required.",
+        () => "Location is required.",
         setLocation);
     
     function handleSubmit(e: FormEvent) {

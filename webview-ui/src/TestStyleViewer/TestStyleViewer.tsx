@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { CssRule, InitialState } from "../../../src/webview-contract/webviewDefinitions/testStyleViewer";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./state";
 
 export function TestStyleViewer(initialState: InitialState) {
-    const {state, eventHandlers} = getStateManagement(stateUpdater, initialState);
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
         const cssVars = state.isVSCode ? getCssVarsForVsCode() : getCssVarsForWebview();
@@ -15,7 +15,7 @@ export function TestStyleViewer(initialState: InitialState) {
 
         vscode.postReportCssVars({cssVars});
         vscode.postReportCssRules({rules: cssRules});
-    }, []);
+    });
 
     function getCssVarsForVsCode(): string[] {
         const htmlStyle = document.querySelector('html')?.getAttribute('style');
@@ -48,7 +48,7 @@ export function TestStyleViewer(initialState: InitialState) {
 
     function getCssRules(): CssRule[] {
         const defaultStyleSheetNode = getStyleSheetNode();
-        let [defaultStyleSheet] = [...document.styleSheets].filter(s => s.ownerNode === defaultStyleSheetNode);
+        const [defaultStyleSheet] = [...document.styleSheets].filter(s => s.ownerNode === defaultStyleSheetNode);
         if (!defaultStyleSheet) {
             return [];
         }

@@ -2,18 +2,16 @@ import { CaptureName, InitialState } from "../../../src/webview-contract/webview
 import styles from "./TcpDump.module.css";
 import { useEffect } from "react";
 import { VSCodeButton, VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { CaptureStatus, NodeStatus, stateUpdater, vscode } from "./state";
 import { NodeSelector } from "../components/NodeSelector";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy, faDownload, faFolderOpen, faPlay, faPlus, faSpinner, faStop, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export function TcpDump(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
-
         if (state.selectedNode && state.nodeStates[state.selectedNode].status === NodeStatus.Unknown) {
             vscode.postCheckNodeState({node: state.selectedNode});
             eventHandlers.onSetCheckingNodeState({node: state.selectedNode});
@@ -171,5 +169,5 @@ export function TcpDump(initialState: InitialState) {
             </>
             }
         </>
-    );;
+    );
 }

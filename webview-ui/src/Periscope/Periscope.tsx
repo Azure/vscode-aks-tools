@@ -4,16 +4,15 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/p
 import { ErrorView } from "./ErrorView";
 import { NoDiagnosticSettingView } from "./NoDiagnosticSettingView";
 import { SuccessView } from "./SuccessView";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./state";
 
 export function Periscope(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
         sendUploadStatusRequest();
-    }, []); // Empty list of dependencies to run only once: https://react.dev/reference/react/useEffect#useeffect
+    });
 
     function sendUploadStatusRequest() {
         vscode.postUploadStatusRequest();

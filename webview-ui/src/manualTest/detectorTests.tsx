@@ -62,8 +62,8 @@ import * as rotateClusterCertificate from "./detectorData/rotate-cluster-certifi
 import * as snatUsage from "./detectorData/snat-usage.json"
 import * as userDefinedRouting from "./detectorData/user-defined-routing.json"
 import * as windowsRegressionK8sv124 from "./detectorData/windowsregresionk8sv124.json"
-import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef, ToWebViewMsgDef, isCategoryDataset } from "../../../src/webview-contract/webviewDefinitions/detector";
-import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef, isCategoryDataset } from "../../../src/webview-contract/webviewDefinitions/detector";
+import { MessageHandler } from "../../../src/webview-contract/messaging";
 import { stateUpdater } from "../Detector/state";
 
 type DetectorDataMap = {
@@ -135,12 +135,12 @@ const singleDetectors: SingleDetectorARMResponse[] = [
 ];
 
 const singleDetectorLookup: DetectorDataMap = singleDetectors.reduce((result: DetectorDataMap, response) => {
-    let newResult = {...result};
+    const newResult = {...result};
     newResult[response.name] = response;
     return newResult;
 }, {});
 
-function getMessageHandler(_webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+function getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
     return {};
 }
 
@@ -159,6 +159,6 @@ export function getDetectorScenarios() {
     });
 }
 
-function getClusterArmId(response: ARMResponse<any>): string {
+function getClusterArmId(response: ARMResponse<unknown>): string {
     return response.id.split('detectors')[0];
 }

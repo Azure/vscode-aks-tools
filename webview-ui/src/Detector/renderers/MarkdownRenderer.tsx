@@ -10,7 +10,9 @@ export function MarkdownRenderer(props: SingleDataset) {
     <>
         <h4>{props.renderingProperties.title}</h4>
         {props.table.rows.map((r, i) => (
-            <ReactMarkdown key={i} rehypePlugins={[rehypeRaw]} children={r[0]} components={markdownComponents} />
+            <ReactMarkdown key={i} rehypePlugins={[rehypeRaw]} components={markdownComponents}>
+                {r[0]}
+            </ReactMarkdown>
         ))}
     </>
     );

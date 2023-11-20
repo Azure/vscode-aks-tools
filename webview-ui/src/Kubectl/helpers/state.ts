@@ -40,7 +40,7 @@ export const stateUpdater: WebviewStateUpdater<"kubectl", EventDef, KubectlState
     eventHandler: {
         setSelectedCommand: (state, args) => ({...state, selectedCommand: args.command, output: null, errorMessage: null, explanation: null}),
         setAllCommands: (state, args) => ({...state, allCommands: args.allCommands}),
-        setCommandRunning: (state, _args) => ({...state, isCommandRunning: true, output: null, errorMessage: null, explanation: null}),
+        setCommandRunning: (state) => ({...state, isCommandRunning: true, output: null, errorMessage: null, explanation: null}),
         setSaveDialogVisibility: (state, args) => ({...state, isSaveDialogShown: args.shown})
     }
 };

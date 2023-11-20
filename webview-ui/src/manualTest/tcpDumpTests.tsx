@@ -30,7 +30,7 @@ const randomFileSize = () => ~~(Math.random() * 5000);
 
 export function getTCPDumpScenarios() {
     const clusterName = "test-cluster";
-    let nodeStates: {[node: NodeName]: TestNodeState} = {
+    const nodeStates: {[node: NodeName]: TestNodeState} = {
         [goodNode]: getInitialNodeState(),
         [nodeWithRunningDebugPod]: {
             isDebugPodRunning: true,

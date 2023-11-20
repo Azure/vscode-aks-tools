@@ -86,7 +86,7 @@ type DerivedTcpTraceKey = typeof derivedTcpTraceKeys[number];
 const allTcpTraceProperties: ItemProperty<TcpTraceKey | DerivedTcpTraceKey>[] = [
     ...getLiteralProperties(tcpTraceKeyMetadata),
     ...derivedNetworkEndpointProperties,
-    getDerivedProperty("T", "t", item => tcpOperationDisplay[item.operation] || "U")
+    getDerivedProperty("T", "t", item => tcpOperationDisplay[item.operation as string] || "U")
 ];
 const defaultTcpTraceProperties: ItemProperty<TcpTraceKey | DerivedTcpTraceKey>[] = toProperties(
     allTcpTraceProperties,

@@ -9,8 +9,8 @@ import { DataItem, GadgetCategory, GadgetMetadata, GadgetProfileResource, Gadget
 export type GadgetConfiguration = {
     category: GadgetCategory,
     resource: string,
-    displayProperties: ItemProperty<any>[],
-    sortSpecifiers: SortSpecifier<any>[],
+    displayProperties: ItemProperty<string>[],
+    sortSpecifiers: SortSpecifier<string>[],
     filters: Filters,
     maxItemCount?: number,
     timeout?: number,
@@ -100,9 +100,9 @@ function negateSortFunction(fn: SortFunction): SortFunction {
     return (a, b) => -fn(a, b);
 }
 
-function asSortFunction(specifier: SortSpecifier<any>): SortFunction {
-    let key = specifier.property.key;
-    let descending = specifier.direction === SortDirection.Descending;
+function asSortFunction(specifier: SortSpecifier<string>): SortFunction {
+    const key = specifier.property.key;
+    const descending = specifier.direction === SortDirection.Descending;
     const fn: SortFunction = (a, b) => {
         if (a[key] > b[key]) {
             return 1;
@@ -123,11 +123,11 @@ function combineSortFunctions(prev: SortFunction, current: SortFunction): SortFu
     }
 }
 
-function getSortFunction(sortSpecifiers: SortSpecifier<any>[]): SortFunction {
+function getSortFunction(sortSpecifiers: SortSpecifier<string>[]): SortFunction {
     return sortSpecifiers.map(asSortFunction).reduce(combineSortFunctions);
 }
 
-function sortItems(items: TraceOutputItem[], sortSpecifiers: SortSpecifier<any>[]): TraceOutputItem[] {
+function sortItems(items: TraceOutputItem[], sortSpecifiers: SortSpecifier<string>[]): TraceOutputItem[] {
     if (sortSpecifiers.length === 0) {
         return items;
     }

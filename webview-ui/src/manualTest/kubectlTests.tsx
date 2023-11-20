@@ -19,8 +19,8 @@ export function getKubectlScenarios() {
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>, succeeding: boolean): MessageHandler<ToVsCodeMsgDef> {
         return {
             runCommandRequest: args => handleRunCommandRequest(args.command, succeeding, webview),
-            addCustomCommandRequest: _ => undefined,
-            deleteCustomCommandRequest: _ => undefined
+            addCustomCommandRequest: () => undefined,
+            deleteCustomCommandRequest: () => undefined
         }
     }
 

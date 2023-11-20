@@ -22,10 +22,7 @@ module.exports = {
         "project": "./tsconfig.json",
         "sourceType": "module"
     },
-    "plugins": [
-        "eslint-plugin-prefer-arrow",
-        "@typescript-eslint"
-    ],
+    "plugins": ["@typescript-eslint"],
     "root": true,
     "rules": {
         "@typescript-eslint/member-delimiter-style": [
@@ -54,7 +51,7 @@ module.exports = {
             }
         ],
         "@typescript-eslint/no-unnecessary-boolean-literal-compare": "warn",
-        "@typescript-eslint/no-unused-vars": "warn",
+        "@typescript-eslint/no-unused-vars": ["warn", { "ignoreRestSiblings": true }],
         "@typescript-eslint/prefer-for-of": "warn",
         "@typescript-eslint/semi": [
             "warn",
@@ -89,12 +86,6 @@ module.exports = {
         "no-underscore-dangle": "warn",
         "no-unused-vars": "off",
         "no-var": "warn",
-        "prefer-arrow/prefer-arrow-functions": [
-            "warn",
-            {
-                "allowStandaloneDeclarations": true
-            }
-        ],
         "prefer-const": "warn",
         "prefer-template": "warn",
         "quote-props": [

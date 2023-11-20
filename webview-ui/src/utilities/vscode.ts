@@ -78,8 +78,8 @@ function subscribeToMessages<TMsgDef extends MessageDefinition>(
     }
 
     const commands = Object.keys(handler);
-    const newListener = (messageEvent: any) => {
-        const message = messageEvent.data;
+    const newListener = (messageEvent: Event) => {
+        const message = "data" in messageEvent && messageEvent.data;
         if (!isValidMessage<TMsgDef>(message)) {
             return;
         }

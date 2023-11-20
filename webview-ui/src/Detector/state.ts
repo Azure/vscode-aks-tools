@@ -2,7 +2,7 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/d
 import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
 
-export type EventDef = {};
+export type EventDef = Record<string, never>;
 
 export type DetectorState = InitialState & {
     portalUrl: string

@@ -14,7 +14,7 @@ export function ErrorView(props: ErrorViewProps) {
     return (
         <>
             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-            AKS Periscope failed to run on '{props.clusterName}'. Please see the error below for more details.
+            AKS Periscope failed to run on &#39;{props.clusterName}&#39;. Please see the error below for more details.
 
             <VSCodeDivider />
 

@@ -34,7 +34,7 @@ export interface InsightResult {
 
 export interface ErrorInfo {
     error: string
-    data: any
+    data: unknown
 }
 
 export function isInsightResult(result: InsightResult | ErrorInfo): result is InsightResult {

@@ -87,13 +87,13 @@ export const stateUpdater: WebviewStateUpdater<"aso", EventDef, ASOState> = {
     eventHandler: {
         setAppId: (state, appId) => ({ ...state, appId: appId || null }),
         setAppSecret: (state, appSecret) => ({ ...state, appSecret: appSecret || null }),
-        setCheckingSP: (state, _args) => ({ ...state, checkSPStep: inProgressStep() }),
+        setCheckingSP: (state) => ({ ...state, checkSPStep: inProgressStep() }),
         setSelectedSubscriptionId: (state, subId) => ({ ...state, selectedSubscription: state.subscriptions.find(s => s.id === subId) || null }),
-        setInstallCertManagerStarted: (state, _args) => ({ ...state, installCertManagerStep: inProgressStep() }),
-        setWaitForCertManagerStarted: (state, _args) => ({ ...state, waitForCertManagerStep: inProgressStep() }),
-        setInstallOperatorStarted: (state, _args) => ({ ...state, installOperatorStep: inProgressStep() }),
-        setInstallOperatorSettingsStarted: (state, _args) => ({ ...state, installOperatorSettingsStep: inProgressStep() }),
-        setWaitForControllerManagerStarted: (state, _args) => ({ ...state, waitForControllerManagerStep: inProgressStep() })
+        setInstallCertManagerStarted: (state) => ({ ...state, installCertManagerStep: inProgressStep() }),
+        setWaitForCertManagerStarted: (state) => ({ ...state, waitForCertManagerStep: inProgressStep() }),
+        setInstallOperatorStarted: (state) => ({ ...state, installOperatorStep: inProgressStep() }),
+        setInstallOperatorSettingsStarted: (state) => ({ ...state, installOperatorSettingsStep: inProgressStep() }),
+        setWaitForControllerManagerStarted: (state) => ({ ...state, waitForControllerManagerStep: inProgressStep() })
     }
 };
 

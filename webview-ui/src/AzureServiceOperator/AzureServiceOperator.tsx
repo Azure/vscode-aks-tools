@@ -4,16 +4,12 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/a
 import { useEffect } from "react";
 import { InstallStepStatus, stateUpdater, vscode } from "./helpers/state";
 import { Progress, StepWithDescription } from "./Progress";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { Inputs } from "./Inputs";
 import { getRequiredInputs } from "./helpers/inputs";
 
 export function AzureServiceOperator(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
-
-    useEffect(() => {
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
-    }, []);
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
         // The first step is triggered by a button press.

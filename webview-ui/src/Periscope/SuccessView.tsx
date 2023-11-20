@@ -24,7 +24,7 @@ export function SuccessView(props: SuccessViewProps) {
     useEffect(() => {
         const interval = setInterval(props.onRequestUploadStatusCheck, 10 * 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [props.onRequestUploadStatusCheck]);
 
     function getNodeRowClassNames(nodeName: string): string {
         return [props.selectedNode === nodeName && styles.selected].filter(s => s).join(' ');

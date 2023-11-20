@@ -1,6 +1,6 @@
-import { useReducer } from "react";
+import { useEffect, useReducer } from "react";
 import { Command, CommandKeys, MessageDefinition, MessageHandler } from "../../../src/webview-contract/messaging";
-import { ContentId, InitialState, ToWebviewMsgDef } from "../../../src/webview-contract/webviewTypes";
+import { ContentId, InitialState, ToWebviewMsgDef, WebviewMessageContext } from "../../../src/webview-contract/webviewTypes";
 
 export interface WebviewStateUpdater<T extends ContentId, TEventDef extends MessageDefinition, TState> {
     createState: (initialState: InitialState<T>) => TState,
@@ -8,25 +8,37 @@ export interface WebviewStateUpdater<T extends ContentId, TEventDef extends Mess
     eventHandler: StateMessageHandler<TEventDef, TState>
 }
 
-export type StateManagement<T extends ContentId, TEventDef extends MessageDefinition, TState> = {
+export type StateManagement<TEventDef extends MessageDefinition, TState> = {
     state: TState,
-    eventHandlers: EventHandlers<TEventDef>,
-    vsCodeMessageHandlers: MessageHandler<ToWebviewMsgDef<T>>
+    eventHandlers: EventHandlers<TEventDef>
 };
 
-export function getStateManagement<T extends ContentId, TEventDef extends MessageDefinition, TState>(
+/**
+ * Custom hook (https://react.dev/learn/reusing-logic-with-custom-hooks) ensuring that the component subscribes to messages
+ * from VS Code, and updates its state in response to both messages from VS Code and webview events.
+ * @param stateUpdater 
+ * @param initialState 
+ * @param vscode 
+ * @returns 
+ */
+export function useStateManagement<T extends ContentId, TEventDef extends MessageDefinition, TState>(
     stateUpdater: WebviewStateUpdater<T, TEventDef, TState>,
-    initialState: InitialState<T>
-): StateManagement<T, TEventDef, TState> {
+    initialState: InitialState<T>,
+    vscode: WebviewMessageContext<T>
+): StateManagement<TEventDef, TState> {
     const updateState = chainStateUpdaters(
         toStateUpdater(stateUpdater.vscodeMessageHandler),
         toStateUpdater(stateUpdater.eventHandler));
 
     const [state, dispatch] = useReducer(updateState, stateUpdater.createState(initialState));
     const eventHandlers = getEventHandlers<TEventDef>(dispatch, stateUpdater.eventHandler);
-    const vsCodeMessageHandlers = getMessageHandler<ToWebviewMsgDef<T>>(dispatch, stateUpdater.vscodeMessageHandler);
 
-    return {state, eventHandlers, vsCodeMessageHandlers};
+    useEffect(() => {
+        const vsCodeMessageHandlers = getMessageHandler<ToWebviewMsgDef<T>>(dispatch, stateUpdater.vscodeMessageHandler);
+        vscode.subscribeToMessages(vsCodeMessageHandlers);
+    }, [vscode, stateUpdater.vscodeMessageHandler]);
+
+    return {state, eventHandlers};
 }
 
 /**
@@ -40,9 +52,9 @@ export type StateMessageHandler<TMsgDef extends MessageDefinition, TState> = {
 /**
  * The type of the 'action' in the reducer.
  */
-export type StateMessage = {
+type StateMessage = {
     command: string,
-    args?: any
+    args?: unknown
 };
 
 /**
@@ -58,7 +70,7 @@ type StateUpdater<TState> = React.Reducer<TState, StateMessage>;
 function toStateUpdater<TMsgDef extends MessageDefinition, TState>(handler: StateMessageHandler<TMsgDef, TState>): StateUpdater<TState> {
     return (state, msg) => {
         if (msg.command in handler) {
-            return handler[msg.command](state, msg.args);
+            return handler[msg.command](state, msg.args as TMsgDef[string]); // TODO: Check this cast
         }
 
         return state;
@@ -87,7 +99,7 @@ export type EventHandlers<TMsgDef extends MessageDefinition> = {
  * (https://react.dev/reference/react/useReducer#dispatch)
  */
 function getEventHandlers<TMsgDef extends MessageDefinition>(dispatch: React.Dispatch<StateMessage>, keys: CommandKeys<TMsgDef>): EventHandlers<TMsgDef> {
-    const entries = Object.keys(keys).map(command => [asEvent(command), (args: any) => dispatch({command: command, args})]);
+    const entries = Object.keys(keys).map(command => [asEvent(command), (args: unknown) => dispatch({command: command, args})]);
     return Object.fromEntries(entries);
 }
 
@@ -100,6 +112,6 @@ function asEvent(str: string) {
  * forwards invocations to the `dispatch` function.
  */
 function getMessageHandler<TMsgDef extends MessageDefinition>(dispatch: React.Dispatch<StateMessage>, keys: CommandKeys<TMsgDef>): MessageHandler<TMsgDef> {
-    const entries = Object.keys(keys).map(command => [command, (args: any) => dispatch({command: command, args})]);
+    const entries = Object.keys(keys).map(command => [command, (args: unknown) => dispatch({command: command, args})]);
     return Object.fromEntries(entries);
 }

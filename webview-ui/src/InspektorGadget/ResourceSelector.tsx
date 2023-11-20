@@ -29,9 +29,9 @@ type SelectedNamespace = {[resourceProperties.namespace]: string};
 type SelectedPod = SelectedNamespace & {[resourceProperties.podName]: string};
 type SelectedContainer = SelectedPod & {[resourceProperties.container]: string};
 
-type SelectedResource = {} | SelectedNamespace | SelectedPod | SelectedContainer;
+type SelectedResource = Record<string, never> | SelectedNamespace | SelectedPod | SelectedContainer;
 
-function isNoResource(selectedResource: SelectedResource): selectedResource is {} {
+function isNoResource(selectedResource: SelectedResource): selectedResource is Record<string, never> {
     return !(resourceProperties.namespace in selectedResource);
 }
 
@@ -75,7 +75,7 @@ function getUpdatedStatus(status: AllNamespaceItemStatuses, clusterResources: Na
 
 export interface ResourceSelectorProps {
     id?: string
-    className?: React.HTMLAttributes<any>['className']
+    className?: string
     resources: NamespaceResources[]
     onSelectionChanged: (selection: {namespace?: string, podName?: string, container?: string}) => void
     userMessageHandlers: EventHandlers<EventDef>
@@ -85,10 +85,10 @@ export function ResourceSelector(props: ResourceSelectorProps) {
     const [status, setStatus] = useState<AllNamespaceItemStatuses>({});
     const [selectedResource, setSelectedResource] = useState<SelectedResource>({});
 
-    let updatedStatus = getUpdatedStatus(status, props.resources);
+    const updatedStatus = getUpdatedStatus(status, props.resources);
     useEffect(() => {
         setStatus(updatedStatus);
-    }, [props.resources]);
+    }, [props.resources, updatedStatus]);
 
     return (
         <ul id={props.id} className={props.className ? `${props.className} ${styles.hierarchyList}` : styles.hierarchyList}>

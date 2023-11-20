@@ -48,11 +48,11 @@ export function getASOScenarios() {
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>, withErrors: boolean): MessageHandler<ToVsCodeMsgDef> {
         return {
             checkSPRequest: args => handleCheckSPRequest(args.appId, args.appSecret, webview),
-            installCertManagerRequest: _ => handleInstallCertManagerRequest(withErrors && sometimes(), webview),
-            waitForCertManagerRequest: _ => handleWaitForCertManagerRequest(withErrors && sometimes(), webview),
-            installOperatorRequest: _ => handleInstallOperatorRequest(withErrors && sometimes(), webview),
+            installCertManagerRequest: () => handleInstallCertManagerRequest(withErrors && sometimes(), webview),
+            waitForCertManagerRequest: () => handleWaitForCertManagerRequest(withErrors && sometimes(), webview),
+            installOperatorRequest: () => handleInstallOperatorRequest(withErrors && sometimes(), webview),
             installOperatorSettingsRequest: args => handleInstallOperatorSettingsRequest(withErrors && sometimes(), args.tenantId, args.subscriptionId, args.appId, args.appSecret, args.cloudName, webview),
-            waitForControllerManagerRequest: _ => handleWaitForControllerManagerRequest(withErrors && sometimes(), webview)
+            waitForControllerManagerRequest: () => handleWaitForControllerManagerRequest(withErrors && sometimes(), webview)
         };
     }
 

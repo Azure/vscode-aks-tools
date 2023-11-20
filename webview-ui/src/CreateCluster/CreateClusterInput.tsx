@@ -39,7 +39,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         e => e.currentTarget as HTMLSelectElement,
         elem => elem.selectedIndex <= 0 ? null : props.resourceGroups[elem.selectedIndex - 1], 
         elem => elem.checkValidity(),
-        _ => "Resource Group is required.",
+        () => "Resource Group is required.",
         setExistingResourceGroup);
 
     const handleNameChange = createHandler<string, ChangeEvent, HTMLInputElement>(

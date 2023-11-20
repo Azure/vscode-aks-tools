@@ -85,7 +85,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                         <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
                     </span>
                     <span className={styles.tooltiptext}>
-                        It is important that you don't repeatedly start/stop your cluster.
+                        It is important that you don&#39;t repeatedly start/stop your cluster.
                         Repeatedly starting/stopping your cluster may result in errors.
                         Once your cluster is stopped, you should wait 15-30 minutes before starting it up again.
                         &nbsp;

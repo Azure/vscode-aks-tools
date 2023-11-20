@@ -43,18 +43,18 @@ export function TraceOutput(props: TraceOutputProps) {
     );
 }
 
-function displayValue(value: any, property: ItemProperty<any>) {
+function displayValue(value: unknown, property: ItemProperty<string>) {
     switch (property.valueType) {
         case ValueType.CharByte:
             return <>{String.fromCharCode(value as number)}</>;
         case ValueType.Bytes:
             return <>{value} B</>;
         case ValueType.StackTrace:
-            return <pre>{value}</pre>;
+            return <pre>{value as string}</pre>;
         case ValueType.AddressArray:
-            return <>{value ? (JSON.parse(value) as string[]).join(',') : ""}</>
+            return <>{value ? (JSON.parse(value as string) as string[]).join(',') : ""}</>
         case ValueType.Timestamp:
-            return <>{value ? formatTime(value) : ""}</>
+            return <>{value ? formatTime(value as number) : ""}</>
         default:
             return <>{value}</>;
     }

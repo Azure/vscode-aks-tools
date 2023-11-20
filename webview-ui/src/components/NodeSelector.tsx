@@ -4,7 +4,7 @@ import { FormEvent } from "react";
 export interface NodeSelectorProps {
     nodes: string[]
     id: string
-    className: React.HTMLAttributes<any>['className']
+    className?: string
     required?: boolean
     onNodeChanged: (node: string | null) => void
 }

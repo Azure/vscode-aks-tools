@@ -6,15 +6,11 @@ import { useEffect } from "react";
 import { GadgetCategory } from "./helpers/gadgets/types";
 import { isNotLoaded } from "../utilities/lazy";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
 
 export function InspektorGadget(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
-
-    useEffect(() => {
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
-    });
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
         if (!state.initializationStarted) {

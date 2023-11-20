@@ -111,7 +111,7 @@ export function getInspektorGadgetScenarios() {
             const useSpecifiedTimeout = args.gadgetCategory === "profile" && args.timeout;
             const waitTime = useSpecifiedTimeout ? args.timeout! * 1000 : 2000;
             await new Promise(resolve => setTimeout(resolve, waitTime));
-            const items = Array.from({ length: 10 }, _ => getTraceItem(args));
+            const items = Array.from({ length: 10 }, () => getTraceItem(args));
             webview.postRunTraceResponse({items, traceId});
         }
     
@@ -148,7 +148,7 @@ export function getInspektorGadgetScenarios() {
             const isTopTrace = config.gadgetCategory === "top";
             if (isTopTrace) {
                 const maxRows = config.maxRows!;
-                const items = Array.from({ length: maxRows }, _ => getTraceItem(config));
+                const items = Array.from({ length: maxRows }, () => getTraceItem(config));
                 webview.postRunTraceResponse({items, traceId});
             } else {
                 const items = [getTraceItem(config)];
@@ -198,7 +198,7 @@ export function getInspektorGadgetScenarios() {
         );
     }
 
-    function getTraceStatsValue(columnKey: string): any {
+    function getTraceStatsValue(columnKey: string): unknown {
         const operations = ["accept", "close"];
         const protocols = ["TCP", "UDP"];
         const qrValues = ["Q", "R"];
@@ -289,7 +289,7 @@ export function getInspektorGadgetScenarios() {
             case "timestamp":
                 return new Date().getTime() * 1000000 + ~~(Math.random() * 1000000); // fake nanosecond resolution
             case "id":
-                return Array.from({length: 4}, _ => ~~(Math.random() * 16)).map(byte => (byte & 0xff).toString(16)).join(''); // Random 4-character hex string
+                return Array.from({length: 4}, () => ~~(Math.random() * 16)).map(byte => (byte & 0xff).toString(16)).join(''); // Random 4-character hex string
             case "qr":
                 return qrValues[~~(Math.random() * qrValues.length)];
             case "nameserver":

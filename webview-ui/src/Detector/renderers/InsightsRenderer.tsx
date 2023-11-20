@@ -33,7 +33,9 @@ export function InsightsRenderer(props: SingleDataset) {
                         <b>{row[2]}</b>
                     </td>
                     <td className={styles.insightTableCell}>
-                        <ReactMarkdown rehypePlugins={[rehypeRaw]} children={getMarkdownContent(row[3])} components={markdownComponents} />
+                        <ReactMarkdown rehypePlugins={[rehypeRaw]} components={markdownComponents}>
+                            {getMarkdownContent(row[3])}
+                        </ReactMarkdown>
                     </td>
                 </tr>
             ))}

@@ -134,7 +134,7 @@ export function Traces(props: TracesProps) {
                 </thead>
                 <tbody>
                     {props.traces.map(trace => (
-                        <tr key={trace.traceId} onClick={_ => handleRowClick(trace)} className={getTraceRowClassNames(trace.traceId)}>
+                        <tr key={trace.traceId} onClick={() => handleRowClick(trace)} className={getTraceRowClassNames(trace.traceId)}>
                             <td>
                                 <VSCodeCheckbox checked={checkedTraceIds.includes(trace.traceId)} onClick={ignoreClick} onChange={() => toggleCheckedTraceId(trace.traceId)} style={{margin: "0", paddingRight: "0.5rem"}} />
                                 {getGadgetMetadata(trace.category, trace.resource)?.name}

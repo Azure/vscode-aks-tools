@@ -14,8 +14,9 @@ export function Dialog(props: React.PropsWithChildren<DialogProps>) {
     });
 
     useEffect(() => {
-        dialogRef.current?.addEventListener("close", handleClose);
-        return () => dialogRef.current?.removeEventListener("close", handleClose);
+        const elem = dialogRef.current;
+        elem?.addEventListener("close", handleClose);
+        return () => elem?.removeEventListener("close", handleClose);
     });
 
     useEffect(() => {

@@ -1,12 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import checker from 'vite-plugin-checker';
+import eslintPlugin from 'vite-plugin-eslint';
 import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    eslintPlugin({
+      cache: false,
+      include: ['./src/**/*.ts', './src/**/*.tsx'],
+      exclude: [],
+    }),
     // By default, vite doesn't output typescript errors.
     // This plugin causes errors to be printed to stdout/stderr, meaning they
     // can be picked up by the problem matcher defined in .vscode/tasks.json.

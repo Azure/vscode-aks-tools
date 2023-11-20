@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./state";
 import { ClusterDisplay } from "./ClusterDisplay";
 import { isLoaded, isNotLoaded } from "../utilities/lazy";
@@ -8,11 +8,7 @@ import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { AgentPoolDisplay } from "./AgentPoolDisplay";
 
 export function ClusterProperties(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
-
-    useEffect(() => {
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
-    }, []);
+    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
         if (isNotLoaded(state.clusterInfo)) {
