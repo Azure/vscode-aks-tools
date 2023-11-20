@@ -452,7 +452,7 @@
         "@azure/arm-monitor": "^6.0.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-storage": "^15.2.0",
-        "@azure/arm-subscriptions": "^5.0.1",
+        "@azure/arm-subscriptions": "^5.1.0",
         "@azure/core-auth": "^1.5.0",
         "@azure/identity": "^2.1.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
