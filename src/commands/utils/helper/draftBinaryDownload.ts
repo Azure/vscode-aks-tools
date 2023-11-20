@@ -11,14 +11,14 @@ async function getLatestDraftReleaseTag() {
        vscode.window.showErrorMessage(draftConfig.error);
        return undefined;
     }
- 
+
     return draftConfig.result.releaseTag;
  }
 
  export async function getDraftBinaryPath(): Promise<Errorable<string>> {
 
     const releaseTag = await getLatestDraftReleaseTag();
- 
+
     if (!releaseTag) {
        return {
           succeeded: false,
@@ -36,17 +36,17 @@ async function getLatestDraftReleaseTag() {
  function getBinaryFileName() {
     let architecture = os.arch();
     let operatingSystem = os.platform().toLocaleLowerCase();
- 
+
     if (architecture === 'x64') {
        architecture = 'amd64';
     }
     let draftBinaryFile = `draft-${operatingSystem}-${architecture}`;
- 
+
     if (operatingSystem === 'win32') {
        operatingSystem = 'windows';
        // Draft release v0.0.22 the file name has exe associated with it.
        draftBinaryFile = `draft-${operatingSystem}-${architecture}.exe`;
     }
- 
+
     return draftBinaryFile;
  }

@@ -116,7 +116,7 @@ async function runAKSPeriscope(
     }
 
     // Create a run ID of format: YYYY-MM-DDThh-mm-ssZ
-    const runId = new Date().toISOString().slice(0, 19).replace(/:/g, "-") + "Z";
+    const runId = `${new Date().toISOString().slice(0, 19).replace(/:/g, "-")  }Z`;
 
     const aksDeploymentFile = await longRunning(`Creating AKS Periscope resource specification for ${clusterName}.`,
         () => prepareAKSPeriscopeKustomizeOverlay(clusterStorageInfo.result, kustomizeConfig.result, clusterFeatures.result, runId)

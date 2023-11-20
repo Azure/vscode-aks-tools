@@ -12,9 +12,9 @@ const viewType = "aksVsCodeTools";
  * - handling messages from the webview and posting messages back
  */
 export interface PanelDataProvider<TContent extends ContentId> {
-    getTitle(): string
-    getInitialState(): InitialState<TContent>
-    getMessageHandler(webview: ToWebviewMessageSink<TContent>): ToVsCodeMessageHandler<TContent>
+    getTitle(): string;
+    getInitialState(): InitialState<TContent>;
+    getMessageHandler(webview: ToWebviewMessageSink<TContent>): ToVsCodeMessageHandler<TContent>;
 }
 
 /**
@@ -54,10 +54,10 @@ export abstract class BasePanel<TContent extends ContentId> {
 
         // Set the HTML content for the webview panel
         const initialState = dataProvider.getInitialState();
-        panel.webview.html = this._getWebviewContent(panel.webview, this.extensionUri, title, initialState);
+        panel.webview.html = this.getWebviewContent(panel.webview, this.extensionUri, title, initialState);
     }
 
-    private _getWebviewContent(webview: Webview, extensionUri: Uri, title: string, initialState: InitialState<TContent> | undefined) {
+    private getWebviewContent(webview: Webview, extensionUri: Uri, title: string, initialState: InitialState<TContent> | undefined) {
         // Get URIs for the React build output.
         const stylesUri = getUri(webview, extensionUri, ["assets", "main.css"]);
         const scriptUri = getUri(webview, extensionUri, ["assets", "main.js"]);
@@ -68,7 +68,7 @@ export abstract class BasePanel<TContent extends ContentId> {
         const encodedInitialState = encodeState(initialState);
 
         // Tip: Install the es6-string-html VS Code extension to enable code highlighting below
-        return /*html*/ `
+        return /* html*/ `
         <!DOCTYPE html>
         <html lang="en">
             <head>
@@ -91,13 +91,13 @@ function getMessageContext<TContent extends ContentId>(webview: Webview, webview
     const postMessageImpl: PostMessageImpl<ToWebviewMsgDef<TContent>> = message => webview.postMessage(message);
     const sink = asMessageSink(postMessageImpl, webviewCommandKeys);
     const source: MessageSource<ToVsCodeMsgDef<TContent>> = {
-        subscribeToMessages(handler) {
+        subscribeToMessages: (handler) => {
             webview.onDidReceiveMessage(
                 (message: any) => {
                     if (!isValidMessage<ToVsCodeMessage<TContent>>(message)) {
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }
-    
+
                     const action = (handler as MessageHandler<MessageDefinition>)[message.command];
                     if (action) {
                         action(message.parameters, message.command);

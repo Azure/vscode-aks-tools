@@ -28,9 +28,8 @@ export class KubectlClusterOperations implements ClusterOperations {
     async getGadgetVersion(): Promise<Errorable<GadgetVersion>> {
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget version");
 
-        function setNullIfNotInstalled(version: string) {
-            return version === "not installed" ? null : version;
-        }
+        const setNullIfNotInstalled = (version: string) =>
+            version === "not installed" ? null : version;
 
         return errmap(commandResult, sr => {
             const lines = sr.stdout.split('\n').filter(l => l.trim().length);
@@ -43,16 +42,16 @@ export class KubectlClusterOperations implements ClusterOperations {
 
     async deploy(): Promise<Errorable<GadgetVersion>> {
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget deploy");
-        return bindAsync(commandResult, _ => this.getGadgetVersion());
+        return bindAsync(commandResult, () => this.getGadgetVersion());
     }
 
     async undeploy(): Promise<Errorable<GadgetVersion>> {
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget undeploy");
-        return bindAsync(commandResult, _ => this.getGadgetVersion());
+        return bindAsync(commandResult, () => this.getGadgetVersion());
     }
 
     async runTrace(gadgetArguments: GadgetArguments): Promise<Errorable<TraceOutputItem[]>> {
-        const command = this._getKubectlArgs(gadgetArguments).join(' ');
+        const command = this.getKubectlArgs(gadgetArguments).join(' ');
         const shellResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
         const linesResult = errmap(shellResult, r => r.stdout.split('\n'));
         const arraysResult = bindAll(linesResult, parseOutputLine);
@@ -60,11 +59,11 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     watchTrace(gadgetArguments: GadgetArguments): Promise<Errorable<OutputStream>> {
-        const args = this._getKubectlArgs(gadgetArguments);
+        const args = this.getKubectlArgs(gadgetArguments);
         return streamKubectlOutput(this.kubectl, this.kubeConfigFile, args);
     }
 
-    private _getKubectlArgs(args: GadgetArguments): string[] {
+    private getKubectlArgs(args: GadgetArguments): string[] {
         const pluginCommand = ["gadget", args.gadgetCategory, args.gadgetResource, "--output", "json"];
         const nodeNameFilter = args.filters.nodeName ? ["--node", args.filters.nodeName] : [];
         const namespaceFilter =

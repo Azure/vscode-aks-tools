@@ -42,13 +42,13 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            getLocationsRequest: _ => this._handleGetLocationsRequest(webview),
-            getResourceGroupsRequest: _ => this._handleGetResourceGroupsRequest(webview),
-            createClusterRequest: args => this._handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview)
+            getLocationsRequest: () => this.handleGetLocationsRequest(webview),
+            getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
+            createClusterRequest: args => this.handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview)
         };
     }
 
-    private async _handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         const provider = await this.resourceManagementClient.providers.get("Microsoft.ContainerService");
         const resourceTypes = provider.resourceTypes?.filter(t => t.resourceType === "managedClusters");
         if (!resourceTypes || resourceTypes.length > 1) {
@@ -65,7 +65,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         webview.postGetLocationsResponse({locations: resourceType.locations});
     }
 
-    private async _handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         const groups = await getResourceGroupList(this.resourceManagementClient);
         if (failed(groups)) {
             webview.postProgressUpdate({
@@ -85,7 +85,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         webview.postGetResourceGroupsResponse({groups: usableGroups});
     }
 
-    private async _handleCreateClusterRequest(isNewResourceGroup: boolean, group: WebviewResourceGroup, location: string, name: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleCreateClusterRequest(isNewResourceGroup: boolean, group: WebviewResourceGroup, location: string, name: string, webview: MessageSink<ToWebViewMsgDef>) {
         if (isNewResourceGroup) {
             await createResourceGroup(group, webview, this.resourceManagementClient);
         }
@@ -166,7 +166,7 @@ async function createCluster(
                 });
             }
         });
-    
+
         await poller.pollUntilDone();
     } catch (ex) {
         const errorMessage = getErrorMessage(ex);

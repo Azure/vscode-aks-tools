@@ -1,5 +1,5 @@
 import { SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, AzExtParentTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import AksClusterTreeItem from './aksClusterTreeItem';
 import { Subscription } from '@azure/arm-subscriptions';
 import { getResourceManagementClient } from '../commands/utils/clusters';
@@ -26,7 +26,7 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
         return false;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const client = getResourceManagementClient(this);
         const aksClusterResources = [];
         const result = client.resources.list({ filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'" });

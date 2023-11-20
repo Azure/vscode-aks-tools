@@ -9,21 +9,21 @@ export enum NonZeroExitCodeBehaviour {
 }
 
 type KubeconfigCommandConfig = {
-    plainCommand: string,
-    commandWithKubeconfig: string,
-    exitCodeBehaviour: NonZeroExitCodeBehaviour
+    plainCommand: string;
+    commandWithKubeconfig: string;
+    exitCodeBehaviour: NonZeroExitCodeBehaviour;
 };
 
 export type K8sVersion = {
-    major: string,
-    minor: string,
-    gitVersion: string,
-    buildDate: string
+    major: string;
+    minor: string;
+    gitVersion: string;
+    buildDate: string;
 };
 
 export type KubectlVersion = {
-    clientVersion: K8sVersion,
-    serverVersion: K8sVersion
+    clientVersion: K8sVersion;
+    serverVersion: K8sVersion;
 };
 
 export function getVersion(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string): Promise<Errorable<KubectlVersion>> {
@@ -64,7 +64,7 @@ async function invokeKubectlCommandInternal(kubectl: APIAvailable<KubectlV1>, co
         if (shellResult.code !== 0 && config.exitCodeBehaviour === NonZeroExitCodeBehaviour.Fail) {
             return { succeeded: false, error: `The command "kubectl ${config.plainCommand}" returned status code ${shellResult.code}\nError: ${shellResult.stderr}` };
         }
-    
+
         return { succeeded: true, result: shellResult };
     } catch (e) {
         return { succeeded: false, error: `Error running "kubectl ${config.plainCommand}":\n${getErrorMessage(e)}` };
@@ -107,11 +107,11 @@ export async function getResources<T>(
             namespaceFlags = "";
             break;
         default:
-            namespaceFlags = `-n ${namespace}`
+            namespaceFlags = `-n ${namespace}`;
             break;
     }
 
-    const labelFlags = Object.keys(labels).map(l => `-l ${l}=${labels[l]}`)
+    const labelFlags = Object.keys(labels).map(l => `-l ${l}=${labels[l]}`);
 
     const command = [
         `get ${resourceName}`,
@@ -125,7 +125,7 @@ export async function getResources<T>(
 }
 
 interface K8sList<T> {
-    items: T[]
+    items: T[];
 }
 
 export async function streamKubectlOutput(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string, kubectlArgs: string[]): Promise<Errorable<OutputStream>> {

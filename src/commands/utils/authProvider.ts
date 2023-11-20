@@ -5,18 +5,18 @@ import { Errorable } from "./errorable";
 
 // The AppId (ClientId) of VS Code
 // https://github.com/Azure/azure-sdk-for-js/blob/5eb19b911388ec4ba830e36934bdb4840ec7977d/sdk/identity/identity/src/credentials/visualStudioCodeCredential.ts#L21
-const AzureAccountClientId = "aebc6443-996d-45c2-90f0-388ff96faa56";
+const azureAccountClientId = "aebc6443-996d-45c2-90f0-388ff96faa56";
 
 export async function getAksAadAccessToken(environment: Environment, serverId: string, tenantId: string, refreshToken: string): Promise<Errorable<AuthenticationResult>> {
     // The MSAL configuration is for the current application (i.e. VS Code),
     // even though we will be requesting a token for a different application.
     const clientConfig: Configuration = {
         auth: {
-            clientId: AzureAccountClientId,
+            clientId: azureAccountClientId,
             authority: new URL(tenantId, environment.activeDirectoryEndpointUrl).href
         }
     };
-    
+
     const application = new PublicClientApplication(clientConfig);
 
     // The token needs to have an 'audience' claim whose value matches the 'serverId' value (i.e. the AKS AAD server).
@@ -24,7 +24,7 @@ export async function getAksAadAccessToken(environment: Environment, serverId: s
     const request: RefreshTokenRequest = {
         scopes: [`${serverId}/.default`],
         refreshToken
-    }
+    };
 
     // According to the MSAL docs, this method is intended for use in migration from an older AD API (ADAL),
     // and the recommended alternative is to use `acquireTokenSilent`:

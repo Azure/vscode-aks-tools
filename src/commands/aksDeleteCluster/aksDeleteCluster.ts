@@ -22,7 +22,7 @@ export default async function aksDeleteCluster(
   const answer = await vscode.window.showInformationMessage(`Do you want to delete cluster ${clusterName}?`, "Yes", "No");
 
   if (answer === "Yes") {
-    const result = await longRunning(`Deleting cluster ${clusterName}.`, async () => { return await deleteCluster(cluster.result, clusterName) });
+    const result = await longRunning(`Deleting cluster ${clusterName}.`, async () => { return await deleteCluster(cluster.result, clusterName); });
 
     if (failed(result)) {
       vscode.window.showErrorMessage(result.error);

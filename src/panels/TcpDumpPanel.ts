@@ -73,18 +73,18 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            checkNodeState: args => this._handleCheckNodeState(args.node, webview),
-            startDebugPod: args => this._handleStartDebugPod(args.node, webview),
-            deleteDebugPod: args => this._handleDeleteDebugPod(args.node, webview),
-            startCapture: args => this._handleStartCapture(args.node, args.capture, webview),
-            stopCapture: args => this._handleStopCapture(args.node, args.capture, webview),
-            downloadCaptureFile: args => this._handleDownloadCaptureFile(args.node, args.capture, webview),
-            openFolder: args => this._handleOpenFolder(args)
+            checkNodeState: args => this.handleCheckNodeState(args.node, webview),
+            startDebugPod: args => this.handleStartDebugPod(args.node, webview),
+            deleteDebugPod: args => this.handleDeleteDebugPod(args.node, webview),
+            startCapture: args => this.handleStartCapture(args.node, args.capture, webview),
+            stopCapture: args => this.handleStopCapture(args.node, args.capture, webview),
+            downloadCaptureFile: args => this.handleDownloadCaptureFile(args.node, args.capture, webview),
+            openFolder: args => this.handleOpenFolder(args)
         };
     }
 
-    private async _handleCheckNodeState(node: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const podNames = await this._getPodNames();
+    private async handleCheckNodeState(node: string, webview: MessageSink<ToWebViewMsgDef>) {
+        const podNames = await this.getPodNames();
         if (failed(podNames)) {
             webview.postCheckNodeStateResponse({
                 node,
@@ -110,7 +110,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
             return;
         }
 
-        const waitResult = await this._waitForPodReady(node);
+        const waitResult = await this.waitForPodReady(node);
         if (failed(waitResult)) {
             webview.postCheckNodeStateResponse({
                 node,
@@ -123,7 +123,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
             return;
         }
 
-        const runningCaptureProcs = await this._getRunningCaptures(node);
+        const runningCaptureProcs = await this.getRunningCaptures(node);
         if (failed(runningCaptureProcs)) {
             webview.postCheckNodeStateResponse({
                 node,
@@ -137,7 +137,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
         }
 
         const runningCapture = runningCaptureProcs.result.length > 0 ? runningCaptureProcs.result[0].capture : null;
-        const completedCaptures = await this._getCompletedCaptures(node, runningCaptureProcs.result.map(p => p.capture));
+        const completedCaptures = await this.getCompletedCaptures(node, runningCaptureProcs.result.map(p => p.capture));
         if (failed(completedCaptures)) {
             webview.postCheckNodeStateResponse({
                 node,
@@ -160,7 +160,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
         });
     }
 
-    private async _handleStartDebugPod(node: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleStartDebugPod(node: string, webview: MessageSink<ToWebViewMsgDef>) {
         const createPodYaml = `
 apiVersion: v1
 kind: Pod
@@ -208,7 +208,7 @@ spec:
             return;
         }
 
-        const waitResult = await this._waitForPodReady(node);
+        const waitResult = await this.waitForPodReady(node);
         if (failed(waitResult)) {
             webview.postStartDebugPodResponse({
                 node,
@@ -218,7 +218,7 @@ spec:
             return;
         }
 
-        const installResult = await this._installDebugTools(node);
+        const installResult = await this.installDebugTools(node);
         if (failed(installResult)) {
             webview.postStartDebugPodResponse({
                 node,
@@ -235,7 +235,7 @@ spec:
         });
     }
 
-    private async _handleDeleteDebugPod(node: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleDeleteDebugPod(node: string, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `delete pod -n ${debugPodNamespace} ${getPodName(node)}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         if (failed(output)) {
@@ -247,7 +247,7 @@ spec:
             return;
         }
 
-        const waitResult = await this._waitForPodDeleted(node);
+        const waitResult = await this.waitForPodDeleted(node);
         if (failed(waitResult)) {
             webview.postStartDebugPodResponse({
                 node,
@@ -264,7 +264,7 @@ spec:
         });
     }
 
-    private async _handleStartCapture(node: string, capture: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleStartCapture(node: string, capture: string, webview: MessageSink<ToWebViewMsgDef>) {
         const podCommand = `/bin/sh -c "${getTcpDumpCommand(capture)} 1>/dev/null 2>&1 &"`;
         const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
         webview.postStartCaptureResponse({
@@ -274,8 +274,8 @@ spec:
         });
     }
 
-    private async _handleStopCapture(node: string, capture: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const runningCaptures = await this._getRunningCaptures(node);
+    private async handleStopCapture(node: string, capture: string, webview: MessageSink<ToWebViewMsgDef>) {
+        const runningCaptures = await this.getRunningCaptures(node);
         if (failed(runningCaptures)) {
             webview.postStopCaptureResponse({
                 node,
@@ -309,7 +309,7 @@ spec:
             return;
         }
 
-        const completedCaptures = await this._getCompletedCaptures(node, []);
+        const completedCaptures = await this.getCompletedCaptures(node, []);
         if (failed(completedCaptures)) {
             webview.postStopCaptureResponse({
                 node,
@@ -339,7 +339,7 @@ spec:
         });
     }
 
-    private async _handleDownloadCaptureFile(node: string, captureName: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleDownloadCaptureFile(node: string, captureName: string, webview: MessageSink<ToWebViewMsgDef>) {
         const localCaptureUri = await window.showSaveDialog({
             defaultUri: Uri.file(`${captureName}.cap`),
             filters: {"Capture Files": ['cap']},
@@ -382,41 +382,40 @@ spec:
         });
     }
 
-    private _handleOpenFolder(path: string) {
+    private handleOpenFolder(path: string) {
         commands.executeCommand('revealFileInOS', Uri.file(path));
     }
 
-    private async _getPodNames(): Promise<Errorable<string[]>> {
+    private async getPodNames(): Promise<Errorable<string[]>> {
         const command = `get pod -n ${debugPodNamespace} --no-headers -o custom-columns=":metadata.name"`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         return errmap(output, sr => sr.stdout.trim().split("\n"));
     }
 
-    private async _waitForPodReady(node: string): Promise<Errorable<void>> {
+    private async waitForPodReady(node: string): Promise<Errorable<void>> {
         const command = `wait pod -n ${debugPodNamespace} --for=condition=ready --timeout=300s ${getPodName(node)}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-        return errmap(output, _ => undefined);
+        return errmap(output, () => undefined);
     }
 
-    private async _waitForPodDeleted(node: string): Promise<Errorable<void>> {
+    private async waitForPodDeleted(node: string): Promise<Errorable<void>> {
         const command = `wait pod -n ${debugPodNamespace} --for=delete --timeout=300s ${getPodName(node)}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-        return errmap(output, _ => undefined);
+        return errmap(output, () => undefined);
     }
 
-    private async _installDebugTools(node: string): Promise<Errorable<void>> {
+    private async installDebugTools(node: string): Promise<Errorable<void>> {
         const podCommand = `/bin/sh -c "apt-get update && apt-get install -y tcpdump procps"`;
         const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
-        return errmap(output, _ => undefined);
+        return errmap(output, () => undefined);
     }
 
-    private async _getRunningCaptures(node: string): Promise<Errorable<TcpDumpProcess[]>> {
+    private async getRunningCaptures(node: string): Promise<Errorable<TcpDumpProcess[]>> {
         // List all processes without header columns, including PID, command and args (which contains the command)
         const podCommand = "ps -e -o pid= -o comm= -o args=";
         const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
-        return errmap(output, sr => sr.stdout.trim().split("\n").map(asProcess).filter(isTcpDump));
 
-        function asProcess(psOutputLine: string): Process {
+        const asProcess = (psOutputLine: string): Process => {
             const parts = psOutputLine.trim().split(/\s+/);
             const pid = parseInt(parts[0]);
             const command = parts[1];
@@ -425,16 +424,17 @@ spec:
             const isTcpDump = capture !== null;
             const process = {pid, command, args, isTcpDump, capture};
             return process;
-        }
+        };
+
+        return errmap(output, sr => sr.stdout.trim().split("\n").map(asProcess).filter(isTcpDump));
     }
 
-    private async _getCompletedCaptures(node: string, runningCaptures: string[]): Promise<Errorable<CompletedCapture[]>> {
+    private async getCompletedCaptures(node: string, runningCaptures: string[]): Promise<Errorable<CompletedCapture[]>> {
         // Use 'find' rather than 'ls' (http://mywiki.wooledge.org/ParsingLs)
         const podCommand = `find ${captureDir} -type f -name ${captureFilePrefix}*.cap -printf "%p\\t%k\\n"`;
         const output = await getExecOutput(this.kubectl, this.kubeConfigFilePath, debugPodNamespace, getPodName(node), podCommand);
-        return errmap(output, sr => sr.stdout.trim().split("\n").filter(line => line.length > 0).map(asCompletedCapture).filter(cap => !runningCaptures.some(c => cap.name === c)));
 
-        function asCompletedCapture(findOutputLine: string): CompletedCapture {
+        const asCompletedCapture = (findOutputLine: string): CompletedCapture => {
             const parts = findOutputLine.trim().split("\t");
             const filePath = parts[0];
             const sizeInKB = parseInt(parts[1]);
@@ -446,20 +446,22 @@ spec:
             }
 
             return {name, sizeInKB};
-        }
+        };
+
+        return errmap(output, sr => sr.stdout.trim().split("\n").filter(line => line.length > 0).map(asCompletedCapture).filter(cap => !runningCaptures.some(c => cap.name === c)));
     }
 }
 
 type Process = {
-    pid: number,
-    command: string,
-    args: string,
-    isTcpDump: boolean
+    pid: number;
+    command: string;
+    args: string;
+    isTcpDump: boolean;
 };
 
 type TcpDumpProcess = Process & {
-    isTcpDump: true,
-    capture: string
+    isTcpDump: true;
+    capture: string;
 };
 
 function isTcpDump(process: Process): process is TcpDumpProcess {

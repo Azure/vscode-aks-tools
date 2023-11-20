@@ -44,16 +44,16 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            checkSPRequest: args => this._handleCheckSPRequest(args.appId, args.appSecret, webview),
-            installCertManagerRequest: _ => this._handleInstallCertManagerRequest(webview),
-            waitForCertManagerRequest: _ => this._handleWaitForCertManagerRequest(webview),
-            installOperatorRequest: _ => this._handleInstallOperatorRequest(webview),
-            installOperatorSettingsRequest: args => this._handleInstallOperatorSettingsRequest(args.appId, args.appSecret, args.cloudName, args.subscriptionId, args.tenantId, webview),
-            waitForControllerManagerRequest: _ => this._handleWaitForControllerManagerRequest(webview)
+            checkSPRequest: args => this.handleCheckSPRequest(args.appId, args.appSecret, webview),
+            installCertManagerRequest: () => this.handleInstallCertManagerRequest(webview),
+            waitForCertManagerRequest: () => this.handleWaitForCertManagerRequest(webview),
+            installOperatorRequest: () => this.handleInstallOperatorRequest(webview),
+            installOperatorSettingsRequest: args => this.handleInstallOperatorSettingsRequest(args.appId, args.appSecret, args.cloudName, args.subscriptionId, args.tenantId, webview),
+            waitForControllerManagerRequest: () => this.handleWaitForControllerManagerRequest(webview)
         };
     }
 
-    private async _handleCheckSPRequest(appId: string, appSecret: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleCheckSPRequest(appId: string, appSecret: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const servicePrincipalAccess = await getServicePrincipalAccess(this.azAccount, appId, appSecret);
         if (failed(servicePrincipalAccess)) {
             webview.postCheckSPResponse({
@@ -77,7 +77,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         });
     }
 
-    private async _handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         // From installation instructions:
         // https://azure.github.io/azure-service-operator/#installation
         const asoCrdYamlFile = "https://github.com/jetstack/cert-manager/releases/download/v1.12.1/cert-manager.yaml";
@@ -103,7 +103,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         });
     }
 
-    private async _handleWaitForCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleWaitForCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const deployments = ['cert-manager', 'cert-manager-cainjector', 'cert-manager-webhook'];
         const promiseResults = await Promise.all(deployments.map(async d => {
             const kubectlArgs =  `rollout status -n cert-manager deploy/${d} --timeout=240s`;
@@ -130,7 +130,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         });
     }
 
-    private async _handleInstallOperatorRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleInstallOperatorRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const asoYamlFile = "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0/azureserviceoperator_v2.0.0.yaml";
 
         // Use a larger-than-default request timeout here, because cert-manager sometimes does some certificate re-issuing
@@ -161,7 +161,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         });
     }
 
-    private async _handleInstallOperatorSettingsRequest(appId: string, appSecret: string, cloudName: AzureCloudName, subscriptionId: string, tenantId: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleInstallOperatorSettingsRequest(appId: string, appSecret: string, cloudName: AzureCloudName, subscriptionId: string, tenantId: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const cloudEnv: ASOCloudName = azureToASOCloudMap[cloudName];
         const yamlPathOnDisk = vscode.Uri.file(path.join(this.extension.extensionPath, 'resources', 'yaml', 'azureoperatorsettings.yaml'));
 
@@ -185,7 +185,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
             .replace("<ENV_CLOUD>", cloudEnv);
 
         const templateYamlFile = await createTempFile(settings, "yaml");
-    
+
         // Use a larger-than-default request timeout here, because cert-manager-cainjector is still busy updating resources, increasing response times.
         const kubectlArgs = `apply -f ${templateYamlFile.filePath} --request-timeout 120s`;
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
@@ -209,7 +209,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         });
     }
 
-    private async _handleWaitForControllerManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleWaitForControllerManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const kubectlArgs = "rollout status -n azureserviceoperator-system deploy/azureserviceoperator-controller-manager --timeout=240s";
         const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
         if (failed(shellOutput)) {

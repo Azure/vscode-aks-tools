@@ -8,7 +8,7 @@ export async function longRunning<T>(title: string, action: () => Promise<T>): P
         location: vscode.ProgressLocation.Notification,
         title: title
     };
-    return await vscode.window.withProgress(options, (_) => action());
+    return await vscode.window.withProgress(options, () => action());
 }
 
 export function getExtension(): Errorable<vscode.Extension<vscode.ExtensionContext>> {

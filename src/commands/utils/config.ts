@@ -23,7 +23,7 @@ export function getKustomizeConfig(): Errorable<KustomizeConfig> {
         containerRegistry: props.result[1],
         releaseTag: props.result[2],
         imageVersion: props.result[3]
-    }
+    };
 
     const minimumSupportedVersion = "0.0.11";
     if (semver.parse(config.imageVersion) && semver.lt(config.imageVersion, minimumSupportedVersion)) {
@@ -76,14 +76,14 @@ export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
 export function getDraftConfig(): Errorable<DraftConfig> {
     const draftConfig = vscode.workspace.getConfiguration('aks.drafttool');
     const props = getConfigValue(draftConfig, 'releaseTag');
- 
+
     if (failed(props)) {
        return {
           succeeded: false,
           error: `Failed to read aks.draft configuration: ${props.error}`
        };
     }
- 
+
     const config = {
        releaseTag: props.result
     };
@@ -94,11 +94,11 @@ export function getDraftConfig(): Errorable<DraftConfig> {
 function getConfigValue(config: vscode.WorkspaceConfiguration, key: string): Errorable<string> {
     const value = config.get(key);
     if (value === undefined) {
-        return { succeeded: false, error: `${key} not defined.` }
+        return { succeeded: false, error: `${key} not defined.` };
     }
     const result = value as string;
     if (result === undefined) {
-        return { succeeded: false, error: `${key} value has type: ${typeof value}; expected string.` }
+        return { succeeded: false, error: `${key} value has type: ${typeof value}; expected string.` };
     }
     return { succeeded: true, result: result };
 }
@@ -110,11 +110,10 @@ export function getKubectlCustomCommands(): PresetCommand[] {
         return [];
     }
 
-    return value.filter(isCommand).map(item => ({...item, category: CommandCategory.Custom}));
+    const isCommand = (value: any): value is PresetCommand =>
+        (value.constructor.name === 'Object') && (value as PresetCommand).command && (value as PresetCommand).name ? true : false;
 
-    function isCommand(value: any): value is PresetCommand {
-        return (value.constructor.name === 'Object') && (value as PresetCommand).command && (value as PresetCommand).name ? true : false;
-    }
+    return value.filter(isCommand).map(item => ({...item, category: CommandCategory.Custom}));
 }
 
 export async function addKubectlCustomCommand(name: string, command: string) {

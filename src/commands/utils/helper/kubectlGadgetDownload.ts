@@ -51,7 +51,7 @@ function getPathToBinaryInArchive() {
 }
 
 function getBinaryFilename() {
-   let operatingSystem = os.platform().toLocaleLowerCase();
+   const operatingSystem = os.platform().toLocaleLowerCase();
 
    let extension = '';
    if (operatingSystem === 'win32') {

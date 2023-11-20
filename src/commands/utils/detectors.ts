@@ -16,30 +16,30 @@ export async function saveAllDetectorResponses(
 ) {
     const outputDirObj = tmp.dirSync();
 
-    function saveDetector(detector: ARMResponse<any>) {
-        const detectorFilePath = path.join(outputDirObj.name, `${detector.name}.json`);
-        // Anonymize the data.
-        detector.id = "/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/" + detector.name;
-        fs.writeFileSync(detectorFilePath, JSON.stringify(detector, null, 2));
-    }
-
-    for (let categoryDetectorId of categoryDetectorIds) {
+    for (const categoryDetectorId of categoryDetectorIds) {
         const categoryDetector = await getDetectorInfo(target, categoryDetectorId);
         if (failed(categoryDetector)) {
             throw new Error(`Error getting category detector ${categoryDetectorId}: ${getErrorMessage(categoryDetector.error)}`);
         }
 
-        saveDetector(categoryDetector.result);
+        saveDetector(outputDirObj.name, categoryDetector.result);
 
         const singleDetectors = await getDetectorListData(target, categoryDetector.result);
         if (failed(singleDetectors)) {
             throw new Error(`Error getting single detectors for ${categoryDetectorId}: ${getErrorMessage(singleDetectors.error)}`);
         }
 
-        for (let singleDetector of singleDetectors.result) {
-            saveDetector(singleDetector);
+        for (const singleDetector of singleDetectors.result) {
+            saveDetector(outputDirObj.name, singleDetector);
         }
     }
+}
+
+function saveDetector(outputDir: string, detector: ARMResponse<any>) {
+    const detectorFilePath = path.join(outputDir, `${detector.name}.json`);
+    // Anonymize the data.
+    detector.id = `/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/${  detector.name}`;
+    fs.writeFileSync(detectorFilePath, JSON.stringify(detector, null, 2));
 }
 
 export async function getDetectorListData(

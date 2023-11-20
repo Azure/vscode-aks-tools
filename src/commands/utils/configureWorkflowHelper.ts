@@ -4,7 +4,7 @@ import { getExtensionPath } from "./host";
 import * as vscode from 'vscode';
 import { Errorable, failed } from "./errorable";
 
-export function getWorkflowYaml(workflowName: string) : Errorable<string> {
+export function getWorkflowYaml(workflowName: string): Errorable<string> {
     const extensionPath = getExtensionPath();
     if (failed(extensionPath)) {
         return extensionPath;

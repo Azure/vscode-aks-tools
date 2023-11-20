@@ -63,7 +63,7 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
     // This means we end up with a blank line at the start of the output, but it's otherwise consistent.
     const command = `get crd -o jsonpath="{range .items[*]}{\\"\\n\\"}{.metadata.name}{\\" \\"}{.spec.names.kind}{\\" \\"}{.spec.names.singular}{\\" \\"}{.spec.names.plural}{\\" \\"}{.spec.names.shortNames[0]}{end}"`;
     const crdShellResult = await kubectl.invokeCommand(command);
-    if (crdShellResult == undefined) {
+    if (crdShellResult === undefined) {
         return { succeeded: false, error: `Failed to run kubectl command: ${command}` };
     }
 
@@ -93,5 +93,5 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
     // Filter the custom resources to only include Azure resources
     const azureResources = customResources.filter(r => r.name.includes("azure.com"));
 
-    return { succeeded: true, result: azureResources }
+    return { succeeded: true, result: azureResources };
 }

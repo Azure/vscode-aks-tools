@@ -1,21 +1,21 @@
 import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
-    isVSCode: boolean
+    isVSCode: boolean;
 }
 
 export interface CssRule {
-    selector: string,
-    text: string
+    selector: string;
+    text: string;
 }
 
 export type ToVsCodeMsgDef = {
     reportCssVars: {
-        cssVars: string[]
-    },
+        cssVars: string[];
+    };
     reportCssRules: {
-        rules: CssRule[]
-    }
+        rules: CssRule[];
+    };
 };
 
 export type ToWebViewMsgDef = {};

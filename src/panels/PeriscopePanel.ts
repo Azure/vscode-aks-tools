@@ -20,11 +20,11 @@ export class PeriscopePanel extends BasePanel<"periscope"> {
 }
 
 export interface DeploymentParameters {
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>
-    kustomizeConfig: KustomizeConfig
-    storage: PeriscopeStorage
-    clusterKubeConfig: string
-    periscopeNamespace: string
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>;
+    kustomizeConfig: KustomizeConfig;
+    storage: PeriscopeStorage;
+    clusterKubeConfig: string;
+    periscopeNamespace: string;
 }
 
 export class PeriscopeDataProvider implements PanelDataProvider<"periscope"> {
@@ -71,12 +71,12 @@ export class PeriscopeDataProvider implements PanelDataProvider<"periscope"> {
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            nodeLogsRequest: args => this._handleNodeLogsRequest(args.nodeName, webview),
-            uploadStatusRequest: () => this._handleUploadStatusRequest(webview)
+            nodeLogsRequest: args => this.handleNodeLogsRequest(args.nodeName, webview),
+            uploadStatusRequest: () => this.handleUploadStatusRequest(webview)
         };
     }
 
-    private async _handleUploadStatusRequest(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleUploadStatusRequest(webview: MessageSink<ToWebViewMsgDef>) {
         if (!this.deploymentParameters) {
             throw new Error('Node upload statuses cannot be checked when deployment parameters are not configured');
         }
@@ -85,7 +85,7 @@ export class PeriscopeDataProvider implements PanelDataProvider<"periscope"> {
         webview.postUploadStatusResponse({uploadStatuses});
     }
 
-    private async _handleNodeLogsRequest(nodeName: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleNodeLogsRequest(nodeName: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         const deploymentParameters = this.deploymentParameters;
         if (!deploymentParameters) {
             throw new Error('Node logs cannot be retrieved when deployment parameters are not configured');

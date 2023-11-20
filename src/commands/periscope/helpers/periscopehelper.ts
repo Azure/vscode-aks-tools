@@ -48,7 +48,7 @@ export async function chooseStorageAccount(diagnosticSettings: DiagnosticSetting
         return selectedStorageAccount;
     }
 
-    const storageAccountNameToStorageIdArray: { id: string; label: string; }[] = [];
+    const storageAccountNameToStorageIdArray: { id: string; label: string }[] = [];
 
     diagnosticSettings.value?.forEach((item) => {
         if (item.storageAccountId) {
@@ -244,15 +244,7 @@ export async function getNodeLogs(
 
         const podNames = getPodsResult.result.stdout.split(' ');
 
-        const podLogsResults = await Promise.all(podNames.map(getPodLogs));
-        const podLogs = combine(podLogsResults);
-        if (failed(podLogs)) {
-            return podLogs;
-        }
-
-        return { succeeded: true, result: podLogs.result };
-
-        async function getPodLogs(podName: string): Promise<Errorable<PodLogs>> {
+        const podLogsResults = await Promise.all(podNames.map(async (podName: string): Promise<Errorable<PodLogs>> => {
             const cmd = `logs -n ${periscopeNamespace} ${podName}`;
             const cmdResult = await invokeKubectlCommand(kubectl, kubeConfigFile, cmd);
             if (failed(cmdResult)) {
@@ -261,7 +253,14 @@ export async function getNodeLogs(
 
             const result = { podName, logs: cmdResult.result.stdout };
             return { succeeded: true, result };
+        }));
+
+        const podLogs = combine(podLogsResults);
+        if (failed(podLogs)) {
+            return podLogs;
         }
+
+        return { succeeded: true, result: podLogs.result };
     });
 }
 
@@ -272,8 +271,6 @@ async function extractContainerName(kubectl: k8s.APIAvailable<k8s.KubectlV1>, cl
     const hostNameResult = await getHostName(runCommandResult.result);
     if (failed(hostNameResult)) return hostNameResult;
 
-    let containerName: string;
-
     // Form containerName from FQDN hence "-hcp-"" aka standard aks cluster vs "privatelink.<region>.azmk8s.io" private cluster.
     // https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
     const maxContainerNameLength = 63;
@@ -282,7 +279,8 @@ async function extractContainerName(kubectl: k8s.APIAvailable<k8s.KubectlV1>, cl
     if (lenContainerName === -1) {
         lenContainerName = maxContainerNameLength;
     }
-    containerName = hostNameResult.result.substr(0, lenContainerName);
+
+    const containerName = hostNameResult.result.substring(0, lenContainerName);
 
     return { succeeded: true, result: containerName };
 }

@@ -9,7 +9,7 @@ import { CreateClusterDataProvider, CreateClusterPanel } from '../../panels/Crea
 
 /**
  * A multi-step input using window.createQuickPick() and window.createInputBox().
- * 
+ *
  * This first part uses the helper class `MultiStepInput` that wraps the API for the multi-step case.
  */
 export default async function aksCreateCluster(

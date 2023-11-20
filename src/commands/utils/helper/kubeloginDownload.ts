@@ -32,7 +32,7 @@ export async function getKubeloginBinaryPath(): Promise<Errorable<string>> {
 function getArchiveFilename() {
     let architecture = os.arch();
     let operatingSystem = os.platform().toLocaleLowerCase();
-    
+
     if (architecture === 'x64') {
         architecture = 'amd64';
     }
@@ -55,7 +55,7 @@ function getPathToBinaryInArchive() {
    let extension = '';
    if (operatingSystem === 'win32') {
        operatingSystem = 'windows';
-       extension = '.exe'
+       extension = '.exe';
    }
 
    return path.join('bin', `${operatingSystem}_${architecture}`, `kubelogin${extension}`);

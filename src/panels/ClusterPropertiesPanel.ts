@@ -34,16 +34,16 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            getPropertiesRequest: () => this._handleGetPropertiesRequest(webview),
-            stopClusterRequest: () => this._handleStopClusterRequest(webview),
-            startClusterRequest: () => this._handleStartClusterRequest(webview),
-            abortAgentPoolOperation: (poolName: string) => this._handleAbortAgentPoolOperation(webview, poolName),
-            abortClusterOperation: () => this._handleAbortClusterOperation(webview),
-            reconcileClusterRequest: () => this._handleReconcileClusterOperation(webview)
+            getPropertiesRequest: () => this.handleGetPropertiesRequest(webview),
+            stopClusterRequest: () => this.handleStopClusterRequest(webview),
+            startClusterRequest: () => this.handleStartClusterRequest(webview),
+            abortAgentPoolOperation: (poolName: string) => this.handleAbortAgentPoolOperation(webview, poolName),
+            abortClusterOperation: () => this.handleAbortClusterOperation(webview),
+            reconcileClusterRequest: () => this.handleReconcileClusterOperation(webview)
         };
     }
 
-    private async _handleAbortAgentPoolOperation(webview: MessageSink<ToWebViewMsgDef>, poolName: string) {
+    private async handleAbortAgentPoolOperation(webview: MessageSink<ToWebViewMsgDef>, poolName: string) {
         try {
             const poller = await this.client.agentPools.beginAbortLatestOperation(this.resourceGroup, this.clusterName, poolName);
 
@@ -56,7 +56,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             });
 
             // Update the cluster properties now the operation has started.
-            await this._readAndPostClusterProperties(webview);
+            await this.readAndPostClusterProperties(webview);
 
             // Wait until operation completes.
             await poller.pollUntilDone();
@@ -66,7 +66,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         }
     }
 
-    private async _handleAbortClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleAbortClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
         try {
             const poller = await this.client.managedClusters.beginAbortLatestOperation(this.resourceGroup, this.clusterName);
 
@@ -79,7 +79,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             });
 
             // Update the cluster properties now the operation has started.
-            await this._readAndPostClusterProperties(webview);
+            await this.readAndPostClusterProperties(webview);
 
             // Wait until operation completes.
             await poller.pollUntilDone();
@@ -89,7 +89,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         }
     }
 
-    private async _handleReconcileClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleReconcileClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
         try {
             const getClusterInfo = await this.client.managedClusters.get(this.resourceGroup, this.clusterName);
             const poller = await this.client.managedClusters.beginCreateOrUpdate(this.resourceGroup, this.clusterName, {
@@ -106,7 +106,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             });
 
             // Update the cluster properties now the operation has started.
-            await this._readAndPostClusterProperties(webview);
+            await this.readAndPostClusterProperties(webview);
 
             // Wait until operation completes.
             await poller.pollUntilDone();
@@ -116,11 +116,11 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         }
     }
 
-    private async _handleGetPropertiesRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        await this._readAndPostClusterProperties(webview);
+    private async handleGetPropertiesRequest(webview: MessageSink<ToWebViewMsgDef>) {
+        await this.readAndPostClusterProperties(webview);
     }
 
-    private async _handleStopClusterRequest(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleStopClusterRequest(webview: MessageSink<ToWebViewMsgDef>) {
         try {
             const poller = await this.client.managedClusters.beginStop(this.resourceGroup, this.clusterName);
 
@@ -134,7 +134,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             });
 
             // Update the cluster properties now the operation has started.
-            await this._readAndPostClusterProperties(webview);
+            await this.readAndPostClusterProperties(webview);
 
             // Wait until operation completes.
             await poller.pollUntilDone();
@@ -143,10 +143,10 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             webview.postErrorNotification(errorMessage);
         }
 
-        await this._readAndPostClusterProperties(webview);
+        await this.readAndPostClusterProperties(webview);
     }
 
-    private async _handleStartClusterRequest(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleStartClusterRequest(webview: MessageSink<ToWebViewMsgDef>) {
         try {
             const poller = await this.client.managedClusters.beginStart(this.resourceGroup, this.clusterName);
 
@@ -160,7 +160,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             });
 
             // Update the cluster properties now the operation has started.
-            await this._readAndPostClusterProperties(webview);
+            await this.readAndPostClusterProperties(webview);
 
             // Wait until operation completes.
             await poller.pollUntilDone();
@@ -169,10 +169,10 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             webview.postErrorNotification(errorMessage);
         }
 
-        await this._readAndPostClusterProperties(webview);
+        await this.readAndPostClusterProperties(webview);
     }
 
-    private async _readAndPostClusterProperties(webview: MessageSink<ToWebViewMsgDef>) {
+    private async readAndPostClusterProperties(webview: MessageSink<ToWebViewMsgDef>) {
         const cluster = await getManagedCluster(this.client, this.resourceGroup, this.clusterName);
         if (failed(cluster)) {
             webview.postErrorNotification(cluster.error);

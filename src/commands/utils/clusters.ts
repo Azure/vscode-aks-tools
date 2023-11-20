@@ -14,8 +14,8 @@ import { longRunning } from './host';
 const tmp = require('tmp');
 
 export interface KubernetesClusterInfo {
-    readonly name: string,
-    readonly kubeconfigYaml: string
+    readonly name: string;
+    readonly kubeconfigYaml: string;
 }
 
 export async function getKubernetesClusterInfo(commandTarget: any, cloudExplorer: APIAvailable<CloudExplorerV1>, clusterExplorer: APIAvailable<ClusterExplorerV1>): Promise<Errorable<KubernetesClusterInfo>> {
@@ -27,7 +27,7 @@ export async function getKubernetesClusterInfo(commandTarget: any, cloudExplorer
         if (failed(properties)) {
             return properties;
         }
-    
+
         const kubeconfigYaml = await getKubeconfigYaml(aksCluster.result, properties.result);
         if (failed(kubeconfigYaml)) {
             return kubeconfigYaml;
@@ -49,7 +49,7 @@ export async function getKubernetesClusterInfo(commandTarget: any, cloudExplorer
     // Not an AKS cluster. This should be a cluster-explorer node. Verify:
     const explorerCluster = clusterExplorer.api.resolveCommandTarget(commandTarget) as ClusterExplorerV1.ClusterExplorerContextNode;
     if (explorerCluster === undefined) {
-        return { succeeded: false, error: 'This command should only apply to active cluster nodes.' }
+        return { succeeded: false, error: 'This command should only apply to active cluster nodes.' };
     }
 
     const kubeconfigPath = getPath(await configuration.api.getKubeconfigPath());
@@ -199,12 +199,12 @@ async function getAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.Contai
 }
 
 interface ExecOptions {
-    subcommand: string,
-    environment: string,
-    serverId: string,
-    clientId: string,
-    tenantId: string,
-    loginMethod: string
+    subcommand: string;
+    environment: string;
+    serverId: string;
+    clientId: string;
+    tenantId: string;
+    loginMethod: string;
 }
 
 function readExecOptions(execArgs: [string]): ExecOptions {
@@ -324,12 +324,12 @@ export async function getWindowsNodePoolKubernetesVersions(
 ): Promise<Errorable<string[]>> {
     try {
         const k8sVersions: string[] = [];
-        for await (let page of containerClient.agentPools.list(resourceGroupName, clusterName).byPage()) {
+        for await (const page of containerClient.agentPools.list(resourceGroupName, clusterName).byPage()) {
             for (const nodePool of page) {
                 if (!nodePool.osType) {
                     return { succeeded: false, error: `OS type not available for node pool ${nodePool.name} for cluster ${clusterName}` };
                 }
-    
+
                 if (nodePool.osType.toUpperCase() === "WINDOWS") {
                     if (!nodePool.currentOrchestratorVersion) {
                         return { succeeded: false, error: `Kubernetes version not available for node pool ${nodePool.name} for cluster ${clusterName}` };
@@ -376,7 +376,7 @@ export async function deleteCluster(
 ): Promise<Errorable<string>> {
     try {
         const containerClient = getContainerClient(target);
-        await containerClient.managedClusters.beginDeleteAndWait(target.resourceGroupName, clusterName)
+        await containerClient.managedClusters.beginDeleteAndWait(target.resourceGroupName, clusterName);
 
         return { succeeded: true, result: "Delete cluster succeeded." };
     } catch (ex) {
@@ -394,7 +394,7 @@ export async function reconcileUsingUpdateInCluster(
         const getClusterInfo = await containerClient.managedClusters.get(target.resourceGroupName, clusterName);
         await containerClient.managedClusters.beginCreateOrUpdateAndWait(target.resourceGroupName, clusterName, {
             location: getClusterInfo.location,
-        })
+        });
 
         return { succeeded: true, result: "Reconcile/Update cluster succeeded." };
     } catch (ex) {

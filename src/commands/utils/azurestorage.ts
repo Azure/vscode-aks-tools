@@ -20,7 +20,7 @@ function sasPermission(duration: LinkDuration): any {
 
     switch (duration) {
         case LinkDuration.DownloadNow:
-            permissionsForSas = permissionsForSas + "acwdu";
+            permissionsForSas = `${permissionsForSas  }acwdu`;
             return permissionsForSas;
         case LinkDuration.Shareable:
             return permissionsForSas;
@@ -54,7 +54,7 @@ export function getSASKey(
     }, creds).toString();
 
     // Generate SAS.
-    const sas = "?" + accountSharedAccessSignature;
+    const sas = `?${  accountSharedAccessSignature}`;
 
     return sas;
 }

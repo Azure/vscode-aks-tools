@@ -25,34 +25,34 @@ export const presetCommands: PresetCommand[] = presetCommandItems.map(cmd => ({
 }));
 
 export interface PresetCommand {
-    name: string,
-    command: string
-    category: CommandCategory
+    name: string;
+    command: string;
+    category: CommandCategory;
 }
 
 export interface InitialState {
-    clusterName: string,
-    customCommands: PresetCommand[]
+    clusterName: string;
+    customCommands: PresetCommand[];
 }
 
 export type ToVsCodeMsgDef = {
     runCommandRequest: {
-        command: string
-    },
+        command: string;
+    };
     addCustomCommandRequest: {
-        name: string,
-        command: string
-    },
+        name: string;
+        command: string;
+    };
     deleteCustomCommandRequest: {
-        name: string
-    }
+        name: string;
+    };
 };
 
 export type ToWebViewMsgDef = {
     runCommandResponse: {
-        output: string | null
-        errorMessage: string | null
-    }
+        output: string | null;
+        errorMessage: string | null;
+    };
 };
 
 export type KubectlDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

@@ -1,6 +1,6 @@
 import { Uri } from "vscode";
-import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/detector";
+import { MessageHandler } from "../webview-contract/messaging";
+import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/detector";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 const meta = require('../../package.json');
 
@@ -21,9 +21,9 @@ export class DetectorDataProvider implements PanelDataProvider<"detector"> {
         this.clusterArmId = getClusterArmId(categoryDetector);
     }
 
-    readonly detectorName: string
-    readonly detectorDescription: string
-    readonly clusterArmId: string
+    readonly detectorName: string;
+    readonly detectorDescription: string;
+    readonly clusterArmId: string;
 
     getTitle(): string {
         return `${this.detectorName} diagnostics for ${this.clusterName}`;
@@ -39,7 +39,7 @@ export class DetectorDataProvider implements PanelDataProvider<"detector"> {
         };
     }
 
-    getMessageHandler(_webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+    getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {};
     }
 }

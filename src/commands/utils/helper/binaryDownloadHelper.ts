@@ -19,16 +19,16 @@ function getToolDownloadFolder(toolName: string): string {
 }
 
 type CommonDownloadSpec = {
-    downloadUrl: string
-}
+    downloadUrl: string;
+};
 
 export type BinaryDownloadSpec = CommonDownloadSpec & {
-    isCompressed: false
+    isCompressed: false;
 };
 
 export type ArchiveDownloadSpec = CommonDownloadSpec & {
-    isCompressed: true,
-    pathToBinaryInArchive: string
+    isCompressed: true;
+    pathToBinaryInArchive: string;
 };
 
 export type DownloadSpec = BinaryDownloadSpec | ArchiveDownloadSpec;
@@ -83,7 +83,7 @@ async function downloadTool(
                 error: `Failed to unzip binary ${downloadFilePath} to ${downloadFolder}: ${error}`
             };
         }
-    
+
         // Remove zip.
         fs.unlinkSync(downloadFilePath);
 
@@ -98,7 +98,7 @@ async function downloadTool(
     // If there's any failure after this, we *want* it to be downloaded again.
     download.clear(downloadFilePath);
 
-    //If linux check -- make chmod 0755
+    // If linux check -- make chmod 0755
     fs.chmodSync(path.join(binaryFilePath), '0755');
     return { succeeded: true, result: binaryFilePath };
 }

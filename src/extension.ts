@@ -10,7 +10,7 @@ import installAzureServiceOperator  from './commands/azureServiceOperators/insta
 import { AzureResourceNodeContributor } from './tree/azureResourceNodeContributor';
 import { setAssetContext } from './assets';
 import { configureStarterWorkflow, configureHelmStarterWorkflow, configureKomposeStarterWorkflow, configureKustomizeStarterWorkflow } from './commands/aksStarterWorkflow/configureStarterWorkflow';
-import { 
+import {
     aksCRUDDiagnostics,
     aksBestPracticesDiagnostics,
     aksIdentitySecurityDiagnostics,
@@ -35,7 +35,7 @@ import { aksTCPDump } from './commands/aksTCPCollection/tcpDumpCollection';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    context.subscriptions.push(new Reporter(context));
+    context.subscriptions.push(new Reporter());
     setAssetContext(context);
 
     if (cloudExplorer.available) {
@@ -51,7 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         registerAzureUtilsExtensionVariables(uiExtensionVariables);
         vscode.commands.executeCommand(
-            'workbench.action.openWalkthrough', 
+            'workbench.action.openWalkthrough',
             { category: 'ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough'}
         );
         registerCommandWithTelemetry('aks.selectSubscriptions', selectSubscriptions);

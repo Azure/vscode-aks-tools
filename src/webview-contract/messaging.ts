@@ -3,7 +3,7 @@
  * The keys are the command names, and the values are the types of the parameters.
  */
 export type MessageDefinition = {
-    [commandName: string]: any
+    [commandName: string]: any;
 };
 
 /**
@@ -29,7 +29,7 @@ export function asMessageSink<TPostMsgDef extends MessageDefinition>(postImpl: P
 }
 
 function asPostFunction(str: string) {
-    return "post" + str[0].toUpperCase() + str.slice(1);
+    return `post${  str[0].toUpperCase()  }${str.slice(1)}`;
 }
 
 /**
@@ -37,7 +37,7 @@ function asPostFunction(str: string) {
  * Webviews and the VS Code extension can act as `MessageSink` instances.
  */
 export interface MessageSource<TListenMsgDef extends MessageDefinition> {
-    subscribeToMessages(handler: MessageHandler<TListenMsgDef>): void
+    subscribeToMessages(handler: MessageHandler<TListenMsgDef>): void;
 }
 
 /**
@@ -57,8 +57,8 @@ export type Command<T> = Extract<keyof T, string>;
  */
 export type Message<TMsgDef extends MessageDefinition> = {
     [P in Command<TMsgDef>]: {
-        command: P,
-        parameters: TMsgDef[P]
+        command: P;
+        parameters: TMsgDef[P];
     }
 }[Command<TMsgDef>];
 

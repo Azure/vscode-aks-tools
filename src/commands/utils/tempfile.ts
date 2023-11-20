@@ -32,6 +32,6 @@ export class TempFile extends vscode.Disposable {
 }
 
 interface TempFileReference {
-    name: string
-    removeCallback(): void
+    name: string;
+    removeCallback(): void;
 }

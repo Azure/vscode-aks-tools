@@ -25,7 +25,7 @@ export default async function aksReconcileCluster(
     const result = await longRunning(
       `Reconciling/update last cluster operation in ${clusterName}.`,
       async () => {
-        return await reconcileUsingUpdateInCluster(cluster.result, clusterName)
+        return await reconcileUsingUpdateInCluster(cluster.result, clusterName);
       });
 
     if (failed(result)) {

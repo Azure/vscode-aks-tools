@@ -7,8 +7,8 @@ import { OutputStream } from '../utils/commands';
 import { GadgetArguments, TraceOutputItem } from '../../webview-contract/webviewDefinitions/inspektorGadget';
 
 export class TraceWatcher extends vscode.Disposable {
-    private _currentTraceOutput: TraceOutput | null = null;
-    private _outputItemsSubscription: Subscription | null = null;
+    private currentTraceOutput: TraceOutput | null = null;
+    private outputItemsSubscription: Subscription | null = null;
 
     constructor(
         readonly clusterOperations: ClusterOperations,
@@ -16,7 +16,7 @@ export class TraceWatcher extends vscode.Disposable {
     ) {
         super(() => {
             this.stopWatching();
-        })
+        });
     }
 
     async watch(
@@ -32,17 +32,17 @@ export class TraceWatcher extends vscode.Disposable {
             return output;
         }
 
-        this._currentTraceOutput = output.result;
-        this._outputItemsSubscription = output.result.outputItems.subscribe({ next: outputItemsHandler, error: errorHandler });
+        this.currentTraceOutput = output.result;
+        this.outputItemsSubscription = output.result.outputItems.subscribe({ next: outputItemsHandler, error: errorHandler });
 
         return { succeeded: true, result: undefined };
     }
 
     stopWatching() {
-        this._currentTraceOutput?.dispose();
-        this._currentTraceOutput = null;
-        this._outputItemsSubscription?.unsubscribe();
-        this._outputItemsSubscription = null;
+        this.currentTraceOutput?.dispose();
+        this.currentTraceOutput = null;
+        this.outputItemsSubscription?.unsubscribe();
+        this.outputItemsSubscription = null;
     }
 }
 
@@ -54,12 +54,12 @@ class TraceOutput extends vscode.Disposable {
             this.source.dispose();
         });
 
-        this.outputItems = this.source.lines.pipe(filter(line => !!line)).pipe(rxmap(line => this._outputLineToObjects(line)));
+        this.outputItems = this.source.lines.pipe(filter(line => !!line)).pipe(rxmap(line => this.outputLineToObjects(line)));
     }
 
     readonly outputItems: Observable<TraceOutputItem[]>;
 
-    private _outputLineToObjects(line: string): object[] {
+    private outputLineToObjects(line: string): object[] {
         const items = parseOutputLine(line);
         if (failed(items)) {
             throw new Error(`Unable to read streaming trace output: ${items.error}`);

@@ -1,15 +1,15 @@
-import { WebviewDefinition } from "../webviewTypes"
+import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
-    portalUrl: string
-    portalReferrerContext: string
-    subscriptionId: string
-    subscriptionName: string
+    portalUrl: string;
+    portalReferrerContext: string;
+    subscriptionId: string;
+    subscriptionName: string;
 }
 
 export interface ResourceGroup {
-    name: string
-    location: string
+    name: string;
+    location: string;
 }
 
 export enum ProgressEventType {
@@ -20,30 +20,30 @@ export enum ProgressEventType {
 }
 
 export interface CreateClusterParams {
-    isNewResourceGroup: boolean
-    resourceGroup: ResourceGroup
-    location: string
-    name: string
+    isNewResourceGroup: boolean;
+    resourceGroup: ResourceGroup;
+    location: string;
+    name: string;
 }
 
 export type ToVsCodeMsgDef = {
-    getLocationsRequest: void,
-    getResourceGroupsRequest: void,
-    createClusterRequest: CreateClusterParams
+    getLocationsRequest: void;
+    getResourceGroupsRequest: void;
+    createClusterRequest: CreateClusterParams;
 };
 
 export type ToWebViewMsgDef = {
     getLocationsResponse: {
-        locations: string[]
-    },
+        locations: string[];
+    };
     getResourceGroupsResponse: {
-        groups: ResourceGroup[]
-    },
+        groups: ResourceGroup[];
+    };
     progressUpdate: {
-        operationDescription: string,
-        event: ProgressEventType,
-        errorMessage: string | null
-    }
+        operationDescription: string;
+        event: ProgressEventType;
+        errorMessage: string | null;
+    };
 };
 
 export type CreateClusterDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
