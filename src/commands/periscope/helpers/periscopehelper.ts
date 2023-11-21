@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import { getSASKey, LinkDuration } from '../../utils/azurestorage';
 import { parseResource } from '../../../azure-api-utils';
-import * as ast from '@azure/arm-storage';
+import { StorageManagementClient } from '@azure/arm-storage';
 import { PeriscopeStorage, PodLogs, UploadStatus } from '../models/storage';
-import * as amon from '@azure/arm-monitor';
+import { MonitorClient, DiagnosticSettingsResourceCollection } from '@azure/arm-monitor';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as semver from 'semver';
@@ -21,10 +21,10 @@ const tmp = require('tmp');
 
 export async function getClusterDiagnosticSettings(
     cluster: AksClusterTreeItem
-): Promise<amon.MonitorManagementModels.DiagnosticSettingsCategoryResourceCollection | undefined> {
+): Promise<DiagnosticSettingsResourceCollection | undefined> {
     try {
         // Get daignostic setting via diagnostic monitor
-        const diagnosticMonitor = new amon.MonitorManagementClient(cluster.subscription.credentials, cluster.subscription.subscriptionId);
+        const diagnosticMonitor = new MonitorClient(cluster.subscription.credentials, cluster.subscription.subscriptionId);
         const diagnosticSettings = await diagnosticMonitor.diagnosticSettings.list(cluster.id!);
 
         return diagnosticSettings;
@@ -34,9 +34,7 @@ export async function getClusterDiagnosticSettings(
     }
 }
 
-export async function chooseStorageAccount(
-    diagnosticSettings: amon.MonitorManagementModels.DiagnosticSettingsResourceCollection,
-): Promise<string | void> {
+export async function chooseStorageAccount(diagnosticSettings: DiagnosticSettingsResourceCollection): Promise<string | void> {
     /*
         Check the diagnostic setting is 1 or more than 1:
           1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
@@ -94,7 +92,7 @@ export async function getStorageInfo(
         }
 
         // Get keys from storage client.
-        const storageClient = new ast.StorageManagementClient(cluster.subscription.credentials, cluster.subscription.subscriptionId);
+        const storageClient = new StorageManagementClient(cluster.subscription.credentials, cluster.subscription.subscriptionId);
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         const storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
 
