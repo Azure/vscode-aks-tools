@@ -104,7 +104,7 @@ function getEventHandlers<TMsgDef extends MessageDefinition>(dispatch: React.Dis
 }
 
 function asEvent(str: string) {
-    return "on" + str[0].toUpperCase() + str.slice(1);
+    return `on${str[0].toUpperCase()}${str.slice(1)}`;
 }
 
 /**

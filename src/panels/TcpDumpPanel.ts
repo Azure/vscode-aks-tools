@@ -15,7 +15,7 @@ const tcpDumpCommandBase = "tcpdump --snapshot-length=0 -vvv";
 const captureDir = "/tmp";
 const captureFilePrefix = "vscodenodecap_";
 const captureFileBasePath = `${captureDir}/${captureFilePrefix}`;
-const captureFilePathRegex = `${captureFileBasePath.replace(/\//g, '\\$&')}(.*)\.cap`; // Matches the part of the filename after the prefix
+const captureFilePathRegex = `${captureFileBasePath.replace(/\//g, '\\$&')}(.*)\\.cap`; // Matches the part of the filename after the prefix
 
 function getPodName(node: string) {
     return `debug-${node}`;
@@ -28,7 +28,7 @@ function getTcpDumpCommand(capture: string): string {
 function getCaptureFromCommand(command: string, commandWithArgs: string): string | null {
     if (command !== "tcpdump") return null;
     if (!commandWithArgs.startsWith(tcpDumpCommandBase)) return null;
-    const fileMatch = commandWithArgs.match(new RegExp(`\-w ${captureFilePathRegex}`));
+    const fileMatch = commandWithArgs.match(new RegExp(`\\-w ${captureFilePathRegex}`));
     return fileMatch && fileMatch[1];
 }
 

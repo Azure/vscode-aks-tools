@@ -14,9 +14,13 @@ Happy linting! 💖
 module.exports = {
     "env": {
         "es6": true,
-        "node": true
+        "node": true,
+        "mocha": true
     },
     "ignorePatterns": ["/webview-ui/*", "*.js"],
+    extends: [
+        "eslint:recommended",
+    ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
         "project": "./tsconfig.json",
@@ -25,21 +29,8 @@ module.exports = {
     "plugins": ["@typescript-eslint"],
     "root": true,
     "rules": {
-        "@typescript-eslint/member-delimiter-style": [
-            "warn",
-            {
-                "multiline": {
-                    "delimiter": "semi",
-                    "requireLast": true
-                },
-                "singleline": {
-                    "delimiter": "semi",
-                    "requireLast": false
-                }
-            }
-        ],
         "@typescript-eslint/naming-convention": [
-            "warn",
+            "error",
             {
                 "selector": "variable",
                 "format": [
@@ -50,24 +41,13 @@ module.exports = {
                 "trailingUnderscore": "forbid"
             }
         ],
-        "@typescript-eslint/no-unnecessary-boolean-literal-compare": "warn",
-        "@typescript-eslint/no-unused-vars": ["warn", { "ignoreRestSiblings": true }],
-        "@typescript-eslint/prefer-for-of": "warn",
-        "@typescript-eslint/semi": [
-            "warn",
-            "always"
-        ],
-        "@typescript-eslint/type-annotation-spacing": "warn",
-        "curly": [
-            "warn",
-            "multi-line"
-        ],
-        "eqeqeq": [
-            "warn",
-            "always"
-        ],
+        "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
+        "@typescript-eslint/no-unused-vars": ["error", { "ignoreRestSiblings": true }],
+        "@typescript-eslint/prefer-for-of": "error",
+        "curly": ["error","multi-line"],
+        "eqeqeq": ["error","always"],
         "id-denylist": [
-            "warn",
+            "error",
             "any",
             "Number",
             "number",
@@ -78,29 +58,9 @@ module.exports = {
             "Undefined",
             "undefined"
         ],
-        "id-match": "warn",
-        "no-debugger": "warn",
-        "no-fallthrough": "warn",
-        "no-multiple-empty-lines": "warn",
-        "no-trailing-spaces": "warn",
-        "no-underscore-dangle": "warn",
-        "no-unused-vars": "off",
-        "no-var": "warn",
-        "prefer-const": "warn",
-        "prefer-template": "warn",
-        "quote-props": [
-            "warn",
-            "as-needed"
-        ],
-        "semi": "off",
-        "spaced-comment": [
-            "warn",
-            "always",
-            {
-                "markers": [
-                    "/"
-                ]
-            }
-        ]
+        "no-underscore-dangle": "error",
+        "no-var": "error",
+        "prefer-const": "error",
+        "prefer-template": "error"
     }
 };

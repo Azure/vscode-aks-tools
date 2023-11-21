@@ -20,7 +20,7 @@ export interface Filters {
     podName?: string;
     containerName?: string;
     labels?: { [key: string]: string };
-};
+}
 
 export interface GadgetArguments {
     gadgetCategory: string;

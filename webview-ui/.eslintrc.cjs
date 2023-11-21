@@ -12,7 +12,39 @@ module.exports = {
         "plugin:react-hooks/recommended"
     ],
     rules: {
-        "@typescript-eslint/no-unused-vars": ["error", { "ignoreRestSiblings": true }]
+        "@typescript-eslint/naming-convention": [
+            "error",
+            {
+                "selector": "variable",
+                "format": [
+                    "camelCase",
+                    "UPPER_CASE"
+                ],
+                "leadingUnderscore": "forbid",
+                "trailingUnderscore": "forbid"
+            }
+        ],
+        "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
+        "@typescript-eslint/no-unused-vars": ["error", { "ignoreRestSiblings": true }],
+        "@typescript-eslint/prefer-for-of": "error",
+        "curly": ["error","multi-line"],
+        "eqeqeq": ["error","always"],
+        "id-denylist": [
+            "error",
+            "any",
+            "Number",
+            "number",
+            "String",
+            "string",
+            "Boolean",
+            "boolean",
+            "Undefined",
+            "undefined"
+        ],
+        "no-underscore-dangle": "error",
+        "no-var": "error",
+        "prefer-const": "error",
+        "prefer-template": "error"
     },
     parser: '@typescript-eslint/parser',
     parserOptions: {

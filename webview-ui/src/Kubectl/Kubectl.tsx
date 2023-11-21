@@ -57,7 +57,7 @@ export function Kubectl(initialState: InitialState) {
 
     const allCommandNames = state.allCommands.map(cmd => cmd.name);
     const commandLookup = Object.fromEntries(state.allCommands.map(cmd => [cmd.command, cmd]));
-    const matchesExisting = state.selectedCommand != null ? state.selectedCommand.trim() in commandLookup : false;
+    const matchesExisting = state.selectedCommand !== null ? state.selectedCommand.trim() in commandLookup : false;
 
     return (
     <div className={styles.wrapper}>

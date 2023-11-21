@@ -63,5 +63,5 @@ function displayValue(value: unknown, property: ItemProperty<string>) {
 function formatTime(timestampInNs: number): string {
     const date = new Date(timestampInNs / 1000000);
     const msFraction = timestampInNs % 1000000;
-    return date.toISOString().slice(0, -1) + msFraction.toString() + 'Z';
+    return `${date.toISOString().slice(0, -1) + msFraction.toString()}Z`;
 }

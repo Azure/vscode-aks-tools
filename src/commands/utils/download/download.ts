@@ -4,7 +4,7 @@ import { Dictionary } from '../dictionary';
 import { sleep } from '../sleep';
 import * as download from 'download';
 
-const DOWNLOAD_ONCE_STATUS = Dictionary.of<DownloadOperationStatus>();
+const DOWNLOAD_ONCE_STATUS: Dictionary<DownloadOperationStatus> = {};
 
 enum DownloadOperationStatus {
    Queued = 1,
@@ -40,7 +40,7 @@ export async function once(
          : DownloadOperationStatus.Failed;
       return result;
    } else {
-      while (true) {
+      for (;;) {
          await sleep(100);
          if (DOWNLOAD_ONCE_STATUS[destinationFile] === DownloadOperationStatus.Completed) {
             return {succeeded: true, result: null};

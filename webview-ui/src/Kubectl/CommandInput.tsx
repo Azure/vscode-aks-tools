@@ -20,7 +20,7 @@ export function CommandInput(props: CommandInputProps) {
 
     function onKeyPress(e: KeyboardEvent<HTMLElement>) {
         if (e.nativeEvent instanceof KeyboardEvent) {
-            if (e.code == 'Enter') {
+            if (e.code === 'Enter') {
                 props.onRunCommand(props.command);
             }
         }

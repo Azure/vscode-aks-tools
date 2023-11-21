@@ -19,7 +19,7 @@ export function getPeriscopeScenarios() {
 
     const testNodes = ["test-node-001", "test-node-002", "test-node-003"];
     const startDate = new Date();
-    const runId = startDate.toISOString().slice(0, 19).replace(/:/g, '-') + 'Z';
+    const runId = `${startDate.toISOString().slice(0, 19).replace(/:/g, '-')}Z`;
     const kustomizeConfig = {
         containerRegistry: "mcr.microsoft.com",
         imageVersion: "999.9.9",
