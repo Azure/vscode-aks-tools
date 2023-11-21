@@ -244,7 +244,15 @@ export async function getNodeLogs(
 
         const podNames = getPodsResult.result.stdout.split(' ');
 
-        const podLogsResults = await Promise.all(podNames.map(async (podName: string): Promise<Errorable<PodLogs>> => {
+        const podLogsResults = await Promise.all(podNames.map(getPodLogs));
+        const podLogs = combine(podLogsResults);
+        if (failed(podLogs)) {
+            return podLogs;
+        }
+
+        return { succeeded: true, result: podLogs.result };
+
+        async function getPodLogs(podName: string): Promise<Errorable<PodLogs>> {
             const cmd = `logs -n ${periscopeNamespace} ${podName}`;
             const cmdResult = await invokeKubectlCommand(kubectl, kubeConfigFile, cmd);
             if (failed(cmdResult)) {
@@ -253,14 +261,7 @@ export async function getNodeLogs(
 
             const result = { podName, logs: cmdResult.result.stdout };
             return { succeeded: true, result };
-        }));
-
-        const podLogs = combine(podLogsResults);
-        if (failed(podLogs)) {
-            return podLogs;
         }
-
-        return { succeeded: true, result: podLogs.result };
     });
 }
 

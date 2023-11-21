@@ -28,8 +28,9 @@ export class KubectlClusterOperations implements ClusterOperations {
     async getGadgetVersion(): Promise<Errorable<GadgetVersion>> {
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget version");
 
-        const setNullIfNotInstalled = (version: string) =>
-            version === "not installed" ? null : version;
+        function setNullIfNotInstalled(version: string) {
+            return version === "not installed" ? null : version;
+        }
 
         return errmap(commandResult, sr => {
             const lines = sr.stdout.split('\n').filter(l => l.trim().length);

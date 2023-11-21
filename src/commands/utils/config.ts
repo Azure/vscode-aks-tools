@@ -110,10 +110,11 @@ export function getKubectlCustomCommands(): PresetCommand[] {
         return [];
     }
 
-    const isCommand = (value: any): value is PresetCommand =>
-        (value.constructor.name === 'Object') && (value as PresetCommand).command && (value as PresetCommand).name ? true : false;
-
     return value.filter(isCommand).map(item => ({...item, category: CommandCategory.Custom}));
+
+    function isCommand(value: any): value is PresetCommand {
+        return (value.constructor.name === 'Object') && (value as PresetCommand).command && (value as PresetCommand).name ? true : false;
+    }
 }
 
 export async function addKubectlCustomCommand(name: string, command: string) {
