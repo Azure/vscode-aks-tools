@@ -1,5 +1,3 @@
-import { isError } from "./runtimeTypes";
-
 export interface Succeeded<T> {
     readonly succeeded: true;
     readonly result: T;
@@ -85,7 +83,7 @@ export function combine<T>(es: Errorable<T>[]): Errorable<T[]> {
 }
 
 export function getErrorMessage(error: unknown) {
-    if (isError(error)) {
+    if (error instanceof Error) {
         return error.message;
     }
     return String(error);
