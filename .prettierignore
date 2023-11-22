@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+docs/
+publish-book/
+resources/
+.github/
+
+**/*.json
+**/*.md
