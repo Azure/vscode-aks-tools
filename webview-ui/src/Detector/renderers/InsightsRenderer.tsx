@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleCheck, faCircleXmark, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
-import { SingleDataset } from '../../../../src/webview-contract/webviewDefinitions/detector';
+import { RowValue, SingleDataset } from '../../../../src/webview-contract/webviewDefinitions/detector';
 import { Error } from "./Error";
 import { Status, getStatusForInsightDataset, isInsightResult } from '../utils';
 import styles from "../Detector.module.css";
@@ -49,6 +49,6 @@ function hasExtraData(dataset: SingleDataset) {
     return dataset.table.rows.filter(r => r[2] || r[3]).length > 0;
 }
 
-function getMarkdownContent(text: string) {
-    return text.replace(/^\s*<markdown>/, '').replace(/<\/markdown>\s*$/, '');
+function getMarkdownContent(text: RowValue): string {
+    return typeof text === 'string' ? text.replace(/^\s*<markdown>/, '').replace(/<\/markdown>\s*$/, '') : String(text);
 }

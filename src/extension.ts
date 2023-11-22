@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import AksClusterTreeItem from './tree/aksClusterTreeItem';
 import AzureAccountTreeItem from './tree/azureAccountTreeItem';
-import { createAzExtOutputChannel, AzExtTreeDataProvider, registerCommand, IActionContext } from '@microsoft/vscode-azext-utils';
+import { createAzExtOutputChannel, AzExtTreeDataProvider, registerCommand, CommandCallback } from '@microsoft/vscode-azext-utils';
 import selectSubscriptions from './commands/selectSubscriptions';
 import periscope from './commands/periscope/periscope';
 import { Reporter, reporter } from './commands/utils/reporter';
@@ -130,12 +130,12 @@ async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string 
     return kubeconfig.result;
 }
 
-function registerCommandWithTelemetry(command: string, callback: (context: IActionContext, target: any) => any) {
+function registerCommandWithTelemetry(command: string, callback: CommandCallback) {
     const wrappedCallback = telemetrise(command, callback);
     return registerCommand(command, wrappedCallback);
 }
 
-function telemetrise(command: string, callback: (context: IActionContext, target: any) => any): (context: IActionContext, target: any) => any {
+function telemetrise(command: string, callback: CommandCallback): CommandCallback {
     return (context, target) => {
         if (reporter) {
             reporter.sendTelemetryEvent("command", { command: command });

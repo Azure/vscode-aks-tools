@@ -2,7 +2,7 @@ import * as path from 'path';
 import { succeeded, Errorable, getErrorMessage} from '../errorable';
 import { Dictionary } from '../dictionary';
 import { sleep } from '../sleep';
-import * as download from 'download';
+import download from 'download';
 
 const DOWNLOAD_ONCE_STATUS: Dictionary<DownloadOperationStatus> = {};
 

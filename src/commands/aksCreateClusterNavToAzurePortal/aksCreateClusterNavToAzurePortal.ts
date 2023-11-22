@@ -6,7 +6,7 @@ import { failed } from '../utils/errorable';
 
 export default async function aksCreateClusterNavToAzurePortal(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 

@@ -11,6 +11,22 @@ module.exports = {
         "plugin:react/jsx-runtime",
         "plugin:react-hooks/recommended"
     ],
+    parser: '@typescript-eslint/parser',
+    parserOptions: {
+        ecmaVersion: 2020,
+        project: "./tsconfig.json",
+        sourceType: "module",
+        ecmaFeatures: {
+            jsx: true
+        }
+    },
+    plugins: ["@typescript-eslint"],
+    root: true,
+    settings: {
+        react: {
+            version: "detect"
+        }
+    },
     rules: {
         "@typescript-eslint/naming-convention": [
             "error",
@@ -45,21 +61,5 @@ module.exports = {
         "no-var": "error",
         "prefer-const": "error",
         "prefer-template": "error"
-    },
-    parser: '@typescript-eslint/parser',
-    parserOptions: {
-        ecmaVersion: 2020,
-        project: "./tsconfig.json",
-        sourceType: "module",
-        ecmaFeatures: {
-            jsx: true
-        }
-    },
-    plugins: ["@typescript-eslint"],
-    root: true,
-    settings: {
-        react: {
-            version: "detect"
-        }
     }
 };

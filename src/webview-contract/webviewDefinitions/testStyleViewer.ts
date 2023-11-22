@@ -18,6 +18,6 @@ export type ToVsCodeMsgDef = {
     };
 };
 
-export type ToWebViewMsgDef = {};
+export type ToWebViewMsgDef = Record<string, never>;
 
 export type TestStyleViewerDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

@@ -406,7 +406,8 @@
     },
     "scripts": {
         "install:all": "npm install && cd webview-ui && npm install",
-        "lint": "eslint -c .eslintrc.js --ext .ts ./src",
+        "lint:all": "eslint -c .eslintrc.js --ext .ts ./src && cd webview-ui && npm run lint",
+        "lint-fix:all": "eslint -c .eslintrc.js --ext .ts ./src --fix && cd webview-ui && npm run lint-fix",
         "dev:webview": "cd webview-ui && npm run dev",
         "build:webview": "cd webview-ui && npm run build",
         "vscode:prepublish": "npm run webpack",

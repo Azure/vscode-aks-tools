@@ -71,7 +71,7 @@ export function getStatusForInsightDataset(dataset: SingleDataset): InsightResul
     const statusColumnIndex = insightColumnIndexMap.get(InsightColumnName.Status)!;
     const messageColumnIndex = insightColumnIndexMap.get(InsightColumnName.Message)!;
     const statusValue = dataset.table.rows[0][statusColumnIndex];
-    const message = dataset.table.rows[0][messageColumnIndex];
+    const message = dataset.table.rows[0][messageColumnIndex] as string;
     const status =
         statusValue === "Success" ? Status.Success :
         statusValue === "Warning" ? Status.Warning :

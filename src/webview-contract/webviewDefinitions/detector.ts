@@ -35,11 +35,13 @@ interface Column {
     dataType: string;
 }
 
+export type RowValue = string | boolean | number;
+
 interface Dataset<TRenderingProperties> {
     renderingProperties: TRenderingProperties;
     table: {
         columns: Column[];
-        rows: any[][];
+        rows: RowValue[][];
         tableName: string;
     };
 }
@@ -70,8 +72,8 @@ export function isCategoryDataset(dataset: CategoryDataset | SingleDataset): dat
     return (dataset as CategoryDataset).renderingProperties.detectorIds !== undefined;
 }
 
-export type ToWebViewMsgDef = {};
+export type ToWebViewMsgDef = Record<string, never>;
 
-export type ToVsCodeMsgDef = {};
+export type ToVsCodeMsgDef = Record<string, never>;
 
 export type DetectorDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

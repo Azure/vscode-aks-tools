@@ -4,6 +4,7 @@ import { KubeloginConfig, KustomizeConfig } from '../periscope/models/config';
 import * as semver from "semver";
 import { CommandCategory, PresetCommand } from '../../webview-contract/webviewDefinitions/kubectl';
 import { DraftConfig } from '../periscope/models/DraftConfig';
+import { isObject } from './runtimeTypes';
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration('aks.periscope');
@@ -112,8 +113,8 @@ export function getKubectlCustomCommands(): PresetCommand[] {
 
     return value.filter(isCommand).map(item => ({...item, category: CommandCategory.Custom}));
 
-    function isCommand(value: any): value is PresetCommand {
-        return (value.constructor.name === 'Object') && (value as PresetCommand).command && (value as PresetCommand).name ? true : false;
+    function isCommand(value: unknown): value is PresetCommand {
+        return isObject(value) && "command" in value && "name" in value;
     }
 }
 

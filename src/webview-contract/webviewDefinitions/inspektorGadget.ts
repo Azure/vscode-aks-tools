@@ -32,7 +32,9 @@ export interface GadgetArguments {
     timeout?: number;
 }
 
-export type TraceOutputItem = { [key: string]: any };
+export type TraceOutputValue = string | number | boolean | null;
+
+export type TraceOutputItem = { [key: string]: TraceOutputValue };
 
 export type ToVsCodeMsgDef = {
     getVersionRequest: void;

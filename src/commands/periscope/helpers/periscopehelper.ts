@@ -17,7 +17,7 @@ import { ClusterFeatures } from '../models/clusterFeatures';
 import { ContainerServiceClient } from '@azure/arm-containerservice';
 import { getWindowsNodePoolKubernetesVersions } from '../../utils/clusters';
 import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob';
-const tmp = require('tmp');
+import { dirSync } from 'tmp';
 
 export async function getClusterDiagnosticSettings(
     cluster: AksClusterTreeItem
@@ -94,7 +94,19 @@ export async function getStorageInfo(
         // Get keys from storage client.
         const storageClient = new StorageManagementClient(cluster.subscription.credentials, cluster.subscription.subscriptionId);
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
-        const storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
+        if (storageAccKeyList.keys === undefined) {
+            return { succeeded: false, error: "No keys found for storage account." };
+        }
+
+        const storageKeyObject = storageAccKeyList.keys.find((it) => it.keyName === "key1");
+        if (storageKeyObject === undefined) {
+            return { succeeded: false, error: "No key with name 'key1' found for storage account." };
+        }
+
+        const storageKey = storageKeyObject.value;
+        if (storageKey === undefined) {
+            return { succeeded: false, error: "Storage key with name 'key1' has no value." };
+        }
 
         const acctProperties = await storageClient.storageAccounts.getProperties(resourceGroupName, accountName);
         const blobEndpoint = acctProperties.primaryEndpoints?.blob;
@@ -127,7 +139,7 @@ export async function prepareAKSPeriscopeKustomizeOverlay(
     clusterFeatures: ClusterFeatures,
     runId: string
 ): Promise<Errorable<string>> {
-    const kustomizeDirObj = tmp.dirSync();
+    const kustomizeDirObj = dirSync();
     const kustomizeFile = path.join(kustomizeDirObj.name, "kustomization.yaml");
 
     // Build the list of components to include in the Kustomize overlay spec based on cluster features.

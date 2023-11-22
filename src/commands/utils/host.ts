@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { Errorable, map as errmap } from './errorable';
-
-const meta = require('../../../package.json');
+import meta from '../../../package.json';
 
 export async function longRunning<T>(title: string, action: () => Promise<T>): Promise<T> {
     const options = {

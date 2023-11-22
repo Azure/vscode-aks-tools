@@ -1,6 +1,7 @@
 import { TraceOutputItem } from "../../webview-contract/webviewDefinitions/inspektorGadget";
 import { Errorable, map as errmap } from "../utils/errorable";
 import { parseJson } from "../utils/json";
+import { isArray, isObject } from "../utils/runtimeTypes";
 
 // The keys of values which should be serialized as JSON, rather than flattened or spread into separate
 // objects (see `asFlatItems`).
@@ -34,18 +35,10 @@ export function parseOutputLine(line: string): Errorable<object[]> {
  */
 export function asFlatItems(item: object): TraceOutputItem[] {
     const allObjectEntries = Object.entries(item).reduce(addFlatEntries, [[]]);
-    return allObjectEntries.map(objectEntries => Object.fromEntries(objectEntries));
+    return allObjectEntries.map(objectEntries => Object.fromEntries(objectEntries) as TraceOutputItem);
 }
 
-export function isObject(value: any) {
-    return value !== null ? value.constructor.name === 'Object' : false;
-}
-
-export function isArray(value: any) {
-    return value !== null ? value.constructor.name === 'Array' : false;
-}
-
-type ObjectEntry = [string, any];
+type ObjectEntry = [string, unknown];
 type ObjectEntries = ObjectEntry[];
 type MultiObjectEntries = ObjectEntries[];
 
@@ -61,7 +54,7 @@ function addFlatEntries(allObjectEntries: MultiObjectEntries, entry: ObjectEntry
     if (isArray(value)) {
         // Create new target objects for every item in the array.
         // To each of those we add all the existing properties, as well as the array item properties.
-        return (value as any[]).flatMap(val => addFlatEntries(allObjectEntries, [key, val]));
+        return value.flatMap(val => addFlatEntries(allObjectEntries, [key, val]));
     }
 
     if (isObject(value)) {

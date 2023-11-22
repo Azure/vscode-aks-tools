@@ -104,9 +104,17 @@ function asSortFunction(specifier: SortSpecifier<string>): SortFunction {
     const key = specifier.property.key;
     const descending = specifier.direction === SortDirection.Descending;
     const fn: SortFunction = (a, b) => {
-        if (a[key] > b[key]) {
+        const aValue = a[key];
+        const bValue = b[key];
+        if (aValue === null && bValue === null) {
+            return 0;
+        } else if (aValue === null) {
+            return -1;
+        } else if (bValue === null) {
             return 1;
-        } else if (a[key] < b[key]) {
+        } else if (aValue > bValue) {
+            return 1;
+        } else if (aValue < bValue) {
             return -1;
         }
 
@@ -141,7 +149,7 @@ function takeFirstItems(items: TraceOutputItem[], maxRows: number): TraceOutputI
 
 function filterItems(configuration: GadgetConfiguration, items: TraceOutputItem[]): TraceOutputItem[] {
     if (configuration.excludeThreads) {
-        items = items.map(item => item as DataItem<ProcessThreadKey>).filter(item => item.pid === item.tid);
+        items = items.filter(item => (item as DataItem<ProcessThreadKey>).pid === (item as DataItem<ProcessThreadKey>).tid);
     }
 
     return items;

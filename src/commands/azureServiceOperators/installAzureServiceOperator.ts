@@ -10,7 +10,7 @@ import { AzureServiceOperatorDataProvider, AzureServiceOperatorPanel } from '../
 
 export default async function installAzureServiceOperator(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;

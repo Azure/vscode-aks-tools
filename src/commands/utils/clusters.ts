@@ -11,14 +11,14 @@ import * as path from 'path';
 import { AuthenticationResult } from '@azure/msal-node';
 import { getKubeloginBinaryPath } from './helper/kubeloginDownload';
 import { longRunning } from './host';
-const tmp = require('tmp');
+import { dirSync } from 'tmp';
 
 export interface KubernetesClusterInfo {
     readonly name: string;
     readonly kubeconfigYaml: string;
 }
 
-export async function getKubernetesClusterInfo(commandTarget: any, cloudExplorer: APIAvailable<CloudExplorerV1>, clusterExplorer: APIAvailable<ClusterExplorerV1>): Promise<Errorable<KubernetesClusterInfo>> {
+export async function getKubernetesClusterInfo(commandTarget: unknown, cloudExplorer: APIAvailable<CloudExplorerV1>, clusterExplorer: APIAvailable<ClusterExplorerV1>): Promise<Errorable<KubernetesClusterInfo>> {
 
     // See if this is an AKS cluster, and if so, download the credentials for it.
     const aksCluster = getAksClusterTreeItem(commandTarget, cloudExplorer);
@@ -72,7 +72,7 @@ function getPath(kubeconfigPath: ConfigurationV1.KubeconfigPath): string {
     }
 }
 
-export function getAksClusterTreeItem(commandTarget: any, cloudExplorer: API<CloudExplorerV1>): Errorable<AksClusterTreeItem> {
+export function getAksClusterTreeItem(commandTarget: unknown, cloudExplorer: API<CloudExplorerV1>): Errorable<AksClusterTreeItem> {
     if (!cloudExplorer.available) {
         return { succeeded: false, error: 'Cloud explorer is unavailable.'};
     }
@@ -95,7 +95,7 @@ export function getAksClusterTreeItem(commandTarget: any, cloudExplorer: API<Clo
     return { succeeded: true, result: cluster };
 }
 
-export function getAksClusterSubscriptionItem(commandTarget: any, cloudExplorer: API<CloudExplorerV1>): Errorable<SubscriptionTreeNode> {
+export function getAksClusterSubscriptionItem(commandTarget: unknown, cloudExplorer: API<CloudExplorerV1>): Errorable<SubscriptionTreeNode> {
     if (!cloudExplorer.available) {
         return { succeeded: false, error: 'Cloud explorer is unavailable.'};
     }
@@ -137,6 +137,21 @@ async function getNonAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.Con
     return getClusterUserKubeconfig(clusterUserCredentials, cluster.name);
 }
 
+type KubeConfigExecBlock = {
+    command: string;
+    args: string[];
+}
+
+type KubeConfigUser = {
+    user: {
+        exec: KubeConfigExecBlock;
+    }
+};
+
+type KubeConfig = {
+    users: KubeConfigUser[];
+};
+
 async function getAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.ContainerServiceClient): Promise<Errorable<string>> {
     let clusterUserCredentials: azcs.CredentialResults;
 
@@ -154,9 +169,9 @@ async function getAadKubeconfig(cluster: AksClusterTreeItem, client: azcs.Contai
     }
 
     // Parse the kubeconfig YAML into an object so that we can read and update exec options.
-    let kubeconfigYaml: any;
+    let kubeconfigYaml: KubeConfig;
     try {
-        kubeconfigYaml = yaml.load(unauthenticatedKubeconfig.result);
+        kubeconfigYaml = yaml.load(unauthenticatedKubeconfig.result) as KubeConfig;
     } catch (e) {
         return { succeeded: false, error: `Failed to parse kubeconfig YAML for ${cluster.name}: ${e}` };
     }
@@ -207,7 +222,7 @@ interface ExecOptions {
     loginMethod: string;
 }
 
-function readExecOptions(execArgs: [string]): ExecOptions {
+function readExecOptions(execArgs: string[]): ExecOptions {
     // The 'exec' command args are made up of a subcommand (get-token) and a number of name/value options.
     const [subcommand, ...options] = execArgs;
 
@@ -251,7 +266,7 @@ function storeCachedAadToken(aadAccessToken: AuthenticationResult, execOptions: 
     // If our credential is found in there, it won't initiate an interactive login.
     // It will look for a file with a specific name based on the options supplied:
     const expectedFilename = `${execOptions.environment}-${execOptions.serverId}-${execOptions.clientId}-${execOptions.tenantId}.json`;
-    const cacheDirObj = tmp.dirSync();
+    const cacheDirObj = dirSync();
     const cacheFilePath = path.join(cacheDirObj.name, expectedFilename);
 
     const nowTimestamp = Math.floor(new Date().getTime() / 1000);

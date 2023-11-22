@@ -8,7 +8,7 @@ import { ClusterPropertiesDataProvider, ClusterPropertiesPanel } from '../../pan
 
 export default async function aksClusterProperties(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 

@@ -20,7 +20,7 @@ import { PeriscopeDataProvider, PeriscopePanel } from '../../panels/PeriscopePan
 
 export default async function periscope(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     if (!kubectl.available) {

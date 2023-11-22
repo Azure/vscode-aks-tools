@@ -4,11 +4,11 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getAksClusterTreeItem } from '../utils/clusters';
 import { getExtensionPath }  from '../utils/host';
 import { failed } from '../utils/errorable';
-const meta = require('../../../package.json');
+import meta from '../../../package.json';
 
 export default async function aksNavToPortal(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 

@@ -2,7 +2,7 @@ import { Uri } from "vscode";
 import { MessageHandler } from "../webview-contract/messaging";
 import { ARMResponse, CategoryDetectorARMResponse, InitialState, SingleDetectorARMResponse, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/detector";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-const meta = require('../../package.json');
+import meta from '../../package.json';
 
 export class DetectorPanel extends BasePanel<"detector"> {
     constructor(extensionUri: Uri) {
@@ -44,6 +44,6 @@ export class DetectorDataProvider implements PanelDataProvider<"detector"> {
     }
 }
 
-function getClusterArmId(response: ARMResponse<any>): string {
+function getClusterArmId(response: ARMResponse<unknown>): string {
     return response.id.split('detectors')[0];
 }

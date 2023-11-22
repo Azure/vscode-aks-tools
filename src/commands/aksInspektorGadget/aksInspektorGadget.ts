@@ -14,7 +14,7 @@ import { ensureDirectoryInPath } from '../utils/env';
 
 export async function aksInspektorGadgetShow(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;

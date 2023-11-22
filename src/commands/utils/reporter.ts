@@ -1,5 +1,6 @@
 import TelemetryReporter from 'vscode-extension-telemetry';
 import vscode = require('vscode');
+import meta from '../../../package.json';
 
 export let reporter: TelemetryReporter;
 
@@ -20,7 +21,7 @@ interface IPackageInfo {
 }
 
 function getPackageInfo(): IPackageInfo | undefined {
-    const extensionPackage = require('../../../package.json');
+    const extensionPackage = meta;
     if (extensionPackage) {
         return { name: extensionPackage.name, version: extensionPackage.version, aiKey: extensionPackage.aiKey };
     }

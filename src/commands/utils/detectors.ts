@@ -4,8 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ARMResponse, CategoryDetectorARMResponse, SingleDetectorARMResponse, isCategoryDataset } from "../../webview-contract/webviewDefinitions/detector";
 import { getResourceManagementClient } from "./clusters";
-const tmp = require('tmp');
-const meta = require('../../../package.json');
+import { dirSync } from 'tmp';
+import meta from '../../../package.json';
 
 /**
  * Can be used to store the JSON responses for a collection of category detectors and all their child detectors.
@@ -14,7 +14,7 @@ export async function saveAllDetectorResponses(
     target: AksClusterTreeItem,
     categoryDetectorIds: string[]
 ) {
-    const outputDirObj = tmp.dirSync();
+    const outputDirObj = dirSync();
 
     for (const categoryDetectorId of categoryDetectorIds) {
         const categoryDetector = await getDetectorInfo(target, categoryDetectorId);
@@ -35,7 +35,7 @@ export async function saveAllDetectorResponses(
     }
 }
 
-function saveDetector(outputDir: string, detector: ARMResponse<any>) {
+function saveDetector(outputDir: string, detector: CategoryDetectorARMResponse | SingleDetectorARMResponse) {
     const detectorFilePath = path.join(outputDir, `${detector.name}.json`);
     // Anonymize the data.
     detector.id = `/subscriptions/12345678-1234-1234-1234-1234567890ab/resourcegroups/test-rg/providers/Microsoft.ContainerService/managedClusters/test-cluster/detectors/${  detector.name}`;
@@ -70,7 +70,7 @@ export async function getDetectorListData(
 export async function getDetectorInfo(
     target: AksClusterTreeItem,
     detectorName: string
-): Promise<Errorable<ARMResponse<any>>> {
+): Promise<Errorable<CategoryDetectorARMResponse>> {
     try {
         const client = getResourceManagementClient(target);
         // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
@@ -79,12 +79,12 @@ export async function getDetectorInfo(
             resourceGroup, target.resourceType,
             target.name, "detectors", detectorName, "2019-08-01");
 
-        return { succeeded: true, result: <ARMResponse<any>>detectorInfo };
+        return { succeeded: true, result: <CategoryDetectorARMResponse>detectorInfo };
     } catch (ex) {
         return { succeeded: false, error: `Error invoking ${detectorName} detector: ${ex}` };
     }
 }
 
-export function getPortalUrl(clusterdata: ARMResponse<any>) {
+export function getPortalUrl(clusterdata: ARMResponse<unknown>) {
     return `https://portal.azure.com/#resource${clusterdata.id.split('detectors')[0]}aksDiagnostics?referrer_source=vscode&referrer_context=${meta.name}`;
 }

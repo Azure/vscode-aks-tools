@@ -7,7 +7,7 @@ import { longRunning } from '../utils/host';
 
 export default async function aksRotateClusterCert(
   _context: IActionContext,
-  target: any
+  target: unknown
 ): Promise<void> {
   const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 

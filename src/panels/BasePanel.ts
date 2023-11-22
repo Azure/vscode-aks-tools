@@ -93,7 +93,7 @@ function getMessageContext<TContent extends ContentId>(webview: Webview, webview
     const source: MessageSource<ToVsCodeMsgDef<TContent>> = {
         subscribeToMessages: (handler) => {
             webview.onDidReceiveMessage(
-                (message: any) => {
+                (message: object) => {
                     if (!isValidMessage<ToVsCodeMessage<TContent>>(message)) {
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }

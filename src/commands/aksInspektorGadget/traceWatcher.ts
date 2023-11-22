@@ -22,7 +22,7 @@ export class TraceWatcher extends vscode.Disposable {
     async watch(
         gadgetArgs: GadgetArguments,
         outputItemsHandler: (items: TraceOutputItem[]) => void,
-        errorHandler: (e: Error) => {}
+        errorHandler: (e: Error) => void
     ): Promise<Errorable<void>> {
         this.stopWatching();
 
@@ -59,7 +59,7 @@ class TraceOutput extends vscode.Disposable {
 
     readonly outputItems: Observable<TraceOutputItem[]>;
 
-    private outputLineToObjects(line: string): object[] {
+    private outputLineToObjects(line: string): TraceOutputItem[] {
         const items = parseOutputLine(line);
         if (failed(items)) {
             throw new Error(`Unable to read streaming trace output: ${items.error}`);

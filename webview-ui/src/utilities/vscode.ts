@@ -1,6 +1,7 @@
 import type { WebviewApi } from "vscode-webview";
 import { asMessageSink, MessageDefinition, MessageHandler, isValidMessage, CommandKeys, PostMessageImpl, MessageSource } from "../../../src/webview-contract/messaging";
 import { ContentId, ToVsCodeMsgDef, ToWebviewMsgDef, VsCodeMessageContext, WebviewMessageContext } from "../../../src/webview-contract/webviewTypes";
+import { isObject } from "./runtimeTypes";
 
 const vsCodeApi: WebviewApi<unknown> | undefined = (typeof acquireVsCodeApi === "function") ? acquireVsCodeApi() : undefined;
 
@@ -80,7 +81,7 @@ function subscribeToMessages<TMsgDef extends MessageDefinition>(
     const commands = Object.keys(handler);
     const newListener = (messageEvent: Event) => {
         const message = "data" in messageEvent && messageEvent.data;
-        if (!isValidMessage<TMsgDef>(message)) {
+        if (!isObject(message) || !isValidMessage<TMsgDef>(message)) {
             return;
         }
 

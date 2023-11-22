@@ -9,6 +9,7 @@ import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider, TokenCredentialAuthenticationProviderOptions } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from '@azure/arm-authorization';
 import { RoleAssignmentsListResponse } from '@azure/arm-authorization/esm/models';
+import { isObject } from './runtimeTypes';
 
 export interface AzureAccountExtensionApi {
     readonly filters: AzureResourceFilter[];
@@ -102,6 +103,13 @@ async function getServicePrincipalInfo(sessions: AzureSession[], appId: string, 
     return spInfosResult;
 }
 
+type ServicePrincipalSearchResult = {
+    value?: {
+        id: string;
+        displayName: string;
+    }[];
+}
+
 async function getServicePrincipalInfoForSession(session: AzureSession, appId: string, appSecret: string): Promise<Errorable<ServicePrincipalInfo>> {
     // Use the MS Graph API to retrieve the object ID and display name of the service principal,
     // using its own password as the credential.
@@ -117,7 +125,7 @@ async function getServicePrincipalInfoForSession(session: AzureSession, appId: s
         authProvider: new TokenCredentialAuthenticationProvider(credential, graphClientOptions)
     });
 
-    let spSearchResults: any;
+    let spSearchResults: ServicePrincipalSearchResult;
     try {
         spSearchResults = await graphClient.api("/servicePrincipals").filter(`appId eq '${appId}'`).select(['id', 'displayName']).get();
     } catch (e) {
@@ -177,6 +185,6 @@ async function getSubscriptionAccess(credential: TokenCredential, subscription: 
     return { succeeded: true, result: {subscription, hasRoleAssignment: roleAssignments.length > 0}};
 }
 
-function isUnauthorizedError(e: any): boolean {
-    return e.code === 'AuthorizationFailed' && e.statusCode === 403;
+function isUnauthorizedError(e: unknown): boolean {
+    return isObject(e) && "code" in e && "statusCode" in e && e.code === 'AuthorizationFailed' && e.statusCode === 403;
 }

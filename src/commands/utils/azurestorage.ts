@@ -14,16 +14,14 @@ function sasDuration(duration: LinkDuration): number {
     }
 }
 
-function sasPermission(duration: LinkDuration): any {
+function sasPermission(duration: LinkDuration): string {
     // Restrict the permission as default permissioning model.
-    let permissionsForSas = "rlp";
-
+    const shareablePermissions = "rlp";
     switch (duration) {
         case LinkDuration.DownloadNow:
-            permissionsForSas = `${permissionsForSas  }acwdu`;
-            return permissionsForSas;
-        case LinkDuration.Shareable:
-            return permissionsForSas;
+            return `${shareablePermissions}acwdu`;
+        default:
+            return shareablePermissions;
     }
 }
 

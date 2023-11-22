@@ -6,7 +6,7 @@ import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { getResourceGroupList } from "../commands/utils/clusters";
 import { InitialState, ProgressEventType, ResourceGroup as WebviewResourceGroup, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/createCluster";
-const meta = require('../../package.json');
+import meta from '../../package.json';
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {

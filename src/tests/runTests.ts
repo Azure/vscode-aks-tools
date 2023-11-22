@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
+import { isError } from '../commands/utils/runtimeTypes';
 
 async function main() {
     try {
@@ -15,10 +16,9 @@ async function main() {
         await runTests({ extensionDevelopmentPath, extensionTestsPath });
     } catch (err) {
         console.error(`Failed to run tests:\n${err}`);
-        console.log(`message: ${(err as any)?.message}`);
-        console.log(`name: ${(err as any)?.name}`);
-        console.log(`stack: ${(err as any)?.stack}`);
-        console.log(`cause: ${(err as any)?.cause}`);
+        if (isError(err)) {
+            console.log(`message: ${err.message}\nname: ${err.name}\nstack: ${err.stack}`);
+        }
         process.exit(1);
     }
 }

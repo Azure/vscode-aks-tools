@@ -73,7 +73,7 @@ async function downloadTool(
     }
 
     if (isArchive(downloadSpec)) {
-        const decompress = require("decompress");
+        const {default: decompress} = await import("decompress");
 
         try {
             await decompress(downloadFilePath, downloadFolder);

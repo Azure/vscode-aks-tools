@@ -129,12 +129,15 @@ interface K8sList<T> {
 }
 
 export async function streamKubectlOutput(kubectl: APIAvailable<KubectlV1>, kubeConfigFile: string, kubectlArgs: string[]): Promise<Errorable<OutputStream>> {
-    const kubectlInternal = <KubectlInternal>(<any>kubectl.api).kubectl;
+    const kubectlInternal = asInternal(kubectl.api);
+    if (failed(kubectlInternal)) {
+        return kubectlInternal;
+    }
 
     // If part of the command is a plugin, the kubeconfig argument must be placed after that,
     // so we add it at the end here.
     const args = [...kubectlArgs, "--kubeconfig", kubeConfigFile];
-    const runningProcess = await kubectlInternal.observeCommand(args);
+    const runningProcess = await kubectlInternal.result.observeCommand(args);
 
     return new Promise<Errorable<OutputStream>>(resolve => {
         // Wait until there's some output or an error before completing
@@ -152,6 +155,15 @@ export async function streamKubectlOutput(kubectl: APIAvailable<KubectlV1>, kube
             complete: () => resolve({ succeeded: true, result: new OutputStream(() => {}, new Observable()) })
         });
     });
+}
+
+function asInternal(api: KubectlV1): Errorable<KubectlInternal> {
+    if (!("kubectl" in api)) {
+        return {succeeded: false, error: "Internal kubectl property not available in KubectlV1 API."};
+    }
+
+    const result = api.kubectl as KubectlInternal;
+    return {succeeded: true, result};
 }
 
 interface KubectlInternal {

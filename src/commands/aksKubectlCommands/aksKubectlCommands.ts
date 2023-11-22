@@ -8,7 +8,7 @@ import * as tmpfile from '../utils/tempfile';
 import { KubectlDataProvider, KubectlPanel } from '../../panels/KubectlPanel';
 import { getKubectlCustomCommands } from '../utils/config';
 
-export async function aksRunKubectlCommands(_context: IActionContext, target: any) {
+export async function aksRunKubectlCommands(_context: IActionContext, target: unknown) {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;

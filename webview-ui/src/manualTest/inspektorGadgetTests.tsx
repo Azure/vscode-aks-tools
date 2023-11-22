@@ -1,5 +1,5 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import { GadgetArguments, GadgetVersion, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef, TraceOutputItem } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
+import { GadgetArguments, GadgetVersion, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef, TraceOutputItem, TraceOutputValue } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { InspektorGadget } from "../InspektorGadget/InspektorGadget";
 import { getGadgetMetadata } from "../InspektorGadget/helpers/gadgets";
 import { GadgetCategory, isDerivedProperty } from "../InspektorGadget/helpers/gadgets/types";
@@ -191,14 +191,18 @@ export function getInspektorGadgetScenarios() {
 
         return remainingColumns.reduce<TraceOutputItem>(
             (stats, key) => {
-                stats[key] = getTraceStatsValue(key);
+                const value = getTraceStatsValue(key);
+                if (value !== undefined) {
+                    stats[key] = value;
+                }
+
                 return stats;
             },
             stats
         );
     }
 
-    function getTraceStatsValue(columnKey: string): unknown {
+    function getTraceStatsValue(columnKey: string): TraceOutputValue | undefined {
         const operations = ["accept", "close"];
         const protocols = ["TCP", "UDP"];
         const qrValues = ["Q", "R"];

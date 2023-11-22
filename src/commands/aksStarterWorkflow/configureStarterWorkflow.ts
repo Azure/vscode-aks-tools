@@ -7,33 +7,33 @@ import { failed } from '../utils/errorable';
 
 export function configureStarterWorkflow(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service");
 }
 
 export function configureHelmStarterWorkflow(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service-helm");
 }
 
 export function configureKomposeStarterWorkflow(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service-kompose");
 }
 
 export function configureKustomizeStarterWorkflow(
     _context: IActionContext,
-    target: any
+    target: unknown
 ): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service-kustomize");
 }
 
-async function configureNamedStarterWorkflow(target: any, workflowName: string) {
+async function configureNamedStarterWorkflow(target: unknown, workflowName: string) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
     const cluster = getAksClusterTreeItem(target, cloudExplorer);
