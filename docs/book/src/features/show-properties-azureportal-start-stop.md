@@ -8,6 +8,11 @@ Right click on your AKS cluster and click on **Show in Azure Portal** to easily 
 
 Right click on your AKS cluster and click on **Show Properties** to display the AKS cluster and agent pool properties like provisioning state, fqdn, k8s version, along with node properties like node version, vm type, vm size, o/s type, o/s disk size and nodes provisioning state.
 
+This page also enables some useful cluster and node pool level operations like `Abort Last Operation` (at cluster and agent pool level) and `Reconcile`.
+
+![Abort operation](../resources/show-properties-abort.png)
+![Reconcile operation](../resources/show-properties-reconcile.png)
+
 ### Create cluster from Azure Portal
 
 Right click on your AKS sunscription and click on **Create cluster from Azure Portal** to easily navigate to AKS create cluster page in Azure Portal.

@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.3.17]
+
+* Upgrade azext-utils and related packages.
+* Feature: agent pool abort last operation.
+* Feature: abort/reconcile cluster operation in show properties page.
+* Fix the filePath as empty issue. (TCP Dump Issue)
+* Fix vscode engine update.
+* Add dependabot file.
+* Dependabot updates.
+* Clean up unused or unnecessary dependencies.
+
+Collaborations and thanks to @peterbom.
+
 ## [1.3.16]
 
 * Collect TCP Dump.
