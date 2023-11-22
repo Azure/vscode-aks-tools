@@ -3,6 +3,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const FileManagerPlugin = require('filemanager-webpack-plugin');
+const ESLintPlugin = require('eslint-webpack-plugin');
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -27,6 +28,10 @@ const config = {
     '@opentelemetry/tracing': '@opentelemetry/tracing'
   },
   plugins: [
+    new ESLintPlugin({
+      extensions: ['ts'],
+      exclude: ['node_modules', 'webview-ui'],
+    }),
     // Prevent webpack from trying to bundle electron, or require it as a direct dependency:
     // https://github.com/sindresorhus/got/issues/345#issuecomment-329939488
     new webpack.IgnorePlugin({ resourceRegExp: /^electron$/ }),
