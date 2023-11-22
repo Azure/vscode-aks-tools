@@ -23,3 +23,5 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 ![Cloud explorer tcp menu](../resources/right-click-tcp-dump-collect.png.png)
 
 ![Cloud explorer tcp dump webview](../resources/tcp-dump-linux-node.png.png)
+
+![AKS Show Properties webview](../resources/show-properties-reconcile.png)
