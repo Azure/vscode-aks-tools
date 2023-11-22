@@ -1,0 +1,702 @@
+{
+  "properties": {
+    "parameters": {
+      "location": { "value": "eastus" },
+      "resourceName": { "value": "hari-aks" },
+      "dnsPrefix": { "value": "hari-aks-dns" },
+      "apiVersion": { "value": "2023-08-01" },
+      "nodeResourceGroup": { "value": "hari-aks_hari-demo_hari-aks_eastus" },
+      "subscriptionId": { "value": "20c6254d-ab44-45c8-8885-ceb54699e1bf" },
+      "resourceGroupName": { "value": "hari-demo" }
+    },
+    "template": {
+      "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+      "contentVersion": "1.0.0.0",
+      "variables": {
+        "isScaleSetPrioritySpot": "[equals(parameters('scaleSetPriority'), 'Spot')]",
+        "defaultAadProfile": {
+          "managed": true,
+          "adminGroupObjectIDs": "[parameters('adminGroupObjectIDs')]",
+          "enableAzureRBAC": "[parameters('azureRbac')]"
+        },
+        "defaultApiServerAccessProfile": {
+          "authorizedIPRanges": "[if(parameters('enableAuthorizedIpRange'), parameters('authorizedIPRanges'), null())]",
+          "enablePrivateCluster": "[parameters('enablePrivateCluster')]"
+        },
+        "defaultAzurePolicy": {
+          "enabled": "[parameters('enableAzurePolicy')]"
+        },
+        "defaultSecrectStoreProvider": {
+          "enabled": "[parameters('enableSecretStoreCSIDriver')]",
+          "config": "[if(parameters('enableSecretStoreCSIDriver'), variables('secrectStoreConfig'), null())]"
+        },
+        "secrectStoreConfig": {
+          "enableSecretRotation": "false",
+          "rotationPollInterval": "2m"
+        },
+        "servicePrincipalProfile": {
+          "ClientId": "[parameters('servicePrincipalClientId')]",
+          "Secret": "[parameters('servicePrincipalClientSecret')]"
+        }
+      },
+      "parameters": {
+        "apiVersion": { "type": "string" },
+        "resourceName": {
+          "type": "string",
+          "metadata": {
+            "description": "The name of the Managed Cluster resource."
+          }
+        },
+        "location": {
+          "type": "string",
+          "metadata": { "description": "The location of AKS resource." }
+        },
+        "isLocationEdgeZone": { "defaultValue": false, "type": "bool" },
+        "edgeZone": {
+          "defaultValue": {},
+          "type": "object",
+          "metadata": { "description": "Extended location of the cluster." }
+        },
+        "useServicePrincipal": { "defaultValue": false, "type": "bool" },
+        "clusterSku": {
+          "defaultValue": { "name": "Base", "tier": "Standard" },
+          "type": "object",
+          "metadata": { "descirption": "The managed cluster SKU tier." }
+        },
+        "clusterTags": {
+          "defaultValue": {},
+          "type": "object",
+          "metadata": {
+            "description": "Specifies the tags of the AKS cluster."
+          }
+        },
+        "clusterIdentity": {
+          "defaultValue": { "type": "SystemAssigned" },
+          "type": "object",
+          "metadata": {
+            "description": "The identity of the managed cluster, if configured."
+          }
+        },
+        "enableAadProfile": {
+          "defaultValue": false,
+          "type": "bool",
+          "metadata": {
+            "description": "Flag to turn on or off of AAD Profile."
+          }
+        },
+        "aadProfile": {
+          "defaultValue": {},
+          "type": "object",
+          "metadata": {
+            "descirption": "The Azure Active Directory configuration."
+          }
+        },
+        "dnsPrefix": {
+          "type": "string",
+          "metadata": {
+            "description": "Optional DNS prefix to use with hosted Kubernetes API server FQDN."
+          }
+        },
+        "kubernetesVersion": {
+          "type": "string",
+          "defaultValue": "1.7.7",
+          "metadata": { "description": "The version of Kubernetes." }
+        },
+        "enableRBAC": {
+          "type": "bool",
+          "defaultValue": true,
+          "metadata": {
+            "description": "Boolean flag to turn on and off of RBAC."
+          }
+        },
+        "windowsProfile": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": {
+            "description": "Boolean flag to turn on and off of virtual machine scale sets"
+          }
+        },
+        "nodeResourceGroup": {
+          "type": "string",
+          "metadata": {
+            "description": "The name of the resource group containing agent pool nodes."
+          }
+        },
+        "upgradeChannel": {
+          "defaultValue": "none",
+          "type": "string",
+          "allowedValues": ["none", "patch", "rapid", "stable", "node-image"],
+          "metadata": {
+            "description": "Auto upgrade channel for a managed cluster."
+          }
+        },
+        "servicePrincipalClientId": {
+          "defaultValue": "",
+          "metadata": { "description": "Client ID (used by cloudprovider)." },
+          "type": "securestring"
+        },
+        "servicePrincipalClientSecret": {
+          "defaultValue": "",
+          "metadata": { "description": "The Service Principal Client Secret." },
+          "type": "securestring"
+        },
+        "adminGroupObjectIDs": {
+          "type": "array",
+          "defaultValue": [],
+          "metadata": {
+            "description": "An array of AAD group object ids to give administrative access."
+          }
+        },
+        "principalId": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": { "description": "The objectId of service principal." }
+        },
+        "azureRbac": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": { "description": "Enable or disable Azure RBAC." }
+        },
+        "disableLocalAccounts": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": { "description": "Enable or disable local accounts." }
+        },
+        "enablePrivateCluster": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": {
+            "description": "Enable private network access to the Kubernetes cluster."
+          }
+        },
+        "isPrivateClusterSupported": { "type": "bool", "defaultValue": false },
+        "enableAuthorizedIpRange": { "type": "bool", "defaultValue": false },
+        "authorizedIPRanges": {
+          "defaultValue": [],
+          "type": "array",
+          "metadata": {
+            "description": "Boolean flag to turn on and off http application routing."
+          }
+        },
+        "isPublicNetworkAccessEnabled": {
+          "type": "bool",
+          "defaultValue": false
+        },
+        "publicNetworkAccess": {
+          "defaultValue": "Enabled",
+          "type": "string",
+          "allowedValues": ["Disabled", "Enabled", "SecuredByPerimeter"],
+          "metadata": {
+            "description": "Allow or deny public network access for AKS."
+          }
+        },
+        "enableDiskEncryptionSetID": {
+          "defaultValue": false,
+          "type": "bool",
+          "metadata": {
+            "description": "Flag to turn on or off of diskEncryptionSetID. Set diskEncryptionSetID to null when false."
+          }
+        },
+        "diskEncryptionSetID": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "The ID of the disk encryption set used to encrypt the OS disks of the nodes."
+          }
+        },
+        "aadSessionKey": { "type": "securestring", "defaultValue": "" },
+        "isAzurePolicySupported": { "type": "bool", "defaultValue": false },
+        "enableAzurePolicy": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": {
+            "description": "Boolean flag to turn on and off Azure Policy addon."
+          }
+        },
+        "isSecretStoreCSIDDriverSupported": {
+          "type": "bool",
+          "defaultValue": false
+        },
+        "enableSecretStoreCSIDriver": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": {
+            "description": "Boolean flag to turn on and off secret store CSI driver."
+          }
+        },
+        "enableOmsAgent": {
+          "type": "bool",
+          "defaultValue": true,
+          "metadata": {
+            "description": "Boolean flag to turn on and off omsagent addon."
+          }
+        },
+        "workspaceRegion": {
+          "type": "string",
+          "defaultValue": "East US",
+          "metadata": {
+            "description": "Specify the region for your OMS workspace."
+          }
+        },
+        "workspaceName": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "Specify the name of the OMS workspace."
+          }
+        },
+        "omsWorkspaceId": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "Specify the resource id of the OMS workspace."
+          }
+        },
+        "omsSku": {
+          "type": "string",
+          "defaultValue": "standalone",
+          "allowedValues": ["free", "standalone", "pernode"],
+          "metadata": { "description": "Select the SKU for your workspace." }
+        },
+        "aciVnetSubnetName": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "Name of virtual network subnet used for the ACI Connector."
+          }
+        },
+        "aciConnectorLinuxEnabled": {
+          "defaultValue": false,
+          "type": "bool",
+          "metadata": { "description": "Enables the Linux ACI Connector." }
+        },
+        "acrName": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "Specify the name of the Azure Container Registry."
+          }
+        },
+        "acrResourceGroup": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "The name of the resource group the container registry is associated with."
+          }
+        },
+        "guidValue": {
+          "type": "string",
+          "metadata": {
+            "description": "The unique id used in the role assignment of the kubernetes service to the container registry service. It is recommended to use the default value."
+          },
+          "defaultValue": "[newGuid()]"
+        },
+        "enableVnetSubnetID": {
+          "defaultValue": false,
+          "type": "bool",
+          "metadata": {
+            "description": "Flag to turn on or off of vnetSubnetID."
+          }
+        },
+        "vnetSubnetID": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "Resource ID of virtual network subnet used for nodes and/or pods IP assignment."
+          }
+        },
+        "loadBalancerSku": {
+          "defaultValue": "Standard",
+          "type": "string",
+          "allowedValues": ["Basic", "Standard"],
+          "metadata": {
+            "description": "Specifies the sku of the load balancer used by the virtual machine scale sets used by node pools."
+          }
+        },
+        "networkPolicy": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "Network policy used for building Kubernetes network."
+          }
+        },
+        "networkPlugin": {
+          "defaultValue": "kubenet",
+          "type": "string",
+          "allowedValues": ["azure", "kubenet"],
+          "metadata": {
+            "description": "Network plugin used for building Kubernetes network."
+          }
+        },
+        "serviceCidr": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "A CIDR notation IP range from which to assign service cluster IPs."
+          }
+        },
+        "dnsServiceIP": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": { "description": "Containers DNS server IP address." }
+        },
+        "spotMaxPrice": {
+          "defaultValue": "",
+          "type": "string",
+          "metadata": {
+            "description": "Possible values are any decimal value greater than zero or -1 which indicates the willingness to pay any on-demand price."
+          }
+        },
+        "vmssNodePool": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": {
+            "description": "Boolean flag to turn on and off of virtual machine scale sets"
+          }
+        },
+        "isAvailabilityZoneEnabled": {
+          "type": "bool",
+          "defaultValue": false,
+          "metadata": {
+            "description": "Boolean flag to turn on or off of Availability Zone"
+          }
+        },
+        "osDiskSizeGB": {
+          "type": "int",
+          "defaultValue": 0,
+          "metadata": {
+            "description": "Disk size (in GiB) to provision for each of the agent pool nodes. This value ranges from 0 to 1023. Specifying 0 will apply the default disk size for that agentVMSize."
+          },
+          "minValue": 0,
+          "maxValue": 1023
+        },
+        "agentCount": {
+          "defaultValue": 3,
+          "minValue": 1,
+          "maxValue": 50,
+          "type": "int",
+          "metadata": {
+            "description": "The number of agent nodes for the cluster. Production workloads have a recommended minimum of 3."
+          }
+        },
+        "scaleSetEvictionPolicy": {
+          "defaultValue": "Delete",
+          "allowedValues": ["Delete", "Deallocate"],
+          "type": "string",
+          "metadata": {
+            "description": "Specifies the ScaleSetEvictionPolicy to be used to specify eviction policy for spot virtual machine scale set. Default to Delete. Allowed values are Delete or Deallocate."
+          }
+        },
+        "scaleSetPriority": {
+          "defaultValue": "Regular",
+          "allowedValues": ["Spot", "Regular"],
+          "type": "string",
+          "metadata": {
+            "description": "Specifies the virtual machine scale set priority in the user node pool: Spot or Regular."
+          }
+        },
+        "agentTags": {
+          "defaultValue": {},
+          "type": "object",
+          "metadata": { "description": "Specifies the tags of the agent pool." }
+        },
+        "enableNodePublicIP": {
+          "defaultValue": false,
+          "type": "bool",
+          "metadata": {
+            "description": "Some scenarios may require nodes in a node pool to receive their own dedicated public IP addresses."
+          }
+        },
+        "agentNodeTaints": {
+          "defaultValue": [],
+          "type": "array",
+          "metadata": {
+            "description": "Specifies the taints added to new nodes during node pool create and scale. For example, key=value:NoSchedule. - string."
+          }
+        },
+        "agentNodeLables": {
+          "defaultValue": {},
+          "type": "object",
+          "metadata": {
+            "description": "Specifies the Agent pool node labels to be persisted across all nodes in the system node pool."
+          }
+        },
+        "agentAvailabilityZones": {
+          "defaultValue": [],
+          "type": "array",
+          "metadata": {
+            "description": "Specifies the availability zones for the agent nodes in the agent node pool. Requires the use of VirtualMachineScaleSets as node pool type."
+          }
+        },
+        "agentMode": {
+          "defaultValue": "System",
+          "type": "string",
+          "allowedValues": ["System", "User"],
+          "metadata": {
+            "description": "A cluster must have at least one 'System' Agent Pool at all times."
+          }
+        },
+        "agentMaxPods": {
+          "defaultValue": 30,
+          "type": "int",
+          "metadata": {
+            "description": "Specifies the maximum number of pods that can run on a node in the agent node pool. The maximum number of pods per node in an AKS cluster is 250. The default maximum number of pods per node varies between kubenet and Azure CNI networking, and the method of cluster deployment."
+          }
+        },
+        "agentOSType": {
+          "defaultValue": "Linux",
+          "allowedValues": ["Linux", "Windows"],
+          "type": "string",
+          "metadata": {
+            "description": "The type of operating system for agent pool."
+          }
+        },
+        "agentVMSize": {
+          "defaultValue": "Standard_D2_v3",
+          "type": "string",
+          "metadata": { "description": "The size of the Virtual Machine." }
+        },
+        "agentMaxCount": {
+          "defaultValue": 5,
+          "type": "int",
+          "metadata": {
+            "description": "Specifies the maximum number of nodes for auto-scaling for the system node pool."
+          }
+        },
+        "agentMinCount": {
+          "defaultValue": 3,
+          "type": "int",
+          "metadata": {
+            "description": "Specifies the minimum number of nodes for auto-scaling for the system node pool."
+          }
+        },
+        "enableAutoScaling": {
+          "defaultValue": true,
+          "type": "bool",
+          "metadata": {
+            "description": "Specifies whether to enable auto-scaling for the system node pool."
+          }
+        },
+        "serviceMeshMode": {
+          "type": "string",
+          "allowedValues": ["Disabled", "Istio"],
+          "defaultValue": "Disabled"
+        },
+        "istioInternalIngressGateway": {
+          "type": "bool",
+          "defaultValue": false
+        },
+        "istioExternalIngressGateway": {
+          "type": "bool",
+          "defaultValue": false
+        },
+        "nodeOSUpgradeChannel": {
+          "defaultValue": "NodeImage",
+          "type": "string",
+          "allowedValues": ["None", "Unmanaged", "SecurityPatch", "NodeImage"],
+          "metadata": {
+            "description": "Auto upgrade channel for node OS security."
+          }
+        },
+        "subscriptionId": {
+          "type": "string",
+          "defaultValue": "",
+          "metadata": { "description": "The subscription id of the cluster." }
+        },
+        "resourceGroupName": {
+          "type": "string",
+          "defaultValue": "",
+          "metadata": {
+            "description": "The resource group name of the cluster."
+          }
+        }
+      },
+      "resources": [
+        {
+          "name": "InsightsActionGroupDepl-2905bc4e-a2fe-f9d8-66ce-c785058b9dbb",
+          "type": "Microsoft.Resources/deployments",
+          "apiVersion": "2021-04-01",
+          "properties": {
+            "mode": "Incremental",
+            "template": {
+              "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+              "contentVersion": "1.0.0.0",
+              "resources": [
+                {
+                  "type": "microsoft.insights/actionGroups",
+                  "apiVersion": "2022-06-01",
+                  "name": "RecommendedAlertRules-AG-11",
+                  "location": "Global",
+                  "properties": {
+                    "groupShortName": "recalert11",
+                    "enabled": true,
+                    "emailReceivers": [
+                      {
+                        "name": "Email_-EmailAction-",
+                        "emailAddress": "hsubramanian@microsoft.com",
+                        "useCommonAlertSchema": true
+                      }
+                    ],
+                    "emailSMSAppReceivers": []
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "InsightsMetricAlertsDepl-cc0cecf3-0d64-1805-9b7f-5891ce8b0765",
+          "type": "Microsoft.Resources/deployments",
+          "apiVersion": "2021-04-01",
+          "dependsOn": [
+            "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('resourceGroupName')]/providers/Microsoft.ContainerService/managedClusters/[parameters('resourceName')]",
+            "[concat('Microsoft.Resources/deployments/', 'InsightsActionGroupDepl-2905bc4e-a2fe-f9d8-66ce-c785058b9dbb')]"
+          ],
+          "properties": {
+            "mode": "Incremental",
+            "template": {
+              "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+              "contentVersion": "1.0.0.0",
+              "resources": [
+                {
+                  "type": "microsoft.insights/metricAlerts",
+                  "apiVersion": "2018-03-01",
+                  "name": "CPU Usage Percentage - dev-test",
+                  "location": "Global",
+                  "properties": {
+                    "severity": 3,
+                    "enabled": true,
+                    "scopes": [
+                      "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('resourceGroupName')]/providers/Microsoft.ContainerService/managedClusters/[parameters('resourceName')]"
+                    ],
+                    "evaluationFrequency": "PT5M",
+                    "windowSize": "PT5M",
+                    "criteria": {
+                      "allOf": [
+                        {
+                          "name": "Metric1",
+                          "metricName": "node_cpu_usage_percentage",
+                          "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                          "operator": "GreaterThan",
+                          "timeAggregation": "Average",
+                          "criterionType": "StaticThresholdCriterion",
+                          "threshold": 95
+                        }
+                      ],
+                      "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+                    },
+                    "targetResourceType": "Microsoft.ContainerService/managedClusters",
+                    "actions": [
+                      {
+                        "actionGroupId": "[resourceId('Microsoft.Insights/ActionGroups', 'RecommendedAlertRules-AG-11')]",
+                        "webhookProperties": {}
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "microsoft.insights/metricAlerts",
+                  "apiVersion": "2018-03-01",
+                  "name": "Memory Working Set Percentage - dev-test",
+                  "location": "Global",
+                  "properties": {
+                    "severity": 3,
+                    "enabled": true,
+                    "scopes": [
+                      "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('resourceGroupName')]/providers/Microsoft.ContainerService/managedClusters/[parameters('resourceName')]"
+                    ],
+                    "evaluationFrequency": "PT5M",
+                    "windowSize": "PT5M",
+                    "criteria": {
+                      "allOf": [
+                        {
+                          "name": "Metric1",
+                          "metricName": "node_memory_working_set_percentage",
+                          "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                          "operator": "GreaterThan",
+                          "timeAggregation": "Average",
+                          "criterionType": "StaticThresholdCriterion",
+                          "threshold": 100
+                        }
+                      ],
+                      "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria"
+                    },
+                    "targetResourceType": "Microsoft.ContainerService/managedClusters",
+                    "actions": [
+                      {
+                        "actionGroupId": "[resourceId('Microsoft.Insights/ActionGroups', 'RecommendedAlertRules-AG-11')]",
+                        "webhookProperties": {}
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "Microsoft.ContainerService/managedClusters",
+          "apiVersion": "[parameters('apiVersion')]",
+          "sku": "[parameters('clusterSku')]",
+          "identity": "[parameters('clusterIdentity')]",
+          "dependsOn": [],
+          "location": "[parameters('location')]",
+          "name": "[parameters('resourceName')]",
+          "extendedLocation": "[if(parameters('isLocationEdgeZone'), parameters('edgeZone'), null())]",
+          "properties": {
+            "kubernetesVersion": "[parameters('kubernetesVersion')]",
+            "enableRBAC": "[parameters('enableRBAC')]",
+            "dnsPrefix": "[parameters('dnsPrefix')]",
+            "nodeResourceGroup": "[parameters('nodeResourceGroup')]",
+            "disableLocalAccounts": "[parameters('disableLocalAccounts')]",
+            "aadProfile": "[if(parameters('enableAadProfile'), variables('defaultAadProfile'), null())]",
+            "autoUpgradeProfile": {
+              "upgradeChannel": "[parameters('upgradeChannel')]"
+            },
+            "agentPoolProfiles": [
+              {
+                "name": "agentpool",
+                "osDiskSizeGB": "[parameters('osDiskSizeGB')]",
+                "count": 2,
+                "enableAutoScaling": true,
+                "minCount": 2,
+                "maxCount": 5,
+                "vmSize": "Standard_DS2_v2",
+                "osType": "Linux",
+                "osSKU": "Ubuntu",
+                "storageProfile": "ManagedDisks",
+                "type": "VirtualMachineScaleSets",
+                "mode": "System",
+                "maxPods": 110,
+                "availabilityZones": [],
+                "nodeTaints": [],
+                "enableNodePublicIP": false,
+                "tags": {}
+              }
+            ],
+            "addonProfiles": {
+              "azurepolicy": "[if(parameters('isAzurePolicySupported'), variables('defaultAzurePolicy'), null())]",
+              "azureKeyvaultSecretsProvider": "[if(parameters('isSecretStoreCSIDDriverSupported'), variables('defaultSecrectStoreProvider'), null())]"
+            },
+            "diskEncryptionSetID": "[if(parameters('enableDiskEncryptionSetID'), parameters('diskEncryptionSetID'), null())]",
+            "networkProfile": {
+              "loadBalancerSku": "[parameters('loadBalancerSku')]",
+              "networkPlugin": "[parameters('networkPlugin')]",
+              "networkPolicy": "[parameters('networkPolicy')]",
+              "serviceCidr": "[parameters('serviceCidr')]",
+              "dnsServiceIP": "[parameters('dnsServiceIP')]"
+            }
+          },
+          "tags": "[parameters('clusterTags')]"
+        }
+      ],
+      "outputs": {
+        "controlPlaneFQDN": {
+          "type": "string",
+          "value": "[reference(concat('Microsoft.ContainerService/managedClusters/', parameters('resourceName'))).fqdn]"
+        }
+      }
+    },
+    "mode": "Incremental"
+  }
+}

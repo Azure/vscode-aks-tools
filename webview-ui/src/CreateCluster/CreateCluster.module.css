@@ -5,19 +5,42 @@
 }
 
 .presetContainer {
-    display: flex;
-    gap: 1rem;
+    width: 217px;
+    height: 166px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    border: 1px solid var(--base-base-10, #808080); 
 }
 
-.preset {
+.presetTitle {
+    width: 161px;
     color: var(--base-base-01, #FFF);
 
-    /* az-text-/header 2 */
-    font-size: 16px;
-    font-style: normal;
-    font-weight: 600;
-    line-height: 22px;
-    /* 137.5% */
+/* az-text-/header 2 */
+font-family: Segoe UI;
+font-size: 16px;
+font-style: normal;
+font-weight: 600;
+line-height: 22px; /* 137.5% */   
+}
+
+.presetDescription {
+    width: 161px;
+    color: var(--base-base-01, #FFF);
+
+/* az-text-/body */
+font-family: Segoe UI;
+font-size: 13px;
+font-style: normal;
+font-weight: 400;
+line-height: 18px; /* 138.462% */
+}
+
+.devTestIcon {
+    background-image: url('../../resources/createCluster/devTest.svg');
+    background-repeat: no-repeat;
+    height: 17px; /* adjust as needed */
+    width: 17.465px; /* adjust as needed */
 }
 
 .infoIndicator {

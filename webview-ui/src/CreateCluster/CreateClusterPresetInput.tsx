@@ -14,46 +14,20 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
 
     return (
         <>
-        <h3>Choose a cluster preset configuration</h3>
-        <div className={styles.presetContainer}>
-        <VSCodeButton 
-                className={styles.preset} appearance="icon" aria-label="Production Standard" onClick={() => handlePresetClick("standard")}
-                >
+            <div className={styles.presetContainer} onClick={() => handlePresetClick("dev")}>
+                <div>
+                    <img src="resources/createCluster/devtest.png" alt="Dev/Test" />
+                </div>
+                <div className={styles.presetTitle}>
+                    Dev/Test
+                </div>
+                <div className={styles.presetDescription}>
+                    Best for developing new workloads or testing existing workloads.
                     <div>
-                        <span>icon</span>
-                        <span>Production Standard</span>
-                        <span>Best for most applications serving production traffic with AKS recommended best practices.</span>
+                        <a href="https://learn.microsoft.com/en-us/azure/aks/quotas-skus-regions#cluster-configuration-presets-in-the-azure-portal">Learn more</a>
                     </div>
-                    
-                </VSCodeButton>
-                <VSCodeButton 
-                className={styles.preset} appearance="icon" aria-label="Dev/Test" onClick={() => handlePresetClick("dev")}
-                >
-                    <div>
-                        <span>icon</span>
-                        <span>Dev/Test</span>
-                        <span>Best for most applications serving production traffic with AKS recommended best practices.</span>
-                    </div>
-                </VSCodeButton>
-                <VSCodeButton 
-                className={styles.preset} appearance="icon" aria-label="Production Economy" onClick={() => handlePresetClick("economy")}
-                >
-                    <div>
-                        <span>icon</span>
-                        <span>Production Economy</span>
-                        <span>Best for most applications serving production traffic with AKS recommended best practices.</span>
-                    </div>
-                </VSCodeButton>
-                <VSCodeButton 
-                className={styles.preset} appearance="icon" aria-label="Production Enterprise" onClick={() => handlePresetClick("enterprise")}
-                >
-                    <div>
-                        <span>icon</span>
-                        <span>Production Enterprise</span>
-                        <span>Best for most applications serving production traffic with AKS recommended best practices.</span>
-                    </div>
-                </VSCodeButton>
-        </div>
+                </div>
+            </div>
         </>
     )
 }
