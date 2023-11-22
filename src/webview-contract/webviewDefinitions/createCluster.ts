@@ -16,7 +16,7 @@ export enum ProgressEventType {
     InProgress,
     Cancelled,
     Failed,
-    Success
+    Success,
 }
 
 export interface CreateClusterParams {

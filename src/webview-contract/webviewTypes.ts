@@ -12,7 +12,11 @@ import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 /**
  * Groups all the related types for a single webview.
  */
-export type WebviewDefinition<TInitialState extends object, TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition> = {
+export type WebviewDefinition<
+    TInitialState extends object,
+    TToVsCode extends MessageDefinition,
+    TToWebview extends MessageDefinition,
+> = {
     initialState: TInitialState;
     toVsCodeMsgDef: TToVsCode;
     toWebviewMsgDef: TToWebview;
@@ -35,7 +39,7 @@ type AllWebviewDefinitions = {
 };
 
 type ContentIdLookup = {
-    [id in keyof AllWebviewDefinitions]: id
+    [id in keyof AllWebviewDefinitions]: id;
 };
 
 /**

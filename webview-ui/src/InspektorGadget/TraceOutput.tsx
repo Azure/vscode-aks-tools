@@ -5,13 +5,17 @@ import { ProcessSnapshotKey } from "./helpers/gadgets/snapshot";
 import { ItemProperty, ValueType } from "./helpers/gadgets/types";
 
 export interface TraceOutputProps {
-    trace: TraceGadget
+    trace: TraceGadget;
 }
 
 export function TraceOutput(props: TraceOutputProps) {
     const tidKey: ProcessSnapshotKey = "tid";
-    const outputProperties = props.trace.displayProperties.filter(p => !props.trace?.excludeThreads || p.key !== tidKey);
-    const outputArrays = props.trace.output?.map(item => outputProperties.map(p => ({ property: p, value: item[p.key] })));
+    const outputProperties = props.trace.displayProperties.filter(
+        (p) => !props.trace?.excludeThreads || p.key !== tidKey,
+    );
+    const outputArrays = props.trace.output?.map((item) =>
+        outputProperties.map((p) => ({ property: p, value: item[p.key] })),
+    );
     if (props.trace.output === null) {
         return (
             <>
@@ -22,24 +26,25 @@ export function TraceOutput(props: TraceOutputProps) {
     }
 
     return (
-    <table className={styles.traceoutput}>
-        <thead>
-            <tr>
-                {outputProperties.map(p => (
-                    <th key={p.name}>{p.name}</th>
-                ))}
-            </tr>
-        </thead>
-        <tbody>
-            {outputArrays && outputArrays.map((values, i) => (
-                <tr key={i}>
-                    {values.map((val, i) => (
-                        <td key={i}>{displayValue(val.value, val.property)}</td>
+        <table className={styles.traceoutput}>
+            <thead>
+                <tr>
+                    {outputProperties.map((p) => (
+                        <th key={p.name}>{p.name}</th>
                     ))}
                 </tr>
-            ))}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {outputArrays &&
+                    outputArrays.map((values, i) => (
+                        <tr key={i}>
+                            {values.map((val, i) => (
+                                <td key={i}>{displayValue(val.value, val.property)}</td>
+                            ))}
+                        </tr>
+                    ))}
+            </tbody>
+        </table>
     );
 }
 
@@ -52,9 +57,9 @@ function displayValue(value: unknown, property: ItemProperty<string>) {
         case ValueType.StackTrace:
             return <pre>{value as string}</pre>;
         case ValueType.AddressArray:
-            return <>{value ? (JSON.parse(value as string) as string[]).join(',') : ""}</>
+            return <>{value ? (JSON.parse(value as string) as string[]).join(",") : ""}</>;
         case ValueType.Timestamp:
-            return <>{value ? formatTime(value as number) : ""}</>
+            return <>{value ? formatTime(value as number) : ""}</>;
         default:
             return <>{value}</>;
     }

@@ -1,8 +1,25 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
-import { CommandKeys, MessageDefinition, MessageHandler, MessageSource, PostMessageImpl, asMessageSink, isValidMessage } from "../webview-contract/messaging";
+import {
+    CommandKeys,
+    MessageDefinition,
+    MessageHandler,
+    MessageSource,
+    PostMessageImpl,
+    asMessageSink,
+    isValidMessage,
+} from "../webview-contract/messaging";
 import { getNonce, getUri } from "./utilities/webview";
 import { encodeState } from "../webview-contract/initialState";
-import { ContentId, InitialState, ToVsCodeMessage, ToVsCodeMessageHandler, ToVsCodeMsgDef, ToWebviewMessageSink, ToWebviewMsgDef, VsCodeMessageContext } from "../webview-contract/webviewTypes";
+import {
+    ContentId,
+    InitialState,
+    ToVsCodeMessage,
+    ToVsCodeMessageHandler,
+    ToVsCodeMsgDef,
+    ToWebviewMessageSink,
+    ToWebviewMsgDef,
+    VsCodeMessageContext,
+} from "../webview-contract/webviewTypes";
 
 const viewType = "aksVsCodeTools";
 
@@ -24,8 +41,8 @@ export abstract class BasePanel<TContent extends ContentId> {
     protected constructor(
         readonly extensionUri: Uri,
         readonly contentId: TContent,
-        readonly webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>
-    ) { }
+        readonly webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>,
+    ) {}
 
     show(dataProvider: PanelDataProvider<TContent>, ...disposables: Disposable[]) {
         const panelOptions = {
@@ -33,7 +50,7 @@ export abstract class BasePanel<TContent extends ContentId> {
             // Restrict the webview to only load resources from the `webview-ui/dist` directory
             localResourceRoots: [Uri.joinPath(this.extensionUri, "webview-ui/dist")],
             // persist the state of the webview across restarts
-            retainContextWhenHidden: true
+            retainContextWhenHidden: true,
         };
 
         const title = dataProvider.getTitle();
@@ -47,17 +64,26 @@ export abstract class BasePanel<TContent extends ContentId> {
 
         // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
         // the panel or when the panel is closed programmatically)
-        panel.onDidDispose(() => {
-            panel.dispose();
-            disposables.forEach(d => d.dispose());
-        }, null, disposables);
+        panel.onDidDispose(
+            () => {
+                panel.dispose();
+                disposables.forEach((d) => d.dispose());
+            },
+            null,
+            disposables,
+        );
 
         // Set the HTML content for the webview panel
         const initialState = dataProvider.getInitialState();
         panel.webview.html = this.getWebviewContent(panel.webview, this.extensionUri, title, initialState);
     }
 
-    private getWebviewContent(webview: Webview, extensionUri: Uri, title: string, initialState: InitialState<TContent> | undefined) {
+    private getWebviewContent(
+        webview: Webview,
+        extensionUri: Uri,
+        title: string,
+        initialState: InitialState<TContent> | undefined,
+    ) {
         // Get URIs for the React build output.
         const stylesUri = getUri(webview, extensionUri, ["assets", "main.css"]);
         const scriptUri = getUri(webview, extensionUri, ["assets", "main.js"]);
@@ -87,8 +113,12 @@ export abstract class BasePanel<TContent extends ContentId> {
     }
 }
 
-function getMessageContext<TContent extends ContentId>(webview: Webview, webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>, disposables: Disposable[]): VsCodeMessageContext<TContent> {
-    const postMessageImpl: PostMessageImpl<ToWebviewMsgDef<TContent>> = message => webview.postMessage(message);
+function getMessageContext<TContent extends ContentId>(
+    webview: Webview,
+    webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>,
+    disposables: Disposable[],
+): VsCodeMessageContext<TContent> {
+    const postMessageImpl: PostMessageImpl<ToWebviewMsgDef<TContent>> = (message) => webview.postMessage(message);
     const sink = asMessageSink(postMessageImpl, webviewCommandKeys);
     const source: MessageSource<ToVsCodeMsgDef<TContent>> = {
         subscribeToMessages: (handler) => {
@@ -106,10 +136,10 @@ function getMessageContext<TContent extends ContentId>(webview: Webview, webview
                     }
                 },
                 undefined,
-                disposables
+                disposables,
             );
         },
     };
 
-    return {...sink, ...source};
+    return { ...sink, ...source };
 }

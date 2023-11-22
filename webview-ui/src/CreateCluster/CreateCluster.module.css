@@ -31,7 +31,7 @@
 }
 
 .fullWidth {
-    grid-column: 1 / 4
+    grid-column: 1 / 4;
 }
 
 .errorIndicator {

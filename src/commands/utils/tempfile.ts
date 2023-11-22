@@ -1,11 +1,12 @@
-import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
-import { fileSync } from 'tmp';
+import * as vscode from "vscode";
+import * as fs from "fs/promises";
+import { fileSync } from "tmp";
 
 export async function withOptionalTempFile<T>(
     content: string,
     extension: string,
-    fn: (filename: string) => Promise<T>): Promise<T> {
+    fn: (filename: string) => Promise<T>,
+): Promise<T> {
     const tempFile = await createTempFile(content, extension);
 
     try {

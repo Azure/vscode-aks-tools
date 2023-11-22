@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import './main.css';
+import "./main.css";
 import { decodeState } from "../../src/webview-contract/initialState";
 import { CreateCluster } from "./CreateCluster/CreateCluster";
 import { ContentId } from "../../src/webview-contract/webviewTypes";
@@ -49,14 +49,10 @@ function getVsCodeContent(): JSX.Element {
         gadget: () => <InspektorGadget {...getInitialState()} />,
         kubectl: () => <Kubectl {...getInitialState()} />,
         aso: () => <AzureServiceOperator {...getInitialState()} />,
-        tcpDump: () => <TcpDump {...getInitialState()} />
+        tcpDump: () => <TcpDump {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
 }
 
-root.render(
-    <StrictMode>
-        {getVsCodeContent()}
-    </StrictMode>
-);
+root.render(<StrictMode>{getVsCodeContent()}</StrictMode>);

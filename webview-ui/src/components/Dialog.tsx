@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 
 interface DialogProps {
-    isShown: boolean
-    onCancel: () => void
+    isShown: boolean;
+    onCancel: () => void;
 }
 
 export function Dialog(props: React.PropsWithChildren<DialogProps>) {
@@ -34,16 +34,12 @@ export function Dialog(props: React.PropsWithChildren<DialogProps>) {
     }
 
     function handleDocumentClick(e: MouseEvent) {
-        if(e.target === dialogRef.current) {
+        if (e.target === dialogRef.current) {
             e.preventDefault();
             e.stopPropagation();
             dialogRef.current!.close();
         }
     }
 
-    return (
-        <dialog ref={dialogRef}>
-            {props.children}
-        </dialog>
-    )
+    return <dialog ref={dialogRef}>{props.children}</dialog>;
 }

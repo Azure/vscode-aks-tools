@@ -9,7 +9,7 @@ export interface GadgetVersion {
 
 export enum NamespaceSelection {
     Default,
-    All
+    All,
 }
 
 export type NamespaceFilter = NamespaceSelection | string;

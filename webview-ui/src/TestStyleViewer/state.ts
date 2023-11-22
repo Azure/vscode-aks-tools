@@ -3,29 +3,29 @@ import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
 
 export type State = InitialState & {
-    cssVars: string[],
-    cssRules: CssRule[]
+    cssVars: string[];
+    cssRules: CssRule[];
 };
 
 export type EventDef = {
-    cssVarsUpdate: string[],
-    cssRulesUpdate: CssRule[]
+    cssVarsUpdate: string[];
+    cssRulesUpdate: CssRule[];
 };
 
 export const stateUpdater: WebviewStateUpdater<"style", EventDef, State> = {
-    createState: initialState => ({
+    createState: (initialState) => ({
         ...initialState,
         cssVars: [],
-        cssRules: []
+        cssRules: [],
     }),
     vscodeMessageHandler: {},
     eventHandler: {
-        cssVarsUpdate: (state, cssVars) => ({...state, cssVars}),
-        cssRulesUpdate: (state, cssRules) => ({...state, cssRules})
-    }
+        cssVarsUpdate: (state, cssVars) => ({ ...state, cssVars }),
+        cssRulesUpdate: (state, cssRules) => ({ ...state, cssRules }),
+    },
 };
 
 export const vscode = getWebviewMessageContext<"style">({
     reportCssRules: null,
-    reportCssVars: null
+    reportCssVars: null,
 });

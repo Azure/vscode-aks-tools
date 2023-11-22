@@ -7,7 +7,7 @@ import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
 
 export function CreateCluster(initialState: InitialState) {
-    const {state, eventHandlers} = useStateManagement(stateUpdater, initialState, vscode);
+    const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
         if (state.stage === Stage.Uninitialized) {
@@ -27,25 +27,34 @@ export function CreateCluster(initialState: InitialState) {
         switch (state.stage) {
             case Stage.Uninitialized:
             case Stage.Loading:
-                return <p>Loading...</p>
+                return <p>Loading...</p>;
             case Stage.CollectingInput:
-                return <CreateClusterInput locations={state.locations!} resourceGroups={state.resourceGroups!} eventHandlers={eventHandlers} vscode={vscode} />;
+                return (
+                    <CreateClusterInput
+                        locations={state.locations!}
+                        resourceGroups={state.resourceGroups!}
+                        eventHandlers={eventHandlers}
+                        vscode={vscode}
+                    />
+                );
             case Stage.Creating:
                 return (
-                <>
-                    <h3>Creating Cluster {state.createParams!.name} in {state.createParams!.location}</h3>
-                    <VSCodeProgressRing />
-                </>
-                )
+                    <>
+                        <h3>
+                            Creating Cluster {state.createParams!.name} in {state.createParams!.location}
+                        </h3>
+                        <VSCodeProgressRing />
+                    </>
+                );
             case Stage.Failed:
                 return (
-                <>
-                    <h3>Error Creating Cluster</h3>
-                    <p>{state.message}</p>
-                </>
+                    <>
+                        <h3>Error Creating Cluster</h3>
+                        <p>{state.message}</p>
+                    </>
                 );
             case Stage.Succeeded:
-               return (
+                return (
                     <Success
                         portalUrl={state.portalUrl}
                         portalReferrerContext={state.portalReferrerContext}

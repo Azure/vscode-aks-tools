@@ -3,7 +3,7 @@ import { WebviewDefinition } from "../webviewTypes";
 export enum CommandCategory {
     Resources,
     Health,
-    Custom
+    Custom,
 }
 
 const presetCommandItems: [string, string, CommandCategory][] = [
@@ -15,13 +15,13 @@ const presetCommandItems: [string, string, CommandCategory][] = [
     ["Get All Events", "get events --all-namespaces", CommandCategory.Health],
     ["Healthz Check", "get --raw /healthz?verbose", CommandCategory.Health],
     ["Livez Check", "get --raw /livez?verbose", CommandCategory.Health],
-    ["Readyz Check", "get --raw /readyz?verbose", CommandCategory.Health]
+    ["Readyz Check", "get --raw /readyz?verbose", CommandCategory.Health],
 ];
 
-export const presetCommands: PresetCommand[] = presetCommandItems.map(cmd => ({
+export const presetCommands: PresetCommand[] = presetCommandItems.map((cmd) => ({
     name: cmd[0],
     command: cmd[1],
-    category: cmd[2]
+    category: cmd[2],
 }));
 
 export interface PresetCommand {

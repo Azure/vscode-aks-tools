@@ -2,7 +2,13 @@ import { Uri } from "vscode";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { AgentPoolProfileInfo, ClusterInfo, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/clusterProperties";
+import {
+    AgentPoolProfileInfo,
+    ClusterInfo,
+    InitialState,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+} from "../webview-contract/webviewDefinitions/clusterProperties";
 import { ContainerServiceClient, ManagedCluster, ManagedClusterAgentPoolProfile } from "@azure/arm-containerservice";
 import { getManagedCluster } from "../commands/utils/clusters";
 
@@ -10,7 +16,7 @@ export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
     constructor(extensionUri: Uri) {
         super(extensionUri, "clusterProperties", {
             getPropertiesResponse: null,
-            errorNotification: null
+            errorNotification: null,
         });
     }
 }
@@ -19,8 +25,8 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
     constructor(
         readonly client: ContainerServiceClient,
         readonly resourceGroup: string,
-        readonly clusterName: string
-    ) { }
+        readonly clusterName: string,
+    ) {}
 
     getTitle(): string {
         return `Cluster Properties for ${this.clusterName}`;
@@ -28,7 +34,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
     getInitialState(): InitialState {
         return {
-            clusterName: this.clusterName
+            clusterName: this.clusterName,
         };
     }
 
@@ -39,15 +45,19 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             startClusterRequest: () => this.handleStartClusterRequest(webview),
             abortAgentPoolOperation: (poolName: string) => this.handleAbortAgentPoolOperation(webview, poolName),
             abortClusterOperation: () => this.handleAbortClusterOperation(webview),
-            reconcileClusterRequest: () => this.handleReconcileClusterOperation(webview)
+            reconcileClusterRequest: () => this.handleReconcileClusterOperation(webview),
         };
     }
 
     private async handleAbortAgentPoolOperation(webview: MessageSink<ToWebViewMsgDef>, poolName: string) {
         try {
-            const poller = await this.client.agentPools.beginAbortLatestOperation(this.resourceGroup, this.clusterName, poolName);
+            const poller = await this.client.agentPools.beginAbortLatestOperation(
+                this.resourceGroup,
+                this.clusterName,
+                poolName,
+            );
 
-            poller.onProgress(state => {
+            poller.onProgress((state) => {
                 // Note: not handling 'canceled' here because this is a cancel operation.
                 if (state.status === "failed") {
                     const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
@@ -68,9 +78,12 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
     private async handleAbortClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
         try {
-            const poller = await this.client.managedClusters.beginAbortLatestOperation(this.resourceGroup, this.clusterName);
+            const poller = await this.client.managedClusters.beginAbortLatestOperation(
+                this.resourceGroup,
+                this.clusterName,
+            );
 
-            poller.onProgress(state => {
+            poller.onProgress((state) => {
                 // Note: not handling 'canceled' here because this is a cancel operation.
                 if (state.status === "failed") {
                     const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
@@ -93,10 +106,10 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         try {
             const getClusterInfo = await this.client.managedClusters.get(this.resourceGroup, this.clusterName);
             const poller = await this.client.managedClusters.beginCreateOrUpdate(this.resourceGroup, this.clusterName, {
-                location: getClusterInfo.location
+                location: getClusterInfo.location,
             });
 
-            poller.onProgress(state => {
+            poller.onProgress((state) => {
                 if (state.status === "canceled") {
                     webview.postErrorNotification(`Reconcile Cluster operation on ${this.clusterName} was cancelled.`);
                 } else if (state.status === "failed") {
@@ -124,7 +137,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         try {
             const poller = await this.client.managedClusters.beginStop(this.resourceGroup, this.clusterName);
 
-            poller.onProgress(state => {
+            poller.onProgress((state) => {
                 if (state.status === "canceled") {
                     webview.postErrorNotification(`Stop Cluster operation on ${this.clusterName} was cancelled.`);
                 } else if (state.status === "failed") {
@@ -150,7 +163,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         try {
             const poller = await this.client.managedClusters.beginStart(this.resourceGroup, this.clusterName);
 
-            poller.onProgress(state => {
+            poller.onProgress((state) => {
                 if (state.status === "canceled") {
                     webview.postErrorNotification(`Start Cluster operation on ${this.clusterName} was cancelled.`);
                 } else if (state.status === "failed") {
@@ -189,7 +202,7 @@ function asClusterInfo(cluster: ManagedCluster): ClusterInfo {
         fqdn: cluster.fqdn!,
         kubernetesVersion: cluster.kubernetesVersion!,
         powerStateCode: cluster.powerState!.code!,
-        agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo)
+        agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
     };
 }
 
@@ -202,6 +215,6 @@ function asPoolProfileInfo(pool: ManagedClusterAgentPoolProfile): AgentPoolProfi
         provisioningState: pool.provisioningState!,
         vmSize: pool.vmSize!,
         count: pool.count!,
-        osType: pool.osType!
+        osType: pool.osType!,
     };
 }

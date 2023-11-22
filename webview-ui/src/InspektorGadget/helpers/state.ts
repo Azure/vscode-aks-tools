@@ -1,4 +1,13 @@
-import { ClusterResources, Nodes, setContainersLoading, setPodsLoading, updateContainersForCluster, updateNamespacesForCluster, updateNodesForCluster, updatePodsForCluster } from "./clusterResources";
+import {
+    ClusterResources,
+    Nodes,
+    setContainersLoading,
+    setPodsLoading,
+    updateContainersForCluster,
+    updateNamespacesForCluster,
+    updateNodesForCluster,
+    updatePodsForCluster,
+} from "./clusterResources";
 import { newLoading, newNotLoaded } from "../../utilities/lazy";
 import { TraceGadget, enrich, enrichSortAndFilter } from "./gadgets";
 import { GadgetVersion, TraceOutputItem } from "../../../../src/webview-contract/webviewDefinitions/inspektorGadget";
@@ -9,37 +18,37 @@ import { getWebviewMessageContext } from "../../utilities/vscode";
 const maxTraceOutputLength = 1000;
 
 export interface InspektorGadgetState {
-    initializationStarted: boolean
-    nextTraceId: number
-    version: GadgetVersion | null
-    nodes: Nodes
-    resources: ClusterResources
-    overviewStatus: string
-    allTraces: TraceGadget[]
+    initializationStarted: boolean;
+    nextTraceId: number;
+    version: GadgetVersion | null;
+    nodes: Nodes;
+    resources: ClusterResources;
+    overviewStatus: string;
+    allTraces: TraceGadget[];
 }
 
 export type EventDef = {
-    setInitializing: void,
-    deploy: void,
-    undeploy: void,
-    incrementTraceId: void,
+    setInitializing: void;
+    deploy: void;
+    undeploy: void;
+    incrementTraceId: void;
     createTrace: {
-        trace: TraceGadget
-    },
+        trace: TraceGadget;
+    };
     deleteTraces: {
-        traceIds: number[]
-    },
-    setNodesLoading: void,
-    setNamespacesLoading: void,
+        traceIds: number[];
+    };
+    setNodesLoading: void;
+    setNamespacesLoading: void;
     setPodsLoading: {
-        namespace: string
-    },
+        namespace: string;
+    };
     setContainersLoading: {
-        namespace: string,
-        podName: string
-    },
-    setNodesNotLoaded: void,
-    setNamespacesNotLoaded: void
+        namespace: string;
+        podName: string;
+    };
+    setNodesNotLoaded: void;
+    setNamespacesNotLoaded: void;
 };
 
 export const stateUpdater: WebviewStateUpdater<"gadget", EventDef, InspektorGadgetState> = {
@@ -50,15 +59,24 @@ export const stateUpdater: WebviewStateUpdater<"gadget", EventDef, InspektorGadg
         nodes: newNotLoaded(),
         resources: newNotLoaded(),
         overviewStatus: "Initializing",
-        allTraces: []
+        allTraces: [],
     }),
     vscodeMessageHandler: {
         updateVersion: (state, args) => ({ ...state, overviewStatus: "", version: args }),
-        runTraceResponse: (state, args) => ({ ...state, allTraces: getUpdatedTraces(state.allTraces, args.traceId, args.items) }),
+        runTraceResponse: (state, args) => ({
+            ...state,
+            allTraces: getUpdatedTraces(state.allTraces, args.traceId, args.items),
+        }),
         getNodesResponse: (state, args) => ({ ...state, nodes: updateNodesForCluster(args.nodes) }),
         getNamespacesResponse: (state, args) => ({ ...state, resources: updateNamespacesForCluster(args.namespaces) }),
-        getPodsResponse: (state, args) => ({ ...state, resources: updatePodsForCluster(state.resources, args.namespace, args.podNames) }),
-        getContainersResponse: (state, args) => ({ ...state, resources: updateContainersForCluster(state.resources, args.namespace, args.podName, args.containerNames) })
+        getPodsResponse: (state, args) => ({
+            ...state,
+            resources: updatePodsForCluster(state.resources, args.namespace, args.podNames),
+        }),
+        getContainersResponse: (state, args) => ({
+            ...state,
+            resources: updateContainersForCluster(state.resources, args.namespace, args.podName, args.containerNames),
+        }),
     },
     eventHandler: {
         setInitializing: (state) => ({ ...state, initializationStarted: true }),
@@ -66,26 +84,32 @@ export const stateUpdater: WebviewStateUpdater<"gadget", EventDef, InspektorGadg
         undeploy: (state) => ({ ...state, overviewStatus: "Undeploying Inspektor Gadget", version: null }),
         incrementTraceId: (state) => ({ ...state, nextTraceId: state.nextTraceId + 1 }),
         createTrace: (state, args) => ({ ...state, allTraces: [...state.allTraces, args.trace] }),
-        deleteTraces: (state, args) => ({ ...state, allTraces: state.allTraces.filter(t => !args.traceIds.includes(t.traceId)) }),
+        deleteTraces: (state, args) => ({
+            ...state,
+            allTraces: state.allTraces.filter((t) => !args.traceIds.includes(t.traceId)),
+        }),
         setNodesLoading: (state) => ({ ...state, nodes: newLoading() }),
         setNamespacesLoading: (state) => ({ ...state, resources: newLoading() }),
         setPodsLoading: (state, args) => ({ ...state, resources: setPodsLoading(state.resources, args.namespace) }),
-        setContainersLoading: (state, args) => ({ ...state, resources: setContainersLoading(state.resources, args.namespace, args.podName) }),
+        setContainersLoading: (state, args) => ({
+            ...state,
+            resources: setContainersLoading(state.resources, args.namespace, args.podName),
+        }),
         setNodesNotLoaded: (state) => ({ ...state, nodes: newNotLoaded() }),
-        setNamespacesNotLoaded: (state) => ({ ...state, resources: newNotLoaded() })
-    }
+        setNamespacesNotLoaded: (state) => ({ ...state, resources: newNotLoaded() }),
+    },
 };
 
 function getUpdatedTraces(traces: TraceGadget[], traceId: number, items: TraceOutputItem[]): TraceGadget[] {
-    const traceIndex = traces.findIndex(t => t.traceId === traceId);
+    const traceIndex = traces.findIndex((t) => t.traceId === traceId);
     if (traceIndex === -1) {
         return traces;
     }
 
     const trace = traces[traceIndex];
     const appendItems = trace.category === "trace";
-    const newItems =
-        appendItems ? [...(trace.output || []), ...enrich(trace, items)].slice(-maxTraceOutputLength) // Append to the existing items.
+    const newItems = appendItems
+        ? [...(trace.output || []), ...enrich(trace, items)].slice(-maxTraceOutputLength) // Append to the existing items.
         : enrichSortAndFilter(trace, items); // Replace the existing items in the trace.
 
     const newTrace = { ...trace, output: newItems };
@@ -102,5 +126,5 @@ export const vscode = getWebviewMessageContext<"gadget">({
     runBlockingTraceRequest: null,
     runStreamingTraceRequest: null,
     stopStreamingTraceRequest: null,
-    undeployRequest: null
+    undeployRequest: null,
 });

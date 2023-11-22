@@ -5,15 +5,21 @@ import { ContainerServiceClient, ManagedCluster } from "@azure/arm-containerserv
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { getResourceGroupList } from "../commands/utils/clusters";
-import { InitialState, ProgressEventType, ResourceGroup as WebviewResourceGroup, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/createCluster";
-import meta from '../../package.json';
+import {
+    InitialState,
+    ProgressEventType,
+    ResourceGroup as WebviewResourceGroup,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+} from "../webview-contract/webviewDefinitions/createCluster";
+import meta from "../../package.json";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
         super(extensionUri, "createCluster", {
             getLocationsResponse: null,
             getResourceGroupsResponse: null,
-            progressUpdate: null
+            progressUpdate: null,
         });
     }
 }
@@ -24,8 +30,8 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         readonly containerServiceClient: ContainerServiceClient,
         readonly portalUrl: string,
         readonly subscriptionId: string,
-        readonly subscriptionName: string
-    ) { }
+        readonly subscriptionName: string,
+    ) {}
 
     getTitle(): string {
         return `Create Cluster in ${this.subscriptionName}`;
@@ -36,7 +42,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             portalUrl: this.portalUrl,
             portalReferrerContext: meta.name,
             subscriptionId: this.subscriptionId,
-            subscriptionName: this.subscriptionName
+            subscriptionName: this.subscriptionName,
         };
     }
 
@@ -44,15 +50,24 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         return {
             getLocationsRequest: () => this.handleGetLocationsRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
-            createClusterRequest: args => this.handleCreateClusterRequest(args.isNewResourceGroup, args.resourceGroup, args.location, args.name, webview)
+            createClusterRequest: (args) =>
+                this.handleCreateClusterRequest(
+                    args.isNewResourceGroup,
+                    args.resourceGroup,
+                    args.location,
+                    args.name,
+                    webview,
+                ),
         };
     }
 
     private async handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         const provider = await this.resourceManagementClient.providers.get("Microsoft.ContainerService");
-        const resourceTypes = provider.resourceTypes?.filter(t => t.resourceType === "managedClusters");
+        const resourceTypes = provider.resourceTypes?.filter((t) => t.resourceType === "managedClusters");
         if (!resourceTypes || resourceTypes.length > 1) {
-            window.showErrorMessage(`Unexpected number of managedClusters resource types for provider (${resourceTypes?.length || 0}).`);
+            window.showErrorMessage(
+                `Unexpected number of managedClusters resource types for provider (${resourceTypes?.length || 0}).`,
+            );
             return;
         }
 
@@ -62,7 +77,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             return;
         }
 
-        webview.postGetLocationsResponse({locations: resourceType.locations});
+        webview.postGetLocationsResponse({ locations: resourceType.locations });
     }
 
     private async handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
@@ -71,21 +86,30 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
                 operationDescription: "Retrieving resource groups",
-                errorMessage: groups.error
+                errorMessage: groups.error,
             });
             return;
         }
 
-        const usableGroups = groups.result.filter(isValidResourceGroup).map(g => ({
-            label: `${g.name} (${g.location})`,
-            name: g.name,
-            location: g.location
-        })).sort((a, b) => a.name > b.name ? 1 : -1);
+        const usableGroups = groups.result
+            .filter(isValidResourceGroup)
+            .map((g) => ({
+                label: `${g.name} (${g.location})`,
+                name: g.name,
+                location: g.location,
+            }))
+            .sort((a, b) => (a.name > b.name ? 1 : -1));
 
-        webview.postGetResourceGroupsResponse({groups: usableGroups});
+        webview.postGetResourceGroupsResponse({ groups: usableGroups });
     }
 
-    private async handleCreateClusterRequest(isNewResourceGroup: boolean, group: WebviewResourceGroup, location: string, name: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleCreateClusterRequest(
+        isNewResourceGroup: boolean,
+        group: WebviewResourceGroup,
+        location: string,
+        name: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
         if (isNewResourceGroup) {
             await createResourceGroup(group, webview, this.resourceManagementClient);
         }
@@ -104,13 +128,13 @@ function isValidResourceGroup(group: ARMResourceGroup): group is WebviewResource
 async function createResourceGroup(
     group: WebviewResourceGroup,
     webview: MessageSink<ToWebViewMsgDef>,
-    resourceManagementClient: ResourceManagementClient
+    resourceManagementClient: ResourceManagementClient,
 ) {
     const operationDescription = `Creating resource group ${group.name}`;
     webview.postProgressUpdate({
         event: ProgressEventType.InProgress,
         operationDescription,
-        errorMessage: null
+        errorMessage: null,
     });
 
     try {
@@ -119,7 +143,7 @@ async function createResourceGroup(
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
-            errorMessage: getErrorMessage(ex)
+            errorMessage: getErrorMessage(ex),
         });
     }
 }
@@ -129,25 +153,25 @@ async function createCluster(
     location: string,
     name: string,
     webview: MessageSink<ToWebViewMsgDef>,
-    containerServiceClient: ContainerServiceClient
+    containerServiceClient: ContainerServiceClient,
 ) {
     const operationDescription = `Creating cluster ${name}`;
     webview.postProgressUpdate({
         event: ProgressEventType.InProgress,
         operationDescription,
-        errorMessage: null
+        errorMessage: null,
     });
 
     const clusterSpec = getManagedClusterSpec(location, name);
 
     try {
         const poller = await containerServiceClient.managedClusters.beginCreateOrUpdate(group.name, name, clusterSpec);
-        poller.onProgress(state => {
+        poller.onProgress((state) => {
             if (state.status === "canceled") {
                 webview.postProgressUpdate({
                     event: ProgressEventType.Cancelled,
                     operationDescription,
-                    errorMessage: null
+                    errorMessage: null,
                 });
             } else if (state.status === "failed") {
                 const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
@@ -155,14 +179,14 @@ async function createCluster(
                 webview.postProgressUpdate({
                     event: ProgressEventType.Failed,
                     operationDescription,
-                    errorMessage
+                    errorMessage,
                 });
             } else if (state.status === "succeeded") {
                 window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
                 webview.postProgressUpdate({
                     event: ProgressEventType.Success,
                     operationDescription,
-                    errorMessage: null
+                    errorMessage: null,
                 });
             }
         });
@@ -174,7 +198,7 @@ async function createCluster(
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
-            errorMessage
+            errorMessage,
         });
     }
 }
@@ -184,7 +208,7 @@ function getManagedClusterSpec(location: string, name: string): ManagedCluster {
         addonProfiles: {},
         location: location,
         identity: {
-            type: "SystemAssigned"
+            type: "SystemAssigned",
         },
         agentPoolProfiles: [
             {
@@ -195,9 +219,9 @@ function getManagedClusterSpec(location: string, name: string): ManagedCluster {
                 mode: "System",
                 osSKU: "AzureLinux",
                 osType: "Linux",
-                vmSize: "Standard_DS2_v2"
+                vmSize: "Standard_DS2_v2",
             },
         ],
-        dnsPrefix: `${name}-dns`
+        dnsPrefix: `${name}-dns`,
     };
 }

@@ -38,7 +38,8 @@ ul.commandCategoryList > li {
     margin-bottom: 0.6rem;
 }
 
-ul.commandCategoryList h3,h4 {
+ul.commandCategoryList h3,
+h4 {
     margin: 0;
     margin-top: 0.2rem;
     margin-bottom: 0.2rem;
@@ -97,7 +98,8 @@ ul.commandList .commandDelete:hover {
     margin-bottom: 0.2rem;
 }
 
-.inputContainer .control, .commands {
+.inputContainer .control,
+.commands {
     margin-bottom: 0.8rem;
     min-width: 20rem;
 }

@@ -1,35 +1,23 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { getAksClusterTreeItem } from '../utils/clusters';
-import { getWorkflowYaml, substituteClusterInWorkflowYaml } from '../utils/configureWorkflowHelper';
-import { failed } from '../utils/errorable';
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { getAksClusterTreeItem } from "../utils/clusters";
+import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
+import { failed } from "../utils/errorable";
 
-export function configureStarterWorkflow(
-    _context: IActionContext,
-    target: unknown
-): Promise<void> {
+export function configureStarterWorkflow(_context: IActionContext, target: unknown): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service");
 }
 
-export function configureHelmStarterWorkflow(
-    _context: IActionContext,
-    target: unknown
-): Promise<void> {
+export function configureHelmStarterWorkflow(_context: IActionContext, target: unknown): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service-helm");
 }
 
-export function configureKomposeStarterWorkflow(
-    _context: IActionContext,
-    target: unknown
-): Promise<void> {
+export function configureKomposeStarterWorkflow(_context: IActionContext, target: unknown): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service-kompose");
 }
 
-export function configureKustomizeStarterWorkflow(
-    _context: IActionContext,
-    target: unknown
-): Promise<void> {
+export function configureKustomizeStarterWorkflow(_context: IActionContext, target: unknown): Promise<void> {
     return configureNamedStarterWorkflow(target, "azure-kubernetes-service-kustomize");
 }
 
@@ -52,12 +40,13 @@ async function configureNamedStarterWorkflow(target: unknown, workflowName: stri
     const substitutedYaml = substituteClusterInWorkflowYaml(
         starterWorkflowYaml.result,
         cluster.result.armId.split("/")[4],
-        cluster.result.name);
+        cluster.result.name,
+    );
 
     // Display it to the end-user in their vscode editor.
     const doc = await vscode.workspace.openTextDocument({
         content: substitutedYaml,
-        language: "yaml"
+        language: "yaml",
     });
 
     vscode.window.showTextDocument(doc);

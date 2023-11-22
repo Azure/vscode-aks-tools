@@ -28,5 +28,8 @@ export function getUri(webview: Webview, extensionUri: Uri, pathList: string[]) 
 export function getNonce() {
     const allowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     const length = 32;
-    return [...Array(length)].map(() => Math.floor(Math.random() * allowedChars.length)).map(i => allowedChars[i]).join("");
+    return [...Array(length)]
+        .map(() => Math.floor(Math.random() * allowedChars.length))
+        .map((i) => allowedChars[i])
+        .join("");
 }

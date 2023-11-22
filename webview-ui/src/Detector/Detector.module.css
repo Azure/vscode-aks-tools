@@ -79,7 +79,8 @@
     margin-bottom: 16px;
 }
 
-.markdownTable th, .markdownTable td {
+.markdownTable th,
+.markdownTable td {
     padding: 6px 13px;
     border: 1px solid var(--vscode-panel-border);
 }

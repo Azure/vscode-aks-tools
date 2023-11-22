@@ -1,12 +1,12 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterTreeItem } from '../utils/clusters';
-import { getExtension, longRunning }  from '../utils/host';
-import { getDetectorInfo, getDetectorListData } from '../utils/detectors';
-import { Errorable, failed } from '../utils/errorable';
-import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { DetectorDataProvider, DetectorPanel } from '../../panels/DetectorPanel';
+import { getAksClusterTreeItem } from "../utils/clusters";
+import { getExtension, longRunning } from "../utils/host";
+import { getDetectorInfo, getDetectorListData } from "../utils/detectors";
+import { Errorable, failed } from "../utils/errorable";
+import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
+import { DetectorDataProvider, DetectorPanel } from "../../panels/DetectorPanel";
 
 export function aksBestPracticesDiagnostics(_context: IActionContext, target: unknown): Promise<void> {
     return runDetector(target, "aks-category-risk-assessment");
@@ -24,7 +24,10 @@ export function aksIdentitySecurityDiagnostics(_context: IActionContext, target:
     return runDetector(target, "aks-category-identity-security");
 }
 
-export function aksKnownIssuesAvailabilityPerformanceDiagnostics(_context: IActionContext, target: unknown): Promise<void> {
+export function aksKnownIssuesAvailabilityPerformanceDiagnostics(
+    _context: IActionContext,
+    target: unknown,
+): Promise<void> {
     return runDetector(target, "aks-category-availability-perf");
 }
 
@@ -37,8 +40,8 @@ async function runDetector(commandTarget: unknown, categoryDetectorName: string)
 
     const cluster = getAksClusterTreeItem(commandTarget, cloudExplorer);
     if (failed(cluster)) {
-      vscode.window.showErrorMessage(cluster.error);
-      return;
+        vscode.window.showErrorMessage(cluster.error);
+        return;
     }
 
     const extension = getExtension();
@@ -48,9 +51,9 @@ async function runDetector(commandTarget: unknown, categoryDetectorName: string)
     }
 
     const clustername = cluster.result.name;
-    const dataProvider = await longRunning(
-        `Loading ${clustername} diagnostics.`,
-        () => getDataProvider(cluster.result, categoryDetectorName));
+    const dataProvider = await longRunning(`Loading ${clustername} diagnostics.`, () =>
+        getDataProvider(cluster.result, categoryDetectorName),
+    );
 
     if (failed(dataProvider)) {
         vscode.window.showErrorMessage(dataProvider.error);
@@ -61,7 +64,10 @@ async function runDetector(commandTarget: unknown, categoryDetectorName: string)
     panel.show(dataProvider.result);
 }
 
-async function getDataProvider(cloudTarget: AksClusterTreeItem, categoryDetectorName: string): Promise<Errorable<DetectorDataProvider>> {
+async function getDataProvider(
+    cloudTarget: AksClusterTreeItem,
+    categoryDetectorName: string,
+): Promise<Errorable<DetectorDataProvider>> {
     const detectorInfo = await getDetectorInfo(cloudTarget, categoryDetectorName);
     if (failed(detectorInfo)) {
         return detectorInfo;

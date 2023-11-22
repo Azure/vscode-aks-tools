@@ -19,7 +19,7 @@ export const azureToASOCloudMap: Record<AzureCloudName, ASOCloudName> = {
     AzureCloud: "AzurePublicCloud",
     AzureChinaCloud: "AzureChinaCloud",
     AzureUSGovernment: "AzureUSGovernmentCloud",
-    AzureGermanCloud: "AzureGermanCloud"
+    AzureGermanCloud: "AzureGermanCloud",
 };
 
 export type InstallSettingsParams = {

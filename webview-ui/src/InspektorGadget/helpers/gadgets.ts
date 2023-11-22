@@ -1,20 +1,37 @@
-import { Filters, GadgetArguments, TraceOutputItem } from "../../../../src/webview-contract/webviewDefinitions/inspektorGadget";
+import {
+    Filters,
+    GadgetArguments,
+    TraceOutputItem,
+} from "../../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { ProcessThreadKey } from "./gadgets/common";
 import { cpuProfileMetadata } from "./gadgets/profile";
 import { processSnapshotMetadata, socketSnapshotMetadata } from "./gadgets/snapshot";
 import { blockIOTopMetadata, ebpfTopMetadata, fileTopMetadata, tcpTopMetadata } from "./gadgets/top";
 import { dnsTraceMetadata, execTraceMetadata, tcpTraceMetadata } from "./gadgets/trace";
-import { DataItem, GadgetCategory, GadgetMetadata, GadgetProfileResource, GadgetSnapshotResource, GadgetTopResource, GadgetTraceResource, ItemProperty, SortDirection, SortSpecifier, isDerivedProperty, toSortString } from "./gadgets/types";
+import {
+    DataItem,
+    GadgetCategory,
+    GadgetMetadata,
+    GadgetProfileResource,
+    GadgetSnapshotResource,
+    GadgetTopResource,
+    GadgetTraceResource,
+    ItemProperty,
+    SortDirection,
+    SortSpecifier,
+    isDerivedProperty,
+    toSortString,
+} from "./gadgets/types";
 
 export type GadgetConfiguration = {
-    category: GadgetCategory,
-    resource: string,
-    displayProperties: ItemProperty<string>[],
-    sortSpecifiers: SortSpecifier<string>[],
-    filters: Filters,
-    maxItemCount?: number,
-    timeout?: number,
-    excludeThreads?: boolean
+    category: GadgetCategory;
+    resource: string;
+    displayProperties: ItemProperty<string>[];
+    sortSpecifiers: SortSpecifier<string>[];
+    filters: Filters;
+    maxItemCount?: number;
+    timeout?: number;
+    excludeThreads?: boolean;
 };
 
 export function toGadgetArguments(config: GadgetConfiguration): GadgetArguments {
@@ -25,52 +42,55 @@ export function toGadgetArguments(config: GadgetConfiguration): GadgetArguments 
         // TODO: interval
         maxRows: config.maxItemCount,
         timeout: config.timeout,
-        sortString: toSortString(config.sortSpecifiers)
+        sortString: toSortString(config.sortSpecifiers),
     };
 }
 
 export type TraceGadget = GadgetConfiguration & {
-    traceId: number
-    output: TraceOutputItem[] | null
+    traceId: number;
+    output: TraceOutputItem[] | null;
 };
 
-export type ConfiguredGadgetResources<T extends string> = Partial<{[key in T]: GadgetMetadata<string>}>;
+export type ConfiguredGadgetResources<T extends string> = Partial<{ [key in T]: GadgetMetadata<string> }>;
 
 const profileGadgetResources: ConfiguredGadgetResources<GadgetProfileResource> = {
-    "cpu": cpuProfileMetadata
+    cpu: cpuProfileMetadata,
 };
 
 const snapshotGadgetResources: ConfiguredGadgetResources<GadgetSnapshotResource> = {
-    "process": processSnapshotMetadata,
-    "socket": socketSnapshotMetadata
+    process: processSnapshotMetadata,
+    socket: socketSnapshotMetadata,
 };
 
 const topGadgetResources: ConfiguredGadgetResources<GadgetTopResource> = {
-    "tcp": tcpTopMetadata,
+    tcp: tcpTopMetadata,
     "block-io": blockIOTopMetadata,
-    "ebpf": ebpfTopMetadata,
-    "file": fileTopMetadata
+    ebpf: ebpfTopMetadata,
+    file: fileTopMetadata,
 };
 
 const traceGadgetResources: ConfiguredGadgetResources<GadgetTraceResource> = {
-    "dns": dnsTraceMetadata,
-    "tcp": tcpTraceMetadata,
-    "exec": execTraceMetadata
+    dns: dnsTraceMetadata,
+    tcp: tcpTraceMetadata,
+    exec: execTraceMetadata,
 };
 
 export const configuredGadgetResources: Record<GadgetCategory, ConfiguredGadgetResources<string>> = {
-    "profile": profileGadgetResources,
-    "snapshot": snapshotGadgetResources,
-    "top": topGadgetResources,
-    "trace": traceGadgetResources
+    profile: profileGadgetResources,
+    snapshot: snapshotGadgetResources,
+    top: topGadgetResources,
+    trace: traceGadgetResources,
 };
 
-export function getGadgetMetadata(gadgetCategory: GadgetCategory, gadgetResource: string): GadgetMetadata<string> | null {
+export function getGadgetMetadata(
+    gadgetCategory: GadgetCategory,
+    gadgetResource: string,
+): GadgetMetadata<string> | null {
     return configuredGadgetResources[gadgetCategory][gadgetResource] || null;
 }
 
 export function enrich(configuration: GadgetConfiguration, items: TraceOutputItem[]): TraceOutputItem[] {
-    return items.map(item => enrichItem(configuration, item));
+    return items.map((item) => enrichItem(configuration, item));
 }
 
 export function enrichSortAndFilter(configuration: GadgetConfiguration, items: TraceOutputItem[]): TraceOutputItem[] {
@@ -90,7 +110,9 @@ export function enrichSortAndFilter(configuration: GadgetConfiguration, items: T
 function enrichItem(configuration: GadgetConfiguration, item: TraceOutputItem): TraceOutputItem {
     const itemEntries = Object.entries(item);
     const metadata = getGadgetMetadata(configuration.category, configuration.resource);
-    const derivedEntries = metadata ? metadata.allProperties.filter(isDerivedProperty).map(p => [p.key, p.valueGetter(item)]) : [];
+    const derivedEntries = metadata
+        ? metadata.allProperties.filter(isDerivedProperty).map((p) => [p.key, p.valueGetter(item)])
+        : [];
     return Object.fromEntries([...itemEntries, ...derivedEntries]);
 }
 
@@ -119,7 +141,7 @@ function asSortFunction(specifier: SortSpecifier<string>): SortFunction {
         }
 
         return 0;
-    }
+    };
 
     return descending ? negateSortFunction(fn) : fn;
 }
@@ -128,7 +150,7 @@ function combineSortFunctions(prev: SortFunction, current: SortFunction): SortFu
     return (a, b) => {
         const result = prev(a, b);
         return result === 0 ? current(a, b) : result;
-    }
+    };
 }
 
 function getSortFunction(sortSpecifiers: SortSpecifier<string>[]): SortFunction {
@@ -149,7 +171,9 @@ function takeFirstItems(items: TraceOutputItem[], maxRows: number): TraceOutputI
 
 function filterItems(configuration: GadgetConfiguration, items: TraceOutputItem[]): TraceOutputItem[] {
     if (configuration.excludeThreads) {
-        items = items.filter(item => (item as DataItem<ProcessThreadKey>).pid === (item as DataItem<ProcessThreadKey>).tid);
+        items = items.filter(
+            (item) => (item as DataItem<ProcessThreadKey>).pid === (item as DataItem<ProcessThreadKey>).tid,
+        );
     }
 
     return items;

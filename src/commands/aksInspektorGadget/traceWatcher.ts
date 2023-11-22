@@ -1,10 +1,10 @@
-import * as vscode from 'vscode';
-import { Errorable, failed, map as errmap } from '../utils/errorable';
-import { Observable, Subscription, filter, map as rxmap } from 'rxjs';
-import { ClusterOperations } from './clusterOperations';
-import { asFlatItems, parseOutputLine } from './traceItems';
-import { OutputStream } from '../utils/commands';
-import { GadgetArguments, TraceOutputItem } from '../../webview-contract/webviewDefinitions/inspektorGadget';
+import * as vscode from "vscode";
+import { Errorable, failed, map as errmap } from "../utils/errorable";
+import { Observable, Subscription, filter, map as rxmap } from "rxjs";
+import { ClusterOperations } from "./clusterOperations";
+import { asFlatItems, parseOutputLine } from "./traceItems";
+import { OutputStream } from "../utils/commands";
+import { GadgetArguments, TraceOutputItem } from "../../webview-contract/webviewDefinitions/inspektorGadget";
 
 export class TraceWatcher extends vscode.Disposable {
     private currentTraceOutput: TraceOutput | null = null;
@@ -12,7 +12,7 @@ export class TraceWatcher extends vscode.Disposable {
 
     constructor(
         readonly clusterOperations: ClusterOperations,
-        readonly clusterName: string
+        readonly clusterName: string,
     ) {
         super(() => {
             this.stopWatching();
@@ -22,18 +22,21 @@ export class TraceWatcher extends vscode.Disposable {
     async watch(
         gadgetArgs: GadgetArguments,
         outputItemsHandler: (items: TraceOutputItem[]) => void,
-        errorHandler: (e: Error) => void
+        errorHandler: (e: Error) => void,
     ): Promise<Errorable<void>> {
         this.stopWatching();
 
         const outputStream = await this.clusterOperations.watchTrace(gadgetArgs);
-        const output = errmap(outputStream, stream => new TraceOutput(stream));
+        const output = errmap(outputStream, (stream) => new TraceOutput(stream));
         if (failed(output)) {
             return output;
         }
 
         this.currentTraceOutput = output.result;
-        this.outputItemsSubscription = output.result.outputItems.subscribe({ next: outputItemsHandler, error: errorHandler });
+        this.outputItemsSubscription = output.result.outputItems.subscribe({
+            next: outputItemsHandler,
+            error: errorHandler,
+        });
 
         return { succeeded: true, result: undefined };
     }
@@ -47,14 +50,14 @@ export class TraceWatcher extends vscode.Disposable {
 }
 
 class TraceOutput extends vscode.Disposable {
-    constructor(
-        readonly source: OutputStream
-    ) {
+    constructor(readonly source: OutputStream) {
         super(() => {
             this.source.dispose();
         });
 
-        this.outputItems = this.source.lines.pipe(filter(line => !!line)).pipe(rxmap(line => this.outputLineToObjects(line)));
+        this.outputItems = this.source.lines
+            .pipe(filter((line) => !!line))
+            .pipe(rxmap((line) => this.outputLineToObjects(line)));
     }
 
     readonly outputItems: Observable<TraceOutputItem[]>;

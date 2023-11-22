@@ -1,7 +1,7 @@
 module.exports = {
     env: {
         browser: true,
-        es2020: true
+        es2020: true,
     },
     ignorePatterns: ["node_modules/", "dist/", "*.js", "*.cjs"],
     extends: [
@@ -9,42 +9,39 @@ module.exports = {
         "plugin:@typescript-eslint/recommended",
         "plugin:react/recommended",
         "plugin:react/jsx-runtime",
-        "plugin:react-hooks/recommended"
+        "plugin:react-hooks/recommended",
     ],
-    parser: '@typescript-eslint/parser',
+    parser: "@typescript-eslint/parser",
     parserOptions: {
         ecmaVersion: 2020,
         project: "./tsconfig.json",
         sourceType: "module",
         ecmaFeatures: {
-            jsx: true
-        }
+            jsx: true,
+        },
     },
     plugins: ["@typescript-eslint"],
     root: true,
     settings: {
         react: {
-            version: "detect"
-        }
+            version: "detect",
+        },
     },
     rules: {
         "@typescript-eslint/naming-convention": [
             "error",
             {
-                "selector": "variable",
-                "format": [
-                    "camelCase",
-                    "UPPER_CASE"
-                ],
-                "leadingUnderscore": "forbid",
-                "trailingUnderscore": "forbid"
-            }
+                selector: "variable",
+                format: ["camelCase", "UPPER_CASE"],
+                leadingUnderscore: "forbid",
+                trailingUnderscore: "forbid",
+            },
         ],
         "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
-        "@typescript-eslint/no-unused-vars": ["error", { "ignoreRestSiblings": true }],
+        "@typescript-eslint/no-unused-vars": ["error", { ignoreRestSiblings: true }],
         "@typescript-eslint/prefer-for-of": "error",
-        "curly": ["error","multi-line"],
-        "eqeqeq": ["error","always"],
+        curly: ["error", "multi-line"],
+        eqeqeq: ["error", "always"],
         "id-denylist": [
             "error",
             "any",
@@ -55,11 +52,11 @@ module.exports = {
             "Boolean",
             "boolean",
             "Undefined",
-            "undefined"
+            "undefined",
         ],
         "no-underscore-dangle": "error",
         "no-var": "error",
         "prefer-const": "error",
-        "prefer-template": "error"
-    }
+        "prefer-template": "error",
+    },
 };

@@ -1,10 +1,16 @@
 import * as vscode from "vscode";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { failed, getErrorMessage } from '../commands/utils/errorable';
-import { ClusterOperations } from '../commands/aksInspektorGadget/clusterOperations';
-import { TraceWatcher } from '../commands/aksInspektorGadget/traceWatcher';
-import { GadgetArguments, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef, TraceOutputItem } from "../webview-contract/webviewDefinitions/inspektorGadget";
+import { failed, getErrorMessage } from "../commands/utils/errorable";
+import { ClusterOperations } from "../commands/aksInspektorGadget/clusterOperations";
+import { TraceWatcher } from "../commands/aksInspektorGadget/traceWatcher";
+import {
+    GadgetArguments,
+    InitialState,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+    TraceOutputItem,
+} from "../webview-contract/webviewDefinitions/inspektorGadget";
 
 export class InspektorGadgetPanel extends BasePanel<"gadget"> {
     constructor(extensionUri: vscode.Uri) {
@@ -14,7 +20,7 @@ export class InspektorGadgetPanel extends BasePanel<"gadget"> {
             getNodesResponse: null,
             getPodsResponse: null,
             runTraceResponse: null,
-            updateVersion: null
+            updateVersion: null,
         });
     }
 }
@@ -23,8 +29,8 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
     constructor(
         readonly clusterOperations: ClusterOperations,
         readonly clusterName: string,
-        readonly traceWatcher: TraceWatcher
-    ) { }
+        readonly traceWatcher: TraceWatcher,
+    ) {}
 
     getTitle(): string {
         return `Inspektor Gadget on ${this.clusterName}`;
@@ -39,13 +45,15 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             getVersionRequest: () => this.handleGetVersionRequest(webview),
             deployRequest: () => this.handleDeployRequest(webview),
             undeployRequest: () => this.handleUndeployRequest(webview),
-            runStreamingTraceRequest: args => this.handleRunStreamingTraceRequest(args.traceId, args.arguments, webview),
-            runBlockingTraceRequest: args => this.handleRunBlockingTraceRequest(args.traceId, args.arguments, webview),
+            runStreamingTraceRequest: (args) =>
+                this.handleRunStreamingTraceRequest(args.traceId, args.arguments, webview),
+            runBlockingTraceRequest: (args) =>
+                this.handleRunBlockingTraceRequest(args.traceId, args.arguments, webview),
             stopStreamingTraceRequest: () => this.handleStopStreamingTraceRequest(),
             getNodesRequest: () => this.handleGetNodesRequest(webview),
             getNamespacesRequest: () => this.handleGetNamespacesRequest(webview),
-            getPodsRequest: args => this.handleGetPodsRequest(args.namespace, webview),
-            getContainersRequest: args => this.handleGetContainersRequest(args.namespace, args.podName, webview),
+            getPodsRequest: (args) => this.handleGetPodsRequest(args.namespace, webview),
+            getContainersRequest: (args) => this.handleGetContainersRequest(args.namespace, args.podName, webview),
         };
     }
 
@@ -79,20 +87,30 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
         webview.postUpdateVersion(version.result);
     }
 
-    private async handleRunStreamingTraceRequest(traceId: number, args: GadgetArguments, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const outputItemsHandler = (items: TraceOutputItem[]) => webview.postRunTraceResponse({traceId, items});
+    private async handleRunStreamingTraceRequest(
+        traceId: number,
+        args: GadgetArguments,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ): Promise<void> {
+        const outputItemsHandler = (items: TraceOutputItem[]) => webview.postRunTraceResponse({ traceId, items });
 
-        await this.traceWatcher.watch(args, outputItemsHandler, e => vscode.window.showErrorMessage(getErrorMessage(e)));
+        await this.traceWatcher.watch(args, outputItemsHandler, (e) =>
+            vscode.window.showErrorMessage(getErrorMessage(e)),
+        );
     }
 
-    private async handleRunBlockingTraceRequest(traceId: number, args: GadgetArguments, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleRunBlockingTraceRequest(
+        traceId: number,
+        args: GadgetArguments,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ): Promise<void> {
         const items = await this.clusterOperations.runTrace(args);
         if (failed(items)) {
             vscode.window.showErrorMessage(items.error);
             return;
         }
 
-        webview.postRunTraceResponse({traceId, items: items.result});
+        webview.postRunTraceResponse({ traceId, items: items.result });
     }
 
     private async handleStopStreamingTraceRequest(): Promise<void> {
@@ -106,7 +124,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postGetNodesResponse({nodes: nodes.result});
+        webview.postGetNodesResponse({ nodes: nodes.result });
     }
 
     private async handleGetNamespacesRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -116,7 +134,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postGetNamespacesResponse({namespaces: namespaces.result});
+        webview.postGetNamespacesResponse({ namespaces: namespaces.result });
     }
 
     private async handleGetPodsRequest(namespace: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
@@ -126,16 +144,20 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             return;
         }
 
-        webview.postGetPodsResponse({namespace, podNames: pods.result});
+        webview.postGetPodsResponse({ namespace, podNames: pods.result });
     }
 
-    private async handleGetContainersRequest(namespace: string, podName: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleGetContainersRequest(
+        namespace: string,
+        podName: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ): Promise<void> {
         const containers = await this.clusterOperations.getContainers(namespace, podName);
         if (failed(containers)) {
             vscode.window.showErrorMessage(containers.error);
             return;
         }
 
-        webview.postGetContainersResponse({namespace, podName, containerNames: containers.result});
+        webview.postGetContainersResponse({ namespace, podName, containerNames: containers.result });
     }
 }

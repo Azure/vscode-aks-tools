@@ -20,7 +20,9 @@ export function parseOutputLine(line: string): Errorable<object[]> {
     }
 
     const objectOrArray = parseJson<object | object[]>(line);
-    return errmap(objectOrArray, objOrArray => isArray(objOrArray) ? objOrArray as object[] : [objOrArray as object]);
+    return errmap(objectOrArray, (objOrArray) =>
+        isArray(objOrArray) ? (objOrArray as object[]) : [objOrArray as object],
+    );
 }
 
 /**
@@ -35,7 +37,7 @@ export function parseOutputLine(line: string): Errorable<object[]> {
  */
 export function asFlatItems(item: object): TraceOutputItem[] {
     const allObjectEntries = Object.entries(item).reduce(addFlatEntries, [[]]);
-    return allObjectEntries.map(objectEntries => Object.fromEntries(objectEntries) as TraceOutputItem);
+    return allObjectEntries.map((objectEntries) => Object.fromEntries(objectEntries) as TraceOutputItem);
 }
 
 type ObjectEntry = [string, unknown];
@@ -48,23 +50,23 @@ function addFlatEntries(allObjectEntries: MultiObjectEntries, entry: ObjectEntry
 
     if (jsonKeys.includes(key)) {
         // Add an entry where the value is a JSON string.
-        return allObjectEntries.map(objectEntries => [...objectEntries, [key, JSON.stringify(value)]]);
+        return allObjectEntries.map((objectEntries) => [...objectEntries, [key, JSON.stringify(value)]]);
     }
 
     if (isArray(value)) {
         // Create new target objects for every item in the array.
         // To each of those we add all the existing properties, as well as the array item properties.
-        return value.flatMap(val => addFlatEntries(allObjectEntries, [key, val]));
+        return value.flatMap((val) => addFlatEntries(allObjectEntries, [key, val]));
     }
 
     if (isObject(value)) {
         // Add entries for each of this object's properties, to each of the target objects,
         // making sure to prepend the parent key, e.g.:
         // [key, {subkey: 1}] ==> ["key.subkey": 1]
-        const prependKey: (e: ObjectEntry) => ObjectEntry = e => [`${key}.${e[0]}`, e[1]];
+        const prependKey: (e: ObjectEntry) => ObjectEntry = (e) => [`${key}.${e[0]}`, e[1]];
         return Object.entries(value).map(prependKey).reduce(addFlatEntries, allObjectEntries);
     }
 
     // This is a simple property. Append an entry for this to every target object.
-    return allObjectEntries.map(objectEntries => [...objectEntries, [key, value]]);
+    return allObjectEntries.map((objectEntries) => [...objectEntries, [key, value]]);
 }
