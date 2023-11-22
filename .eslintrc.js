@@ -4,7 +4,7 @@ module.exports = {
         node: true,
         mocha: true
     },
-    ignorePatterns: ["/webview-ui/*", "*.js"],
+    ignorePatterns: ["node_modules/", "dist/", "out/", "webview-ui/", "*.js"],
     extends: [
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",

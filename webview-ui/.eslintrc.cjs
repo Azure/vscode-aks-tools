@@ -3,7 +3,7 @@ module.exports = {
         browser: true,
         es2020: true
     },
-    ignorePatterns: ["*.js", "*.cjs"],
+    ignorePatterns: ["node_modules/", "dist/", "*.js", "*.cjs"],
     extends: [
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
