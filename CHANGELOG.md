@@ -8,7 +8,7 @@
 * Fix the filePath as empty issue. (TCP Dump Issue)
 * Fix vscode engine update.
 * Add dependabot file.
-* Dependent bot updates.
+* Dependabot updates.
 * Clean up unused or unnecessary dependencies.
 
 Collaborations and thanks to @peterbom.
