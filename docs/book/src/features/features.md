@@ -20,6 +20,8 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 
 ![Cloud explorer create cluster webview](../resources/create-cluster-webview.png)
 
-![Cloud explorer tcp menu](../resources/right-click-tcp-dump-collect.png.png)
+![Cloud explorer tcp menu](../resources/right-click-tcp-dump-collect.png)
 
-![Cloud explorer tcp dump webview](../resources/tcp-dump-linux-node.png.png)
+![Cloud explorer tcp dump webview](../resources/tcp-dump-linux-node.png)
+
+![AKS Show Properties webview](../resources/show-properties-reconcile.png)
