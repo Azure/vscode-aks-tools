@@ -1,10 +1,11 @@
+.github/
+.vscode-test/
 node_modules/
 dist/
-out/
 docs/
+out/
 publish-book/
 resources/
-.github/
 
 **/*.json
 **/*.md

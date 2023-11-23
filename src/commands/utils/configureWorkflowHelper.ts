@@ -1,4 +1,4 @@
-import path = require("path");
+import path from "path";
 import * as fs from "fs";
 import { getExtensionPath } from "./host";
 import * as vscode from "vscode";

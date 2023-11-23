@@ -63,7 +63,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
 
     private async sendResponse(
         webview: MessageSink<ToWebViewMsgDef>,
-        command: string,
+        _command: string,
         output: string | null,
         errorMessage: string | null,
     ) {

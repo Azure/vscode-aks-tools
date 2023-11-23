@@ -6,7 +6,7 @@ import { getExtension } from "../utils/host";
 import { failed } from "../utils/errorable";
 import * as tmpfile from "../utils/tempfile";
 import { getKubectlGadgetBinaryPath } from "../utils/helper/kubectlGadgetDownload";
-import path = require("path");
+import path from "path";
 import { InspektorGadgetDataProvider, InspektorGadgetPanel } from "../../panels/InspektorGadgetPanel";
 import { KubectlClusterOperations } from "./clusterOperations";
 import { TraceWatcher } from "./traceWatcher";

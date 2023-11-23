@@ -14,7 +14,7 @@ import {
 } from "../webview-contract/webviewDefinitions/azureServiceOperator";
 import { AzureAccountExtensionApi, getServicePrincipalAccess } from "../commands/utils/azureAccount";
 import { NonZeroExitCodeBehaviour, invokeKubectlCommand } from "../commands/utils/kubectl";
-import path = require("path");
+import path from "path";
 import * as fs from "fs/promises";
 import { createTempFile } from "../commands/utils/tempfile";
 

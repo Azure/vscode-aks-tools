@@ -3,7 +3,7 @@ import * as os from "os";
 import { getDraftConfig } from "../config";
 import { Errorable, failed } from "../errorable";
 import { getToolBinaryPath } from "./binaryDownloadHelper";
-import path = require("path");
+import path from "path";
 
 async function getLatestDraftReleaseTag() {
     const draftConfig = getDraftConfig();

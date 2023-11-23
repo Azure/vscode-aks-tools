@@ -3,7 +3,7 @@ import * as os from "os";
 import * as fs from "fs";
 import { moveFile } from "move-file";
 import { Errorable, failed } from "../errorable";
-import path = require("path");
+import path from "path";
 import { longRunning } from "../host";
 
 function getToolBaseInstallFolder(toolName: string): string {

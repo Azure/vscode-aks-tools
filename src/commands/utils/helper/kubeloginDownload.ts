@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as os from "os";
-import path = require("path");
+import path from "path";
 import { getKubeloginConfig } from "../config";
 import { Errorable, failed } from "../errorable";
 import { getToolBinaryPath } from "./binaryDownloadHelper";
