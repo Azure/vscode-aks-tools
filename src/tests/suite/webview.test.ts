@@ -1,16 +1,16 @@
-import * as vscode from 'vscode';
-import { MessageHandler, MessageSink } from '../../webview-contract/messaging';
-import { CssRule, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from '../../webview-contract/webviewDefinitions/testStyleViewer';
-import { BasePanel, PanelDataProvider } from '../../panels/BasePanel';
-import { getExtensionPath } from '../../commands/utils/host';
-import { map as errmap, Succeeded, succeeded } from '../../commands/utils/errorable';
-import { expect } from 'chai';
+import * as vscode from "vscode";
+import { MessageHandler } from "../../webview-contract/messaging";
+import { CssRule, InitialState, ToVsCodeMsgDef } from "../../webview-contract/webviewDefinitions/testStyleViewer";
+import { BasePanel, PanelDataProvider } from "../../panels/BasePanel";
+import { getExtensionPath } from "../../commands/utils/host";
+import { map as errmap, Succeeded, succeeded } from "../../commands/utils/errorable";
+import { expect } from "chai";
 
 const extensionPathResult = getExtensionPath();
-const extensionUriResult = errmap(extensionPathResult, p => vscode.Uri.file(p));
+const extensionUriResult = errmap(extensionPathResult, (p) => vscode.Uri.file(p));
 
-describe('Webview Styles', () => {
-    it('should contain css variables and rules', async () => {
+describe("Webview Styles", () => {
+    it("should contain css variables and rules", async () => {
         expect(succeeded(extensionUriResult)).to.be.true;
         const extensionUri = (extensionUriResult as Succeeded<vscode.Uri>).result;
         const panel = new StyleTestPanel(extensionUri);
@@ -34,14 +34,14 @@ class StyleTestPanel extends BasePanel<"style"> {
 
 class StyleTestDataProvider implements PanelDataProvider<"style"> {
     readonly cssVarsPromise: Promise<string[]>;
-    private _cssVarsResolve?: (cssVars: string[]) => void;
+    private cssVarsResolve?: (cssVars: string[]) => void;
 
     readonly rulesPromise: Promise<CssRule[]>;
-    private _rulesResolve?: (rules: CssRule[]) => void;
+    private rulesResolve?: (rules: CssRule[]) => void;
 
     constructor() {
-        this.cssVarsPromise = new Promise(resolve => this._cssVarsResolve = resolve);
-        this.rulesPromise = new Promise(resolve => this._rulesResolve = resolve);
+        this.cssVarsPromise = new Promise((resolve) => (this.cssVarsResolve = resolve));
+        this.rulesPromise = new Promise((resolve) => (this.rulesResolve = resolve));
     }
 
     getTitle(): string {
@@ -52,10 +52,10 @@ class StyleTestDataProvider implements PanelDataProvider<"style"> {
         return { isVSCode: true };
     }
 
-    getMessageHandler(_webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+    getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
-            reportCssRules: args => this._rulesResolve && this._rulesResolve(args.rules),
-            reportCssVars: args => this._cssVarsResolve && this._cssVarsResolve(args.cssVars)
+            reportCssRules: (args) => this.rulesResolve && this.rulesResolve(args.rules),
+            reportCssVars: (args) => this.cssVarsResolve && this.cssVarsResolve(args.cssVars),
         };
     }
 }

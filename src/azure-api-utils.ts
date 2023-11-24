@@ -1,6 +1,6 @@
-export function parseResource(armId: string): { resourceGroupName: string | undefined, name: string | undefined } {
-    const bits = armId.split('/');
-    const resourceGroupName = bitAfter(bits, 'resourceGroups');
+export function parseResource(armId: string): { resourceGroupName: string | undefined; name: string | undefined } {
+    const bits = armId.split("/");
+    const resourceGroupName = bitAfter(bits, "resourceGroups");
     const name = bits[bits.length - 1];
     return { resourceGroupName, name };
 }

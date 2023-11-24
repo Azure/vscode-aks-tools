@@ -1,30 +1,33 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
-import { getSASKey, LinkDuration } from '../../utils/azurestorage';
-import { parseResource } from '../../../azure-api-utils';
-import { StorageManagementClient } from '@azure/arm-storage';
-import { PeriscopeStorage, PodLogs, UploadStatus } from '../models/storage';
-import { MonitorClient, DiagnosticSettingsResourceCollection } from '@azure/arm-monitor';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as semver from 'semver';
-import AksClusterTreeItem from '../../../tree/aksClusterTreeItem';
-import * as tmpfile from '../../utils/tempfile';
-import { combine, Errorable, failed } from '../../utils/errorable';
-import { invokeKubectlCommand } from '../../utils/kubectl';
-import { KustomizeConfig } from '../models/config';
-import { ClusterFeatures } from '../models/clusterFeatures';
-import { ContainerServiceClient } from '@azure/arm-containerservice';
-import { getWindowsNodePoolKubernetesVersions } from '../../utils/clusters';
-import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob';
-const tmp = require('tmp');
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
+import { getSASKey, LinkDuration } from "../../utils/azurestorage";
+import { parseResource } from "../../../azure-api-utils";
+import { StorageManagementClient } from "@azure/arm-storage";
+import { PeriscopeStorage, PodLogs, UploadStatus } from "../models/storage";
+import { MonitorClient, DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
+import * as path from "path";
+import * as fs from "fs";
+import * as semver from "semver";
+import AksClusterTreeItem from "../../../tree/aksClusterTreeItem";
+import * as tmpfile from "../../utils/tempfile";
+import { combine, Errorable, failed } from "../../utils/errorable";
+import { invokeKubectlCommand } from "../../utils/kubectl";
+import { KustomizeConfig } from "../models/config";
+import { ClusterFeatures } from "../models/clusterFeatures";
+import { ContainerServiceClient } from "@azure/arm-containerservice";
+import { getWindowsNodePoolKubernetesVersions } from "../../utils/clusters";
+import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
+import { dirSync } from "tmp";
 
 export async function getClusterDiagnosticSettings(
-    cluster: AksClusterTreeItem
+    cluster: AksClusterTreeItem,
 ): Promise<DiagnosticSettingsResourceCollection | undefined> {
     try {
         // Get daignostic setting via diagnostic monitor
-        const diagnosticMonitor = new MonitorClient(cluster.subscription.credentials, cluster.subscription.subscriptionId);
+        const diagnosticMonitor = new MonitorClient(
+            cluster.subscription.credentials,
+            cluster.subscription.subscriptionId,
+        );
         const diagnosticSettings = await diagnosticMonitor.diagnosticSettings.list(cluster.id!);
 
         return diagnosticSettings;
@@ -34,7 +37,9 @@ export async function getClusterDiagnosticSettings(
     }
 }
 
-export async function chooseStorageAccount(diagnosticSettings: DiagnosticSettingsResourceCollection): Promise<string | void> {
+export async function chooseStorageAccount(
+    diagnosticSettings: DiagnosticSettingsResourceCollection,
+): Promise<string | void> {
     /*
         Check the diagnostic setting is 1 or more than 1:
           1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
@@ -48,7 +53,7 @@ export async function chooseStorageAccount(diagnosticSettings: DiagnosticSetting
         return selectedStorageAccount;
     }
 
-    const storageAccountNameToStorageIdArray: { id: string; label: string; }[] = [];
+    const storageAccountNameToStorageIdArray: { id: string; label: string }[] = [];
 
     diagnosticSettings.value?.forEach((item) => {
         if (item.storageAccountId) {
@@ -65,36 +70,51 @@ export async function chooseStorageAccount(diagnosticSettings: DiagnosticSetting
     const accountQuickPicks = storageAccountNameToStorageIdArray;
 
     // Create quick pick for more than 1 storage account scenario.
-    const selectedQuickPick = await vscode.window.showQuickPick(
-        accountQuickPicks,
-        {
-            placeHolder: "Select storage account for Periscope deployment:",
-            ignoreFocusOut: true
-        });
+    const selectedQuickPick = await vscode.window.showQuickPick(accountQuickPicks, {
+        placeHolder: "Select storage account for Periscope deployment:",
+        ignoreFocusOut: true,
+    });
 
     if (selectedQuickPick) {
         return selectedQuickPick.id;
     }
-
 }
 
 export async function getStorageInfo(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     cluster: AksClusterTreeItem,
     diagnosticStorageAccountId: string,
-    clusterKubeConfig: string
+    clusterKubeConfig: string,
 ): Promise<Errorable<PeriscopeStorage>> {
     try {
         const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId);
 
         if (!resourceGroupName || !accountName) {
-            return { succeeded: false, error: `Invalid storage id ${diagnosticStorageAccountId} associated with the cluster` };
+            return {
+                succeeded: false,
+                error: `Invalid storage id ${diagnosticStorageAccountId} associated with the cluster`,
+            };
         }
 
         // Get keys from storage client.
-        const storageClient = new StorageManagementClient(cluster.subscription.credentials, cluster.subscription.subscriptionId);
+        const storageClient = new StorageManagementClient(
+            cluster.subscription.credentials,
+            cluster.subscription.subscriptionId,
+        );
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
-        const storageKey = storageAccKeyList.keys?.find((it) => it.keyName === "key1")?.value!;
+        if (storageAccKeyList.keys === undefined) {
+            return { succeeded: false, error: "No keys found for storage account." };
+        }
+
+        const storageKeyObject = storageAccKeyList.keys.find((it) => it.keyName === "key1");
+        if (storageKeyObject === undefined) {
+            return { succeeded: false, error: "No key with name 'key1' found for storage account." };
+        }
+
+        const storageKey = storageKeyObject.value;
+        if (storageKey === undefined) {
+            return { succeeded: false, error: "Storage key with name 'key1' has no value." };
+        }
 
         const acctProperties = await storageClient.storageAccounts.getProperties(resourceGroupName, accountName);
         const blobEndpoint = acctProperties.primaryEndpoints?.blob;
@@ -112,7 +132,7 @@ export async function getStorageInfo(
             storageKey: storageKey,
             blobEndpoint,
             storageDeploymentSas: getSASKey(accountName, storageKey, LinkDuration.DownloadNow),
-            sevenDaysSasKey: getSASKey(accountName, storageKey, LinkDuration.Shareable)
+            sevenDaysSasKey: getSASKey(accountName, storageKey, LinkDuration.Shareable),
         };
 
         return { succeeded: true, result: clusterStorageInfo };
@@ -125,9 +145,9 @@ export async function prepareAKSPeriscopeKustomizeOverlay(
     clusterStorageInfo: PeriscopeStorage,
     kustomizeConfig: KustomizeConfig,
     clusterFeatures: ClusterFeatures,
-    runId: string
+    runId: string,
 ): Promise<Errorable<string>> {
-    const kustomizeDirObj = tmp.dirSync();
+    const kustomizeDirObj = dirSync();
     const kustomizeFile = path.join(kustomizeDirObj.name, "kustomization.yaml");
 
     // Build the list of components to include in the Kustomize overlay spec based on cluster features.
@@ -186,21 +206,26 @@ configMapGenerator:
     }
 }
 
-export async function getNodeNames(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterKubeConfig: string): Promise<Errorable<string[]>> {
+export async function getNodeNames(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    clusterKubeConfig: string,
+): Promise<Errorable<string[]>> {
     const runCommandResult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(
         clusterKubeConfig,
         "YAML",
-        (kubeConfigFile) => invokeKubectlCommand(kubectl, kubeConfigFile, 'get node -o jsonpath="{.items[*].metadata.name}"'));
+        (kubeConfigFile) =>
+            invokeKubectlCommand(kubectl, kubeConfigFile, 'get node -o jsonpath="{.items[*].metadata.name}"'),
+    );
 
     if (failed(runCommandResult)) return runCommandResult;
 
-    return { succeeded: true, result: runCommandResult.result.stdout.split(' ') };
+    return { succeeded: true, result: runCommandResult.result.stdout.split(" ") };
 }
 
 export async function checkUploadStatus(
     periscopeStorage: PeriscopeStorage,
     runId: string,
-    nodeNames: string[]
+    nodeNames: string[],
 ): Promise<UploadStatus[]> {
     const storageAccount = periscopeStorage.storageName;
     const storageKey = periscopeStorage.storageKey;
@@ -208,10 +233,7 @@ export async function checkUploadStatus(
     // Use SharedKeyCredential with storage account and account key
     const sharedKeyCredential = new StorageSharedKeyCredential(storageAccount, storageKey);
 
-    const blobServiceClient = new BlobServiceClient(
-        periscopeStorage.blobEndpoint,
-        sharedKeyCredential
-    );
+    const blobServiceClient = new BlobServiceClient(periscopeStorage.blobEndpoint, sharedKeyCredential);
 
     const uploadStatuses = [];
 
@@ -220,7 +242,7 @@ export async function checkUploadStatus(
         const blobName = `${runId}/${nodeName}/${nodeName}.zip`;
         const blobClient = containerClient.getBlobClient(blobName);
         const isUploaded = await blobClient.exists();
-        uploadStatuses.push({nodeName, isUploaded});
+        uploadStatuses.push({ nodeName, isUploaded });
     }
 
     return uploadStatuses;
@@ -230,49 +252,53 @@ export async function getNodeLogs(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     clusterKubeConfig: string,
     periscopeNamespace: string,
-    nodeName: string
+    nodeName: string,
 ): Promise<Errorable<PodLogs[]>> {
-    const getPodsCommand =
-        `get pods -n ${periscopeNamespace} --field-selector "spec.nodeName=${nodeName}" -o jsonpath="{.items[*].metadata.name}"`;
+    const getPodsCommand = `get pods -n ${periscopeNamespace} --field-selector "spec.nodeName=${nodeName}" -o jsonpath="{.items[*].metadata.name}"`;
 
     // Run kubectl commands in parallel to gather some output about cluster features.
-    return await tmpfile.withOptionalTempFile<Errorable<PodLogs[]>>(clusterKubeConfig, "YAML", async (kubeConfigFile) => {
-        const getPodsResult = await invokeKubectlCommand(kubectl, kubeConfigFile, getPodsCommand);
-        if (failed(getPodsResult)) {
-            return getPodsResult;
-        }
-
-        const podNames = getPodsResult.result.stdout.split(' ');
-
-        const podLogsResults = await Promise.all(podNames.map(getPodLogs));
-        const podLogs = combine(podLogsResults);
-        if (failed(podLogs)) {
-            return podLogs;
-        }
-
-        return { succeeded: true, result: podLogs.result };
-
-        async function getPodLogs(podName: string): Promise<Errorable<PodLogs>> {
-            const cmd = `logs -n ${periscopeNamespace} ${podName}`;
-            const cmdResult = await invokeKubectlCommand(kubectl, kubeConfigFile, cmd);
-            if (failed(cmdResult)) {
-                return cmdResult;
+    return await tmpfile.withOptionalTempFile<Errorable<PodLogs[]>>(
+        clusterKubeConfig,
+        "YAML",
+        async (kubeConfigFile) => {
+            const getPodsResult = await invokeKubectlCommand(kubectl, kubeConfigFile, getPodsCommand);
+            if (failed(getPodsResult)) {
+                return getPodsResult;
             }
 
-            const result = { podName, logs: cmdResult.result.stdout };
-            return { succeeded: true, result };
-        }
-    });
+            const podNames = getPodsResult.result.stdout.split(" ");
+
+            const podLogsResults = await Promise.all(podNames.map(getPodLogs));
+            const podLogs = combine(podLogsResults);
+            if (failed(podLogs)) {
+                return podLogs;
+            }
+
+            return { succeeded: true, result: podLogs.result };
+
+            async function getPodLogs(podName: string): Promise<Errorable<PodLogs>> {
+                const cmd = `logs -n ${periscopeNamespace} ${podName}`;
+                const cmdResult = await invokeKubectlCommand(kubectl, kubeConfigFile, cmd);
+                if (failed(cmdResult)) {
+                    return cmdResult;
+                }
+
+                const result = { podName, logs: cmdResult.result.stdout };
+                return { succeeded: true, result };
+            }
+        },
+    );
 }
 
-async function extractContainerName(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterKubeConfig: string): Promise<Errorable<string>> {
+async function extractContainerName(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    clusterKubeConfig: string,
+): Promise<Errorable<string>> {
     const runCommandResult = await getClusterInfo(kubectl, clusterKubeConfig);
     if (failed(runCommandResult)) return runCommandResult;
 
     const hostNameResult = await getHostName(runCommandResult.result);
     if (failed(hostNameResult)) return hostNameResult;
-
-    let containerName: string;
 
     // Form containerName from FQDN hence "-hcp-"" aka standard aks cluster vs "privatelink.<region>.azmk8s.io" private cluster.
     // https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
@@ -282,17 +308,22 @@ async function extractContainerName(kubectl: k8s.APIAvailable<k8s.KubectlV1>, cl
     if (lenContainerName === -1) {
         lenContainerName = maxContainerNameLength;
     }
-    containerName = hostNameResult.result.substr(0, lenContainerName);
+
+    const containerName = hostNameResult.result.substring(0, lenContainerName);
 
     return { succeeded: true, result: containerName };
 }
 
-async function getClusterInfo(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterKubeConfig: string): Promise<Errorable<string>> {
+async function getClusterInfo(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    clusterKubeConfig: string,
+): Promise<Errorable<string>> {
     // Run cluster-info to get DNS Core hostname.
     const runCommandResult = await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(
         clusterKubeConfig,
         "YAML",
-        (kubeConfigFile) => invokeKubectlCommand(kubectl, kubeConfigFile, 'cluster-info'));
+        (kubeConfigFile) => invokeKubectlCommand(kubectl, kubeConfigFile, "cluster-info"),
+    );
 
     if (failed(runCommandResult)) return runCommandResult;
 
@@ -300,19 +331,18 @@ async function getClusterInfo(kubectl: k8s.APIAvailable<k8s.KubectlV1>, clusterK
 }
 
 function getHostName(output: string): Errorable<string> {
-
     // Get DNS Core hostname which Periscope use it as name of the container.
     // Doc: https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#discovering-builtin-services
     const matches = output.match(/(https?:\/\/[^\s]+)/g);
     if (matches === null) {
-        return { succeeded: false, error: 'Extract container name failed with no match.' };
+        return { succeeded: false, error: "Extract container name failed with no match." };
     }
 
     let hostName: string;
-    if (matches.length > 0 && matches[0].indexOf('://') !== -1) {
-        hostName = matches[0].replace('https://', '').split('.')[0];
+    if (matches.length > 0 && matches[0].indexOf("://") !== -1) {
+        hostName = matches[0].replace("https://", "").split(".")[0];
     } else {
-        return { succeeded: false, error: 'Cluster-Info contains no host name.' };
+        return { succeeded: false, error: "Cluster-Info contains no host name." };
     }
 
     return { succeeded: true, result: hostName };
@@ -321,9 +351,13 @@ function getHostName(output: string): Errorable<string> {
 export async function getClusterFeatures(
     containerClient: ContainerServiceClient,
     resourceGroupName: string,
-    clusterName: string
+    clusterName: string,
 ): Promise<Errorable<ClusterFeatures>> {
-    const windowsNodePoolK8sVersions = await getWindowsNodePoolKubernetesVersions(containerClient, resourceGroupName, clusterName);
+    const windowsNodePoolK8sVersions = await getWindowsNodePoolKubernetesVersions(
+        containerClient,
+        resourceGroupName,
+        clusterName,
+    );
     if (failed(windowsNodePoolK8sVersions)) return windowsNodePoolK8sVersions;
 
     // Build the feature list.

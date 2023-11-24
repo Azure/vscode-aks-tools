@@ -72,24 +72,28 @@ export function combine<T>(es: Errorable<T>[]): Errorable<T[]> {
     if (failures.length > 0) {
         return {
             succeeded: false,
-            error: failures.map(f => f.error).join('\n')
+            error: failures.map((f) => f.error).join("\n"),
         };
     }
 
     return {
         succeeded: true,
-        result: es.map(e => (e as Succeeded<T>).result)
+        result: es.map((e) => (e as Succeeded<T>).result),
     };
 }
 
 export function getErrorMessage(error: unknown) {
     if (error instanceof Error) {
-       return error.message;
+        return error.message;
     }
     return String(error);
 }
 
-export function findOrError<T>(items: T[], predicate: (value: T, index: number) => boolean, errorMessage: string): Errorable<T> {
+export function findOrError<T>(
+    items: T[],
+    predicate: (value: T, index: number) => boolean,
+    errorMessage: string,
+): Errorable<T> {
     const foundItem = items.find(predicate);
     return foundItem ? { succeeded: true, result: foundItem } : { succeeded: false, error: errorMessage };
 }

@@ -1,18 +1,20 @@
-import * as k8s from 'vscode-kubernetes-tools-api';
-import * as vscode from 'vscode';
-import { Errorable } from '../commands/utils/errorable';
+import * as k8s from "vscode-kubernetes-tools-api";
+import * as vscode from "vscode";
+import { Errorable } from "../commands/utils/errorable";
 
 export class AzureResourceNodeContributor implements k8s.ClusterExplorerV1.NodeContributor {
     constructor(
         private readonly explorer: k8s.ClusterExplorerV1,
-        private readonly kubectl: k8s.KubectlV1
+        private readonly kubectl: k8s.KubectlV1,
     ) {}
 
     contributesChildren(parent?: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): boolean {
-        return parent?.nodeType === 'context';
+        return parent?.nodeType === "context";
     }
 
-    async getChildren(parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined): Promise<k8s.ClusterExplorerV1.Node[]> {
+    async getChildren(
+        parent: k8s.ClusterExplorerV1.ClusterExplorerNode | undefined,
+    ): Promise<k8s.ClusterExplorerV1.Node[]> {
         if (parent === undefined) {
             return [];
         }
@@ -24,7 +26,7 @@ export class AzureResourceNodeContributor implements k8s.ClusterExplorerV1.NodeC
 class AzureServicesFolderNode implements k8s.ClusterExplorerV1.Node {
     constructor(
         private readonly explorer: k8s.ClusterExplorerV1,
-        private readonly kubectl: k8s.KubectlV1
+        private readonly kubectl: k8s.KubectlV1,
     ) {}
 
     async getChildren(): Promise<k8s.ClusterExplorerV1.Node[]> {
@@ -35,15 +37,22 @@ class AzureServicesFolderNode implements k8s.ClusterExplorerV1.Node {
         }
 
         // Map the custom resource definitions into NodeSources that the K8s extension knows how to turn into nodes.
-        const nodeSources = crdTypes.result.map(t => this.explorer.nodeSources.resourceFolder(t.displayName, t.pluralDisplayName, t.manifestKind, t.abbreviation));
+        const nodeSources = crdTypes.result.map((t) =>
+            this.explorer.nodeSources.resourceFolder(
+                t.displayName,
+                t.pluralDisplayName,
+                t.manifestKind,
+                t.abbreviation,
+            ),
+        );
 
         // Turn the NodeSources into nodes.
-        const nodes = (await Promise.all(nodeSources.map(ns => ns.nodes()))).flat();
+        const nodes = (await Promise.all(nodeSources.map((ns) => ns.nodes()))).flat();
         return nodes;
     }
 
     getTreeItem(): vscode.TreeItem {
-        return new vscode.TreeItem('Azure Services', vscode.TreeItemCollapsibleState.Collapsed);
+        return new vscode.TreeItem("Azure Services", vscode.TreeItemCollapsibleState.Collapsed);
     }
 }
 
@@ -63,17 +72,20 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
     // This means we end up with a blank line at the start of the output, but it's otherwise consistent.
     const command = `get crd -o jsonpath="{range .items[*]}{\\"\\n\\"}{.metadata.name}{\\" \\"}{.spec.names.kind}{\\" \\"}{.spec.names.singular}{\\" \\"}{.spec.names.plural}{\\" \\"}{.spec.names.shortNames[0]}{end}"`;
     const crdShellResult = await kubectl.invokeCommand(command);
-    if (crdShellResult == undefined) {
+    if (crdShellResult === undefined) {
         return { succeeded: false, error: `Failed to run kubectl command: ${command}` };
     }
 
     if (crdShellResult.code !== 0) {
-        return { succeeded: false, error: `Kubectl returned error ${crdShellResult.code} for ${command}\nError: ${crdShellResult.stderr}` };
+        return {
+            succeeded: false,
+            error: `Kubectl returned error ${crdShellResult.code} for ${command}\nError: ${crdShellResult.stderr}`,
+        };
     }
 
-    const lines = crdShellResult.stdout.split('\n').filter(l => l.length > 0);
+    const lines = crdShellResult.stdout.split("\n").filter((l) => l.length > 0);
 
-    const customResources = lines.map(line => {
+    const customResources = lines.map((line) => {
         const parts = line.split(" ");
         const metadataName = parts[0];
         const kind = parts[1];
@@ -84,14 +96,14 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
         return {
             name: metadataName,
             displayName: singularName,
-            pluralDisplayName:  pluralName,
+            pluralDisplayName: pluralName,
             manifestKind: kind,
-            abbreviation
+            abbreviation,
         };
     });
 
     // Filter the custom resources to only include Azure resources
-    const azureResources = customResources.filter(r => r.name.includes("azure.com"));
+    const azureResources = customResources.filter((r) => r.name.includes("azure.com"));
 
-    return { succeeded: true, result: azureResources }
+    return { succeeded: true, result: azureResources };
 }

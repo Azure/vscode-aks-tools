@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import './vars.css';
-import '../main.css';
+import "./vars.css";
+import "../main.css";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getCreateClusterScenarios } from "./createClusterTests";
@@ -37,13 +37,13 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     gadget: getInspektorGadgetScenarios(),
     kubectl: getKubectlScenarios(),
     aso: getASOScenarios(),
-    tcpDump: getTCPDumpScenarios()
+    tcpDump: getTCPDumpScenarios(),
 };
 
-const testScenarios = Object.values(contentTestScenarios).flatMap(s => s);
+const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);
 
 root.render(
     <StrictMode>
         <TestScenarioSelector scenarios={testScenarios} />
-    </StrictMode>
+    </StrictMode>,
 );

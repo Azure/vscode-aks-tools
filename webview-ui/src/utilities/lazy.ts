@@ -1,20 +1,20 @@
 enum LoadingState {
     NotLoaded,
     Loading,
-    Loaded
+    Loaded,
 }
 
 export type NotLoaded = {
-    loadingState: LoadingState.NotLoaded
+    loadingState: LoadingState.NotLoaded;
 };
 
 export type Loading = {
-    loadingState: LoadingState.Loading
+    loadingState: LoadingState.Loading;
 };
 
 export type Loaded<T> = {
-    loadingState: LoadingState.Loaded
-    value: T
+    loadingState: LoadingState.Loaded;
+    value: T;
 };
 
 export type Lazy<T> = NotLoaded | Loading | Loaded<T>;

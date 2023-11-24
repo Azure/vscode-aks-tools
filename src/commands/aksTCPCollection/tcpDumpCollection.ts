@@ -1,14 +1,14 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getKubernetesClusterInfo } from '../utils/clusters';
-import { getExtension } from '../utils/host';
-import { Errorable, failed, map as errmap } from '../utils/errorable';
-import * as tmpfile from '../utils/tempfile';
-import { TcpDumpDataProvider, TcpDumpPanel } from '../../panels/TcpDumpPanel';
-import { getVersion, invokeKubectlCommand } from '../utils/kubectl';
+import { getKubernetesClusterInfo } from "../utils/clusters";
+import { getExtension } from "../utils/host";
+import { Errorable, failed, map as errmap } from "../utils/errorable";
+import * as tmpfile from "../utils/tempfile";
+import { TcpDumpDataProvider, TcpDumpPanel } from "../../panels/TcpDumpPanel";
+import { getVersion, invokeKubectlCommand } from "../utils/kubectl";
 
-export async function aksTCPDump(_context: IActionContext, target: any) {
+export async function aksTCPDump(_context: IActionContext, target: unknown) {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
@@ -53,14 +53,23 @@ export async function aksTCPDump(_context: IActionContext, target: any) {
         return;
     }
 
-    const dataProvider = new TcpDumpDataProvider(kubectl, kubeConfigFile.filePath, kubectlVersion.result, clusterInfo.result.name, linuxNodesList.result);
+    const dataProvider = new TcpDumpDataProvider(
+        kubectl,
+        kubeConfigFile.filePath,
+        kubectlVersion.result,
+        clusterInfo.result.name,
+        linuxNodesList.result,
+    );
     const panel = new TcpDumpPanel(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);
 }
 
-async function getLinuxNodes(kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFile: string): Promise<Errorable<string[]>> {
+async function getLinuxNodes(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+): Promise<Errorable<string[]>> {
     const command = `get node -l kubernetes.io/os=linux --no-headers -o custom-columns=":metadata.name"`;
     const commandResult = await invokeKubectlCommand(kubectl, kubeConfigFile, command);
-    return errmap(commandResult, sr => sr.stdout.trim().split("\n"));
+    return errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
 }

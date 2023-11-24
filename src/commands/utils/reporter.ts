@@ -1,12 +1,13 @@
-import TelemetryReporter from 'vscode-extension-telemetry';
-import vscode = require('vscode');
+import TelemetryReporter from "vscode-extension-telemetry";
+import vscode from "vscode";
+import meta from "../../../package.json";
 
 export let reporter: TelemetryReporter;
 
 export class Reporter extends vscode.Disposable {
-    constructor(ctx: vscode.ExtensionContext) {
+    constructor() {
         super(() => reporter.dispose());
-        const packageInfo = getPackageInfo(ctx);
+        const packageInfo = getPackageInfo();
         if (packageInfo) {
             reporter = packageInfo && new TelemetryReporter(packageInfo.name, packageInfo.version, packageInfo.aiKey);
         }
@@ -19,8 +20,8 @@ interface IPackageInfo {
     aiKey: string;
 }
 
-function getPackageInfo(context: vscode.ExtensionContext): IPackageInfo | undefined {
-    const extensionPackage = require('../../../package.json');
+function getPackageInfo(): IPackageInfo | undefined {
+    const extensionPackage = meta;
     if (extensionPackage) {
         return { name: extensionPackage.name, version: extensionPackage.version, aiKey: extensionPackage.aiKey };
     }

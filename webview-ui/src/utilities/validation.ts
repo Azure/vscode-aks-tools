@@ -1,8 +1,8 @@
 export interface Validatable<T> {
-    value: T | null
-    isChecked: boolean
-    isValid: boolean
-    message: string | null
+    value: T | null;
+    isChecked: boolean;
+    isValid: boolean;
+    message: string | null;
 }
 
 export function unset<T>(): Validatable<T> {
@@ -10,8 +10,8 @@ export function unset<T>(): Validatable<T> {
         value: null,
         isChecked: false,
         isValid: false,
-        message: null
-    }
+        message: null,
+    };
 }
 
 export function shouldShowMessage<T>(v: Validatable<T>): boolean {
@@ -23,9 +23,9 @@ export function createHandler<TValue, TEvent, TElement>(
     valueLookup: (elem: TElement) => TValue | null,
     checkValidity: (elem: TElement) => boolean,
     getMessage: (elem: TElement) => string,
-    dispatch: React.Dispatch<React.SetStateAction<Validatable<TValue>>>
+    dispatch: React.Dispatch<React.SetStateAction<Validatable<TValue>>>,
 ): (e: TEvent) => void {
-    return e => {
+    return (e) => {
         const elem = elemLookup(e);
         const value = valueLookup(elem);
         const isValid = checkValidity(elem);
@@ -34,7 +34,7 @@ export function createHandler<TValue, TEvent, TElement>(
             value,
             isChecked: true,
             isValid,
-            message
+            message,
         });
-    }
+    };
 }

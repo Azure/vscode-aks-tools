@@ -1,15 +1,15 @@
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./Kubectl.module.css";
-import { FormEvent } from "react";
+import { FormEvent, KeyboardEvent } from "react";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface CommandInputProps {
-    command: string
-    matchesExisting: boolean
-    onCommandUpdate: (command: string) => void
-    onRunCommand: (command: string) => void
-    onSaveRequest: () => void
+    command: string;
+    matchesExisting: boolean;
+    onCommandUpdate: (command: string) => void;
+    onRunCommand: (command: string) => void;
+    onSaveRequest: () => void;
 }
 
 export function CommandInput(props: CommandInputProps) {
@@ -18,9 +18,9 @@ export function CommandInput(props: CommandInputProps) {
         props.onCommandUpdate(input.value);
     }
 
-    function onKeyPress(e: any) {
+    function onKeyPress(e: KeyboardEvent<HTMLElement>) {
         if (e.nativeEvent instanceof KeyboardEvent) {
-            if (e.code == 'Enter') {
+            if (e.code === "Enter") {
                 props.onRunCommand(props.command);
             }
         }
@@ -29,10 +29,20 @@ export function CommandInput(props: CommandInputProps) {
     const canRun = props.command.trim().length > 0;
     return (
         <div className={styles.inputContainer}>
-            <label htmlFor="command-input" className={styles.label}>Command</label>
-            <VSCodeTextField id="command-input" className={styles.control} value={props.command} onInput={handleCommandChange} onKeyUp={onKeyPress} />
+            <label htmlFor="command-input" className={styles.label}>
+                Command
+            </label>
+            <VSCodeTextField
+                id="command-input"
+                className={styles.control}
+                value={props.command}
+                onInput={handleCommandChange}
+                onKeyUp={onKeyPress}
+            />
             <div className={styles.commands}>
-                <VSCodeButton disabled={!canRun} onClick={() => props.onRunCommand(props.command)}>Run</VSCodeButton>
+                <VSCodeButton disabled={!canRun} onClick={() => props.onRunCommand(props.command)}>
+                    Run
+                </VSCodeButton>
                 {!props.matchesExisting && <VSCodeButton onClick={props.onSaveRequest}>Save</VSCodeButton>}
             </div>
         </div>

@@ -1,4 +1,9 @@
-import { CreateClusterParams, InitialState, ProgressEventType, ResourceGroup } from "../../../../src/webview-contract/webviewDefinitions/createCluster";
+import {
+    CreateClusterParams,
+    InitialState,
+    ProgressEventType,
+    ResourceGroup,
+} from "../../../../src/webview-contract/webviewDefinitions/createCluster";
 import { WebviewStateUpdater } from "../../utilities/state";
 import { getWebviewMessageContext } from "../../utilities/vscode";
 
@@ -8,47 +13,58 @@ export enum Stage {
     CollectingInput,
     Creating,
     Failed,
-    Succeeded
+    Succeeded,
 }
 
 export type CreateClusterState = InitialState & {
-    stage: Stage
-    message: string | null
-    locations: string[] | null
-    resourceGroups: ResourceGroup[] | null
-    createParams: CreateClusterParams | null
+    stage: Stage;
+    message: string | null;
+    locations: string[] | null;
+    resourceGroups: ResourceGroup[] | null;
+    createParams: CreateClusterParams | null;
 };
 
 export type EventDef = {
-    setInitializing: void,
-    setInitialized: void,
+    setInitializing: void;
+    setInitialized: void;
     setCreating: {
-        parameters: CreateClusterParams
-    }
+        parameters: CreateClusterParams;
+    };
 };
 
 export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, CreateClusterState> = {
-    createState: initialState => ({
+    createState: (initialState) => ({
         ...initialState,
         stage: Stage.Uninitialized,
         message: null,
         locations: null,
         resourceGroups: null,
-        createParams: null
+        createParams: null,
     }),
     vscodeMessageHandler: {
         getLocationsResponse: (state, args) => ({ ...state, locations: args.locations }),
         getResourceGroupsResponse: (state, args) => ({ ...state, resourceGroups: args.groups }),
-        progressUpdate: (state, args) => ({ ...state, ...getStageAndMessage(args.operationDescription, args.event, args.errorMessage) })
+        progressUpdate: (state, args) => ({
+            ...state,
+            ...getStageAndMessage(args.operationDescription, args.event, args.errorMessage),
+        }),
     },
     eventHandler: {
-        setInitializing: (state, _args) => ({ ...state, stage: Stage.Loading }),
-        setInitialized: (state, _args) => ({ ...state, stage: Stage.CollectingInput }),
-        setCreating: (state, args) => ({ ...state, createParams: args.parameters, message: "Sending create cluster request" })
-    }
+        setInitializing: (state) => ({ ...state, stage: Stage.Loading }),
+        setInitialized: (state) => ({ ...state, stage: Stage.CollectingInput }),
+        setCreating: (state, args) => ({
+            ...state,
+            createParams: args.parameters,
+            message: "Sending create cluster request",
+        }),
+    },
 };
 
-function getStageAndMessage(operationDescription: string, event: ProgressEventType, errorMessage: string | null): Pick<CreateClusterState, "stage" | "message"> {
+function getStageAndMessage(
+    operationDescription: string,
+    event: ProgressEventType,
+    errorMessage: string | null,
+): Pick<CreateClusterState, "stage" | "message"> {
     switch (event) {
         case ProgressEventType.InProgress:
             return { stage: Stage.Creating, message: operationDescription };
@@ -64,5 +80,5 @@ function getStageAndMessage(operationDescription: string, event: ProgressEventTy
 export const vscode = getWebviewMessageContext<"createCluster">({
     createClusterRequest: null,
     getLocationsRequest: null,
-    getResourceGroupsRequest: null
+    getResourceGroupsRequest: null,
 });

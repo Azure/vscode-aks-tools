@@ -1,21 +1,18 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getKubernetesClusterInfo } from '../utils/clusters';
-import { getExtension } from '../utils/host';
-import { failed } from '../utils/errorable';
-import * as tmpfile from '../utils/tempfile';
-import { getKubectlGadgetBinaryPath } from '../utils/helper/kubectlGadgetDownload';
-import path = require('path');
-import { InspektorGadgetDataProvider, InspektorGadgetPanel } from '../../panels/InspektorGadgetPanel';
-import { KubectlClusterOperations } from './clusterOperations';
-import { TraceWatcher } from './traceWatcher';
-import { ensureDirectoryInPath } from '../utils/env';
+import { getKubernetesClusterInfo } from "../utils/clusters";
+import { getExtension } from "../utils/host";
+import { failed } from "../utils/errorable";
+import * as tmpfile from "../utils/tempfile";
+import { getKubectlGadgetBinaryPath } from "../utils/helper/kubectlGadgetDownload";
+import path from "path";
+import { InspektorGadgetDataProvider, InspektorGadgetPanel } from "../../panels/InspektorGadgetPanel";
+import { KubectlClusterOperations } from "./clusterOperations";
+import { TraceWatcher } from "./traceWatcher";
+import { ensureDirectoryInPath } from "../utils/env";
 
-export async function aksInspektorGadgetShow(
-    _context: IActionContext,
-    target: any
-): Promise<void> {
+export async function aksInspektorGadgetShow(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
