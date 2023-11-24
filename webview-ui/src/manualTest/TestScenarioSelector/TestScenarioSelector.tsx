@@ -1,9 +1,9 @@
 import { useState } from "react";
-import styles from "./TestScenarioSelector.module.css"
+import styles from "./TestScenarioSelector.module.css";
 import { Scenario } from "../../utilities/manualTest";
 
 export interface TestScenarioSelectorProps {
-    scenarios: Scenario[]
+    scenarios: Scenario[];
 }
 
 export function TestScenarioSelector(props: TestScenarioSelectorProps) {
@@ -16,7 +16,7 @@ export function TestScenarioSelector(props: TestScenarioSelectorProps) {
     }
 
     function getLinkClassNames(name: string): string {
-        return [styles.contentLink, selected === name && styles.selected].filter(s => s).join(' ');
+        return [styles.contentLink, selected === name && styles.selected].filter((s) => s).join(" ");
     }
 
     function getContent() {
@@ -24,7 +24,7 @@ export function TestScenarioSelector(props: TestScenarioSelectorProps) {
             return <></>;
         }
 
-        const scenario = props.scenarios.find(f => f.name === selected);
+        const scenario = props.scenarios.find((f) => f.name === selected);
         if (!scenario) {
             return <p className={styles.main}>{`Test scenario '${selected}' not found.`}</p>;
         }
@@ -35,16 +35,22 @@ export function TestScenarioSelector(props: TestScenarioSelectorProps) {
     return (
         <>
             <ul className={styles.sidebar}>
-                {
-                    props.scenarios.map(s => (
-                        <li key={s.name}>
-                            <a href="#" className={getLinkClassNames(s.name)} onClick={() => handleTestScenarioChange(s.name)}>{s.name}</a>
-                        </li>
-                    ))
-                }
+                {props.scenarios.map((s) => (
+                    <li key={s.name}>
+                        <a
+                            href="#"
+                            className={getLinkClassNames(s.name)}
+                            onClick={() => handleTestScenarioChange(s.name)}
+                        >
+                            {s.name}
+                        </a>
+                    </li>
+                ))}
             </ul>
             {/* Use an incrementing `key` value to ensure previous content and its associated state is destroyed on each change */}
-            <div className={styles.main} key={key}>{getContent()}</div>
+            <div className={styles.main} key={key}>
+                {getContent()}
+            </div>
         </>
     );
 }

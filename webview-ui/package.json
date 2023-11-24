@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "eslint -c .eslintrc.cjs ./src",
+    "lint-fix": "eslint -c .eslintrc.cjs ./src --fix",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
@@ -23,9 +25,15 @@
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@types/vscode-webview": "^1.57.4",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
     "@vitejs/plugin-react": "^4.2.0",
+    "eslint": "^8.54.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "typescript": "^5.3.2",
     "vite": "^5.0.0",
-    "vite-plugin-checker": "^0.6.2"
+    "vite-plugin-checker": "^0.6.2",
+    "vite-plugin-eslint": "^1.8.1"
   }
 }

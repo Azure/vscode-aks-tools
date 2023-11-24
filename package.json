@@ -406,7 +406,9 @@
     },
     "scripts": {
         "install:all": "npm install && cd webview-ui && npm install",
-        "lint": "eslint -c .eslintrc.js --ext .ts ./src",
+        "lint:all": "eslint -c .eslintrc.js --ext .ts ./src && cd webview-ui && npm run lint",
+        "lint-fix:all": "eslint -c .eslintrc.js --ext .ts ./src --fix && cd webview-ui && npm run lint-fix",
+        "prettier-format": "prettier --config .prettierrc . --write",
         "dev:webview": "cd webview-ui && npm run dev",
         "build:webview": "cd webview-ui && npm run build",
         "vscode:prepublish": "npm run webpack",
@@ -414,7 +416,7 @@
         "webpack-dev": "webpack --mode development --watch --info-verbosity verbose",
         "test-compile": "npm run build:webview && tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test-compile && node ./out/tests/runTests.js"
+        "test": "npm run test-compile && node ./out/src/tests/runTests.js"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account",
@@ -436,10 +438,11 @@
         "@vscode/test-electron": "^2.3.6",
         "chai": "^4.3.10",
         "eslint": "^8.52.0",
-        "eslint-plugin-prefer-arrow": "^1.2.3",
+        "eslint-webpack-plugin": "^4.0.1",
         "filemanager-webpack-plugin": "^8.0.0",
         "glob": "^10.3.10",
         "mocha": "^10.2.0",
+        "prettier": "^3.1.0",
         "sinon": "^12.0.1",
         "ts-loader": "^9.5.1",
         "typescript": "^5.2.2",

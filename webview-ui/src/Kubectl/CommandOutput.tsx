@@ -4,10 +4,10 @@ import { EventHandlers } from "../utilities/state";
 import { EventDef } from "./helpers/state";
 
 export interface CommandOutputProps {
-    isCommandRunning: boolean
-    output: string | null
-    errorMessage: string | null
-    eventHandlers: EventHandlers<EventDef>
+    isCommandRunning: boolean;
+    output: string | null;
+    errorMessage: string | null;
+    eventHandlers: EventHandlers<EventDef>;
 }
 
 export function CommandOutput(props: CommandOutputProps) {
@@ -15,10 +15,10 @@ export function CommandOutput(props: CommandOutputProps) {
     const hasError = props.errorMessage !== undefined;
 
     return (
-    <>
-        {props.isCommandRunning && <VSCodeProgressRing />}
-        {hasOutput && <pre>{props.output}</pre>}
-        {hasError && <pre className={styles.error}>{props.errorMessage}</pre>}
-    </>
+        <>
+            {props.isCommandRunning && <VSCodeProgressRing />}
+            {hasOutput && <pre>{props.output}</pre>}
+            {hasError && <pre className={styles.error}>{props.errorMessage}</pre>}
+        </>
     );
 }

@@ -1,14 +1,14 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getKubernetesClusterInfo } from '../utils/clusters';
-import { getExtension } from '../utils/host';
-import { failed } from '../utils/errorable';
-import * as tmpfile from '../utils/tempfile';
-import { KubectlDataProvider, KubectlPanel } from '../../panels/KubectlPanel';
-import { getKubectlCustomCommands } from '../utils/config';
+import { getKubernetesClusterInfo } from "../utils/clusters";
+import { getExtension } from "../utils/host";
+import { failed } from "../utils/errorable";
+import * as tmpfile from "../utils/tempfile";
+import { KubectlDataProvider, KubectlPanel } from "../../panels/KubectlPanel";
+import { getKubectlCustomCommands } from "../utils/config";
 
-export async function aksRunKubectlCommands(_context: IActionContext, target: any) {
+export async function aksRunKubectlCommands(_context: IActionContext, target: unknown) {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
@@ -42,7 +42,12 @@ export async function aksRunKubectlCommands(_context: IActionContext, target: an
 
     const customCommands = getKubectlCustomCommands();
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const dataProvider = new KubectlDataProvider(kubectl, kubeConfigFile.filePath, clusterInfo.result.name, customCommands);
+    const dataProvider = new KubectlDataProvider(
+        kubectl,
+        kubeConfigFile.filePath,
+        clusterInfo.result.name,
+        customCommands,
+    );
     const panel = new KubectlPanel(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);

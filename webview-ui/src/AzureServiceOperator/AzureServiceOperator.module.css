@@ -31,7 +31,8 @@
     min-width: 15rem;
 }
 
-.successHeadingIcon, .errorHeadingIcon {
+.successHeadingIcon,
+.errorHeadingIcon {
     padding-right: 0.5rem;
 }
 

@@ -1,24 +1,24 @@
-import * as vscode from 'vscode';
-import * as os from 'os';
-import path = require("path");
-import { getKubeloginConfig } from '../config';
-import { Errorable, failed } from '../errorable';
-import { getToolBinaryPath } from './binaryDownloadHelper';
+import * as vscode from "vscode";
+import * as os from "os";
+import path from "path";
+import { getKubeloginConfig } from "../config";
+import { Errorable, failed } from "../errorable";
+import { getToolBinaryPath } from "./binaryDownloadHelper";
 
 async function getLatestKubeloginReleaseTag() {
-   const kubeloginConfig = getKubeloginConfig();
-   if (failed(kubeloginConfig)) {
-      vscode.window.showErrorMessage(kubeloginConfig.error);
-      return undefined;
-   }
+    const kubeloginConfig = getKubeloginConfig();
+    if (failed(kubeloginConfig)) {
+        vscode.window.showErrorMessage(kubeloginConfig.error);
+        return undefined;
+    }
 
-   return kubeloginConfig.result.releaseTag;
+    return kubeloginConfig.result.releaseTag;
 }
 
 export async function getKubeloginBinaryPath(): Promise<Errorable<string>> {
     const releaseTag = await getLatestKubeloginReleaseTag();
     if (!releaseTag) {
-         return {succeeded: false, error: "Could not get latest release tag."};
+        return { succeeded: false, error: "Could not get latest release tag." };
     }
 
     const archiveFilename = getArchiveFilename();
@@ -26,37 +26,41 @@ export async function getKubeloginBinaryPath(): Promise<Errorable<string>> {
     const pathToBinaryInArchive = getPathToBinaryInArchive();
     const binaryFilename = path.basename(pathToBinaryInArchive);
 
-    return await getToolBinaryPath("kubelogin", releaseTag, binaryFilename, {downloadUrl, isCompressed: true, pathToBinaryInArchive});
+    return await getToolBinaryPath("kubelogin", releaseTag, binaryFilename, {
+        downloadUrl,
+        isCompressed: true,
+        pathToBinaryInArchive,
+    });
 }
 
 function getArchiveFilename() {
     let architecture = os.arch();
     let operatingSystem = os.platform().toLocaleLowerCase();
-    
-    if (architecture === 'x64') {
-        architecture = 'amd64';
+
+    if (architecture === "x64") {
+        architecture = "amd64";
     }
 
-    if (operatingSystem === 'win32') {
-        operatingSystem = 'win';
+    if (operatingSystem === "win32") {
+        operatingSystem = "win";
     }
 
     return `kubelogin-${operatingSystem}-${architecture}.zip`;
 }
 
 function getPathToBinaryInArchive() {
-   let architecture = os.arch();
-   let operatingSystem = os.platform().toLocaleLowerCase();
+    let architecture = os.arch();
+    let operatingSystem = os.platform().toLocaleLowerCase();
 
-   if (architecture === 'x64') {
-       architecture = 'amd64';
-   }
+    if (architecture === "x64") {
+        architecture = "amd64";
+    }
 
-   let extension = '';
-   if (operatingSystem === 'win32') {
-       operatingSystem = 'windows';
-       extension = '.exe'
-   }
+    let extension = "";
+    if (operatingSystem === "win32") {
+        operatingSystem = "windows";
+        extension = ".exe";
+    }
 
-   return path.join('bin', `${operatingSystem}_${architecture}`, `kubelogin${extension}`);
+    return path.join("bin", `${operatingSystem}_${architecture}`, `kubelogin${extension}`);
 }

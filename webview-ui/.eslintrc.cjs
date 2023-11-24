@@ -1,30 +1,32 @@
 module.exports = {
     env: {
+        browser: true,
         es2020: true,
-        node: true,
-        mocha: true,
     },
-    ignorePatterns: [
-        ".github/",
-        ".vscode-test/",
-        "node_modules/",
-        "dist/",
-        "docs/",
-        "out/",
-        "publish-book/",
-        "resources",
-        "webview-ui/",
-        "*.js",
+    ignorePatterns: ["node_modules/", "dist/", "*.js", "*.cjs"],
+    extends: [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:react/recommended",
+        "plugin:react/jsx-runtime",
+        "plugin:react-hooks/recommended",
     ],
-    extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
     parser: "@typescript-eslint/parser",
     parserOptions: {
         ecmaVersion: 2020,
         project: "./tsconfig.json",
         sourceType: "module",
+        ecmaFeatures: {
+            jsx: true,
+        },
     },
     plugins: ["@typescript-eslint"],
     root: true,
+    settings: {
+        react: {
+            version: "detect",
+        },
+    },
     rules: {
         "@typescript-eslint/naming-convention": [
             "error",

@@ -1,9 +1,9 @@
 export type Lookup<T> = {
-    [key: string]: T
+    [key: string]: T;
 };
 
 export function asLookup<T>(items: T[], keyFn: (value: T) => string): Lookup<T> {
-    const entries = items.map(val => [keyFn(val), val]);
+    const entries = items.map((val) => [keyFn(val), val]);
     return Object.fromEntries(entries);
 }
 
@@ -22,9 +22,9 @@ export function distinct(items: string[]) {
 }
 
 export function intersection<T>(itemsA: T[], itemsB: T[]): T[] {
-    return itemsA.filter(a => itemsB.includes(a));
+    return itemsA.filter((a) => itemsB.includes(a));
 }
 
 export function exclude<T>(take: T[], exclude: T[]): T[] {
-    return take.filter(a => !exclude.includes(a));
+    return take.filter((a) => !exclude.includes(a));
 }

@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import './main.css';
+import "./main.css";
 import { decodeState } from "../../src/webview-contract/initialState";
 import { CreateCluster } from "./CreateCluster/CreateCluster";
 import { ContentId } from "../../src/webview-contract/webviewTypes";
@@ -29,31 +29,30 @@ const root = createRoot(rootElem!);
 
 function getVsCodeContent(): JSX.Element {
     if (!rootElem) {
-        return <>Error: Element with ID 'root' is not found.</>;
+        return <>Error: Element with ID &#39;root&#39; is not found.</>;
     }
     const vscodeContentId = rootElem?.dataset.contentid as ContentId;
     if (!vscodeContentId) {
-        return <>Error: 'content-id' attribute is not set on root element.</>;
+        return <>Error: &#39;content-id&#39; attribute is not set on root element.</>;
     }
 
-    const vsCodeInitialState = decodeState<any>(rootElem?.dataset.initialstate);
+    function getInitialState<T>(): T {
+        return decodeState<T>(rootElem?.dataset.initialstate);
+    }
+
     const rendererLookup: Record<ContentId, () => JSX.Element> = {
-        createCluster: () => <CreateCluster {...vsCodeInitialState} />,
-        style: () => <TestStyleViewer {...vsCodeInitialState} />,
-        clusterProperties: () => <ClusterProperties {...vsCodeInitialState} />,
-        periscope: () => <Periscope {...vsCodeInitialState} />,
-        detector: () => <Detector {...vsCodeInitialState} />,
-        gadget: () => <InspektorGadget {...vsCodeInitialState} />,
-        kubectl: () => <Kubectl {...vsCodeInitialState} />,
-        aso: () => <AzureServiceOperator {...vsCodeInitialState} />,
-        tcpDump: () => <TcpDump {...vsCodeInitialState} />
+        createCluster: () => <CreateCluster {...getInitialState()} />,
+        style: () => <TestStyleViewer {...getInitialState()} />,
+        clusterProperties: () => <ClusterProperties {...getInitialState()} />,
+        periscope: () => <Periscope {...getInitialState()} />,
+        detector: () => <Detector {...getInitialState()} />,
+        gadget: () => <InspektorGadget {...getInitialState()} />,
+        kubectl: () => <Kubectl {...getInitialState()} />,
+        aso: () => <AzureServiceOperator {...getInitialState()} />,
+        tcpDump: () => <TcpDump {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
 }
 
-root.render(
-    <StrictMode>
-        {getVsCodeContent()}
-    </StrictMode>
-);
+root.render(<StrictMode>{getVsCodeContent()}</StrictMode>);

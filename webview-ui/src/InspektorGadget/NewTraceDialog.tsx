@@ -1,9 +1,9 @@
 import { VSCodeButton, VSCodeCheckbox, VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./InspektorGadget.module.css";
 import { Dialog } from "../components/Dialog";
-import { FormEvent, useEffect, useState, ChangeEvent as InputChangeEvent } from 'react';
-import { ResourceSelector } from './ResourceSelector';
-import { ClusterResources, Nodes } from './helpers/clusterResources';
+import { FormEvent, useEffect, useState, ChangeEvent as InputChangeEvent } from "react";
+import { ResourceSelector } from "./ResourceSelector";
+import { ClusterResources, Nodes } from "./helpers/clusterResources";
 import { isLoaded, isNotLoaded } from "../utilities/lazy";
 import { TraceItemSortSelector } from "./TraceItemSortSelector";
 import { GadgetConfiguration, configuredGadgetResources, getGadgetMetadata } from "./helpers/gadgets";
@@ -18,16 +18,16 @@ const defaultTimeoutInSeconds = 30;
 const defaultMaxItemCount = 20;
 
 export interface NewTraceDialogProps {
-    isShown: boolean
-    gadgetCategory: GadgetCategory
-    nodes: Nodes
-    resources: ClusterResources
-    eventHandlers: EventHandlers<EventDef>
-    onCancel: () => void
-    onAccept: (trace: GadgetConfiguration) => void
+    isShown: boolean;
+    gadgetCategory: GadgetCategory;
+    nodes: Nodes;
+    resources: ClusterResources;
+    eventHandlers: EventHandlers<EventDef>;
+    onCancel: () => void;
+    onAccept: (trace: GadgetConfiguration) => void;
 }
 
-export function NewTraceDialog (props: NewTraceDialogProps) {
+export function NewTraceDialog(props: NewTraceDialogProps) {
     useEffect(() => {
         if (props.isShown && isNotLoaded(props.nodes)) {
             props.eventHandlers.onSetNodesLoading();
@@ -43,13 +43,13 @@ export function NewTraceDialog (props: NewTraceDialogProps) {
         category: props.gadgetCategory,
         resource: "",
         filters: {
-            namespace: NamespaceSelection.All
+            namespace: NamespaceSelection.All,
         },
         displayProperties: [],
         sortSpecifiers: [],
         excludeThreads: undefined,
         timeout: undefined,
-        maxItemCount: undefined
+        maxItemCount: undefined,
     });
 
     const configuredResources = configuredGadgetResources[props.gadgetCategory];
@@ -57,18 +57,31 @@ export function NewTraceDialog (props: NewTraceDialogProps) {
     const extraProperties = toExtraPropertyObject(metadata?.extraProperties ?? GadgetExtraProperties.None);
 
     function onResourceChanged(resource: string | null) {
-        const metadata = resource && configuredResources[resource] || null;
+        const metadata = (resource && configuredResources[resource]) || null;
         const extraProperties = toExtraPropertyObject(metadata?.extraProperties ?? GadgetExtraProperties.None);
 
         const displayProperties = metadata?.defaultProperties || [];
         const sortSpecifiers = metadata?.defaultSort || [];
-        const maxItemCount = extraProperties.requiresMaxItemCount ? traceConfig.maxItemCount || defaultMaxItemCount : undefined;
+        const maxItemCount = extraProperties.requiresMaxItemCount
+            ? traceConfig.maxItemCount || defaultMaxItemCount
+            : undefined;
         const excludeThreads = extraProperties.threadExclusionAllowed ? true : undefined;
         const timeout = extraProperties.requiresTimeout ? traceConfig.timeout || defaultTimeoutInSeconds : undefined;
         const { namespace, podName, containerName, ...rest } = traceConfig.filters!;
-        const filters = extraProperties.noK8sResourceFiltering ? {...rest, namespace: NamespaceSelection.Default} : traceConfig.filters;
+        const filters = extraProperties.noK8sResourceFiltering
+            ? { ...rest, namespace: NamespaceSelection.Default }
+            : traceConfig.filters;
 
-        setTraceConfig({ ...traceConfig, resource: resource || "", filters, displayProperties, sortSpecifiers, excludeThreads, maxItemCount, timeout });
+        setTraceConfig({
+            ...traceConfig,
+            resource: resource || "",
+            filters,
+            displayProperties,
+            sortSpecifiers,
+            excludeThreads,
+            maxItemCount,
+            timeout,
+        });
     }
 
     function handleNodeChanged(node: string | null) {
@@ -76,14 +89,19 @@ export function NewTraceDialog (props: NewTraceDialogProps) {
         setTraceConfig({ ...traceConfig, filters });
     }
 
-    function handleResourceSelectionChanged(selection: {namespace?: string, podName?: string, containerName?: string}) {
+    function handleResourceSelectionChanged(selection: {
+        namespace?: string;
+        podName?: string;
+        containerName?: string;
+    }) {
         const { namespace, podName, containerName, ...rest } = traceConfig.filters!;
-        const newNamespace =
-            extraProperties.noK8sResourceFiltering ? NamespaceSelection.Default :
-            !namespace ? NamespaceSelection.All :
-            namespace;
+        const newNamespace = extraProperties.noK8sResourceFiltering
+            ? NamespaceSelection.Default
+            : !namespace
+              ? NamespaceSelection.All
+              : namespace;
         const filters = { ...rest, ...selection, namespace: newNamespace };
-        setTraceConfig({...traceConfig, filters });
+        setTraceConfig({ ...traceConfig, filters });
     }
 
     function canCreate(): boolean {
@@ -124,68 +142,127 @@ export function NewTraceDialog (props: NewTraceDialogProps) {
     }
 
     return (
-    <Dialog isShown={props.isShown} onCancel={() => props.onCancel()}>
-        <h2>New Trace</h2>
+        <Dialog isShown={props.isShown} onCancel={() => props.onCancel()}>
+            <h2>New Trace</h2>
 
-        <form onSubmit={handleSubmit}>
-            <VSCodeDivider/>
+            <form onSubmit={handleSubmit}>
+                <VSCodeDivider />
 
-            <div className={styles.inputContainer}>
-                <label htmlFor="gadget-dropdown" className={styles.label}>Gadget</label>
-                <GadgetSelector id="gadget-dropdown" className={styles.control} required category={props.gadgetCategory} onResourceChanged={onResourceChanged} />
-
-                <label htmlFor="node-dropdown" className={styles.label}>Node</label>
-                {isLoaded(props.nodes) ? <NodeSelector nodes={props.nodes.value} onNodeChanged={handleNodeChanged} id="node-dropdown" className={styles.control} /> : <VSCodeProgressRing /> }
-
-                {!extraProperties.noK8sResourceFiltering && (
-                <>
-                    <label htmlFor="resource-selector" className={styles.label}>Resource</label>
-                    {isLoaded(props.resources) ?
-                        (<ResourceSelector id="resource-selector" resources={props.resources.value} onSelectionChanged={handleResourceSelectionChanged} userMessageHandlers={props.eventHandlers} />) :
-                        <VSCodeProgressRing />}
-                </>
-                )}
-
-                {extraProperties.sortingAllowed && (
-                <>
-                    <label htmlFor="sort-selector" className={styles.label}>Sort by</label>
-                    <TraceItemSortSelector
-                        id="sort-selector"
+                <div className={styles.inputContainer}>
+                    <label htmlFor="gadget-dropdown" className={styles.label}>
+                        Gadget
+                    </label>
+                    <GadgetSelector
+                        id="gadget-dropdown"
                         className={styles.control}
-                        required={true}
-                        allProperties={metadata?.allProperties || []}
-                        sortSpecifiers={traceConfig.sortSpecifiers || []}
-                        onSortSpecifiersChange={handleSortSpecifiersChange}
+                        required
+                        category={props.gadgetCategory}
+                        onResourceChanged={onResourceChanged}
                     />
-                </>
-                )}
 
-                {extraProperties.requiresMaxItemCount && (
-                <>
-                    <label htmlFor="max-rows-input" className={styles.label}>Max rows</label>
-                    <input id="max-rows-input" className={styles.control} type="number" required value={traceConfig.maxItemCount} min={1} max={1000} onChange={handleMaxRowsChange}></input>
-                </>
-                )}
+                    <label htmlFor="node-dropdown" className={styles.label}>
+                        Node
+                    </label>
+                    {isLoaded(props.nodes) ? (
+                        <NodeSelector
+                            nodes={props.nodes.value}
+                            onNodeChanged={handleNodeChanged}
+                            id="node-dropdown"
+                            className={styles.control}
+                        />
+                    ) : (
+                        <VSCodeProgressRing />
+                    )}
 
-                {extraProperties.threadExclusionAllowed && (
-                    <VSCodeCheckbox checked={traceConfig.excludeThreads === false} onChange={handleDisplayThreadsChange}>Display threads</VSCodeCheckbox>
-                )}
+                    {!extraProperties.noK8sResourceFiltering && (
+                        <>
+                            <label htmlFor="resource-selector" className={styles.label}>
+                                Resource
+                            </label>
+                            {isLoaded(props.resources) ? (
+                                <ResourceSelector
+                                    id="resource-selector"
+                                    resources={props.resources.value}
+                                    onSelectionChanged={handleResourceSelectionChanged}
+                                    userMessageHandlers={props.eventHandlers}
+                                />
+                            ) : (
+                                <VSCodeProgressRing />
+                            )}
+                        </>
+                    )}
 
-                {extraProperties.requiresTimeout && (
-                <>
-                    <label htmlFor="timeout-input" className={styles.label}>Timeout (s)</label>
-                    <input id="timeout-input" className={styles.control} type="number" required value={traceConfig.timeout} min={1} max={60 * 5} onChange={handleTimeoutChange}></input>
-                </>
-                )}
-            </div>
+                    {extraProperties.sortingAllowed && (
+                        <>
+                            <label htmlFor="sort-selector" className={styles.label}>
+                                Sort by
+                            </label>
+                            <TraceItemSortSelector
+                                id="sort-selector"
+                                className={styles.control}
+                                required={true}
+                                allProperties={metadata?.allProperties || []}
+                                sortSpecifiers={traceConfig.sortSpecifiers || []}
+                                onSortSpecifiersChange={handleSortSpecifiersChange}
+                            />
+                        </>
+                    )}
 
-            <VSCodeDivider/>
+                    {extraProperties.requiresMaxItemCount && (
+                        <>
+                            <label htmlFor="max-rows-input" className={styles.label}>
+                                Max rows
+                            </label>
+                            <input
+                                id="max-rows-input"
+                                className={styles.control}
+                                type="number"
+                                required
+                                value={traceConfig.maxItemCount}
+                                min={1}
+                                max={1000}
+                                onChange={handleMaxRowsChange}
+                            ></input>
+                        </>
+                    )}
 
-            <div className={styles.buttonContainer}>
-                <VSCodeButton type="submit" disabled={!canCreate()}>Ok</VSCodeButton>
-                <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
-            </div>
-        </form>
-    </Dialog>
+                    {extraProperties.threadExclusionAllowed && (
+                        <VSCodeCheckbox
+                            checked={traceConfig.excludeThreads === false}
+                            onChange={handleDisplayThreadsChange}
+                        >
+                            Display threads
+                        </VSCodeCheckbox>
+                    )}
+
+                    {extraProperties.requiresTimeout && (
+                        <>
+                            <label htmlFor="timeout-input" className={styles.label}>
+                                Timeout (s)
+                            </label>
+                            <input
+                                id="timeout-input"
+                                className={styles.control}
+                                type="number"
+                                required
+                                value={traceConfig.timeout}
+                                min={1}
+                                max={60 * 5}
+                                onChange={handleTimeoutChange}
+                            ></input>
+                        </>
+                    )}
+                </div>
+
+                <VSCodeDivider />
+
+                <div className={styles.buttonContainer}>
+                    <VSCodeButton type="submit" disabled={!canCreate()}>
+                        Ok
+                    </VSCodeButton>
+                    <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
+                </div>
+            </form>
+        </Dialog>
     );
 }

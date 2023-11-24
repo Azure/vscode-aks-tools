@@ -1,10 +1,10 @@
-import * as download from '../download/download';
-import * as os from 'os';
-import * as fs from 'fs';
-import { moveFile } from 'move-file';
+import * as download from "../download/download";
+import * as os from "os";
+import * as fs from "fs";
+import { moveFile } from "move-file";
 import { Errorable, failed } from "../errorable";
-import path = require("path");
-import { longRunning } from '../host';
+import path from "path";
+import { longRunning } from "../host";
 
 function getToolBaseInstallFolder(toolName: string): string {
     return path.join(os.homedir(), `.vs-kubernetes/tools/${toolName}`);
@@ -19,16 +19,16 @@ function getToolDownloadFolder(toolName: string): string {
 }
 
 type CommonDownloadSpec = {
-    downloadUrl: string
-}
+    downloadUrl: string;
+};
 
 export type BinaryDownloadSpec = CommonDownloadSpec & {
-    isCompressed: false
+    isCompressed: false;
 };
 
 export type ArchiveDownloadSpec = CommonDownloadSpec & {
-    isCompressed: true,
-    pathToBinaryInArchive: string
+    isCompressed: true;
+    pathToBinaryInArchive: string;
 };
 
 export type DownloadSpec = BinaryDownloadSpec | ArchiveDownloadSpec;
@@ -41,26 +41,26 @@ export async function getToolBinaryPath(
     toolName: string,
     version: string,
     binaryFilename: string,
-    downloadSpec: DownloadSpec
-    ): Promise<Errorable<string>> {
-
+    downloadSpec: DownloadSpec,
+): Promise<Errorable<string>> {
     const binaryFolder = getToolBinaryFolder(toolName, version);
     const binaryFilePath = path.join(binaryFolder, binaryFilename);
 
     if (fs.existsSync(binaryFilePath)) {
-       return {succeeded: true, result: binaryFilePath};
+        return { succeeded: true, result: binaryFilePath };
     }
 
-    return await longRunning(`Downloading ${toolName} to ${binaryFilePath}.`, () => downloadTool(toolName, binaryFilePath, downloadSpec));
+    return await longRunning(`Downloading ${toolName} to ${binaryFilePath}.`, () =>
+        downloadTool(toolName, binaryFilePath, downloadSpec),
+    );
 }
 
 async function downloadTool(
     toolName: string,
     binaryFilePath: string,
-    downloadSpec: DownloadSpec
+    downloadSpec: DownloadSpec,
 ): Promise<Errorable<string>> {
-
-    const downloadFileName = downloadSpec.downloadUrl.substring(downloadSpec.downloadUrl.lastIndexOf('/') + 1);
+    const downloadFileName = downloadSpec.downloadUrl.substring(downloadSpec.downloadUrl.lastIndexOf("/") + 1);
     const downloadFolder = getToolDownloadFolder(toolName);
     const downloadFilePath = path.join(downloadFolder, downloadFileName);
 
@@ -68,22 +68,22 @@ async function downloadTool(
     if (failed(downloadResult)) {
         return {
             succeeded: false,
-            error: `Failed to download binary from ${downloadSpec.downloadUrl}: ${downloadResult.error}`
+            error: `Failed to download binary from ${downloadSpec.downloadUrl}: ${downloadResult.error}`,
         };
     }
 
     if (isArchive(downloadSpec)) {
-        const decompress = require("decompress");
+        const { default: decompress } = await import("decompress");
 
         try {
             await decompress(downloadFilePath, downloadFolder);
         } catch (error) {
             return {
                 succeeded: false,
-                error: `Failed to unzip binary ${downloadFilePath} to ${downloadFolder}: ${error}`
+                error: `Failed to unzip binary ${downloadFilePath} to ${downloadFolder}: ${error}`,
             };
         }
-    
+
         // Remove zip.
         fs.unlinkSync(downloadFilePath);
 
@@ -98,7 +98,7 @@ async function downloadTool(
     // If there's any failure after this, we *want* it to be downloaded again.
     download.clear(downloadFilePath);
 
-    //If linux check -- make chmod 0755
-    fs.chmodSync(path.join(binaryFilePath), '0755');
+    // If linux check -- make chmod 0755
+    fs.chmodSync(path.join(binaryFilePath), "0755");
     return { succeeded: true, result: binaryFilePath };
 }

@@ -1,6 +1,11 @@
-import { Components } from 'react-markdown'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheckCircle, faExclamationCircle, faExclamationTriangle, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { Components } from "react-markdown";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faCheckCircle,
+    faExclamationCircle,
+    faExclamationTriangle,
+    faInfoCircle,
+} from "@fortawesome/free-solid-svg-icons";
 import styles from "../Detector.module.css";
 
 /**
@@ -9,28 +14,33 @@ import styles from "../Detector.module.css";
  */
 export function getMarkdownComponents(): Components {
     return {
-        table: ({node, ...props}) => <table className={styles.markdownTable} {...props} />,
-        span: ({node, ...props}) => {
+        table: ({ node, ...props }) => <table className={styles.markdownTable} {...props} />,
+        span: ({ node, ...props }) => {
             return (
                 <>
-                    {getIcons(node?.properties?.className as string[] || [])}
+                    {getIcons((node?.properties?.className as string[]) || [])}
                     <span {...props} />
                 </>
             );
-        }
-    }
+        },
+    };
 }
 
 function getIcons(classNames: string[]) {
-    return classNames.map(getIcon).filter(i => i !== null);
+    return classNames.map(getIcon).filter((i) => i !== null);
 }
 
 function getIcon(className: string) {
     switch (className) {
-        case "fa-exclamation-triangle": return <FontAwesomeIcon key={className} icon={faExclamationTriangle} className={styles.warningIndicator} />;
-        case "fa-exclamation-circle": return <FontAwesomeIcon key={className} icon={faExclamationCircle} className={styles.errorIndicator} />;
-        case "fa-check-circle": return <FontAwesomeIcon key={className} icon={faCheckCircle} className={styles.successIndicator} />;
-        case "fa-info-circle": return <FontAwesomeIcon key={className} icon={faInfoCircle} className={styles.infoIndicator} />;
-        default: return null;
+        case "fa-exclamation-triangle":
+            return <FontAwesomeIcon key={className} icon={faExclamationTriangle} className={styles.warningIndicator} />;
+        case "fa-exclamation-circle":
+            return <FontAwesomeIcon key={className} icon={faExclamationCircle} className={styles.errorIndicator} />;
+        case "fa-check-circle":
+            return <FontAwesomeIcon key={className} icon={faCheckCircle} className={styles.successIndicator} />;
+        case "fa-info-circle":
+            return <FontAwesomeIcon key={className} icon={faInfoCircle} className={styles.infoIndicator} />;
+        default:
+            return null;
     }
 }
