@@ -1,26 +1,25 @@
+import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     VSCodeButton,
     VSCodeDivider,
     VSCodeDropdown,
-    VSCodeLink,
     VSCodeOption,
     VSCodeTextField,
 } from "@vscode/webview-ui-toolkit/react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfoCircle, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-import styles from "./CreateCluster.module.css";
 import { FormEvent, useState } from "react";
-import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
-import { CreateResourceGroupDialog } from "./CreateResourceGroup";
-import { EventHandlers } from "../utilities/state";
+import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     CreateClusterParams,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
-import { MessageSink } from "../../../src/webview-contract/messaging";
-import { EventDef } from "./helpers/state";
+import { EventHandlers } from "../utilities/state";
+import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
+import styles from "./CreateCluster.module.css";
 import { CreateClusterPresetInput } from "./CreateClusterPresetInput";
+import { CreateResourceGroupDialog } from "./CreateResourceGroup";
+import { EventDef } from "./helpers/state";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -36,7 +35,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
     const [newResourceGroup, setNewResourceGroup] = useState<ResourceGroup | null>(null);
-    const [presetSelected, setPresetSelected] = useState("standard");
+    const [presetSelected, setPresetSelected] = useState("dev");
 
     function handleCreateResourceGroupDialogCancel() {
         setIsNewResourceGroupDialogShown(false);
@@ -85,7 +84,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
             resourceGroup,
             location: resourceGroup.location,
             name: name.value!,
-            preset: presetSelected
+            preset: presetSelected,
         };
 
         props.vscode.postCreateClusterRequest(parameters);

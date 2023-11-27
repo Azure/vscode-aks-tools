@@ -1,7 +1,7 @@
 import { Deployment } from "@azure/arm-resources";
 
-var fs = require('fs');
-var path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 interface ManagedClusterSpecBuilder {
     buildDevTestClusterSpec(clusterSpec: ClusterSpec): Deployment;
@@ -10,20 +10,19 @@ interface ManagedClusterSpecBuilder {
     buildProdEnterpriseClusterSpec(clusterSpec: ClusterSpec): Deployment;
 }
 
-export type ClusterSpecType = "devtest" | "prodstandard" | "prodeconomy" | "prodenterprise";
-
 export type ClusterSpec = {
     location: string,
     name: string,
     resourceGroupName: string,
     subscriptionId: string,
-    subscriptionName: string
+    kubernetesVersion: string
 }
 
 export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
+    private static apiVersion: string = "2023-08-01";
     constructor() { }
     public buildDevTestClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        var parameters = {
+        const parameters = {
             "location": {
                 "value": clusterSpec.location
             },
@@ -34,19 +33,19 @@ export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
                 "value": `${clusterSpec.name}-dns`
             },
             "apiVersion": {
-                "value": "2023-08-01" // how to get this value ?
+                "value": ClusterSpecBuilder.apiVersion
             },
             "nodeResourceGroup": {
                 "value": `MC_${clusterSpec.resourceGroupName}_${clusterSpec.name}_${clusterSpec.location}`
             },
             "subscriptionId": {
-                "value": "20c6254d-ab44-45c8-8885-ceb54699e1bf" //TODO - pass this value
+                "value": clusterSpec.subscriptionId
             },
             "resourceGroupName": {
                 "value": clusterSpec.resourceGroupName
             },
             "kubernetesVersion": {
-                "value": "1.27.7" // how tp get this value ?
+                "value": clusterSpec.kubernetesVersion
             },
             "clusterIdentity": {
                 "value": {
@@ -56,34 +55,157 @@ export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
         }
 
 
-        var deploymentParameters: Deployment = {
+        const deploymentParameters: Deployment = {
             "properties": {
                 "parameters": parameters,
-                "template": loadTemplate("templates/DevTestCreateCluster.json"),
+                "template": loadTemplate("DevTestCreateCluster.json"),
                 "mode": "Incremental"
             }
         };
         return deploymentParameters;
     }
     buildProdStandardClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        throw new Error("Method not implemented.");
+        //TODO - implement this
+        const parameters = {
+            "location": {
+                "value": clusterSpec.location
+            },
+            "resourceName": {
+                "value": clusterSpec.name
+            },
+            "dnsPrefix": {
+                "value": `${clusterSpec.name}-dns`
+            },
+            "apiVersion": {
+                "value": ClusterSpecBuilder.apiVersion
+            },
+            "nodeResourceGroup": {
+                "value": `MC_${clusterSpec.resourceGroupName}_${clusterSpec.name}_${clusterSpec.location}`
+            },
+            "subscriptionId": {
+                "value": clusterSpec.subscriptionId
+            },
+            "resourceGroupName": {
+                "value": clusterSpec.resourceGroupName
+            },
+            "kubernetesVersion": {
+                "value": clusterSpec.kubernetesVersion
+            },
+            "clusterIdentity": {
+                "value": {
+                    "type": "SystemAssigned"
+                }
+            },
+        }
+
+        const deploymentParameters: Deployment = {
+            "properties": {
+                "parameters": parameters,
+                "template": loadTemplate("DevTestCreateCluster.json"),
+                "mode": "Incremental"
+            }
+        };
+        return deploymentParameters;
     }
     buildProdEconomyClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        throw new Error("Method not implemented.");
+        //TODO - implement this
+        const parameters = {
+            "location": {
+                "value": clusterSpec.location
+            },
+            "resourceName": {
+                "value": clusterSpec.name
+            },
+            "dnsPrefix": {
+                "value": `${clusterSpec.name}-dns`
+            },
+            "apiVersion": {
+                "value": ClusterSpecBuilder.apiVersion
+            },
+            "nodeResourceGroup": {
+                "value": `MC_${clusterSpec.resourceGroupName}_${clusterSpec.name}_${clusterSpec.location}`
+            },
+            "subscriptionId": {
+                "value": clusterSpec.subscriptionId
+            },
+            "resourceGroupName": {
+                "value": clusterSpec.resourceGroupName
+            },
+            "kubernetesVersion": {
+                "value": clusterSpec.kubernetesVersion
+            },
+            "clusterIdentity": {
+                "value": {
+                    "type": "SystemAssigned"
+                }
+            },
+        }
+
+        const deploymentParameters: Deployment = {
+            "properties": {
+                "parameters": parameters,
+                "template": loadTemplate("DevTestCreateCluster.json"),
+                "mode": "Incremental"
+            }
+        };
+        return deploymentParameters;
     }
     buildProdEnterpriseClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        throw new Error("Method not implemented.");
+        //TODO - implement this
+        const parameters = {
+            "location": {
+                "value": clusterSpec.location
+            },
+            "resourceName": {
+                "value": clusterSpec.name
+            },
+            "dnsPrefix": {
+                "value": `${clusterSpec.name}-dns`
+            },
+            "apiVersion": {
+                "value": ClusterSpecBuilder.apiVersion
+            },
+            "nodeResourceGroup": {
+                "value": `MC_${clusterSpec.resourceGroupName}_${clusterSpec.name}_${clusterSpec.location}`
+            },
+            "subscriptionId": {
+                "value": clusterSpec.subscriptionId
+            },
+            "resourceGroupName": {
+                "value": clusterSpec.resourceGroupName
+            },
+            "kubernetesVersion": {
+                "value": clusterSpec.kubernetesVersion
+            },
+            "clusterIdentity": {
+                "value": {
+                    "type": "SystemAssigned"
+                }
+            },
+        }
+
+        const deploymentParameters: Deployment = {
+            "properties": {
+                "parameters": parameters,
+                "template": loadTemplate("DevTestCreateCluster.json"),
+                "mode": "Incremental"
+            }
+        };
+        return deploymentParameters;
     }
 
 }
 
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
 function loadTemplate(templateName: string): any {
     try {
-        var templateFilePath = path.resolve(templateName); //TODO - fix this, doesn't resolve correct path
-        templateFilePath = "/home/hsubramanian/repos/vscode-aks-tools/src/panels/templates/DevTestCreateCluster.json"
+        //const templateFilePath = path.resolve(templateName); //TODO - fix this, doesn't resolve correct path
+        //templateFilePath = "/home/hsubramanian/repos/vscode-aks-tools/src/panels/templates/DevTestCreateCluster.json"
+        const templateFilePath = path.join(__dirname, 'src', 'panels', 'templates', templateName);
         return JSON.parse(fs.readFileSync(templateFilePath, 'utf8'));
     } catch (error) {
-
+        console.log(error);
+        throw error;
     }
 }
 
