@@ -424,7 +424,7 @@
     ],
     "devDependencies": {
         "@types/chai": "^4.3.11",
-        "@types/download": "^8.0.4",
+        "@types/download": "^8.0.5",
         "@types/glob": "^8.1.0",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.4",
