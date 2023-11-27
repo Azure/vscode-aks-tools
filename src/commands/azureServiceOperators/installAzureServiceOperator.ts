@@ -1,17 +1,14 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { getKubernetesClusterInfo } from '../utils/clusters';
-import { getExtension } from '../utils/host';
-import { failed } from '../utils/errorable';
-import { getAzureAccountExtensionApi } from '../utils/azureAccount';
-import { createTempFile } from '../utils/tempfile';
-import { AzureServiceOperatorDataProvider, AzureServiceOperatorPanel } from '../../panels/AzureServiceOperatorPanel';
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { getKubernetesClusterInfo } from "../utils/clusters";
+import { getExtension } from "../utils/host";
+import { failed } from "../utils/errorable";
+import { getAzureAccountExtensionApi } from "../utils/azureAccount";
+import { createTempFile } from "../utils/tempfile";
+import { AzureServiceOperatorDataProvider, AzureServiceOperatorPanel } from "../../panels/AzureServiceOperatorPanel";
 
-export default async function installAzureServiceOperator(
-    _context: IActionContext,
-    target: any
-): Promise<void> {
+export default async function installAzureServiceOperator(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
@@ -50,7 +47,13 @@ export default async function installAzureServiceOperator(
     }
 
     const kubeConfigFile = await createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const dataProvider = new AzureServiceOperatorDataProvider(extension.result, kubectl, kubeConfigFile.filePath, azureAccountApi.result, clusterInfo.result.name);
+    const dataProvider = new AzureServiceOperatorDataProvider(
+        extension.result,
+        kubectl,
+        kubeConfigFile.filePath,
+        azureAccountApi.result,
+        clusterInfo.result.name,
+    );
     const panel = new AzureServiceOperatorPanel(extension.result.extensionUri);
 
     panel.show(dataProvider, kubeConfigFile);

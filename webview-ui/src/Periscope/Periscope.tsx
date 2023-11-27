@@ -4,16 +4,15 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/p
 import { ErrorView } from "./ErrorView";
 import { NoDiagnosticSettingView } from "./NoDiagnosticSettingView";
 import { SuccessView } from "./SuccessView";
-import { getStateManagement } from "../utilities/state";
+import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./state";
 
 export function Periscope(initialState: InitialState) {
-    const {state, eventHandlers, vsCodeMessageHandlers} = getStateManagement(stateUpdater, initialState);
+    const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
-        vscode.subscribeToMessages(vsCodeMessageHandlers);
         sendUploadStatusRequest();
-    }, []); // Empty list of dependencies to run only once: https://react.dev/reference/react/useEffect#useeffect
+    });
 
     function sendUploadStatusRequest() {
         vscode.postUploadStatusRequest();
@@ -21,22 +20,28 @@ export function Periscope(initialState: InitialState) {
 
     function handleNodeClick(node: string) {
         eventHandlers.onSetSelectedNode(node);
-        vscode.postNodeLogsRequest({nodeName: node});
+        vscode.postNodeLogsRequest({ nodeName: node });
     }
 
     return (
         <>
             <h2>AKS Periscope</h2>
             <p>
-                AKS Periscope collects and exports node and pod logs into an Azure Blob storage account
-                to help you analyse and identify potential problems or easily share the information
-                during the troubleshooting process.
+                AKS Periscope collects and exports node and pod logs into an Azure Blob storage account to help you
+                analyse and identify potential problems or easily share the information during the troubleshooting
+                process.
                 <VSCodeLink href="https://aka.ms/vscode-aks-periscope">&nbsp;Learn more</VSCodeLink>
             </p>
             <VSCodeDivider />
             {
                 {
-                    error: <ErrorView clusterName={state.clusterName} message={state.message} config={state.kustomizeConfig!} />,
+                    error: (
+                        <ErrorView
+                            clusterName={state.clusterName}
+                            message={state.message}
+                            config={state.kustomizeConfig!}
+                        />
+                    ),
                     noDiagnosticsConfigured: <NoDiagnosticSettingView clusterName={state.clusterName} />,
                     success: (
                         <SuccessView
@@ -49,9 +54,10 @@ export function Periscope(initialState: InitialState) {
                             nodePodLogs={state.nodePodLogs}
                             containerUrl={state.blobContainerUrl}
                             shareableSas={state.shareableSas}
-                        />)
+                        />
+                    ),
                 }[state.state]
             }
         </>
-    )
+    );
 }

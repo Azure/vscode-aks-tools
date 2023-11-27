@@ -7,4 +7,4 @@ export interface KustomizeConfig {
 
 export interface KubeloginConfig {
     releaseTag: string;
- }
+}

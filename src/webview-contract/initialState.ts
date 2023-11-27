@@ -4,11 +4,7 @@
  */
 export function encodeState<T>(initialState?: T): string {
     const initialStateJson = initialState ? JSON.stringify(initialState) : "";
-    return initialStateJson
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    return initialStateJson.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 /**
@@ -18,9 +14,9 @@ export function encodeState<T>(initialState?: T): string {
 export function decodeState<T>(encodedState?: string): T {
     const initialStateJson = (encodedState || "{}")
         .replace(/&quot;/g, '"')
-        .replace(/&gt;/g, '>')
-        .replace(/&lt;/g, '<')
-        .replace(/&amp;/g, '&');
+        .replace(/&gt;/g, ">")
+        .replace(/&lt;/g, "<")
+        .replace(/&amp;/g, "&");
 
     return JSON.parse(initialStateJson);
 }

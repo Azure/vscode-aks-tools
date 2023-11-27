@@ -1,27 +1,24 @@
-import * as vscode from 'vscode';
-import * as k8s from 'vscode-kubernetes-tools-api';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as tmpfile from '../utils/tempfile';
-import { getAksClusterTreeItem, getClusterProperties, getContainerClient, getKubeconfigYaml } from '../utils/clusters';
-import { getKustomizeConfig } from '../utils/config';
-import { getExtension, longRunning } from '../utils/host';
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import * as tmpfile from "../utils/tempfile";
+import { getAksClusterTreeItem, getClusterProperties, getContainerClient, getKubeconfigYaml } from "../utils/clusters";
+import { getKustomizeConfig } from "../utils/config";
+import { getExtension, longRunning } from "../utils/host";
 import {
     getClusterDiagnosticSettings,
     chooseStorageAccount,
     getStorageInfo,
     prepareAKSPeriscopeKustomizeOverlay,
     getNodeNames,
-    getClusterFeatures
-} from './helpers/periscopehelper';
-import AksClusterTreeItem from '../../tree/aksClusterTreeItem';
-import { Errorable, failed } from '../utils/errorable';
-import { invokeKubectlCommand } from '../utils/kubectl';
-import { PeriscopeDataProvider, PeriscopePanel } from '../../panels/PeriscopePanel';
+    getClusterFeatures,
+} from "./helpers/periscopehelper";
+import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
+import { Errorable, failed } from "../utils/errorable";
+import { invokeKubectlCommand } from "../utils/kubectl";
+import { PeriscopeDataProvider, PeriscopePanel } from "../../panels/PeriscopePanel";
 
-export default async function periscope(
-    _context: IActionContext,
-    target: any
-): Promise<void> {
+export default async function periscope(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     if (!kubectl.available) {
         return;
@@ -43,13 +40,17 @@ export default async function periscope(
         return;
     }
 
-    const properties = await longRunning(`Getting properties for cluster ${cluster.result.name}.`, () => getClusterProperties(cluster.result));
+    const properties = await longRunning(`Getting properties for cluster ${cluster.result.name}.`, () =>
+        getClusterProperties(cluster.result),
+    );
     if (failed(properties)) {
         vscode.window.showErrorMessage(properties.error);
         return undefined;
     }
 
-    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${cluster.result.name}.`, () => getKubeconfigYaml(cluster.result, properties.result));
+    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${cluster.result.name}.`, () =>
+        getKubeconfigYaml(cluster.result, properties.result),
+    );
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);
         return undefined;
@@ -61,13 +62,13 @@ export default async function periscope(
 async function runAKSPeriscope(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     cluster: AksClusterTreeItem,
-    clusterKubeConfig: string
+    clusterKubeConfig: string,
 ): Promise<void> {
     const clusterName = cluster.name;
 
     // Get Diagnostic settings for cluster and get associated storage account information.
-    const clusterDiagnosticSettings = await longRunning(`Identifying cluster diagnostic settings.`,
-        () => getClusterDiagnosticSettings(cluster)
+    const clusterDiagnosticSettings = await longRunning(`Identifying cluster diagnostic settings.`, () =>
+        getClusterDiagnosticSettings(cluster),
     );
 
     const extension = getExtension();
@@ -91,8 +92,8 @@ async function runAKSPeriscope(
     if (!clusterStorageAccountId) return;
 
     // Generate storage sas keys, manage aks persicope run.
-    const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`,
-        () => getStorageInfo(kubectl, cluster, clusterStorageAccountId, clusterKubeConfig)
+    const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`, () =>
+        getStorageInfo(kubectl, cluster, clusterStorageAccountId, clusterKubeConfig),
     );
 
     if (failed(clusterStorageInfo)) {
@@ -116,10 +117,17 @@ async function runAKSPeriscope(
     }
 
     // Create a run ID of format: YYYY-MM-DDThh-mm-ssZ
-    const runId = new Date().toISOString().slice(0, 19).replace(/:/g, "-") + "Z";
+    const runId = `${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}Z`;
 
-    const aksDeploymentFile = await longRunning(`Creating AKS Periscope resource specification for ${clusterName}.`,
-        () => prepareAKSPeriscopeKustomizeOverlay(clusterStorageInfo.result, kustomizeConfig.result, clusterFeatures.result, runId)
+    const aksDeploymentFile = await longRunning(
+        `Creating AKS Periscope resource specification for ${clusterName}.`,
+        () =>
+            prepareAKSPeriscopeKustomizeOverlay(
+                clusterStorageInfo.result,
+                kustomizeConfig.result,
+                clusterFeatures.result,
+                runId,
+            ),
     );
 
     if (failed(aksDeploymentFile)) {
@@ -133,8 +141,8 @@ async function runAKSPeriscope(
         return;
     }
 
-    const runCommandResult = await longRunning(`Deploying AKS Periscope to ${clusterName}.`,
-        () => deployKustomizeOverlay(kubectl, aksDeploymentFile.result, clusterKubeConfig)
+    const runCommandResult = await longRunning(`Deploying AKS Periscope to ${clusterName}.`, () =>
+        deployKustomizeOverlay(kubectl, aksDeploymentFile.result, clusterKubeConfig),
     );
 
     const deploymentParameters = {
@@ -142,35 +150,53 @@ async function runAKSPeriscope(
         kustomizeConfig: kustomizeConfig.result,
         storage: clusterStorageInfo.result,
         clusterKubeConfig,
-        periscopeNamespace: 'aks-periscope'
+        periscopeNamespace: "aks-periscope",
     };
 
     if (failed(runCommandResult)) {
         // For a failure running the command result, we display the error in a webview.
-        const dataProvider = PeriscopeDataProvider.createForDeploymentError(cluster.name, runId, runCommandResult.error, deploymentParameters);
+        const dataProvider = PeriscopeDataProvider.createForDeploymentError(
+            cluster.name,
+            runId,
+            runCommandResult.error,
+            deploymentParameters,
+        );
         panel.show(dataProvider);
         return;
     }
 
     // Show the webview for successful deployment
-    const dataProvider = PeriscopeDataProvider.createForDeploymentSuccess(cluster.name, runId, nodeNames.result, deploymentParameters);
+    const dataProvider = PeriscopeDataProvider.createForDeploymentSuccess(
+        cluster.name,
+        runId,
+        nodeNames.result,
+        deploymentParameters,
+    );
     panel.show(dataProvider);
 }
 
 async function deployKustomizeOverlay(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     overlayDir: string,
-    clusterKubeConfig: string
+    clusterKubeConfig: string,
 ): Promise<Errorable<k8s.KubectlV1.ShellResult>> {
-    return await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(clusterKubeConfig, "YAML", async kubeConfigFile => {
-        // Clean up running instance (without an error if it doesn't yet exist).
-        const deleteResult = await invokeKubectlCommand(kubectl, kubeConfigFile, 'delete ns aks-periscope --ignore-not-found=true');
-        if (failed(deleteResult)) return deleteResult;
+    return await tmpfile.withOptionalTempFile<Errorable<k8s.KubectlV1.ShellResult>>(
+        clusterKubeConfig,
+        "YAML",
+        async (kubeConfigFile) => {
+            // Clean up running instance (without an error if it doesn't yet exist).
+            const deleteResult = await invokeKubectlCommand(
+                kubectl,
+                kubeConfigFile,
+                "delete ns aks-periscope --ignore-not-found=true",
+            );
+            if (failed(deleteResult)) return deleteResult;
 
-        // Deploy aks-periscope.
-        const applyResult = await invokeKubectlCommand(kubectl, kubeConfigFile, `apply -k ${overlayDir}`);
-        if (failed(applyResult)) return applyResult;
+            // Deploy aks-periscope.
+            const applyResult = await invokeKubectlCommand(kubectl, kubeConfigFile, `apply -k ${overlayDir}`);
+            if (failed(applyResult)) return applyResult;
 
-        return invokeKubectlCommand(kubectl, kubeConfigFile, 'cluster-info');
-    });
+            return invokeKubectlCommand(kubectl, kubeConfigFile, "cluster-info");
+        },
+    );
 }

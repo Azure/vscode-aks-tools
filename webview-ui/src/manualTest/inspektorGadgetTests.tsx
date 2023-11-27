@@ -1,5 +1,13 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import { GadgetArguments, GadgetVersion, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef, TraceOutputItem } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
+import {
+    GadgetArguments,
+    GadgetVersion,
+    InitialState,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+    TraceOutputItem,
+    TraceOutputValue,
+} from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { InspektorGadget } from "../InspektorGadget/InspektorGadget";
 import { getGadgetMetadata } from "../InspektorGadget/helpers/gadgets";
 import { GadgetCategory, isDerivedProperty } from "../InspektorGadget/helpers/gadgets/types";
@@ -7,37 +15,73 @@ import { stateUpdater } from "../InspektorGadget/helpers/state";
 import { distinct, exclude } from "../utilities/array";
 import { Scenario } from "../utilities/manualTest";
 
-type ContainerInfo = { name: string, pid: number, mountNsId: number, comm: string, ppid: number, tids: number[] };
+type ContainerInfo = { name: string; pid: number; mountNsId: number; comm: string; ppid: number; tids: number[] };
 type PodContainers = { [podName: string]: ContainerInfo[] };
 type NamespaceResources = { [namespace: string]: PodContainers };
 type NodeResources = { [node: string]: NamespaceResources };
 
 const nodeResources: NodeResources = {
-    "testnode01": {
+    testnode01: {
         "kube-system": {
-            "konnectivity-agent-00001": [{name: "konnectivity-agent", pid: 1000, mountNsId: 4000000000, comm: "proxy-agent", ppid: 100, tids: [10000]}],
-            "coredns-00001": [{name: "coredns", pid: 1001, mountNsId: 4000000001, comm: "coredns", ppid: 101, tids: [10001]}]
+            "konnectivity-agent-00001": [
+                {
+                    name: "konnectivity-agent",
+                    pid: 1000,
+                    mountNsId: 4000000000,
+                    comm: "proxy-agent",
+                    ppid: 100,
+                    tids: [10000],
+                },
+            ],
+            "coredns-00001": [
+                { name: "coredns", pid: 1001, mountNsId: 4000000001, comm: "coredns", ppid: 101, tids: [10001] },
+            ],
         },
-        "default": {
+        default: {
             "testpod-00001": [
-                {name: "testpod", pid: 1002, mountNsId: 4000000002, comm: "testapp", ppid: 102, tids: [10002]},
-                {name: "testsidecar", pid: 1003, mountNsId: 4000000003, comm: "test2", ppid: 103, tids: [10003,10004]}
-            ]
-        }
-    },
-    "testnode02": {
-        "kube-system": {
-            "konnectivity-agent-00002": [{name: "konnectivity-agent", pid: 2000, mountNsId: 4000000000, comm: "proxy-agent", ppid: 200, tids: [20000]}],
-            "coredns-00002": [{name: "coredns", pid: 2001, mountNsId: 4000000001, comm: "coredns", ppid: 201, tids: [20001]}]
+                { name: "testpod", pid: 1002, mountNsId: 4000000002, comm: "testapp", ppid: 102, tids: [10002] },
+                {
+                    name: "testsidecar",
+                    pid: 1003,
+                    mountNsId: 4000000003,
+                    comm: "test2",
+                    ppid: 103,
+                    tids: [10003, 10004],
+                },
+            ],
         },
-        "default": {
+    },
+    testnode02: {
+        "kube-system": {
+            "konnectivity-agent-00002": [
+                {
+                    name: "konnectivity-agent",
+                    pid: 2000,
+                    mountNsId: 4000000000,
+                    comm: "proxy-agent",
+                    ppid: 200,
+                    tids: [20000],
+                },
+            ],
+            "coredns-00002": [
+                { name: "coredns", pid: 2001, mountNsId: 4000000001, comm: "coredns", ppid: 201, tids: [20001] },
+            ],
+        },
+        default: {
             "testpod-00002": [
-                {name: "testpod", pid: 2002, mountNsId: 4000000002, comm: "testapp", ppid: 202, tids: [20002]},
-                {name: "testsidecar", pid: 2003, mountNsId: 4000000003, comm: "test2", ppid: 203, tids: [20003,20004]}
-            ]
-        }
-    }
-}
+                { name: "testpod", pid: 2002, mountNsId: 4000000002, comm: "testapp", ppid: 202, tids: [20002] },
+                {
+                    name: "testsidecar",
+                    pid: 2003,
+                    mountNsId: 4000000003,
+                    comm: "test2",
+                    ppid: 203,
+                    tids: [20003, 20004],
+                },
+            ],
+        },
+    },
+};
 
 function getNamespaces(node: string): string[] {
     const thisNodeResources = nodeResources[node];
@@ -58,13 +102,13 @@ function getContainers(node: string, namespace: string, pod: string): string[] {
     if (!getPodNames(node, namespace).includes(pod)) {
         return [];
     }
-    return nodeResources[node][namespace][pod].map(c => c.name);
+    return nodeResources[node][namespace][pod].map((c) => c.name);
 }
 
 const nodes = Object.keys(nodeResources);
 
 export function getInspektorGadgetScenarios() {
-    let version: GadgetVersion = {client: "1.0.0", server: "1.0.0" };
+    let version: GadgetVersion = { client: "1.0.0", server: "1.0.0" };
     let watchTimer: NodeJS.Timer;
 
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
@@ -72,94 +116,97 @@ export function getInspektorGadgetScenarios() {
             getVersionRequest: handleGetVersionRequest,
             deployRequest: handleDeployRequest,
             undeployRequest: handleUndeployRequest,
-            runStreamingTraceRequest: args => handleRunStreamingTraceRequest(args.traceId, args.arguments),
-            runBlockingTraceRequest: args => handleRunBlockingTraceRequest(args.traceId, args.arguments),
+            runStreamingTraceRequest: (args) => handleRunStreamingTraceRequest(args.traceId, args.arguments),
+            runBlockingTraceRequest: (args) => handleRunBlockingTraceRequest(args.traceId, args.arguments),
             stopStreamingTraceRequest: handleStopWatchingTraceRequest,
             getNodesRequest: handleGetNodesRequest,
             getNamespacesRequest: handleGetNamespacesRequest,
-            getPodsRequest: args => handleGetPodsRequest(args.namespace),
-            getContainersRequest: args => handleGetContainersRequest(args.namespace, args.podName)
+            getPodsRequest: (args) => handleGetPodsRequest(args.namespace),
+            getContainersRequest: (args) => handleGetContainersRequest(args.namespace, args.podName),
         };
 
         async function handleGetVersionRequest() {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             webview.postUpdateVersion(version);
         }
-    
+
         async function handleDeployRequest() {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             version = { client: "1.0.0", server: "1.0.0" };
             webview.postUpdateVersion(version);
         }
-    
+
         async function handleUndeployRequest() {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             version = { client: "1.0.0", server: null };
             webview.postUpdateVersion(version);
         }
-    
+
         function handleRunStreamingTraceRequest(traceId: number, args: GadgetArguments) {
             if (watchTimer) {
                 clearInterval(watchTimer);
             }
-    
+
             const refreshIntervalMs = (args.interval || 1) * 1000;
             watchTimer = setInterval(() => emitTraceOutput(args, traceId), refreshIntervalMs);
         }
-    
+
         async function handleRunBlockingTraceRequest(traceId: number, args: GadgetArguments) {
             const useSpecifiedTimeout = args.gadgetCategory === "profile" && args.timeout;
             const waitTime = useSpecifiedTimeout ? args.timeout! * 1000 : 2000;
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            const items = Array.from({ length: 10 }, _ => getTraceItem(args));
-            webview.postRunTraceResponse({items, traceId});
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
+            const items = Array.from({ length: 10 }, () => getTraceItem(args));
+            webview.postRunTraceResponse({ items, traceId });
         }
-    
+
         function handleStopWatchingTraceRequest() {
             if (watchTimer) {
                 clearInterval(watchTimer);
             }
         }
-    
+
         async function handleGetNodesRequest() {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            webview.postGetNodesResponse({nodes});
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            webview.postGetNodesResponse({ nodes });
         }
-    
+
         async function handleGetNamespacesRequest() {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const namespaces = distinct(nodes.flatMap(node => getNamespaces(node)));
-            webview.postGetNamespacesResponse({namespaces});
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const namespaces = distinct(nodes.flatMap((node) => getNamespaces(node)));
+            webview.postGetNamespacesResponse({ namespaces });
         }
-    
+
         async function handleGetPodsRequest(namespace: string) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const podNames = distinct(nodes.flatMap(node => getPodNames(node, namespace)));
-            webview.postGetPodsResponse({namespace, podNames});
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const podNames = distinct(nodes.flatMap((node) => getPodNames(node, namespace)));
+            webview.postGetPodsResponse({ namespace, podNames });
         }
-    
+
         async function handleGetContainersRequest(namespace: string, podName: string) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const containerNames = distinct(nodes.flatMap(node => getContainers(node, namespace, podName)));
-            webview.postGetContainersResponse({namespace, podName, containerNames});
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const containerNames = distinct(nodes.flatMap((node) => getContainers(node, namespace, podName)));
+            webview.postGetContainersResponse({ namespace, podName, containerNames });
         }
-    
+
         function emitTraceOutput(config: GadgetArguments, traceId: number) {
             const isTopTrace = config.gadgetCategory === "top";
             if (isTopTrace) {
                 const maxRows = config.maxRows!;
-                const items = Array.from({ length: maxRows }, _ => getTraceItem(config));
-                webview.postRunTraceResponse({items, traceId});
+                const items = Array.from({ length: maxRows }, () => getTraceItem(config));
+                webview.postRunTraceResponse({ items, traceId });
             } else {
                 const items = [getTraceItem(config)];
-                webview.postRunTraceResponse({items, traceId});
+                webview.postRunTraceResponse({ items, traceId });
             }
         }
     }
 
     function getTraceItem(gadgetArgs: GadgetArguments): TraceOutputItem {
-        const gadgetMetadata = getGadgetMetadata(gadgetArgs.gadgetCategory as GadgetCategory, gadgetArgs.gadgetResource);
-        const expectedKeys = gadgetMetadata?.allProperties.filter(p => !isDerivedProperty(p)).map(p => p.key) || [];
+        const gadgetMetadata = getGadgetMetadata(
+            gadgetArgs.gadgetCategory as GadgetCategory,
+            gadgetArgs.gadgetResource,
+        );
+        const expectedKeys = gadgetMetadata?.allProperties.filter((p) => !isDerivedProperty(p)).map((p) => p.key) || [];
         const node = nodes[~~(Math.random() * nodes.length)];
         const namespaces = Object.keys(nodeResources[node]);
         const namespace = namespaces[~~(Math.random() * namespaces.length)];
@@ -183,22 +230,23 @@ export function getInspektorGadgetScenarios() {
             ppid: container.ppid,
             uid: 0,
             gid: 1,
-            tid: threadId
+            tid: threadId,
         };
 
         const populatedKeys = Object.keys(stats);
         const remainingColumns = exclude(expectedKeys, populatedKeys);
 
-        return remainingColumns.reduce<TraceOutputItem>(
-            (stats, key) => {
-                stats[key] = getTraceStatsValue(key);
-                return stats;
-            },
-            stats
-        );
+        return remainingColumns.reduce<TraceOutputItem>((stats, key) => {
+            const value = getTraceStatsValue(key);
+            if (value !== undefined) {
+                stats[key] = value;
+            }
+
+            return stats;
+        }, stats);
     }
 
-    function getTraceStatsValue(columnKey: string): any {
+    function getTraceStatsValue(columnKey: string): TraceOutputValue | undefined {
         const operations = ["accept", "close"];
         const protocols = ["TCP", "UDP"];
         const qrValues = ["Q", "R"];
@@ -245,7 +293,7 @@ export function getInspektorGadgetScenarios() {
             case "wbytes":
                 return ~~(Math.random() * 1000);
             case "fileType":
-                return 'R'.charCodeAt(0);
+                return "R".charCodeAt(0);
             case "filename":
                 return "file.txt";
             case "write":
@@ -289,7 +337,9 @@ export function getInspektorGadgetScenarios() {
             case "timestamp":
                 return new Date().getTime() * 1000000 + ~~(Math.random() * 1000000); // fake nanosecond resolution
             case "id":
-                return Array.from({length: 4}, _ => ~~(Math.random() * 16)).map(byte => (byte & 0xff).toString(16)).join(''); // Random 4-character hex string
+                return Array.from({ length: 4 }, () => ~~(Math.random() * 16))
+                    .map((byte) => (byte & 0xff).toString(16))
+                    .join(""); // Random 4-character hex string
             case "qr":
                 return qrValues[~~(Math.random() * qrValues.length)];
             case "nameserver":
@@ -320,6 +370,12 @@ export function getInspektorGadgetScenarios() {
     const initialState: InitialState = {};
 
     return [
-        Scenario.create("gadget", "", () => <InspektorGadget {...initialState} />, getMessageHandler, stateUpdater.vscodeMessageHandler)
+        Scenario.create(
+            "gadget",
+            "",
+            () => <InspektorGadget {...initialState} />,
+            getMessageHandler,
+            stateUpdater.vscodeMessageHandler,
+        ),
     ];
 }

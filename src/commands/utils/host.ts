@@ -1,22 +1,23 @@
-import * as vscode from 'vscode';
-import { Errorable, map as errmap } from './errorable';
-
-const meta = require('../../../package.json');
+import * as vscode from "vscode";
+import { Errorable, map as errmap } from "./errorable";
+import meta from "../../../package.json";
 
 export async function longRunning<T>(title: string, action: () => Promise<T>): Promise<T> {
     const options = {
         location: vscode.ProgressLocation.Notification,
-        title: title
+        title: title,
     };
-    return await vscode.window.withProgress(options, (_) => action());
+    return await vscode.window.withProgress(options, () => action());
 }
 
 export function getExtension(): Errorable<vscode.Extension<vscode.ExtensionContext>> {
     const publisherName = `${meta.publisher}.${meta.name}`;
     const extension = vscode.extensions.getExtension(publisherName);
-    return extension ? { succeeded: true, result: extension } : { succeeded: false, error: `Extension not found for ${publisherName}` };
+    return extension
+        ? { succeeded: true, result: extension }
+        : { succeeded: false, error: `Extension not found for ${publisherName}` };
 }
 
 export function getExtensionPath(): Errorable<string> {
-    return errmap(getExtension(), e => e.extensionPath);
+    return errmap(getExtension(), (e) => e.extensionPath);
 }

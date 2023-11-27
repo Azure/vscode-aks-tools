@@ -1,9 +1,52 @@
-import { derivedNetworkEndpointKeys, networkEndpointKeys, networkEndpointKeyMetadata, k8sKeys, k8sKeyMetadata, derivedNetworkEndpointProperties, timestampKeys, mountNsKeys, mountNsKeyMetadata, processThreadKeys, timestampKeyMetadata, processThreadKeyMetadata, commandKeys, commandKeyMetadata, userKeyMetadata, userKeys } from "./common";
-import { GadgetExtraProperties, GadgetMetadata, getDerivedProperty, getLiteralProperties, ItemMetadata, ItemProperty, toProperties, ValueType } from "./types";
+import {
+    derivedNetworkEndpointKeys,
+    networkEndpointKeys,
+    networkEndpointKeyMetadata,
+    k8sKeys,
+    k8sKeyMetadata,
+    derivedNetworkEndpointProperties,
+    timestampKeys,
+    mountNsKeys,
+    mountNsKeyMetadata,
+    processThreadKeys,
+    timestampKeyMetadata,
+    processThreadKeyMetadata,
+    commandKeys,
+    commandKeyMetadata,
+    userKeyMetadata,
+    userKeys,
+} from "./common";
+import {
+    GadgetExtraProperties,
+    GadgetMetadata,
+    getDerivedProperty,
+    getLiteralProperties,
+    ItemMetadata,
+    ItemProperty,
+    toProperties,
+    ValueType,
+} from "./types";
 
 // DNS
-const dnsTraceKeys = [...k8sKeys, ...timestampKeys, ...mountNsKeys, "netnsid", ...processThreadKeys, ...commandKeys, ...userKeys, "id", "qr", "nameserver", "pktType", "qtype", "name", "rcode", "numAnswers", "addresses"] as const;
-type DnsTraceKey = typeof dnsTraceKeys[number];
+const dnsTraceKeys = [
+    ...k8sKeys,
+    ...timestampKeys,
+    ...mountNsKeys,
+    "netnsid",
+    ...processThreadKeys,
+    ...commandKeys,
+    ...userKeys,
+    "id",
+    "qr",
+    "nameserver",
+    "pktType",
+    "qtype",
+    "name",
+    "rcode",
+    "numAnswers",
+    "addresses",
+] as const;
+type DnsTraceKey = (typeof dnsTraceKeys)[number];
 const dnsTraceKeyMetadata: ItemMetadata<DnsTraceKey> = {
     ...k8sKeyMetadata,
     ...timestampKeyMetadata,
@@ -20,26 +63,47 @@ const dnsTraceKeyMetadata: ItemMetadata<DnsTraceKey> = {
     name: { identifier: "name", name: "Name" },
     rcode: { identifier: "rcode", name: "RCode" },
     numAnswers: { identifier: "numAnswers", name: "#Answers" },
-    addresses: { identifier: "addresses", name: "Addresses", valueType: ValueType.AddressArray }
+    addresses: { identifier: "addresses", name: "Addresses", valueType: ValueType.AddressArray },
 };
-const allDnsTraceProperties: ItemProperty<DnsTraceKey>[] = [
-    ...getLiteralProperties(dnsTraceKeyMetadata)
-];
-const defaultDnsTraceProperties: ItemProperty<DnsTraceKey>[] = toProperties(
-    allDnsTraceProperties,
-    ["k8s.node","k8s.namespace","k8s.podName","pid","tid","comm","qr","pktType","qtype","name","rcode","numAnswers"]
-);
+const allDnsTraceProperties: ItemProperty<DnsTraceKey>[] = [...getLiteralProperties(dnsTraceKeyMetadata)];
+const defaultDnsTraceProperties: ItemProperty<DnsTraceKey>[] = toProperties(allDnsTraceProperties, [
+    "k8s.node",
+    "k8s.namespace",
+    "k8s.podName",
+    "pid",
+    "tid",
+    "comm",
+    "qr",
+    "pktType",
+    "qtype",
+    "name",
+    "rcode",
+    "numAnswers",
+]);
 export const dnsTraceMetadata: GadgetMetadata<DnsTraceKey> = {
     name: "Trace DNS",
     allProperties: allDnsTraceProperties,
     defaultProperties: defaultDnsTraceProperties,
     defaultSort: null,
-    extraProperties: GadgetExtraProperties.None
-}
+    extraProperties: GadgetExtraProperties.None,
+};
 
 // Exec
-const execTraceKeys = [...k8sKeys, ...timestampKeys, ...mountNsKeys, "pid", "ppid", ...commandKeys, "ret", "args", ...userKeys, "loginuid", "sessionid", "cwd"] as const;
-type ExecTraceKey = typeof execTraceKeys[number];
+const execTraceKeys = [
+    ...k8sKeys,
+    ...timestampKeys,
+    ...mountNsKeys,
+    "pid",
+    "ppid",
+    ...commandKeys,
+    "ret",
+    "args",
+    ...userKeys,
+    "loginuid",
+    "sessionid",
+    "cwd",
+] as const;
+type ExecTraceKey = (typeof execTraceKeys)[number];
 const execTraceKeyMetadata: ItemMetadata<ExecTraceKey> = {
     ...k8sKeyMetadata,
     ...timestampKeyMetadata,
@@ -52,26 +116,39 @@ const execTraceKeyMetadata: ItemMetadata<ExecTraceKey> = {
     ...userKeyMetadata,
     loginuid: { identifier: "loginuid", name: "LoginUID" },
     sessionid: { identifier: "sessionid", name: "SessionID" },
-    cwd: { identifier: "cwd", name: "CWD" }
-}
-const allExecTraceProperties: ItemProperty<ExecTraceKey>[] = [
-    ...getLiteralProperties(execTraceKeyMetadata)
-];
-const defaultExecTraceProperties: ItemProperty<ExecTraceKey>[] = toProperties(
-    allExecTraceProperties,
-    ["k8s.node","k8s.namespace","k8s.podName","k8s.containerName","pid","ppid","comm","ret","args"]
-);
+    cwd: { identifier: "cwd", name: "CWD" },
+};
+const allExecTraceProperties: ItemProperty<ExecTraceKey>[] = [...getLiteralProperties(execTraceKeyMetadata)];
+const defaultExecTraceProperties: ItemProperty<ExecTraceKey>[] = toProperties(allExecTraceProperties, [
+    "k8s.node",
+    "k8s.namespace",
+    "k8s.podName",
+    "k8s.containerName",
+    "pid",
+    "ppid",
+    "comm",
+    "ret",
+    "args",
+]);
 export const execTraceMetadata: GadgetMetadata<ExecTraceKey> = {
     name: "Trace Exec",
     allProperties: allExecTraceProperties,
     defaultProperties: defaultExecTraceProperties,
     defaultSort: null,
-    extraProperties: GadgetExtraProperties.None
+    extraProperties: GadgetExtraProperties.None,
 };
 
 // TCP
-const tcpTraceKeys = [...k8sKeys, "operation", "pid", ...commandKeys, "ipversion", ...networkEndpointKeys, ...mountNsKeys] as const;
-type TcpTraceKey = typeof tcpTraceKeys[number];
+const tcpTraceKeys = [
+    ...k8sKeys,
+    "operation",
+    "pid",
+    ...commandKeys,
+    "ipversion",
+    ...networkEndpointKeys,
+    ...mountNsKeys,
+] as const;
+type TcpTraceKey = (typeof tcpTraceKeys)[number];
 const tcpTraceKeyMetadata: ItemMetadata<TcpTraceKey> = {
     ...k8sKeyMetadata,
     operation: { identifier: "t", name: "T" },
@@ -79,31 +156,31 @@ const tcpTraceKeyMetadata: ItemMetadata<TcpTraceKey> = {
     ...commandKeyMetadata,
     ipversion: { identifier: "ip", name: "IP" },
     ...networkEndpointKeyMetadata,
-    ...mountNsKeyMetadata
+    ...mountNsKeyMetadata,
 };
 const derivedTcpTraceKeys = ["t", ...derivedNetworkEndpointKeys] as const;
-type DerivedTcpTraceKey = typeof derivedTcpTraceKeys[number];
+type DerivedTcpTraceKey = (typeof derivedTcpTraceKeys)[number];
 const allTcpTraceProperties: ItemProperty<TcpTraceKey | DerivedTcpTraceKey>[] = [
     ...getLiteralProperties(tcpTraceKeyMetadata),
     ...derivedNetworkEndpointProperties,
-    getDerivedProperty("T", "t", item => tcpOperationDisplay[item.operation] || "U")
+    getDerivedProperty("T", "t", (item) => tcpOperationDisplay[item.operation as string] || "U"),
 ];
 const defaultTcpTraceProperties: ItemProperty<TcpTraceKey | DerivedTcpTraceKey>[] = toProperties(
     allTcpTraceProperties,
-    ["k8s.node","k8s.namespace","k8s.podName","k8s.containerName","t","pid","comm","ipversion","src","dst"]
+    ["k8s.node", "k8s.namespace", "k8s.podName", "k8s.containerName", "t", "pid", "comm", "ipversion", "src", "dst"],
 );
 export const tcpTraceMetadata: GadgetMetadata<TcpTraceKey | DerivedTcpTraceKey> = {
     name: "Trace TCP",
     allProperties: allTcpTraceProperties,
     defaultProperties: defaultTcpTraceProperties,
     defaultSort: null,
-    extraProperties: GadgetExtraProperties.None
-}
+    extraProperties: GadgetExtraProperties.None,
+};
 
 // https://github.com/inspektor-gadget/inspektor-gadget/blob/08056695b8cfc02698afcbd41add88acfac4d8cf/pkg/gadgets/trace/tcp/types/types.go#LL40C1-L45C4
-const tcpOperationDisplay: {[op: string]: string} = {
+const tcpOperationDisplay: { [op: string]: string } = {
     accept: "A",
     connect: "C",
     close: "X",
-    unknown: "U"
+    unknown: "U",
 };

@@ -6,7 +6,7 @@ enum InsightColumnName {
     Status = "Status",
     Message = "Message",
     DataName = "Data.Name",
-    DataValue = "Data.Value"
+    DataValue = "Data.Value",
 }
 
 const insightColumnIndexMap = new Map(Object.values(InsightColumnName).map((name, index) => [name, index]));
@@ -14,27 +14,27 @@ const insightColumnIndexMap = new Map(Object.values(InsightColumnName).map((name
 export enum Status {
     Success = 0,
     Warning,
-    Error
+    Error,
 }
 
 export function getOverallStatus(response: SingleDetectorARMResponse): Status {
     const statuses = response.properties.dataset
-        .filter(d => d.renderingProperties.type === insightDatasetType)
+        .filter((d) => d.renderingProperties.type === insightDatasetType)
         .map(getStatusForInsightDataset)
         .filter(isInsightResult)
-        .map(r => r.status);
+        .map((r) => r.status);
 
     return Math.max(...statuses);
 }
 
 export interface InsightResult {
-    status: Status,
-    message: string
+    status: Status;
+    message: string;
 }
 
 export interface ErrorInfo {
-    error: string
-    data: any
+    error: string;
+    data: unknown;
 }
 
 export function isInsightResult(result: InsightResult | ErrorInfo): result is InsightResult {
@@ -46,7 +46,7 @@ export function getStatusForInsightDataset(dataset: SingleDataset): InsightResul
     if (dataset.table.rows.length === 0) {
         return {
             error: "Expected at least 1 row",
-            data: dataset.table
+            data: dataset.table,
         };
     }
 
@@ -54,7 +54,7 @@ export function getStatusForInsightDataset(dataset: SingleDataset): InsightResul
     if (dataset.table.columns.length < 4) {
         return {
             error: "Expected at least 4 columns",
-            data: dataset.table
+            data: dataset.table,
         };
     }
 
@@ -63,7 +63,7 @@ export function getStatusForInsightDataset(dataset: SingleDataset): InsightResul
         if (actualColName !== colName) {
             return {
                 message: `Expected column ${index} to have name ${colName}, but found ${actualColName}`,
-                data: dataset.table.columns
+                data: dataset.table.columns,
             };
         }
     });
@@ -71,11 +71,9 @@ export function getStatusForInsightDataset(dataset: SingleDataset): InsightResul
     const statusColumnIndex = insightColumnIndexMap.get(InsightColumnName.Status)!;
     const messageColumnIndex = insightColumnIndexMap.get(InsightColumnName.Message)!;
     const statusValue = dataset.table.rows[0][statusColumnIndex];
-    const message = dataset.table.rows[0][messageColumnIndex];
+    const message = dataset.table.rows[0][messageColumnIndex] as string;
     const status =
-        statusValue === "Success" ? Status.Success :
-        statusValue === "Warning" ? Status.Warning :
-        Status.Error;
+        statusValue === "Success" ? Status.Success : statusValue === "Warning" ? Status.Warning : Status.Error;
 
     return { status, message };
 }
