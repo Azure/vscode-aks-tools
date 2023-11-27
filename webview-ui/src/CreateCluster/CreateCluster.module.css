@@ -2,6 +2,12 @@
     display: grid;
     grid-template-columns: 8rem 20rem 8rem;
     grid-gap: 1rem;
+    margin-top: 18px;
+}
+.presetHeader {
+    width: 208px;
+    height: 18px;
+    margin-bottom: 16px;
 }
 
 .presetContainer {
@@ -9,43 +15,59 @@
     height: 166px;
     flex-shrink: 0;
     border-radius: 8px;
-    border: 1px solid var(--base-base-10, #808080); 
+    border: 1px solid var(--base-base-10, #808080);
+    margin-bottom: 23px;
 }
 
 .presetTitle {
     width: 161px;
-    color: var(--base-base-01, #FFF);
-
-/* az-text-/header 2 */
-font-family: Segoe UI;
-font-size: 16px;
-font-style: normal;
-font-weight: 600;
-line-height: 22px; /* 137.5% */   
+    color: var(--base-base-01, #fff);
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 22px;
 }
 
 .presetDescription {
     width: 161px;
-    color: var(--base-base-01, #FFF);
-
-/* az-text-/body */
-font-family: Segoe UI;
-font-size: 13px;
-font-style: normal;
-font-weight: 400;
-line-height: 18px; /* 138.462% */
+    color: var(--base-base-01, #fff);
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 18px;
+    margin-right: 16px;
+    margin-bottom: 16px;
+    margin-left: 40px;
+    margin-top: 12px;
 }
 
-.devTestIcon {
-    background-image: url('../../resources/createCluster/devTest.svg');
-    background-repeat: no-repeat;
-    height: 17px; /* adjust as needed */
-    width: 17.465px; /* adjust as needed */
+.flexContainer {
+    display: flex;
+    margin-top: 16px;
+    margin-right: 16px;
+    margin-left: 16px;
+}
+
+.svgContainer {
+    margin-right: 6px;
+}
+
+.learnMoreContainer {
+    margin-top: 20px;
 }
 
 .infoIndicator {
     color: var(--vscode-notificationsInfoIcon-foreground);
     padding-right: 0.5rem;
+}
+
+.clusterDetailsLabel {
+    color: var(--base-base-01, #fff);
+    font-size: 15px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    grid-column: 1 / 2;
 }
 
 .label {
@@ -58,6 +80,7 @@ line-height: 18px; /* 138.462% */
 
 .longControl {
     grid-column: 2 / 4;
+    width: 322px;
 }
 
 .sideControl {

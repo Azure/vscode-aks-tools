@@ -1,17 +1,11 @@
-import { FormEvent, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { FormEvent, useState } from "react";
+import { ResourceGroup } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { Dialog } from "../components/Dialog";
 import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
-import {
-    VSCodeButton,
-    VSCodeDivider,
-    VSCodeDropdown,
-    VSCodeOption,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
-import { Dialog } from "../components/Dialog";
-import { ResourceGroup } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -65,10 +59,8 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
 
             <form className={styles.createForm} onSubmit={handleSubmit}>
                 <div className={styles.inputContainer}>
-                    <VSCodeDivider className={styles.fullWidth} />
-
                     <label htmlFor="rg-name-input" className={styles.label}>
-                        Name
+                        Name*
                     </label>
                     <VSCodeTextField
                         id="rg-name-input"
@@ -89,7 +81,7 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
                     )}
 
                     <label htmlFor="location-dropdown" className={styles.label}>
-                        Location
+                        Location*
                     </label>
                     <VSCodeDropdown
                         id="location-dropdown"
@@ -111,12 +103,10 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
                             {location.message}
                         </span>
                     )}
-
-                    <VSCodeDivider className={styles.fullWidth} />
                 </div>
 
-                <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit">Ok</VSCodeButton>
+                <div className={styles.buttonContainer} style={{ justifyContent: "flex-end" }}>
+                    <VSCodeButton type="submit">Create</VSCodeButton>
                     <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
                 </div>
             </form>
