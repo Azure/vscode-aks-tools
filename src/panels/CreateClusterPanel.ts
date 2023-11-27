@@ -7,7 +7,7 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ProgressEventType, ToVsCodeMsgDef, ToWebViewMsgDef, ResourceGroup as WebviewResourceGroup } from "../webview-contract/webviewDefinitions/createCluster";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ClusterSpec, ClusterSpecBuilder } from "./utilities/ClusterSpecCreationBuilder";
-const meta = require('../../package.json');
+import meta from '../../package.json';
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -111,7 +111,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             await createResourceGroup(group, webview, this.resourceManagementClient);
         }
 
-        await createCluster(group, location, name, preset, webview, this.containerServiceClient, this.resourceManagementClient);
+        await createCluster(group, location, name, preset, webview, this.containerServiceClient, this.resourceManagementClient, this.subscriptionId);
     }
 }
 
@@ -152,7 +152,8 @@ async function createCluster(
     preset: string,
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
-    resourceManagementClient: ResourceManagementClient
+    resourceManagementClient: ResourceManagementClient,
+    subscriptionId: string
 ) {
     const operationDescription = `Creating cluster ${name}`;
     webview.postProgressUpdate({
@@ -161,12 +162,24 @@ async function createCluster(
         errorMessage: null,
     });
 
+    // kubernetes version is required to create a cluster via deployments
+    const kubernetesVersion = await containerServiceClient.managedClusters.listKubernetesVersions(location);
+    if (!kubernetesVersion || !kubernetesVersion.values || kubernetesVersion.values.length === 0 || !kubernetesVersion.values[0].version) {
+        window.showErrorMessage(`No Kubernetes versions available for location ${location}`);
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription,
+            errorMessage: "No Kubernetes versions available for location",
+        });
+        return;
+    }
+
     const clusterSpec: ClusterSpec = {
         location,
         name,
         resourceGroupName: group.name,
-        subscriptionId: "", //TODO
-        subscriptionName: "" //TODO
+        subscriptionId: subscriptionId,
+        kubernetesVersion: kubernetesVersion.values[0].version // selecting the latest version since versions come in descending order
     };
 
     const deploymentSpec = getManagedClusterSpec(clusterSpec, preset);
@@ -198,26 +211,6 @@ async function createCluster(
                 });
             }
         });
-
-        // deploymentPoller.onProgress(state => {
-        //     if (state.status === "canceled") {
-        //         webview.postProgressUpdate({
-        //             event: ProgressEventType.Cancelled,
-        //             operationDescription,
-        //             errorMessage: null
-        //         });
-        //     } else if (state.status === "failed") {
-        //         const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
-        //         window.showErrorMessage(`Error creating deployments for AKS cluster ${name}: ${errorMessage}`);
-        //         webview.postProgressUpdate({
-        //             event: ProgressEventType.Failed,
-        //             operationDescription,
-        //             errorMessage
-        //         });
-        //     }
-        // });
-
-        //await Promise.all([poller.pollUntilDone(), deploymentPoller.pollUntilDone()]);
         await poller.pollUntilDone();
     } catch (ex) {
         const errorMessage = getErrorMessage(ex);
@@ -232,7 +225,6 @@ async function createCluster(
 
 function getManagedClusterSpec(clusterSpec: ClusterSpec, preset: string): Deployment {
     const specBuilder: ClusterSpecBuilder = new ClusterSpecBuilder();
-    //const deploymentSpecBuilder: DeploymentSpecBuilder = new DeploymentSpecBuilder();
     switch (preset) {
         case "dev":
             return specBuilder.buildDevTestClusterSpec(clusterSpec);
@@ -244,117 +236,3 @@ function getManagedClusterSpec(clusterSpec: ClusterSpec, preset: string): Deploy
             return specBuilder.buildProdStandardClusterSpec(clusterSpec)
     }
 }
-
-// function getStandardClusterSpec(location: string, name: string): ManagedCluster {
-
-//     return {
-//         addonProfiles: {},
-//         location: location,
-//         identity: {
-//             type: "SystemAssigned"
-//         },
-//         agentPoolProfiles: [
-//             {
-//                 name: "nodepool1",
-//                 type: "VirtualMachineScaleSets",
-//                 count: 2,
-//                 enableAutoScaling: true,
-//                 minCount: 2,
-//                 maxCount: 5,
-//                 maxPods: 110,
-//                 availabilityZones: ["1", "2", "3"],
-//                 enableNodePublicIP: false,
-//                 nodeTaints: ["CriticalAddonsOnly=true:NoSchedule"],
-//                 mode: "System",
-//                 osSKU: "AzureLinux",
-//                 osType: "Linux",
-//                 vmSize: "Standard_D8ds_v5"
-//             },
-//             {
-//                 name: "userpool",
-//                 type: "VirtualMachineScaleSets",
-//                 count: 2,
-//                 enableAutoScaling: true,
-//                 minCount: 2,
-//                 maxCount: 100,
-//                 maxPods: 110,
-//                 availabilityZones: ["1", "2", "3"],
-//                 enableNodePublicIP: false,
-//                 mode: "User",
-//                 osSKU: "AzureLinux",
-//                 osType: "Linux",
-//                 vmSize: "Standard_D8ds_v5"
-//             }
-//         ],
-//         dnsPrefix: `${name}-dns`
-//     };
-// }
-
-// // function getDevTestClusterSpec(location: string, name: string): ManagedCluster {
-// //     return {
-// //         addonProfiles: {},
-// //         location: location,
-// //         identity: {
-// //             type: "SystemAssigned"
-// //         },
-// //         agentPoolProfiles: [
-// //             {
-// //                 name: "nodepool1",
-// //                 type: "VirtualMachineScaleSets",
-// //                 count: 1,
-// //                 enableNodePublicIP: true,
-// //                 mode: "System",
-// //                 osSKU: "AzureLinux",
-// //                 osType: "Linux",
-// //                 vmSize: "Standard_DS2_v2"
-// //             },
-// //         ],
-// //         dnsPrefix: `${name}-dns`
-// //     };
-// // }
-
-// function getProductionEconomyClusterSpec(location: string, name: string): ManagedCluster {
-//     return {
-//         addonProfiles: {},
-//         location: location,
-//         identity: {
-//             type: "SystemAssigned"
-//         },
-//         agentPoolProfiles: [
-//             {
-//                 name: "nodepool1",
-//                 type: "VirtualMachineScaleSets",
-//                 count: 2,
-//                 enableNodePublicIP: true,
-//                 mode: "System",
-//                 osSKU: "AzureLinux",
-//                 osType: "Linux",
-//                 vmSize: "Standard_D8ds_v5"
-//             },
-//         ],
-//         dnsPrefix: `${name}-dns`
-//     };
-// }
-
-// function getProductionEnterpriseClusterSpec(location: string, name: string): ManagedCluster {
-//     return {
-//         addonProfiles: {},
-//         location: location,
-//         identity: {
-//             type: "SystemAssigned"
-//         },
-//         agentPoolProfiles: [
-//             {
-//                 name: "nodepool1",
-//                 type: "VirtualMachineScaleSets",
-//                 count: 2,
-//                 enableNodePublicIP: true,
-//                 mode: "System",
-//                 osSKU: "AzureLinux",
-//                 osType: "Linux",
-//                 vmSize: "Standard_D16ds_v5"
-//             },
-//         ],
-//         dnsPrefix: `${name}-dns`
-//     };
-// }
