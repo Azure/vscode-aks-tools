@@ -1,12 +1,6 @@
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-    VSCodeButton,
-    VSCodeDivider,
-    VSCodeDropdown,
-    VSCodeOption,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
@@ -96,10 +90,11 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
             <form className={styles.createForm} onSubmit={handleSubmit}>
                 <div className={styles.inputContainer}>
                     <CreateClusterPresetInput onPresetSelected={handlePresetSelection}></CreateClusterPresetInput>
-                    <VSCodeDivider className={styles.fullWidth} />
-
+                    <label htmlFor="cluster-details" className={styles.clusterDetailsLabel}>
+                        Cluster details
+                    </label>
                     <label htmlFor="existing-resource-group-dropdown" className={styles.label}>
-                        Resource Group
+                        Resource Group*
                     </label>
                     <VSCodeDropdown
                         id="existing-resource-group-dropdown"
@@ -127,7 +122,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         onClick={() => setIsNewResourceGroupDialogShown(true)}
                         disabled={newResourceGroup !== null}
                     >
-                        Create New...
+                        Create New
                     </VSCodeButton>
                     {shouldShowMessage(existingResourceGroup) && (
                         <span className={styles.validationMessage}>
@@ -141,7 +136,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                             <VSCodeTextField
                                 readOnly
                                 className={styles.midControl}
-                                value={`${newResourceGroup.name} (${newResourceGroup.location})`}
+                                value={`(New) ${newResourceGroup.name} (${newResourceGroup.location})`}
                             ></VSCodeTextField>
                             <VSCodeButton className={styles.sideControl} onClick={() => setNewResourceGroup(null)}>
                                 Clear
@@ -150,7 +145,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="name-input" className={styles.label}>
-                        Name
+                        Name*
                     </label>
                     <VSCodeTextField
                         id="name-input"
@@ -169,7 +164,6 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                             {name.message}
                         </span>
                     )}
-                    <VSCodeDivider className={styles.fullWidth} />
                 </div>
 
                 <div className={styles.buttonContainer}>
