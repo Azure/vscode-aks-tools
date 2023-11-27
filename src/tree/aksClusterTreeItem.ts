@@ -1,6 +1,6 @@
-import { AzExtParentTreeItem, AzExtTreeItem , ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
-import { Subscription } from '@azure/arm-subscriptions';
+import { Subscription } from "@azure/arm-subscriptions";
 import { assetUri } from "../assets";
 import { parseResource } from "../azure-api-utils";
 import { Resource } from "@azure/arm-resources";
@@ -8,7 +8,7 @@ import { Resource } from "@azure/arm-resources";
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
 export interface AksClusterTreeNode {
-    readonly nodeType: 'cluster';
+    readonly nodeType: "cluster";
     readonly armId: string;
     readonly name: string;
     readonly session: ISubscriptionContext;
@@ -19,7 +19,8 @@ export interface AksClusterTreeNode {
 export default class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
     constructor(
         parent: AzExtParentTreeItem,
-        readonly resource: Resource) {
+        readonly resource: Resource,
+    ) {
         super(parent);
 
         this.iconPath = assetUri("resources/aks-tools.png");
@@ -53,5 +54,5 @@ export default class AksClusterTreeItem extends AzExtTreeItem implements AksClus
         return parseResource(this.armId).resourceGroupName!;
     }
 
-    public readonly nodeType = 'cluster';
+    public readonly nodeType = "cluster";
 }

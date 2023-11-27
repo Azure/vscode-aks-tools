@@ -70,7 +70,7 @@ line-height: 18px; /* 138.462% */
 }
 
 .fullWidth {
-    grid-column: 1 / 4
+    grid-column: 1 / 4;
 }
 
 .errorIndicator {

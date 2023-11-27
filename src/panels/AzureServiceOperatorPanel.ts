@@ -1,12 +1,20 @@
 import * as vscode from "vscode";
-import * as k8s from 'vscode-kubernetes-tools-api';
+import * as k8s from "vscode-kubernetes-tools-api";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { failed, getErrorMessage, map as errmap, combine } from '../commands/utils/errorable';
-import { ASOCloudName, AzureCloudName, CommandResult, InitialState, ToVsCodeMsgDef, ToWebViewMsgDef, azureToASOCloudMap } from "../webview-contract/webviewDefinitions/azureServiceOperator";
+import { failed, getErrorMessage, map as errmap, combine } from "../commands/utils/errorable";
+import {
+    ASOCloudName,
+    AzureCloudName,
+    CommandResult,
+    InitialState,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+    azureToASOCloudMap,
+} from "../webview-contract/webviewDefinitions/azureServiceOperator";
 import { AzureAccountExtensionApi, getServicePrincipalAccess } from "../commands/utils/azureAccount";
 import { NonZeroExitCodeBehaviour, invokeKubectlCommand } from "../commands/utils/kubectl";
-import path = require("path");
+import path from "path";
 import * as fs from "fs/promises";
 import { createTempFile } from "../commands/utils/tempfile";
 
@@ -18,7 +26,7 @@ export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
             installOperatorResponse: null,
             installOperatorSettingsResponse: null,
             waitForCertManagerResponse: null,
-            waitForControllerManagerResponse: null
+            waitForControllerManagerResponse: null,
         });
     }
 }
@@ -29,8 +37,8 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
         readonly azAccount: AzureAccountExtensionApi,
-        readonly clusterName: string
-    ) { }
+        readonly clusterName: string,
+    ) {}
 
     getTitle(): string {
         return `ASO on ${this.clusterName}`;
@@ -38,22 +46,34 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
 
     getInitialState(): InitialState {
         return {
-            clusterName: this.clusterName
+            clusterName: this.clusterName,
         };
     }
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            checkSPRequest: args => this._handleCheckSPRequest(args.appId, args.appSecret, webview),
-            installCertManagerRequest: _ => this._handleInstallCertManagerRequest(webview),
-            waitForCertManagerRequest: _ => this._handleWaitForCertManagerRequest(webview),
-            installOperatorRequest: _ => this._handleInstallOperatorRequest(webview),
-            installOperatorSettingsRequest: args => this._handleInstallOperatorSettingsRequest(args.appId, args.appSecret, args.cloudName, args.subscriptionId, args.tenantId, webview),
-            waitForControllerManagerRequest: _ => this._handleWaitForControllerManagerRequest(webview)
+            checkSPRequest: (args) => this.handleCheckSPRequest(args.appId, args.appSecret, webview),
+            installCertManagerRequest: () => this.handleInstallCertManagerRequest(webview),
+            waitForCertManagerRequest: () => this.handleWaitForCertManagerRequest(webview),
+            installOperatorRequest: () => this.handleInstallOperatorRequest(webview),
+            installOperatorSettingsRequest: (args) =>
+                this.handleInstallOperatorSettingsRequest(
+                    args.appId,
+                    args.appSecret,
+                    args.cloudName,
+                    args.subscriptionId,
+                    args.tenantId,
+                    webview,
+                ),
+            waitForControllerManagerRequest: () => this.handleWaitForControllerManagerRequest(webview),
         };
     }
 
-    private async _handleCheckSPRequest(appId: string, appSecret: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleCheckSPRequest(
+        appId: string,
+        appSecret: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ): Promise<void> {
         const servicePrincipalAccess = await getServicePrincipalAccess(this.azAccount, appId, appSecret);
         if (failed(servicePrincipalAccess)) {
             webview.postCheckSPResponse({
@@ -62,7 +82,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
                 commandResults: [],
                 cloudName: null,
                 subscriptions: [],
-                tenantId: null
+                tenantId: null,
             });
             return;
         }
@@ -73,21 +93,26 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
             commandResults: [],
             cloudName: servicePrincipalAccess.result.cloudName as AzureCloudName,
             subscriptions: servicePrincipalAccess.result.subscriptions,
-            tenantId: servicePrincipalAccess.result.tenantId
+            tenantId: servicePrincipalAccess.result.tenantId,
         });
     }
 
-    private async _handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
         // From installation instructions:
         // https://azure.github.io/azure-service-operator/#installation
         const asoCrdYamlFile = "https://github.com/jetstack/cert-manager/releases/download/v1.12.1/cert-manager.yaml";
         const kubectlArgs = `create -f ${asoCrdYamlFile}`;
-        const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
+        const shellOutput = await invokeKubectlCommand(
+            this.kubectl,
+            this.kubeConfigFilePath,
+            kubectlArgs,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
         if (failed(shellOutput)) {
             webview.postInstallCertManagerResponse({
                 succeeded: false,
                 errorMessage: shellOutput.error,
-                commandResults: []
+                commandResults: [],
             });
             return;
         }
@@ -99,39 +124,54 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         webview.postInstallCertManagerResponse({
             succeeded,
             errorMessage,
-            commandResults: [{ command, stdout, stderr }]
+            commandResults: [{ command, stdout, stderr }],
         });
     }
 
-    private async _handleWaitForCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const deployments = ['cert-manager', 'cert-manager-cainjector', 'cert-manager-webhook'];
-        const promiseResults = await Promise.all(deployments.map(async d => {
-            const kubectlArgs =  `rollout status -n cert-manager deploy/${d} --timeout=240s`;
-            const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
-            return errmap<k8s.KubectlV1.ShellResult, k8s.KubectlV1.ShellResult & CommandResult>(shellOutput, sr => ({...sr, command: `kubectl ${kubectlArgs}`}));
-        }));
+    private async handleWaitForCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+        const deployments = ["cert-manager", "cert-manager-cainjector", "cert-manager-webhook"];
+        const promiseResults = await Promise.all(
+            deployments.map(async (d) => {
+                const kubectlArgs = `rollout status -n cert-manager deploy/${d} --timeout=240s`;
+                const shellOutput = await invokeKubectlCommand(
+                    this.kubectl,
+                    this.kubeConfigFilePath,
+                    kubectlArgs,
+                    NonZeroExitCodeBehaviour.Succeed,
+                );
+                return errmap<k8s.KubectlV1.ShellResult, k8s.KubectlV1.ShellResult & CommandResult>(
+                    shellOutput,
+                    (sr) => ({ ...sr, command: `kubectl ${kubectlArgs}` }),
+                );
+            }),
+        );
         const shellResults = combine(promiseResults);
         if (failed(shellResults)) {
             webview.postWaitForCertManagerResponse({
                 succeeded: false,
                 errorMessage: shellResults.error,
-                commandResults: []
+                commandResults: [],
             });
             return;
         }
 
         // There was no error running the commands, but there may have been a non-zero exit code.
-        const succeeded = !shellResults.result.some(r => r.code !== 0);
+        const succeeded = !shellResults.result.some((r) => r.code !== 0);
         const errorMessage = succeeded ? null : "Waiting for cert-manager failed, see error output.";
         webview.postWaitForCertManagerResponse({
             succeeded,
             errorMessage,
-            commandResults: shellResults.result.map(r => ({command: r.command, stdout: r.stdout, stderr: r.stderr}))
+            commandResults: shellResults.result.map((r) => ({
+                command: r.command,
+                stdout: r.stdout,
+                stderr: r.stderr,
+            })),
         });
     }
 
-    private async _handleInstallOperatorRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const asoYamlFile = "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0/azureserviceoperator_v2.0.0.yaml";
+    private async handleInstallOperatorRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+        const asoYamlFile =
+            "https://github.com/Azure/azure-service-operator/releases/download/v2.0.0/azureserviceoperator_v2.0.0.yaml";
 
         // Use a larger-than-default request timeout here, because cert-manager sometimes does some certificate re-issuing
         // when ASO resources are created, and it takes time for the inject reconciler (cert-manager-cainjector) to update the resources.
@@ -140,12 +180,17 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         // This also means we don't need the '--server-side=true' argument, which affects change tracking (there will be no changes if
         // the operator does not exist).
         const kubectlArgs = `create -f ${asoYamlFile} --request-timeout 120s`;
-        const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
+        const shellOutput = await invokeKubectlCommand(
+            this.kubectl,
+            this.kubeConfigFilePath,
+            kubectlArgs,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
         if (failed(shellOutput)) {
             webview.postInstallOperatorResponse({
                 succeeded: false,
                 errorMessage: shellOutput.error,
-                commandResults: []
+                commandResults: [],
             });
             return;
         }
@@ -157,22 +202,31 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         webview.postInstallOperatorResponse({
             succeeded,
             errorMessage,
-            commandResults: [{ command, stdout, stderr }]
+            commandResults: [{ command, stdout, stderr }],
         });
     }
 
-    private async _handleInstallOperatorSettingsRequest(appId: string, appSecret: string, cloudName: AzureCloudName, subscriptionId: string, tenantId: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+    private async handleInstallOperatorSettingsRequest(
+        appId: string,
+        appSecret: string,
+        cloudName: AzureCloudName,
+        subscriptionId: string,
+        tenantId: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ): Promise<void> {
         const cloudEnv: ASOCloudName = azureToASOCloudMap[cloudName];
-        const yamlPathOnDisk = vscode.Uri.file(path.join(this.extension.extensionPath, 'resources', 'yaml', 'azureoperatorsettings.yaml'));
+        const yamlPathOnDisk = vscode.Uri.file(
+            path.join(this.extension.extensionPath, "resources", "yaml", "azureoperatorsettings.yaml"),
+        );
 
         let settingsTemplate: string;
         try {
-            settingsTemplate = await fs.readFile(yamlPathOnDisk.fsPath, 'utf8');
+            settingsTemplate = await fs.readFile(yamlPathOnDisk.fsPath, "utf8");
         } catch (e) {
             webview.postInstallOperatorSettingsResponse({
                 succeeded: false,
                 errorMessage: `Failed to read settings template from ${yamlPathOnDisk.fsPath}: ${getErrorMessage(e)}`,
-                commandResults: []
+                commandResults: [],
             });
             return;
         }
@@ -185,15 +239,20 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
             .replace("<ENV_CLOUD>", cloudEnv);
 
         const templateYamlFile = await createTempFile(settings, "yaml");
-    
+
         // Use a larger-than-default request timeout here, because cert-manager-cainjector is still busy updating resources, increasing response times.
         const kubectlArgs = `apply -f ${templateYamlFile.filePath} --request-timeout 120s`;
-        const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
+        const shellOutput = await invokeKubectlCommand(
+            this.kubectl,
+            this.kubeConfigFilePath,
+            kubectlArgs,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
         if (failed(shellOutput)) {
             webview.postInstallOperatorSettingsResponse({
                 succeeded: false,
                 errorMessage: shellOutput.error,
-                commandResults: []
+                commandResults: [],
             });
             return;
         }
@@ -205,18 +264,24 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         webview.postInstallOperatorSettingsResponse({
             succeeded,
             errorMessage,
-            commandResults: [{ command, stdout, stderr }]
+            commandResults: [{ command, stdout, stderr }],
         });
     }
 
-    private async _handleWaitForControllerManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const kubectlArgs = "rollout status -n azureserviceoperator-system deploy/azureserviceoperator-controller-manager --timeout=240s";
-        const shellOutput = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, kubectlArgs, NonZeroExitCodeBehaviour.Succeed);
+    private async handleWaitForControllerManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+        const kubectlArgs =
+            "rollout status -n azureserviceoperator-system deploy/azureserviceoperator-controller-manager --timeout=240s";
+        const shellOutput = await invokeKubectlCommand(
+            this.kubectl,
+            this.kubeConfigFilePath,
+            kubectlArgs,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
         if (failed(shellOutput)) {
             webview.postWaitForControllerManagerResponse({
                 succeeded: false,
                 errorMessage: shellOutput.error,
-                commandResults: []
+                commandResults: [],
             });
             return;
         }
@@ -228,7 +293,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         webview.postWaitForControllerManagerResponse({
             succeeded,
             errorMessage,
-            commandResults: [{ command, stdout, stderr }]
+            commandResults: [{ command, stdout, stderr }],
         });
     }
 }

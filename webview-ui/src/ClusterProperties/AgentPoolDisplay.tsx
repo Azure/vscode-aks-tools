@@ -29,12 +29,18 @@ export function AgentPoolDisplay(props: AgentPoolDisplayProps) {
             <dt>Provisioning State</dt>
             <dd>
                 {props.profileInfo.provisioningState}
-                {showAbortButton &&
-                <>
-                    &nbsp;
-                    <VSCodeButton disabled={props.clusterOperationRequested} onClick={() => handleAbortClick(props.profileInfo.name)} appearance="secondary">Abort</VSCodeButton>
-                </>
-                }
+                {showAbortButton && (
+                    <>
+                        &nbsp;
+                        <VSCodeButton
+                            disabled={props.clusterOperationRequested}
+                            onClick={() => handleAbortClick(props.profileInfo.name)}
+                            appearance="secondary"
+                        >
+                            Abort
+                        </VSCodeButton>
+                    </>
+                )}
             </dd>
 
             <dt>Power State</dt>

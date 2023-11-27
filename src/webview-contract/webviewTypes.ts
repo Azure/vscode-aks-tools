@@ -12,10 +12,14 @@ import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 /**
  * Groups all the related types for a single webview.
  */
-export type WebviewDefinition<TInitialState extends object, TToVsCode extends MessageDefinition, TToWebview extends MessageDefinition> = {
-    initialState: TInitialState,
-    toVsCodeMsgDef: TToVsCode,
-    toWebviewMsgDef: TToWebview
+export type WebviewDefinition<
+    TInitialState extends object,
+    TToVsCode extends MessageDefinition,
+    TToWebview extends MessageDefinition,
+> = {
+    initialState: TInitialState;
+    toVsCodeMsgDef: TToVsCode;
+    toWebviewMsgDef: TToWebview;
 };
 
 /**
@@ -23,19 +27,19 @@ export type WebviewDefinition<TInitialState extends object, TToVsCode extends Me
  * are defined here.
  */
 type AllWebviewDefinitions = {
-    style: TestStyleViewerDefinition,
-    clusterProperties: ClusterPropertiesDefinition,
-    periscope: PeriscopeDefinition,
-    createCluster: CreateClusterDefinition,
-    detector: DetectorDefinition,
-    gadget: InspektorGadgetDefinition,
-    kubectl: KubectlDefinition,
-    aso: ASODefinition,
-    tcpDump: TCPDumpDefinition
+    style: TestStyleViewerDefinition;
+    clusterProperties: ClusterPropertiesDefinition;
+    periscope: PeriscopeDefinition;
+    createCluster: CreateClusterDefinition;
+    detector: DetectorDefinition;
+    gadget: InspektorGadgetDefinition;
+    kubectl: KubectlDefinition;
+    aso: ASODefinition;
+    tcpDump: TCPDumpDefinition;
 };
 
 type ContentIdLookup = {
-    [id in keyof AllWebviewDefinitions]: id
+    [id in keyof AllWebviewDefinitions]: id;
 };
 
 /**

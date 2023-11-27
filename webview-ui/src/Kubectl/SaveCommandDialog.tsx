@@ -6,16 +6,16 @@ import styles from "./Kubectl.module.css";
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface SaveCommandDialogProps {
-    isShown: boolean
-    existingNames: string[]
-    onCancel: () => void
-    onAccept: (name: string) => void
+    isShown: boolean;
+    existingNames: string[];
+    onCancel: () => void;
+    onAccept: (name: string) => void;
 }
 
 export function SaveCommandDialog(props: SaveCommandDialogProps) {
     const [name, setName] = useState("");
 
-    const existingNameExists = Object.fromEntries(props.existingNames.map(name => [name, true]));
+    const existingNameExists = Object.fromEntries(props.existingNames.map((name) => [name, true]));
 
     function canSave() {
         const nameToSave = name.trim();
@@ -39,19 +39,28 @@ export function SaveCommandDialog(props: SaveCommandDialogProps) {
     return (
         <Dialog isShown={props.isShown} onCancel={() => props.onCancel()}>
             <h2>Save Command As</h2>
-    
+
             <form onSubmit={handleSubmit}>
-                <VSCodeDivider/>
-    
+                <VSCodeDivider />
+
                 <div className={styles.inputContainer}>
-                    <label htmlFor="cmd-name-input" className={styles.label}>Name</label>
-                    <VSCodeTextField id="command-input" className={styles.control} value={name} onInput={handleNameChange} />
+                    <label htmlFor="cmd-name-input" className={styles.label}>
+                        Name
+                    </label>
+                    <VSCodeTextField
+                        id="command-input"
+                        className={styles.control}
+                        value={name}
+                        onInput={handleNameChange}
+                    />
                 </div>
-    
-                <VSCodeDivider/>
-    
+
+                <VSCodeDivider />
+
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit" disabled={!canSave()}>Ok</VSCodeButton>
+                    <VSCodeButton type="submit" disabled={!canSave()}>
+                        Ok
+                    </VSCodeButton>
                     <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
                 </div>
             </form>
