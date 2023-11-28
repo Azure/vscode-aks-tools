@@ -7,7 +7,8 @@
     "publisher": "ms-kubernetes-tools",
     "icon": "resources/aks-tools.png",
     "engines": {
-        "vscode": "^1.82.0"
+        "vscode": "^1.82.0",
+        "node": ">=16.20.2 <21.2.0"
     },
     "capabilities": {
         "untrustedWorkspaces": {
