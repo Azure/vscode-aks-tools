@@ -109,7 +109,7 @@ const nodes = Object.keys(nodeResources);
 
 export function getInspektorGadgetScenarios() {
     let version: GadgetVersion = { client: "1.0.0", server: "1.0.0" };
-    let watchTimer: NodeJS.Timer;
+    let watchTimer: NodeJS.Timeout;
 
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
