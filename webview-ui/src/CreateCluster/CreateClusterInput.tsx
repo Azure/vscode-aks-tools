@@ -29,7 +29,10 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
     const [newResourceGroup, setNewResourceGroup] = useState<ResourceGroup | null>(null);
-    const [presetSelected, setPresetSelected] = useState("dev");
+    const [presetSelected, setPresetSelected] = useState<string>("dev");
+    const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
+    const allResourceGroups = newResourceGroup ? [newResourceGroup, ...props.resourceGroups] : props.resourceGroups;
 
     function handleCreateResourceGroupDialogCancel() {
         setIsNewResourceGroupDialogShown(false);
@@ -39,15 +42,22 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         setIsNewResourceGroupDialogShown(false);
         setExistingResourceGroup(unset());
         setNewResourceGroup(group);
+        setSelectedIndex(1); // this is the index of the new resource group and the first option is "Select"
     }
 
     function handlePresetSelection(presetSelected: string) {
         setPresetSelected(presetSelected);
     }
 
+    function handleValidationAndIndex(e: ChangeEvent) {
+        handleExistingResourceGroupChange(e);
+        const ele = e.currentTarget as HTMLSelectElement;
+        setSelectedIndex(ele.selectedIndex);
+    }
+
     const handleExistingResourceGroupChange = createHandler<ResourceGroup, ChangeEvent, HTMLSelectElement>(
         (e) => e.currentTarget as HTMLSelectElement,
-        (elem) => (elem.selectedIndex <= 0 ? null : props.resourceGroups[elem.selectedIndex - 1]),
+        (elem) => (elem.selectedIndex < 0 ? null : allResourceGroups[elem.selectedIndex - 1]),
         (elem) => elem.checkValidity(),
         () => "Resource Group is required.",
         setExistingResourceGroup,
@@ -99,29 +109,27 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     <VSCodeDropdown
                         id="existing-resource-group-dropdown"
                         className={styles.midControl}
-                        disabled={newResourceGroup !== null}
-                        required={newResourceGroup === null}
-                        onBlur={handleExistingResourceGroupChange}
-                        onChange={handleExistingResourceGroupChange}
-                        selectedIndex={
-                            existingResourceGroup.value
-                                ? props.resourceGroups.indexOf(existingResourceGroup.value) + 1
-                                : 0
-                        }
+                        required
+                        onBlur={handleValidationAndIndex}
+                        onChange={handleValidationAndIndex}
+                        selectedIndex={selectedIndex}
+                        aria-label="Select a resource group"
                     >
-                        <VSCodeOption value="">Select</VSCodeOption>
-                        {props.resourceGroups.map((group) => (
-                            <VSCodeOption key={group.name} value={group.name}>
-                                {group.name} ({group.location})
-                            </VSCodeOption>
-                        ))}
+                        <VSCodeOption selected value="">
+                            Select
+                        </VSCodeOption>
+                        {allResourceGroups.length > 0 ? (
+                            allResourceGroups.map((group) => (
+                                <VSCodeOption key={group.name} value={group.name}>
+                                    {group === newResourceGroup ? "(New)" : ""} {group.name} ({group.location})
+                                </VSCodeOption>
+                            ))
+                        ) : (
+                            <VSCodeOption disabled>No resource groups available</VSCodeOption>
+                        )}
                     </VSCodeDropdown>
 
-                    <VSCodeButton
-                        className={styles.sideControl}
-                        onClick={() => setIsNewResourceGroupDialogShown(true)}
-                        disabled={newResourceGroup !== null}
-                    >
+                    <VSCodeButton className={styles.sideControl} onClick={() => setIsNewResourceGroupDialogShown(true)}>
                         Create New
                     </VSCodeButton>
                     {shouldShowMessage(existingResourceGroup) && (
@@ -131,7 +139,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         </span>
                     )}
 
-                    {newResourceGroup && (
+                    {/* {newResourceGroup && (
                         <>
                             <VSCodeTextField
                                 readOnly
@@ -142,7 +150,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                                 Clear
                             </VSCodeButton>
                         </>
-                    )}
+                    )} */}
 
                     <label htmlFor="name-input" className={styles.label}>
                         Name*
@@ -171,12 +179,14 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                 </div>
             </form>
 
-            <CreateResourceGroupDialog
-                isShown={isNewResourceGroupDialogShown}
-                locations={props.locations}
-                onCancel={handleCreateResourceGroupDialogCancel}
-                onAccept={handleCreateResourceGroupDialogAccept}
-            />
+            {isNewResourceGroupDialogShown && (
+                <CreateResourceGroupDialog
+                    isShown={isNewResourceGroupDialogShown}
+                    locations={props.locations}
+                    onCancel={handleCreateResourceGroupDialogCancel}
+                    onAccept={handleCreateResourceGroupDialogAccept}
+                />
+            )}
         </>
     );
 }
