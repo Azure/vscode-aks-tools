@@ -186,7 +186,6 @@ async function createCluster(
 
     try {
         const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(group.name, name, deploymentSpec);
-        //const poller = await containerServiceClient.managedClusters.beginCreateOrUpdate(group.name, name, clusterSpec);
         poller.onProgress(state => {
             if (state.status === "canceled") {
                 webview.postProgressUpdate({
@@ -213,7 +212,7 @@ async function createCluster(
         });
         await poller.pollUntilDone();
     } catch (ex) {
-        const errorMessage = getErrorMessage(ex);
+        const errorMessage = getErrorMessage(ex); //TODO get inner exception message
         window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
