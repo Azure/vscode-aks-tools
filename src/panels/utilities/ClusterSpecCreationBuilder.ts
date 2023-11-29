@@ -199,9 +199,7 @@ export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
 //eslint-disable-next-line @typescript-eslint/no-explicit-any
 function loadTemplate(templateName: string): any {
     try {
-        //const templateFilePath = path.resolve(templateName); //TODO - fix this, doesn't resolve correct path
-        //templateFilePath = "/home/hsubramanian/repos/vscode-aks-tools/src/panels/templates/DevTestCreateCluster.json"
-        const templateFilePath = path.join(__dirname, 'src', 'panels', 'templates', templateName);
+        const templateFilePath = path.resolve(__dirname, '..', 'src', 'panels', 'templates', templateName);
         return JSON.parse(fs.readFileSync(templateFilePath, 'utf8'));
     } catch (error) {
         console.log(error);
