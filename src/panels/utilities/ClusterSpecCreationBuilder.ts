@@ -210,7 +210,7 @@ function generateDnsPrefix(clusterName: string): string {
 function validateDnsPrefix(dnsPrefix: string): string {
     // please refer https://aka.ms/aks-naming-rules
     dnsPrefix.length > 54 ? dnsPrefix.substring(0, 54) : dnsPrefix;
-    const dnsPrefixRegex = /^[a-z0-9](?:[a-z0-9\-]{0,52}[a-z0-9])?$/i;
+    const dnsPrefixRegex = /^[a-z0-9](?:[a-z0-9-]{0,52}[a-z0-9])?$/i;
     if (!dnsPrefixRegex.test(dnsPrefix)) {
         throw new Error("Invalid DNS prefix. The DNS prefix must start and end with alphanumeric values, be between 1-54 characters in length, and can only include alphanumeric values and hyphens ('-'). Special characters, such as periods ('.'), are not allowed.");
     }
