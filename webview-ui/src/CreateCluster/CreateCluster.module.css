@@ -7,7 +7,7 @@
 .presetHeader {
     width: 208px;
     height: 18px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 .presetContainer {
@@ -54,6 +54,17 @@
 
 .learnMoreContainer {
     margin-top: 20px;
+}
+
+.portalLink {
+    width: 967px;
+    height: 31px;
+    color: var(--base-base-03, #e7e7e7);
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    margin-bottom: 10px;
 }
 
 .infoIndicator {

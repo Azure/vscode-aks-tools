@@ -594,11 +594,11 @@
                 "description": "The resource group name of the cluster."
             }
         },
-        "userEmailId": {
+        "userEmailAddress": {
             "type": "string",
             "defaultValue": "",
             "metadata": {
-                "description": "Your parameter description."
+                "description": "User email address."
             }
         }
     },
@@ -624,7 +624,7 @@
                                 "emailReceivers": [
                                     {
                                         "name": "Email_-EmailAction-",
-                                        "emailAddress": "[parameters('userEmailId')]",
+                                        "emailAddress": "[parameters('userEmailAddress')]",
                                         "useCommonAlertSchema": true
                                     }
                                 ],
@@ -652,7 +652,7 @@
                         {
                             "type": "microsoft.insights/metricAlerts",
                             "apiVersion": "2018-03-01",
-                            "name": "[concat('Memory Working Set Percentage - ', parameters('yourParameter'))]",
+                            "name": "[concat('CPU Usage Percentage -', parameters('resourceName'))]",
                             "location": "Global",
                             "properties": {
                                 "severity": 3,
@@ -688,7 +688,7 @@
                         {
                             "type": "microsoft.insights/metricAlerts",
                             "apiVersion": "2018-03-01",
-                            "name": "[concat('Memory Working Set Percentage - ', parameters('yourParameter'))]",
+                            "name": "[concat('Memory Working Set Percentage - ', parameters('resourceName'))]",
                             "location": "Global",
                             "properties": {
                                 "severity": 3,
