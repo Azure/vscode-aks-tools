@@ -139,19 +139,6 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         </span>
                     )}
 
-                    {/* {newResourceGroup && (
-                        <>
-                            <VSCodeTextField
-                                readOnly
-                                className={styles.midControl}
-                                value={`(New) ${newResourceGroup.name} (${newResourceGroup.location})`}
-                            ></VSCodeTextField>
-                            <VSCodeButton className={styles.sideControl} onClick={() => setNewResourceGroup(null)}>
-                                Clear
-                            </VSCodeButton>
-                        </>
-                    )} */}
-
                     <label htmlFor="name-input" className={styles.label}>
                         Name*
                     </label>
