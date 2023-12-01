@@ -38,9 +38,7 @@ export default async function aksCreateCluster(_context: IActionContext, target:
         resourceManagementClient,
         containerServiceClient,
         portalUrl,
-        subscriptionTreeItem.subscription.subscriptionId,
-        subscriptionTreeItem.subscription.subscriptionDisplayName,
-        subscriptionTreeItem.subscription.userId
+        subscriptionTreeItem.subscription
     );
 
     panel.show(dataProvider);

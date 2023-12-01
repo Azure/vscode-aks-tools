@@ -1,7 +1,5 @@
 import { Deployment } from "@azure/arm-resources";
-
-import fs from 'fs';
-import path from 'path';
+import devTestTemplate from '../templates/DevTestCreateCluster.json';
 
 interface ManagedClusterSpecBuilder {
     buildDevTestClusterSpec(clusterSpec: ClusterSpec): Deployment;
@@ -62,7 +60,7 @@ export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
         const deploymentParameters: Deployment = {
             "properties": {
                 "parameters": parameters,
-                "template": loadTemplate("DevTestCreateCluster.json"),
+                "template": devTestTemplate,
                 "mode": "Incremental"
             }
         };
@@ -106,7 +104,7 @@ export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
         const deploymentParameters: Deployment = {
             "properties": {
                 "parameters": parameters,
-                "template": loadTemplate("DevTestCreateCluster.json"),
+                "template": devTestTemplate, //TODO - change this to the correct template
                 "mode": "Incremental"
             }
         };
@@ -150,7 +148,7 @@ export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
         const deploymentParameters: Deployment = {
             "properties": {
                 "parameters": parameters,
-                "template": loadTemplate("DevTestCreateCluster.json"),
+                "template": devTestTemplate, //TODO - change this to the correct template
                 "mode": "Incremental"
             }
         };
@@ -194,24 +192,13 @@ export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
         const deploymentParameters: Deployment = {
             "properties": {
                 "parameters": parameters,
-                "template": loadTemplate("DevTestCreateCluster.json"),
+                "template": devTestTemplate, //TODO - change this to the correct template
                 "mode": "Incremental"
             }
         };
         return deploymentParameters;
     }
 
-}
-
-//eslint-disable-next-line @typescript-eslint/no-explicit-any
-function loadTemplate(templateName: string): any {
-    try {
-        const templateFilePath = path.resolve(__dirname, '..', 'src', 'panels', 'templates', templateName);
-        return JSON.parse(fs.readFileSync(templateFilePath, 'utf8'));
-    } catch (error) {
-        console.log(error);
-        throw error;
-    }
 }
 
 function generateDnsPrefix(clusterName: string): string {
@@ -223,7 +210,6 @@ function generateDnsPrefix(clusterName: string): string {
 function validateDnsPrefix(dnsPrefix: string): string {
     // please refer https://aka.ms/aks-naming-rules
     dnsPrefix.length > 54 ? dnsPrefix.substring(0, 54) : dnsPrefix;
-    // eslint-disable-next-line no-useless-escape
     const dnsPrefixRegex = /^[a-z0-9](?:[a-z0-9\-]{0,52}[a-z0-9])?$/i;
     if (!dnsPrefixRegex.test(dnsPrefix)) {
         throw new Error("Invalid DNS prefix. The DNS prefix must start and end with alphanumeric values, be between 1-54 characters in length, and can only include alphanumeric values and hyphens ('-'). Special characters, such as periods ('.'), are not allowed.");
@@ -232,16 +218,19 @@ function validateDnsPrefix(dnsPrefix: string): string {
 }
 
 function generateNodeResourceGroup(resourceGroupName: string, clusterName: string, location: string): string {
-    // this replaces all white spaces in the string
-    resourceGroupName = resourceGroupName.replace(/\s+/g, '');
-    clusterName = clusterName.replace(/\s+/g, '');
-    location = location.replace(/\s+/g, '');
-    const nodeResourceGroup = `MC_${resourceGroupName}_${clusterName}_${location}`;
+    const sanitizedResourceGroupName = removeWhitespace(resourceGroupName);
+    const sanitizedClusterName = removeWhitespace(clusterName);
+    const sanitizedLocation = removeWhitespace(location);
+    const nodeResourceGroup = `MC_${sanitizedResourceGroupName}_${sanitizedClusterName}_${sanitizedLocation}`;
     return validateNodeResourceGroup(nodeResourceGroup);
 }
 
 function validateNodeResourceGroup(nodeResourceGroup: string): string {
     // please refer https://aka.ms/aks-naming-rules
     return nodeResourceGroup.length > 80 ? nodeResourceGroup.substring(0, 80) : nodeResourceGroup;
+}
+
+function removeWhitespace(str: string): string {
+    return str.replace(/\s+/g, '');
 }
 
