@@ -89,6 +89,16 @@ export function getErrorMessage(error: unknown) {
     return String(error);
 }
 
+export function getInnerErrorMessage(error: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((error as any).details && (error as any).details.error && (error as any).details.error.details && (error as any).details.error.details.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (error as any).details.error.details[0].message;
+    } else {
+        return getErrorMessage(error);
+    }
+}
+
 export function findOrError<T>(
     items: T[],
     predicate: (value: T, index: number) => boolean,

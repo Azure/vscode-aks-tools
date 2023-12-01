@@ -533,7 +533,7 @@
                     "emailReceivers": [
                       {
                         "name": "Email_-EmailAction-",
-                        "emailAddress": "hsubramanian@microsoft.com",
+                        "emailAddress": "abc@microsoft.com",
                         "useCommonAlertSchema": true
                       }
                     ],

@@ -17,12 +17,14 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                 <div className={styles.presetHeader}>
                     <h3>Cluster preset configuration</h3>
                 </div>
+                <div className={styles.portalLink}>
+                    If you wish to create a more complex Azure Kubernetes Service (AKS) cluster, please&nbsp;
+                    <a href="https://portal.azure.com/#create/Microsoft.AKS">click here</a>
+                    &nbsp;to visit the Azure Portal.
+                </div>
                 <div className={styles.presetContainer} onClick={() => handlePresetClick("dev")}>
                     <div className={styles.flexContainer}>
                         <DevTestIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
-                        {/* <div className={styles.svgContainer}>
-                        <img src="resources/devtest.svg" />
-                    </div> */}
                         <div className={styles.presetTitle}>Dev/Test</div>
                     </div>
                     <div className={styles.presetDescription}>
