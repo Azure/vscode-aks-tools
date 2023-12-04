@@ -2,7 +2,6 @@ import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
-import { ResourceGroup } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { Dialog } from "../components/Dialog";
 import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
@@ -13,7 +12,7 @@ export interface CreateResourceGroupDialogProps {
     isShown: boolean;
     locations: string[];
     onCancel: () => void;
-    onAccept: (group: ResourceGroup) => void;
+    onAccept: (groupName: string) => void;
 }
 
 export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps) {
@@ -38,10 +37,13 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        props.onAccept({
-            name: name.value!,
-            location: "", //location is set in the CreateClusterInput component
-        });
+
+        // This check might be redundant based on the way validation works, but let's check this explicitly:
+        if (!name.value) {
+            return;
+        }
+
+        props.onAccept(name.value);
     }
 
     return (
