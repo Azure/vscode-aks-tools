@@ -32,6 +32,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [newResourceGroup, setNewResourceGroup] = useState<ResourceGroup | null>(null);
     const [presetSelected, setPresetSelected] = useState<Preset>("dev");
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
+    const [location, setLocation] = useState<Validatable<string>>(unset());
 
     const allResourceGroups = newResourceGroup ? [newResourceGroup, ...props.resourceGroups] : props.resourceGroups;
 
@@ -81,13 +82,23 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         setName,
     );
 
+    const handleLocationChange = createHandler<string, ChangeEvent, HTMLSelectElement>(
+        (e) => e.currentTarget as HTMLSelectElement,
+        (elem) => (elem.selectedIndex <= 0 ? null : props.locations[elem.selectedIndex - 1]),
+        (elem) => elem.checkValidity(),
+        () => "Location is required.",
+        setLocation,
+    );
+
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        const resourceGroup = (existingResourceGroup.value || newResourceGroup)!;
+        let resourceGroup = (existingResourceGroup.value || newResourceGroup)!;
+        resourceGroup =
+            resourceGroup === newResourceGroup ? { ...resourceGroup, location: location.value! } : resourceGroup;
         const parameters: CreateClusterParams = {
             isNewResourceGroup: !existingResourceGroup.value,
             resourceGroup,
-            location: resourceGroup.location,
+            location: location.value!,
             name: name.value!,
             preset: presetSelected,
         };
@@ -122,7 +133,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         {allResourceGroups.length > 0 ? (
                             allResourceGroups.map((group) => (
                                 <VSCodeOption key={group.name} value={group.name}>
-                                    {group === newResourceGroup ? "(New)" : ""} {group.name} ({group.location})
+                                    {group === newResourceGroup ? "(New)" : ""} {group.name}
                                 </VSCodeOption>
                             ))
                         ) : (
@@ -141,7 +152,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="name-input" className={styles.label}>
-                        Name*
+                        Cluster Name*
                     </label>
                     <VSCodeTextField
                         id="name-input"
@@ -158,6 +169,30 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
                             {name.message}
+                        </span>
+                    )}
+
+                    <label htmlFor="location-dropdown" className={styles.label}>
+                        Location*
+                    </label>
+                    <VSCodeDropdown
+                        id="location-dropdown"
+                        className={styles.longControl}
+                        required
+                        onBlur={handleLocationChange}
+                        onChange={handleLocationChange}
+                    >
+                        <VSCodeOption value="">Select</VSCodeOption>
+                        {props.locations.map((location) => (
+                            <VSCodeOption key={location} value={location}>
+                                {location}
+                            </VSCodeOption>
+                        ))}
+                    </VSCodeDropdown>
+                    {shouldShowMessage(location) && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                            {location.message}
                         </span>
                     )}
                 </div>

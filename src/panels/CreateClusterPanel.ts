@@ -152,7 +152,11 @@ async function createResourceGroup(
     });
 
     try {
-        await resourceManagementClient.resourceGroups.createOrUpdate(group.name, group);
+        !group.location ? webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription,
+            errorMessage: "Location is required",
+        }) : await resourceManagementClient.resourceGroups.createOrUpdate(group.name, group);
     } catch (ex) {
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
