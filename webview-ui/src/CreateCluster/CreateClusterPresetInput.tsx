@@ -1,12 +1,13 @@
+import { Preset } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { DevTestIcon } from "../icons/DevTestIcon";
 import styles from "./CreateCluster.module.css";
 
 export interface CreateClusterPresetInputProps {
-    onPresetSelected: (presetSelected: string) => void;
+    onPresetSelected: (presetSelected: Preset) => void;
 }
 
 export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
-    function handlePresetClick(presetSelected: string) {
+    function handlePresetClick(presetSelected: Preset) {
         console.log(presetSelected);
         props.onPresetSelected(presetSelected);
     }
