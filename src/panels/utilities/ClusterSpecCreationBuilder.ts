@@ -1,236 +1,97 @@
 import { Deployment } from "@azure/arm-resources";
-import devTestTemplate from '../templates/DevTestCreateCluster.json';
-
-interface ManagedClusterSpecBuilder {
-    buildDevTestClusterSpec(clusterSpec: ClusterSpec): Deployment;
-    buildProdStandardClusterSpec(clusterSpec: ClusterSpec): Deployment;
-    buildProdEconomyClusterSpec(clusterSpec: ClusterSpec): Deployment;
-    buildProdEnterpriseClusterSpec(clusterSpec: ClusterSpec): Deployment;
-}
+import { Preset } from "../../webview-contract/webviewDefinitions/createCluster";
+import devTestTemplate from "../templates/DevTestCreateCluster.json";
 
 export type ClusterSpec = {
-    location: string,
-    name: string,
-    resourceGroupName: string,
-    subscriptionId: string,
-    kubernetesVersion: string,
-    username: string
-}
+    location: string;
+    name: string;
+    resourceGroupName: string;
+    subscriptionId: string;
+    kubernetesVersion: string;
+    username: string;
+};
 
-export class ClusterSpecBuilder implements ManagedClusterSpecBuilder {
-    private static apiVersion: string = "2023-08-01";
-    constructor() { }
-    public buildDevTestClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        const parameters = {
-            "location": {
-                "value": clusterSpec.location
-            },
-            "resourceName": {
-                "value": clusterSpec.name
-            },
-            "dnsPrefix": {
-                "value": generateDnsPrefix(clusterSpec.name)
-            },
-            "apiVersion": {
-                "value": ClusterSpecBuilder.apiVersion
-            },
-            "nodeResourceGroup": {
-                "value": generateNodeResourceGroup(clusterSpec.resourceGroupName, clusterSpec.name, clusterSpec.location)
-            },
-            "subscriptionId": {
-                "value": clusterSpec.subscriptionId
-            },
-            "resourceGroupName": {
-                "value": clusterSpec.resourceGroupName
-            },
-            "kubernetesVersion": {
-                "value": clusterSpec.kubernetesVersion
-            },
-            "clusterIdentity": {
-                "value": {
-                    "type": "SystemAssigned"
-                }
-            },
-            "userEmailAddress": {
-                value: clusterSpec.username
-            }
-        }
+type TemplateContent = Record<string, unknown>;
 
+const deploymentApiVersion = "2023-08-01";
+const presetTemplates: Record<Preset, TemplateContent> = {
+    dev: devTestTemplate,
+};
 
-        const deploymentParameters: Deployment = {
-            "properties": {
-                "parameters": parameters,
-                "template": devTestTemplate,
-                "mode": "Incremental"
-            }
+export class ClusterDeploymentBuilder {
+    private deployment: Deployment = {
+        properties: {
+            parameters: {},
+            template: {},
+            mode: "Incremental",
+        },
+    };
+
+    public buildCommonParameters(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
+        this.deployment.properties.parameters = {
+            ...this.deployment.properties.parameters,
+            location: {
+                value: clusterSpec.location,
+            },
+            resourceName: {
+                value: clusterSpec.name,
+            },
+            dnsPrefix: {
+                value: generateDnsPrefix(clusterSpec.name),
+            },
+            apiVersion: {
+                value: deploymentApiVersion,
+            },
+            nodeResourceGroup: {
+                value: generateNodeResourceGroup(clusterSpec.resourceGroupName, clusterSpec.name, clusterSpec.location),
+            },
+            subscriptionId: {
+                value: clusterSpec.subscriptionId,
+            },
+            resourceGroupName: {
+                value: clusterSpec.resourceGroupName,
+            },
+            kubernetesVersion: {
+                value: clusterSpec.kubernetesVersion,
+            },
+            clusterIdentity: {
+                value: {
+                    type: "SystemAssigned",
+                },
+            },
+            userEmailAddress: {
+                value: clusterSpec.username,
+            },
         };
-        return deploymentParameters;
+
+        return this;
     }
 
-    buildProdStandardClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        //TODO - implement this
-        const parameters = {
-            "location": {
-                "value": clusterSpec.location
-            },
-            "resourceName": {
-                "value": clusterSpec.name
-            },
-            "dnsPrefix": {
-                "value": `${clusterSpec.name}-dns`
-            },
-            "apiVersion": {
-                "value": ClusterSpecBuilder.apiVersion
-            },
-            "nodeResourceGroup": {
-                "value": `MC_${clusterSpec.resourceGroupName}_${clusterSpec.name}_${clusterSpec.location}`
-            },
-            "subscriptionId": {
-                "value": clusterSpec.subscriptionId
-            },
-            "resourceGroupName": {
-                "value": clusterSpec.resourceGroupName
-            },
-            "kubernetesVersion": {
-                "value": clusterSpec.kubernetesVersion
-            },
-            "clusterIdentity": {
-                "value": {
-                    "type": "SystemAssigned"
-                }
-            },
-        }
-
-        const deploymentParameters: Deployment = {
-            "properties": {
-                "parameters": parameters,
-                "template": devTestTemplate, //TODO - change this to the correct template
-                "mode": "Incremental"
-            }
-        };
-        return deploymentParameters;
+    public buildTemplate(preset: Preset) {
+        this.deployment.properties.template = presetTemplates[preset];
+        return this;
     }
 
-    buildProdEconomyClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        //TODO - implement this
-        const parameters = {
-            "location": {
-                "value": clusterSpec.location
-            },
-            "resourceName": {
-                "value": clusterSpec.name
-            },
-            "dnsPrefix": {
-                "value": `${clusterSpec.name}-dns`
-            },
-            "apiVersion": {
-                "value": ClusterSpecBuilder.apiVersion
-            },
-            "nodeResourceGroup": {
-                "value": `MC_${clusterSpec.resourceGroupName}_${clusterSpec.name}_${clusterSpec.location}`
-            },
-            "subscriptionId": {
-                "value": clusterSpec.subscriptionId
-            },
-            "resourceGroupName": {
-                "value": clusterSpec.resourceGroupName
-            },
-            "kubernetesVersion": {
-                "value": clusterSpec.kubernetesVersion
-            },
-            "clusterIdentity": {
-                "value": {
-                    "type": "SystemAssigned"
-                }
-            }
-        }
-
-        const deploymentParameters: Deployment = {
-            "properties": {
-                "parameters": parameters,
-                "template": devTestTemplate, //TODO - change this to the correct template
-                "mode": "Incremental"
-            }
-        };
-        return deploymentParameters;
+    public getDeployment(): Deployment {
+        return this.deployment;
     }
-
-    buildProdEnterpriseClusterSpec(clusterSpec: ClusterSpec): Deployment {
-        //TODO - implement this
-        const parameters = {
-            "location": {
-                "value": clusterSpec.location
-            },
-            "resourceName": {
-                "value": clusterSpec.name
-            },
-            "dnsPrefix": {
-                "value": `${clusterSpec.name}-dns`
-            },
-            "apiVersion": {
-                "value": ClusterSpecBuilder.apiVersion
-            },
-            "nodeResourceGroup": {
-                "value": `MC_${clusterSpec.resourceGroupName}_${clusterSpec.name}_${clusterSpec.location}`
-            },
-            "subscriptionId": {
-                "value": clusterSpec.subscriptionId
-            },
-            "resourceGroupName": {
-                "value": clusterSpec.resourceGroupName
-            },
-            "kubernetesVersion": {
-                "value": clusterSpec.kubernetesVersion
-            },
-            "clusterIdentity": {
-                "value": {
-                    "type": "SystemAssigned"
-                }
-            },
-        }
-
-        const deploymentParameters: Deployment = {
-            "properties": {
-                "parameters": parameters,
-                "template": devTestTemplate, //TODO - change this to the correct template
-                "mode": "Incremental"
-            }
-        };
-        return deploymentParameters;
-    }
-
 }
 
 function generateDnsPrefix(clusterName: string): string {
-    // this replaces all white spaces in the string
-    clusterName = clusterName.replace(/\s+/g, '');
-    return validateDnsPrefix(clusterName);
-}
-
-function validateDnsPrefix(dnsPrefix: string): string {
-    // please refer https://aka.ms/aks-naming-rules
-    dnsPrefix.length > 54 ? dnsPrefix.substring(0, 54) : dnsPrefix;
-    const dnsPrefixRegex = /^[a-z0-9](?:[a-z0-9-]{0,52}[a-z0-9])?$/i;
-    if (!dnsPrefixRegex.test(dnsPrefix)) {
-        throw new Error("Invalid DNS prefix. The DNS prefix must start and end with alphanumeric values, be between 1-54 characters in length, and can only include alphanumeric values and hyphens ('-'). Special characters, such as periods ('.'), are not allowed.");
-    }
-    return dnsPrefix;
+    return clusterName
+        .replaceAll(/[^a-z0-9-\\s]/gi, "")
+        .replace(/^-/, "")
+        .replace(/-$/, "")
+        .substring(0, 54);
 }
 
 function generateNodeResourceGroup(resourceGroupName: string, clusterName: string, location: string): string {
     const sanitizedResourceGroupName = removeWhitespace(resourceGroupName);
     const sanitizedClusterName = removeWhitespace(clusterName);
     const sanitizedLocation = removeWhitespace(location);
-    const nodeResourceGroup = `MC_${sanitizedResourceGroupName}_${sanitizedClusterName}_${sanitizedLocation}`;
-    return validateNodeResourceGroup(nodeResourceGroup);
-}
-
-function validateNodeResourceGroup(nodeResourceGroup: string): string {
-    // please refer https://aka.ms/aks-naming-rules
-    return nodeResourceGroup.length > 80 ? nodeResourceGroup.substring(0, 80) : nodeResourceGroup;
+    return `MC_${sanitizedResourceGroupName}_${sanitizedClusterName}_${sanitizedLocation}`.substring(0, 80);
 }
 
 function removeWhitespace(str: string): string {
-    return str.replace(/\s+/g, '');
+    return str.replace(/\s+/g, "");
 }
-
