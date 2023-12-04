@@ -56,7 +56,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             createClusterRequest: (args) =>
                 this.handleCreateClusterRequest(
                     args.isNewResourceGroup,
-                    args.resourceGroup,
+                    args.resourceGroupName,
                     args.location,
                     args.name,
                     args.preset,
@@ -109,18 +109,22 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
 
     private async handleCreateClusterRequest(
         isNewResourceGroup: boolean,
-        group: WebviewResourceGroup,
+        groupName: string,
         location: string,
         name: string,
         preset: Preset,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (isNewResourceGroup) {
+            const group = {
+                name: groupName,
+                location,
+            };
             await createResourceGroup(group, webview, this.resourceManagementClient);
         }
 
         await createCluster(
-            group,
+            groupName,
             location,
             name,
             preset,
@@ -163,7 +167,7 @@ async function createResourceGroup(
 }
 
 async function createCluster(
-    group: WebviewResourceGroup,
+    groupName: string,
     location: string,
     name: string,
     preset: Preset,
@@ -197,9 +201,9 @@ async function createCluster(
     const clusterSpec: ClusterSpec = {
         location,
         name,
-        resourceGroupName: group.name,
+        resourceGroupName: groupName,
         subscriptionId: subscriptionContext.subscriptionId,
-        kubernetesVersion: kubernetesVersion.version, // selecting the latest version since versions come in descending order
+        kubernetesVersion: kubernetesVersion.version,
         username: subscriptionContext.userId,
     };
 
@@ -212,7 +216,7 @@ async function createCluster(
 
     try {
         const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
-            group.name,
+            groupName,
             deploymentName,
             deploymentSpec,
         );
