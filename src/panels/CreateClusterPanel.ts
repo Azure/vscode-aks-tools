@@ -34,7 +34,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         readonly containerServiceClient: ContainerServiceClient,
         readonly portalUrl: string,
         readonly subscriptionContext: ISubscriptionContext,
-    ) {}
+    ) { }
 
     getTitle(): string {
         return `Create Cluster in ${this.subscriptionContext.subscriptionDisplayName}`;
@@ -203,7 +203,7 @@ async function createCluster(
         name,
         resourceGroupName: groupName,
         subscriptionId: subscriptionContext.subscriptionId,
-        kubernetesVersion: kubernetesVersion.version, // selecting the latest version since versions come in descending order
+        kubernetesVersion: kubernetesVersion.version,
         username: subscriptionContext.userId,
     };
 
