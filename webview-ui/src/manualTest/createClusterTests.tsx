@@ -3,7 +3,6 @@ import { CreateCluster } from "../CreateCluster/CreateCluster";
 import {
     InitialState,
     ProgressEventType,
-    ResourceGroup,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
@@ -39,7 +38,7 @@ export function getCreateClusterScenarios() {
             createClusterRequest: (args) =>
                 handleCreateClusterRequest(
                     args.isNewResourceGroup,
-                    args.resourceGroup,
+                    args.resourceGroupName,
                     args.location,
                     args.name,
                     webview,
@@ -59,21 +58,21 @@ export function getCreateClusterScenarios() {
 
     async function handleCreateClusterRequest(
         isNewResourceGroup: boolean,
-        group: ResourceGroup,
+        groupName: string,
         location: string,
         name: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (isNewResourceGroup) {
             webview.postProgressUpdate({
-                operationDescription: `Creating Resource Group ${group.name} in ${group.location}`,
+                operationDescription: `Creating Resource Group ${groupName} in ${location}`,
                 event: ProgressEventType.InProgress,
                 errorMessage: null,
             });
 
             await new Promise((resolve) => setTimeout(resolve, 5000));
             webview.postProgressUpdate({
-                operationDescription: `Successfully created ${group.name} in ${group.location}`,
+                operationDescription: `Successfully created ${groupName} in ${location}`,
                 event: ProgressEventType.InProgress,
                 errorMessage: null,
             });
