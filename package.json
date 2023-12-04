@@ -435,7 +435,7 @@
         "@types/vscode": "^1.82.0",
         "@typescript-eslint/eslint-plugin": "^6.9.1",
         "@typescript-eslint/parser": "^6.9.1",
-        "@vscode/test-electron": "^2.3.6",
+        "@vscode/test-electron": "^2.3.8",
         "chai": "^4.3.10",
         "eslint": "^8.52.0",
         "eslint-webpack-plugin": "^4.0.1",
