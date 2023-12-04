@@ -21,7 +21,7 @@ export enum ProgressEventType {
 
 export interface CreateClusterParams {
     isNewResourceGroup: boolean;
-    resourceGroup: ResourceGroup;
+    resourceGroupName: string;
     location: string;
     name: string;
     preset: Preset;
