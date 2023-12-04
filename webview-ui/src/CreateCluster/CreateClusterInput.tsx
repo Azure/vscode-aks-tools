@@ -29,21 +29,27 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [existingResourceGroup, setExistingResourceGroup] = useState<Validatable<ResourceGroup>>(unset());
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
-    const [newResourceGroup, setNewResourceGroup] = useState<ResourceGroup | null>(null);
+    const [newResourceGroupName, setNewResourceGroupName] = useState<string | null>(null);
     const [presetSelected, setPresetSelected] = useState<Preset>("dev");
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
     const [location, setLocation] = useState<Validatable<string>>(unset());
 
+    const newResourceGroup = newResourceGroupName
+        ? {
+              name: newResourceGroupName,
+              location: location.value || "",
+          }
+        : null;
     const allResourceGroups = newResourceGroup ? [newResourceGroup, ...props.resourceGroups] : props.resourceGroups;
 
     function handleCreateResourceGroupDialogCancel() {
         setIsNewResourceGroupDialogShown(false);
     }
 
-    function handleCreateResourceGroupDialogAccept(group: ResourceGroup) {
+    function handleCreateResourceGroupDialogAccept(groupName: string) {
         setIsNewResourceGroupDialogShown(false);
         setExistingResourceGroup(unset());
-        setNewResourceGroup(group);
+        setNewResourceGroupName(groupName);
         setSelectedIndex(1); // this is the index of the new resource group and the first option is "Select"
     }
 
@@ -92,12 +98,13 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        let resourceGroup = (existingResourceGroup.value || newResourceGroup)!;
-        resourceGroup =
-            resourceGroup === newResourceGroup ? { ...resourceGroup, location: location.value! } : resourceGroup;
+        const resourceGroup = existingResourceGroup.value || newResourceGroup;
+        if (!resourceGroup) return;
+        if (!location.value) return;
+
         const parameters: CreateClusterParams = {
             isNewResourceGroup: !existingResourceGroup.value,
-            resourceGroup,
+            resourceGroupName: resourceGroup.name,
             location: location.value!,
             name: name.value!,
             preset: presetSelected,
