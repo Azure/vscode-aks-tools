@@ -6,7 +6,6 @@ import { Uri, window } from "vscode";
 import meta from "../../package.json";
 import { getResourceGroupList } from "../commands/utils/clusters";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
-import { isObject } from "../commands/utils/runtimeTypes";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     InitialState,
@@ -17,7 +16,7 @@ import {
     ResourceGroup as WebviewResourceGroup,
 } from "../webview-contract/webviewDefinitions/createCluster";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { ClusterSpec, ClusterDeploymentBuilder } from "./utilities/ClusterSpecCreationBuilder";
+import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -35,7 +34,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         readonly containerServiceClient: ContainerServiceClient,
         readonly portalUrl: string,
         readonly subscriptionContext: ISubscriptionContext,
-    ) {}
+    ) { }
 
     getTitle(): string {
         return `Create Cluster in ${this.subscriptionContext.subscriptionDisplayName}`;
@@ -288,7 +287,7 @@ function isInvalidTemplateDeploymentError(ex: unknown): ex is InvalidTemplateDep
 }
 
 function isRestError(ex: unknown): ex is RestError {
-    return isObject(ex) && ex.constructor.name === "RestError";
+    return typeof ex === "object" && ex !== null && ex.constructor.name === "RestError";
 }
 
 function isDefaultK8sVersion(version: KubernetesVersion): boolean {
