@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     CreateClusterParams,
+    Preset,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
@@ -29,7 +30,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
     const [newResourceGroup, setNewResourceGroup] = useState<ResourceGroup | null>(null);
-    const [presetSelected, setPresetSelected] = useState<string>("dev");
+    const [presetSelected, setPresetSelected] = useState<Preset>("dev");
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
     const allResourceGroups = newResourceGroup ? [newResourceGroup, ...props.resourceGroups] : props.resourceGroups;
@@ -45,7 +46,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         setSelectedIndex(1); // this is the index of the new resource group and the first option is "Select"
     }
 
-    function handlePresetSelection(presetSelected: string) {
+    function handlePresetSelection(presetSelected: Preset) {
         setPresetSelected(presetSelected);
     }
 

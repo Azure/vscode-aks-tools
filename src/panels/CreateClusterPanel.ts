@@ -1,16 +1,23 @@
-import { ContainerServiceClient } from "@azure/arm-containerservice";
-import { ResourceGroup as ARMResourceGroup, Deployment, ResourceManagementClient } from "@azure/arm-resources";
+import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
+import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, window } from "vscode";
-import meta from '../../package.json';
+import meta from "../../package.json";
 import { getResourceGroupList } from "../commands/utils/clusters";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { isObject } from "../commands/utils/runtimeTypes";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { InitialState, ProgressEventType, ToVsCodeMsgDef, ToWebViewMsgDef, ResourceGroup as WebviewResourceGroup } from "../webview-contract/webviewDefinitions/createCluster";
+import {
+    InitialState,
+    Preset,
+    ProgressEventType,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+    ResourceGroup as WebviewResourceGroup,
+} from "../webview-contract/webviewDefinitions/createCluster";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { ClusterSpec, ClusterSpecBuilder } from "./utilities/ClusterSpecCreationBuilder";
+import { ClusterSpec, ClusterDeploymentBuilder } from "./utilities/ClusterSpecCreationBuilder";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -27,8 +34,8 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         readonly resourceManagementClient: ResourceManagementClient,
         readonly containerServiceClient: ContainerServiceClient,
         readonly portalUrl: string,
-        readonly subscriptionContext: ISubscriptionContext
-    ) { }
+        readonly subscriptionContext: ISubscriptionContext,
+    ) {}
 
     getTitle(): string {
         return `Create Cluster in ${this.subscriptionContext.subscriptionDisplayName}`;
@@ -106,14 +113,23 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         group: WebviewResourceGroup,
         location: string,
         name: string,
-        preset: string,
+        preset: Preset,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (isNewResourceGroup) {
             await createResourceGroup(group, webview, this.resourceManagementClient);
         }
 
-        await createCluster(group, location, name, preset, webview, this.containerServiceClient, this.resourceManagementClient, this.subscriptionContext);
+        await createCluster(
+            group,
+            location,
+            name,
+            preset,
+            webview,
+            this.containerServiceClient,
+            this.resourceManagementClient,
+            this.subscriptionContext,
+        );
     }
 }
 
@@ -151,11 +167,11 @@ async function createCluster(
     group: WebviewResourceGroup,
     location: string,
     name: string,
-    preset: string,
+    preset: Preset,
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
-    subscriptionContext: ISubscriptionContext
+    subscriptionContext: ISubscriptionContext,
 ) {
     const operationDescription = `Creating cluster ${name}`;
     webview.postProgressUpdate({
@@ -165,8 +181,11 @@ async function createCluster(
     });
 
     // kubernetes version is required to create a cluster via deployments
-    const kubernetesVersion = await containerServiceClient.managedClusters.listKubernetesVersions(location);
-    if (!kubernetesVersion || !kubernetesVersion.values || kubernetesVersion.values.length === 0 || !kubernetesVersion.values[0].version) {
+    const kubernetesVersionsResult = await containerServiceClient.managedClusters.listKubernetesVersions(location);
+    const kubernetesVersions = kubernetesVersionsResult.values || [];
+    const hasDefaultVersion = kubernetesVersions.some(isDefaultK8sVersion);
+    const [kubernetesVersion] = hasDefaultVersion ? kubernetesVersions.filter(isDefaultK8sVersion) : kubernetesVersions;
+    if (!kubernetesVersion?.version) {
         window.showErrorMessage(`No Kubernetes versions available for location ${location}`);
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
@@ -181,15 +200,24 @@ async function createCluster(
         name,
         resourceGroupName: group.name,
         subscriptionId: subscriptionContext.subscriptionId,
-        kubernetesVersion: kubernetesVersion.values[0].version, // selecting the latest version since versions come in descending order
-        username: subscriptionContext.userId
+        kubernetesVersion: kubernetesVersion.version, // selecting the latest version since versions come in descending order
+        username: subscriptionContext.userId,
     };
 
-    const deploymentSpec = getManagedClusterSpec(clusterSpec, preset);
+    // Create a unique deployment name.
+    const deploymentName = `${name}-${Math.random().toString(36).substring(5)}`;
+    const deploymentSpec = new ClusterDeploymentBuilder()
+        .buildCommonParameters(clusterSpec)
+        .buildTemplate(preset)
+        .getDeployment();
 
     try {
-        const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(group.name, name, deploymentSpec);
-        poller.onProgress(state => {
+        const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
+            group.name,
+            deploymentName,
+            deploymentSpec,
+        );
+        poller.onProgress((state) => {
             if (state.status === "canceled") {
                 webview.postProgressUpdate({
                     event: ProgressEventType.Cancelled,
@@ -227,20 +255,6 @@ async function createCluster(
     }
 }
 
-function getManagedClusterSpec(clusterSpec: ClusterSpec, preset: string): Deployment {
-    const specBuilder: ClusterSpecBuilder = new ClusterSpecBuilder();
-    switch (preset) {
-        case "dev":
-            return specBuilder.buildDevTestClusterSpec(clusterSpec);
-        case "economy":
-            return specBuilder.buildProdEconomyClusterSpec(clusterSpec)
-        case "enterprise":
-            return specBuilder.buildProdEnterpriseClusterSpec(clusterSpec)
-        default:
-            return specBuilder.buildProdStandardClusterSpec(clusterSpec)
-    }
-}
-
 function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {
     const innerDetails = ex.details.error?.details || [];
     if (innerDetails.length > 0) {
@@ -275,4 +289,8 @@ function isInvalidTemplateDeploymentError(ex: unknown): ex is InvalidTemplateDep
 
 function isRestError(ex: unknown): ex is RestError {
     return isObject(ex) && ex.constructor.name === "RestError";
+}
+
+function isDefaultK8sVersion(version: KubernetesVersion): boolean {
+    return "isDefault" in version && version.isDefault === true;
 }
