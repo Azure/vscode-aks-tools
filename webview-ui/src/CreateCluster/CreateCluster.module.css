@@ -2,69 +2,66 @@
     display: grid;
     grid-template-columns: 8rem 20rem 8rem;
     grid-gap: 1rem;
-    margin-top: 18px;
 }
+
 .presetHeader {
-    width: 250px;
-    height: 18px;
-    margin-bottom: 10px;
+    height: 1rem;
+    margin: 0 0 0.6rem 0;
+    width: 15rem;
 }
 
 .presetContainer {
-    width: 217px;
-    height: 166px;
-    flex-shrink: 0;
-    border-radius: 8px;
-    border: 1px solid var(--base-base-10, #808080);
-    margin-bottom: 23px;
+    border: 0.0625rem solid var(--vscode-editorCursor-foreground);
+    border-radius: 0.5rem;
+    height: 10.375rem;
+    margin-bottom: 1rem;
+    width: 13.5rem;
 }
 
 .presetTitle {
-    width: 161px;
-    color: var(--base-base-01, #fff);
-    font-size: 16px;
+    color: var(--vscode-activityBar-activeBorder);
+    font-size: 1rem;
     font-style: normal;
     font-weight: 600;
-    line-height: 22px;
+    line-height: 1.375rem;
+    width: 10rem;
 }
 
 .presetDescription {
-    width: 161px;
-    color: var(--base-base-01, #fff);
-    font-size: 13px;
+    color: var(--vscode-activityBar-activeBorder);
+    font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
-    line-height: 18px;
-    margin-right: 16px;
-    margin-bottom: 16px;
-    margin-left: 40px;
-    margin-top: 12px;
+    line-height: 1.125rem;
+    margin-bottom: 1rem;
+    margin-left: 2.5rem;
+    margin-right: 1rem;
+    margin-top: 0.75rem;
+    width: 10rem;
 }
 
 .flexContainer {
     display: flex;
-    margin-top: 16px;
-    margin-right: 16px;
-    margin-left: 16px;
+    margin: 1rem 1rem 0 1rem;
 }
 
 .svgContainer {
-    margin-right: 6px;
+    margin-right: 0.375rem;
 }
 
 .learnMoreContainer {
-    margin-top: 20px;
+    margin-top: 1.25rem;
 }
 
 .portalLink {
-    width: 967px;
-    height: 31px;
-    color: var(--base-base-03, #e7e7e7);
-    font-size: 13px;
+    color: var(--vscode-panel-dropBorder);
+    font-size: 0.8rem;
     font-style: normal;
     font-weight: 500;
+    height: 2rem;
     line-height: normal;
-    margin-bottom: 10px;
+    margin-bottom: 0.625rem;
+    width: 60rem;
 }
 
 .infoIndicator {
@@ -73,12 +70,12 @@
 }
 
 .clusterDetailsLabel {
-    color: var(--base-base-01, #fff);
-    font-size: 15px;
+    color: var(--vscode-activityBar-activeBorder);
+    font-size: 1rem;
     font-style: normal;
     font-weight: 600;
-    line-height: normal;
     grid-column: 1 / 2;
+    line-height: normal;
 }
 
 .label {
@@ -91,7 +88,7 @@
 
 .longControl {
     grid-column: 2 / 4;
-    width: 322px;
+    width: 20rem;
 }
 
 .sideControl {
