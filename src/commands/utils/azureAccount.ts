@@ -11,8 +11,14 @@ import {
     TokenCredentialAuthenticationProviderOptions,
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
-import { RoleAssignmentsListResponse } from "@azure/arm-authorization/esm/models";
 import { isObject } from "./runtimeTypes";
+import { RoleAssignment } from "@azure/arm-authorization";
+import { collectAll } from "@azure/core-paging";
+
+// Define the collectAll function if it is not exported
+declare module "@azure/core-paging" {
+    export function collectAll<T>(pagedIterator: PagedAsyncIterableIterator<T>): Promise<T[]>;
+}
 
 export interface AzureAccountExtensionApi {
     readonly filters: AzureResourceFilter[];
@@ -200,14 +206,16 @@ async function getSubscriptionAccess(
     subscription: Subscription,
     spInfo: ServicePrincipalInfo,
 ): Promise<Errorable<SubscriptionAccessResult>> {
+
     if (!subscription.subscriptionId) {
         return { succeeded: true, result: { subscription, hasRoleAssignment: false } };
     }
 
     const client = new AuthorizationManagementClient(credential, subscription.subscriptionId);
-    let roleAssignments: RoleAssignmentsListResponse;
+    let roleAssignments: RoleAssignment[];
     try {
-        roleAssignments = await client.roleAssignments.list({ filter: `principalId eq '${spInfo.id}'` });
+        const iterator = client.roleAssignments.listForSubscription({ filter: `principalId eq '${spInfo.id}'` });
+        roleAssignments = await collectAll(iterator);
     } catch (e) {
         if (isUnauthorizedError(e)) {
             return { succeeded: true, result: { subscription, hasRoleAssignment: false } };
