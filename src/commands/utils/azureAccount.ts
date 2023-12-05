@@ -13,12 +13,6 @@ import {
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { isObject } from "./runtimeTypes";
 import { RoleAssignment } from "@azure/arm-authorization";
-import { collectAll } from "@azure/core-paging";
-
-// Define the collectAll function if it is not exported
-declare module "@azure/core-paging" {
-    export function collectAll<T>(pagedIterator: PagedAsyncIterableIterator<T>): Promise<T[]>;
-}
 
 export interface AzureAccountExtensionApi {
     readonly filters: AzureResourceFilter[];
@@ -212,10 +206,12 @@ async function getSubscriptionAccess(
     }
 
     const client = new AuthorizationManagementClient(credential, subscription.subscriptionId);
-    let roleAssignments: RoleAssignment[];
+    const roleAssignments: RoleAssignment[] = [];
     try {
         const iterator = client.roleAssignments.listForSubscription({ filter: `principalId eq '${spInfo.id}'` });
-        roleAssignments = await collectAll(iterator);
+        for await (const pageRoleAssignments of iterator.byPage()) {
+            roleAssignments.push(...pageRoleAssignments);
+        }
     } catch (e) {
         if (isUnauthorizedError(e)) {
             return { succeeded: true, result: { subscription, hasRoleAssignment: false } };
