@@ -11,8 +11,8 @@ import {
     TokenCredentialAuthenticationProviderOptions,
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
-import { RoleAssignmentsListResponse } from "@azure/arm-authorization/esm/models";
 import { isObject } from "./runtimeTypes";
+import { RoleAssignment } from "@azure/arm-authorization";
 
 export interface AzureAccountExtensionApi {
     readonly filters: AzureResourceFilter[];
@@ -200,14 +200,18 @@ async function getSubscriptionAccess(
     subscription: Subscription,
     spInfo: ServicePrincipalInfo,
 ): Promise<Errorable<SubscriptionAccessResult>> {
+
     if (!subscription.subscriptionId) {
         return { succeeded: true, result: { subscription, hasRoleAssignment: false } };
     }
 
     const client = new AuthorizationManagementClient(credential, subscription.subscriptionId);
-    let roleAssignments: RoleAssignmentsListResponse;
+    const roleAssignments: RoleAssignment[] = [];
     try {
-        roleAssignments = await client.roleAssignments.list({ filter: `principalId eq '${spInfo.id}'` });
+        const iterator = client.roleAssignments.listForSubscription({ filter: `principalId eq '${spInfo.id}'` });
+        for await (const pageRoleAssignments of iterator.byPage()) {
+            roleAssignments.push(...pageRoleAssignments);
+        }
     } catch (e) {
         if (isUnauthorizedError(e)) {
             return { succeeded: true, result: { subscription, hasRoleAssignment: false } };
