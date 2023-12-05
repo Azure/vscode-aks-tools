@@ -11,7 +11,6 @@ import {
     TokenCredentialAuthenticationProviderOptions,
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
-import { isObject } from "./runtimeTypes";
 import { RoleAssignment } from "@azure/arm-authorization";
 
 export interface AzureAccountExtensionApi {
@@ -226,5 +225,12 @@ async function getSubscriptionAccess(
 }
 
 function isUnauthorizedError(e: unknown): boolean {
-    return isObject(e) && "code" in e && "statusCode" in e && e.code === "AuthorizationFailed" && e.statusCode === 403;
+    return (
+        typeof e === "object" &&
+        e !== null &&
+        "code" in e &&
+        "statusCode" in e &&
+        e.code === "AuthorizationFailed" &&
+        e.statusCode === 403
+    );
 }
