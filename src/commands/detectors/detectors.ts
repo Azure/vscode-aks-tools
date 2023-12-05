@@ -78,6 +78,11 @@ async function getDataProvider(
         return detectors;
     }
 
-    const dataProvider = new DetectorDataProvider(cloudTarget.name, detectorInfo.result, detectors.result);
+    const dataProvider = new DetectorDataProvider(
+        cloudTarget.subscription.environment,
+        cloudTarget.name,
+        detectorInfo.result,
+        detectors.result,
+    );
     return { succeeded: true, result: dataProvider };
 }

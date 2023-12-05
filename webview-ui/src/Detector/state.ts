@@ -4,15 +4,10 @@ import { getWebviewMessageContext } from "../utilities/vscode";
 
 export type EventDef = Record<string, never>;
 
-export type DetectorState = InitialState & {
-    portalUrl: string;
-};
+export type DetectorState = InitialState;
 
 export const stateUpdater: WebviewStateUpdater<"detector", EventDef, DetectorState> = {
-    createState: (initialState) => ({
-        ...initialState,
-        portalUrl: `https://portal.azure.com/#resource${initialState.clusterArmId}aksDiagnostics?referrer_source=vscode&referrer_context=${initialState.portalReferrerContext}`,
-    }),
+    createState: (initialState) => ({ ...initialState }),
     vscodeMessageHandler: {},
     eventHandler: {},
 };

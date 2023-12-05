@@ -158,8 +158,7 @@ export function getDetectorScenarios() {
         const initialState: InitialState = {
             name: categoryDetector.properties.metadata.name,
             description: categoryDetector.properties.metadata.description,
-            clusterArmId: getClusterArmId(categoryDetector),
-            portalReferrerContext: "vscode-aks-tools-test",
+            portalDetectorUrl: getPortalDetectorUrl(categoryDetector),
             detectors: detectorIds.map((id) => singleDetectorLookup[id]),
         };
 
@@ -173,6 +172,7 @@ export function getDetectorScenarios() {
     });
 }
 
-function getClusterArmId(response: ARMResponse<unknown>): string {
-    return response.id.split("detectors")[0];
+function getPortalDetectorUrl(response: ARMResponse<unknown>): string {
+    const clusterArmId = response.id.split("detectors")[0];
+    return `https://testportal.azure.com/#resource${clusterArmId}aksDiagnostics?referrer_source=vscode&referrer_context=testing`;
 }

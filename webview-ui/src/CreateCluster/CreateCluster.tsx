@@ -3,7 +3,7 @@ import { CreateClusterInput } from "./CreateClusterInput";
 import { Success } from "./Success";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { Stage, stateUpdater, vscode } from "./helpers/state";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeLink, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
 
 export function CreateCluster(initialState: InitialState) {
@@ -43,6 +43,13 @@ export function CreateCluster(initialState: InitialState) {
                         <h3>
                             Creating Cluster {state.createParams!.name} in {state.createParams!.location}
                         </h3>
+                        {state.deploymentPortalUrl && (
+                            <p>
+                                Click <VSCodeLink href={state.deploymentPortalUrl}>here</VSCodeLink> to view the
+                                deployment in the Azure Portal.
+                            </p>
+                        )}
+
                         <VSCodeProgressRing />
                     </>
                 );
@@ -55,13 +62,7 @@ export function CreateCluster(initialState: InitialState) {
                 );
             case Stage.Succeeded:
                 return (
-                    <Success
-                        portalUrl={state.portalUrl}
-                        portalReferrerContext={state.portalReferrerContext}
-                        subscriptionId={state.subscriptionId}
-                        resourceGroup={state.createParams!.resourceGroupName}
-                        name={state.createParams!.name}
-                    />
+                    <Success portalClusterUrl={state.createdCluster?.portalUrl || ""} name={state.createParams!.name} />
                 );
             default:
                 throw new Error(`Unexpected stage ${state.stage}`);
