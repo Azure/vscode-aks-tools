@@ -42,6 +42,7 @@ import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspekt
 import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
 import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
 import { aksTCPDump } from "./commands/aksTCPCollection/tcpDumpCollection";
+import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -89,9 +90,13 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksInspektorGadgetShow", aksInspektorGadgetShow);
         registerCommandWithTelemetry("aks.createCluster", aksCreateCluster);
         registerCommandWithTelemetry("aks.aksTCPDump", aksTCPDump);
+<<<<<<< Updated upstream
         registerCommandWithTelemetry("aks.aksClusterDiff", () =>  {vscode.commands.executeCommand("vscode.diff"
         , vscode.Uri.parse('file:///tmp/sample-tweet-pretty.txt')
         , vscode.Uri.parse('file:///tmp/sample-tweet-pretty1.txt'))});
+=======
+        registerCommandWithTelemetry("aks.compareCluster", aksCompareCluster);
+>>>>>>> Stashed changes
 
         await registerAzureServiceNodes(context);
 
