@@ -90,13 +90,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksInspektorGadgetShow", aksInspektorGadgetShow);
         registerCommandWithTelemetry("aks.createCluster", aksCreateCluster);
         registerCommandWithTelemetry("aks.aksTCPDump", aksTCPDump);
-<<<<<<< Updated upstream
-        registerCommandWithTelemetry("aks.aksClusterDiff", () =>  {vscode.commands.executeCommand("vscode.diff"
-        , vscode.Uri.parse('file:///tmp/sample-tweet-pretty.txt')
-        , vscode.Uri.parse('file:///tmp/sample-tweet-pretty1.txt'))});
-=======
         registerCommandWithTelemetry("aks.compareCluster", aksCompareCluster);
->>>>>>> Stashed changes
 
         await registerAzureServiceNodes(context);
 
