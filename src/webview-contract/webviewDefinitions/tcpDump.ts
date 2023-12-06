@@ -6,7 +6,9 @@ export interface InitialState {
 }
 
 export type NodeName = string;
+export type PodName = string;
 export type CaptureName = string;
+export type InterfaceName = string;
 
 export type CompletedCapture = {
     name: CaptureName;
@@ -19,6 +21,15 @@ export type NodeCommand = {
 
 export type NodeCaptureCommand = NodeCommand & {
     capture: CaptureName;
+};
+
+export type StartCaptureCommand = NodeCaptureCommand & {
+    filters: CaptureFilters;
+};
+
+export type CaptureFilters = {
+    interface: InterfaceName | null;
+    pcapFilterString: string | null;
 };
 
 export type CommandResult = {
@@ -48,14 +59,20 @@ export type NodeCaptureDownloadResult = NodeCaptureCommandResult & {
     localCapturePath: string;
 };
 
+export type ValueCommandResult<TCommandResult extends CommandResult, TValue> = TCommandResult & {
+    value: TValue;
+};
+
 export type ToVsCodeMsgDef = {
     checkNodeState: NodeCommand;
     startDebugPod: NodeCommand;
-    startCapture: NodeCaptureCommand;
+    startCapture: StartCaptureCommand;
     stopCapture: NodeCaptureCommand;
     downloadCaptureFile: NodeCaptureCommand;
     deleteDebugPod: NodeCommand;
     openFolder: string;
+    getAllNodes: void;
+    getInterfaces: NodeCommand;
 };
 
 export type ToWebViewMsgDef = {
@@ -65,6 +82,8 @@ export type ToWebViewMsgDef = {
     stopCaptureResponse: NodeCaptureStopResult;
     downloadCaptureFileResponse: NodeCaptureDownloadResult;
     deleteDebugPodResponse: NodeCommandResult;
+    getAllNodesResponse: ValueCommandResult<CommandResult, NodeName[]>;
+    getInterfacesResponse: ValueCommandResult<NodeCommandResult, InterfaceName[]>;
 };
 
 export type TCPDumpDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

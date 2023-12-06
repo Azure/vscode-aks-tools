@@ -23,6 +23,10 @@
     max-width: 8rem;
 }
 
+.content .fullWidth {
+    grid-column: 1 / 3;
+}
+
 table.capturelist {
     border-collapse: collapse;
     width: 100%;

@@ -2,7 +2,7 @@ export type Lookup<T> = {
     [key: string]: T;
 };
 
-export function asLookup<T>(items: T[], keyFn: (value: T) => string): Lookup<T> {
+export function asLookup<T>(items: T[], keyFn: (value: T) => ItemKey): Lookup<T> {
     const entries = items.map((val) => [keyFn(val), val]);
     return Object.fromEntries(entries);
 }
@@ -27,4 +27,29 @@ export function intersection<T>(itemsA: T[], itemsB: T[]): T[] {
 
 export function exclude<T>(take: T[], exclude: T[]): T[] {
     return take.filter((a) => !exclude.includes(a));
+}
+
+export type ItemKey = { [key: string]: string } | string;
+
+export function updateValues<TKey extends ItemKey, TItem>(
+    items: TItem[],
+    updatedKeys: TKey[],
+    keyFn: (item: TItem) => TKey,
+    itemFn: (key: TKey) => TItem,
+): TItem[] {
+    const lookup = asLookup(items, keyFn);
+    return updatedKeys.map((key) => {
+        const keyId = getKeyId(key);
+        return keyId in lookup ? lookup[keyId] : itemFn(key);
+    });
+}
+
+function getKeyId(key: ItemKey): string {
+    if (key instanceof Object) {
+        return Object.keys(key)
+            .map((keyPart) => key[keyPart])
+            .join("\0");
+    }
+
+    return key;
 }

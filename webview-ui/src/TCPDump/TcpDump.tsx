@@ -16,14 +16,30 @@ import {
     faStop,
     faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import { CaptureFilters } from "./CaptureFilters";
+import { isNotLoaded } from "../utilities/lazy";
 
 export function TcpDump(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
-        if (state.selectedNode && state.nodeStates[state.selectedNode].status === NodeStatus.Unknown) {
-            vscode.postCheckNodeState({ node: state.selectedNode });
-            eventHandlers.onSetCheckingNodeState({ node: state.selectedNode });
+        if (isNotLoaded(state.referenceData.nodes)) {
+            vscode.postGetAllNodes();
+            eventHandlers;
+        }
+        if (state.selectedNode) {
+            const nodeState = state.nodeStates[state.selectedNode];
+            if (nodeState.status === NodeStatus.Unknown) {
+                vscode.postCheckNodeState({ node: state.selectedNode });
+                eventHandlers.onSetCheckingNodeState({ node: state.selectedNode });
+            }
+
+            if (nodeState.status === NodeStatus.DebugPodRunning) {
+                if (isNotLoaded(nodeState.captureInterfaces)) {
+                    vscode.postGetInterfaces({ node: state.selectedNode });
+                    eventHandlers.onSetLoadingInterfaces({ node: state.selectedNode });
+                }
+            }
         }
     });
 
@@ -48,7 +64,14 @@ export function TcpDump(initialState: InitialState) {
         const nodeState = state.nodeStates[state.selectedNode];
         if (nodeState.status !== NodeStatus.DebugPodRunning) return;
         const captureName = new Date().toISOString().slice(0, -5).replaceAll(":", "-").replace("T", "_");
-        vscode.postStartCapture({ node: state.selectedNode, capture: captureName });
+        vscode.postStartCapture({
+            node: state.selectedNode,
+            capture: captureName,
+            filters: {
+                interface: nodeState.currentCaptureFilters.interface,
+                pcapFilterString: nodeState.currentCaptureFilters.pcapFilterString,
+            },
+        });
         eventHandlers.onStartingNodeCapture({ node: state.selectedNode, capture: captureName });
     }
 
@@ -152,6 +175,20 @@ export function TcpDump(initialState: InitialState) {
                         Delete
                     </VSCodeButton>
                 )}
+
+                {state.selectedNode &&
+                    nodeState &&
+                    hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) && (
+                        <details className={styles.fullWidth}>
+                            <summary>Filters</summary>
+                            <CaptureFilters
+                                node={state.selectedNode}
+                                nodeState={nodeState}
+                                referenceData={state.referenceData}
+                                eventHandlers={eventHandlers}
+                            />
+                        </details>
+                    )}
 
                 <label className={styles.label}>Capture</label>
                 {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) && (
