@@ -11,7 +11,7 @@
 }
 
 .presetContainer {
-    border: 0.0625rem solid var(--vscode-editorCursor-foreground);
+    border: 0.0625rem solid;
     border-radius: 0.5rem;
     height: 10.375rem;
     margin-bottom: 1rem;
@@ -19,7 +19,6 @@
 }
 
 .presetTitle {
-    color: var(--vscode-activityBar-activeBorder);
     font-size: 1rem;
     font-style: normal;
     font-weight: 600;
@@ -28,7 +27,6 @@
 }
 
 .presetDescription {
-    color: var(--vscode-activityBar-activeBorder);
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 400;
@@ -54,7 +52,6 @@
 }
 
 .portalLink {
-    color: var(--vscode-panel-dropBorder);
     font-size: 0.8rem;
     font-style: normal;
     font-weight: 500;
@@ -70,7 +67,6 @@
 }
 
 .clusterDetailsLabel {
-    color: var(--vscode-activityBar-activeBorder);
     font-size: 1rem;
     font-style: normal;
     font-weight: 600;
