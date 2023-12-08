@@ -1,12 +1,14 @@
 import { QuickPickItem } from 'vscode';
 import { createQuickPickStep, runMultiStepInput } from '../utils/multiStepHelper';
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterSubscriptionItem, getContainerClient, } from '../utils/clusters';
+import { getAksClusterSubscriptionItem, getContainerClient, getResourceManagementClient, } from '../utils/clusters';
 import { failed } from '../utils/errorable';
 import * as vscode from 'vscode';
 import * as k8s from 'vscode-kubernetes-tools-api';
 import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
 import { getExtension } from '../utils/host';
+import { Dictionary } from '../utils/dictionary';
+import * as tmpfile from "../utils/tempfile";
 
 interface State {
     clusterGroupCompareFrom: ClusterNameItem;
@@ -46,9 +48,18 @@ export default async function aksCompareCluster(
 
     const clusterList: string[] = [];
     const iterator = containerServiceClient.managedClusters.list();
+    const clusterGroupList: Dictionary<string> = {};
     for await (const cluster of iterator.byPage()) {
         clusterList.push(...cluster.map(c => c.name ?? ''));
+        cluster.map((c) => {
+            const resourceId = c.id!;
+            const clusterName = c.name!;
+            if (resourceId && clusterName) {
+                clusterGroupList[clusterName] = resourceId;
+            }
+        });
     }
+
 
     const clusterGroupCompareWithStep = createQuickPickStep<State, ClusterNameItem>({
         placeholder: 'Pick a cluster from group to compare with',
@@ -77,5 +88,31 @@ export default async function aksCompareCluster(
     }
 
     // Call create cluster at this instance
-    // createManagedClusterWithOssku(state, <SubscriptionTreeItem>cluster.result);
+    compareManagedCluster(state, clusterGroupList, <SubscriptionTreeItem>cluster.result);
 }
+
+
+function compareManagedCluster(state: State, clusterResourceDictionary: Dictionary<string>, subscription: SubscriptionTreeItem) {
+
+    const resourceManagementClient = getResourceManagementClient(subscription);
+
+    const resourceArmIDWith = clusterResourceDictionary[state.clusterGroupCompareWith.name];
+    const resourceArmIDFrom = clusterResourceDictionary[state.clusterGroupCompareFrom.name];
+    const clusterWith = "";
+    // Example: GET https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}?api-version=2023-08-01
+    // source of example: https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/get?view=rest-aks-2023-08-01&tabs=HTTP#code-try-0 
+    const clusterWithContent = resourceManagementClient.resources.getById(resourceArmIDWith, "2023-08-01");
+    // await resourceManagementClient.sendRequest({ method: 'GET', path: resourceArmIDWith } as PipelineRequest);
+    const clusterFromContent = resourceManagementClient.resources.getById(resourceArmIDFrom, "2023-08-01");
+
+    console.log(clusterWith);
+    const file1 = tmpfile.createTempFile(JSON.stringify(clusterWithContent), "json");
+    const file2 = tmpfile.createTempFile(JSON.stringify(clusterFromContent), "json");
+
+    vscode.commands.executeCommand("vscode.diff"
+        , vscode.Uri.parse(`file:///${file1}`)
+        , vscode.Uri.parse(`file:///${file2}`))
+
+
+}
+
