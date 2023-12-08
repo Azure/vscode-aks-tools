@@ -110,9 +110,7 @@ async function compareManagedCluster(state: State, clusterResourceDictionary: Di
     const file2 = await tmpfile.createTempFile(JSON.stringify(clusterFromContent, null, '\t'), "json");
 
     vscode.commands.executeCommand("vscode.diff"
-        , vscode.Uri.parse(`file://${file1.filePath}`)
-        , vscode.Uri.parse(`file://${file2.filePath}`))
-
-
+        , vscode.Uri.file(`${file1.filePath}`)
+        , vscode.Uri.file(`${file2.filePath}`))
 }
 
