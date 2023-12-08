@@ -88,11 +88,11 @@ export default async function aksCompareCluster(
     }
 
     // Call create cluster at this instance
-    compareManagedCluster(state, clusterGroupList, <SubscriptionTreeItem>cluster.result);
+    await compareManagedCluster(state, clusterGroupList, <SubscriptionTreeItem>cluster.result);
 }
 
 
-function compareManagedCluster(state: State, clusterResourceDictionary: Dictionary<string>, subscription: SubscriptionTreeItem) {
+async function compareManagedCluster(state: State, clusterResourceDictionary: Dictionary<string>, subscription: SubscriptionTreeItem) {
 
     const resourceManagementClient = getResourceManagementClient(subscription);
 
@@ -101,17 +101,17 @@ function compareManagedCluster(state: State, clusterResourceDictionary: Dictiona
     const clusterWith = "";
     // Example: GET https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}?api-version=2023-08-01
     // source of example: https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/get?view=rest-aks-2023-08-01&tabs=HTTP#code-try-0 
-    const clusterWithContent = resourceManagementClient.resources.getById(resourceArmIDWith, "2023-08-01");
+    const clusterWithContent = await resourceManagementClient.resources.getById(resourceArmIDWith, "2023-08-01");
     // await resourceManagementClient.sendRequest({ method: 'GET', path: resourceArmIDWith } as PipelineRequest);
-    const clusterFromContent = resourceManagementClient.resources.getById(resourceArmIDFrom, "2023-08-01");
+    const clusterFromContent = await resourceManagementClient.resources.getById(resourceArmIDFrom, "2023-08-01");
 
     console.log(clusterWith);
-    const file1 = tmpfile.createTempFile(JSON.stringify(clusterWithContent), "json");
-    const file2 = tmpfile.createTempFile(JSON.stringify(clusterFromContent), "json");
+    const file1 = await tmpfile.createTempFile(JSON.stringify(clusterWithContent, null, '\t'), "json");
+    const file2 = await tmpfile.createTempFile(JSON.stringify(clusterFromContent, null, '\t'), "json");
 
     vscode.commands.executeCommand("vscode.diff"
-        , vscode.Uri.parse(`file:///${file1}`)
-        , vscode.Uri.parse(`file:///${file2}`))
+        , vscode.Uri.parse(`file://${file1.filePath}`)
+        , vscode.Uri.parse(`file://${file2.filePath}`))
 
 
 }
