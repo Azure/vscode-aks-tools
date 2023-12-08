@@ -40,6 +40,9 @@
             "request": "launch",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/webview-ui",
+            "outFiles": [
+                "${workspaceFolder}/webview-ui/dist/**/*.js"
+            ],
             "preLaunchTask": "dev:webview"
         }
     ]
