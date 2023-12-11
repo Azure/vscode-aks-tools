@@ -3,7 +3,7 @@ import {
     NodeName,
     CaptureName,
     InterfaceName,
-    PodName,
+    FilterPod,
 } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { Lazy, newLoading, newNotLoaded } from "../utilities/lazy";
 import { WebviewStateUpdater } from "../utilities/state";
@@ -30,20 +30,42 @@ export enum CaptureStatus {
     Downloaded,
 }
 
-export type FilterPod = {
-    name: PodName;
-    ipAddress: string;
+export type CaptureScenario = "SpecificPod" | "TwoPods";
+
+export type CaptureScenarioFilters = {
+    SpecificPod: SpecificPodFilter;
+    TwoPods: TwoPodsFilter;
 };
 
-export type EndpointFilter = {
-    node: NodeName | null;
+export type ScenarioFilterValue = {
+    [P in CaptureScenario]: {
+        node: NodeName;
+        scenario: P;
+        filters: CaptureScenarioFilters[P];
+    };
+}[CaptureScenario];
+
+export type SpecificPodFilter = {
     pod: FilterPod | null;
+    packetDirection: SingleEndpointPacketDirection;
 };
+
+export type TwoPodsFilter = {
+    sourceNode: NodeName | null;
+    sourcePod: FilterPod | null;
+    destNode: NodeName | null;
+    destPod: FilterPod | null;
+    packetDirection: DualEndpointPacketDirection;
+};
+
+export type SingleEndpointPacketDirection = "SentAndReceived" | "Sent" | "Received";
+
+export type DualEndpointPacketDirection = "SourceToDestination" | "Bidirectional";
 
 export type CaptureFilterSelection = {
     interface: InterfaceName | null;
-    source: EndpointFilter;
-    destination: EndpointFilter;
+    scenario: CaptureScenario | null;
+    scenarioFilters: CaptureScenarioFilters;
     appLayerProtocol: ApplicationLayerProtocol | null;
     port: number | null;
     transportLayerProtocol: TransportLayerProtocol | null;
@@ -92,8 +114,11 @@ export type EventDef = {
     stoppingNodeCapture: { node: NodeName };
     downloadingNodeCapture: { node: NodeName; capture: CaptureName };
     setCaptureFilters: { node: NodeName; filters: CaptureFilterSelection };
+    setCaptureScenarioFilters: ScenarioFilterValue;
+    refreshPcapFilterString: { node: NodeName };
     setLoadingNodes: void;
     setLoadingInterfaces: { node: NodeName };
+    setLoadingFilterPods: { node: NodeName };
 };
 
 export const stateUpdater: WebviewStateUpdater<"tcpDump", EventDef, TcpDumpState> = {
@@ -136,6 +161,10 @@ export const stateUpdater: WebviewStateUpdater<"tcpDump", EventDef, TcpDumpState
             ...state,
             referenceData: ReferenceDataUpdate.updateNodes(state.referenceData, args.value),
         }),
+        getFilterPodsForNodeResponse: (state, args) => ({
+            ...state,
+            referenceData: ReferenceDataUpdate.updateFilterPods(state.referenceData, args.node, args.value),
+        }),
     },
     eventHandler: {
         setSelectedNode: (state, node) => ({ ...ensureNodeStateExists(state, node), selectedNode: node }),
@@ -157,15 +186,21 @@ export const stateUpdater: WebviewStateUpdater<"tcpDump", EventDef, TcpDumpState
             ),
         setCaptureFilters: (state, args) =>
             updateNodeState(state, args.node, (nodeState) => ({ ...nodeState, currentCaptureFilters: args.filters })),
+        setCaptureScenarioFilters: (state, args) =>
+            updateNodeState(state, args.node, (nodeState) => CaptureNodeUpdate.updateScenarioFilter(nodeState, args)),
+        refreshPcapFilterString: (state, args) =>
+            updateNodeState(state, args.node, (nodeState) => CaptureNodeUpdate.refreshPcapFilterString(nodeState)),
         setLoadingInterfaces: (state, args) =>
             updateNodeState(state, args.node, (nodeState) => ({ ...nodeState, captureInterfaces: newLoading() })),
         setLoadingNodes: (state) => updateReferenceData(state, ReferenceDataUpdate.setNodesLoading),
+        setLoadingFilterPods: (state, args) =>
+            updateReferenceData(state, (data) => ReferenceDataUpdate.setFilterPodsLoading(data, args.node)),
     },
 };
 
 function ensureNodeStateExists(state: TcpDumpState, node: NodeName | null): TcpDumpState {
     if (!node) return state;
-    const nodeStates = { [node]: CaptureNodeUpdate.getInitialNodeState(), ...state.nodeStates };
+    const nodeStates = { [node]: CaptureNodeUpdate.getInitialNodeState(node), ...state.nodeStates };
     return { ...state, nodeStates };
 }
 
@@ -196,4 +231,5 @@ export const vscode = getWebviewMessageContext<"tcpDump">({
     deleteDebugPod: null,
     getInterfaces: null,
     getAllNodes: null,
+    getFilterPodsForNode: null,
 });

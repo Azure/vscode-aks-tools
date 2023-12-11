@@ -5,21 +5,42 @@ import {
     NodeCaptureStopResult,
     NodeCheckResult,
     NodeCommandResult,
+    NodeName,
     ValueCommandResult,
 } from "../../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { replaceItem } from "../../utilities/array";
 import { newLoaded, newNotLoaded } from "../../utilities/lazy";
-import { CaptureStatus, NodeCapture, NodeState, NodeStatus } from "../state";
+import {
+    CaptureFilterSelection,
+    CaptureStatus,
+    NodeCapture,
+    NodeState,
+    NodeStatus,
+    ScenarioFilterValue,
+} from "../state";
+import * as ScenarioFiltersUpdate from "./scenarioFiltersUpdate";
 
-export function getInitialNodeState(): NodeState {
+export function getInitialNodeState(node: NodeName): NodeState {
     return {
         status: NodeStatus.Unknown,
         errorMessage: null,
         currentCaptureName: null,
         currentCaptureFilters: {
             interface: null,
-            source: { node: null, pod: null },
-            destination: { node: null, pod: null },
+            scenario: null,
+            scenarioFilters: {
+                SpecificPod: {
+                    pod: null,
+                    packetDirection: "SentAndReceived",
+                },
+                TwoPods: {
+                    sourceNode: node,
+                    sourcePod: null,
+                    destNode: node,
+                    destPod: null,
+                    packetDirection: "Bidirectional",
+                },
+            },
             appLayerProtocol: null,
             port: null,
             transportLayerProtocol: null,
@@ -78,6 +99,42 @@ export function updateCaptureInterfaces(
     }
 
     return { ...state, captureInterfaces: newLoaded(result.value) };
+}
+
+export function updateScenarioFilter(state: NodeState, value: ScenarioFilterValue): NodeState {
+    return {
+        ...state,
+        currentCaptureFilters: {
+            ...state.currentCaptureFilters,
+            scenarioFilters: ScenarioFiltersUpdate.updateScenarioFilter(
+                state.currentCaptureFilters.scenarioFilters,
+                value,
+            ),
+        },
+    };
+}
+
+export function refreshPcapFilterString(state: NodeState): NodeState {
+    // https://www.tcpdump.org/manpages/pcap-filter.7.html
+    const parts = getPcapFilterStringParts(state.currentCaptureFilters);
+
+    if (state.currentCaptureFilters.port) {
+        parts.push(`port ${state.currentCaptureFilters.port}`);
+    }
+
+    if (state.currentCaptureFilters.transportLayerProtocol) {
+        parts.push(`ip proto ${state.currentCaptureFilters.transportLayerProtocol.toLowerCase()}`);
+    }
+
+    return {
+        ...state,
+        currentCaptureFilters: { ...state.currentCaptureFilters, pcapFilterString: parts.join(" and ") },
+    };
+}
+
+function getPcapFilterStringParts(filters: CaptureFilterSelection): string[] {
+    if (!filters.scenario) return [];
+    return ScenarioFiltersUpdate.getPcapFilterStringParts(filters.scenario, filters.scenarioFilters);
 }
 
 export function updateFromCaptureStarting(state: NodeState, capture: CaptureName): NodeState {

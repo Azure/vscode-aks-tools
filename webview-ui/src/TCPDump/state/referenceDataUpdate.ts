@@ -1,7 +1,7 @@
-import { NodeName } from "../../../../src/webview-contract/webviewDefinitions/tcpDump";
+import { FilterPod, NodeName } from "../../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { replaceItem, updateValues } from "../../utilities/array";
 import { map as lazyMap, newLoaded, newLoading, newNotLoaded, orDefault } from "../../utilities/lazy";
-import { ReferenceData, NodeReferenceData, FilterPod } from "../state";
+import { ReferenceData, NodeReferenceData } from "../state";
 import * as NodeReferenceDataUpdate from "./nodeReferenceDataUpdate";
 
 export function setNodesLoading(data: ReferenceData): ReferenceData {

@@ -2,6 +2,7 @@ import { MessageHandler, MessageSink } from "../../../src/webview-contract/messa
 import {
     CaptureName,
     CompletedCapture,
+    FilterPod,
     InitialState,
     NodeName,
     ToVsCodeMsgDef,
@@ -9,6 +10,7 @@ import {
 } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { TcpDump } from "../TCPDump/TcpDump";
 import { stateUpdater } from "../TCPDump/state";
+import { getOrThrow } from "../utilities/array";
 import { Scenario } from "../utilities/manualTest";
 
 type TestNodeState = {
@@ -36,6 +38,12 @@ const windowsNode = "windows-node";
 
 const randomFileSize = () => ~~(Math.random() * 5000);
 
+type ClusterNodeProperties = {
+    name: string;
+    index: number;
+    pods: FilterPod[];
+};
+
 export function getTCPDumpScenarios() {
     const clusterName = "test-cluster";
     const nodeStates: { [node: NodeName]: TestNodeState } = {
@@ -59,6 +67,17 @@ export function getTCPDumpScenarios() {
         allNodes: Object.keys(nodeStates),
     };
 
+    const allClusterNodes: ClusterNodeProperties[] = [...Object.keys(nodeStates), windowsNode].map(
+        (name, nodeIndex) => ({
+            name,
+            index: nodeIndex,
+            pods: Array.from({ length: 8 }, (_, podIndex) => ({
+                name: `testpod${podIndex}`,
+                ipAddress: `10.244.${nodeIndex}.${podIndex}`,
+            })),
+        }),
+    );
+
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             checkNodeState: (args) => handleCheckNodeState(args.node),
@@ -70,6 +89,7 @@ export function getTCPDumpScenarios() {
             openFolder: (args) => handleOpenFolder(args),
             getInterfaces: (args) => handleGetInterfaces(args.node),
             getAllNodes: handleGetAllNodes,
+            getFilterPodsForNode: (args) => handleGetFilterPodsForNode(args.node),
         };
 
         async function handleCheckNodeState(node: NodeName) {
@@ -181,7 +201,22 @@ export function getTCPDumpScenarios() {
             webview.postGetAllNodesResponse({
                 succeeded: true,
                 errorMessage: null,
-                value: [...Object.keys(nodeStates), windowsNode],
+                value: allClusterNodes.map((n) => n.name),
+            });
+        }
+
+        async function handleGetFilterPodsForNode(nodeName: NodeName) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            const node = getOrThrow(
+                allClusterNodes,
+                (n) => n.name === nodeName,
+                `Node ${nodeName} not found in test data`,
+            );
+            webview.postGetFilterPodsForNodeResponse({
+                succeeded: true,
+                errorMessage: null,
+                node: nodeName,
+                value: node.pods,
             });
         }
     }

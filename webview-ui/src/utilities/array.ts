@@ -29,6 +29,15 @@ export function exclude<T>(take: T[], exclude: T[]): T[] {
     return take.filter((a) => !exclude.includes(a));
 }
 
+export function getOrThrow<T>(items: T[], predicate: (item: T) => boolean, messageIfMissing: string): T {
+    const item = items.find(predicate);
+    if (!item) {
+        throw new Error(messageIfMissing);
+    }
+
+    return item;
+}
+
 export type ItemKey = { [key: string]: string } | string;
 
 export function updateValues<TKey extends ItemKey, TItem>(

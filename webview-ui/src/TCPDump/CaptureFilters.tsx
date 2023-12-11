@@ -1,56 +1,140 @@
+import { FormEvent, useEffect } from "react";
 import { InterfaceName, NodeName } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { ResourceSelector } from "../components/ResourceSelector";
-import { map as lazyMap } from "../utilities/lazy";
+import { Lazy, isLoaded } from "../utilities/lazy";
 import { EventHandlers } from "../utilities/state";
 import styles from "./TcpDump.module.css";
-import { EventDef, NodeState, ReferenceData } from "./state";
+import { SpecificPodFilters } from "./filterScenarios/SpecificPodFilters";
+import { TwoPodsFilters } from "./filterScenarios/TwoPodsFilters";
+import { CaptureScenario, EventDef, NodeState, ReferenceData } from "./state";
+import { EventHandlerFunc, loadCaptureInterfaces } from "./state/dataLoading";
+import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+
+type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface CaptureFiltersProps {
-    node: NodeName;
+    captureNode: NodeName;
     nodeState: NodeState;
     referenceData: ReferenceData;
     eventHandlers: EventHandlers<EventDef>;
 }
 
 export function CaptureFilters(props: CaptureFiltersProps) {
+    const updates: EventHandlerFunc[] = [];
+    const { lazyCaptureInterfaces } = prepareData(props.nodeState, props.captureNode, updates);
+    useEffect(() => {
+        updates.map((fn) => fn(props.eventHandlers));
+    });
+
     const filters = props.nodeState.currentCaptureFilters;
+    const scenarioLabels: Record<CaptureScenario, string> = {
+        SpecificPod: "Specific Pod",
+        TwoPods: "Two Pods",
+    };
+
+    function handleInterfaceChange(interfaceName: string | null) {
+        // Only need to change the `interface` filter.
+        // Interface is not part of the pcap filter string, so that does not need updating.
+        props.eventHandlers.onSetCaptureFilters({
+            node: props.captureNode,
+            filters: { ...filters, interface: interfaceName },
+        });
+    }
+
+    function handleScenarioChange(scenario: CaptureScenario | null) {
+        props.eventHandlers.onSetCaptureFilters({
+            node: props.captureNode,
+            filters: { ...filters, scenario },
+        });
+        props.eventHandlers.onRefreshPcapFilterString({ node: props.captureNode });
+    }
+
+    function handlePcapFilterStringChange(e: ChangeEvent) {
+        const input = e.currentTarget as HTMLInputElement;
+        const pcapFilterString = input.value || null;
+        props.eventHandlers.onSetCaptureFilters({
+            node: props.captureNode,
+            filters: { ...filters, pcapFilterString },
+        });
+    }
+
     return (
-        <div className={styles.content}>
+        <div className={styles.filterContent}>
             <label htmlFor="interface-input" className={styles.label}>
                 Interface
             </label>
             <ResourceSelector<InterfaceName>
                 id="interface-input"
                 className={styles.controlDropdown}
-                resources={props.nodeState.captureInterfaces}
+                resources={lazyCaptureInterfaces}
                 selectedItem={filters.interface}
                 valueGetter={(i) => i}
                 labelGetter={(i) => i}
-                onSelect={(i) =>
-                    props.eventHandlers.onSetCaptureFilters({
-                        node: props.node,
-                        filters: { ...filters, interface: i },
-                    })
-                }
+                onSelect={handleInterfaceChange}
             />
 
-            <label htmlFor="source-node-input" className={styles.label}>
-                Source Node
+            <label htmlFor="capture-scenario-input" className={styles.label}>
+                Capture Scenario
             </label>
-            <ResourceSelector<NodeName>
-                id="source-node-input"
+            <ResourceSelector<CaptureScenario>
+                id="capture-scenario-input"
                 className={styles.controlDropdown}
-                resources={lazyMap(props.referenceData.nodes, (nodes) => nodes.map((n) => n.node))}
-                selectedItem={filters.source.node}
-                valueGetter={(n) => n}
-                labelGetter={(n) => n}
-                onSelect={(n) =>
-                    props.eventHandlers.onSetCaptureFilters({
-                        node: props.node,
-                        filters: { ...filters, source: { ...filters.source, node: n } },
-                    })
-                }
+                resources={Object.keys(filters.scenarioFilters) as CaptureScenario[]}
+                selectedItem={filters.scenario}
+                valueGetter={(s) => s.toString()}
+                labelGetter={(s) => scenarioLabels[s]}
+                onSelect={handleScenarioChange}
+            />
+
+            {props.nodeState.currentCaptureFilters.scenario &&
+                getScenarioFilterComponent(props.nodeState.currentCaptureFilters.scenario)}
+
+            <label htmlFor="pcap-filter-string-input" className={styles.label}>
+                Pcap Filter
+            </label>
+            <VSCodeTextField
+                id="pcap-filter-string-input"
+                className={styles.control}
+                value={props.nodeState.currentCaptureFilters.pcapFilterString || ""}
+                onInput={handlePcapFilterStringChange}
             />
         </div>
     );
+
+    function getScenarioFilterComponent(scenario: CaptureScenario) {
+        switch (scenario) {
+            case "SpecificPod":
+                return (
+                    <SpecificPodFilters
+                        captureNode={props.captureNode}
+                        filter={props.nodeState.currentCaptureFilters.scenarioFilters["SpecificPod"]}
+                        referenceData={props.referenceData}
+                        eventHandlers={props.eventHandlers}
+                    />
+                );
+            case "TwoPods":
+                return (
+                    <TwoPodsFilters
+                        captureNode={props.captureNode}
+                        filter={props.nodeState.currentCaptureFilters.scenarioFilters["TwoPods"]}
+                        referenceData={props.referenceData}
+                        eventHandlers={props.eventHandlers}
+                    />
+                );
+        }
+    }
+}
+
+type LocalData = {
+    lazyCaptureInterfaces: Lazy<string[]>;
+};
+
+function prepareData(nodeState: NodeState, node: NodeName, updates: EventHandlerFunc[]): LocalData {
+    if (!isLoaded(nodeState.captureInterfaces)) {
+        loadCaptureInterfaces(nodeState, node, updates);
+    }
+
+    return {
+        lazyCaptureInterfaces: nodeState.captureInterfaces,
+    };
 }

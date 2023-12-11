@@ -27,6 +27,11 @@ export type StartCaptureCommand = NodeCaptureCommand & {
     filters: CaptureFilters;
 };
 
+export type FilterPod = {
+    name: PodName;
+    ipAddress: string;
+};
+
 export type CaptureFilters = {
     interface: InterfaceName | null;
     pcapFilterString: string | null;
@@ -72,6 +77,7 @@ export type ToVsCodeMsgDef = {
     deleteDebugPod: NodeCommand;
     openFolder: string;
     getAllNodes: void;
+    getFilterPodsForNode: NodeCommand;
     getInterfaces: NodeCommand;
 };
 
@@ -83,6 +89,7 @@ export type ToWebViewMsgDef = {
     downloadCaptureFileResponse: NodeCaptureDownloadResult;
     deleteDebugPodResponse: NodeCommandResult;
     getAllNodesResponse: ValueCommandResult<CommandResult, NodeName[]>;
+    getFilterPodsForNodeResponse: ValueCommandResult<NodeCommandResult, FilterPod[]>;
     getInterfacesResponse: ValueCommandResult<NodeCommandResult, InterfaceName[]>;
 };
 

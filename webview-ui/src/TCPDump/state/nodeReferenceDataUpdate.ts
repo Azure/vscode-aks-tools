@@ -1,5 +1,6 @@
+import { FilterPod } from "../../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { newLoaded, newLoading } from "../../utilities/lazy";
-import { FilterPod, NodeReferenceData } from "../state";
+import { NodeReferenceData } from "../state";
 
 export function setFilterPodsLoading(data: NodeReferenceData): NodeReferenceData {
     return { ...data, filterPods: newLoading() };
