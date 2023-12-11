@@ -9,6 +9,7 @@ import SubscriptionTreeItem from '../../tree/subscriptionTreeItem';
 import { getExtension } from '../utils/host';
 import { Dictionary } from '../utils/dictionary';
 import * as tmpfile from "../utils/tempfile";
+import { longRunning } from "../utils/host";
 
 interface State {
     clusterGroupCompareFrom: ClusterNameItem;
@@ -45,22 +46,25 @@ export default async function aksCompareCluster(
         return;
     }
     const containerServiceClient = getContainerClient(subscriptionTreeItem);
-
     const clusterList: string[] = [];
-    const iterator = containerServiceClient.managedClusters.list();
     const clusterGroupList: Dictionary<string> = {};
-    for await (const cluster of iterator.byPage()) {
-        clusterList.push(...cluster.map(c => c.name ?? ''));
-        cluster.map((c) => {
-            const resourceId = c.id!;
-            const clusterName = c.name!;
-            if (resourceId && clusterName) {
-                clusterGroupList[clusterName] = resourceId;
-            }
-        });
-    }
 
+    await longRunning(`Getting AKS Cluster list for ${subscriptionTreeItem.name}`, async () => {
+        const iterator = containerServiceClient.managedClusters.list();
+        for await (const cluster of iterator.byPage()) {
+            clusterList.push(...cluster.map(c => c.name ?? ''));
+            // The following code is to create a dictionary of cluster name and resource id
+            cluster.map((c) => {
+                const resourceId = c.id!;
+                const clusterName = c.name!;
+                if (resourceId && clusterName) {
+                    clusterGroupList[clusterName] = resourceId;
+                }
+            });
+        }
+    });
 
+    // Pick a cluster from group to compare with
     const clusterGroupCompareWithStep = createQuickPickStep<State, ClusterNameItem>({
         placeholder: 'Pick a cluster from group to compare with',
         shouldResume: () => Promise.resolve(false),
@@ -69,8 +73,9 @@ export default async function aksCompareCluster(
         storeItem: (state, item) => ({ ...state, clusterGroupCompareWith: item })
     });
 
+    // Pick a cluster from group to compare from
     const clusterGroupCompareFromStep = createQuickPickStep<State, ClusterNameItem>({
-        placeholder: 'Pick a cluster from group to compare with',
+        placeholder: 'Pick second cluster from group to compare from',
         shouldResume: () => Promise.resolve(false),
         items: clusterList.map(name => ({ label: name, name })),
         getActiveItem: state => state.clusterGroupCompareFrom,
@@ -87,30 +92,32 @@ export default async function aksCompareCluster(
         return;
     }
 
-    // Call create cluster at this instance
-    await compareManagedCluster(state, clusterGroupList, <SubscriptionTreeItem>cluster.result);
+    // Call compare cluster at this instance
+    await compareManagedCluster(state, clusterGroupList, <SubscriptionTreeItem>cluster.result)
+
 }
 
 
 async function compareManagedCluster(state: State, clusterResourceDictionary: Dictionary<string>, subscription: SubscriptionTreeItem) {
 
-    const resourceManagementClient = getResourceManagementClient(subscription);
+    await longRunning(`Comparing AKS Cluster ${state.clusterGroupCompareWith.name} with ${state.clusterGroupCompareFrom.name}`, async () => {
 
-    const resourceArmIDWith = clusterResourceDictionary[state.clusterGroupCompareWith.name];
-    const resourceArmIDFrom = clusterResourceDictionary[state.clusterGroupCompareFrom.name];
-    const clusterWith = "";
-    // Example: GET https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}?api-version=2023-08-01
-    // source of example: https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/get?view=rest-aks-2023-08-01&tabs=HTTP#code-try-0 
-    const clusterWithContent = await resourceManagementClient.resources.getById(resourceArmIDWith, "2023-08-01");
-    // await resourceManagementClient.sendRequest({ method: 'GET', path: resourceArmIDWith } as PipelineRequest);
-    const clusterFromContent = await resourceManagementClient.resources.getById(resourceArmIDFrom, "2023-08-01");
+        const resourceManagementClient = getResourceManagementClient(subscription);
 
-    console.log(clusterWith);
-    const file1 = await tmpfile.createTempFile(JSON.stringify(clusterWithContent, null, '\t'), "json");
-    const file2 = await tmpfile.createTempFile(JSON.stringify(clusterFromContent, null, '\t'), "json");
+        const resourceArmIDWith = clusterResourceDictionary[state.clusterGroupCompareWith.name];
+        const resourceArmIDFrom = clusterResourceDictionary[state.clusterGroupCompareFrom.name];
+        // Example: GET https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}?api-version=2023-08-01
+        // source of example: https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/get?view=rest-aks-2023-08-01&tabs=HTTP#code-try-0 
+        const clusterWithContent = await resourceManagementClient.resources.getById(resourceArmIDWith, "2023-08-01");
+        // await resourceManagementClient.sendRequest({ method: 'GET', path: resourceArmIDWith } as PipelineRequest);
+        const clusterFromContent = await resourceManagementClient.resources.getById(resourceArmIDFrom, "2023-08-01");
 
-    vscode.commands.executeCommand("vscode.diff"
-        , vscode.Uri.file(`${file1.filePath}`)
-        , vscode.Uri.file(`${file2.filePath}`))
+        const clusterCompareWithFile = await tmpfile.createTempFile(JSON.stringify(clusterWithContent, null, '\t'), "json");
+        const clusterCompareFromFile = await tmpfile.createTempFile(JSON.stringify(clusterFromContent, null, '\t'), "json");
+
+        vscode.commands.executeCommand("vscode.diff"
+            , vscode.Uri.file(`${clusterCompareWithFile.filePath}`)
+            , vscode.Uri.file(`${clusterCompareFromFile.filePath}`));
+    });
 }
 

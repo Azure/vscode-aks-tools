@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { QuickPickItem, window, Disposable, QuickInputButtons } from 'vscode';
-import { Errorable, failed } from './errorable';
 
 // -------------------------------------------------------
 // Helper code that wraps the API for the multi-step case.
@@ -39,14 +38,6 @@ interface QuickPickParameters<TState, TItem extends QuickPickItem> extends StepP
     items: TItem[];
     getActiveItem: (state: Partial<TState>) => TItem | void;
     storeItem: (state: Partial<TState>, item: TItem) => Partial<TState>;
-}
-
-// Properties applicable specifically to a text input step.
-interface InputBoxParameters<TState> extends StepParameters {
-    getValue: (state: Partial<TState>) => string | void;
-    prompt: string;
-    validate: (value: string) => Promise<Errorable<void>>;
-    storeValue: (state: Partial<TState>, value: string) => Partial<TState>;
 }
 
 export async function runMultiStepInput<T>(title: string, state: Partial<T>, ...steps: [InputStep<T>, ...InputStep<T>[]]): Promise<T | void> {
@@ -101,72 +92,6 @@ export function createQuickPickStep<TState, TItem extends QuickPickItem>(params:
                 input.onDidChangeSelection(items => {
                     const newState = params.storeItem(state, items[0]);
                     resolve({ state: newState, flowAction: InputFlowAction.Next });
-                }),
-                input.onDidHide(async () => {
-                    const resume = await params.shouldResume();
-                    const flowAction = resume ? InputFlowAction.Back : InputFlowAction.Cancel;
-                    resolve({ state, flowAction });
-                })
-            ];
-        });
-
-        try {
-            input.show();
-            return await inputPromise;
-        } finally {
-            disposables.forEach(d => d.dispose());
-            input.dispose();
-        }
-    };
-}
-
-export function createInputBoxStep<TState>(params: InputBoxParameters<TState>): InputStep<TState> {
-    return async (state: Partial<TState>, multiStepParams: MultiStepParameters, stepNumber: number) => {
-        const input = window.createInputBox();
-        input.title = multiStepParams.title;
-        input.step = stepNumber;
-        input.totalSteps = multiStepParams.totalSteps;
-        input.value = params.getValue(state) || '';
-        input.prompt = params.prompt;
-        input.ignoreFocusOut = params.ignoreFocusOut ?? false;
-        input.placeholder = params.placeholder;
-        input.buttons = stepNumber > 1 ? [QuickInputButtons.Back] : [];
-
-        let disposables: Disposable[] = [];
-        const inputPromise = new Promise<SingleStepOutput<TState>>(resolve => {
-            let latestValidation: Promise<Errorable<void>> | null = null;
-            disposables = [
-                input.onDidTriggerButton(item => {
-                    if (item === QuickInputButtons.Back) {
-                        resolve({ state, flowAction: InputFlowAction.Back });
-                    } else {
-                        vscode.window.showErrorMessage("Unexpected button in InputBox");
-                        resolve({ state, flowAction: InputFlowAction.Cancel });
-                    }
-                }),
-                input.onDidAccept(async () => {
-                    const value = input.value;
-                    input.enabled = false;
-                    input.busy = true;
-                    const validationResult = await params.validate(value);
-                    if (failed(validationResult)) {
-                        input.validationMessage = validationResult.error;
-                        input.enabled = true;
-                        input.busy = false;
-                    } else {
-                        const newState = params.storeValue(state, value);
-                        resolve({ state: newState, flowAction: InputFlowAction.Next });
-                    }
-                }),
-                input.onDidChangeValue(async text => {
-                    const thisValidation = params.validate(text);
-                    latestValidation = thisValidation;
-                    const validationResult = await thisValidation;
-
-                    // Only display the validation result if this validation is the latest one.
-                    if (thisValidation === latestValidation) {
-                        input.validationMessage = failed(validationResult) ? validationResult.error : '';
-                    }
                 }),
                 input.onDidHide(async () => {
                     const resume = await params.shouldResume();
