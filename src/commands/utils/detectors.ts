@@ -97,6 +97,7 @@ export async function getDetectorInfo(
 }
 
 export function getPortalUrl(clusterdata: ARMResponse<unknown>) {
-    return `https://portal.azure.com/#resource${clusterdata.id.split("detectors")[0]
-        }aksDiagnostics?referrer_source=vscode&referrer_context=${meta.name}`;
+    return `https://portal.azure.com/#resource${
+        clusterdata.id.split("detectors")[0]
+    }aksDiagnostics?referrer_source=vscode&referrer_context=${meta.name}`;
 }

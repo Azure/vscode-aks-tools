@@ -47,21 +47,18 @@ export default async function aksCompareCluster(
     }
     const containerServiceClient = getContainerClient(subscriptionTreeItem);
     const clusterList: string[] = [];
-    const clusterGroupList: Dictionary<string> = {};
+    const clusterResourceDictionary: Dictionary<string> = {};
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionTreeItem.name}`, async () => {
         const iterator = containerServiceClient.managedClusters.list();
-        for await (const cluster of iterator.byPage()) {
-            clusterList.push(...cluster.map(c => c.name ?? ''));
-            // The following code is to create a dictionary of cluster name and resource id
-            cluster.map((c) => {
-                const resourceId = c.id!;
-                const clusterName = c.name!;
-                if (resourceId && clusterName) {
-                    clusterGroupList[clusterName] = resourceId;
-                }
+        for await (const clusters of iterator.byPage()) {
+            const validClusters = clusters.filter(c => c.id && c.name);
+            clusterList.push(...validClusters.map(c => c.name!));
+            validClusters.forEach(c => {
+                clusterResourceDictionary[c.name!] = c.id!;
             });
         }
+       
     });
 
     // Pick a cluster from group to compare with
@@ -93,7 +90,7 @@ export default async function aksCompareCluster(
     }
 
     // Call compare cluster at this instance
-    await compareManagedCluster(state, clusterGroupList, <SubscriptionTreeItem>cluster.result)
+    await compareManagedCluster(state, clusterResourceDictionary, subscriptionTreeItem)
 
 }
 
