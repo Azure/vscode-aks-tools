@@ -3,7 +3,6 @@ import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@az
 import { RestError } from "@azure/storage-blob";
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, window } from "vscode";
-import meta from "../../package.json";
 import { getResourceGroupList } from "../commands/utils/clusters";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -17,6 +16,7 @@ import {
 } from "../webview-contract/webviewDefinitions/createCluster";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
+import { getPortalResourceUrl } from "../commands/utils/env";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -32,9 +32,8 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     public constructor(
         readonly resourceManagementClient: ResourceManagementClient,
         readonly containerServiceClient: ContainerServiceClient,
-        readonly portalUrl: string,
         readonly subscriptionContext: ISubscriptionContext,
-    ) { }
+    ) {}
 
     getTitle(): string {
         return `Create Cluster in ${this.subscriptionContext.subscriptionDisplayName}`;
@@ -42,8 +41,6 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
 
     getInitialState(): InitialState {
         return {
-            portalUrl: this.portalUrl,
-            portalReferrerContext: meta.name,
             subscriptionId: this.subscriptionContext.subscriptionId,
             subscriptionName: this.subscriptionContext.subscriptionDisplayName,
         };
@@ -91,6 +88,8 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
                 event: ProgressEventType.Failed,
                 operationDescription: "Retrieving resource groups",
                 errorMessage: groups.error,
+                deploymentPortalUrl: null,
+                createdCluster: null,
             });
             return;
         }
@@ -153,6 +152,8 @@ async function createResourceGroup(
         event: ProgressEventType.InProgress,
         operationDescription,
         errorMessage: null,
+        deploymentPortalUrl: null,
+        createdCluster: null,
     });
 
     try {
@@ -162,6 +163,8 @@ async function createResourceGroup(
             event: ProgressEventType.Failed,
             operationDescription,
             errorMessage: getErrorMessage(ex),
+            deploymentPortalUrl: null,
+            createdCluster: null,
         });
     }
 }
@@ -181,6 +184,8 @@ async function createCluster(
         event: ProgressEventType.InProgress,
         operationDescription,
         errorMessage: null,
+        deploymentPortalUrl: null,
+        createdCluster: null,
     });
 
     // kubernetes version is required to create a cluster via deployments
@@ -194,6 +199,8 @@ async function createCluster(
             event: ProgressEventType.Failed,
             operationDescription,
             errorMessage: "No Kubernetes versions available for location",
+            deploymentPortalUrl: null,
+            createdCluster: null,
         });
         return;
     }
@@ -220,12 +227,24 @@ async function createCluster(
             deploymentName,
             deploymentSpec,
         );
+        const deploymentArmId = `/subscriptions/${subscriptionContext.subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
+        const deploymentPortalUrl = getPortalResourceUrl(subscriptionContext.environment, deploymentArmId);
+        webview.postProgressUpdate({
+            event: ProgressEventType.InProgress,
+            operationDescription,
+            errorMessage: null,
+            deploymentPortalUrl,
+            createdCluster: null,
+        });
+
         poller.onProgress((state) => {
             if (state.status === "canceled") {
                 webview.postProgressUpdate({
                     event: ProgressEventType.Cancelled,
                     operationDescription,
                     errorMessage: null,
+                    deploymentPortalUrl,
+                    createdCluster: null,
                 });
             } else if (state.status === "failed") {
                 const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
@@ -234,13 +253,20 @@ async function createCluster(
                     event: ProgressEventType.Failed,
                     operationDescription,
                     errorMessage,
+                    deploymentPortalUrl,
+                    createdCluster: null,
                 });
             } else if (state.status === "succeeded") {
                 window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
+                const armId = `/subscriptions/${subscriptionContext.subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
                 webview.postProgressUpdate({
                     event: ProgressEventType.Success,
                     operationDescription,
                     errorMessage: null,
+                    deploymentPortalUrl,
+                    createdCluster: {
+                        portalUrl: getPortalResourceUrl(subscriptionContext.environment, armId),
+                    },
                 });
             }
         });
@@ -254,6 +280,8 @@ async function createCluster(
             event: ProgressEventType.Failed,
             operationDescription,
             errorMessage,
+            deploymentPortalUrl: null,
+            createdCluster: null,
         });
     }
 }

@@ -10,7 +10,8 @@ import {
 } from "../../webview-contract/webviewDefinitions/detector";
 import { getResourceManagementClient } from "./clusters";
 import { dirSync } from "tmp";
-import meta from "../../../package.json";
+import { Environment } from "@azure/ms-rest-azure-env";
+import { getPortalResourceUrl } from "./env";
 
 /**
  * Can be used to store the JSON responses for a collection of category detectors and all their child detectors.
@@ -96,8 +97,7 @@ export async function getDetectorInfo(
     }
 }
 
-export function getPortalUrl(clusterdata: ARMResponse<unknown>) {
-    return `https://portal.azure.com/#resource${
-        clusterdata.id.split("detectors")[0]
-    }aksDiagnostics?referrer_source=vscode&referrer_context=${meta.name}`;
+export function getPortalUrl(environment: Environment, clusterdata: ARMResponse<unknown>) {
+    const armId = `${clusterdata.id.split("detectors")[0]}aksDiagnostics`;
+    return getPortalResourceUrl(environment, armId);
 }
