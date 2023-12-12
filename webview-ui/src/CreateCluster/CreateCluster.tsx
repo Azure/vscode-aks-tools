@@ -59,7 +59,7 @@ export function CreateCluster(initialState: InitialState) {
                         portalUrl={state.portalUrl}
                         portalReferrerContext={state.portalReferrerContext}
                         subscriptionId={state.subscriptionId}
-                        resourceGroup={state.createParams!.resourceGroup.name}
+                        resourceGroup={state.createParams!.resourceGroupName}
                         name={state.createParams!.name}
                     />
                 );
@@ -70,7 +70,8 @@ export function CreateCluster(initialState: InitialState) {
 
     return (
         <>
-            <h2>Create Cluster in {state.subscriptionName}</h2>
+            <h1>Create Cluster</h1>
+            <label>Subscription: {state.subscriptionName}</label>
             {getBody()}
         </>
     );
