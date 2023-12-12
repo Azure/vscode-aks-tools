@@ -4,9 +4,74 @@
     grid-gap: 1rem;
 }
 
+.presetHeader {
+    height: 1rem;
+    margin: 0 0 0.6rem 0;
+    width: 15rem;
+}
+
+.presetContainer {
+    border: 0.0625rem solid;
+    border-radius: 0.5rem;
+    height: 10.375rem;
+    margin-bottom: 1rem;
+    width: 13.5rem;
+}
+
+.presetTitle {
+    font-size: 1rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 1.375rem;
+    width: 10rem;
+}
+
+.presetDescription {
+    font-size: 0.75rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.125rem;
+    margin-bottom: 1rem;
+    margin-left: 2.5rem;
+    margin-right: 1rem;
+    margin-top: 0.75rem;
+    width: 10rem;
+}
+
+.flexContainer {
+    display: flex;
+    margin: 1rem 1rem 0 1rem;
+}
+
+.svgContainer {
+    margin-right: 0.375rem;
+}
+
+.learnMoreContainer {
+    margin-top: 1.25rem;
+}
+
+.portalLink {
+    font-size: 0.8rem;
+    font-style: normal;
+    font-weight: 500;
+    height: 2rem;
+    line-height: normal;
+    margin-bottom: 0.625rem;
+    width: 60rem;
+}
+
 .infoIndicator {
     color: var(--vscode-notificationsInfoIcon-foreground);
     padding-right: 0.5rem;
+}
+
+.clusterDetailsLabel {
+    font-size: 1rem;
+    font-style: normal;
+    font-weight: 600;
+    grid-column: 1 / 2;
+    line-height: normal;
 }
 
 .label {
@@ -19,6 +84,7 @@
 
 .longControl {
     grid-column: 2 / 4;
+    width: 20rem;
 }
 
 .sideControl {
