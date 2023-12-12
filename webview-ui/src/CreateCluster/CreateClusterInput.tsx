@@ -1,24 +1,19 @@
-import {
-    VSCodeButton,
-    VSCodeDivider,
-    VSCodeDropdown,
-    VSCodeLink,
-    VSCodeOption,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
+import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfoCircle, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-import styles from "./CreateCluster.module.css";
+import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
-import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
-import { CreateResourceGroupDialog } from "./CreateResourceGroup";
-import { EventHandlers } from "../utilities/state";
+import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     CreateClusterParams,
+    Preset,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
-import { MessageSink } from "../../../src/webview-contract/messaging";
+import { EventHandlers } from "../utilities/state";
+import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
+import styles from "./CreateCluster.module.css";
+import { CreateClusterPresetInput } from "./CreateClusterPresetInput";
+import { CreateResourceGroupDialog } from "./CreateResourceGroup";
 import { EventDef } from "./helpers/state";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
@@ -34,21 +29,43 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [existingResourceGroup, setExistingResourceGroup] = useState<Validatable<ResourceGroup>>(unset());
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
-    const [newResourceGroup, setNewResourceGroup] = useState<ResourceGroup | null>(null);
+    const [newResourceGroupName, setNewResourceGroupName] = useState<string | null>(null);
+    const [presetSelected, setPresetSelected] = useState<Preset>("dev");
+    const [selectedIndex, setSelectedIndex] = useState<number>(0);
+    const [location, setLocation] = useState<Validatable<string>>(unset());
+
+    const newResourceGroup = newResourceGroupName
+        ? {
+              name: newResourceGroupName,
+              location: location.value || "",
+          }
+        : null;
+    const allResourceGroups = newResourceGroup ? [newResourceGroup, ...props.resourceGroups] : props.resourceGroups;
 
     function handleCreateResourceGroupDialogCancel() {
         setIsNewResourceGroupDialogShown(false);
     }
 
-    function handleCreateResourceGroupDialogAccept(group: ResourceGroup) {
+    function handleCreateResourceGroupDialogAccept(groupName: string) {
         setIsNewResourceGroupDialogShown(false);
         setExistingResourceGroup(unset());
-        setNewResourceGroup(group);
+        setNewResourceGroupName(groupName);
+        setSelectedIndex(1); // this is the index of the new resource group and the first option is "Select"
+    }
+
+    function handlePresetSelection(presetSelected: Preset) {
+        setPresetSelected(presetSelected);
+    }
+
+    function handleValidationAndIndex(e: ChangeEvent) {
+        handleExistingResourceGroupChange(e);
+        const ele = e.currentTarget as HTMLSelectElement;
+        setSelectedIndex(ele.selectedIndex);
     }
 
     const handleExistingResourceGroupChange = createHandler<ResourceGroup, ChangeEvent, HTMLSelectElement>(
         (e) => e.currentTarget as HTMLSelectElement,
-        (elem) => (elem.selectedIndex <= 0 ? null : props.resourceGroups[elem.selectedIndex - 1]),
+        (elem) => (elem.selectedIndex < 0 ? null : allResourceGroups[elem.selectedIndex - 1]),
         (elem) => elem.checkValidity(),
         () => "Resource Group is required.",
         setExistingResourceGroup,
@@ -71,14 +88,26 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         setName,
     );
 
+    const handleLocationChange = createHandler<string, ChangeEvent, HTMLSelectElement>(
+        (e) => e.currentTarget as HTMLSelectElement,
+        (elem) => (elem.selectedIndex <= 0 ? null : props.locations[elem.selectedIndex - 1]),
+        (elem) => elem.checkValidity(),
+        () => "Location is required.",
+        setLocation,
+    );
+
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        const resourceGroup = (existingResourceGroup.value || newResourceGroup)!;
+        const resourceGroup = existingResourceGroup.value || newResourceGroup;
+        if (!resourceGroup) return;
+        if (!location.value) return;
+
         const parameters: CreateClusterParams = {
             isNewResourceGroup: !existingResourceGroup.value,
-            resourceGroup,
-            location: resourceGroup.location,
+            resourceGroupName: resourceGroup.name,
+            location: location.value!,
             name: name.value!,
+            preset: presetSelected,
         };
 
         props.vscode.postCreateClusterRequest(parameters);
@@ -89,46 +118,38 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         <>
             <form className={styles.createForm} onSubmit={handleSubmit}>
                 <div className={styles.inputContainer}>
-                    <span className={styles.fullWidth}>
-                        <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
-                        This will create a <i>Standard</i> cluster. See &nbsp;
-                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/quotas-skus-regions#cluster-configuration-presets-in-the-azure-portal">
-                            Presets
-                        </VSCodeLink>
-                        &nbsp; for more information.
-                    </span>
-                    <VSCodeDivider className={styles.fullWidth} />
-
+                    <CreateClusterPresetInput onPresetSelected={handlePresetSelection}></CreateClusterPresetInput>
+                    <label htmlFor="cluster-details" className={styles.clusterDetailsLabel}>
+                        Cluster details
+                    </label>
                     <label htmlFor="existing-resource-group-dropdown" className={styles.label}>
-                        Resource Group
+                        Resource Group*
                     </label>
                     <VSCodeDropdown
                         id="existing-resource-group-dropdown"
                         className={styles.midControl}
-                        disabled={newResourceGroup !== null}
-                        required={newResourceGroup === null}
-                        onBlur={handleExistingResourceGroupChange}
-                        onChange={handleExistingResourceGroupChange}
-                        selectedIndex={
-                            existingResourceGroup.value
-                                ? props.resourceGroups.indexOf(existingResourceGroup.value) + 1
-                                : 0
-                        }
+                        required
+                        onBlur={handleValidationAndIndex}
+                        onChange={handleValidationAndIndex}
+                        selectedIndex={selectedIndex}
+                        aria-label="Select a resource group"
                     >
-                        <VSCodeOption value="">Select</VSCodeOption>
-                        {props.resourceGroups.map((group) => (
-                            <VSCodeOption key={group.name} value={group.name}>
-                                {group.name} ({group.location})
-                            </VSCodeOption>
-                        ))}
+                        <VSCodeOption selected value="">
+                            Select
+                        </VSCodeOption>
+                        {allResourceGroups.length > 0 ? (
+                            allResourceGroups.map((group) => (
+                                <VSCodeOption key={group.name} value={group.name}>
+                                    {group === newResourceGroup ? "(New)" : ""} {group.name}
+                                </VSCodeOption>
+                            ))
+                        ) : (
+                            <VSCodeOption disabled>No resource groups available</VSCodeOption>
+                        )}
                     </VSCodeDropdown>
 
-                    <VSCodeButton
-                        className={styles.sideControl}
-                        onClick={() => setIsNewResourceGroupDialogShown(true)}
-                        disabled={newResourceGroup !== null}
-                    >
-                        Create New...
+                    <VSCodeButton className={styles.sideControl} onClick={() => setIsNewResourceGroupDialogShown(true)}>
+                        Create New
                     </VSCodeButton>
                     {shouldShowMessage(existingResourceGroup) && (
                         <span className={styles.validationMessage}>
@@ -137,21 +158,8 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         </span>
                     )}
 
-                    {newResourceGroup && (
-                        <>
-                            <VSCodeTextField
-                                readOnly
-                                className={styles.midControl}
-                                value={`${newResourceGroup.name} (${newResourceGroup.location})`}
-                            ></VSCodeTextField>
-                            <VSCodeButton className={styles.sideControl} onClick={() => setNewResourceGroup(null)}>
-                                Clear
-                            </VSCodeButton>
-                        </>
-                    )}
-
                     <label htmlFor="name-input" className={styles.label}>
-                        Name
+                        Cluster Name*
                     </label>
                     <VSCodeTextField
                         id="name-input"
@@ -170,7 +178,30 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                             {name.message}
                         </span>
                     )}
-                    <VSCodeDivider className={styles.fullWidth} />
+
+                    <label htmlFor="location-dropdown" className={styles.label}>
+                        Location*
+                    </label>
+                    <VSCodeDropdown
+                        id="location-dropdown"
+                        className={styles.longControl}
+                        required
+                        onBlur={handleLocationChange}
+                        onChange={handleLocationChange}
+                    >
+                        <VSCodeOption value="">Select</VSCodeOption>
+                        {props.locations.map((location) => (
+                            <VSCodeOption key={location} value={location}>
+                                {location}
+                            </VSCodeOption>
+                        ))}
+                    </VSCodeDropdown>
+                    {shouldShowMessage(location) && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                            {location.message}
+                        </span>
+                    )}
                 </div>
 
                 <div className={styles.buttonContainer}>
@@ -178,12 +209,14 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                 </div>
             </form>
 
-            <CreateResourceGroupDialog
-                isShown={isNewResourceGroupDialogShown}
-                locations={props.locations}
-                onCancel={handleCreateResourceGroupDialogCancel}
-                onAccept={handleCreateResourceGroupDialogAccept}
-            />
+            {isNewResourceGroupDialogShown && (
+                <CreateResourceGroupDialog
+                    isShown={isNewResourceGroupDialogShown}
+                    locations={props.locations}
+                    onCancel={handleCreateResourceGroupDialogCancel}
+                    onAccept={handleCreateResourceGroupDialogAccept}
+                />
+            )}
         </>
     );
 }

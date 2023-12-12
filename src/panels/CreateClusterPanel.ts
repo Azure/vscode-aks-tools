@@ -1,18 +1,22 @@
-import { Uri, window } from "vscode";
-import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { ContainerServiceClient, ManagedCluster } from "@azure/arm-containerservice";
-import { failed, getErrorMessage } from "../commands/utils/errorable";
+import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { RestError } from "@azure/storage-blob";
+import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { Uri, window } from "vscode";
+import meta from "../../package.json";
 import { getResourceGroupList } from "../commands/utils/clusters";
+import { failed, getErrorMessage } from "../commands/utils/errorable";
+import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     InitialState,
+    Preset,
     ProgressEventType,
-    ResourceGroup as WebviewResourceGroup,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
+    ResourceGroup as WebviewResourceGroup,
 } from "../webview-contract/webviewDefinitions/createCluster";
-import meta from "../../package.json";
+import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -29,20 +33,19 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         readonly resourceManagementClient: ResourceManagementClient,
         readonly containerServiceClient: ContainerServiceClient,
         readonly portalUrl: string,
-        readonly subscriptionId: string,
-        readonly subscriptionName: string,
-    ) {}
+        readonly subscriptionContext: ISubscriptionContext,
+    ) { }
 
     getTitle(): string {
-        return `Create Cluster in ${this.subscriptionName}`;
+        return `Create Cluster in ${this.subscriptionContext.subscriptionDisplayName}`;
     }
 
     getInitialState(): InitialState {
         return {
             portalUrl: this.portalUrl,
             portalReferrerContext: meta.name,
-            subscriptionId: this.subscriptionId,
-            subscriptionName: this.subscriptionName,
+            subscriptionId: this.subscriptionContext.subscriptionId,
+            subscriptionName: this.subscriptionContext.subscriptionDisplayName,
         };
     }
 
@@ -53,9 +56,10 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             createClusterRequest: (args) =>
                 this.handleCreateClusterRequest(
                     args.isNewResourceGroup,
-                    args.resourceGroup,
+                    args.resourceGroupName,
                     args.location,
                     args.name,
+                    args.preset,
                     webview,
                 ),
         };
@@ -105,16 +109,30 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
 
     private async handleCreateClusterRequest(
         isNewResourceGroup: boolean,
-        group: WebviewResourceGroup,
+        groupName: string,
         location: string,
         name: string,
+        preset: Preset,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (isNewResourceGroup) {
+            const group = {
+                name: groupName,
+                location,
+            };
             await createResourceGroup(group, webview, this.resourceManagementClient);
         }
 
-        await createCluster(group, location, name, webview, this.containerServiceClient);
+        await createCluster(
+            groupName,
+            location,
+            name,
+            preset,
+            webview,
+            this.containerServiceClient,
+            this.resourceManagementClient,
+            this.subscriptionContext,
+        );
     }
 }
 
@@ -149,11 +167,14 @@ async function createResourceGroup(
 }
 
 async function createCluster(
-    group: WebviewResourceGroup,
+    groupName: string,
     location: string,
     name: string,
+    preset: Preset,
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
+    resourceManagementClient: ResourceManagementClient,
+    subscriptionContext: ISubscriptionContext,
 ) {
     const operationDescription = `Creating cluster ${name}`;
     webview.postProgressUpdate({
@@ -162,10 +183,43 @@ async function createCluster(
         errorMessage: null,
     });
 
-    const clusterSpec = getManagedClusterSpec(location, name);
+    // kubernetes version is required to create a cluster via deployments
+    const kubernetesVersionsResult = await containerServiceClient.managedClusters.listKubernetesVersions(location);
+    const kubernetesVersions = kubernetesVersionsResult.values || [];
+    const hasDefaultVersion = kubernetesVersions.some(isDefaultK8sVersion);
+    const [kubernetesVersion] = hasDefaultVersion ? kubernetesVersions.filter(isDefaultK8sVersion) : kubernetesVersions;
+    if (!kubernetesVersion?.version) {
+        window.showErrorMessage(`No Kubernetes versions available for location ${location}`);
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription,
+            errorMessage: "No Kubernetes versions available for location",
+        });
+        return;
+    }
+
+    const clusterSpec: ClusterSpec = {
+        location,
+        name,
+        resourceGroupName: groupName,
+        subscriptionId: subscriptionContext.subscriptionId,
+        kubernetesVersion: kubernetesVersion.version,
+        username: subscriptionContext.userId,
+    };
+
+    // Create a unique deployment name.
+    const deploymentName = `${name}-${Math.random().toString(36).substring(5)}`;
+    const deploymentSpec = new ClusterDeploymentBuilder()
+        .buildCommonParameters(clusterSpec)
+        .buildTemplate(preset)
+        .getDeployment();
 
     try {
-        const poller = await containerServiceClient.managedClusters.beginCreateOrUpdate(group.name, name, clusterSpec);
+        const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
+            groupName,
+            deploymentName,
+            deploymentSpec,
+        );
         poller.onProgress((state) => {
             if (state.status === "canceled") {
                 webview.postProgressUpdate({
@@ -190,10 +244,11 @@ async function createCluster(
                 });
             }
         });
-
         await poller.pollUntilDone();
     } catch (ex) {
-        const errorMessage = getErrorMessage(ex);
+        const errorMessage = isInvalidTemplateDeploymentError(ex)
+            ? getInvalidTemplateErrorMessage(ex)
+            : getErrorMessage(ex);
         window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
@@ -203,25 +258,42 @@ async function createCluster(
     }
 }
 
-function getManagedClusterSpec(location: string, name: string): ManagedCluster {
-    return {
-        addonProfiles: {},
-        location: location,
-        identity: {
-            type: "SystemAssigned",
-        },
-        agentPoolProfiles: [
-            {
-                name: "nodepool1",
-                type: "VirtualMachineScaleSets",
-                count: 3,
-                enableNodePublicIP: true,
-                mode: "System",
-                osSKU: "AzureLinux",
-                osType: "Linux",
-                vmSize: "Standard_DS2_v2",
-            },
-        ],
-        dnsPrefix: `${name}-dns`,
+function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {
+    const innerDetails = ex.details.error?.details || [];
+    if (innerDetails.length > 0) {
+        const details = innerDetails.map((d) => `${d.code}: ${d.message}`).join("\n");
+        return `Invalid template:\n${details}`;
+    }
+
+    const innerError = ex.details.error?.message || "";
+    if (innerError) {
+        return `Invalid template:\n${innerError}`;
+    }
+
+    return `Invalid template: ${getErrorMessage(ex)}`;
+}
+
+type InvalidTemplateDeploymentRestError = RestError & {
+    details: {
+        error?: {
+            code: "InvalidTemplateDeployment";
+            message?: string;
+            details?: {
+                code?: string;
+                message?: string;
+            }[];
+        };
     };
+};
+
+function isInvalidTemplateDeploymentError(ex: unknown): ex is InvalidTemplateDeploymentRestError {
+    return isRestError(ex) && ex.code === "InvalidTemplateDeployment";
+}
+
+function isRestError(ex: unknown): ex is RestError {
+    return typeof ex === "object" && ex !== null && ex.constructor.name === "RestError";
+}
+
+function isDefaultK8sVersion(version: KubernetesVersion): boolean {
+    return "isDefault" in version && version.isDefault === true;
 }

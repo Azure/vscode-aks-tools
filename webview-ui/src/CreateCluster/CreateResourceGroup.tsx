@@ -1,17 +1,10 @@
-import { FormEvent, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { FormEvent, useState } from "react";
+import { Dialog } from "../components/Dialog";
 import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
-import {
-    VSCodeButton,
-    VSCodeDivider,
-    VSCodeDropdown,
-    VSCodeOption,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
-import { Dialog } from "../components/Dialog";
-import { ResourceGroup } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -19,12 +12,11 @@ export interface CreateResourceGroupDialogProps {
     isShown: boolean;
     locations: string[];
     onCancel: () => void;
-    onAccept: (group: ResourceGroup) => void;
+    onAccept: (groupName: string) => void;
 }
 
 export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps) {
     const [name, setName] = useState<Validatable<string>>(unset());
-    const [location, setLocation] = useState<Validatable<string>>(unset());
 
     const handleNameChange = createHandler<string, ChangeEvent, HTMLInputElement>(
         (e) => e.currentTarget as HTMLInputElement,
@@ -43,20 +35,15 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
         setName,
     );
 
-    const handleLocationChange = createHandler<string, ChangeEvent, HTMLSelectElement>(
-        (e) => e.currentTarget as HTMLSelectElement,
-        (elem) => (elem.selectedIndex <= 0 ? null : props.locations[elem.selectedIndex - 1]),
-        (elem) => elem.checkValidity(),
-        () => "Location is required.",
-        setLocation,
-    );
-
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        props.onAccept({
-            name: name.value!,
-            location: location.value!,
-        });
+
+        // This check might be redundant based on the way validation works, but let's check this explicitly:
+        if (!name.value) {
+            return;
+        }
+
+        props.onAccept(name.value);
     }
 
     return (
@@ -65,10 +52,8 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
 
             <form className={styles.createForm} onSubmit={handleSubmit}>
                 <div className={styles.inputContainer}>
-                    <VSCodeDivider className={styles.fullWidth} />
-
                     <label htmlFor="rg-name-input" className={styles.label}>
-                        Name
+                        Name*
                     </label>
                     <VSCodeTextField
                         id="rg-name-input"
@@ -87,36 +72,10 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
                             {name.message}
                         </span>
                     )}
-
-                    <label htmlFor="location-dropdown" className={styles.label}>
-                        Location
-                    </label>
-                    <VSCodeDropdown
-                        id="location-dropdown"
-                        className={styles.longControl}
-                        required
-                        onBlur={handleLocationChange}
-                        onChange={handleLocationChange}
-                    >
-                        <VSCodeOption value="">Select</VSCodeOption>
-                        {props.locations.map((location) => (
-                            <VSCodeOption key={location} value={location}>
-                                {location}
-                            </VSCodeOption>
-                        ))}
-                    </VSCodeDropdown>
-                    {shouldShowMessage(location) && (
-                        <span className={styles.validationMessage}>
-                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {location.message}
-                        </span>
-                    )}
-
-                    <VSCodeDivider className={styles.fullWidth} />
                 </div>
 
-                <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit">Ok</VSCodeButton>
+                <div className={styles.buttonContainer} style={{ justifyContent: "flex-end" }}>
+                    <VSCodeButton type="submit">Create</VSCodeButton>
                     <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
                 </div>
             </form>
