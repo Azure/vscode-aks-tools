@@ -1,5 +1,6 @@
 import {
     CreateClusterParams,
+    CreatedCluster,
     InitialState,
     ProgressEventType,
     ResourceGroup,
@@ -22,6 +23,8 @@ export type CreateClusterState = InitialState & {
     locations: string[] | null;
     resourceGroups: ResourceGroup[] | null;
     createParams: CreateClusterParams | null;
+    deploymentPortalUrl: string | null;
+    createdCluster: CreatedCluster | null;
 };
 
 export type EventDef = {
@@ -40,6 +43,8 @@ export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, Create
         locations: null,
         resourceGroups: null,
         createParams: null,
+        deploymentPortalUrl: null,
+        createdCluster: null,
     }),
     vscodeMessageHandler: {
         getLocationsResponse: (state, args) => ({ ...state, locations: args.locations }),
@@ -47,6 +52,8 @@ export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, Create
         progressUpdate: (state, args) => ({
             ...state,
             ...getStageAndMessage(args.operationDescription, args.event, args.errorMessage),
+            deploymentPortalUrl: args.deploymentPortalUrl,
+            createdCluster: args.createdCluster,
         }),
     },
     eventHandler: {

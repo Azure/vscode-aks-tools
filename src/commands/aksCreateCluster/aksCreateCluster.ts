@@ -33,12 +33,10 @@ export default async function aksCreateCluster(_context: IActionContext, target:
 
     const resourceManagementClient = getResourceManagementClient(subscriptionTreeItem);
     const containerServiceClient = getContainerClient(subscriptionTreeItem);
-    const portalUrl = subscriptionTreeItem.subscription.environment.portalUrl;
     const dataProvider = new CreateClusterDataProvider(
         resourceManagementClient,
         containerServiceClient,
-        portalUrl,
-        subscriptionTreeItem.subscription
+        subscriptionTreeItem.subscription,
     );
 
     panel.show(dataProvider);

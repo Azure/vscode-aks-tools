@@ -25,8 +25,6 @@ const resourceGroups = locations.map((l) => ({ name: `rg_${l}`, location: l }));
 
 export function getCreateClusterScenarios() {
     const initialState: InitialState = {
-        portalUrl: "https://portal.azure.com/",
-        portalReferrerContext: "vscode-aks-tools-test",
         subscriptionId: "7f9c8a5b-3e9d-4f1c-8c0f-6a3b2a0d2e7c",
         subscriptionName: "Test Sub",
     };
@@ -68,6 +66,8 @@ export function getCreateClusterScenarios() {
                 operationDescription: `Creating Resource Group ${groupName} in ${location}`,
                 event: ProgressEventType.InProgress,
                 errorMessage: null,
+                deploymentPortalUrl: null,
+                createdCluster: null,
             });
 
             await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -75,13 +75,18 @@ export function getCreateClusterScenarios() {
                 operationDescription: `Successfully created ${groupName} in ${location}`,
                 event: ProgressEventType.InProgress,
                 errorMessage: null,
+                deploymentPortalUrl: null,
+                createdCluster: null,
             });
         }
 
+        const deploymentPortalUrl = `https://portal.azure.com/#resource/subscriptions/${initialState.subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.Resources/deployments/testdeployment?referrer_source=vscode&referrer_context=vscode-aks-tools-test`;
         webview.postProgressUpdate({
             operationDescription: `Creating Cluster ${name}`,
             event: ProgressEventType.InProgress,
             errorMessage: null,
+            deploymentPortalUrl,
+            createdCluster: null,
         });
 
         const waitMs = location === failLocationMarker ? 500 : location === cancelLocationMarker ? 3000 : 10000;
@@ -100,6 +105,13 @@ export function getCreateClusterScenarios() {
             operationDescription: "Creating Cluster",
             event,
             errorMessage,
+            deploymentPortalUrl,
+            createdCluster:
+                event === ProgressEventType.Success
+                    ? {
+                          portalUrl: `https://portal.azure.com/#resource/subscriptions/${initialState.subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}?referrer_source=vscode&referrer_context=vscode-aks-tools-test`,
+                      }
+                    : null,
         });
     }
 

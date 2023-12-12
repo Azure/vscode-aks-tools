@@ -1,8 +1,6 @@
 import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
-    portalUrl: string;
-    portalReferrerContext: string;
     subscriptionId: string;
     subscriptionName: string;
 }
@@ -18,6 +16,10 @@ export enum ProgressEventType {
     Failed,
     Success,
 }
+
+export type CreatedCluster = {
+    portalUrl: string;
+};
 
 export interface CreateClusterParams {
     isNewResourceGroup: boolean;
@@ -47,6 +49,8 @@ export type ToWebViewMsgDef = {
         operationDescription: string;
         event: ProgressEventType;
         errorMessage: string | null;
+        deploymentPortalUrl: string | null;
+        createdCluster: CreatedCluster | null;
     };
 };
 

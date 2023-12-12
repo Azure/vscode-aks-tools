@@ -3,8 +3,7 @@ import { WebviewDefinition } from "../webviewTypes";
 export interface InitialState {
     name: string;
     description: string;
-    clusterArmId: string;
-    portalReferrerContext: string;
+    portalDetectorUrl: string;
     detectors: SingleDetectorARMResponse[];
 }
 

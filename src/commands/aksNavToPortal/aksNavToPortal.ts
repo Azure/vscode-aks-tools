@@ -4,7 +4,7 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getAksClusterTreeItem } from "../utils/clusters";
 import { getExtensionPath } from "../utils/host";
 import { failed } from "../utils/errorable";
-import meta from "../../../package.json";
+import { getPortalResourceUrl } from "../utils/env";
 
 export default async function aksNavToPortal(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -22,10 +22,6 @@ export default async function aksNavToPortal(_context: IActionContext, target: u
     }
 
     // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-    const portalUrl = cluster.result.subscription.environment.portalUrl.replace(/\/$/, "");
-    vscode.env.openExternal(
-        vscode.Uri.parse(
-            `${portalUrl}/#resource${cluster.result.armId}/overview?referrer_source=vscode&referrer_context=${meta.name}`,
-        ),
-    );
+    const resourceUrl = getPortalResourceUrl(cluster.result.subscription.environment, cluster.result.armId);
+    vscode.env.openExternal(vscode.Uri.parse(resourceUrl));
 }
