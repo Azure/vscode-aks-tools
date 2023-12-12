@@ -1,6 +1,8 @@
-export type TransportLayerProtocol = "TCP" | "UDP" | "ICMP";
+export const transportLayerProtocols = ["TCP", "UDP", "ICMP"];
+export type TransportLayerProtocol = (typeof transportLayerProtocols)[number];
 
-export type ApplicationLayerProtocol = "HTTP" | "HTTPS" | "DNS";
+export const applicationLayerProtocols = ["HTTP", "HTTPS", "DNS"] as const;
+export type ApplicationLayerProtocol = (typeof applicationLayerProtocols)[number];
 
 export type ProtocolMapping = Record<
     ApplicationLayerProtocol,

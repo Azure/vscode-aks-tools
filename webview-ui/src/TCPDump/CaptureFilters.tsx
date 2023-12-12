@@ -1,4 +1,4 @@
-import { FormEvent, useEffect } from "react";
+import { FormEvent, useEffect, ChangeEvent as InputChangeEvent } from "react";
 import { InterfaceName, NodeName } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { ResourceSelector } from "../components/ResourceSelector";
 import { Lazy, isLoaded } from "../utilities/lazy";
@@ -9,6 +9,13 @@ import { TwoPodsFilters } from "./filterScenarios/TwoPodsFilters";
 import { CaptureScenario, EventDef, NodeState, ReferenceData } from "./state";
 import { EventHandlerFunc, loadCaptureInterfaces } from "./state/dataLoading";
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import {
+    ApplicationLayerProtocol,
+    TransportLayerProtocol,
+    applicationLayerProtocols,
+    protocolMapping,
+    transportLayerProtocols,
+} from "./protocols";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -49,6 +56,45 @@ export function CaptureFilters(props: CaptureFiltersProps) {
         props.eventHandlers.onRefreshPcapFilterString({ node: props.captureNode });
     }
 
+    function handleAppLayerProtocolChange(appLayerProtocol: ApplicationLayerProtocol | null) {
+        props.eventHandlers.onSetCaptureFilters({
+            node: props.captureNode,
+            filters: {
+                ...filters,
+                appLayerProtocol,
+                port: appLayerProtocol !== null ? protocolMapping[appLayerProtocol].port : filters.port,
+                transportLayerProtocol:
+                    appLayerProtocol !== null
+                        ? protocolMapping[appLayerProtocol].protocol
+                        : filters.transportLayerProtocol,
+            },
+        });
+        props.eventHandlers.onRefreshPcapFilterString({ node: props.captureNode });
+    }
+
+    function handlePortChange(event: InputChangeEvent<HTMLInputElement>): void {
+        const port = event.currentTarget.value ? parseInt(event.currentTarget.value) : null;
+        props.eventHandlers.onSetCaptureFilters({
+            node: props.captureNode,
+            filters: {
+                ...filters,
+                port,
+            },
+        });
+        props.eventHandlers.onRefreshPcapFilterString({ node: props.captureNode });
+    }
+
+    function handleTransportLayerProtocolChange(transportLayerProtocol: TransportLayerProtocol | null) {
+        props.eventHandlers.onSetCaptureFilters({
+            node: props.captureNode,
+            filters: {
+                ...filters,
+                transportLayerProtocol,
+            },
+        });
+        props.eventHandlers.onRefreshPcapFilterString({ node: props.captureNode });
+    }
+
     function handlePcapFilterStringChange(e: ChangeEvent) {
         const input = e.currentTarget as HTMLInputElement;
         const pcapFilterString = input.value || null;
@@ -71,6 +117,46 @@ export function CaptureFilters(props: CaptureFiltersProps) {
                 valueGetter={(i) => i}
                 labelGetter={(i) => i}
                 onSelect={handleInterfaceChange}
+            />
+
+            <label htmlFor="app-layer-protocol-input" className={styles.label}>
+                App Layer Protocol
+            </label>
+            <ResourceSelector<ApplicationLayerProtocol>
+                id="app-layer-protocol-input"
+                className={styles.controlDropdown}
+                resources={applicationLayerProtocols.map((p) => p as ApplicationLayerProtocol)}
+                selectedItem={filters.appLayerProtocol}
+                valueGetter={(p) => p}
+                labelGetter={(p) => p}
+                onSelect={handleAppLayerProtocolChange}
+            />
+
+            <label htmlFor="port-input" className={styles.label}>
+                Port
+            </label>
+            <input
+                id="port-input"
+                className={styles.numberControl}
+                type="number"
+                required
+                value={filters.port || ""}
+                pattern="/^[0-9]*$"
+                max={65535}
+                onChange={handlePortChange}
+            ></input>
+
+            <label htmlFor="transport-layer-protocol-input" className={styles.label}>
+                Transport Layer Protocol
+            </label>
+            <ResourceSelector<TransportLayerProtocol>
+                id="transport-layer-protocol-input"
+                className={styles.controlDropdown}
+                resources={transportLayerProtocols.map((p) => p as TransportLayerProtocol)}
+                selectedItem={filters.transportLayerProtocol}
+                valueGetter={(p) => p}
+                labelGetter={(p) => p}
+                onSelect={handleTransportLayerProtocolChange}
             />
 
             <label htmlFor="capture-scenario-input" className={styles.label}>

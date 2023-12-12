@@ -23,6 +23,12 @@
     grid-column: 2 / 3;
 }
 
+.content > .numberControl,
+.filterContent > .numberControl {
+    grid-column: 2 / 3;
+    max-width: 4rem;
+}
+
 .content > .controlDropdown {
     grid-column: 2 / 3;
     max-width: 30rem;

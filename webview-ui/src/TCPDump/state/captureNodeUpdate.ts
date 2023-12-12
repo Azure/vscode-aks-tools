@@ -116,8 +116,7 @@ export function updateScenarioFilter(state: NodeState, value: ScenarioFilterValu
 
 export function refreshPcapFilterString(state: NodeState): NodeState {
     // https://www.tcpdump.org/manpages/pcap-filter.7.html
-    const parts = getPcapFilterStringParts(state.currentCaptureFilters);
-
+    const parts = [];
     if (state.currentCaptureFilters.port) {
         parts.push(`port ${state.currentCaptureFilters.port}`);
     }
@@ -125,6 +124,8 @@ export function refreshPcapFilterString(state: NodeState): NodeState {
     if (state.currentCaptureFilters.transportLayerProtocol) {
         parts.push(`ip proto ${state.currentCaptureFilters.transportLayerProtocol.toLowerCase()}`);
     }
+
+    parts.push(...getPcapFilterStringParts(state.currentCaptureFilters));
 
     return {
         ...state,
