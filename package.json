@@ -463,7 +463,7 @@
         "@azure/storage-blob": "^12.7.0",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-azureutils": "^2.0.2",
-        "@microsoft/vscode-azext-utils": "^2.1.4",
+        "@microsoft/vscode-azext-utils": "^2.1.3",
         "cross-fetch": "^4.0.0",
         "decompress": "^4.2.1",
         "download": "^8.0.0",
