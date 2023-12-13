@@ -3,7 +3,7 @@ export type Lookup<T> = {
 };
 
 export function asLookup<T>(items: T[], keyFn: (value: T) => ItemKey): Lookup<T> {
-    const entries = items.map((val) => [keyFn(val), val]);
+    const entries = items.map((val) => [getKeyId(keyFn(val)), val]);
     return Object.fromEntries(entries);
 }
 
@@ -40,6 +40,15 @@ export function getOrThrow<T>(items: T[], predicate: (item: T) => boolean, messa
 
 export type ItemKey = { [key: string]: string } | string;
 
+/**
+ * Creates a new array based on an updated set of 'keys', where each key uniquely identifies
+ * an item in the array.
+ * @param items The existing collection of array items
+ * @param updatedKeys The keys of the updated collection
+ * @param keyFn A function that gets the key of an item
+ * @param itemFn A function that creates a new item from a key
+ * @returns An updated collection of items with the new keys/
+ */
 export function updateValues<TKey extends ItemKey, TItem>(
     items: TItem[],
     updatedKeys: TKey[],

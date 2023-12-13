@@ -470,6 +470,10 @@ spec:
     }
 
     private async handleGetFilterPodsForNode(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
+        // Consider the `hostNetwork` value when querying pods. Since we're using the IP address of pods for filtering
+        // purposes, it doesn't really make sense to include those which use the host's network namespace, since they
+        // will all have the same IP address (that of the host). For this reason we exclude pods with hostNetwork==true.
+        //
         // From https://kubernetes.io/docs/reference/kubectl/jsonpath/
         // > On Windows, you must double quote any JSONPath template that contains spaces (not single quote ...).
         // > This in turn means that you must use a single quote or escaped double quote around any literals in the template
@@ -623,12 +627,17 @@ function getLocalKubectlCpPath(fileUri: Uri): string {
 }
 
 function extractInterfaceName(listInterfacesOutputLine: string): string {
+    // `tcpdump --list-interfaces` output lines look like:
+    // 1.eth0 [Up, Running]
+    // Here we extract just the interface name, e.g. `eth0`.
     const match = listInterfacesOutputLine.trim().match(/^\d+\.(\S+)\s.*$/);
     if (!match) return "";
     return match && match[1];
 }
 
 function asFilterPod(podOutputLine: string): FilterPod | null {
+    // Output line is formatted as:
+    // <podname>\t<ipaddress>[\t<hostNetwork>]
     const parts = podOutputLine.trim().split("\t");
     if (parts.length < 2) return null;
     const usesHostNetwork = parts.length > 2 && parts[2] === "true";
