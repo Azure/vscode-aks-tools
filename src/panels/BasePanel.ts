@@ -13,13 +13,14 @@ import { encodeState } from "../webview-contract/initialState";
 import {
     ContentId,
     InitialState,
-    ToVsCodeMessage,
+    TelemetryDefinition,
     ToVsCodeMessageHandler,
     ToVsCodeMsgDef,
     ToWebviewMessageSink,
     ToWebviewMsgDef,
     VsCodeMessageContext,
 } from "../webview-contract/webviewTypes";
+import { reporter } from "../commands/utils/reporter";
 
 const viewType = "aksVsCodeTools";
 
@@ -31,6 +32,7 @@ const viewType = "aksVsCodeTools";
 export interface PanelDataProvider<TContent extends ContentId> {
     getTitle(): string;
     getInitialState(): InitialState<TContent>;
+    getTelemetryDefinition(): TelemetryDefinition<TContent>;
     getMessageHandler(webview: ToWebviewMessageSink<TContent>): ToVsCodeMessageHandler<TContent>;
 }
 
@@ -58,7 +60,14 @@ export abstract class BasePanel<TContent extends ContentId> {
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
 
         // Set up messaging between VSCode and the webview.
-        const messageContext = getMessageContext(panel.webview, this.webviewCommandKeys, disposables);
+        const telemetryDefinition = dataProvider.getTelemetryDefinition();
+        const messageContext = getMessageContext(
+            panel.webview,
+            this.webviewCommandKeys,
+            this.contentId,
+            telemetryDefinition,
+            disposables,
+        );
         const messageHandler = dataProvider.getMessageHandler(messageContext);
         messageContext.subscribeToMessages(messageHandler);
 
@@ -116,6 +125,8 @@ export abstract class BasePanel<TContent extends ContentId> {
 function getMessageContext<TContent extends ContentId>(
     webview: Webview,
     webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>,
+    contentId: TContent,
+    telemetryDefinition: TelemetryDefinition<TContent>,
     disposables: Disposable[],
 ): VsCodeMessageContext<TContent> {
     const postMessageImpl: PostMessageImpl<ToWebviewMsgDef<TContent>> = (message) => webview.postMessage(message);
@@ -124,8 +135,19 @@ function getMessageContext<TContent extends ContentId>(
         subscribeToMessages: (handler) => {
             webview.onDidReceiveMessage(
                 (message: object) => {
-                    if (!isValidMessage<ToVsCodeMessage<TContent>>(message)) {
+                    if (!isValidMessage<ToVsCodeMsgDef<TContent>>(message)) {
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
+                    }
+
+                    const getTelemetryData = telemetryDefinition[message.command];
+                    if (getTelemetryData !== false) {
+                        const commandTelemetryData =
+                            getTelemetryData === true ? {} : getTelemetryData(message.parameters);
+                        const telemetryData = {
+                            ...commandTelemetryData,
+                            command: `${contentId}.${message.command}`,
+                        };
+                        reporter.sendTelemetryEvent("command", telemetryData);
                     }
 
                     const action = (handler as MessageHandler<MessageDefinition>)[message.command];

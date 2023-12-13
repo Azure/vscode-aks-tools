@@ -11,6 +11,7 @@ import {
     ToWebViewMsgDef,
     TraceOutputItem,
 } from "../webview-contract/webviewDefinitions/inspektorGadget";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class InspektorGadgetPanel extends BasePanel<"gadget"> {
     constructor(extensionUri: vscode.Uri) {
@@ -38,6 +39,27 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
 
     getInitialState(): InitialState {
         return {};
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"gadget"> {
+        return {
+            getVersionRequest: false,
+            deployRequest: true,
+            undeployRequest: true,
+            runStreamingTraceRequest: (args) => ({
+                category: args.arguments.gadgetCategory,
+                resource: args.arguments.gadgetResource,
+            }),
+            runBlockingTraceRequest: (args) => ({
+                category: args.arguments.gadgetCategory,
+                resource: args.arguments.gadgetResource,
+            }),
+            stopStreamingTraceRequest: true,
+            getNodesRequest: false,
+            getNamespacesRequest: false,
+            getPodsRequest: false,
+            getContainersRequest: false,
+        };
     }
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {

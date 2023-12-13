@@ -63,3 +63,7 @@ export type ToWebviewMessage<T extends ContentId> = Message<ToWebviewMsgDef<T>>;
 
 export type VsCodeMessageContext<T extends ContentId> = MessageContext<ToWebviewMsgDef<T>, ToVsCodeMsgDef<T>>;
 export type WebviewMessageContext<T extends ContentId> = MessageContext<ToVsCodeMsgDef<T>, ToWebviewMsgDef<T>>;
+
+export type TelemetryDefinition<T extends ContentId> = {
+    [P in keyof ToVsCodeMsgDef<T>]: ((args: ToVsCodeMsgDef<T>[P]) => { [key: string]: string }) | boolean;
+};

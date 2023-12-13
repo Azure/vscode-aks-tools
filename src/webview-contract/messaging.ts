@@ -71,6 +71,8 @@ export type Message<TMsgDef extends MessageDefinition> = {
     };
 }[Command<TMsgDef>];
 
+export type MessageParameters<TMsgDef extends MessageDefinition, TCommand extends Command<TMsgDef>> = TMsgDef[TCommand];
+
 /**
  * The handler type for all the messages defined in `TMsgDef`.
  */
