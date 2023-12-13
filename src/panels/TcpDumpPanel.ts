@@ -470,7 +470,10 @@ spec:
     }
 
     private async handleGetFilterPodsForNode(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `get pods --all-namespaces --field-selector spec.nodeName=${node} -o jsonpath="{range .items[*]}{.metadata.name}{\\"\\t\\"}{.status.podIP}{\\"\\t\\"}{{.spec.hostNetwork}}{\\"\\n\\"}{end}"`;
+        // From https://kubernetes.io/docs/reference/kubectl/jsonpath/
+        // > On Windows, you must double quote any JSONPath template that contains spaces (not single quote ...).
+        // > This in turn means that you must use a single quote or escaped double quote around any literals in the template
+        const command = `get pods --all-namespaces --field-selector spec.nodeName=${node} -o jsonpath="{range .items[*]}{.metadata.name}{'\\t'}{.status.podIP}{'\\t'}{.spec.hostNetwork}{'\\n'}{end}"`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         const pods = errmap(
             output,

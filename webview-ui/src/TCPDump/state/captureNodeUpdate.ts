@@ -116,13 +116,16 @@ export function updateScenarioFilter(state: NodeState, value: ScenarioFilterValu
 
 export function refreshPcapFilterString(state: NodeState): NodeState {
     // https://www.tcpdump.org/manpages/pcap-filter.7.html
+    // https://docs.netgate.com/pfsense/en/latest/diagnostics/packetcapture/tcpdump.html
     const parts = [];
-    if (state.currentCaptureFilters.port) {
+    if (state.currentCaptureFilters.port && state.currentCaptureFilters.transportLayerProtocol) {
+        const protocol = state.currentCaptureFilters.transportLayerProtocol.toLowerCase();
+        parts.push(`${protocol} port ${state.currentCaptureFilters.port}`);
+    } else if (state.currentCaptureFilters.port) {
         parts.push(`port ${state.currentCaptureFilters.port}`);
-    }
-
-    if (state.currentCaptureFilters.transportLayerProtocol) {
-        parts.push(`ip proto ${state.currentCaptureFilters.transportLayerProtocol.toLowerCase()}`);
+    } else if (state.currentCaptureFilters.transportLayerProtocol) {
+        const protocol = state.currentCaptureFilters.transportLayerProtocol.toLowerCase();
+        parts.push(protocol);
     }
 
     parts.push(...getPcapFilterStringParts(state.currentCaptureFilters));
