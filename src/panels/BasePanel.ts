@@ -1,6 +1,7 @@
 import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
 import {
     CommandKeys,
+    Message,
     MessageDefinition,
     MessageHandler,
     MessageSource,
@@ -139,14 +140,8 @@ function getMessageContext<TContent extends ContentId>(
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }
 
-                    const getTelemetryData = telemetryDefinition[message.command];
-                    if (getTelemetryData !== false) {
-                        const commandTelemetryData =
-                            getTelemetryData === true ? {} : getTelemetryData(message.parameters);
-                        const telemetryData = {
-                            ...commandTelemetryData,
-                            command: `${contentId}.${message.command}`,
-                        };
+                    const telemetryData = getTelemetryData(contentId, telemetryDefinition, message);
+                    if (telemetryData !== null) {
                         reporter.sendTelemetryEvent("command", telemetryData);
                     }
 
@@ -164,4 +159,22 @@ function getMessageContext<TContent extends ContentId>(
     };
 
     return { ...sink, ...source };
+}
+
+function getTelemetryData<TContent extends ContentId>(
+    contentId: TContent,
+    telemetryDefinition: TelemetryDefinition<TContent>,
+    message: Message<ToVsCodeMsgDef<TContent>>,
+): { [key: string]: string } | null {
+    const getTelemetryData = telemetryDefinition[message.command];
+
+    // getTelemetryData is either `true` or a function returning a properties object.
+    if (getTelemetryData === false) return null;
+
+    // The `command` value we emit will combine the webview identifier (contentId), e.g. `createCluster`
+    // with the command in the message, e.g. `createClusterRequest`.
+    const data = { command: `${contentId}.${message.command}` };
+    if (getTelemetryData === true) return data;
+
+    return { ...data, ...getTelemetryData(message.parameters) };
 }
