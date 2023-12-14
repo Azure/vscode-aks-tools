@@ -3,7 +3,7 @@ import styles from "./TcpDump.module.css";
 import { useEffect } from "react";
 import { VSCodeButton, VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
-import { CaptureStatus, NodeStatus, stateUpdater, vscode } from "./state";
+import { CaptureStatus, NodeState, NodeStatus, TcpDumpState, stateUpdater, vscode } from "./state";
 import { NodeSelector } from "../components/NodeSelector";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,15 +16,16 @@ import {
     faStop,
     faTrash,
 } from "@fortawesome/free-solid-svg-icons";
+import { CaptureFilters } from "./CaptureFilters";
+import { EventHandlerFunc } from "./state/dataLoading";
 
 export function TcpDump(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
+    const updates: EventHandlerFunc[] = [];
+    const { nodeState } = prepareData(state, updates);
     useEffect(() => {
-        if (state.selectedNode && state.nodeStates[state.selectedNode].status === NodeStatus.Unknown) {
-            vscode.postCheckNodeState({ node: state.selectedNode });
-            eventHandlers.onSetCheckingNodeState({ node: state.selectedNode });
-        }
+        updates.map((fn) => fn(eventHandlers));
     });
 
     function handleCreateDebugPod() {
@@ -48,7 +49,14 @@ export function TcpDump(initialState: InitialState) {
         const nodeState = state.nodeStates[state.selectedNode];
         if (nodeState.status !== NodeStatus.DebugPodRunning) return;
         const captureName = new Date().toISOString().slice(0, -5).replaceAll(":", "-").replace("T", "_");
-        vscode.postStartCapture({ node: state.selectedNode, capture: captureName });
+        vscode.postStartCapture({
+            node: state.selectedNode,
+            capture: captureName,
+            filters: {
+                interface: nodeState.currentCaptureFilters.interface,
+                pcapFilterString: nodeState.currentCaptureFilters.pcapFilterString,
+            },
+        });
         eventHandlers.onStartingNodeCapture({ node: state.selectedNode, capture: captureName });
     }
 
@@ -75,7 +83,6 @@ export function TcpDump(initialState: InitialState) {
         vscode.postOpenFolder(path);
     }
 
-    const nodeState = state.selectedNode ? state.nodeStates[state.selectedNode] : null;
     function hasStatus(...statuses: NodeStatus[]): boolean {
         return nodeState !== null && statuses.includes(nodeState.status);
     }
@@ -152,6 +159,20 @@ export function TcpDump(initialState: InitialState) {
                         Delete
                     </VSCodeButton>
                 )}
+
+                {state.selectedNode &&
+                    nodeState &&
+                    hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) && (
+                        <details className={styles.fullWidth}>
+                            <summary>Filters</summary>
+                            <CaptureFilters
+                                captureNode={state.selectedNode}
+                                nodeState={nodeState}
+                                referenceData={state.referenceData}
+                                eventHandlers={eventHandlers}
+                            />
+                        </details>
+                    )}
 
                 <label className={styles.label}>Capture</label>
                 {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) && (
@@ -272,4 +293,23 @@ export function TcpDump(initialState: InitialState) {
             )}
         </>
     );
+}
+
+type LocalData = {
+    nodeState: NodeState | null;
+};
+
+function prepareData(state: TcpDumpState, updates: EventHandlerFunc[]): LocalData {
+    const captureNode = state.selectedNode;
+    if (!captureNode) {
+        return { nodeState: null };
+    }
+
+    const nodeState = state.nodeStates[captureNode];
+    if (nodeState.status === NodeStatus.Unknown) {
+        vscode.postCheckNodeState({ node: captureNode });
+        updates.push((e) => e.onSetCheckingNodeState({ node: captureNode }));
+    }
+
+    return { nodeState };
 }
