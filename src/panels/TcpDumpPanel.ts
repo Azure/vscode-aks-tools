@@ -8,8 +8,11 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { KubectlVersion, getExecOutput, invokeKubectlCommand } from "../commands/utils/kubectl";
 import {
+    CaptureFilters,
     CompletedCapture,
+    FilterPod,
     InitialState,
+    NodeName,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/tcpDump";
@@ -22,12 +25,18 @@ const captureFilePrefix = "vscodenodecap_";
 const captureFileBasePath = `${captureDir}/${captureFilePrefix}`;
 const captureFilePathRegex = `${captureFileBasePath.replace(/\//g, "\\$&")}(.*)\\.cap`; // Matches the part of the filename after the prefix
 
-function getPodName(node: string) {
+function getPodName(node: NodeName) {
     return `debug-${node}`;
 }
 
-function getTcpDumpCommand(capture: string): string {
-    return `${tcpDumpCommandBase} -w ${captureFileBasePath}${capture}.cap`;
+function getTcpDumpCommand(capture: string, filters: CaptureFilters): string {
+    const parts = [
+        tcpDumpCommandBase,
+        filters.interface ? `-i ${filters.interface}` : "",
+        `-w ${captureFileBasePath}${capture}.cap`,
+        filters.pcapFilterString || "",
+    ].filter((part) => !!part);
+    return parts.join(" ");
 }
 
 function getCaptureFromCommand(command: string, commandWithArgs: string): string | null {
@@ -52,6 +61,9 @@ export class TcpDumpPanel extends BasePanel<"tcpDump"> {
             startCaptureResponse: null,
             stopCaptureResponse: null,
             downloadCaptureFileResponse: null,
+            getInterfacesResponse: null,
+            getAllNodesResponse: null,
+            getFilterPodsForNodeResponse: null,
         });
     }
 }
@@ -81,14 +93,17 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
             checkNodeState: (args) => this.handleCheckNodeState(args.node, webview),
             startDebugPod: (args) => this.handleStartDebugPod(args.node, webview),
             deleteDebugPod: (args) => this.handleDeleteDebugPod(args.node, webview),
-            startCapture: (args) => this.handleStartCapture(args.node, args.capture, webview),
+            startCapture: (args) => this.handleStartCapture(args.node, args.capture, args.filters, webview),
             stopCapture: (args) => this.handleStopCapture(args.node, args.capture, webview),
             downloadCaptureFile: (args) => this.handleDownloadCaptureFile(args.node, args.capture, webview),
             openFolder: (args) => this.handleOpenFolder(args),
+            getInterfaces: (args) => this.handleGetInterfaces(args.node, webview),
+            getAllNodes: () => this.handleGetAllNodes(webview),
+            getFilterPodsForNode: (args) => this.handleGetFilterPodsForNode(args.node, webview),
         };
     }
 
-    private async handleCheckNodeState(node: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleCheckNodeState(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
         const podNames = await this.getPodNames();
         if (failed(podNames)) {
             webview.postCheckNodeStateResponse({
@@ -168,7 +183,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
         });
     }
 
-    private async handleStartDebugPod(node: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleStartDebugPod(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
         const createPodYaml = `
 apiVersion: v1
 kind: Pod
@@ -243,7 +258,7 @@ spec:
         });
     }
 
-    private async handleDeleteDebugPod(node: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleDeleteDebugPod(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `delete pod -n ${debugPodNamespace} ${getPodName(node)}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         if (failed(output)) {
@@ -272,8 +287,13 @@ spec:
         });
     }
 
-    private async handleStartCapture(node: string, capture: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const podCommand = `/bin/sh -c "${getTcpDumpCommand(capture)} 1>/dev/null 2>&1 &"`;
+    private async handleStartCapture(
+        node: NodeName,
+        capture: string,
+        filters: CaptureFilters,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        const podCommand = `/bin/sh -c "${getTcpDumpCommand(capture, filters)} 1>/dev/null 2>&1 &"`;
         const output = await getExecOutput(
             this.kubectl,
             this.kubeConfigFilePath,
@@ -288,7 +308,7 @@ spec:
         });
     }
 
-    private async handleStopCapture(node: string, capture: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleStopCapture(node: NodeName, capture: string, webview: MessageSink<ToWebViewMsgDef>) {
         const runningCaptures = await this.getRunningCaptures(node);
         if (failed(runningCaptures)) {
             webview.postStopCaptureResponse({
@@ -361,7 +381,11 @@ spec:
         });
     }
 
-    private async handleDownloadCaptureFile(node: string, captureName: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleDownloadCaptureFile(
+        node: NodeName,
+        captureName: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
         const localCaptureUri = await window.showSaveDialog({
             defaultUri: Uri.file(`${captureName}.cap`),
             filters: { "Capture Files": ["cap"] },
@@ -410,25 +434,87 @@ spec:
         commands.executeCommand("revealFileInOS", Uri.file(path));
     }
 
+    private async handleGetInterfaces(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
+        const podCommand = `/bin/sh -c "tcpdump --list-interfaces"`;
+        const output = await getExecOutput(
+            this.kubectl,
+            this.kubeConfigFilePath,
+            debugPodNamespace,
+            getPodName(node),
+            podCommand,
+        );
+        const interfaces = errmap(output, (sr) =>
+            sr.stdout
+                .trim()
+                .split("\n")
+                .map(extractInterfaceName)
+                .filter((i) => !!i),
+        );
+        webview.postGetInterfacesResponse({
+            node,
+            succeeded: interfaces.succeeded,
+            errorMessage: failed(interfaces) ? interfaces.error : null,
+            value: failed(interfaces) ? [] : interfaces.result,
+        });
+    }
+
+    private async handleGetAllNodes(webview: MessageSink<ToWebViewMsgDef>) {
+        const command = `get node --no-headers -o custom-columns=":metadata.name"`;
+        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const nodenames = errmap(output, (sr) => sr.stdout.trim().split("\n"));
+        webview.postGetAllNodesResponse({
+            succeeded: nodenames.succeeded,
+            errorMessage: failed(nodenames) ? nodenames.error : null,
+            value: failed(nodenames) ? [] : nodenames.result,
+        });
+    }
+
+    private async handleGetFilterPodsForNode(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
+        // Consider the `hostNetwork` value when querying pods. Since we're using the IP address of pods for filtering
+        // purposes, it doesn't really make sense to include those which use the host's network namespace, since they
+        // will all have the same IP address (that of the host). For this reason we exclude pods with hostNetwork==true.
+        //
+        // From https://kubernetes.io/docs/reference/kubectl/jsonpath/
+        // > On Windows, you must double quote any JSONPath template that contains spaces (not single quote ...).
+        // > This in turn means that you must use a single quote or escaped double quote around any literals in the template
+        const command = `get pods --all-namespaces --field-selector spec.nodeName=${node} -o jsonpath="{range .items[*]}{.metadata.name}{'\\t'}{.status.podIP}{'\\t'}{.spec.hostNetwork}{'\\n'}{end}"`;
+        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const pods = errmap(
+            output,
+            (sr) =>
+                sr.stdout
+                    .trim()
+                    .split("\n")
+                    .map(asFilterPod)
+                    .filter((p) => p !== null) as FilterPod[],
+        );
+        webview.postGetFilterPodsForNodeResponse({
+            node,
+            succeeded: pods.succeeded,
+            errorMessage: failed(pods) ? pods.error : null,
+            value: failed(pods) ? [] : pods.result,
+        });
+    }
+
     private async getPodNames(): Promise<Errorable<string[]>> {
         const command = `get pod -n ${debugPodNamespace} --no-headers -o custom-columns=":metadata.name"`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         return errmap(output, (sr) => sr.stdout.trim().split("\n"));
     }
 
-    private async waitForPodReady(node: string): Promise<Errorable<void>> {
+    private async waitForPodReady(node: NodeName): Promise<Errorable<void>> {
         const command = `wait pod -n ${debugPodNamespace} --for=condition=ready --timeout=300s ${getPodName(node)}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         return errmap(output, () => undefined);
     }
 
-    private async waitForPodDeleted(node: string): Promise<Errorable<void>> {
+    private async waitForPodDeleted(node: NodeName): Promise<Errorable<void>> {
         const command = `wait pod -n ${debugPodNamespace} --for=delete --timeout=300s ${getPodName(node)}`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         return errmap(output, () => undefined);
     }
 
-    private async installDebugTools(node: string): Promise<Errorable<void>> {
+    private async installDebugTools(node: NodeName): Promise<Errorable<void>> {
         const podCommand = `/bin/sh -c "apt-get update && apt-get install -y tcpdump procps"`;
         const output = await getExecOutput(
             this.kubectl,
@@ -440,7 +526,7 @@ spec:
         return errmap(output, () => undefined);
     }
 
-    private async getRunningCaptures(node: string): Promise<Errorable<TcpDumpProcess[]>> {
+    private async getRunningCaptures(node: NodeName): Promise<Errorable<TcpDumpProcess[]>> {
         // List all processes without header columns, including PID, command and args (which contains the command)
         const podCommand = "ps -e -o pid= -o comm= -o args=";
         const output = await getExecOutput(
@@ -466,7 +552,7 @@ spec:
     }
 
     private async getCompletedCaptures(
-        node: string,
+        node: NodeName,
         runningCaptures: string[],
     ): Promise<Errorable<CompletedCapture[]>> {
         // Use 'find' rather than 'ls' (http://mywiki.wooledge.org/ParsingLs)
@@ -538,4 +624,26 @@ function getLocalKubectlCpPath(fileUri: Uri): string {
             : process.cwd();
 
     return relative(workingDirectory, fileUri.fsPath);
+}
+
+function extractInterfaceName(listInterfacesOutputLine: string): string {
+    // `tcpdump --list-interfaces` output lines look like:
+    // 1.eth0 [Up, Running]
+    // Here we extract just the interface name, e.g. `eth0`.
+    const match = listInterfacesOutputLine.trim().match(/^\d+\.(\S+)\s.*$/);
+    if (!match) return "";
+    return match && match[1];
+}
+
+function asFilterPod(podOutputLine: string): FilterPod | null {
+    // Output line is formatted as:
+    // <podname>\t<ipaddress>[\t<hostNetwork>]
+    const parts = podOutputLine.trim().split("\t");
+    if (parts.length < 2) return null;
+    const usesHostNetwork = parts.length > 2 && parts[2] === "true";
+    if (usesHostNetwork) return null;
+    return {
+        name: parts[0],
+        ipAddress: parts[1],
+    };
 }

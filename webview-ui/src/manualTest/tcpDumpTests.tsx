@@ -2,6 +2,7 @@ import { MessageHandler, MessageSink } from "../../../src/webview-contract/messa
 import {
     CaptureName,
     CompletedCapture,
+    FilterPod,
     InitialState,
     NodeName,
     ToVsCodeMsgDef,
@@ -9,6 +10,7 @@ import {
 } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { TcpDump } from "../TCPDump/TcpDump";
 import { stateUpdater } from "../TCPDump/state";
+import { getOrThrow } from "../utilities/array";
 import { Scenario } from "../utilities/manualTest";
 
 type TestNodeState = {
@@ -32,8 +34,15 @@ const nodeThatFailsToDeleteDebugPod = "node-that-fails-to-delete-debug-pod";
 const nodeThatFailsToStartCapture = "node-that-fails-to-start-capture";
 const nodeThatFailsToStopCapture = "node-that-fails-to-stop-capture";
 const nodeWhereDownloadsFail = "node-where-downloads-fail";
+const windowsNode = "windows-node";
 
 const randomFileSize = () => ~~(Math.random() * 5000);
+
+type ClusterNodeProperties = {
+    name: string;
+    index: number;
+    pods: FilterPod[];
+};
 
 export function getTCPDumpScenarios() {
     const clusterName = "test-cluster";
@@ -58,6 +67,17 @@ export function getTCPDumpScenarios() {
         allNodes: Object.keys(nodeStates),
     };
 
+    const allClusterNodes: ClusterNodeProperties[] = [...Object.keys(nodeStates), windowsNode].map(
+        (name, nodeIndex) => ({
+            name,
+            index: nodeIndex,
+            pods: Array.from({ length: 8 }, (_, podIndex) => ({
+                name: `testpod${podIndex}`,
+                ipAddress: `10.244.${nodeIndex}.${podIndex}`,
+            })),
+        }),
+    );
+
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             checkNodeState: (args) => handleCheckNodeState(args.node),
@@ -67,6 +87,9 @@ export function getTCPDumpScenarios() {
             stopCapture: (args) => handleStopCapture(args.node, args.capture),
             downloadCaptureFile: (args) => handleDownloadCaptureFile(args.node, args.capture),
             openFolder: (args) => handleOpenFolder(args),
+            getInterfaces: (args) => handleGetInterfaces(args.node),
+            getAllNodes: handleGetAllNodes,
+            getFilterPodsForNode: (args) => handleGetFilterPodsForNode(args.node),
         };
 
         async function handleCheckNodeState(node: NodeName) {
@@ -161,6 +184,40 @@ export function getTCPDumpScenarios() {
 
         function handleOpenFolder(path: string) {
             alert(`VS Code would launch an OS file system browser here:\n${path}`);
+        }
+
+        async function handleGetInterfaces(node: NodeName) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            webview.postGetInterfacesResponse({
+                node,
+                succeeded: true,
+                errorMessage: null,
+                value: ["eth0", "lo", "any", "nflog", "nfqueue"],
+            });
+        }
+
+        async function handleGetAllNodes() {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            webview.postGetAllNodesResponse({
+                succeeded: true,
+                errorMessage: null,
+                value: allClusterNodes.map((n) => n.name),
+            });
+        }
+
+        async function handleGetFilterPodsForNode(nodeName: NodeName) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            const node = getOrThrow(
+                allClusterNodes,
+                (n) => n.name === nodeName,
+                `Node ${nodeName} not found in test data`,
+            );
+            webview.postGetFilterPodsForNodeResponse({
+                succeeded: true,
+                errorMessage: null,
+                node: nodeName,
+                value: node.pods,
+            });
         }
     }
 
