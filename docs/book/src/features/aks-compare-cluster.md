@@ -2,7 +2,7 @@
 
 ### Compare AKS Clusters
 
-Right click on your AKS cluster and select **Compare AKS Cluster** to use vscode diff to comapre json object of 2 AKS clusters.
+Right click on your AKS cluster and select **Compare AKS Cluster** to use vscode diff to compare json object of 2 AKS clusters.
 
 ![right click command](../resources/right-click-compare-cluster.png)
 
