@@ -21,6 +21,7 @@
   - [Deploy and Undeploy InspektorGadget](./features/inspektor-gadget.md)
   - [Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot](./features/inspektor-gadget.md)
   - [Collect TCP Dump](./features/tcp-dumps.md)
+  - [Compare AKS Cluster](./features/aks-compare-cluster.md)
 - [Release](./release.md)
   - [Releasing Information](./release/releasing.md)
 - [Contributing](./contributing.md)
