@@ -69,10 +69,9 @@ export type WebviewMessageContext<T extends ContentId> = MessageContext<ToVsCode
  * Possible values are:
  * - false: No telemetry will be emitted
  * - true: A telemetry event will be emitted containing the property "command" with value "<webview>.<messagetype>"
- * - (args) => {properties}: A telemetry event will be emitted containing:
- *                           - the property "command" with value "<webview>.<messagetype>"
- *                           - all other properties defined in the function.
+ * - (args) => string: A telemetry event will be emitted containing the property "command" with value "<webview>.<returnValue>"
+ *                     where `returnValue` is the command name returned from the specified function.
  */
 export type TelemetryDefinition<T extends ContentId> = {
-    [P in keyof ToVsCodeMsgDef<T>]: ((args: ToVsCodeMsgDef<T>[P]) => { [key: string]: string }) | boolean;
+    [P in keyof ToVsCodeMsgDef<T>]: ((args: ToVsCodeMsgDef<T>[P]) => string) | boolean;
 };

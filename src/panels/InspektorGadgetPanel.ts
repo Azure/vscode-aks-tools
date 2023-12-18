@@ -46,14 +46,10 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
             getVersionRequest: false,
             deployRequest: true,
             undeployRequest: true,
-            runStreamingTraceRequest: (args) => ({
-                category: args.arguments.gadgetCategory,
-                resource: args.arguments.gadgetResource,
-            }),
-            runBlockingTraceRequest: (args) => ({
-                category: args.arguments.gadgetCategory,
-                resource: args.arguments.gadgetResource,
-            }),
+            runStreamingTraceRequest: (args) =>
+                `streamTrace_${args.arguments.gadgetCategory}_${args.arguments.gadgetResource}`,
+            runBlockingTraceRequest: (args) =>
+                `runTrace_${args.arguments.gadgetCategory}_${args.arguments.gadgetResource}`,
             stopStreamingTraceRequest: true,
             getNodesRequest: false,
             getNamespacesRequest: false,

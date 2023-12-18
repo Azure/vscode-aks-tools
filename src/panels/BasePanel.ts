@@ -172,9 +172,9 @@ function getTelemetryData<TContent extends ContentId>(
     if (getTelemetryData === false) return null;
 
     // The `command` value we emit will combine the webview identifier (contentId), e.g. `createCluster`
-    // with the command in the message, e.g. `createClusterRequest`.
-    const data = { command: `${contentId}.${message.command}` };
-    if (getTelemetryData === true) return data;
-
-    return { ...data, ...getTelemetryData(message.parameters) };
+    // with either:
+    // - the command in the message, e.g. `createClusterRequest`
+    // - the return value of `getTelemetryData`
+    const commandValue = getTelemetryData === true ? message.command : getTelemetryData(message.parameters);
+    return { command: `${contentId}.${commandValue}` };
 }
