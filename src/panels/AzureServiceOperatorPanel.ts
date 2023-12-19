@@ -17,6 +17,7 @@ import { NonZeroExitCodeBehaviour, invokeKubectlCommand } from "../commands/util
 import path from "path";
 import * as fs from "fs/promises";
 import { createTempFile } from "../commands/utils/tempfile";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
     constructor(extensionUri: vscode.Uri) {
@@ -47,6 +48,17 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     getInitialState(): InitialState {
         return {
             clusterName: this.clusterName,
+        };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"aso"> {
+        return {
+            checkSPRequest: true,
+            installCertManagerRequest: true,
+            waitForCertManagerRequest: false,
+            installOperatorRequest: true,
+            installOperatorSettingsRequest: true,
+            waitForControllerManagerRequest: false,
         };
     }
 

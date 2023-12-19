@@ -11,6 +11,7 @@ import {
 } from "../webview-contract/webviewDefinitions/clusterProperties";
 import { ContainerServiceClient, ManagedCluster, ManagedClusterAgentPoolProfile } from "@azure/arm-containerservice";
 import { getManagedCluster } from "../commands/utils/clusters";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
     constructor(extensionUri: Uri) {
@@ -35,6 +36,17 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
     getInitialState(): InitialState {
         return {
             clusterName: this.clusterName,
+        };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"clusterProperties"> {
+        return {
+            getPropertiesRequest: false,
+            stopClusterRequest: true,
+            startClusterRequest: true,
+            abortAgentPoolOperation: true,
+            abortClusterOperation: true,
+            reconcileClusterRequest: true,
         };
     }
 
