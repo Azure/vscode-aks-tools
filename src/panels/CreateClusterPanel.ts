@@ -17,6 +17,7 @@ import {
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
 import { getPortalResourceUrl } from "../commands/utils/env";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -43,6 +44,14 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         return {
             subscriptionId: this.subscriptionContext.subscriptionId,
             subscriptionName: this.subscriptionContext.subscriptionDisplayName,
+        };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"createCluster"> {
+        return {
+            getResourceGroupsRequest: false,
+            getLocationsRequest: false,
+            createClusterRequest: true,
         };
     }
 

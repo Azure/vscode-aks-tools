@@ -63,3 +63,15 @@ export type ToWebviewMessage<T extends ContentId> = Message<ToWebviewMsgDef<T>>;
 
 export type VsCodeMessageContext<T extends ContentId> = MessageContext<ToWebviewMsgDef<T>, ToVsCodeMsgDef<T>>;
 export type WebviewMessageContext<T extends ContentId> = MessageContext<ToVsCodeMsgDef<T>, ToWebviewMsgDef<T>>;
+
+/**
+ * A type for definining what telemetry (if any) will be emitted for each message passed from a webview to VS Code.
+ * Possible values are:
+ * - false: No telemetry will be emitted
+ * - true: A telemetry event will be emitted containing the property "command" with value "<webview>.<messagetype>"
+ * - (args) => string: A telemetry event will be emitted containing the property "command" with value "<webview>.<returnValue>"
+ *                     where `returnValue` is the command name returned from the specified function.
+ */
+export type TelemetryDefinition<T extends ContentId> = {
+    [P in keyof ToVsCodeMsgDef<T>]: ((args: ToVsCodeMsgDef<T>[P]) => string) | boolean;
+};
