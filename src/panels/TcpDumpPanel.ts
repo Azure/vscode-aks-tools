@@ -17,6 +17,7 @@ import {
     ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/tcpDump";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 const debugPodNamespace = "default";
 const tcpDumpCommandBase = "tcpdump --snapshot-length=0 -vvv";
@@ -85,6 +86,21 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
         return {
             clusterName: this.clusterName,
             allNodes: this.linuxNodesList,
+        };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"tcpDump"> {
+        return {
+            checkNodeState: false,
+            startDebugPod: true,
+            deleteDebugPod: true,
+            startCapture: true,
+            stopCapture: true,
+            downloadCaptureFile: true,
+            openFolder: true,
+            getInterfaces: false,
+            getAllNodes: false,
+            getFilterPodsForNode: false,
         };
     }
 

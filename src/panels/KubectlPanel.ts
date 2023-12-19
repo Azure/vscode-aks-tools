@@ -11,6 +11,7 @@ import {
     ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/kubectl";
 import { addKubectlCustomCommand, deleteKubectlCustomCommand } from "../commands/utils/config";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class KubectlPanel extends BasePanel<"kubectl"> {
     constructor(extensionUri: Uri) {
@@ -36,6 +37,14 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         return {
             clusterName: this.clusterName,
             customCommands: this.customCommands,
+        };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"kubectl"> {
+        return {
+            runCommandRequest: true,
+            addCustomCommandRequest: true,
+            deleteCustomCommandRequest: true,
         };
     }
 

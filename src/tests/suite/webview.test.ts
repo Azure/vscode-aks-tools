@@ -5,6 +5,7 @@ import { BasePanel, PanelDataProvider } from "../../panels/BasePanel";
 import { getExtensionPath } from "../../commands/utils/host";
 import { map as errmap, Succeeded, succeeded } from "../../commands/utils/errorable";
 import { expect } from "chai";
+import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 
 const extensionPathResult = getExtensionPath();
 const extensionUriResult = errmap(extensionPathResult, (p) => vscode.Uri.file(p));
@@ -50,6 +51,13 @@ class StyleTestDataProvider implements PanelDataProvider<"style"> {
 
     getInitialState(): InitialState {
         return { isVSCode: true };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"style"> {
+        return {
+            reportCssRules: false,
+            reportCssVars: false,
+        };
     }
 
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {

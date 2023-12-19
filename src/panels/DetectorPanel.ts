@@ -9,6 +9,7 @@ import {
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { getPortalUrl } from "../commands/utils/detectors";
 import { Environment } from "@azure/ms-rest-azure-env";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class DetectorPanel extends BasePanel<"detector"> {
     constructor(extensionUri: Uri) {
@@ -43,6 +44,10 @@ export class DetectorDataProvider implements PanelDataProvider<"detector"> {
             portalDetectorUrl: this.detectorPortalUrl,
             detectors: this.detectors,
         };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"detector"> {
+        return {};
     }
 
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {

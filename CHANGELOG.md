@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.3.18]
+
+* Compare 2 AKS Cluster.
+* Add Filters to TCP Dump.
+* Enhance Create Cluster and designed U/X experience.
+* Refactors like Portal URL, Fixing Old Dependencies, Occassional Errors for npm.
+* Add outfiles to webview UI launch config.
+* Update vscode engine and vscode type for this repo.
+
+Thank you so much to our awesome designer help by @ivelisseca and to @sprab, @peterbom, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration for tcp-dump enhanced filter with Qi, Prabha, Tom, June, Yi, Weinong's email, Thank you all for your ideas!
+
 ## [1.3.17]
 
 * Upgrade azext-utils and related packages.

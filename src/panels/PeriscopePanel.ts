@@ -14,6 +14,7 @@ import {
 } from "../webview-contract/webviewDefinitions/periscope";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { URL } from "url";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class PeriscopePanel extends BasePanel<"periscope"> {
     constructor(extensionUri: Uri) {
@@ -81,6 +82,13 @@ export class PeriscopeDataProvider implements PanelDataProvider<"periscope"> {
             kustomizeConfig: this.deploymentParameters?.kustomizeConfig || null,
             blobContainerUrl: containerUrl,
             shareableSas: shareableSas,
+        };
+    }
+
+    getTelemetryDefinition(): TelemetryDefinition<"periscope"> {
+        return {
+            nodeLogsRequest: false,
+            uploadStatusRequest: false,
         };
     }
 
