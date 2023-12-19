@@ -459,7 +459,7 @@
     },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
-        "@azure/arm-containerservice": "^19.4.0",
+        "@azure/arm-containerservice": "^19.5.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-storage": "^18.2.0",
