@@ -158,7 +158,7 @@
             },
             {
                 "command": "aks.refreshSubscription",
-                "title": "Refresh subscription...",
+                "title": "Refresh Subscription",
                 "icon": {
                     "dark": "resources/dark/refresh.svg",
                     "light": "resources/light/refresh.svg"
