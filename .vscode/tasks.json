@@ -4,6 +4,13 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "webpack-dev",
+            "type": "npm",
+            "script": "webpack-dev",
+            "problemMatcher": "$ts-webpack-watch",
+            "isBackground": true,
+        },
+        {
             "label": "webpack",
             "type": "npm",
             "script": "webpack"
