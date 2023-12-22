@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterTreeItem } from "../utils/clusters";
+import { getAksClusterTreeNode } from "../utils/clusters";
 import { getExtension, longRunning } from "../utils/host";
 import { getDetectorInfo, getDetectorListData } from "../utils/detectors";
 import { Errorable, failed } from "../utils/errorable";
-import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
+import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import { DetectorDataProvider, DetectorPanel } from "../../panels/DetectorPanel";
 
 export function aksBestPracticesDiagnostics(_context: IActionContext, target: unknown): Promise<void> {
@@ -38,9 +38,9 @@ export function aksNodeHealth(_context: IActionContext, target: unknown): Promis
 async function runDetector(commandTarget: unknown, categoryDetectorName: string) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    const cluster = getAksClusterTreeItem(commandTarget, cloudExplorer);
-    if (failed(cluster)) {
-        vscode.window.showErrorMessage(cluster.error);
+    const clusterNode = getAksClusterTreeNode(commandTarget, cloudExplorer);
+    if (failed(clusterNode)) {
+        vscode.window.showErrorMessage(clusterNode.error);
         return;
     }
 
@@ -50,9 +50,9 @@ async function runDetector(commandTarget: unknown, categoryDetectorName: string)
         return;
     }
 
-    const clustername = cluster.result.name;
+    const clustername = clusterNode.result.name;
     const dataProvider = await longRunning(`Loading ${clustername} diagnostics.`, () =>
-        getDataProvider(cluster.result, categoryDetectorName),
+        getDataProvider(clusterNode.result, categoryDetectorName),
     );
 
     if (failed(dataProvider)) {
@@ -65,22 +65,22 @@ async function runDetector(commandTarget: unknown, categoryDetectorName: string)
 }
 
 async function getDataProvider(
-    cloudTarget: AksClusterTreeItem,
+    clusterNode: AksClusterTreeNode,
     categoryDetectorName: string,
 ): Promise<Errorable<DetectorDataProvider>> {
-    const detectorInfo = await getDetectorInfo(cloudTarget, categoryDetectorName);
+    const detectorInfo = await getDetectorInfo(clusterNode, categoryDetectorName);
     if (failed(detectorInfo)) {
         return detectorInfo;
     }
 
-    const detectors = await getDetectorListData(cloudTarget, detectorInfo.result);
+    const detectors = await getDetectorListData(clusterNode, detectorInfo.result);
     if (failed(detectors)) {
         return detectors;
     }
 
     const dataProvider = new DetectorDataProvider(
-        cloudTarget.subscription.environment,
-        cloudTarget.name,
+        clusterNode.subscription.environment,
+        clusterNode.name,
         detectorInfo.result,
         detectors.result,
     );

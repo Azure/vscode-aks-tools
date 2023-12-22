@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
-import AksClusterTreeItem from "./tree/aksClusterTreeItem";
-import AzureAccountTreeItem from "./tree/azureAccountTreeItem";
+import { AksClusterTreeNode } from "./tree/aksClusterTreeItem";
+import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import {
     createAzExtOutputChannel,
     AzExtTreeDataProvider,
@@ -96,7 +96,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         await registerAzureServiceNodes(context);
 
-        const azureAccountTreeItem = new AzureAccountTreeItem();
+        const azureAccountTreeItem = createAzureAccountTreeItem();
         context.subscriptions.push(azureAccountTreeItem);
         const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, "azureAks.loadMore");
 
@@ -130,17 +130,17 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
     clusterExplorer.api.registerNodeContributor(azureResourceNodeContributor);
 }
 
-async function getClusterKubeconfig(target: AksClusterTreeItem): Promise<string | undefined> {
-    const properties = await longRunning(`Getting properties for cluster ${target.name}.`, () =>
-        getClusterProperties(target),
+async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<string | undefined> {
+    const properties = await longRunning(`Getting properties for cluster ${treeNode.name}.`, () =>
+        getClusterProperties(treeNode),
     );
     if (failed(properties)) {
         vscode.window.showErrorMessage(properties.error);
         return undefined;
     }
 
-    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${target.name}.`, () =>
-        getKubeconfigYaml(target, properties.result),
+    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${treeNode.name}.`, () =>
+        getKubeconfigYaml(treeNode, properties.result),
     );
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);

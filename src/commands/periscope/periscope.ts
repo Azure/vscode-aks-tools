@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as tmpfile from "../utils/tempfile";
-import { getAksClusterTreeItem, getClusterProperties, getContainerClient, getKubeconfigYaml } from "../utils/clusters";
+import { getAksClusterTreeNode, getClusterProperties, getContainerClient, getKubeconfigYaml } from "../utils/clusters";
 import { getKustomizeConfig } from "../utils/config";
 import { getExtension, longRunning } from "../utils/host";
 import {
@@ -13,7 +13,7 @@ import {
     getNodeNames,
     getClusterFeatures,
 } from "./helpers/periscopehelper";
-import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
+import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import { Errorable, failed } from "../utils/errorable";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { PeriscopeDataProvider, PeriscopePanel } from "../../panels/PeriscopePanel";
@@ -26,49 +26,49 @@ export default async function periscope(_context: IActionContext, target: unknow
 
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    const cluster = getAksClusterTreeItem(target, cloudExplorer);
-    if (failed(cluster)) {
-        vscode.window.showErrorMessage(cluster.error);
+    const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
+    if (failed(clusterNode)) {
+        vscode.window.showErrorMessage(clusterNode.error);
         return;
     }
 
     // Once Periscope will support usgov endpoints all we need is to remove this check.
     // I have done background plumbing for vscode to fetch downlodable link from correct endpoint.
-    const cloudName = cluster.result.subscription.environment.name;
+    const cloudName = clusterNode.result.subscription.environment.name;
     if (cloudName !== "AzureCloud") {
         vscode.window.showInformationMessage(`Periscope is not supported in ${cloudName} cloud.`);
         return;
     }
 
-    const properties = await longRunning(`Getting properties for cluster ${cluster.result.name}.`, () =>
-        getClusterProperties(cluster.result),
+    const properties = await longRunning(`Getting properties for cluster ${clusterNode.result.name}.`, () =>
+        getClusterProperties(clusterNode.result),
     );
     if (failed(properties)) {
         vscode.window.showErrorMessage(properties.error);
         return undefined;
     }
 
-    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${cluster.result.name}.`, () =>
-        getKubeconfigYaml(cluster.result, properties.result),
+    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${clusterNode.result.name}.`, () =>
+        getKubeconfigYaml(clusterNode.result, properties.result),
     );
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);
         return undefined;
     }
 
-    await runAKSPeriscope(kubectl, cluster.result, kubeconfig.result);
+    await runAKSPeriscope(kubectl, clusterNode.result, kubeconfig.result);
 }
 
 async function runAKSPeriscope(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
-    cluster: AksClusterTreeItem,
+    clusterNode: AksClusterTreeNode,
     clusterKubeConfig: string,
 ): Promise<void> {
-    const clusterName = cluster.name;
+    const clusterName = clusterNode.name;
 
     // Get Diagnostic settings for cluster and get associated storage account information.
     const clusterDiagnosticSettings = await longRunning(`Identifying cluster diagnostic settings.`, () =>
-        getClusterDiagnosticSettings(cluster),
+        getClusterDiagnosticSettings(clusterNode),
     );
 
     const extension = getExtension();
@@ -81,7 +81,7 @@ async function runAKSPeriscope(
 
     if (!clusterDiagnosticSettings || !clusterDiagnosticSettings.value?.length) {
         // If there is no storage account attached to diagnostic setting, don't move forward and at this point we will render webview with helpful content.
-        const dataProvider = PeriscopeDataProvider.createForNoDiagnostics(cluster.name);
+        const dataProvider = PeriscopeDataProvider.createForNoDiagnostics(clusterNode.name);
         panel.show(dataProvider);
         return;
     }
@@ -93,7 +93,7 @@ async function runAKSPeriscope(
 
     // Generate storage sas keys, manage aks persicope run.
     const clusterStorageInfo = await longRunning(`Generating SAS for ${clusterName} cluster.`, () =>
-        getStorageInfo(kubectl, cluster, clusterStorageAccountId, clusterKubeConfig),
+        getStorageInfo(kubectl, clusterNode, clusterStorageAccountId, clusterKubeConfig),
     );
 
     if (failed(clusterStorageInfo)) {
@@ -107,10 +107,10 @@ async function runAKSPeriscope(
         return;
     }
 
-    const containerClient = getContainerClient(cluster);
+    const containerClient = getContainerClient(clusterNode);
 
     // Get the features of the cluster that determine which optional kustomize components to deploy.
-    const clusterFeatures = await getClusterFeatures(containerClient, cluster.resourceGroupName, cluster.name);
+    const clusterFeatures = await getClusterFeatures(containerClient, clusterNode.resourceGroupName, clusterNode.name);
     if (failed(clusterFeatures)) {
         vscode.window.showErrorMessage(clusterFeatures.error);
         return;
@@ -156,7 +156,7 @@ async function runAKSPeriscope(
     if (failed(runCommandResult)) {
         // For a failure running the command result, we display the error in a webview.
         const dataProvider = PeriscopeDataProvider.createForDeploymentError(
-            cluster.name,
+            clusterNode.name,
             runId,
             runCommandResult.error,
             deploymentParameters,
@@ -167,7 +167,7 @@ async function runAKSPeriscope(
 
     // Show the webview for successful deployment
     const dataProvider = PeriscopeDataProvider.createForDeploymentSuccess(
-        cluster.name,
+        clusterNode.name,
         runId,
         nodeNames.result,
         deploymentParameters,

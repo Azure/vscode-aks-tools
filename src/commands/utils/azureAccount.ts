@@ -199,7 +199,6 @@ async function getSubscriptionAccess(
     subscription: Subscription,
     spInfo: ServicePrincipalInfo,
 ): Promise<Errorable<SubscriptionAccessResult>> {
-
     if (!subscription.subscriptionId) {
         return { succeeded: true, result: { subscription, hasRoleAssignment: false } };
     }

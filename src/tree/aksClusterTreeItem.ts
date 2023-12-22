@@ -1,22 +1,27 @@
 import { AzExtParentTreeItem, AzExtTreeItem, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
-import { Subscription } from "@azure/arm-subscriptions";
 import { assetUri } from "../assets";
 import { parseResource } from "../azure-api-utils";
 import { Resource } from "@azure/arm-resources";
+import { SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
 export interface AksClusterTreeNode {
     readonly nodeType: "cluster";
+    readonly resourceType: string;
     readonly armId: string;
     readonly name: string;
-    readonly session: ISubscriptionContext;
-    readonly subscription: Subscription;
+    readonly subscription: ISubscriptionContext;
     readonly resourceGroupName: string;
 }
 
-export default class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
+export function createChildClusterTreeNode(parent: SubscriptionTreeItemBase, clusterResource: Resource): AzExtTreeItem {
+    return new AksClusterTreeItem(parent, clusterResource);
+}
+
+class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
+    public readonly armId: string;
     constructor(
         parent: AzExtParentTreeItem,
         readonly resource: Resource,
@@ -24,7 +29,8 @@ export default class AksClusterTreeItem extends AzExtTreeItem implements AksClus
         super(parent);
 
         this.iconPath = assetUri("resources/aks-tools.png");
-        this.id = this.resource.id;
+        this.id = this.resource.name!;
+        this.armId = this.resource.id!;
     }
 
     public readonly contextValue: string = `aks.cluster ${CloudExplorerV1.SHOW_KUBECONFIG_COMMANDS_CONTEXT}`;
@@ -33,20 +39,12 @@ export default class AksClusterTreeItem extends AzExtTreeItem implements AksClus
         return this.name;
     }
 
-    public get armId(): string {
-        return this.fullId;
-    }
-
     public get name(): string {
         return this.resource.name!;
     }
 
     public get resourceType(): string {
         return this.resource.type!;
-    }
-
-    public get session(): ISubscriptionContext {
-        return this.session;
     }
 
     public get resourceGroupName(): string {
