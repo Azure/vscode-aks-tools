@@ -421,7 +421,7 @@
         "build:webview": "cd webview-ui && npm run build",
         "vscode:prepublish": "npm run webpack",
         "webpack": "npm run build:webview && webpack --mode production",
-        "webpack-dev": "webpack --mode development --watch --info-verbosity verbose",
+        "webpack-dev": "webpack --mode development --watch",
         "test-compile": "npm run build:webview && tsc -p ./",
         "watch": "tsc -watch -p ./",
         "test": "npm run test-compile && node ./out/src/tests/runTests.js"

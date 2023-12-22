@@ -18,7 +18,7 @@
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
             ],
-            "preLaunchTask": "webpack"
+            "preLaunchTask": "webpack-dev"
         },
         {
             "name": "Extension Tests",
