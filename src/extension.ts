@@ -43,6 +43,7 @@ import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
 import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
 import { aksTCPDump } from "./commands/aksTCPCollection/tcpDumpCollection";
 import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
+import refreshSubscription from "./commands/refreshSubscriptions";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -91,6 +92,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.createCluster", aksCreateCluster);
         registerCommandWithTelemetry("aks.aksTCPDump", aksTCPDump);
         registerCommandWithTelemetry("aks.compareCluster", aksCompareCluster);
+        registerCommandWithTelemetry("aks.refreshSubscription", refreshSubscription);
 
         await registerAzureServiceNodes(context);
 
