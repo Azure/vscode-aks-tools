@@ -24,29 +24,15 @@
             "label": "dev:webview",
             "type": "npm",
             "script": "dev:webview",
-            "problemMatcher": [
-                {
-                    "fileLocation": "absolute",
-                    "background": {
-                        "activeOnStart": true,
-                        "beginsPattern": "^(?:.* page reload |\\[TypeScript\\]).*",
-                        "endsPattern": "^.*\\[TypeScript\\].*"
-                    },
-                    "pattern": [
-                        {
-                            "regexp": "^ (ERROR|WARNING)\\(TypeScript\\)  (.*)",
-                            "severity": 1,
-                            "message": 2
-                        },
-                        {
-                            "regexp": "^ FILE  (.*):(\\d*):(\\d*)$",
-                            "file": 1,
-                            "line": 2,
-                            "column": 3
-                        }
-                    ]
+            "problemMatcher": {
+                "base": "$tsc-watch",
+                "fileLocation": "absolute",
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^(?:.* page reload |\\[TypeScript\\]).*",
+                    "endsPattern": "^.*\\[TypeScript\\].*"
                 }
-            ],
+            },
             "isBackground": true,
             "presentation": {
                 "reveal": "never"
