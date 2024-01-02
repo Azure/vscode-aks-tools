@@ -1,5 +1,5 @@
 import { Errorable, combine, failed, getErrorMessage } from "./errorable";
-import AksClusterTreeItem from "../../tree/aksClusterTreeItem";
+import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -16,11 +16,11 @@ import { getPortalResourceUrl } from "./env";
 /**
  * Can be used to store the JSON responses for a collection of category detectors and all their child detectors.
  */
-export async function saveAllDetectorResponses(target: AksClusterTreeItem, categoryDetectorIds: string[]) {
+export async function saveAllDetectorResponses(clusterNode: AksClusterTreeNode, categoryDetectorIds: string[]) {
     const outputDirObj = dirSync();
 
     for (const categoryDetectorId of categoryDetectorIds) {
-        const categoryDetector = await getDetectorInfo(target, categoryDetectorId);
+        const categoryDetector = await getDetectorInfo(clusterNode, categoryDetectorId);
         if (failed(categoryDetector)) {
             throw new Error(
                 `Error getting category detector ${categoryDetectorId}: ${getErrorMessage(categoryDetector.error)}`,
@@ -29,7 +29,7 @@ export async function saveAllDetectorResponses(target: AksClusterTreeItem, categ
 
         saveDetector(outputDirObj.name, categoryDetector.result);
 
-        const singleDetectors = await getDetectorListData(target, categoryDetector.result);
+        const singleDetectors = await getDetectorListData(clusterNode, categoryDetector.result);
         if (failed(singleDetectors)) {
             throw new Error(
                 `Error getting single detectors for ${categoryDetectorId}: ${getErrorMessage(singleDetectors.error)}`,
@@ -50,7 +50,7 @@ function saveDetector(outputDir: string, detector: CategoryDetectorARMResponse |
 }
 
 export async function getDetectorListData(
-    cloudTarget: AksClusterTreeItem,
+    clusterNode: AksClusterTreeNode,
     categoryDetector: CategoryDetectorARMResponse,
 ): Promise<Errorable<SingleDetectorARMResponse[]>> {
     const detectorIds =
@@ -61,7 +61,7 @@ export async function getDetectorListData(
 
     let results: Errorable<SingleDetectorARMResponse>[] = [];
     try {
-        const promiseResults = await Promise.all(detectorIds.map((name) => getDetectorInfo(cloudTarget, name)));
+        const promiseResults = await Promise.all(detectorIds.map((name) => getDetectorInfo(clusterNode, name)));
         // Line below is added to handle edge case of applens detector list with missing implementation,
         // due to internal server error it causes rest of list to fail.
         results = promiseResults.filter((x) => x.succeeded);
@@ -75,17 +75,15 @@ export async function getDetectorListData(
 }
 
 export async function getDetectorInfo(
-    target: AksClusterTreeItem,
+    clusterNode: AksClusterTreeNode,
     detectorName: string,
 ): Promise<Errorable<CategoryDetectorARMResponse>> {
     try {
-        const client = getResourceManagementClient(target);
-        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-        const resourceGroup = target.armId.split("/")[4];
+        const client = getResourceManagementClient(clusterNode);
         const detectorInfo = await client.resources.get(
-            resourceGroup,
-            target.resourceType,
-            target.name,
+            clusterNode.resourceGroupName,
+            clusterNode.resourceType,
+            clusterNode.name,
             "detectors",
             detectorName,
             "2019-08-01",

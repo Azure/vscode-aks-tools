@@ -8,7 +8,7 @@ import { MonitorClient, DiagnosticSettingsResourceCollection } from "@azure/arm-
 import * as path from "path";
 import * as fs from "fs";
 import * as semver from "semver";
-import AksClusterTreeItem from "../../../tree/aksClusterTreeItem";
+import { AksClusterTreeNode } from "../../../tree/aksClusterTreeItem";
 import * as tmpfile from "../../utils/tempfile";
 import { combine, Errorable, failed } from "../../utils/errorable";
 import { invokeKubectlCommand } from "../../utils/kubectl";
@@ -20,15 +20,15 @@ import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-bl
 import { dirSync } from "tmp";
 
 export async function getClusterDiagnosticSettings(
-    cluster: AksClusterTreeItem,
+    clusterNode: AksClusterTreeNode,
 ): Promise<DiagnosticSettingsResourceCollection | undefined> {
     try {
         // Get daignostic setting via diagnostic monitor
         const diagnosticMonitor = new MonitorClient(
-            cluster.subscription.credentials,
-            cluster.subscription.subscriptionId,
+            clusterNode.subscription.credentials,
+            clusterNode.subscription.subscriptionId,
         );
-        const diagnosticSettings = await diagnosticMonitor.diagnosticSettings.list(cluster.id!);
+        const diagnosticSettings = await diagnosticMonitor.diagnosticSettings.list(clusterNode.armId);
 
         return diagnosticSettings;
     } catch (e) {
@@ -82,7 +82,7 @@ export async function chooseStorageAccount(
 
 export async function getStorageInfo(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
-    cluster: AksClusterTreeItem,
+    clusterNode: AksClusterTreeNode,
     diagnosticStorageAccountId: string,
     clusterKubeConfig: string,
 ): Promise<Errorable<PeriscopeStorage>> {
@@ -98,8 +98,8 @@ export async function getStorageInfo(
 
         // Get keys from storage client.
         const storageClient = new StorageManagementClient(
-            cluster.subscription.credentials,
-            cluster.subscription.subscriptionId,
+            clusterNode.subscription.credentials,
+            clusterNode.subscription.subscriptionId,
         );
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         if (storageAccKeyList.keys === undefined) {
