@@ -1,11 +1,15 @@
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { AzureAccountTreeItemBase, SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
-import SubscriptionTreeItem from "./subscriptionTreeItem";
+import { createChildSubscriptionTreeItem } from "./subscriptionTreeItem";
 import * as k8s from "vscode-kubernetes-tools-api";
 
-export default class AzureAccountTreeItem extends AzureAccountTreeItemBase {
-    public createSubscriptionTreeItem(root: ISubscriptionContext): SubscriptionTreeItemBase {
-        return new SubscriptionTreeItem(this, root);
+export function createAzureAccountTreeItem(): AzureAccountTreeItemBase {
+    return new AzureAccountTreeItem();
+}
+
+class AzureAccountTreeItem extends AzureAccountTreeItemBase {
+    public createSubscriptionTreeItem(subscription: ISubscriptionContext): SubscriptionTreeItemBase {
+        return createChildSubscriptionTreeItem(this, subscription);
     }
 
     public async refreshImpl?(): Promise<void> {

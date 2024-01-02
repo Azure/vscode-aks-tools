@@ -1,29 +1,38 @@
-import { SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
+import { AzureAccountTreeItemBase, SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 import {
     AzExtTreeItem,
     AzExtParentTreeItem,
     ISubscriptionContext,
     AzExtTreeDataProvider,
 } from "@microsoft/vscode-azext-utils";
-import AksClusterTreeItem from "./aksClusterTreeItem";
-import { Subscription } from "@azure/arm-subscriptions";
+import { createChildClusterTreeNode } from "./aksClusterTreeItem";
 import { getResourceManagementClient } from "../commands/utils/clusters";
 import * as k8s from "vscode-kubernetes-tools-api";
+import { Resource } from "@azure/arm-resources";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
 export interface SubscriptionTreeNode {
     readonly nodeType: "subscription";
     readonly name: string;
-    readonly session: ISubscriptionContext;
-    readonly subscription: Subscription;
+    readonly subscription: ISubscriptionContext;
     readonly treeDataProvider: AzExtTreeDataProvider;
     readonly treeItem: AzExtTreeItem;
 }
 
-export default class SubscriptionTreeItem extends SubscriptionTreeItemBase implements SubscriptionTreeNode {
+export function createChildSubscriptionTreeItem(
+    parent: AzureAccountTreeItemBase,
+    subscription: ISubscriptionContext,
+): SubscriptionTreeItemBase {
+    return new SubscriptionTreeItem(parent, subscription);
+}
+
+class SubscriptionTreeItem extends SubscriptionTreeItemBase implements SubscriptionTreeNode {
+    public readonly name: string;
+
     constructor(parent: AzExtParentTreeItem, root: ISubscriptionContext) {
         super(parent, root);
+        this.name = root.subscriptionDisplayName || "";
     }
 
     get treeItem(): AzExtTreeItem {
@@ -38,7 +47,7 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const client = getResourceManagementClient(this);
-        const aksClusterResources = [];
+        const aksClusterResources: Resource[] = [];
         const result = client.resources.list({
             filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'",
         });
@@ -46,7 +55,7 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
             aksClusterResources.push(...pageResources);
         }
 
-        return aksClusterResources.map((aksClusterResource) => new AksClusterTreeItem(this, aksClusterResource));
+        return aksClusterResources.map((aksClusterResource) => createChildClusterTreeNode(this, aksClusterResource));
     }
 
     public async refreshImpl(): Promise<void> {
@@ -56,14 +65,6 @@ export default class SubscriptionTreeItem extends SubscriptionTreeItemBase imple
         if (cloudExplorer.available) {
             cloudExplorer.api.refresh();
         }
-    }
-
-    public get name(): string {
-        return this.subscription.subscriptionDisplayName || "";
-    }
-
-    public get session(): ISubscriptionContext {
-        return this.session;
     }
 
     public readonly nodeType = "subscription";

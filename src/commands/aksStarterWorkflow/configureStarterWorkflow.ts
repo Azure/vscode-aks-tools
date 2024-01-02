@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterTreeItem } from "../utils/clusters";
+import { getAksClusterTreeNode } from "../utils/clusters";
 import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
 import { failed } from "../utils/errorable";
 
@@ -24,9 +24,9 @@ export function configureKustomizeStarterWorkflow(_context: IActionContext, targ
 async function configureNamedStarterWorkflow(target: unknown, workflowName: string) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    const cluster = getAksClusterTreeItem(target, cloudExplorer);
-    if (failed(cluster)) {
-        vscode.window.showErrorMessage(cluster.error);
+    const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
+    if (failed(clusterNode)) {
+        vscode.window.showErrorMessage(clusterNode.error);
         return;
     }
 
@@ -39,8 +39,8 @@ async function configureNamedStarterWorkflow(target: unknown, workflowName: stri
 
     const substitutedYaml = substituteClusterInWorkflowYaml(
         starterWorkflowYaml.result,
-        cluster.result.armId.split("/")[4],
-        cluster.result.name,
+        clusterNode.result.resourceGroupName,
+        clusterNode.result.name,
     );
 
     // Display it to the end-user in their vscode editor.

@@ -1,9 +1,8 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterSubscriptionItem, getContainerClient, getResourceManagementClient } from "../utils/clusters";
+import { getAksClusterSubscriptionNode, getContainerClient, getResourceManagementClient } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
-import SubscriptionTreeItem from "../../tree/subscriptionTreeItem";
 import { getExtension } from "../utils/host";
 import { CreateClusterDataProvider, CreateClusterPanel } from "../../panels/CreateClusterPanel";
 
@@ -15,13 +14,11 @@ import { CreateClusterDataProvider, CreateClusterPanel } from "../../panels/Crea
 export default async function aksCreateCluster(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
-    const cluster = getAksClusterSubscriptionItem(target, cloudExplorer);
-    if (failed(cluster)) {
-        vscode.window.showErrorMessage(cluster.error);
+    const subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
+    if (failed(subscriptionNode)) {
+        vscode.window.showErrorMessage(subscriptionNode.error);
         return;
     }
-
-    const subscriptionTreeItem = <SubscriptionTreeItem>cluster.result;
 
     const extension = getExtension();
     if (failed(extension)) {
@@ -31,12 +28,12 @@ export default async function aksCreateCluster(_context: IActionContext, target:
 
     const panel = new CreateClusterPanel(extension.result.extensionUri);
 
-    const resourceManagementClient = getResourceManagementClient(subscriptionTreeItem);
-    const containerServiceClient = getContainerClient(subscriptionTreeItem);
+    const resourceManagementClient = getResourceManagementClient(subscriptionNode.result);
+    const containerServiceClient = getContainerClient(subscriptionNode.result);
     const dataProvider = new CreateClusterDataProvider(
         resourceManagementClient,
         containerServiceClient,
-        subscriptionTreeItem.subscription,
+        subscriptionNode.result.subscription,
     );
 
     panel.show(dataProvider);
