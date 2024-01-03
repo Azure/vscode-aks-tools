@@ -295,7 +295,7 @@
                 },
                 {
                     "command": "aks.eraserTool",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
                     "group": "8@3"
                 },
                 {
