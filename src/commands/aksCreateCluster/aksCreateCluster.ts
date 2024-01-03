@@ -34,6 +34,7 @@ export default async function aksCreateCluster(_context: IActionContext, target:
         resourceManagementClient,
         containerServiceClient,
         subscriptionNode.result.subscription,
+        () => vscode.commands.executeCommand("aks.refreshSubscription", target),
     );
 
     panel.show(dataProvider);

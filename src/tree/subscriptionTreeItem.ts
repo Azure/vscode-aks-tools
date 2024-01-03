@@ -20,6 +20,10 @@ export interface SubscriptionTreeNode {
     readonly treeItem: AzExtTreeItem;
 }
 
+export function isSubscriptionTreeNode(node: unknown): node is SubscriptionTreeNode {
+    return node instanceof SubscriptionTreeItemBase;
+}
+
 export function createChildSubscriptionTreeItem(
     parent: AzureAccountTreeItemBase,
     subscription: ISubscriptionContext,
