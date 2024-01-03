@@ -34,6 +34,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         readonly resourceManagementClient: ResourceManagementClient,
         readonly containerServiceClient: ContainerServiceClient,
         readonly subscriptionContext: ISubscriptionContext,
+        readonly refreshTree: () => void,
     ) {}
 
     getTitle(): string {
@@ -141,6 +142,8 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             this.resourceManagementClient,
             this.subscriptionContext,
         );
+
+        this.refreshTree();
     }
 }
 
