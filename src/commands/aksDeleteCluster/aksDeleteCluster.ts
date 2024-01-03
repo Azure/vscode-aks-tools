@@ -5,6 +5,8 @@ import { deleteCluster, getAksClusterTreeNode } from "../utils/clusters";
 import { failed, succeeded } from "../utils/errorable";
 import { longRunning } from "../utils/host";
 
+const refreshIntervals = [1, 2, 5, 10, 30, 60, 120];
+
 export default async function aksDeleteCluster(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
@@ -33,6 +35,14 @@ export default async function aksDeleteCluster(_context: IActionContext, target:
 
         if (succeeded(result)) {
             vscode.window.showInformationMessage(result.result);
+
+            // Periodically refresh the subscription treeview, because the list-clusters API
+            // call still includes the cluster for a while after it's been deleted.
+            refreshIntervals.forEach((interval) => {
+                setTimeout(() => {
+                    vscode.commands.executeCommand("aks.refreshSubscription", clusterNode.result.subscriptionTreeNode);
+                }, interval * 1000);
+            });
         }
     }
 }

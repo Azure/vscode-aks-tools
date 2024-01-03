@@ -10,7 +10,7 @@ import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import * as azcs from "@azure/arm-containerservice";
 import { Errorable, failed, getErrorMessage, succeeded } from "./errorable";
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
-import { SubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
+import { SubscriptionTreeNode, isSubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
 import { getAksAadAccessToken } from "./authProvider";
 import * as yaml from "js-yaml";
 import * as fs from "fs";
@@ -114,6 +114,10 @@ export function getAksClusterSubscriptionNode(
     commandTarget: unknown,
     cloudExplorer: API<CloudExplorerV1>,
 ): Errorable<SubscriptionTreeNode> {
+    if (isSubscriptionTreeNode(commandTarget)) {
+        return { succeeded: true, result: commandTarget };
+    }
+
     if (!cloudExplorer.available) {
         return { succeeded: false, error: "Cloud explorer is unavailable." };
     }
