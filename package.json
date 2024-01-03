@@ -169,6 +169,10 @@
                 "title": "Run AKS Periscope"
             },
             {
+                "command": "aks.eraserTool",
+                "title": "Run Eraser Image Cleanup"
+            },
+            {
                 "command": "aks.installAzureServiceOperator",
                 "title": "Install Azure Service Operator"
             },
@@ -288,6 +292,11 @@
                     "command": "aks.periscope",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "8@2"
+                },
+                {
+                    "command": "aks.eraserTool",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
+                    "group": "8@3"
                 },
                 {
                     "command": "aks.showInPortal",
