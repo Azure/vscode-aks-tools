@@ -10,9 +10,9 @@
 * Update launch.json and tasks.json for webpack-dev.
 * Use new telemetry library.
 * Support telemetry for commands from webviews.
-* Dependent bot updates.
+* Dependabot updates.
 
-Thank you so much @sprab, @peterbom for feature work, collaboration and making this tool continously better. Thank you everyone whoc indirectly helped in building in any ideas for this release!
+Thank you so much @sprab, @peterbom for feature work, collaboration and making this tool continuously better. Thank you everyone who indirectly helped in building in any ideas for this release!
 
 ## [1.3.18]
 
