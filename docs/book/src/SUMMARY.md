@@ -22,6 +22,7 @@
   - [Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot](./features/inspektor-gadget.md)
   - [Collect TCP Dump](./features/tcp-dumps.md)
   - [Compare AKS Cluster](./features/aks-compare-cluster.md)
+  - [Run Image Cleaner Eraser Tool](./features/image-cleaner-eraser-tool.md)
 - [Release](./release.md)
   - [Releasing Information](./release/releasing.md)
 - [Contributing](./contributing.md)
