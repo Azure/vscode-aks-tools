@@ -1,5 +1,19 @@
 # Change Log
 
+## [1.4.0]
+
+* Run Eraser Tool on AKS Cluster.
+* Add refreshSubscription command to aksCreateCluster and aksDeleteCluster.
+* Refactor AzureAccountTreeItem and related files.
+* Simplify webview dev task problem matcher.
+* Refresh subscription.
+* Update launch.json and tasks.json for webpack-dev.
+* Use new telemetry library.
+* Support telemetry for commands from webviews.
+* Dependabot updates.
+
+Thank you so much @sprab, @peterbom for feature work, collaboration and making this tool continuously better. Thank you everyone who indirectly helped in building in any ideas for this release!
+
 ## [1.3.18]
 
 * Compare 2 AKS Cluster.
