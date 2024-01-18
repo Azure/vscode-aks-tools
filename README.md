@@ -1,5 +1,7 @@
 # Azure Kubernetes Service (AKS) Extension for Visual Studio Code
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8315/badge)](https://www.bestpractices.dev/projects/8315) [![Build & Publish](https://github.com/Azure/vscode-aks-tools/actions/workflows/publish.yml/badge.svg)](https://github.com/Azure/vscode-aks-tools/actions/workflows/publish.yml) [![Build](https://github.com/Azure/vscode-aks-tools/actions/workflows/build.yml/badge.svg)](https://github.com/Azure/vscode-aks-tools/actions/workflows/build.yml) [![Poll Starter Workflows](https://github.com/Azure/vscode-aks-tools/actions/workflows/poll-starter-workflows.yml/badge.svg)](https://github.com/Azure/vscode-aks-tools/actions/workflows/poll-starter-workflows.yml)
+
 * [Introduction](https://azure.github.io/vscode-aks-tools/index.html)
 * [Installation](https://azure.github.io/vscode-aks-tools/installation.html#installation)
 * [Feature List](https://azure.github.io/vscode-aks-tools/features/features.html)
