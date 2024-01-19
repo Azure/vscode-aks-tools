@@ -17,13 +17,14 @@ export async function run(): Promise<void> {
     try {
         return new Promise<void>((c, e) => {
             // Run the mocha test
-            mocha.run((failures) => {
+            // https://github.com/mochajs/mocha/issues/4625#issuecomment-1000683844
+            mocha.loadFilesAsync().then(() => mocha.run((failures) => {
                 if (failures > 0) {
                     e(new Error(`${failures} tests failed.`));
                 } else {
                     c();
                 }
-            });
+            })).catch(() => process.exitCode = 1);
         });
     } catch (err) {
         console.error(err);
