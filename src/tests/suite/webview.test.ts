@@ -4,7 +4,6 @@ import { CssRule, InitialState, ToVsCodeMsgDef } from "../../webview-contract/we
 import { BasePanel, PanelDataProvider } from "../../panels/BasePanel";
 import { getExtensionPath } from "../../commands/utils/host";
 import { map as errmap, Succeeded, succeeded } from "../../commands/utils/errorable";
-import { expect } from "chai";
 import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 
 const extensionPathResult = getExtensionPath();
@@ -12,7 +11,9 @@ const extensionUriResult = errmap(extensionPathResult, (p) => vscode.Uri.file(p)
 
 describe("Webview Styles", () => {
     it("should contain css variables and rules", async () => {
-        expect(succeeded(extensionUriResult)).to.be.true;
+
+        import("chai").then(chai => chai.expect(succeeded(extensionUriResult)).to.be.true);
+
         const extensionUri = (extensionUriResult as Succeeded<vscode.Uri>).result;
         const panel = new StyleTestPanel(extensionUri);
         const dataProvider = new StyleTestDataProvider();
@@ -22,8 +23,8 @@ describe("Webview Styles", () => {
         const rules = await dataProvider.rulesPromise;
 
         // Place breakpoint here to see CSS variables and rules in test host webview.
-        expect(cssVars).to.not.be.empty;
-        expect(rules).to.not.be.empty;
+        import("chai").then(chai => chai.expect(cssVars).to.not.be.empty);
+        import("chai").then(chai => chai.expect(rules).to.not.be.empty);
     });
 });
 
