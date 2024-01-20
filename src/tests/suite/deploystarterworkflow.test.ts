@@ -1,12 +1,11 @@
 import * as configureStarterWorkflow from "../../commands/utils/configureWorkflowHelper";
 import "sinon";
-import { expect } from "chai";
 import { Succeeded, succeeded } from "../../commands/utils/errorable";
 
 describe("Test getWorkflowYaml for missing file", () => {
     it("should return an error", () => {
         const result = configureStarterWorkflow.getWorkflowYaml("this-template-does-not-exist");
-        expect(succeeded(result)).to.be.false;
+        import("chai").then(chai => chai.expect(succeeded(result)).to.be.false);
     });
 });
 
@@ -21,21 +20,21 @@ describe("Test getWorkflowYaml for known files", () => {
     it("should return string content with expected placeholders", () => {
         knownWorkflowNames.forEach((workflowName) => {
             const result = configureStarterWorkflow.getWorkflowYaml(workflowName);
-            expect(succeeded(result)).to.be.true;
+            import("chai").then(chai => chai.expect(succeeded(result)).to.be.true);
             const content = (result as Succeeded<string>).result;
-            expect(content).to.contain(
+            import("chai").then(chai => chai.expect(content).to.contain(
                 'RESOURCE_GROUP: "your-resource-group"',
                 `resource group placeholder missing from ${workflowName}`,
-            );
-            expect(content).to.contain(
+            ));
+            import("chai").then(chai => chai.expect(content).to.contain(
                 'CLUSTER_NAME: "your-cluster-name"',
                 `cluster name placeholder missing from ${workflowName}`,
-            );
-            expect(content).not.to.contain(
+            ));
+            import("chai").then(chai => chai.expect(content).not.to.contain(
                 "<RESOURCE_GROUP>",
                 `incorrect placeholder <RESOURCE_GROUP> in ${workflowName}`,
-            );
-            expect(content).not.to.contain("<CLUSTER_NAME>", `incorrect placeholder <CLUSTER_NAME> in ${workflowName}`);
+            ));
+            import("chai").then(chai => chai.expect(content).not.to.contain("<CLUSTER_NAME>", `incorrect placeholder <CLUSTER_NAME> in ${workflowName}`));
         });
     });
 });
@@ -59,7 +58,7 @@ env:
             testResourceGroup,
             testClusterName,
         );
-        expect(result).to.contain(`RESOURCE_GROUP: "${testResourceGroup}"`);
-        expect(result).to.contain(`CLUSTER_NAME: "${testClusterName}"`);
+        import("chai").then(chai => chai.expect(result).to.contain(`RESOURCE_GROUP: "${testResourceGroup}"`));
+        import("chai").then(chai => chai.expect(result).to.contain(`CLUSTER_NAME: "${testClusterName}"`));
     });
 });
