@@ -35,7 +35,7 @@ class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
         super(parent);
 
         this.iconPath = assetUri("resources/aks-tools.png");
-        this.id = this.resource.name!;
+        this.id = `${this.resource.name!} ${parseResource(this.resource.id!).resourceGroupName!}`;
         this.armId = this.resource.id!;
         this.subscriptionTreeNode = parent;
     }
