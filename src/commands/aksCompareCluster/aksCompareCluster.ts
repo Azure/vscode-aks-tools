@@ -7,19 +7,21 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { SubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
 import { getExtension } from "../utils/host";
-import { Dictionary } from "../utils/dictionary";
 import * as tmpfile from "../utils/tempfile";
 import { longRunning } from "../utils/host";
+import { ManagedCluster } from "@azure/arm-containerservice";
 
 interface State {
     clusterGroupCompareFrom: ClusterNameItem;
     clusterGroupCompareWith: ClusterNameItem;
     clustername: string;
+    armid: string;
     subid: string | undefined;
 }
 
 interface ClusterNameItem extends QuickPickItem {
     name: string;
+    armid: string;
 }
 
 /**
@@ -42,17 +44,13 @@ export default async function aksCompareCluster(_context: IActionContext, target
         return;
     }
     const containerServiceClient = getContainerClient(subscriptionNode.result);
-    const clusterList: string[] = [];
-    const clusterResourceDictionary: Dictionary<string> = {};
+    const clusterList: ManagedCluster[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
         const iterator = containerServiceClient.managedClusters.list();
         for await (const clusters of iterator.byPage()) {
             const validClusters = clusters.filter((c) => c.id && c.name);
-            clusterList.push(...validClusters.map((c) => c.name!));
-            validClusters.forEach((c) => {
-                clusterResourceDictionary[c.name!] = c.id!;
-            });
+            clusterList.push(...validClusters.map((c) => ({ label: c.name!, name: c.name!, id: c.id!, location: c.location! })));
         }
     });
 
@@ -60,7 +58,7 @@ export default async function aksCompareCluster(_context: IActionContext, target
     const clusterGroupCompareWithStep = createQuickPickStep<State, ClusterNameItem>({
         placeholder: "Pick a cluster from group to compare with",
         shouldResume: () => Promise.resolve(false),
-        items: clusterList.map((name) => ({ label: name, name })),
+        items: clusterList.map(({ name, id }) => ({ label: name!, name: name!, armid: id! })),
         getActiveItem: (state) => state.clusterGroupCompareWith,
         storeItem: (state, item) => ({ ...state, clusterGroupCompareWith: item }),
     });
@@ -69,7 +67,7 @@ export default async function aksCompareCluster(_context: IActionContext, target
     const clusterGroupCompareFromStep = createQuickPickStep<State, ClusterNameItem>({
         placeholder: "Pick second cluster from group to compare from",
         shouldResume: () => Promise.resolve(false),
-        items: clusterList.map((name) => ({ label: name, name })),
+        items: clusterList.map(({ name, id }) => ({ label: name!, name: name!, armid: id! })),
         getActiveItem: (state) => state.clusterGroupCompareFrom,
         storeItem: (state, item) => ({ ...state, clusterGroupCompareFrom: item }),
     });
@@ -90,12 +88,11 @@ export default async function aksCompareCluster(_context: IActionContext, target
     }
 
     // Call compare cluster at this instance
-    await compareManagedCluster(state, clusterResourceDictionary, subscriptionNode.result);
+    await compareManagedCluster(state, subscriptionNode.result);
 }
 
 async function compareManagedCluster(
     state: State,
-    clusterResourceDictionary: Dictionary<string>,
     subscriptionNode: SubscriptionTreeNode,
 ) {
     await longRunning(
@@ -103,8 +100,8 @@ async function compareManagedCluster(
         async () => {
             const resourceManagementClient = getResourceManagementClient(subscriptionNode);
 
-            const resourceArmIDWith = clusterResourceDictionary[state.clusterGroupCompareWith.name];
-            const resourceArmIDFrom = clusterResourceDictionary[state.clusterGroupCompareFrom.name];
+            const resourceArmIDWith = state.clusterGroupCompareWith.armid;
+            const resourceArmIDFrom = state.clusterGroupCompareFrom.armid;
             // Example: GET https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerService/managedClusters/{resourceName}?api-version=2023-08-01
             // source of example: https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/get?view=rest-aks-2023-08-01&tabs=HTTP#code-try-0
             const clusterWithContent = await resourceManagementClient.resources.getById(
