@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.4.1]
+
+* Fix for making instance when cluster name is same but RG are different.
+* Changes in correlation with new GH Action Permission Changes.
+* Add badge for codeql and chai test fix.
+* Add codeql analysis for repo.
+* Add bestpractices progress and other badges.
+* Dependabot updates.
+
+Thank you so much @sprab for continued effort for testing changes for unique name fix and testing other feature, thanks @hsubramanianaks, @peterbom for reviews, collaboration. Thank you everyone who indirectly helped in building in any ideas for this release!
+
 ## [1.4.0]
 
 * Run Eraser Tool on AKS Cluster.
