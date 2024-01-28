@@ -469,7 +469,7 @@
         "@types/vscode": "^1.82.0",
         "@typescript-eslint/eslint-plugin": "^6.19.1",
         "@typescript-eslint/parser": "^6.19.1",
-        "@vscode/test-electron": "^2.3.8",
+        "@vscode/test-electron": "^2.3.9",
         "chai": "^5.0.0",
         "eslint": "^8.56.0",
         "eslint-webpack-plugin": "^4.0.1",
