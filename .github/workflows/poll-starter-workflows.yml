@@ -9,11 +9,22 @@ env:
   STARTER_WORKFLOW_PATH: "./resources/yaml/"
   STARTER_WORKFLOW_REPO_BRANCH: "main"
 
+permissions:
+  contents: read
+
 jobs:
   poll:
+    permissions:
+      contents: write  # for peter-evans/create-pull-request to create branch
+      pull-requests: write  # for peter-evans/create-pull-request to create a PR
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden Runner
+        uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Download starter workflows
         run: |
@@ -40,7 +51,7 @@ jobs:
           done
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38 # v5.0.2
         with:
           commit-message: update starter workflows
           title: Automated Update Starter Workflows
