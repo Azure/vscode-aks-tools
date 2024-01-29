@@ -467,7 +467,7 @@
         "@types/sinon": "^17.0.3",
         "@types/tmp": "^0.2.6",
         "@types/vscode": "^1.82.0",
-        "@typescript-eslint/eslint-plugin": "^6.19.1",
+        "@typescript-eslint/eslint-plugin": "^6.20.0",
         "@typescript-eslint/parser": "^6.20.0",
         "@vscode/test-electron": "^2.3.9",
         "chai": "^5.0.3",
