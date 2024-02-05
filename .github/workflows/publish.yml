@@ -52,7 +52,7 @@ jobs:
         body: Publish ${{ steps.changelog_reader.outputs.changes }}
     - name: Create vsix and publish to marketplace
       id: create_vsix
-      uses: HaaLeo/publish-vscode-extension@65512ae7dcf96159b51fdd7ed73eb17d5cacad33 # v1.5.0
+      uses: HaaLeo/publish-vscode-extension@5a88c65b39833230b296f5bb2125fd8bc75a25ed # v1.6.1
       with:
         pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
         registryUrl: https://marketplace.visualstudio.com
