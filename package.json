@@ -7,7 +7,7 @@
     "publisher": "ms-kubernetes-tools",
     "icon": "resources/aks-tools.png",
     "engines": {
-        "vscode": "^1.82.0"
+        "vscode": "^1.86.0"
     },
     "capabilities": {
         "untrustedWorkspaces": {
@@ -466,7 +466,7 @@
         "@types/semver": "^7.5.6",
         "@types/sinon": "^17.0.3",
         "@types/tmp": "^0.2.6",
-        "@types/vscode": "^1.82.0",
+        "@types/vscode": "^1.86.0",
         "@typescript-eslint/eslint-plugin": "^6.20.0",
         "@typescript-eslint/parser": "^6.20.0",
         "@vscode/test-electron": "^2.3.9",
