@@ -6,6 +6,8 @@ import { ResourceManagementClient } from "@azure/arm-resources";
 import { ContainerServiceClient } from "@azure/arm-containerservice";
 import { MonitorClient } from "@azure/arm-monitor";
 import { StorageManagementClient } from "@azure/arm-storage";
+import { ContainerRegistryManagementClient } from "@azure/arm-containerregistry";
+import { ContainerRegistryClient } from "@azure/container-registry";
 
 export function getSubscriptionClient(): SubscriptionClient {
     return new SubscriptionClient(getCredential(), { endpoint: getArmEndpoint() });
@@ -25,6 +27,14 @@ export function getMonitorClient(subscriptionId: string): MonitorClient {
 
 export function getStorageManagementClient(subscriptionId: string): StorageManagementClient {
     return new StorageManagementClient(getCredential(), subscriptionId, { endpoint: getArmEndpoint() });
+}
+
+export function getAcrManagementClient(subscriptionId: string): ContainerRegistryManagementClient {
+    return new ContainerRegistryManagementClient(getCredential(), subscriptionId, { endpoint: getArmEndpoint() });
+}
+
+export function getAcrClient(registryLoginServer: string): ContainerRegistryClient {
+    return new ContainerRegistryClient(registryLoginServer, getCredential(), { audience: getArmEndpoint() });
 }
 
 function getArmEndpoint(): string {

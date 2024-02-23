@@ -2,6 +2,9 @@ import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink
 import { ClusterPropertiesDefinition } from "./webviewDefinitions/clusterProperties";
 import { CreateClusterDefinition } from "./webviewDefinitions/createCluster";
 import { DetectorDefinition } from "./webviewDefinitions/detector";
+import { DraftDeploymentDefinition } from "./webviewDefinitions/draft/draftDeployment";
+import { DraftDockerfileDefinition } from "./webviewDefinitions/draft/draftDockerfile";
+import { DraftWorkflowDefinition } from "./webviewDefinitions/draft/draftWorkflow";
 import { KubectlDefinition } from "./webviewDefinitions/kubectl";
 import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget";
 import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
@@ -32,6 +35,9 @@ type AllWebviewDefinitions = {
     periscope: PeriscopeDefinition;
     createCluster: CreateClusterDefinition;
     detector: DetectorDefinition;
+    draftDeployment: DraftDeploymentDefinition;
+    draftDockerfile: DraftDockerfileDefinition;
+    draftWorkflow: DraftWorkflowDefinition;
     gadget: InspektorGadgetDefinition;
     kubectl: KubectlDefinition;
     aso: ASODefinition;

@@ -4,6 +4,7 @@ import {
     CloudExplorerV1,
     ClusterExplorerV1,
     ConfigurationV1,
+    KubectlV1,
     extension,
 } from "vscode-kubernetes-tools-api";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
@@ -20,6 +21,8 @@ import { TokenInfo } from "../../auth/types";
 import { AuthenticationSession, authentication } from "vscode";
 import { getTokenInfo } from "../../auth/azureAuth";
 import { getAksClient, listAll } from "./arm";
+import { withOptionalTempFile } from "./tempfile";
+import { invokeKubectlCommand } from "./kubectl";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -454,6 +457,29 @@ export async function getWindowsNodePoolKubernetesVersions(
             error: `Error retrieving Windows node pool Kubernetes versions for ${clusterName}: ${ex}`,
         };
     }
+}
+
+export async function getClusterNamespaces(
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<string[]>> {
+    const cluster = await getManagedCluster(subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `get namespace --no-headers -o custom-columns=":metadata.name"`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        return errmap(output, (sr) => sr.stdout.trim().split("\n"));
+    });
 }
 
 export async function deleteCluster(

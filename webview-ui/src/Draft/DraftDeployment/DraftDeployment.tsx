@@ -1,0 +1,693 @@
+import { FormEvent, useEffect } from "react";
+import { CreateParams, InitialState } from "../../../../src/webview-contract/webviewDefinitions/draft/draftDeployment";
+import {
+    DeploymentSpecType,
+    NewOrExisting,
+    Subscription,
+} from "../../../../src/webview-contract/webviewDefinitions/draft/types";
+import styles from "../Draft.module.css";
+import { useStateManagement } from "../../utilities/state";
+import { DraftDeploymentState, getExistingPaths, stateUpdater, vscode } from "./state";
+import { Maybe, isNothing, just, nothing } from "../../utilities/maybe";
+import {
+    Validatable,
+    fromNullable,
+    hasMessage,
+    invalid,
+    isValid,
+    missing,
+    orDefault,
+    toNullable,
+    valid,
+} from "../../utilities/validation";
+import {
+    EventHandlerFunc,
+    ensureAcrImageTagsLoaded,
+    ensureAcrNamesLoaded,
+    ensureAcrRepositoryNamesLoaded,
+    ensureClusterNamesLoaded,
+    ensureClusterNamespacesLoaded,
+    ensureResourceGroupsLoaded,
+    ensureSubscriptionsLoaded,
+} from "./dataLoading";
+import { Lazy, isLoaded, map as lazyMap } from "../../utilities/lazy";
+import { ResourceSelector } from "../../components/ResourceSelector";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+import {
+    VSCodeButton,
+    VSCodeLink,
+    VSCodeRadio,
+    VSCodeRadioGroup,
+    VSCodeTextField,
+} from "@vscode/webview-ui-toolkit/react";
+import { faFolder } from "@fortawesome/free-regular-svg-icons";
+import { NewImageTagDialog } from "../dialogs/NewImageTagDialog";
+import { NewNamespaceDialog } from "../dialogs/NewNamespaceDialog";
+import { NewRepositoryDialog } from "../dialogs/NewRepositoryDialog";
+
+export function DraftDeployment(initialState: InitialState) {
+    const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
+
+    const updates: EventHandlerFunc[] = [];
+    const {
+        lazySubscriptions,
+        lazyResourceGroups,
+        lazyClusterNames,
+        lazyClusterNamespaces,
+        lazyAcrNames,
+        lazyRepositoryNames,
+        lazyImageTags,
+    } = prepareData(state, updates);
+    useEffect(() => {
+        updates.map((fn) => fn(eventHandlers));
+    });
+
+    function handleSubscriptionSelect(subscription: Subscription | null) {
+        const validated =
+            subscription === null ? missing<Subscription>("Subscription is required.") : valid(subscription);
+        eventHandlers.onSetSubscription(validated);
+    }
+
+    function handleClusterResourceGroupSelect(resourceGroup: string | null) {
+        const validated =
+            resourceGroup === null ? missing<string>("Cluster resource group is required.") : valid(resourceGroup);
+        eventHandlers.onSetClusterResourceGroup(validated);
+    }
+
+    function handleClusterSelect(cluster: string | null) {
+        const validated = cluster === null ? missing<string>("Cluster is required.") : valid(cluster);
+        eventHandlers.onSetCluster(validated);
+    }
+
+    function handleAcrResourceGroupSelect(resourceGroup: string | null) {
+        const validated =
+            resourceGroup === null ? missing<string>("ACR resource group is required.") : valid(resourceGroup);
+        eventHandlers.onSetAcrResourceGroup(validated);
+    }
+
+    function handleAcrSelect(acr: string | null) {
+        const validated = acr === null ? missing<string>("ACR is required.") : valid(acr);
+        eventHandlers.onSetAcr(validated);
+    }
+
+    function handleRepositorySelect(repository: NewOrExisting<string> | null) {
+        const validated =
+            repository === null ? missing<NewOrExisting<string>>("Repository is required.") : valid(repository);
+        eventHandlers.onSetAcrRepository(validated);
+    }
+
+    function handleNewRepositoryClick() {
+        eventHandlers.onSetDialogContent({
+            dialog: "newRepository",
+            content: {
+                repository: fromNullable(state.newAcrRepository),
+            },
+        });
+        eventHandlers.onSetDialogVisibility({
+            dialog: "newRepository",
+            shown: true,
+        });
+    }
+
+    function handleImageTagSelect(imageTag: NewOrExisting<string> | null) {
+        const validated =
+            imageTag === null ? missing<NewOrExisting<string>>("Image tag is required.") : valid(imageTag);
+        eventHandlers.onSetAcrRepoTag(validated);
+    }
+
+    function handleImageTagChangeForNewRepository(e: Event | FormEvent<HTMLElement>) {
+        const value = (e.currentTarget as HTMLInputElement).value;
+        const validated = getValidatedImageTagForNewRepository(value);
+        eventHandlers.onSetAcrRepoTag(validated);
+
+        function getValidatedImageTagForNewRepository(tag: string): Validatable<NewOrExisting<string>> {
+            if (!tag) return missing("Image tag name is required.");
+            return valid({
+                isNew: true,
+                value: tag,
+            });
+        }
+    }
+
+    function handleNewImageTagClick() {
+        eventHandlers.onSetDialogContent({
+            dialog: "newImageTag",
+            content: {
+                imageTag: fromNullable(state.newAcrRepoTag),
+            },
+        });
+        eventHandlers.onSetDialogVisibility({
+            dialog: "newImageTag",
+            shown: true,
+        });
+    }
+
+    function handleChooseLocationClick() {
+        vscode.postPickLocationRequest({
+            defaultPath: state.workspaceConfig.fullPath,
+            type: "directory",
+            title: "Location to save deployment files",
+            buttonLabel: "Select",
+        });
+    }
+
+    function handleDeploymentSpecTypeChange(e: Event | FormEvent<HTMLElement>) {
+        const type = (e.currentTarget as HTMLInputElement).value as DeploymentSpecType;
+        eventHandlers.onSetDeploymentSpecType(type);
+    }
+
+    function handleApplicationNameChange(e: Event | FormEvent<HTMLElement>) {
+        const name = (e.currentTarget as HTMLInputElement).value;
+        const validated = getValidatedApplicationName(name);
+        eventHandlers.onSetApplicationName(validated);
+
+        function getValidatedApplicationName(name: string): Validatable<string> {
+            if (!name) return missing("Application name is required.");
+
+            // TODO: further validation
+            return valid(name);
+        }
+    }
+
+    function handlePortChange(e: Event | FormEvent<HTMLElement>) {
+        const elem = e.currentTarget as HTMLInputElement;
+        const port = parseInt(elem.value);
+        const validated = getValidatedPort(port);
+        eventHandlers.onSetPort(validated);
+
+        function getValidatedPort(port: number): Validatable<number> {
+            if (Number.isNaN(port)) {
+                return invalid(port, "Port must be a number.");
+            }
+            if (port < 1 || port > 65535) {
+                return invalid(port, "Port number must be between 1 and 65535.");
+            }
+
+            return valid(port);
+        }
+    }
+
+    function handleNamespaceSelect(namespace: NewOrExisting<string> | null) {
+        const validated =
+            namespace === null ? missing<NewOrExisting<string>>("Namespace is required.") : valid(namespace);
+        eventHandlers.onSetClusterNamespace(validated);
+    }
+
+    function handleNewNamespaceClick() {
+        eventHandlers.onSetDialogContent({
+            dialog: "newClusterNamespace",
+            content: {
+                namespace: fromNullable(state.newClusterNamespace),
+            },
+        });
+        eventHandlers.onSetDialogVisibility({
+            dialog: "newClusterNamespace",
+            shown: true,
+        });
+    }
+
+    function validate(): Maybe<CreateParams> {
+        if (!isValid(state.subscription)) return nothing();
+        if (!isValid(state.location)) return nothing();
+        if (!isValid(state.applicationName)) return nothing();
+        if (!isValid(state.port)) return nothing();
+        if (!isValid(state.clusterNamespace)) return nothing();
+        if (!isValid(state.acrResourceGroup)) return nothing();
+        if (!isValid(state.acr)) return nothing();
+        if (!isValid(state.acrRepository)) return nothing();
+        if (!isValid(state.acrRepoTag)) return nothing();
+
+        const result: CreateParams = {
+            subscriptionId: state.subscription.value.id,
+            location: state.location.value,
+            deploymentSpecType: state.deploymentSpecType,
+            applicationName: state.applicationName.value,
+            port: state.port.value,
+            namespace: state.clusterNamespace.value.value,
+            acrResourceGroup: state.acrResourceGroup.value,
+            acrName: state.acr.value,
+            repositoryName: state.acrRepository.value.value,
+            tag: state.acrRepoTag.value.value,
+        };
+
+        return just(result);
+    }
+
+    function handleFormSubmit(e: FormEvent) {
+        e.preventDefault();
+        const createParams = validate();
+        if (isNothing(createParams)) {
+            return;
+        }
+
+        eventHandlers.onSetCreating();
+        vscode.postCreateDeploymentRequest(createParams.value);
+    }
+
+    const [manifests, helm, kustomize]: DeploymentSpecType[] = ["manifests", "helm", "kustomize"];
+
+    const lazyAllNamespaces = getNewAndExisting(lazyClusterNamespaces, state.newClusterNamespace);
+    const lazyAllRepositories = getNewAndExisting(lazyRepositoryNames, state.newAcrRepository);
+    const lazyAllImageTags = getNewAndExisting(lazyImageTags, state.newAcrRepoTag);
+
+    const existingFiles = getExistingPaths(state.deploymentSpecType, state.existingFiles);
+
+    return (
+        <>
+            <form className={styles.wrapper} onSubmit={handleFormSubmit}>
+                <p>
+                    DRAFT makes it easier for developers to get started building apps that run on Kubernetes by taking a
+                    non-containerized application and generating the Dockerfiles, Kubernetes manifest, Helm charts,
+                    Kustomize configuration, and other artifacts associated with a containerized application. Draft can
+                    also generate a GitHub actions workflow file to quickly build and deploy applications onto any
+                    Kubernetes cluster.
+                </p>
+
+                <fieldset className={styles.inputContainer} disabled={state.status !== "Editing"}>
+                    <label htmlFor="subscription-input" className={styles.label}>
+                        Subscription *
+                    </label>
+                    <ResourceSelector<Subscription>
+                        id="subscription-input"
+                        className={styles.control}
+                        resources={lazySubscriptions}
+                        selectedItem={toNullable(state.subscription)}
+                        valueGetter={(l) => l.id}
+                        labelGetter={(l) => l.name}
+                        onSelect={handleSubscriptionSelect}
+                    />
+                    {hasMessage(state.subscription) && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                            {state.subscription.message}
+                        </span>
+                    )}
+
+                    {isValid(state.subscription) && (
+                        <>
+                            <h3>Cluster details</h3>
+                            <label htmlFor="cluster-rg-input" className={styles.label}>
+                                Cluster Resource Group *
+                            </label>
+                            <ResourceSelector<string>
+                                id="cluster-rg-input"
+                                className={styles.control}
+                                resources={lazyResourceGroups}
+                                selectedItem={toNullable(state.clusterResourceGroup)}
+                                valueGetter={(g) => g}
+                                labelGetter={(g) => g}
+                                onSelect={handleClusterResourceGroupSelect}
+                            />
+                            {hasMessage(state.clusterResourceGroup) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.clusterResourceGroup.message}
+                                </span>
+                            )}
+                        </>
+                    )}
+
+                    {isValid(state.clusterResourceGroup) && (
+                        <>
+                            <label htmlFor="cluster-input" className={styles.label}>
+                                Cluster *
+                            </label>
+                            <ResourceSelector<string>
+                                id="cluster-input"
+                                className={styles.control}
+                                resources={lazyClusterNames}
+                                selectedItem={toNullable(state.cluster)}
+                                valueGetter={(c) => c}
+                                labelGetter={(c) => c}
+                                onSelect={handleClusterSelect}
+                            />
+                            {hasMessage(state.cluster) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.cluster.message}
+                                </span>
+                            )}
+                        </>
+                    )}
+
+                    {isValid(state.subscription) && (
+                        <>
+                            <h3 className={styles.fullWidth}>Azure Container Registry details</h3>
+                            <label htmlFor="acr-rg-input" className={styles.label}>
+                                ACR Resource Group *
+                            </label>
+                            <ResourceSelector<string>
+                                id="acr-rg-input"
+                                className={styles.control}
+                                resources={lazyResourceGroups}
+                                selectedItem={toNullable(state.acrResourceGroup)}
+                                valueGetter={(g) => g}
+                                labelGetter={(g) => g}
+                                onSelect={handleAcrResourceGroupSelect}
+                            />
+                            {hasMessage(state.acrResourceGroup) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.acrResourceGroup.message}
+                                </span>
+                            )}
+                        </>
+                    )}
+
+                    {isValid(state.acrResourceGroup) && (
+                        <>
+                            <label htmlFor="acr-input" className={styles.label}>
+                                Container Registry *
+                            </label>
+                            <ResourceSelector<string>
+                                id="acr-input"
+                                className={styles.control}
+                                resources={lazyAcrNames}
+                                selectedItem={toNullable(state.acr)}
+                                valueGetter={(c) => c}
+                                labelGetter={(c) => c}
+                                onSelect={handleAcrSelect}
+                            />
+                            {hasMessage(state.acr) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.acr.message}
+                                </span>
+                            )}
+                        </>
+                    )}
+
+                    {isValid(state.acr) && (
+                        <>
+                            <label htmlFor="acr-repo-input" className={styles.label}>
+                                Repository *
+                            </label>
+                            <ResourceSelector<NewOrExisting<string>>
+                                id="acr-repo-input"
+                                className={styles.control}
+                                resources={lazyAllRepositories}
+                                selectedItem={toNullable(state.acrRepository)}
+                                valueGetter={(r) => r.value}
+                                labelGetter={(r) => (r.isNew ? `(New) ${r.value}` : r.value)}
+                                onSelect={handleRepositorySelect}
+                            />
+
+                            {isLoaded(lazyRepositoryNames) && (
+                                <div className={styles.controlSupplement}>
+                                    <VSCodeButton appearance="icon" onClick={handleNewRepositoryClick}>
+                                        <span className={styles.iconButton}>
+                                            <FontAwesomeIcon icon={faPlus} />
+                                            &nbsp;Create new
+                                        </span>
+                                    </VSCodeButton>
+                                </div>
+                            )}
+
+                            {hasMessage(state.acrRepository) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.acrRepository.message}
+                                </span>
+                            )}
+                        </>
+                    )}
+
+                    {isValid(state.acrRepository) && (
+                        <>
+                            <label htmlFor="acr-image-tag-input" className={styles.label}>
+                                Image tag *
+                            </label>
+                            {!state.acrRepository.value.isNew && (
+                                <>
+                                    <ResourceSelector<NewOrExisting<string>>
+                                        id="acr-image-tag-input"
+                                        className={styles.control}
+                                        resources={lazyAllImageTags}
+                                        selectedItem={toNullable(state.acrRepoTag)}
+                                        valueGetter={(r) => r.value}
+                                        labelGetter={(r) => (r.isNew ? `(New) ${r.value}` : r.value)}
+                                        onSelect={handleImageTagSelect}
+                                    />
+
+                                    {isLoaded(lazyImageTags) && (
+                                        <div className={styles.controlSupplement}>
+                                            <VSCodeButton appearance="icon" onClick={handleNewImageTagClick}>
+                                                <span className={styles.iconButton}>
+                                                    <FontAwesomeIcon icon={faPlus} />
+                                                    &nbsp;Create new
+                                                </span>
+                                            </VSCodeButton>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {state.acrRepository.value.isNew && (
+                                <VSCodeTextField
+                                    id="acr-image-tag-input"
+                                    className={styles.control}
+                                    value={isValid(state.acrRepoTag) ? state.acrRepoTag.value.value : ""}
+                                    onBlur={handleImageTagChangeForNewRepository}
+                                    onInput={handleImageTagChangeForNewRepository}
+                                />
+                            )}
+
+                            {hasMessage(state.acrRepoTag) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.acrRepoTag.message}
+                                </span>
+                            )}
+                        </>
+                    )}
+
+                    <h3 className={styles.fullWidth}>Deployment details</h3>
+                    <label htmlFor="location-input" className={styles.label}>
+                        Location
+                    </label>
+                    <VSCodeTextField
+                        id="location-input"
+                        readOnly
+                        value={`.${state.workspaceConfig.pathSeparator}${state.location.value}`}
+                        className={styles.control}
+                    />
+                    <div className={styles.controlSupplement}>
+                        <VSCodeButton appearance="icon" onClick={handleChooseLocationClick}>
+                            <span className={styles.iconButton}>
+                                <FontAwesomeIcon icon={faFolder} />
+                                &nbsp;Choose location
+                            </span>
+                        </VSCodeButton>
+                    </div>
+                    {hasMessage(state.location) && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                            {state.location.message}
+                        </span>
+                    )}
+
+                    <label htmlFor="deployment-type-input" className={styles.label}>
+                        Type
+                    </label>
+                    <VSCodeRadioGroup
+                        id="deployment-type-input"
+                        className={styles.control}
+                        value={state.deploymentSpecType}
+                        orientation="vertical"
+                        onChange={handleDeploymentSpecTypeChange}
+                    >
+                        <VSCodeRadio value={manifests}>Manifests</VSCodeRadio>
+                        <VSCodeRadio value={helm}>Helm</VSCodeRadio>
+                        <VSCodeRadio value={kustomize}>Kustomize</VSCodeRadio>
+                    </VSCodeRadioGroup>
+
+                    <label htmlFor="app-name-input" className={styles.label}>
+                        Application name *
+                    </label>
+                    <VSCodeTextField
+                        id="app-name-input"
+                        value={orDefault(state.applicationName, "")}
+                        className={styles.control}
+                        onBlur={handleApplicationNameChange}
+                        onInput={handleApplicationNameChange}
+                    />
+                    {hasMessage(state.applicationName) && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                            {state.applicationName.message}
+                        </span>
+                    )}
+
+                    <label htmlFor="port-input" className={styles.label}>
+                        Application port *
+                    </label>
+                    <input
+                        type="number"
+                        id="port-input"
+                        className={styles.control}
+                        value={orDefault(state.port, "")}
+                        onInput={handlePortChange}
+                    />
+                    {hasMessage(state.port) && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                            {state.port.message}
+                        </span>
+                    )}
+
+                    {isValid(state.cluster) && (
+                        <>
+                            <label htmlFor="namespace-input" className={styles.label}>
+                                Namespace *
+                            </label>
+                            <ResourceSelector<NewOrExisting<string>>
+                                id="namespace-input"
+                                className={styles.control}
+                                resources={lazyAllNamespaces}
+                                selectedItem={toNullable(state.clusterNamespace)}
+                                valueGetter={(n) => n.value}
+                                labelGetter={(n) => (n.isNew ? `(New) ${n.value}` : n.value)}
+                                onSelect={handleNamespaceSelect}
+                            />
+
+                            {isLoaded(lazyClusterNamespaces) && (
+                                <div className={styles.controlSupplement}>
+                                    <VSCodeButton appearance="icon" onClick={handleNewNamespaceClick}>
+                                        <span className={styles.iconButton}>
+                                            <FontAwesomeIcon icon={faPlus} />
+                                            &nbsp;Create new
+                                        </span>
+                                    </VSCodeButton>
+                                </div>
+                            )}
+
+                            {hasMessage(state.clusterNamespace) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.clusterNamespace.message}
+                                </span>
+                            )}
+                        </>
+                    )}
+                </fieldset>
+
+                <div className={styles.buttonContainer}>
+                    {state.status !== "Created" && (
+                        <VSCodeButton type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
+                            Create
+                        </VSCodeButton>
+                    )}
+                </div>
+            </form>
+
+            {existingFiles.length > 0 && (
+                <>
+                    <h3>Files</h3>
+                    <ul className={styles.existingFileList}>
+                        {existingFiles.map((path, i) => (
+                            <li key={i}>
+                                <VSCodeLink
+                                    href="#"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        vscode.postOpenFileRequest(path);
+                                    }}
+                                >
+                                    {path}
+                                </VSCodeLink>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            )}
+
+            {isLoaded(lazyClusterNamespaces) && (
+                <NewNamespaceDialog
+                    state={state.allDialogsState.newClusterNamespaceState}
+                    existingNamespaces={lazyClusterNamespaces.value}
+                    eventHandlers={eventHandlers}
+                    onSetNewClusterNamespace={eventHandlers.onSetNewClusterNamespace}
+                />
+            )}
+            {isLoaded(lazyRepositoryNames) && (
+                <NewRepositoryDialog
+                    state={state.allDialogsState.newRepositoryState}
+                    existingRepositories={lazyRepositoryNames.value}
+                    eventHandlers={eventHandlers}
+                    onSetNewAcrRepository={eventHandlers.onSetNewAcrRepository}
+                />
+            )}
+            {isLoaded(lazyImageTags) && (
+                <NewImageTagDialog
+                    state={state.allDialogsState.newImageTagState}
+                    existingTags={lazyImageTags.value}
+                    eventHandlers={eventHandlers}
+                    onSetNewAcrRepoTag={eventHandlers.onSetNewAcrRepoTag}
+                />
+            )}
+        </>
+    );
+}
+
+type LocalData = {
+    lazySubscriptions: Lazy<Subscription[]>;
+    lazyResourceGroups: Lazy<string[]>;
+    lazyClusterNames: Lazy<string[]>;
+    lazyClusterNamespaces: Lazy<string[]>;
+    lazyAcrNames: Lazy<string[]>;
+    lazyRepositoryNames: Lazy<string[]>;
+    lazyImageTags: Lazy<string[]>;
+};
+
+function prepareData(state: DraftDeploymentState, updates: EventHandlerFunc[]): LocalData {
+    return {
+        lazySubscriptions: ensureSubscriptionsLoaded(state.azureReferenceData, updates),
+        lazyResourceGroups: ensureResourceGroupsLoaded(
+            state.azureReferenceData,
+            toNullable(state.subscription),
+            updates,
+        ),
+        lazyClusterNames: ensureClusterNamesLoaded(
+            state.azureReferenceData,
+            toNullable(state.subscription),
+            toNullable(state.clusterResourceGroup),
+            updates,
+        ),
+        lazyAcrNames: ensureAcrNamesLoaded(
+            state.azureReferenceData,
+            toNullable(state.subscription),
+            toNullable(state.acrResourceGroup),
+            updates,
+        ),
+        lazyRepositoryNames: ensureAcrRepositoryNamesLoaded(
+            state.azureReferenceData,
+            toNullable(state.subscription),
+            toNullable(state.acrResourceGroup),
+            toNullable(state.acr),
+            updates,
+        ),
+        lazyImageTags: ensureAcrImageTagsLoaded(
+            state.azureReferenceData,
+            toNullable(state.subscription),
+            toNullable(state.acrResourceGroup),
+            toNullable(state.acr),
+            isValid(state.acrRepository) && !state.acrRepository.value.isNew ? state.acrRepository.value.value : null,
+            updates,
+        ),
+        lazyClusterNamespaces: ensureClusterNamespacesLoaded(
+            state.azureReferenceData,
+            toNullable(state.subscription),
+            toNullable(state.clusterResourceGroup),
+            toNullable(state.cluster),
+            updates,
+        ),
+    };
+}
+
+function getNewAndExisting<T>(existing: Lazy<T[]>, newItem: T | null): Lazy<NewOrExisting<T>[]> {
+    const wrappedExisting = lazyMap(existing, (items) => items.map((value) => ({ isNew: false, value })));
+    return newItem !== null
+        ? lazyMap(wrappedExisting, (items) => [{ isNew: true, value: newItem }, ...items])
+        : wrappedExisting;
+}
