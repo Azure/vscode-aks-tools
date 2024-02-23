@@ -12,6 +12,7 @@ import { Kubectl } from "./Kubectl/Kubectl";
 import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperator";
 import { ClusterProperties } from "./ClusterProperties/ClusterProperties";
 import { TcpDump } from "./TCPDump/TcpDump";
+import { DraftDeployment, DraftDockerfile, DraftWorkflow } from "./Draft";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -46,6 +47,9 @@ function getVsCodeContent(): JSX.Element {
         clusterProperties: () => <ClusterProperties {...getInitialState()} />,
         periscope: () => <Periscope {...getInitialState()} />,
         detector: () => <Detector {...getInitialState()} />,
+        draftDeployment: () => <DraftDeployment {...getInitialState()} />,
+        draftDockerfile: () => <DraftDockerfile {...getInitialState()} />,
+        draftWorkflow: () => <DraftWorkflow {...getInitialState()} />,
         gadget: () => <InspektorGadget {...getInitialState()} />,
         kubectl: () => <Kubectl {...getInitialState()} />,
         aso: () => <AzureServiceOperator {...getInitialState()} />,

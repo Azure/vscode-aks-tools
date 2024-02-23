@@ -12,8 +12,16 @@ import {
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { RoleAssignment } from "@azure/arm-authorization";
+import { ResourceManagementClient } from "@azure/arm-resources";
+import { ContainerRegistryManagementClient, Registry } from "@azure/arm-containerregistry";
+import { ContainerRegistryClient } from "@azure/container-registry";
+import { ContainerServiceClient } from "@azure/arm-containerservice";
+import { PagedAsyncIterableIterator } from "@azure/core-paging";
+
+export type AzureLoginStatus = "Initializing" | "LoggingIn" | "LoggedIn" | "LoggedOut";
 
 export interface AzureAccountExtensionApi {
+    readonly status: AzureLoginStatus;
     readonly filters: AzureResourceFilter[];
     readonly sessions: AzureSession[];
     readonly subscriptions: AzureSubscription[];
@@ -63,7 +71,110 @@ export function getAzureAccountExtensionApi(): Errorable<AzureAccountExtensionAp
         return { succeeded: false, error: "Azure extension not found." };
     }
 
-    return { succeeded: true, result: azureAccountExtension.exports.api };
+    const result: AzureAccountExtensionApi = azureAccountExtension.exports.api;
+    if (result.status !== "LoggedIn") {
+        return { succeeded: false, error: `Azure account is not logged in: ${result.status}` };
+    }
+
+    return { succeeded: true, result };
+}
+
+// This is implemented as async, even though it's currently synchronous. If/when we move to the new
+// Azure authentication library, it will need to be async.
+export async function getAzureSubscriptions(azAccount: AzureAccountExtensionApi): Promise<AzureSubscription[]> {
+    // TODO: Change to use @microsoft/vscode-azext-azureauth, see:
+    //       - https://github.com/microsoft/vscode-azure-account?tab=readme-ov-file#azure-account-and-sign-in
+    //       - https://github.com/Azure/azure-sdk-for-js/issues/22904
+    //       - https://www.npmjs.com/package/@microsoft/vscode-azext-azureauth
+    // return await this.subscriptionProvider.getSubscriptions(true);
+    // NOTE: The Azure Account extension stores its filtered list of subscriptions under "azure.resourceFilter"
+    //       in VS Code settings. The new library seems to use "azureResourceGroups.selectedSubscriptions"
+    //       instead, meaning that we would need to either:
+    //      - Migrate the existing settings; or
+    //      - Extend `VSCodeAzureSubscriptionProvider` with an implementation of `getSubscriptionFilters`
+    //        which uses the old settings.
+
+    return azAccount.filters;
+}
+
+export async function getAzureSubscription(
+    azAccount: AzureAccountExtensionApi,
+    subscriptionId: string,
+): Promise<Errorable<AzureSubscription>> {
+    const subscriptions = await getAzureSubscriptions(azAccount);
+    const subscription = subscriptions.find(
+        (subscription) => subscription.subscription.subscriptionId === subscriptionId,
+    );
+    if (!subscription) {
+        return { succeeded: false, error: `Subscription ${subscriptionId} not found` };
+    }
+
+    return { succeeded: true, result: subscription };
+}
+
+export function getResourceManagementClient(azureSubscription: AzureSubscription): ResourceManagementClient {
+    return new ResourceManagementClient(
+        azureSubscription.session.credentials2!,
+        azureSubscription.subscription.subscriptionId!,
+        {
+            endpoint: azureSubscription.session.environment.resourceManagerEndpointUrl,
+        },
+    );
+}
+
+export function getAcrMgtClient(azureSubscription: AzureSubscription): ContainerRegistryManagementClient {
+    return new ContainerRegistryManagementClient(
+        azureSubscription.session.credentials2!,
+        azureSubscription.subscription.subscriptionId!,
+        {
+            endpoint: azureSubscription.session.environment.resourceManagerEndpointUrl,
+        },
+    );
+}
+
+export async function getAcrClient(
+    azureSubscription: AzureSubscription,
+    resourceGroup: string,
+    acrName: string,
+): Promise<Errorable<ContainerRegistryClient>> {
+    const registry = await getAcrRegistry(azureSubscription, resourceGroup, acrName);
+    if (failed(registry)) {
+        return registry;
+    }
+
+    const result = new ContainerRegistryClient(
+        `https://${registry.result.loginServer}`,
+        azureSubscription.session.credentials2!,
+        {
+            audience: azureSubscription.session.environment.resourceManagerEndpointUrl,
+        },
+    );
+
+    return { succeeded: true, result };
+}
+
+export async function getAcrRegistry(
+    azureSubscription: AzureSubscription,
+    resourceGroup: string,
+    acrName: string,
+): Promise<Errorable<Registry>> {
+    const acrMgtClient = getAcrMgtClient(azureSubscription);
+    const registry = await acrMgtClient.registries.get(resourceGroup, acrName);
+    if (!registry) {
+        return { succeeded: false, error: `ACR ${acrName} not found` };
+    }
+
+    return { succeeded: true, result: registry };
+}
+
+export function getAksClient(azureSubscription: AzureSubscription): ContainerServiceClient {
+    return new ContainerServiceClient(
+        azureSubscription.session.credentials2!,
+        azureSubscription.subscription.subscriptionId!,
+        {
+            endpoint: azureSubscription.session.environment.resourceManagerEndpointUrl,
+        },
+    );
 }
 
 export async function getServicePrincipalAccess(
@@ -232,4 +343,12 @@ function isUnauthorizedError(e: unknown): boolean {
         e.code === "AuthorizationFailed" &&
         e.statusCode === 403
     );
+}
+
+export async function listAll<T>(iterator: PagedAsyncIterableIterator<T>): Promise<T[]> {
+    const all: T[] = [];
+    for await (const page of iterator.byPage()) {
+        all.push(...page);
+    }
+    return all;
 }

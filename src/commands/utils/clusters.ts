@@ -19,10 +19,24 @@ import { AuthenticationResult } from "@azure/msal-node";
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
 import { dirSync } from "tmp";
+import { AzExtServiceClientCredentials } from "@microsoft/vscode-azext-utils";
+import { Environment } from "@azure/ms-rest-azure-env";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
     readonly kubeconfigYaml: string;
+}
+
+export interface ClusterContext {
+    subscription: SubscriptionContext;
+    resourceGroupName: string;
+    name: string;
+}
+
+export interface SubscriptionContext {
+    subscriptionId: string;
+    credentials: AzExtServiceClientCredentials;
+    environment: Environment;
 }
 
 export async function getKubernetesClusterInfo(
@@ -139,32 +153,34 @@ export function getAksClusterSubscriptionNode(
 }
 
 export async function getKubeconfigYaml(
-    clusterNode: AksClusterTreeNode,
+    clusterContext: ClusterContext,
     managedCluster: azcs.ManagedCluster,
 ): Promise<Errorable<string>> {
-    const client = getContainerClient(clusterNode);
-    return managedCluster.aadProfile ? getAadKubeconfig(clusterNode, client) : getNonAadKubeconfig(clusterNode, client);
+    const client = getContainerClient(clusterContext);
+    return managedCluster.aadProfile
+        ? getAadKubeconfig(clusterContext, client)
+        : getNonAadKubeconfig(clusterContext, client);
 }
 
 async function getNonAadKubeconfig(
-    clusterNode: AksClusterTreeNode,
+    clusterContext: ClusterContext,
     client: azcs.ContainerServiceClient,
 ): Promise<Errorable<string>> {
     let clusterUserCredentials: azcs.CredentialResults;
 
     try {
         clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(
-            clusterNode.resourceGroupName,
-            clusterNode.name,
+            clusterContext.resourceGroupName,
+            clusterContext.name,
         );
     } catch (e) {
         return {
             succeeded: false,
-            error: `Failed to retrieve user credentials for non-AAD cluster ${clusterNode.name}: ${e}`,
+            error: `Failed to retrieve user credentials for non-AAD cluster ${clusterContext.name}: ${e}`,
         };
     }
 
-    return getClusterUserKubeconfig(clusterUserCredentials, clusterNode.name);
+    return getClusterUserKubeconfig(clusterUserCredentials, clusterContext.name);
 }
 
 type KubeConfigExecBlock = {
@@ -183,7 +199,7 @@ type KubeConfig = {
 };
 
 async function getAadKubeconfig(
-    clusterNode: AksClusterTreeNode,
+    clusterContext: ClusterContext,
     client: azcs.ContainerServiceClient,
 ): Promise<Errorable<string>> {
     let clusterUserCredentials: azcs.CredentialResults;
@@ -191,19 +207,19 @@ async function getAadKubeconfig(
     try {
         // For AAD clusters, force the credentials to be in 'exec' format.
         clusterUserCredentials = await client.managedClusters.listClusterUserCredentials(
-            clusterNode.resourceGroupName,
-            clusterNode.name,
+            clusterContext.resourceGroupName,
+            clusterContext.name,
             { format: azcs.KnownFormat.Exec },
         );
     } catch (e) {
         return {
             succeeded: false,
-            error: `Failed to retrieve user credentials for AAD cluster ${clusterNode.name}: ${e}`,
+            error: `Failed to retrieve user credentials for AAD cluster ${clusterContext.name}: ${e}`,
         };
     }
 
     // The initial credentials contain an 'exec' section that calls kubelogin with devicecode authentication.
-    const unauthenticatedKubeconfig = getClusterUserKubeconfig(clusterUserCredentials, clusterNode.name);
+    const unauthenticatedKubeconfig = getClusterUserKubeconfig(clusterUserCredentials, clusterContext.name);
     if (failed(unauthenticatedKubeconfig)) {
         return unauthenticatedKubeconfig;
     }
@@ -213,7 +229,7 @@ async function getAadKubeconfig(
     try {
         kubeconfigYaml = yaml.load(unauthenticatedKubeconfig.result) as KubeConfig;
     } catch (e) {
-        return { succeeded: false, error: `Failed to parse kubeconfig YAML for ${clusterNode.name}: ${e}` };
+        return { succeeded: false, error: `Failed to parse kubeconfig YAML for ${clusterContext.name}: ${e}` };
     }
 
     // We expect there will be just one user in the kubeconfig. Read the 'exec' arguments for it.
@@ -222,12 +238,12 @@ async function getAadKubeconfig(
 
     // We need to supply an access token that grants the user access to the cluster. The user running this will be authenticated,
     // and we have access to their credentials here...
-    const localToken = await clusterNode.subscription.credentials.getToken();
+    const localToken = await clusterContext.subscription.credentials.getToken();
 
     // But, the user's token is for VS Code, and instead we need a token whose audience is the AKS server ID.
     // This can be obtained by exchanging the user's refresh token for one with the new audience.
     const aadAccessToken = await getAksAadAccessToken(
-        clusterNode.subscription.environment,
+        clusterContext.subscription.environment,
         execOptions.serverId,
         execOptions.tenantId,
         localToken.refreshToken,
@@ -357,9 +373,9 @@ function getClusterUserKubeconfig(credentialResults: azcs.CredentialResults, clu
     return { succeeded: true, result: kubeconfig };
 }
 
-export function getClusterProperties(clusterNode: AksClusterTreeNode): Promise<Errorable<azcs.ManagedCluster>> {
-    const client = getContainerClient(clusterNode);
-    return getManagedCluster(client, clusterNode.resourceGroupName, clusterNode.name);
+export function getClusterProperties(clusterContext: ClusterContext): Promise<Errorable<azcs.ManagedCluster>> {
+    const client = getContainerClient(clusterContext);
+    return getManagedCluster(client, clusterContext.resourceGroupName, clusterContext.name);
 }
 
 export async function getManagedCluster(
@@ -372,20 +388,6 @@ export async function getManagedCluster(
         return { succeeded: true, result: managedCluster };
     } catch (e) {
         return { succeeded: false, error: `Failed to retrieve cluster ${clusterName}: ${e}` };
-    }
-}
-
-export async function determineProvisioningState(
-    clusterNode: AksClusterTreeNode,
-    clusterName: string,
-): Promise<Errorable<string>> {
-    try {
-        const containerClient = getContainerClient(clusterNode);
-        const clusterInfo = await containerClient.managedClusters.get(clusterNode.resourceGroupName, clusterName);
-
-        return { succeeded: true, result: clusterInfo.provisioningState ?? "" };
-    } catch (ex) {
-        return { succeeded: false, error: `Error invoking ${clusterName} managed cluster: ${ex}` };
     }
 }
 
@@ -427,18 +429,16 @@ export async function getWindowsNodePoolKubernetesVersions(
     }
 }
 
-export function getContainerClient(treeNode: AksClusterTreeNode | SubscriptionTreeNode): azcs.ContainerServiceClient {
-    const environment = treeNode.subscription.environment;
-    return new azcs.ContainerServiceClient(treeNode.subscription.credentials, treeNode.subscription.subscriptionId, {
+export function getContainerClient(context: { subscription: SubscriptionContext }): azcs.ContainerServiceClient {
+    const environment = context.subscription.environment;
+    return new azcs.ContainerServiceClient(context.subscription.credentials, context.subscription.subscriptionId, {
         endpoint: environment.resourceManagerEndpointUrl,
     });
 }
 
-export function getResourceManagementClient(
-    treeNode: AksClusterTreeNode | SubscriptionTreeNode,
-): ResourceManagementClient {
-    const environment = treeNode.subscription.environment;
-    return new ResourceManagementClient(treeNode.subscription.credentials, treeNode.subscription.subscriptionId, {
+export function getResourceManagementClient(context: { subscription: SubscriptionContext }): ResourceManagementClient {
+    const environment = context.subscription.environment;
+    return new ResourceManagementClient(context.subscription.credentials, context.subscription.subscriptionId, {
         endpoint: environment.resourceManagerEndpointUrl,
     });
 }
@@ -457,10 +457,10 @@ export async function getResourceGroupList(client: ResourceManagementClient): Pr
     }
 }
 
-export async function deleteCluster(clusterNode: AksClusterTreeNode, clusterName: string): Promise<Errorable<string>> {
+export async function deleteCluster(clusterContext: ClusterContext, clusterName: string): Promise<Errorable<string>> {
     try {
-        const containerClient = getContainerClient(clusterNode);
-        await containerClient.managedClusters.beginDeleteAndWait(clusterNode.resourceGroupName, clusterName);
+        const containerClient = getContainerClient(clusterContext);
+        await containerClient.managedClusters.beginDeleteAndWait(clusterContext.resourceGroupName, clusterName);
 
         return { succeeded: true, result: "Delete cluster succeeded." };
     } catch (ex) {
@@ -468,17 +468,17 @@ export async function deleteCluster(clusterNode: AksClusterTreeNode, clusterName
     }
 }
 
-export async function reconcileUsingUpdateInCluster(clusterNode: AksClusterTreeNode): Promise<Errorable<string>> {
+export async function reconcileUsingUpdateInCluster(clusterContext: ClusterContext): Promise<Errorable<string>> {
     try {
         // Pleaset note: here is in the only place this way of reconcile is documented: https://learn.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest#az-aks-update()-examples
-        const containerClient = getContainerClient(clusterNode);
+        const containerClient = getContainerClient(clusterContext);
         const getClusterInfo = await containerClient.managedClusters.get(
-            clusterNode.resourceGroupName,
-            clusterNode.name,
+            clusterContext.resourceGroupName,
+            clusterContext.name,
         );
         await containerClient.managedClusters.beginCreateOrUpdateAndWait(
-            clusterNode.resourceGroupName,
-            clusterNode.name,
+            clusterContext.resourceGroupName,
+            clusterContext.name,
             {
                 location: getClusterInfo.location,
             },
@@ -488,24 +488,24 @@ export async function reconcileUsingUpdateInCluster(clusterNode: AksClusterTreeN
     } catch (ex) {
         return {
             succeeded: false,
-            error: `Error invoking ${clusterNode.name} managed cluster: ${getErrorMessage(ex)}`,
+            error: `Error invoking ${clusterContext.name} managed cluster: ${getErrorMessage(ex)}`,
         };
     }
 }
 
-export async function rotateClusterCert(clusterNode: AksClusterTreeNode): Promise<Errorable<string>> {
+export async function rotateClusterCert(clusterContext: ClusterContext): Promise<Errorable<string>> {
     try {
-        const containerClient = getContainerClient(clusterNode);
+        const containerClient = getContainerClient(clusterContext);
         await containerClient.managedClusters.beginRotateClusterCertificatesAndWait(
-            clusterNode.resourceGroupName,
-            clusterNode.name,
+            clusterContext.resourceGroupName,
+            clusterContext.name,
         );
 
-        return { succeeded: true, result: `Rotate cluster certificate for ${clusterNode.name} succeeded.` };
+        return { succeeded: true, result: `Rotate cluster certificate for ${clusterContext.name} succeeded.` };
     } catch (ex) {
         return {
             succeeded: false,
-            error: `Error invoking ${clusterNode.name} managed cluster: ${getErrorMessage(ex)}`,
+            error: `Error invoking ${clusterContext.name} managed cluster: ${getErrorMessage(ex)}`,
         };
     }
 }

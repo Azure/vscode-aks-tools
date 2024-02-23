@@ -13,11 +13,12 @@ import {
     azureToASOCloudMap,
 } from "../webview-contract/webviewDefinitions/azureServiceOperator";
 import { AzureAccountExtensionApi, getServicePrincipalAccess } from "../commands/utils/azureAccount";
-import { NonZeroExitCodeBehaviour, invokeKubectlCommand } from "../commands/utils/kubectl";
+import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import path from "path";
 import * as fs from "fs/promises";
 import { createTempFile } from "../commands/utils/tempfile";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { NonZeroExitCodeBehaviour } from "../commands/utils/shell";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
     constructor(extensionUri: vscode.Uri) {
