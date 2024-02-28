@@ -1,4 +1,4 @@
-import { FormEvent } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Lazy, isLoaded, isLoading, newLoaded } from "../utilities/lazy";
 import { VSCodeDropdown, VSCodeOption, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 
@@ -28,6 +28,18 @@ export function ResourceSelector<TResource>(props: ResourceSelectorProps<TResour
     const selectedIndex = isLoaded(resources)
         ? resources.value.findIndex((r) => props.valueGetter(r) === selectedValue) + 1
         : 0;
+
+    // Force a single re-render when the selected index changes. This is to work around a bug
+    // in which no item is selected even when it is supposed to be (and a re-render fixes that).
+    const [selectedIndexState, setSelectedIndexState] = useState(-1);
+    useEffect(() => {
+        setTimeout(() => {
+            if (selectedIndex !== selectedIndexState) {
+                setSelectedIndexState(selectedIndex);
+            }
+        }, 1);
+    }, [selectedIndex, selectedIndexState]);
+
     return (
         <>
             {isLoading(resources) && <VSCodeProgressRing style={{ height: "1rem" }} />}
