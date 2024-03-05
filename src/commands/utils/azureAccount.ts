@@ -1,6 +1,4 @@
-import * as vscode from "vscode";
 import { Subscription } from "@azure/arm-subscriptions";
-import { Environment } from "@azure/ms-rest-azure-env";
 import { TokenCredential } from "@azure/core-auth";
 import { combine, Errorable, failed, getErrorMessage, succeeded } from "./errorable";
 import { ClientSecretCredential } from "@azure/identity";
@@ -12,28 +10,11 @@ import {
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { RoleAssignment } from "@azure/arm-authorization";
+import { getConfiguredAzureEnv } from "@microsoft/vscode-azext-azureauth";
+import { getSubscriptions, getTenantIds } from "./azureSession";
 
-export interface AzureAccountExtensionApi {
-    readonly filters: AzureResourceFilter[];
-    readonly sessions: AzureSession[];
-    readonly subscriptions: AzureSubscription[];
-}
-
-export interface AzureResourceFilter {
-    readonly session: AzureSession;
-    readonly subscription: Subscription;
-}
-
-export interface AzureSession {
-    readonly environment: Environment;
-    readonly userId: string;
-    readonly tenantId: string;
-    readonly credentials2?: TokenCredential;
-}
-
-export interface AzureSubscription {
-    readonly session: AzureSession;
-    readonly subscription: Subscription;
+function getDefaultScope(endpointUrl: string): string {
+    return endpointUrl.endsWith("/") ? `${endpointUrl}.default` : `${endpointUrl}/.default`;
 }
 
 export interface ServicePrincipalAccess {
@@ -53,36 +34,29 @@ interface SubscriptionAccessResult {
 interface ServicePrincipalInfo {
     readonly id: string;
     readonly displayName: string;
-    readonly session: AzureSession;
     readonly credential: TokenCredential;
-}
-
-export function getAzureAccountExtensionApi(): Errorable<AzureAccountExtensionApi> {
-    const azureAccountExtension = vscode.extensions.getExtension("ms-vscode.azure-account");
-    if (!azureAccountExtension) {
-        return { succeeded: false, error: "Azure extension not found." };
-    }
-
-    return { succeeded: true, result: azureAccountExtension.exports.api };
+    readonly tenantId: string;
 }
 
 export async function getServicePrincipalAccess(
-    apiAzureAccount: AzureAccountExtensionApi,
     appId: string,
     secret: string,
 ): Promise<Errorable<ServicePrincipalAccess>> {
-    const spInfo = await getServicePrincipalInfo(apiAzureAccount.sessions, appId, secret);
+    const spInfo = await getServicePrincipalInfo(appId, secret);
     if (failed(spInfo)) {
         return spInfo;
     }
 
-    const cloudName = spInfo.result.session.environment.name;
-    const tenantId = spInfo.result.session.tenantId;
+    const cloudName = getConfiguredAzureEnv().name;
+    const filteredSubscriptions = await getSubscriptions(true);
+    if (failed(filteredSubscriptions)) {
+        return filteredSubscriptions;
+    }
+
     const promiseResults = await Promise.all(
-        apiAzureAccount.filters.map((f) =>
-            getSubscriptionAccess(spInfo.result.credential, f.subscription, spInfo.result),
-        ),
+        filteredSubscriptions.result.map((s) => getSubscriptionAccess(spInfo.result.credential, s, spInfo.result)),
     );
+
     const ownershipResults = combine(promiseResults);
     if (failed(ownershipResults)) {
         return ownershipResults;
@@ -95,16 +69,17 @@ export async function getServicePrincipalAccess(
             name: r.subscription.displayName || "",
         }));
 
-    return { succeeded: true, result: { cloudName, tenantId, subscriptions } };
+    return { succeeded: true, result: { cloudName, tenantId: spInfo.result.tenantId, subscriptions } };
 }
 
-async function getServicePrincipalInfo(
-    sessions: AzureSession[],
-    appId: string,
-    appSecret: string,
-): Promise<Errorable<ServicePrincipalInfo>> {
+async function getServicePrincipalInfo(appId: string, appSecret: string): Promise<Errorable<ServicePrincipalInfo>> {
+    const tenantIds = await getTenantIds();
+    if (failed(tenantIds)) {
+        return tenantIds;
+    }
+
     const spInfoResults = await Promise.all(
-        sessions.map((s) => getServicePrincipalInfoForSession(s, appId, appSecret)),
+        tenantIds.result.map((id) => getServicePrincipalInfoForTenant(id, appId, appSecret)),
     );
     for (const spInfoResult of spInfoResults) {
         if (succeeded(spInfoResult)) {
@@ -128,19 +103,19 @@ type ServicePrincipalSearchResult = {
     }[];
 };
 
-async function getServicePrincipalInfoForSession(
-    session: AzureSession,
+async function getServicePrincipalInfoForTenant(
+    tenantId: string,
     appId: string,
     appSecret: string,
 ): Promise<Errorable<ServicePrincipalInfo>> {
     // Use the MS Graph API to retrieve the object ID and display name of the service principal,
     // using its own password as the credential.
-    const baseUrl = getMicrosoftGraphClientBaseUrl(session.environment);
+    const baseUrl = getMicrosoftGraphClientBaseUrl();
     const graphClientOptions: TokenCredentialAuthenticationProviderOptions = {
-        scopes: [`${baseUrl}/.default`],
+        scopes: [getDefaultScope(baseUrl)],
     };
 
-    const credential = new ClientSecretCredential(session.tenantId, appId, appSecret);
+    const credential = new ClientSecretCredential(tenantId, appId, appSecret);
 
     const graphClient = GraphClient.initWithMiddleware({
         baseUrl,
@@ -171,14 +146,15 @@ async function getServicePrincipalInfoForSession(
     const spInfo = {
         id: searchResult.id,
         displayName: searchResult.displayName,
-        session,
         credential,
+        tenantId,
     };
 
     return { succeeded: true, result: spInfo };
 }
 
-function getMicrosoftGraphClientBaseUrl(environment: Environment): string {
+function getMicrosoftGraphClientBaseUrl(): string {
+    const environment = getConfiguredAzureEnv();
     // Environments are from here: https://github.com/Azure/ms-rest-azure-env/blob/6fa17ce7f36741af6ce64461735e6c7c0125f0ed/lib/azureEnvironment.ts#L266-L346
     // They do not contain the MS Graph endpoints, whose values are here:
     // https://github.com/microsoftgraph/msgraph-sdk-javascript/blob/d365ab1d68f90f2c38c67a5a7c7fe54acfc2584e/src/Constants.ts#L28

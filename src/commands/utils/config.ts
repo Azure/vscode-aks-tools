@@ -6,6 +6,55 @@ import { CommandCategory, PresetCommand } from "../../webview-contract/webviewDe
 import { DraftConfig } from "../periscope/models/DraftConfig";
 import { isObject } from "./runtimeTypes";
 
+export interface SubscriptionFilter {
+    tenantId: string;
+    subscriptionId: string;
+}
+
+const onFilteredSubscriptionsChangeEmitter = new vscode.EventEmitter<void>();
+
+export function getFilteredSubscriptionsChangeEvent() {
+    return onFilteredSubscriptionsChangeEmitter.event;
+}
+
+export function getFilteredSubscriptions(): SubscriptionFilter[] {
+    try {
+        let values = vscode.workspace.getConfiguration("aks").get<string[]>("selectedSubscriptions", []);
+        if (values.length === 0) {
+            // Get filters from the Azure Account extension if the AKS extension has none.
+            values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceFilter", []);
+        }
+        return values.map(asSubscriptionFilter).filter((v) => v !== null) as SubscriptionFilter[];
+    } catch (e) {
+        return [];
+    }
+}
+
+function asSubscriptionFilter(value: string): SubscriptionFilter | null {
+    try {
+        const parts = value.split("/");
+        return { tenantId: parts[0], subscriptionId: parts[1] };
+    } catch (e) {
+        return null;
+    }
+}
+
+export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): Promise<void> {
+    const existingFilters = getFilteredSubscriptions();
+    const filtersChanged =
+        existingFilters.length !== filters.length ||
+        !filters.every((f) => existingFilters.some((ef) => ef.subscriptionId === f.subscriptionId));
+
+    const values = filters.map((f) => `${f.tenantId}/${f.subscriptionId}`).sort();
+
+    if (filtersChanged) {
+        await vscode.workspace
+            .getConfiguration("aks")
+            .update("selectedSubscriptions", values, vscode.ConfigurationTarget.Global, true);
+        onFilteredSubscriptionsChangeEmitter.fire();
+    }
+}
+
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration("aks.periscope");
     const props = combine([

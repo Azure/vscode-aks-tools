@@ -7,8 +7,8 @@ import {
     AzExtTreeDataProvider,
     registerCommand,
     CommandCallback,
+    registerUIExtensionVariables,
 } from "@microsoft/vscode-azext-utils";
-import selectSubscriptions from "./commands/selectSubscriptions";
 import periscope from "./commands/periscope/periscope";
 import { Reporter, reporter } from "./commands/utils/reporter";
 import installAzureServiceOperator from "./commands/azureServiceOperators/installAzureServiceOperator";
@@ -32,7 +32,6 @@ import { failed } from "./commands/utils/errorable";
 import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
 import aksCreateClusterNavToAzurePortal from "./commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal";
-import { registerAzureUtilsExtensionVariables } from "@microsoft/vscode-azext-azureutils";
 import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
 import { longRunning } from "./commands/utils/host";
 import { getClusterProperties, getKubeconfigYaml } from "./commands/utils/clusters";
@@ -45,6 +44,7 @@ import { aksTCPDump } from "./commands/aksTCPCollection/tcpDumpCollection";
 import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 import refreshSubscription from "./commands/refreshSubscriptions";
 import aksEraserTool from "./commands/aksEraserTool/erasertool";
+import { signInToAzure, selectSubscriptions } from "./commands/aksAccount/aksAccount";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -62,10 +62,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
-        registerAzureUtilsExtensionVariables(uiExtensionVariables);
+        registerUIExtensionVariables(uiExtensionVariables);
         vscode.commands.executeCommand("workbench.action.openWalkthrough", {
             category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
         });
+        registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
         registerCommandWithTelemetry("aks.periscope", periscope);
         registerCommandWithTelemetry("aks.installAzureServiceOperator", installAzureServiceOperator);
