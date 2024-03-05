@@ -3,7 +3,6 @@ import * as os from "os";
 import { getDraftConfig } from "../config";
 import { Errorable, failed } from "../errorable";
 import { getToolBinaryPath } from "./binaryDownloadHelper";
-import path from "path";
 
 async function getLatestDraftReleaseTag() {
     const draftConfig = getDraftConfig();
@@ -25,14 +24,14 @@ export async function getDraftBinaryPath(): Promise<Errorable<string>> {
         };
     }
 
-    const draftBinaryFile = getBinaryFileName();
-    const downloadUrl = `https://github.com/Azure/draft/releases/download/${releaseTag}/${draftBinaryFile}`;
-    const binaryFilename = path.basename(draftBinaryFile);
+    const downloadFileName = getDownloadFileName();
+    const downloadUrl = `https://github.com/Azure/draft/releases/download/${releaseTag}/${downloadFileName}`;
+    const executableFileName = getExecutableFileName();
 
-    return await getToolBinaryPath("draft", releaseTag, binaryFilename, { downloadUrl, isCompressed: false });
+    return await getToolBinaryPath("draft", releaseTag, executableFileName, { downloadUrl, isCompressed: false });
 }
 
-function getBinaryFileName() {
+function getDownloadFileName() {
     let architecture = os.arch();
     let operatingSystem = os.platform().toLocaleLowerCase();
 
@@ -48,4 +47,10 @@ function getBinaryFileName() {
     }
 
     return draftBinaryFile;
+}
+
+function getExecutableFileName() {
+    const operatingSystem = os.platform().toLocaleLowerCase();
+    const extension = operatingSystem === "win32" ? ".exe" : "";
+    return `draft${extension}`;
 }

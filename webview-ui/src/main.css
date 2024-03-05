@@ -95,3 +95,27 @@ dialog {
     color: var(--vscode-editor-foreground);
     border-color: var(--vscode-editorGroup-border);
 }
+
+fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+input[type="number"] {
+    height: calc(var(--input-height) * 1px);
+    color: var(--input-foreground);
+    background-color: var(--input-background);
+    border: 0;
+    padding: 0 calc(var(--design-unit) * 2px + 1px);
+    box-sizing: border-box;
+}
+
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+input[type="number"]:disabled {
+    cursor: not-allowed;
+    opacity: var(--disabled-opacity);
+}

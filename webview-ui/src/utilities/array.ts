@@ -71,3 +71,7 @@ function getKeyId(key: ItemKey): string {
 
     return key;
 }
+
+export function filterNulls<T>(items: (T | null)[]): T[] {
+    return items.filter((item) => item !== null) as T[];
+}

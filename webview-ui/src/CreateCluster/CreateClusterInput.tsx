@@ -10,11 +10,12 @@ import {
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { EventHandlers } from "../utilities/state";
-import { Validatable, createHandler, shouldShowMessage, unset } from "../utilities/validation";
+import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
 import { CreateClusterPresetInput } from "./CreateClusterPresetInput";
 import { CreateResourceGroupDialog } from "./CreateResourceGroup";
 import { EventDef } from "./helpers/state";
+import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -26,7 +27,7 @@ interface CreateClusterInputProps {
 }
 
 export function CreateClusterInput(props: CreateClusterInputProps) {
-    const [existingResourceGroup, setExistingResourceGroup] = useState<Validatable<ResourceGroup>>(unset());
+    const [existingResourceGroup, setExistingResourceGroup] = useState<Validatable<ResourceGroup | null>>(unset());
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
     const [newResourceGroupName, setNewResourceGroupName] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const newResourceGroup = newResourceGroupName
         ? {
               name: newResourceGroupName,
-              location: location.value || "",
+              location: isValid(location) ? location.value : "",
           }
         : null;
     const allResourceGroups = newResourceGroup ? [newResourceGroup, ...props.resourceGroups] : props.resourceGroups;
@@ -48,7 +49,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
 
     function handleCreateResourceGroupDialogAccept(groupName: string) {
         setIsNewResourceGroupDialogShown(false);
-        setExistingResourceGroup(unset());
+        setExistingResourceGroup(valid(null));
         setNewResourceGroupName(groupName);
         setSelectedIndex(1); // this is the index of the new resource group and the first option is "Select"
     }
@@ -63,55 +64,71 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         setSelectedIndex(ele.selectedIndex);
     }
 
-    const handleExistingResourceGroupChange = createHandler<ResourceGroup, ChangeEvent, HTMLSelectElement>(
-        (e) => e.currentTarget as HTMLSelectElement,
-        (elem) => (elem.selectedIndex < 0 ? null : allResourceGroups[elem.selectedIndex - 1]),
-        (elem) => elem.checkValidity(),
-        () => "Resource Group is required.",
-        setExistingResourceGroup,
-    );
+    function handleExistingResourceGroupChange(e: ChangeEvent) {
+        const elem = e.currentTarget as HTMLSelectElement;
+        const resourceGroup = elem.selectedIndex <= 0 ? null : allResourceGroups[elem.selectedIndex - 1];
+        const validatable = resourceGroup ? valid(resourceGroup) : invalid(null, "Resource Group is required.");
+        setExistingResourceGroup(validatable);
+    }
 
-    const handleNameChange = createHandler<string, ChangeEvent, HTMLInputElement>(
-        (e) => e.currentTarget as HTMLInputElement,
-        (elem) => elem.value || null,
-        (elem) => elem.checkValidity(),
-        (elem) =>
-            elem.validity.patternMismatch
-                ? "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number."
-                : elem.validity.tooShort
-                  ? "Cluster name must be at least 1 character long."
-                  : elem.validity.tooLong
-                    ? "Cluster name must be at most 63 characters long."
-                    : elem.validity.valueMissing
-                      ? "Cluster name is required."
-                      : "Invalid Cluster name.",
-        setName,
-    );
+    function getValidatedName(name: string): Validatable<string> {
+        if (!name) return invalid(name, "Cluster name must be at least 1 character long.");
+        if (name.length > 63) return invalid(name, "Cluster name must be at most 63 characters long.");
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$/.test(name)) {
+            return invalid(
+                name,
+                "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number.",
+            );
+        }
 
-    const handleLocationChange = createHandler<string, ChangeEvent, HTMLSelectElement>(
-        (e) => e.currentTarget as HTMLSelectElement,
-        (elem) => (elem.selectedIndex <= 0 ? null : props.locations[elem.selectedIndex - 1]),
-        (elem) => elem.checkValidity(),
-        () => "Location is required.",
-        setLocation,
-    );
+        return valid(name);
+    }
 
-    function handleSubmit(e: FormEvent) {
-        e.preventDefault();
-        const resourceGroup = existingResourceGroup.value || newResourceGroup;
-        if (!resourceGroup) return;
-        if (!location.value) return;
+    function handleNameChange(e: ChangeEvent) {
+        const name = (e.currentTarget as HTMLInputElement).value;
+        const validated = getValidatedName(name);
+        setName(validated);
+    }
+
+    function handleLocationChange(e: ChangeEvent) {
+        const elem = e.currentTarget as HTMLSelectElement;
+        const location = elem.selectedIndex <= 0 ? null : props.locations[elem.selectedIndex - 1];
+        const validated = location ? valid(location) : missing<string>("Location is required.");
+        setLocation(validated);
+    }
+
+    function validate(): Maybe<CreateClusterParams> {
+        if (!isValid(location)) return nothing();
+        let resourceGroupName: string;
+        let isNewResourceGroup: boolean;
+        if (isValid(existingResourceGroup) && existingResourceGroup.value !== null) {
+            resourceGroupName = existingResourceGroup.value.name;
+            isNewResourceGroup = false;
+        } else if (newResourceGroupName) {
+            resourceGroupName = newResourceGroupName;
+            isNewResourceGroup = true;
+        } else {
+            return nothing();
+        }
+        if (!isValid(name)) return nothing();
 
         const parameters: CreateClusterParams = {
-            isNewResourceGroup: !existingResourceGroup.value,
-            resourceGroupName: resourceGroup.name,
-            location: location.value!,
-            name: name.value!,
+            isNewResourceGroup,
+            resourceGroupName,
+            location: location.value,
+            name: name.value,
             preset: presetSelected,
         };
 
-        props.vscode.postCreateClusterRequest(parameters);
-        props.eventHandlers.onSetCreating({ parameters });
+        return just(parameters);
+    }
+
+    function handleSubmit(e: FormEvent) {
+        e.preventDefault();
+        const parameters = validate();
+        if (isNothing(parameters)) return;
+        props.vscode.postCreateClusterRequest(parameters.value);
+        props.eventHandlers.onSetCreating({ parameters: parameters.value });
     }
 
     return (
@@ -128,7 +145,6 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     <VSCodeDropdown
                         id="existing-resource-group-dropdown"
                         className={styles.midControl}
-                        required
                         onBlur={handleValidationAndIndex}
                         onChange={handleValidationAndIndex}
                         selectedIndex={selectedIndex}
@@ -151,7 +167,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     <VSCodeButton className={styles.sideControl} onClick={() => setIsNewResourceGroupDialogShown(true)}>
                         Create New
                     </VSCodeButton>
-                    {shouldShowMessage(existingResourceGroup) && (
+                    {hasMessage(existingResourceGroup) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
                             {existingResourceGroup.message}
@@ -163,16 +179,12 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     </label>
                     <VSCodeTextField
                         id="name-input"
-                        value={name.value || ""}
+                        value={isValueSet(name) ? name.value : ""}
                         className={`${styles.longControl} ${styles.validatable}`}
-                        required
-                        minlength={1}
-                        maxlength={63}
-                        pattern="^[a-zA-Z0-9][a-zA-Z0-9_\-]+[a-zA-Z0-9]$"
                         onBlur={handleNameChange}
                         onInput={handleNameChange}
                     />
-                    {shouldShowMessage(name) && (
+                    {hasMessage(name) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
                             {name.message}
@@ -185,7 +197,6 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     <VSCodeDropdown
                         id="location-dropdown"
                         className={styles.longControl}
-                        required
                         onBlur={handleLocationChange}
                         onChange={handleLocationChange}
                     >
@@ -196,7 +207,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                             </VSCodeOption>
                         ))}
                     </VSCodeDropdown>
-                    {shouldShowMessage(location) && (
+                    {hasMessage(location) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
                             {location.message}
