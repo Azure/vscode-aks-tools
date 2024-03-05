@@ -1,11 +1,11 @@
-import { AzureAccountTreeItemBase, SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 import {
-    AzExtTreeItem,
     AzExtParentTreeItem,
-    ISubscriptionContext,
     AzExtTreeDataProvider,
+    AzExtTreeItem,
+    ISubscriptionContext,
 } from "@microsoft/vscode-azext-utils";
-import { createChildClusterTreeNode } from "./aksClusterTreeItem";
+import { createClusterTreeNode } from "./aksClusterTreeItem";
+import { assetUri } from "../assets";
 import { getResourceManagementClient } from "../commands/utils/clusters";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { Resource } from "@azure/arm-resources";
@@ -21,29 +21,38 @@ export interface SubscriptionTreeNode {
 }
 
 export function isSubscriptionTreeNode(node: unknown): node is SubscriptionTreeNode {
-    return node instanceof SubscriptionTreeItemBase;
+    return node instanceof SubscriptionTreeItem;
 }
 
-export function createChildSubscriptionTreeItem(
-    parent: AzureAccountTreeItemBase,
+export function createSubscriptionTreeItem(
+    parent: AzExtParentTreeItem,
     subscription: ISubscriptionContext,
-): SubscriptionTreeItemBase {
+): AzExtTreeItem {
     return new SubscriptionTreeItem(parent, subscription);
 }
 
-class SubscriptionTreeItem extends SubscriptionTreeItemBase implements SubscriptionTreeNode {
+class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTreeNode {
+    public readonly subscriptionValue: ISubscriptionContext;
     public readonly name: string;
+    public readonly contextValue = "aks.subscription";
+    public readonly label: string;
 
-    constructor(parent: AzExtParentTreeItem, root: ISubscriptionContext) {
-        super(parent, root);
-        this.name = root.subscriptionDisplayName || "";
+    public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
+        super(parent);
+        this.subscriptionValue = subscription;
+        this.name = subscription.subscriptionDisplayName;
+        this.label = subscription.subscriptionDisplayName;
+        this.id = subscription.subscriptionPath;
+        this.iconPath = assetUri("resources/azureSubscription.svg");
     }
 
     get treeItem(): AzExtTreeItem {
         return this;
     }
 
-    public readonly contextValue: string = "aks.subscription";
+    get subscription(): ISubscriptionContext {
+        return this.subscriptionValue;
+    }
 
     public hasMoreChildrenImpl(): boolean {
         return false;
@@ -59,7 +68,7 @@ class SubscriptionTreeItem extends SubscriptionTreeItemBase implements Subscript
             aksClusterResources.push(...pageResources);
         }
 
-        return aksClusterResources.map((aksClusterResource) => createChildClusterTreeNode(this, aksClusterResource));
+        return aksClusterResources.map((aksClusterResource) => createClusterTreeNode(this, aksClusterResource));
     }
 
     public async refreshImpl(): Promise<void> {

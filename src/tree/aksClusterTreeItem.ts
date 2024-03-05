@@ -3,7 +3,6 @@ import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { assetUri } from "../assets";
 import { parseResource } from "../azure-api-utils";
 import { Resource } from "@azure/arm-resources";
-import { SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 import { SubscriptionTreeNode } from "./subscriptionTreeItem";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
@@ -18,8 +17,8 @@ export interface AksClusterTreeNode {
     readonly resourceGroupName: string;
 }
 
-export function createChildClusterTreeNode(
-    parent: SubscriptionTreeItemBase & SubscriptionTreeNode,
+export function createClusterTreeNode(
+    parent: AzExtParentTreeItem & SubscriptionTreeNode,
     clusterResource: Resource,
 ): AzExtTreeItem {
     return new AksClusterTreeItem(parent, clusterResource);

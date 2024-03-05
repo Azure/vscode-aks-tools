@@ -4,7 +4,6 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getExtension } from "../utils/host";
 import { failed } from "../utils/errorable";
-import { getAzureAccountExtensionApi } from "../utils/azureAccount";
 import { createTempFile } from "../utils/tempfile";
 import { AzureServiceOperatorDataProvider, AzureServiceOperatorPanel } from "../../panels/AzureServiceOperatorPanel";
 
@@ -28,12 +27,6 @@ export default async function installAzureServiceOperator(_context: IActionConte
         return undefined;
     }
 
-    const azureAccountApi = getAzureAccountExtensionApi();
-    if (failed(azureAccountApi)) {
-        vscode.window.showErrorMessage(azureAccountApi.error);
-        return undefined;
-    }
-
     const clusterInfo = await getKubernetesClusterInfo(target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
@@ -51,7 +44,6 @@ export default async function installAzureServiceOperator(_context: IActionConte
         extension.result,
         kubectl,
         kubeConfigFile.filePath,
-        azureAccountApi.result,
         clusterInfo.result.name,
     );
     const panel = new AzureServiceOperatorPanel(extension.result.extensionUri);

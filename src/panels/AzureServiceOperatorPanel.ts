@@ -12,7 +12,7 @@ import {
     ToWebViewMsgDef,
     azureToASOCloudMap,
 } from "../webview-contract/webviewDefinitions/azureServiceOperator";
-import { AzureAccountExtensionApi, getServicePrincipalAccess } from "../commands/utils/azureAccount";
+import { getServicePrincipalAccess } from "../commands/utils/azureAccount";
 import { NonZeroExitCodeBehaviour, invokeKubectlCommand } from "../commands/utils/kubectl";
 import path from "path";
 import * as fs from "fs/promises";
@@ -37,7 +37,6 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         readonly extension: vscode.Extension<vscode.ExtensionContext>,
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
-        readonly azAccount: AzureAccountExtensionApi,
         readonly clusterName: string,
     ) {}
 
@@ -86,7 +85,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         appSecret: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ): Promise<void> {
-        const servicePrincipalAccess = await getServicePrincipalAccess(this.azAccount, appId, appSecret);
+        const servicePrincipalAccess = await getServicePrincipalAccess(appId, appSecret);
         if (failed(servicePrincipalAccess)) {
             webview.postCheckSPResponse({
                 succeeded: false,
