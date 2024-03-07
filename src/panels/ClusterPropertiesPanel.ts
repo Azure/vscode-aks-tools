@@ -9,8 +9,8 @@ import {
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/clusterProperties";
-import { ContainerServiceClient, ManagedCluster, ManagedClusterAgentPoolProfile } from "@azure/arm-containerservice";
-import { getManagedCluster } from "../commands/utils/clusters";
+import { ContainerServiceClient, KubernetesVersionListResult, ManagedCluster, ManagedClusterAgentPoolProfile } from "@azure/arm-containerservice";
+import { getKubernetesVersionInfo, getManagedCluster } from "../commands/utils/clusters";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
@@ -204,17 +204,24 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             return;
         }
 
-        webview.postGetPropertiesResponse(asClusterInfo(cluster.result));
+        const kubernetesVersion = await getKubernetesVersionInfo(this.client, cluster.result.location, cluster.result.name!);
+        if (failed(kubernetesVersion)) {
+            webview.postErrorNotification(kubernetesVersion.error);
+            return;
+        }
+
+        webview.postGetPropertiesResponse(asClusterInfo(cluster.result, kubernetesVersion.result));
     }
 }
 
-function asClusterInfo(cluster: ManagedCluster): ClusterInfo {
+function asClusterInfo(cluster: ManagedCluster, kubernetesVersionList: KubernetesVersionListResult): ClusterInfo {
     return {
         provisioningState: cluster.provisioningState!,
         fqdn: cluster.fqdn!,
         kubernetesVersion: cluster.kubernetesVersion!,
         powerStateCode: cluster.powerState!.code!,
         agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
+        kubernetesVersionClusterInfo: kubernetesVersionList,
     };
 }
 

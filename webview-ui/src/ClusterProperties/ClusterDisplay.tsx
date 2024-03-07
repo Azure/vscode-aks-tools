@@ -136,8 +136,36 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
             <dt>FQDN</dt>
             <dd>{props.clusterInfo.fqdn}</dd>
-            <dt>Kubernetes Version</dt>
-            <dd>{props.clusterInfo.kubernetesVersion}</dd>
+            <dt>Kubernetes Version test</dt>
+            <dd>
+                {props.clusterInfo.kubernetesVersion} {(props.clusterInfo.kubernetesVersionClusterInfo.values!.filter(it => (props.clusterInfo.kubernetesVersion.includes(it.version!)) )).length > 0 ? "" : "(Deprecated Version)"}
+                &nbsp;
+                <span className={styles.tooltip}>
+                    <span>
+                        <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
+                    </span>
+                    <span className={styles.tooltiptext}>
+                    Current Versions available:
+                    
+                    <table>
+                    <tr>
+                        <th>Version</th>
+                        <th>Patch Versions</th> 
+                    </tr>
+                    {props.clusterInfo.kubernetesVersionClusterInfo.values!.map((it) => (
+                        <tr key={it.version}>
+                            <td>{it.version}</td>
+                            <td>{Object.keys(it.patchVersions!).join(",")}</td>
+                        </tr>
+                    ))}
+                    </table>
+                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
+                            Learn more
+                        </VSCodeLink>
+                    </span>
+                </span>
+            </dd>
+          
         </dl>
     );
 }
