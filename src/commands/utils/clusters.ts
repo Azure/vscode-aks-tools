@@ -378,13 +378,12 @@ export async function getManagedCluster(
 export async function getKubernetesVersionInfo(
     client: azcs.ContainerServiceClient,
     location: string,
-    clusterName: string,
 ): Promise<Errorable<azcs.KubernetesVersionListResult>> {
     try {
         const managedCluster = await client.managedClusters.listKubernetesVersions(location);
         return { succeeded: true, result: managedCluster };
     } catch (e) {
-        return { succeeded: false, error: `Failed to retrieve cluster ${clusterName}: ${e}` };
+        return { succeeded: false, error: `Failed to list Kubernetes versions in ${location}: ${getErrorMessage(e)}` };
     }
 }
 

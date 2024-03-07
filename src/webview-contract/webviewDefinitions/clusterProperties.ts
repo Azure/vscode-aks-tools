@@ -1,4 +1,3 @@
-import { KubernetesVersionListResult } from "@azure/arm-containerservice";
 import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
@@ -11,7 +10,7 @@ export type ClusterInfo = {
     kubernetesVersion: string;
     powerStateCode: string;
     agentPoolProfiles: AgentPoolProfileInfo[];
-    kubernetesVersionClusterInfo: KubernetesVersionListResult;
+    supportedVersions: KubernetesVersionInfo[];
 };
 
 export type AgentPoolProfileInfo = {
@@ -23,6 +22,11 @@ export type AgentPoolProfileInfo = {
     vmSize: string;
     count: number;
     osType: string;
+};
+
+export type KubernetesVersionInfo = {
+    version: string;
+    patchVersions: string[];
 };
 
 export type ToVsCodeMsgDef = {

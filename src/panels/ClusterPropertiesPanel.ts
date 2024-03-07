@@ -6,10 +6,17 @@ import {
     AgentPoolProfileInfo,
     ClusterInfo,
     InitialState,
+    KubernetesVersionInfo,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/clusterProperties";
-import { ContainerServiceClient, KubernetesVersionListResult, ManagedCluster, ManagedClusterAgentPoolProfile } from "@azure/arm-containerservice";
+import {
+    ContainerServiceClient,
+    KubernetesVersion,
+    KubernetesVersionListResult,
+    ManagedCluster,
+    ManagedClusterAgentPoolProfile,
+} from "@azure/arm-containerservice";
 import { getKubernetesVersionInfo, getManagedCluster } from "../commands/utils/clusters";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
@@ -204,7 +211,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             return;
         }
 
-        const kubernetesVersion = await getKubernetesVersionInfo(this.client, cluster.result.location, cluster.result.name!);
+        const kubernetesVersion = await getKubernetesVersionInfo(this.client, cluster.result.location);
         if (failed(kubernetesVersion)) {
             webview.postErrorNotification(kubernetesVersion.error);
             return;
@@ -221,7 +228,7 @@ function asClusterInfo(cluster: ManagedCluster, kubernetesVersionList: Kubernete
         kubernetesVersion: cluster.kubernetesVersion!,
         powerStateCode: cluster.powerState!.code!,
         agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
-        kubernetesVersionClusterInfo: kubernetesVersionList,
+        supportedVersions: (kubernetesVersionList.values || []).map(asKubernetesVersionInfo),
     };
 }
 
@@ -235,5 +242,12 @@ function asPoolProfileInfo(pool: ManagedClusterAgentPoolProfile): AgentPoolProfi
         vmSize: pool.vmSize!,
         count: pool.count!,
         osType: pool.osType!,
+    };
+}
+
+function asKubernetesVersionInfo(version: KubernetesVersion): KubernetesVersionInfo {
+    return {
+        version: version.version || "",
+        patchVersions: version.patchVersions ? Object.keys(version.patchVersions) : [],
     };
 }

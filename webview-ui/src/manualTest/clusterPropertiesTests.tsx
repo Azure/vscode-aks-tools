@@ -3,13 +3,13 @@ import {
     AgentPoolProfileInfo,
     ClusterInfo,
     InitialState,
+    KubernetesVersionInfo,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
 import { stateUpdater } from "../ClusterProperties/state";
 import { ClusterProperties } from "../ClusterProperties/ClusterProperties";
-import { KubernetesVersionListResult } from "@azure/arm-containerservice";
 
 function sometimes() {
     return ~~(Math.random() * 3) === 0;
@@ -48,23 +48,32 @@ const testWindows2022Pool: AgentPoolProfileInfo = {
     osType: "Windows",
 };
 
-const kubernetesVersionListResult1: KubernetesVersionListResult = {
-    "values": [
-        {
-          "capabilities": {
-            "supportPlan": [
-              "KubernetesOfficial"
-            ]
-          },
-          "isPreview": true,
-          "patchVersions": {
-            "1.29.0": {
-              "upgrades": []
-            }
-          },
-          "version": "1.29"
-        }],
-};
+const supportedVersions: KubernetesVersionInfo[] = [
+    {
+        version: "1.24",
+        patchVersions: ["1.24.6"],
+    },
+    {
+        version: "1.25",
+        patchVersions: ["1.25.3"],
+    },
+    {
+        version: "1.26",
+        patchVersions: ["1.26.1"],
+    },
+    {
+        version: "1.27",
+        patchVersions: ["1.27.0"],
+    },
+    {
+        version: "1.28",
+        patchVersions: ["1.28.0"],
+    },
+    {
+        version: "1.29",
+        patchVersions: ["1.29.0"],
+    },
+];
 
 const runningClusterInfo: ClusterInfo = {
     provisioningState: "Succeeded",
@@ -72,7 +81,7 @@ const runningClusterInfo: ClusterInfo = {
     kubernetesVersion: "1.24.6",
     powerStateCode: "Running",
     agentPoolProfiles: [testSystemPool, testWindows2019Pool, testWindows2022Pool],
-    kubernetesVersionClusterInfo: kubernetesVersionListResult1 as KubernetesVersionListResult,
+    supportedVersions: supportedVersions,
 };
 
 const abortedClusterInfo: ClusterInfo = {
