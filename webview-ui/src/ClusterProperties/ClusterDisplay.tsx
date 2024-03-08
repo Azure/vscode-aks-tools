@@ -139,7 +139,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
             <dt>FQDN</dt>
             <dd>{props.clusterInfo.fqdn}</dd>
-            <dt>Kubernetes Version test</dt>
+            <dt>Kubernetes Version</dt>
             <dd>
                 {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
                 &nbsp;

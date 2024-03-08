@@ -225,7 +225,7 @@ function asClusterInfo(cluster: ManagedCluster, kubernetesVersionList: Kubernete
     return {
         provisioningState: cluster.provisioningState!,
         fqdn: cluster.fqdn!,
-        kubernetesVersion: cluster.kubernetesVersion!,
+        kubernetesVersion: cluster.currentKubernetesVersion!,
         powerStateCode: cluster.powerState!.code!,
         agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
         supportedVersions: (kubernetesVersionList.values || []).map(asKubernetesVersionInfo),
