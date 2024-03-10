@@ -11,14 +11,14 @@ import * as azcs from "@azure/arm-containerservice";
 import { Errorable, failed, getErrorMessage, succeeded } from "./errorable";
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { SubscriptionTreeNode, isSubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
-import { getAksAadAccessToken } from "./authProvider";
 import * as yaml from "js-yaml";
 import * as fs from "fs";
 import * as path from "path";
-import { AuthenticationResult } from "@azure/msal-node";
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
 import { dirSync } from "tmp";
+import { AuthenticationSession, authentication } from "vscode";
+import { TokenInfo, getTokenInfo } from "./azureSession";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -220,25 +220,26 @@ async function getAadKubeconfig(
     const execBlock = kubeconfigYaml.users[0].user.exec;
     const execOptions = readExecOptions(execBlock.args);
 
-    // We need to supply an access token that grants the user access to the cluster. The user running this will be authenticated,
-    // and we have access to their credentials here...
-    const localToken = await clusterNode.subscription.credentials.getToken();
+    // Get a token whose audience is the AKS server ID.
+    const scope = `${execOptions.serverId}/.default`;
+    let session: AuthenticationSession;
+    try {
+        session = await authentication.getSession("microsoft", [scope], { createIfNone: true });
+    } catch (e) {
+        return {
+            succeeded: false,
+            error: `Failed to retrieve Microsoft authentication session for scope ${scope}: ${getErrorMessage(e)}`,
+        };
+    }
 
-    // But, the user's token is for VS Code, and instead we need a token whose audience is the AKS server ID.
-    // This can be obtained by exchanging the user's refresh token for one with the new audience.
-    const aadAccessToken = await getAksAadAccessToken(
-        clusterNode.subscription.environment,
-        execOptions.serverId,
-        execOptions.tenantId,
-        localToken.refreshToken,
-    );
-    if (failed(aadAccessToken)) {
-        return aadAccessToken;
+    const tokenInfo = getTokenInfo(session);
+    if (failed(tokenInfo)) {
+        return tokenInfo;
     }
 
     // Now we have a token the user can use to access their cluster, but kubelogin doesn't support that being passed as an
     // argument directly. Instead, we can save it to a temp directory and instruct kubelogin to use that as its cache directory.
-    const cacheDir = storeCachedAadToken(aadAccessToken.result, execOptions);
+    const cacheDir = storeCachedAadToken(tokenInfo.result, execOptions);
     if (failed(cacheDir)) {
         return cacheDir;
     }
@@ -313,7 +314,7 @@ function buildExecOptionsWithCache(execOptions: ExecOptions, cacheDir: string) {
     ];
 }
 
-function storeCachedAadToken(aadAccessToken: AuthenticationResult, execOptions: ExecOptions): Errorable<string> {
+function storeCachedAadToken(tokenInfo: TokenInfo, execOptions: ExecOptions): Errorable<string> {
     // kubelogin supports an extra option '--token-cache-dir' where it expects to find cached credentials.
     // If our credential is found in there, it won't initiate an interactive login.
     // It will look for a file with a specific name based on the options supplied:
@@ -322,11 +323,9 @@ function storeCachedAadToken(aadAccessToken: AuthenticationResult, execOptions: 
     const cacheFilePath = path.join(cacheDirObj.name, expectedFilename);
 
     const nowTimestamp = Math.floor(new Date().getTime() / 1000);
-    const expiryTimestamp = aadAccessToken.expiresOn
-        ? Math.floor(aadAccessToken.expiresOn.getTime() / 1000)
-        : nowTimestamp;
+    const expiryTimestamp = Math.floor(tokenInfo.expiry.getTime() / 1000);
     const cachedTokenData = {
-        access_token: aadAccessToken.accessToken,
+        access_token: tokenInfo.token,
         refresh_token: "",
         expires_in: expiryTimestamp - nowTimestamp,
         expires_on: expiryTimestamp,

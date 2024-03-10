@@ -1,11 +1,11 @@
 import { QuickPickItem, Uri, env, window } from "vscode";
-import { ensureSignedIn, getSubscriptions, getTenantIds } from "../utils/azureSession";
+import { ensureSignedIn, getSubscriptions, getTenantIds, signIn } from "../utils/azureSession";
 import { failed } from "../utils/errorable";
 import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
 import { getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
 
 export async function signInToAzure(): Promise<void> {
-    await ensureSignedIn();
+    await signIn();
 }
 
 type SubscriptionQuickPickItem = QuickPickItem & { subscription: AzureSubscription };
