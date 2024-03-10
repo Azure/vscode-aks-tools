@@ -10,8 +10,14 @@ import {
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { TokenCredential } from "@azure/core-auth";
 import { getFilteredSubscriptions } from "./config";
+import { parseJson } from "./json";
 
 export type SignInStatus = "Initializing" | "SigningIn" | "SignedIn" | "SignedOut";
+
+export type TokenInfo = {
+    token: string;
+    expiry: Date;
+};
 
 class AksAzureSubscriptionProvider extends VSCodeAzureSubscriptionProvider {
     protected async getSubscriptionFilters(): Promise<SubscriptionId[]> {
@@ -84,10 +90,22 @@ export async function getSubscriptions(filter: boolean): Promise<Errorable<Azure
     }
 }
 
-async function signIn(): Promise<Errorable<void>> {
+export async function signIn(): Promise<Errorable<void>> {
     try {
-        if (!(await subscriptionProvider.isSignedIn())) {
-            await subscriptionProvider.signIn();
+        const signedIn = await subscriptionProvider.signIn();
+        if (!signedIn) {
+            return { succeeded: false, error: "Failed to sign in to Azure." };
+        }
+
+        if (signInStatus !== "SignedIn") {
+            signInStatus = "SignedIn";
+            onSignInStatusChangeEmitter.fire(signInStatus);
+        }
+
+        const tenants = await subscriptionProvider.getTenants();
+        for (const tenant of tenants) {
+            const isSignedIn = await subscriptionProvider.isSignedIn(tenant.tenantId);
+            console.log(`Tenant ${tenant.tenantId} is signed in: ${isSignedIn}`);
         }
     } catch (e) {
         signInStatus = "SignedOut";
@@ -149,6 +167,46 @@ export function getSubscriptionContext(
         environment,
         isCustomCloud: environment.name === "AzureCustomCloud",
     };
+}
+
+export function getTokenInfo(session: AuthenticationSession): Errorable<TokenInfo> {
+    const jwtToken = session.accessToken;
+    const tokenParts = jwtToken.split(".");
+    if (tokenParts.length !== 3) {
+        return { succeeded: false, error: `Invalid JWT token: ${jwtToken}` };
+    }
+
+    const body = tokenParts[1];
+    let jsonBody: string;
+    try {
+        jsonBody = Buffer.from(body, "base64").toString();
+    } catch (e) {
+        return { succeeded: false, error: `Failed to decode JWT token body: ${body}` };
+    }
+
+    const jwt = parseJson<Jwt>(jsonBody);
+    if (failed(jwt)) {
+        return jwt;
+    }
+
+    const tokenInfo: TokenInfo = {
+        token: jwtToken,
+        expiry: new Date(jwt.result.exp * 1000),
+    };
+
+    return { succeeded: true, result: tokenInfo };
+}
+
+interface Jwt {
+    aud: string;
+    exp: number;
+    iat: number;
+    iss: string;
+    nbf: number;
+    oid: string;
+    sub: string;
+    tid: string;
+    ver: string;
 }
 
 async function initialize(): Promise<void> {
