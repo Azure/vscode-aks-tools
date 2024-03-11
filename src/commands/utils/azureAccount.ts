@@ -10,8 +10,8 @@ import {
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { RoleAssignment } from "@azure/arm-authorization";
-import { getConfiguredAzureEnv } from "@microsoft/vscode-azext-azureauth";
-import { getSubscriptions, getTenantIds } from "./azureSession";
+import { getEnvironment } from "../../auth/azureAuth";
+import { getSubscriptions, getTenantIds, SelectionType } from "./subscriptions";
 
 function getDefaultScope(endpointUrl: string): string {
     return endpointUrl.endsWith("/") ? `${endpointUrl}.default` : `${endpointUrl}/.default`;
@@ -42,15 +42,17 @@ export async function getServicePrincipalAccess(
     appId: string,
     secret: string,
 ): Promise<Errorable<ServicePrincipalAccess>> {
-    const spInfo = await getServicePrincipalInfo(appId, secret);
-    if (failed(spInfo)) {
-        return spInfo;
-    }
-
-    const cloudName = getConfiguredAzureEnv().name;
-    const filteredSubscriptions = await getSubscriptions(true);
+    const cloudName = getEnvironment().name;
+    const filteredSubscriptions = await getSubscriptions(SelectionType.Filtered);
     if (failed(filteredSubscriptions)) {
         return filteredSubscriptions;
+    }
+
+    const tenantIds = getTenantIds(filteredSubscriptions.result);
+
+    const spInfo = await getServicePrincipalInfo(tenantIds, appId, secret);
+    if (failed(spInfo)) {
+        return spInfo;
     }
 
     const promiseResults = await Promise.all(
@@ -72,14 +74,13 @@ export async function getServicePrincipalAccess(
     return { succeeded: true, result: { cloudName, tenantId: spInfo.result.tenantId, subscriptions } };
 }
 
-async function getServicePrincipalInfo(appId: string, appSecret: string): Promise<Errorable<ServicePrincipalInfo>> {
-    const tenantIds = await getTenantIds();
-    if (failed(tenantIds)) {
-        return tenantIds;
-    }
-
+async function getServicePrincipalInfo(
+    tenantIds: string[],
+    appId: string,
+    appSecret: string,
+): Promise<Errorable<ServicePrincipalInfo>> {
     const spInfoResults = await Promise.all(
-        tenantIds.result.map((id) => getServicePrincipalInfoForTenant(id, appId, appSecret)),
+        tenantIds.map((id) => getServicePrincipalInfoForTenant(id, appId, appSecret)),
     );
     for (const spInfoResult of spInfoResults) {
         if (succeeded(spInfoResult)) {
@@ -154,7 +155,7 @@ async function getServicePrincipalInfoForTenant(
 }
 
 function getMicrosoftGraphClientBaseUrl(): string {
-    const environment = getConfiguredAzureEnv();
+    const environment = getEnvironment();
     // Environments are from here: https://github.com/Azure/ms-rest-azure-env/blob/6fa17ce7f36741af6ce64461735e6c7c0125f0ed/lib/azureEnvironment.ts#L266-L346
     // They do not contain the MS Graph endpoints, whose values are here:
     // https://github.com/microsoftgraph/msgraph-sdk-javascript/blob/d365ab1d68f90f2c38c67a5a7c7fe54acfc2584e/src/Constants.ts#L28
