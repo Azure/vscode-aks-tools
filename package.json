@@ -497,7 +497,7 @@
         "@azure/storage-blob": "^12.17.0",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-azureutils": "^3.0.1",
-        "@microsoft/vscode-azext-utils": "^2.1.5",
+        "@microsoft/vscode-azext-utils": "^2.4.0",
         "@vscode/extension-telemetry": "^0.9.3",
         "cross-fetch": "^4.0.0",
         "decompress": "^4.2.1",
