@@ -1,6 +1,6 @@
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./Kubectl.module.css";
-import { FormEvent, KeyboardEvent } from "react";
+import { FormEvent } from "react";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -18,7 +18,7 @@ export function CommandInput(props: CommandInputProps) {
         props.onCommandUpdate(input.value);
     }
 
-    function onKeyPress(e: KeyboardEvent<HTMLElement>) {
+    function onKeyPress(e: React.KeyboardEvent<HTMLElement>) {
         if (e.nativeEvent instanceof KeyboardEvent) {
             if (e.code === "Enter") {
                 props.onRunCommand(props.command);
