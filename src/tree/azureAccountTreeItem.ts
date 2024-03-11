@@ -2,22 +2,25 @@ import {
     AzExtParentTreeItem,
     AzExtTreeItem,
     GenericTreeItem,
+    ISubscriptionContext,
     TreeItemIconPath,
     registerEvent,
 } from "@microsoft/vscode-azext-utils";
-import { ThemeIcon } from "vscode";
+import { AuthenticationSession, ThemeIcon } from "vscode";
 import { assetUri } from "../assets";
 import { failed } from "../commands/utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { createSubscriptionTreeItem } from "./subscriptionTreeItem";
+import { getFilteredSubscriptionsChangeEvent } from "../commands/utils/config";
 import {
     getAuthSession,
+    getCredential,
+    getEnvironment,
     getSignInStatus,
     getSignInStatusChangeEvent,
-    getSubscriptionContext,
-    getSubscriptions,
-} from "../commands/utils/azureSession";
-import { getFilteredSubscriptionsChangeEvent } from "../commands/utils/config";
+} from "../auth/azureAuth";
+import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
+import { Subscription } from "@azure/arm-resources-subscriptions";
 
 export function createAzureAccountTreeItem(): AzExtParentTreeItem & { dispose(): unknown } {
     return new AzureAccountTreeItem();
@@ -104,7 +107,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                 ];
         }
 
-        const subscriptions = await getSubscriptions(true);
+        const subscriptions = await getSubscriptions(SelectionType.Filtered);
         if (failed(subscriptions)) {
             return [
                 new GenericTreeItem(this, {
@@ -157,4 +160,20 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
 
         return this.subscriptionTreeItems;
     }
+}
+
+function getSubscriptionContext(session: AuthenticationSession, subscription: Subscription): ISubscriptionContext {
+    const credentials = getCredential();
+    const environment = getEnvironment();
+
+    return {
+        credentials,
+        subscriptionDisplayName: subscription.displayName || "",
+        subscriptionId: subscription.subscriptionId || "",
+        subscriptionPath: `/subscriptions/${subscription.subscriptionId}`,
+        tenantId: subscription.tenantId || "",
+        userId: session.account.id,
+        environment,
+        isCustomCloud: environment.name === "AzureCustomCloud",
+    };
 }

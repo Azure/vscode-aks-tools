@@ -1,23 +1,17 @@
 import { QuickPickItem, Uri, env, window } from "vscode";
-import { ensureSignedIn, getSubscriptions, getTenantIds, signIn } from "../utils/azureSession";
 import { failed } from "../utils/errorable";
-import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
-import { getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
+import { SubscriptionFilter, getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
+import { signIn } from "../../auth/azureAuth";
+import { SelectionType, getSubscriptions, getTenantIds } from "../utils/subscriptions";
 
 export async function signInToAzure(): Promise<void> {
     await signIn();
 }
 
-type SubscriptionQuickPickItem = QuickPickItem & { subscription: AzureSubscription };
+type SubscriptionQuickPickItem = QuickPickItem & { subscription: SubscriptionFilter };
 
 export async function selectSubscriptions(): Promise<void> {
-    const signInResult = await ensureSignedIn();
-    if (failed(signInResult)) {
-        window.showErrorMessage(signInResult.error);
-        return;
-    }
-
-    const allSubscriptions = await getSubscriptions(false);
+    const allSubscriptions = await getSubscriptions(SelectionType.All);
     if (failed(allSubscriptions)) {
         window.showErrorMessage(allSubscriptions.error);
         return;
@@ -38,25 +32,24 @@ export async function selectSubscriptions(): Promise<void> {
         return;
     }
 
-    const tenantIds = await getTenantIds();
-    if (failed(tenantIds)) {
-        window.showErrorMessage(tenantIds.error);
-        return;
-    }
+    const tenantIds = await getTenantIds(allSubscriptions.result);
 
     const filteredSubscriptions = await getFilteredSubscriptions();
 
-    const subscriptionsInKnownTenants = filteredSubscriptions.filter((sub) => tenantIds.result.includes(sub.tenantId));
+    const subscriptionsInKnownTenants = filteredSubscriptions.filter((sub) => tenantIds.includes(sub.tenantId));
     const subscriptionsInUnknownTenants = filteredSubscriptions.filter(
         (sub) => !subscriptionsInKnownTenants.includes(sub),
     );
 
     const quickPickItems: SubscriptionQuickPickItem[] = allSubscriptions.result.map((sub) => {
         return {
-            label: sub.name,
+            label: sub.displayName || "",
             description: sub.subscriptionId,
             picked: subscriptionsInKnownTenants.some((filtered) => filtered.subscriptionId === sub.subscriptionId),
-            subscription: sub,
+            subscription: {
+                subscriptionId: sub.subscriptionId || "",
+                tenantId: sub.tenantId || "",
+            },
         };
     });
 

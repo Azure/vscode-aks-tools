@@ -18,7 +18,8 @@ import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
 import { dirSync } from "tmp";
 import { AuthenticationSession, authentication } from "vscode";
-import { TokenInfo, getTokenInfo } from "./azureSession";
+import { getTokenInfo } from "../../auth/azureAuth";
+import { TokenInfo } from "../../auth/types";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -221,14 +222,14 @@ async function getAadKubeconfig(
     const execOptions = readExecOptions(execBlock.args);
 
     // Get a token whose audience is the AKS server ID.
-    const scope = `${execOptions.serverId}/.default`;
+    const scopes = [`${execOptions.serverId}/.default`, `VSCODE_TENANT:${execOptions.tenantId}`];
     let session: AuthenticationSession;
     try {
-        session = await authentication.getSession("microsoft", [scope], { createIfNone: true });
+        session = await authentication.getSession("microsoft", scopes, { createIfNone: true });
     } catch (e) {
         return {
             succeeded: false,
-            error: `Failed to retrieve Microsoft authentication session for scope ${scope}: ${getErrorMessage(e)}`,
+            error: `Failed to retrieve Microsoft authentication session for scopes [${scopes.join(",")}]: ${getErrorMessage(e)}`,
         };
     }
 
