@@ -10,12 +10,8 @@ import {
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { RoleAssignment } from "@azure/arm-authorization";
-import { getEnvironment } from "../../auth/azureAuth";
+import { getDefaultScope, getEnvironment } from "../../auth/azureAuth";
 import { getSubscriptions, getTenantIds, SelectionType } from "./subscriptions";
-
-function getDefaultScope(endpointUrl: string): string {
-    return endpointUrl.endsWith("/") ? `${endpointUrl}.default` : `${endpointUrl}/.default`;
-}
 
 export interface ServicePrincipalAccess {
     readonly cloudName: string;
