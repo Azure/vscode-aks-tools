@@ -3,6 +3,7 @@ import {
     AgentPoolProfileInfo,
     ClusterInfo,
     InitialState,
+    KubernetesVersionInfo,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
@@ -47,12 +48,40 @@ const testWindows2022Pool: AgentPoolProfileInfo = {
     osType: "Windows",
 };
 
+const supportedVersions: KubernetesVersionInfo[] = [
+    {
+        version: "1.24",
+        patchVersions: ["1.24.6"],
+    },
+    {
+        version: "1.25",
+        patchVersions: ["1.25.3"],
+    },
+    {
+        version: "1.26",
+        patchVersions: ["1.26.1"],
+    },
+    {
+        version: "1.27",
+        patchVersions: ["1.27.0"],
+    },
+    {
+        version: "1.28",
+        patchVersions: ["1.28.0"],
+    },
+    {
+        version: "1.29",
+        patchVersions: ["1.29.0"],
+    },
+];
+
 const runningClusterInfo: ClusterInfo = {
     provisioningState: "Succeeded",
     fqdn: "testcluster-w-testrg-4340d4fda1c9.hcp.eastus.azmk8s.io",
     kubernetesVersion: "1.24.6",
     powerStateCode: "Running",
     agentPoolProfiles: [testSystemPool, testWindows2019Pool, testWindows2022Pool],
+    supportedVersions: supportedVersions,
 };
 
 const abortedClusterInfo: ClusterInfo = {

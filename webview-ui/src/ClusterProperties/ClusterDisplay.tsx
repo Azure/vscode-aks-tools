@@ -62,6 +62,9 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
     const showReconcileButton =
         props.clusterInfo.provisioningState === "Canceled" && props.clusterInfo.powerStateCode === "Running";
 
+    const supportedPatchVersions = props.clusterInfo.supportedVersions.flatMap((v) => v.patchVersions);
+    const isSupported = supportedPatchVersions.includes(props.clusterInfo.kubernetesVersion);
+
     return (
         <dl className={styles.propertyList}>
             <dt>Provisioning State</dt>
@@ -137,7 +140,33 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
             <dt>FQDN</dt>
             <dd>{props.clusterInfo.fqdn}</dd>
             <dt>Kubernetes Version</dt>
-            <dd>{props.clusterInfo.kubernetesVersion}</dd>
+            <dd>
+                {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
+                &nbsp;
+                <span className={styles.tooltip}>
+                    <span>
+                        <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
+                    </span>
+                    <span className={styles.tooltiptext}>
+                        Current Versions available:
+                        <table>
+                            <tr>
+                                <th>Version</th>
+                                <th>Patch Versions</th>
+                            </tr>
+                            {props.clusterInfo.supportedVersions.map((v) => (
+                                <tr key={v.version}>
+                                    <td>{v.version}</td>
+                                    <td>{v.patchVersions.join(", ")}</td>
+                                </tr>
+                            ))}
+                        </table>
+                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
+                            Learn more
+                        </VSCodeLink>
+                    </span>
+                </span>
+            </dd>
         </dl>
     );
 }
