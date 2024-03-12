@@ -173,6 +173,10 @@ export function getTokenInfo(session: AuthenticationSession): Errorable<TokenInf
     return { succeeded: true, result: tokenInfo };
 }
 
+export function getDefaultScope(endpointUrl: string): string {
+    return endpointUrl.endsWith("/") ? `${endpointUrl}.default` : `${endpointUrl}/.default`;
+}
+
 interface Jwt {
     aud: string;
     exp: number;
@@ -206,10 +210,6 @@ async function getArmSession(
 
 function getConfiguredAuthProviderId(): AuthProviderId {
     return getConfiguredAzureEnv().name === Environment.AzureCloud.name ? "microsoft" : "microsoft-sovereign-cloud";
-}
-
-function getDefaultScope(endpointUrl: string): string {
-    return endpointUrl.endsWith("/") ? `${endpointUrl}.default` : `${endpointUrl}/.default`;
 }
 
 async function getAuthenticatedTenants(session: AuthenticationSession): Promise<Tenant[]> {

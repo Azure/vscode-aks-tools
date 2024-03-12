@@ -1,6 +1,6 @@
 import { Subscription } from "@azure/arm-resources-subscriptions";
 import { getSubscriptionClient, listAll } from "./arm";
-import { Errorable, getErrorMessage } from "./errorable";
+import { Errorable, getErrorMessage, map as errmap } from "./errorable";
 import { getFilteredSubscriptions } from "./config";
 
 export enum SelectionType {
@@ -11,9 +11,8 @@ export enum SelectionType {
 export async function getSubscriptions(selectionType: SelectionType): Promise<Errorable<Subscription[]>> {
     const client = getSubscriptionClient();
     try {
-        const subs = await listAll(client.subscriptions.list());
-        const result = sortAndFilter(subs, selectionType);
-        return { succeeded: true, result };
+        const subsResult = await listAll(client.subscriptions.list());
+        return errmap(subsResult, (subs) => sortAndFilter(subs, selectionType));
     } catch (e) {
         return { succeeded: false, error: `Failed to retrieve subscriptions: ${getErrorMessage(e)}` };
     }
