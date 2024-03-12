@@ -6,11 +6,18 @@ import {
     AgentPoolProfileInfo,
     ClusterInfo,
     InitialState,
+    KubernetesVersionInfo,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/clusterProperties";
-import { ContainerServiceClient, ManagedCluster, ManagedClusterAgentPoolProfile } from "@azure/arm-containerservice";
-import { getManagedCluster } from "../commands/utils/clusters";
+import {
+    ContainerServiceClient,
+    KubernetesVersion,
+    KubernetesVersionListResult,
+    ManagedCluster,
+    ManagedClusterAgentPoolProfile,
+} from "@azure/arm-containerservice";
+import { getKubernetesVersionInfo, getManagedCluster } from "../commands/utils/clusters";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
@@ -204,17 +211,24 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             return;
         }
 
-        webview.postGetPropertiesResponse(asClusterInfo(cluster.result));
+        const kubernetesVersion = await getKubernetesVersionInfo(this.client, cluster.result.location);
+        if (failed(kubernetesVersion)) {
+            webview.postErrorNotification(kubernetesVersion.error);
+            return;
+        }
+
+        webview.postGetPropertiesResponse(asClusterInfo(cluster.result, kubernetesVersion.result));
     }
 }
 
-function asClusterInfo(cluster: ManagedCluster): ClusterInfo {
+function asClusterInfo(cluster: ManagedCluster, kubernetesVersionList: KubernetesVersionListResult): ClusterInfo {
     return {
         provisioningState: cluster.provisioningState!,
         fqdn: cluster.fqdn!,
-        kubernetesVersion: cluster.kubernetesVersion!,
+        kubernetesVersion: cluster.currentKubernetesVersion!,
         powerStateCode: cluster.powerState!.code!,
         agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
+        supportedVersions: (kubernetesVersionList.values || []).map(asKubernetesVersionInfo),
     };
 }
 
@@ -228,5 +242,12 @@ function asPoolProfileInfo(pool: ManagedClusterAgentPoolProfile): AgentPoolProfi
         vmSize: pool.vmSize!,
         count: pool.count!,
         osType: pool.osType!,
+    };
+}
+
+function asKubernetesVersionInfo(version: KubernetesVersion): KubernetesVersionInfo {
+    return {
+        version: version.version || "",
+        patchVersions: version.patchVersions ? Object.keys(version.patchVersions) : [],
     };
 }
