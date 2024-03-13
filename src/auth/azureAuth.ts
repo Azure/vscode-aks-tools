@@ -10,10 +10,11 @@ import {
 import { SignInStatus, TokenInfo } from "./types";
 import { Environment } from "@azure/ms-rest-azure-env";
 import { getConfiguredAzureEnv } from "../commands/utils/config";
-import { Errorable, failed, getErrorMessage, succeeded } from "../commands/utils/errorable";
+import { Errorable, failed, getErrorMessage, map as errmap, succeeded, bindAsync } from "../commands/utils/errorable";
 import { TokenCredential } from "@azure/core-auth";
 import { parseJson } from "../commands/utils/json";
 import { SubscriptionClient, TenantIdDescription } from "@azure/arm-resources-subscriptions";
+import { listAll } from "../commands/utils/arm";
 
 type AuthProviderId = "microsoft" | "microsoft-sovereign-cloud";
 
@@ -24,7 +25,6 @@ type Tenant = {
 
 class AzureSessionProvider extends VsCodeDisposable {
     private readonly initializePromise: Promise<void>;
-    private signInPromise: Promise<Errorable<AuthenticationSession>> | null = null;
     private tenants: Tenant[] = [];
 
     public readonly onSignInStatusChangeEmitter = new EventEmitter<SignInStatus>();
@@ -64,20 +64,24 @@ class AzureSessionProvider extends VsCodeDisposable {
 
     public async signIn(): Promise<void> {
         await this.initializePromise;
-        if (this.signInPromise) {
-            await this.signInPromise;
-        } else {
-            this.signInStatusValue = "SigningIn";
-            this.onSignInStatusChangeEmitter.fire(this.signInStatusValue);
-            await this.signInAndUpdateTenants({ createIfNone: true, clearSessionPreference: true });
-        }
 
-        this.signInPromise = null;
+        const newSignInStatus = "SigningIn";
+        if (newSignInStatus !== this.signInStatusValue) {
+            this.signInStatusValue = newSignInStatus;
+            this.onSignInStatusChangeEmitter.fire(this.signInStatusValue);
+        }
+        await this.signInAndUpdateTenants({ createIfNone: true, clearSessionPreference: true });
     }
 
     private async signInAndUpdateTenants(options: AuthenticationGetSessionOptions): Promise<void> {
-        const getSessionResult = await getArmSession(null, options);
-        this.tenants = succeeded(getSessionResult) ? await getAuthenticatedTenants(getSessionResult.result) : [];
+        // Initially, try to get a session using the 'organizations' tenant/authority:
+        // https://learn.microsoft.com/en-us/entra/identity-platform/msal-client-application-configuration#authority
+        // This allows the user to sign in to the Microsoft provider and list tenants,
+        // but the resulting session will not allow tenant-level operations. For that,
+        // we need to get a session for a specific tenant.
+        const getSessionResult = await getArmSession("organizations", options);
+        const getTenantsResult = await bindAsync(getSessionResult, (session) => getTenants(session));
+        this.tenants = succeeded(getTenantsResult) ? getTenantsResult.result : [];
         const newSignInStatus = this.tenants.length > 0 ? "SignedIn" : "SignedOut";
         if (newSignInStatus !== this.signInStatusValue) {
             this.signInStatusValue = newSignInStatus;
@@ -87,12 +91,12 @@ class AzureSessionProvider extends VsCodeDisposable {
 
     public async getSession(): Promise<Errorable<AuthenticationSession>> {
         await this.initializePromise;
-        if (this.signInPromise) {
-            return await this.signInPromise;
+        if (this.signInStatusValue !== "SignedIn") {
+            return { succeeded: false, error: `Not signed in (${this.signInStatusValue}).` };
         }
 
         if (this.tenants.length === 0) {
-            return { succeeded: false, error: "No authenticated tenants found." };
+            return { succeeded: false, error: "No tenants found." };
         }
 
         let tenant: Tenant;
@@ -107,7 +111,8 @@ class AzureSessionProvider extends VsCodeDisposable {
             tenant = this.tenants[0];
         }
 
-        return await getArmSession(tenant.id, { createIfNone: false, silent: true });
+        // Get a session for a specific tenant.
+        return await getArmSession(tenant.id, { createIfNone: true });
     }
 }
 
@@ -190,7 +195,7 @@ interface Jwt {
 }
 
 async function getArmSession(
-    tenantId: string | null,
+    tenantId: string,
     options: AuthenticationGetSessionOptions,
 ): Promise<Errorable<AuthenticationSession>> {
     try {
@@ -212,7 +217,7 @@ function getConfiguredAuthProviderId(): AuthProviderId {
     return getConfiguredAzureEnv().name === Environment.AzureCloud.name ? "microsoft" : "microsoft-sovereign-cloud";
 }
 
-async function getAuthenticatedTenants(session: AuthenticationSession): Promise<Tenant[]> {
+async function getTenants(session: AuthenticationSession): Promise<Errorable<Tenant[]>> {
     const armEndpoint = getConfiguredAzureEnv().resourceManagerEndpointUrl;
     const credential: TokenCredential = {
         getToken: async () => {
@@ -220,13 +225,9 @@ async function getAuthenticatedTenants(session: AuthenticationSession): Promise<
         },
     };
     const subscriptionClient = new SubscriptionClient(credential, { endpoint: armEndpoint });
-    const tenants: Tenant[] = [];
-    for await (const page of subscriptionClient.tenants.list().byPage()) {
-        tenants.push(...page.filter(asTenant).map((t) => ({ name: t.displayName, id: t.tenantId })));
-    }
 
-    const sessions = await Promise.all(tenants.map((t) => getArmSession(t.id, { createIfNone: false, silent: true })));
-    return sessions.filter(succeeded).map((_, i) => tenants[i]);
+    const tenantsResult = await listAll(subscriptionClient.tenants.list());
+    return errmap(tenantsResult, (t) => t.filter(asTenant).map((t) => ({ name: t.displayName, id: t.tenantId })));
 }
 
 function asTenant(tenant: TenantIdDescription): tenant is { tenantId: string; displayName: string } {
