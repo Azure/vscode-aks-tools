@@ -3,12 +3,12 @@ import { getCredential, getEnvironment } from "../../auth/azureAuth";
 import { PagedAsyncIterableIterator } from "@azure/core-paging";
 import { Errorable, getErrorMessage } from "./errorable";
 
-const environment = getEnvironment();
-const credential = getCredential();
-
 export function getSubscriptionClient(): SubscriptionClient {
-    const endpoint = environment.resourceManagerEndpointUrl;
-    return new SubscriptionClient(credential, { endpoint });
+    return new SubscriptionClient(getCredential(), { endpoint: getArmEndpoint() });
+}
+
+function getArmEndpoint(): string {
+    return getEnvironment().resourceManagerEndpointUrl;
 }
 
 export async function listAll<T>(iterator: PagedAsyncIterableIterator<T>): Promise<Errorable<T[]>> {
