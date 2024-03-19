@@ -2,7 +2,9 @@ import * as path from "path";
 import { succeeded, Errorable, getErrorMessage } from "../errorable";
 import { Dictionary } from "../dictionary";
 import { sleep } from "../sleep";
-import download from "download";
+import { mkdir } from "fs/promises";
+import { WriteStream, createWriteStream } from "fs";
+import fetch from "node-fetch";
 
 const DOWNLOAD_ONCE_STATUS: Dictionary<DownloadOperationStatus> = {};
 
@@ -14,9 +16,7 @@ enum DownloadOperationStatus {
 
 export async function to(sourceUrl: string, destinationFile: string): Promise<Errorable<null>> {
     try {
-        await download(sourceUrl, path.dirname(destinationFile), {
-            filename: path.basename(destinationFile),
-        });
+        await download(sourceUrl, destinationFile);
 
         return { succeeded: true, result: null };
     } catch (e) {
@@ -47,4 +47,35 @@ export async function once(sourceUrl: string, destinationFile: string): Promise<
 
 export async function clear(downloadedFilePath: string) {
     delete DOWNLOAD_ONCE_STATUS[downloadedFilePath];
+}
+
+async function download(url: string, outputFilepath: string): Promise<Errorable<void>> {
+    const directory = path.dirname(outputFilepath);
+    try {
+        await mkdir(directory, { recursive: true });
+    } catch (e) {
+        return { succeeded: false, error: `Unable to create directory ${directory}: ${getErrorMessage(e)}` };
+    }
+
+    let fileStream: WriteStream;
+    try {
+        fileStream = createWriteStream(outputFilepath);
+    } catch (e) {
+        return { succeeded: false, error: `Unable to create file ${outputFilepath}: ${getErrorMessage(e)}` };
+    }
+
+    try {
+        const response = await fetch(url);
+        if (response.body === null) {
+            return { succeeded: false, error: `No body in response from ${url}` };
+        }
+
+        for await (const chunk of response.body) {
+            fileStream.write(chunk);
+        }
+    } catch (e) {
+        return { succeeded: false, error: `Error downloading from ${url} to ${outputFilepath}: ${getErrorMessage(e)}` };
+    }
+
+    return { succeeded: true, result: undefined };
 }
