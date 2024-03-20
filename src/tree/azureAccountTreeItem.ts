@@ -107,7 +107,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                 ];
         }
 
-        const subscriptions = await getSubscriptions(SelectionType.Filtered);
+        let subscriptions = await getSubscriptions(SelectionType.Filtered);
         if (failed(subscriptions)) {
             return [
                 new GenericTreeItem(this, {
@@ -120,13 +120,26 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         }
 
         if (subscriptions.result.length === 0) {
+            subscriptions = await getSubscriptions(SelectionType.All);
+            if (failed(subscriptions)) {
+                return [
+                    new GenericTreeItem(this, {
+                        label: "Error loading subscriptions",
+                        contextValue: "azureCommand",
+                        id: "aksAccountError",
+                        iconPath: new ThemeIcon("error"),
+                    }),
+                ];
+            }
+        }
+
+        if (subscriptions.result.length === 0) {
             return [
                 new GenericTreeItem(this, {
-                    label: "Select Subscriptions...",
-                    commandId: "aks.selectSubscriptions",
+                    label: "No subscriptions found",
                     contextValue: "azureCommand",
-                    id: "aksAccountSelectSubscriptions",
-                    includeInTreeItemPicker: true,
+                    id: "aksAccountNoSubs",
+                    iconPath: new ThemeIcon("info"),
                 }),
             ];
         }
@@ -135,10 +148,10 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         if (failed(session)) {
             return [
                 new GenericTreeItem(this, {
-                    label: "Loading...",
+                    label: "Error authenticating",
                     contextValue: "azureCommand",
-                    id: "aksAccountLoading",
-                    iconPath: new ThemeIcon("loading~spin"),
+                    id: "aksAccountError",
+                    iconPath: new ThemeIcon("error"),
                 }),
             ];
         }
