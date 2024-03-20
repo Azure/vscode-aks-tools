@@ -179,19 +179,17 @@ export function getTokenInfo(session: AuthenticationSession): Errorable<TokenInf
 }
 
 export function getDefaultScope(endpointUrl: string): string {
+    // Endpoint URL is that of the audience, e.g. for ARM in the public cloud
+    // it would be "https://management.core.windows.net".
     return endpointUrl.endsWith("/") ? `${endpointUrl}.default` : `${endpointUrl}/.default`;
 }
 
+/**
+ * The type of a JSON-parsed JWT body. Right now we only make use of the 'exp' field,
+ * but other standard claims could be added here if needed.
+ */
 interface Jwt {
-    aud: string;
     exp: number;
-    iat: number;
-    iss: string;
-    nbf: number;
-    oid: string;
-    sub: string;
-    tid: string;
-    ver: string;
 }
 
 async function getArmSession(
