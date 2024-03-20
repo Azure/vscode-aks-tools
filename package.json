@@ -144,6 +144,12 @@
                     "default": "v0.0.30",
                     "title": "Draft repository release tag",
                     "description": "Release tag for the stable Draft tool release."
+                },
+                "aks.retinatool.releaseTag": {
+                    "type": "string",
+                    "default": "v0.0.1",
+                    "title": "Retina repository release tag",
+                    "description": "Release tag for the stable Retina tool release."
                 }
             }
         },

@@ -92,6 +92,24 @@ export function getDraftConfig(): Errorable<DraftConfig> {
     return { succeeded: true, result: config };
 }
 
+export function getRetinaConfig(): Errorable<DraftConfig> {
+    const retinaconfig = vscode.workspace.getConfiguration("aks.retinatool");
+    const props = getConfigValue(retinaconfig, "releaseTag");
+
+    if (failed(props)) {
+        return {
+            succeeded: false,
+            error: `Failed to read aks.retina configuration: ${props.error}`,
+        };
+    }
+
+    const config = {
+        releaseTag: props.result,
+    };
+
+    return { succeeded: true, result: config };
+}
+
 function getConfigValue(config: vscode.WorkspaceConfiguration, key: string): Errorable<string> {
     const value = config.get(key);
     if (value === undefined) {
