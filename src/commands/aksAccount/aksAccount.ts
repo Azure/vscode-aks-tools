@@ -18,15 +18,11 @@ export async function selectSubscriptions(): Promise<void> {
     }
 
     if (allSubscriptions.result.length === 0) {
-        const noSubscriptionsFound =
-            "No subscriptions were found. Setup your account if you have yet to do so or check out our troubleshooting page for common solutions to this problem.";
-        const setupAccount = "Setup Account";
-        const openTroubleshooting = "Open Troubleshooting";
-        const response = await window.showInformationMessage(noSubscriptionsFound, setupAccount, openTroubleshooting);
+        const noSubscriptionsFound = "No subscriptions were found. Set up your account if you have yet to do so.";
+        const setupAccount = "Set up Account";
+        const response = await window.showInformationMessage(noSubscriptionsFound, setupAccount);
         if (response === setupAccount) {
-            env.openExternal(Uri.parse("https://aka.ms/AAeyf8k"));
-        } else if (response === openTroubleshooting) {
-            env.openExternal(Uri.parse("https://aka.ms/AAevvhr"));
+            env.openExternal(Uri.parse("https://azure.microsoft.com/"));
         }
 
         return;
