@@ -75,6 +75,8 @@ async function download(url: string, outputFilepath: string): Promise<Errorable<
         }
     } catch (e) {
         return { succeeded: false, error: `Error downloading from ${url} to ${outputFilepath}: ${getErrorMessage(e)}` };
+    } finally {
+        fileStream.end();
     }
 
     return { succeeded: true, result: undefined };
