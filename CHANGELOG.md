@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.4.2]
+
+* Show Properties page new feature for help information with k8s version deprecated available .
+* Replace download package with more in-house implementation.
+* Eslint improvement, Inspektor Gadget update.
+* Handle new archive structure for IG in windows.
+* Dependabot updates.
+
+Thank you so much @sprab for continued effort for testing changes, thanks you, @peterbom & our other BAU contributors.
+
 ## [1.4.1]
 
 * Fix for making instance when cluster name is same but RG are different.

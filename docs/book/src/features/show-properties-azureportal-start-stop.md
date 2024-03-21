@@ -10,8 +10,11 @@ Right click on your AKS cluster and click on **Show Properties** to display the 
 
 This page also enables some useful cluster and node pool level operations like `Abort Last Operation` (at cluster and agent pool level) and `Reconcile`.
 
+This page now also enable information box for the users to quickly see available kuberentes versions available for the cluster to upgrade and if the current version is out of support or not.
+
 ![Abort operation](../resources/show-properties-abort.png)
 ![Reconcile operation](../resources/show-properties-reconcile.png)
+![Kuberentes version information](../resources/show-properties-page-k8s-available-versions.png)
 
 ### Create cluster from Azure Portal
 
