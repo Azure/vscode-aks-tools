@@ -22,7 +22,7 @@ export async function getKubectlGadgetBinaryPath(): Promise<Errorable<string>> {
 
     const archiveFilename = getArchiveFilename(releaseTag);
     const downloadUrl = `https://github.com/inspektor-gadget/inspektor-gadget/releases/download/${releaseTag}/${archiveFilename}`;
-    const pathToBinaryInArchive = getPathToBinaryInArchive();
+    const pathToBinaryInArchive = getBinaryFilename();
 
     // The plugin requires an '.exe' extension on Windows, but it doesn't have that in the archive
     // so we can't simply extract it from the path within the archive.
@@ -48,10 +48,6 @@ function getArchiveFilename(releaseTag: string) {
     }
 
     return `kubectl-gadget-${operatingSystem}-${architecture}-${releaseTag}.tar.gz`;
-}
-
-function getPathToBinaryInArchive() {
-    return "kubectl-gadget";
 }
 
 function getBinaryFilename() {
