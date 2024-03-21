@@ -34,7 +34,7 @@ import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProp
 import aksCreateClusterNavToAzurePortal from "./commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal";
 import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
 import { longRunning } from "./commands/utils/host";
-import { getClusterProperties, getKubeconfigYaml } from "./commands/utils/clusters";
+import { getKubeconfigYaml, getManagedCluster } from "./commands/utils/clusters";
 import aksDeleteCluster from "./commands/aksDeleteCluster/aksDeleteCluster";
 import aksRotateClusterCert from "./commands/aksRotateClusterCert/aksRotateClusterCert";
 import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
@@ -135,7 +135,7 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 
 async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<string | undefined> {
     const properties = await longRunning(`Getting properties for cluster ${treeNode.name}.`, () =>
-        getClusterProperties(treeNode),
+        getManagedCluster(treeNode.subscription.subscriptionId, treeNode.resourceGroupName, treeNode.name),
     );
     if (failed(properties)) {
         vscode.window.showErrorMessage(properties.error);
@@ -143,7 +143,7 @@ async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<strin
     }
 
     const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${treeNode.name}.`, () =>
-        getKubeconfigYaml(treeNode, properties.result),
+        getKubeconfigYaml(treeNode.subscription.subscriptionId, treeNode.resourceGroupName, properties.result),
     );
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);

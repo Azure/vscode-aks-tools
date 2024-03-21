@@ -3,7 +3,6 @@ import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@az
 import { RestError } from "@azure/storage-blob";
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, window } from "vscode";
-import { getResourceGroupList } from "../commands/utils/clusters";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
@@ -18,6 +17,7 @@ import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
 import { getPortalResourceUrl } from "../commands/utils/env";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { getResourceGroups } from "../commands/utils/resourceGroups";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -92,7 +92,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     }
 
     private async handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const groups = await getResourceGroupList(this.resourceManagementClient);
+        const groups = await getResourceGroups(this.subscriptionContext.subscriptionId);
         if (failed(groups)) {
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,

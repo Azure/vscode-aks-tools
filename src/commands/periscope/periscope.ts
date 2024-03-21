@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as tmpfile from "../utils/tempfile";
-import { getAksClusterTreeNode, getClusterProperties, getContainerClient, getKubeconfigYaml } from "../utils/clusters";
+import { getAksClusterTreeNode, getKubeconfigYaml, getManagedCluster } from "../utils/clusters";
 import { getKustomizeConfig } from "../utils/config";
 import { getExtension, longRunning } from "../utils/host";
 import {
@@ -17,6 +17,7 @@ import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import { Errorable, failed } from "../utils/errorable";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { PeriscopeDataProvider, PeriscopePanel } from "../../panels/PeriscopePanel";
+import { getAksClient } from "../utils/arm";
 
 export default async function periscope(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -41,7 +42,11 @@ export default async function periscope(_context: IActionContext, target: unknow
     }
 
     const properties = await longRunning(`Getting properties for cluster ${clusterNode.result.name}.`, () =>
-        getClusterProperties(clusterNode.result),
+        getManagedCluster(
+            clusterNode.result.subscription.subscriptionId,
+            clusterNode.result.resourceGroupName,
+            clusterNode.result.name,
+        ),
     );
     if (failed(properties)) {
         vscode.window.showErrorMessage(properties.error);
@@ -49,7 +54,11 @@ export default async function periscope(_context: IActionContext, target: unknow
     }
 
     const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${clusterNode.result.name}.`, () =>
-        getKubeconfigYaml(clusterNode.result, properties.result),
+        getKubeconfigYaml(
+            clusterNode.result.subscription.subscriptionId,
+            clusterNode.result.resourceGroupName,
+            properties.result,
+        ),
     );
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);
@@ -107,7 +116,7 @@ async function runAKSPeriscope(
         return;
     }
 
-    const containerClient = getContainerClient(clusterNode);
+    const containerClient = getAksClient(clusterNode.subscription.subscriptionId);
 
     // Get the features of the cluster that determine which optional kustomize components to deploy.
     const clusterFeatures = await getClusterFeatures(containerClient, clusterNode.resourceGroupName, clusterNode.name);
