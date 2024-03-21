@@ -107,7 +107,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                 ];
         }
 
-        let subscriptions = await getSubscriptions(SelectionType.Filtered);
+        const subscriptions = await getSubscriptions(SelectionType.AllIfNoFilters);
         if (failed(subscriptions)) {
             return [
                 new GenericTreeItem(this, {
@@ -117,20 +117,6 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                     iconPath: new ThemeIcon("error"),
                 }),
             ];
-        }
-
-        if (subscriptions.result.length === 0) {
-            subscriptions = await getSubscriptions(SelectionType.All);
-            if (failed(subscriptions)) {
-                return [
-                    new GenericTreeItem(this, {
-                        label: "Error loading subscriptions",
-                        contextValue: "azureCommand",
-                        id: "aksAccountError",
-                        iconPath: new ThemeIcon("error"),
-                    }),
-                ];
-            }
         }
 
         if (subscriptions.result.length === 0) {

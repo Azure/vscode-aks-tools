@@ -1,6 +1,5 @@
-import { Subscription } from "@azure/arm-subscriptions";
 import { TokenCredential } from "@azure/core-auth";
-import { combine, Errorable, failed, getErrorMessage, succeeded } from "./errorable";
+import { combine, Errorable, failed, getErrorMessage } from "./errorable";
 import { ClientSecretCredential } from "@azure/identity";
 import "cross-fetch/polyfill"; // Needed by the graph client: https://github.com/microsoftgraph/msgraph-sdk-javascript/blob/dev/README.md#via-npm
 import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
@@ -10,8 +9,8 @@ import {
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { RoleAssignment } from "@azure/arm-authorization";
-import { getDefaultScope, getEnvironment } from "../../auth/azureAuth";
-import { getSubscriptions, getTenantIds, SelectionType } from "./subscriptions";
+import { getAuthSession, getDefaultScope, getEnvironment } from "../../auth/azureAuth";
+import { DefinedSubscription, getSubscriptions, SelectionType } from "./subscriptions";
 
 export interface ServicePrincipalAccess {
     readonly cloudName: string;
@@ -23,7 +22,7 @@ export interface ServicePrincipalAccess {
 }
 
 interface SubscriptionAccessResult {
-    readonly subscription: Subscription;
+    readonly subscription: DefinedSubscription;
     readonly hasRoleAssignment: boolean;
 }
 
@@ -44,9 +43,12 @@ export async function getServicePrincipalAccess(
         return filteredSubscriptions;
     }
 
-    const tenantIds = getTenantIds(filteredSubscriptions.result);
+    const session = await getAuthSession();
+    if (failed(session)) {
+        return session;
+    }
 
-    const spInfo = await getServicePrincipalInfo(tenantIds, appId, secret);
+    const spInfo = await getServicePrincipalInfo(session.result.tenantId, appId, secret);
     if (failed(spInfo)) {
         return spInfo;
     }
@@ -63,34 +65,11 @@ export async function getServicePrincipalAccess(
     const subscriptions = ownershipResults.result
         .filter((r) => r.hasRoleAssignment)
         .map((r) => ({
-            id: r.subscription.subscriptionId || "",
-            name: r.subscription.displayName || "",
+            id: r.subscription.subscriptionId,
+            name: r.subscription.displayName,
         }));
 
     return { succeeded: true, result: { cloudName, tenantId: spInfo.result.tenantId, subscriptions } };
-}
-
-async function getServicePrincipalInfo(
-    tenantIds: string[],
-    appId: string,
-    appSecret: string,
-): Promise<Errorable<ServicePrincipalInfo>> {
-    const spInfoResults = await Promise.all(
-        tenantIds.map((id) => getServicePrincipalInfoForTenant(id, appId, appSecret)),
-    );
-    for (const spInfoResult of spInfoResults) {
-        if (succeeded(spInfoResult)) {
-            return spInfoResult;
-        }
-    }
-
-    const spInfosResult = combine(spInfoResults);
-    if (succeeded(spInfosResult)) {
-        // Can only happen if there were no sessions, otherwise we would've returned success above.
-        return { succeeded: false, error: "No Azure sessions found." };
-    }
-
-    return spInfosResult;
 }
 
 type ServicePrincipalSearchResult = {
@@ -100,7 +79,7 @@ type ServicePrincipalSearchResult = {
     }[];
 };
 
-async function getServicePrincipalInfoForTenant(
+async function getServicePrincipalInfo(
     tenantId: string,
     appId: string,
     appSecret: string,
@@ -169,7 +148,7 @@ function getMicrosoftGraphClientBaseUrl(): string {
 
 async function getSubscriptionAccess(
     credential: TokenCredential,
-    subscription: Subscription,
+    subscription: DefinedSubscription,
     spInfo: ServicePrincipalInfo,
 ): Promise<Errorable<SubscriptionAccessResult>> {
     if (!subscription.subscriptionId) {
