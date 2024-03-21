@@ -26,7 +26,11 @@ export default async function aksDeleteCluster(_context: IActionContext, target:
 
     if (answer === "Yes") {
         const result = await longRunning(`Deleting cluster ${clusterName}.`, async () => {
-            return await deleteCluster(clusterNode.result, clusterName);
+            return await deleteCluster(
+                clusterNode.result.subscription.subscriptionId,
+                clusterNode.result.resourceGroupName,
+                clusterName,
+            );
         });
 
         if (failed(result)) {

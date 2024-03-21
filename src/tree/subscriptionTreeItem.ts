@@ -6,9 +6,9 @@ import {
 } from "@microsoft/vscode-azext-utils";
 import { createClusterTreeNode } from "./aksClusterTreeItem";
 import { assetUri } from "../assets";
-import { getResourceManagementClient } from "../commands/utils/clusters";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { Resource } from "@azure/arm-resources";
+import { getResourceManagementClient } from "../commands/utils/arm";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -59,7 +59,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
     }
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        const client = getResourceManagementClient(this);
+        const client = getResourceManagementClient(this.subscription.subscriptionId);
         const aksClusterResources: Resource[] = [];
         const result = client.resources.list({
             filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'",

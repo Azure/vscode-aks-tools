@@ -24,7 +24,11 @@ export default async function aksReconcileCluster(_context: IActionContext, targ
 
     if (answer === "Yes") {
         const result = await longRunning(`Reconciling/update last cluster operation in ${clusterName}.`, async () => {
-            return await reconcileUsingUpdateInCluster(clusterNode.result);
+            return await reconcileUsingUpdateInCluster(
+                clusterNode.result.subscription.subscriptionId,
+                clusterNode.result.resourceGroupName,
+                clusterName,
+            );
         });
 
         if (failed(result)) {

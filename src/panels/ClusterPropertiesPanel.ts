@@ -19,6 +19,7 @@ import {
 } from "@azure/arm-containerservice";
 import { getKubernetesVersionInfo, getManagedCluster } from "../commands/utils/clusters";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { getAksClient } from "../commands/utils/arm";
 
 export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
     constructor(extensionUri: Uri) {
@@ -30,11 +31,14 @@ export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
 }
 
 export class ClusterPropertiesDataProvider implements PanelDataProvider<"clusterProperties"> {
+    private readonly client: ContainerServiceClient;
     constructor(
-        readonly client: ContainerServiceClient,
+        readonly subscriptionId: string,
         readonly resourceGroup: string,
         readonly clusterName: string,
-    ) {}
+    ) {
+        this.client = getAksClient(subscriptionId);
+    }
 
     getTitle(): string {
         return `Cluster Properties for ${this.clusterName}`;
@@ -205,7 +209,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
     }
 
     private async readAndPostClusterProperties(webview: MessageSink<ToWebViewMsgDef>) {
-        const cluster = await getManagedCluster(this.client, this.resourceGroup, this.clusterName);
+        const cluster = await getManagedCluster(this.subscriptionId, this.resourceGroup, this.clusterName);
         if (failed(cluster)) {
             webview.postErrorNotification(cluster.error);
             return;

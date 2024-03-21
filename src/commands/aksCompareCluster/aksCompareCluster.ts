@@ -1,7 +1,7 @@
 import { QuickPickItem } from "vscode";
 import { createQuickPickStep, runMultiStepInput } from "../utils/multiStepHelper";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterSubscriptionNode, getContainerClient, getResourceManagementClient } from "../utils/clusters";
+import { getAksClusterSubscriptionNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -10,6 +10,7 @@ import { getExtension } from "../utils/host";
 import * as tmpfile from "../utils/tempfile";
 import { longRunning } from "../utils/host";
 import { ManagedCluster } from "@azure/arm-containerservice";
+import { getAksClient, getResourceManagementClient } from "../utils/arm";
 
 interface State {
     clusterGroupCompareFrom: ClusterNameItem;
@@ -43,14 +44,16 @@ export default async function aksCompareCluster(_context: IActionContext, target
         vscode.window.showErrorMessage(extension.error);
         return;
     }
-    const containerServiceClient = getContainerClient(subscriptionNode.result);
+    const containerServiceClient = getAksClient(subscriptionNode.result.subscription.subscriptionId);
     const clusterList: ManagedCluster[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
         const iterator = containerServiceClient.managedClusters.list();
         for await (const clusters of iterator.byPage()) {
             const validClusters = clusters.filter((c) => c.id && c.name);
-            clusterList.push(...validClusters.map((c) => ({ label: c.name!, name: c.name!, id: c.id!, location: c.location! })));
+            clusterList.push(
+                ...validClusters.map((c) => ({ label: c.name!, name: c.name!, id: c.id!, location: c.location! })),
+            );
         }
     });
 
@@ -91,14 +94,11 @@ export default async function aksCompareCluster(_context: IActionContext, target
     await compareManagedCluster(state, subscriptionNode.result);
 }
 
-async function compareManagedCluster(
-    state: State,
-    subscriptionNode: SubscriptionTreeNode,
-) {
+async function compareManagedCluster(state: State, subscriptionNode: SubscriptionTreeNode) {
     await longRunning(
         `Comparing AKS Cluster ${state.clusterGroupCompareWith.name} with ${state.clusterGroupCompareFrom.name}`,
         async () => {
-            const resourceManagementClient = getResourceManagementClient(subscriptionNode);
+            const resourceManagementClient = getResourceManagementClient(subscriptionNode.subscription.subscriptionId);
 
             const resourceArmIDWith = state.clusterGroupCompareWith.armid;
             const resourceArmIDFrom = state.clusterGroupCompareFrom.armid;

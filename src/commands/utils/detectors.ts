@@ -8,10 +8,10 @@ import {
     SingleDetectorARMResponse,
     isCategoryDataset,
 } from "../../webview-contract/webviewDefinitions/detector";
-import { getResourceManagementClient } from "./clusters";
 import { dirSync } from "tmp";
 import { Environment } from "@azure/ms-rest-azure-env";
 import { getPortalResourceUrl } from "./env";
+import { getResourceManagementClient } from "./arm";
 
 /**
  * Can be used to store the JSON responses for a collection of category detectors and all their child detectors.
@@ -79,7 +79,7 @@ export async function getDetectorInfo(
     detectorName: string,
 ): Promise<Errorable<CategoryDetectorARMResponse>> {
     try {
-        const client = getResourceManagementClient(clusterNode);
+        const client = getResourceManagementClient(clusterNode.subscription.subscriptionId);
         const detectorInfo = await client.resources.get(
             clusterNode.resourceGroupName,
             clusterNode.resourceType,

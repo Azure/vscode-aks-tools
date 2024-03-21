@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterTreeNode, getContainerClient } from "../utils/clusters";
+import { getAksClusterTreeNode } from "../utils/clusters";
 import { getExtension } from "../utils/host";
 import { failed } from "../utils/errorable";
 import { ClusterPropertiesDataProvider, ClusterPropertiesPanel } from "../../panels/ClusterPropertiesPanel";
@@ -21,9 +21,8 @@ export default async function aksClusterProperties(_context: IActionContext, tar
         return;
     }
 
-    const client = getContainerClient(clusterNode.result);
     const dataProvider = new ClusterPropertiesDataProvider(
-        client,
+        clusterNode.result.subscription.subscriptionId,
         clusterNode.result.resourceGroupName,
         clusterNode.result.name,
     );
