@@ -1,33 +1,39 @@
 import { Subscription } from "@azure/arm-resources-subscriptions";
 import { getSubscriptionClient, listAll } from "./arm";
-import { Errorable, getErrorMessage, map as errmap } from "./errorable";
+import { Errorable, map as errmap } from "./errorable";
 import { getFilteredSubscriptions } from "./config";
 
 export enum SelectionType {
     Filtered,
     All,
+    AllIfNoFilters,
 }
 
-export async function getSubscriptions(selectionType: SelectionType): Promise<Errorable<Subscription[]>> {
+/**
+ * A subscription with the subscriptionId and displayName properties guaranteed to be defined.
+ */
+export type DefinedSubscription = Subscription & Required<Pick<Subscription, "subscriptionId" | "displayName">>;
+
+export async function getSubscriptions(selectionType: SelectionType): Promise<Errorable<DefinedSubscription[]>> {
     const client = getSubscriptionClient();
-    try {
-        const subsResult = await listAll(client.subscriptions.list());
-        return errmap(subsResult, (subs) => sortAndFilter(subs, selectionType));
-    } catch (e) {
-        return { succeeded: false, error: `Failed to retrieve subscriptions: ${getErrorMessage(e)}` };
-    }
+    const subsResult = await listAll(client.subscriptions.list());
+    return errmap(subsResult, (subs) => sortAndFilter(subs.filter(asDefinedSubscription), selectionType));
 }
 
-export function getTenantIds(subscriptions: Subscription[]): string[] {
-    const duplicatedTenantIds = subscriptions.map((s) => s.tenantId).filter((t) => t !== undefined) as string[];
-    return [...new Set(duplicatedTenantIds)];
-}
-
-function sortAndFilter(subscriptions: Subscription[], selectionType: SelectionType): Subscription[] {
-    if (selectionType === SelectionType.Filtered) {
-        const filtered = getFilteredSubscriptions();
-        subscriptions = subscriptions.filter((s) => filtered.some((f) => f.subscriptionId === s.subscriptionId));
+function sortAndFilter(subscriptions: DefinedSubscription[], selectionType: SelectionType): DefinedSubscription[] {
+    const attemptFilter = selectionType === SelectionType.Filtered || selectionType === SelectionType.AllIfNoFilters;
+    if (attemptFilter) {
+        const filters = getFilteredSubscriptions();
+        const filteredSubs = subscriptions.filter((s) => filters.some((f) => f.subscriptionId === s.subscriptionId));
+        const returnAll = selectionType === SelectionType.AllIfNoFilters && filteredSubs.length === 0;
+        if (!returnAll) {
+            subscriptions = filteredSubs;
+        }
     }
 
-    return subscriptions.sort((a, b) => (a.displayName || "").localeCompare(b.displayName || ""));
+    return subscriptions.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+function asDefinedSubscription(sub: Subscription): sub is DefinedSubscription {
+    return sub.subscriptionId !== undefined && sub.displayName !== undefined;
 }

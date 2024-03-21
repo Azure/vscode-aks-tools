@@ -1,8 +1,8 @@
 import { QuickPickItem, Uri, env, window } from "vscode";
 import { failed } from "../utils/errorable";
 import { SubscriptionFilter, getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
-import { signIn } from "../../auth/azureAuth";
-import { SelectionType, getSubscriptions, getTenantIds } from "../utils/subscriptions";
+import { getAuthSession, signIn } from "../../auth/azureAuth";
+import { SelectionType, getSubscriptions } from "../utils/subscriptions";
 
 export async function signInToAzure(): Promise<void> {
     await signIn();
@@ -28,20 +28,24 @@ export async function selectSubscriptions(): Promise<void> {
         return;
     }
 
-    const tenantIds = await getTenantIds(allSubscriptions.result);
+    const session = await getAuthSession();
+    if (failed(session)) {
+        window.showErrorMessage(session.error);
+        return;
+    }
 
     const filteredSubscriptions = await getFilteredSubscriptions();
 
-    const subscriptionsInKnownTenants = filteredSubscriptions.filter((sub) => tenantIds.includes(sub.tenantId));
-    const subscriptionsInUnknownTenants = filteredSubscriptions.filter(
-        (sub) => !subscriptionsInKnownTenants.includes(sub),
+    const subscriptionsInCurrentTenant = filteredSubscriptions.filter(
+        (sub) => sub.tenantId === session.result.tenantId,
     );
+    const subscriptionsInOtherTenants = filteredSubscriptions.filter((sub) => sub.tenantId !== session.result.tenantId);
 
     const quickPickItems: SubscriptionQuickPickItem[] = allSubscriptions.result.map((sub) => {
         return {
             label: sub.displayName || "",
             description: sub.subscriptionId,
-            picked: subscriptionsInKnownTenants.some((filtered) => filtered.subscriptionId === sub.subscriptionId),
+            picked: subscriptionsInCurrentTenant.some((filtered) => filtered.subscriptionId === sub.subscriptionId),
             subscription: {
                 subscriptionId: sub.subscriptionId || "",
                 tenantId: sub.tenantId || "",
@@ -60,7 +64,7 @@ export async function selectSubscriptions(): Promise<void> {
 
     const newFilteredSubscriptions = [
         ...selectedItems.map((item) => item.subscription),
-        ...subscriptionsInUnknownTenants, // Retain filters in any tenants we don't know about.
+        ...subscriptionsInOtherTenants, // Retain filters in any other tenants.
     ];
 
     await setFilteredSubscriptions(newFilteredSubscriptions);

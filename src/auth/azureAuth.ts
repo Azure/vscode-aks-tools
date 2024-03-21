@@ -23,6 +23,10 @@ type Tenant = {
     id: string;
 };
 
+export type AzureAuthenticationSession = AuthenticationSession & {
+    tenantId: string;
+};
+
 class AzureSessionProvider extends VsCodeDisposable {
     private readonly initializePromise: Promise<void>;
     private tenants: Tenant[] = [];
@@ -89,7 +93,7 @@ class AzureSessionProvider extends VsCodeDisposable {
         }
     }
 
-    public async getSession(): Promise<Errorable<AuthenticationSession>> {
+    public async getSession(): Promise<Errorable<AzureAuthenticationSession>> {
         await this.initializePromise;
         if (this.signInStatusValue !== "SignedIn") {
             return { succeeded: false, error: `Not signed in (${this.signInStatusValue}).` };
@@ -130,7 +134,7 @@ export function getSignInStatusChangeEvent() {
     return sessionProvider.onSignInStatusChangeEmitter.event;
 }
 
-export function getAuthSession(): Promise<Errorable<AuthenticationSession>> {
+export function getAuthSession(): Promise<Errorable<AzureAuthenticationSession>> {
     return sessionProvider.getSession();
 }
 
@@ -195,14 +199,14 @@ interface Jwt {
 async function getArmSession(
     tenantId: string,
     options: AuthenticationGetSessionOptions,
-): Promise<Errorable<AuthenticationSession>> {
+): Promise<Errorable<AzureAuthenticationSession>> {
     try {
         const tenantScopes = tenantId ? [`VSCODE_TENANT:${tenantId}`] : [];
         const scopes = [getDefaultScope(getConfiguredAzureEnv().managementEndpointUrl), ...tenantScopes];
 
         const session = await authentication.getSession(getConfiguredAuthProviderId(), scopes, options);
         if (session) {
-            return { succeeded: true, result: session };
+            return { succeeded: true, result: Object.assign(session, { tenantId }) };
         }
 
         return { succeeded: false, error: "No Azure session found." };
