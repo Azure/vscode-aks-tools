@@ -44,7 +44,7 @@ export default async function aksCompareCluster(_context: IActionContext, target
         vscode.window.showErrorMessage(extension.error);
         return;
     }
-    const containerServiceClient = getAksClient(subscriptionNode.result.subscription.subscriptionId);
+    const containerServiceClient = getAksClient(subscriptionNode.result.subscriptionId);
     const clusterList: ManagedCluster[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
@@ -76,7 +76,7 @@ export default async function aksCompareCluster(_context: IActionContext, target
     });
 
     const initialState: Partial<State> = {
-        subid: subscriptionNode.result.subscription.subscriptionId,
+        subid: subscriptionNode.result.subscriptionId,
     };
 
     const state = await runMultiStepInput(
@@ -98,7 +98,7 @@ async function compareManagedCluster(state: State, subscriptionNode: Subscriptio
     await longRunning(
         `Comparing AKS Cluster ${state.clusterGroupCompareWith.name} with ${state.clusterGroupCompareFrom.name}`,
         async () => {
-            const resourceManagementClient = getResourceManagementClient(subscriptionNode.subscription.subscriptionId);
+            const resourceManagementClient = getResourceManagementClient(subscriptionNode.subscriptionId);
 
             const resourceArmIDWith = state.clusterGroupCompareWith.armid;
             const resourceArmIDFrom = state.clusterGroupCompareFrom.armid;

@@ -135,7 +135,7 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 
 async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<string | undefined> {
     const properties = await longRunning(`Getting properties for cluster ${treeNode.name}.`, () =>
-        getManagedCluster(treeNode.subscription.subscriptionId, treeNode.resourceGroupName, treeNode.name),
+        getManagedCluster(treeNode.subscriptionId, treeNode.resourceGroupName, treeNode.name),
     );
     if (failed(properties)) {
         vscode.window.showErrorMessage(properties.error);
@@ -143,7 +143,7 @@ async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<strin
     }
 
     const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${treeNode.name}.`, () =>
-        getKubeconfigYaml(treeNode.subscription.subscriptionId, treeNode.resourceGroupName, properties.result),
+        getKubeconfigYaml(treeNode.subscriptionId, treeNode.resourceGroupName, properties.result),
     );
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);

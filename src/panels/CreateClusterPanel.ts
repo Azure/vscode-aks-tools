@@ -1,7 +1,6 @@
 import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
-import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, window } from "vscode";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -18,6 +17,8 @@ import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCr
 import { getPortalResourceUrl } from "../commands/utils/env";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
+import { getAksClient, getResourceManagementClient } from "../commands/utils/arm";
+import { getAuthSession, getEnvironment } from "../auth/azureAuth";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -30,21 +31,26 @@ export class CreateClusterPanel extends BasePanel<"createCluster"> {
 }
 
 export class CreateClusterDataProvider implements PanelDataProvider<"createCluster"> {
+    private readonly resourceManagementClient: ResourceManagementClient;
+    private readonly containerServiceClient: ContainerServiceClient;
+
     public constructor(
-        readonly resourceManagementClient: ResourceManagementClient,
-        readonly containerServiceClient: ContainerServiceClient,
-        readonly subscriptionContext: ISubscriptionContext,
+        readonly subscriptionId: string,
+        readonly subscriptionName: string,
         readonly refreshTree: () => void,
-    ) {}
+    ) {
+        this.resourceManagementClient = getResourceManagementClient(this.subscriptionId);
+        this.containerServiceClient = getAksClient(this.subscriptionId);
+    }
 
     getTitle(): string {
-        return `Create Cluster in ${this.subscriptionContext.subscriptionDisplayName}`;
+        return `Create Cluster in ${this.subscriptionName}`;
     }
 
     getInitialState(): InitialState {
         return {
-            subscriptionId: this.subscriptionContext.subscriptionId,
-            subscriptionName: this.subscriptionContext.subscriptionDisplayName,
+            subscriptionId: this.subscriptionId,
+            subscriptionName: this.subscriptionName,
         };
     }
 
@@ -92,7 +98,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     }
 
     private async handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const groups = await getResourceGroups(this.subscriptionContext.subscriptionId);
+        const groups = await getResourceGroups(this.subscriptionId);
         if (failed(groups)) {
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
@@ -133,6 +139,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         }
 
         await createCluster(
+            this.subscriptionId,
             groupName,
             location,
             name,
@@ -140,7 +147,6 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             webview,
             this.containerServiceClient,
             this.resourceManagementClient,
-            this.subscriptionContext,
         );
 
         this.refreshTree();
@@ -182,6 +188,7 @@ async function createResourceGroup(
 }
 
 async function createCluster(
+    subscriptionId: string,
     groupName: string,
     location: string,
     name: string,
@@ -189,7 +196,6 @@ async function createCluster(
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
-    subscriptionContext: ISubscriptionContext,
 ) {
     const operationDescription = `Creating cluster ${name}`;
     webview.postProgressUpdate({
@@ -217,13 +223,26 @@ async function createCluster(
         return;
     }
 
+    const session = await getAuthSession();
+    if (failed(session)) {
+        window.showErrorMessage(`Error getting authentication session: ${session.error}`);
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription,
+            errorMessage: session.error,
+            deploymentPortalUrl: null,
+            createdCluster: null,
+        });
+        return;
+    }
+
     const clusterSpec: ClusterSpec = {
         location,
         name,
         resourceGroupName: groupName,
-        subscriptionId: subscriptionContext.subscriptionId,
+        subscriptionId: subscriptionId,
         kubernetesVersion: kubernetesVersion.version,
-        username: subscriptionContext.userId,
+        username: session.result.account.label, // Account label seems to be email address
     };
 
     // Create a unique deployment name.
@@ -233,14 +252,16 @@ async function createCluster(
         .buildTemplate(preset)
         .getDeployment();
 
+    const environment = getEnvironment();
+
     try {
         const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
             groupName,
             deploymentName,
             deploymentSpec,
         );
-        const deploymentArmId = `/subscriptions/${subscriptionContext.subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
-        const deploymentPortalUrl = getPortalResourceUrl(subscriptionContext.environment, deploymentArmId);
+        const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
+        const deploymentPortalUrl = getPortalResourceUrl(environment, deploymentArmId);
         webview.postProgressUpdate({
             event: ProgressEventType.InProgress,
             operationDescription,
@@ -270,14 +291,14 @@ async function createCluster(
                 });
             } else if (state.status === "succeeded") {
                 window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
-                const armId = `/subscriptions/${subscriptionContext.subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
+                const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
                 webview.postProgressUpdate({
                     event: ProgressEventType.Success,
                     operationDescription,
                     errorMessage: null,
                     deploymentPortalUrl,
                     createdCluster: {
-                        portalUrl: getPortalResourceUrl(subscriptionContext.environment, armId),
+                        portalUrl: getPortalResourceUrl(environment, armId),
                     },
                 });
             }

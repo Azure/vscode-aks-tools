@@ -184,7 +184,7 @@ export function getTokenInfo(session: AuthenticationSession): Errorable<TokenInf
 
 export function getDefaultScope(endpointUrl: string): string {
     // Endpoint URL is that of the audience, e.g. for ARM in the public cloud
-    // it would be "https://management.core.windows.net".
+    // it would be "https://management.azure.com".
     return endpointUrl.endsWith("/") ? `${endpointUrl}.default` : `${endpointUrl}/.default`;
 }
 
@@ -202,7 +202,7 @@ async function getArmSession(
 ): Promise<Errorable<AzureAuthenticationSession>> {
     try {
         const tenantScopes = tenantId ? [`VSCODE_TENANT:${tenantId}`] : [];
-        const scopes = [getDefaultScope(getConfiguredAzureEnv().managementEndpointUrl), ...tenantScopes];
+        const scopes = [getDefaultScope(getConfiguredAzureEnv().resourceManagerEndpointUrl), ...tenantScopes];
 
         const session = await authentication.getSession(getConfiguredAuthProviderId(), scopes, options);
         if (session) {

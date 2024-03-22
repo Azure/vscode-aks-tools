@@ -18,6 +18,7 @@ import { Errorable, failed } from "../utils/errorable";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { PeriscopeDataProvider, PeriscopePanel } from "../../panels/PeriscopePanel";
 import { getAksClient } from "../utils/arm";
+import { getEnvironment } from "../../auth/azureAuth";
 
 export default async function periscope(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -35,7 +36,7 @@ export default async function periscope(_context: IActionContext, target: unknow
 
     // Once Periscope will support usgov endpoints all we need is to remove this check.
     // I have done background plumbing for vscode to fetch downlodable link from correct endpoint.
-    const cloudName = clusterNode.result.subscription.environment.name;
+    const cloudName = getEnvironment().name;
     if (cloudName !== "AzureCloud") {
         vscode.window.showInformationMessage(`Periscope is not supported in ${cloudName} cloud.`);
         return;
@@ -43,7 +44,7 @@ export default async function periscope(_context: IActionContext, target: unknow
 
     const properties = await longRunning(`Getting properties for cluster ${clusterNode.result.name}.`, () =>
         getManagedCluster(
-            clusterNode.result.subscription.subscriptionId,
+            clusterNode.result.subscriptionId,
             clusterNode.result.resourceGroupName,
             clusterNode.result.name,
         ),
@@ -54,11 +55,7 @@ export default async function periscope(_context: IActionContext, target: unknow
     }
 
     const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${clusterNode.result.name}.`, () =>
-        getKubeconfigYaml(
-            clusterNode.result.subscription.subscriptionId,
-            clusterNode.result.resourceGroupName,
-            properties.result,
-        ),
+        getKubeconfigYaml(clusterNode.result.subscriptionId, clusterNode.result.resourceGroupName, properties.result),
     );
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);
@@ -116,7 +113,7 @@ async function runAKSPeriscope(
         return;
     }
 
-    const containerClient = getAksClient(clusterNode.subscription.subscriptionId);
+    const containerClient = getAksClient(clusterNode.subscriptionId);
 
     // Get the features of the cluster that determine which optional kustomize components to deploy.
     const clusterFeatures = await getClusterFeatures(containerClient, clusterNode.resourceGroupName, clusterNode.name);
