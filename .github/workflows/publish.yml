@@ -8,6 +8,10 @@ jobs:
   JobBuild:
       name: release
       runs-on: ubuntu-latest
+       # Expose step outputs as job outputs
+      outputs:
+        currentversion: ${{ steps.package_version.outputs.current-version }}
+        changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
       permissions: 
         actions: read
         contents: read
@@ -34,7 +38,13 @@ jobs:
       - name: Get current package version
         id: package_version
         uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b # v1.3.1
-
+      - name: Check version is mentioned in Changelog
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
+        with:
+            validation_depth: 10
+            version: ${{ steps.package_version.outputs.current-version }}
+            path: 'CHANGELOG.md'
   JobsPublish:
     name: publish
     runs-on: ubuntu-latest
@@ -45,22 +55,15 @@ jobs:
         deployments: read
         packages: none
     steps:
-      - name: Check version is mentioned in Changelog
-        id: changelog_reader
-        uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
-        with:
-            validation_depth: 10
-            version: ${{ steps.JobBuild.outputs.package_version }}
-            path: 'CHANGELOG.md'
       - name: Create a Release
         id: create_release
         uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         with:
-            tag_name : ${{ needs.JobBuild.outputs.package_version }}
-            release_name: ${{ steps.JobBuild.outputs.current-version}}
-            body: Publish ${{ steps.changelog_reader.outputs.changes }}
+            tag_name : ${{ needs.JobBuild.outputs.currentversion }}
+            release_name: ${{ needs.JobBuild.outputs.currentversion}}
+            body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
       - name: Create vsix and publish to marketplace
         id: create_vsix
         uses: HaaLeo/publish-vscode-extension@28e2d3f5817fccf23c1f219eb0cecc903132d1a2 # v1.6.2
