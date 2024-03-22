@@ -7,6 +7,7 @@ import { getDetectorInfo, getDetectorListData } from "../utils/detectors";
 import { Errorable, failed } from "../utils/errorable";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import { DetectorDataProvider, DetectorPanel } from "../../panels/DetectorPanel";
+import { getEnvironment } from "../../auth/azureAuth";
 
 export function aksBestPracticesDiagnostics(_context: IActionContext, target: unknown): Promise<void> {
     return runDetector(target, "aks-category-risk-assessment");
@@ -79,7 +80,7 @@ async function getDataProvider(
     }
 
     const dataProvider = new DetectorDataProvider(
-        clusterNode.subscription.environment,
+        getEnvironment(),
         clusterNode.name,
         detectorInfo.result,
         detectors.result,

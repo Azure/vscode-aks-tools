@@ -5,7 +5,6 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExtension } from "../utils/host";
 import { CreateClusterDataProvider, CreateClusterPanel } from "../../panels/CreateClusterPanel";
-import { getAksClient, getResourceManagementClient } from "../utils/arm";
 
 /**
  * A multi-step input using window.createQuickPick() and window.createInputBox().
@@ -29,12 +28,9 @@ export default async function aksCreateCluster(_context: IActionContext, target:
 
     const panel = new CreateClusterPanel(extension.result.extensionUri);
 
-    const resourceManagementClient = getResourceManagementClient(subscriptionNode.result.subscription.subscriptionId);
-    const containerServiceClient = getAksClient(subscriptionNode.result.subscription.subscriptionId);
     const dataProvider = new CreateClusterDataProvider(
-        resourceManagementClient,
-        containerServiceClient,
-        subscriptionNode.result.subscription,
+        subscriptionNode.result.subscriptionId,
+        subscriptionNode.result.name,
         () => vscode.commands.executeCommand("aks.refreshSubscription", target),
     );
 

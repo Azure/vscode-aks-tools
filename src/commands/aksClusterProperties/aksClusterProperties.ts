@@ -22,7 +22,7 @@ export default async function aksClusterProperties(_context: IActionContext, tar
     }
 
     const dataProvider = new ClusterPropertiesDataProvider(
-        clusterNode.result.subscription.subscriptionId,
+        clusterNode.result.subscriptionId,
         clusterNode.result.resourceGroupName,
         clusterNode.result.name,
     );

@@ -79,7 +79,7 @@ export async function getDetectorInfo(
     detectorName: string,
 ): Promise<Errorable<CategoryDetectorARMResponse>> {
     try {
-        const client = getResourceManagementClient(clusterNode.subscription.subscriptionId);
+        const client = getResourceManagementClient(clusterNode.subscriptionId);
         const detectorInfo = await client.resources.get(
             clusterNode.resourceGroupName,
             clusterNode.resourceType,

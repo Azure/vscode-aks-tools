@@ -29,7 +29,8 @@ export interface KubernetesClusterInfo {
 /**
  * A managed cluster with the name and location properties guaranteed to be defined.
  */
-export type DefinedManagedCluster = azcs.ManagedCluster & Required<Pick<azcs.ManagedCluster, "name" | "location">>;
+export type DefinedManagedCluster = azcs.ManagedCluster &
+    Required<Pick<azcs.ManagedCluster, "id" | "name" | "location">>;
 
 export async function getKubernetesClusterInfo(
     commandTarget: unknown,
@@ -41,7 +42,7 @@ export async function getKubernetesClusterInfo(
     if (succeeded(clusterNode)) {
         const properties = await longRunning(`Getting properties for cluster ${clusterNode.result.name}.`, () =>
             getManagedCluster(
-                clusterNode.result.subscription.subscriptionId,
+                clusterNode.result.subscriptionId,
                 clusterNode.result.resourceGroupName,
                 clusterNode.result.name,
             ),
@@ -51,7 +52,7 @@ export async function getKubernetesClusterInfo(
         }
 
         const kubeconfigYaml = await getKubeconfigYaml(
-            clusterNode.result.subscription.subscriptionId,
+            clusterNode.result.subscriptionId,
             clusterNode.result.resourceGroupName,
             properties.result,
         );
@@ -370,6 +371,12 @@ function getClusterUserKubeconfig(credentialResults: azcs.CredentialResults, clu
     return { succeeded: true, result: kubeconfig };
 }
 
+export async function getClustersBySubscription(subscriptionId: string): Promise<Errorable<DefinedManagedCluster[]>> {
+    const client = getAksClient(subscriptionId);
+    const clusters = await listAll(client.managedClusters.list());
+    return errmap(clusters, (c) => c.filter(isDefinedManagedCluster));
+}
+
 export async function getClustersByResourceGroup(
     subscriptionId: string,
     resourceGroup: string,
@@ -509,5 +516,5 @@ export async function rotateClusterCert(
 }
 
 function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is DefinedManagedCluster {
-    return cluster.name !== undefined && cluster.location !== undefined;
+    return cluster.id !== undefined && cluster.name !== undefined && cluster.location !== undefined;
 }
