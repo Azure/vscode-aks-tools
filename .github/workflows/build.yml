@@ -46,8 +46,7 @@ jobs:
     - name: Package Extension
       if: matrix.os == 'ubuntu-latest'
       run: |
-        npm install -g @vscode/vsce@2.24.0
-        vsce package
+        npm run package
         mkdir vsix
         mv *.vsix vsix
     - name: Archive Extension
