@@ -2,9 +2,8 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getSASKey, LinkDuration } from "../../utils/azurestorage";
 import { parseResource } from "../../../azure-api-utils";
-import { StorageManagementClient } from "@azure/arm-storage";
 import { PeriscopeStorage, PodLogs, UploadStatus } from "../models/storage";
-import { MonitorClient, DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
+import { DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
 import * as path from "path";
 import * as fs from "fs";
 import * as semver from "semver";
@@ -18,17 +17,15 @@ import { ContainerServiceClient } from "@azure/arm-containerservice";
 import { getWindowsNodePoolKubernetesVersions } from "../../utils/clusters";
 import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
 import { dirSync } from "tmp";
+import { getMonitorClient, getStorageManagementClient } from "../../utils/arm";
 
 export async function getClusterDiagnosticSettings(
     clusterNode: AksClusterTreeNode,
 ): Promise<DiagnosticSettingsResourceCollection | undefined> {
     try {
-        // Get daignostic setting via diagnostic monitor
-        const diagnosticMonitor = new MonitorClient(
-            clusterNode.subscription.credentials,
-            clusterNode.subscription.subscriptionId,
-        );
-        const diagnosticSettings = await diagnosticMonitor.diagnosticSettings.list(clusterNode.armId);
+        // Get diagnostic setting via diagnostic monitor
+        const client = getMonitorClient(clusterNode.subscriptionId);
+        const diagnosticSettings = await client.diagnosticSettings.list(clusterNode.armId);
 
         return diagnosticSettings;
     } catch (e) {
@@ -97,10 +94,7 @@ export async function getStorageInfo(
         }
 
         // Get keys from storage client.
-        const storageClient = new StorageManagementClient(
-            clusterNode.subscription.credentials,
-            clusterNode.subscription.subscriptionId,
-        );
+        const storageClient = getStorageManagementClient(clusterNode.subscriptionId);
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         if (storageAccKeyList.keys === undefined) {
             return { succeeded: false, error: "No keys found for storage account." };

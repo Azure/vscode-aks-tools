@@ -28,7 +28,7 @@ export default async function aksRotateClusterCert(_context: IActionContext, tar
 
     if (answer === "Yes") {
         const result = await longRunning(`Rotating cluster certificate for ${clusterName}.`, async () =>
-            rotateClusterCert(clusterNode.result),
+            rotateClusterCert(clusterNode.result.subscriptionId, clusterNode.result.resourceGroupName, clusterName),
         );
 
         if (failed(result)) {
