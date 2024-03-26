@@ -23,12 +23,19 @@ type Tenant = {
     id: string;
 };
 
+enum AuthScenario {
+    Initialization,
+    SignIn,
+    GetSession,
+}
+
 export type AzureAuthenticationSession = AuthenticationSession & {
     tenantId: string;
 };
 
 class AzureSessionProvider extends VsCodeDisposable {
     private readonly initializePromise: Promise<void>;
+    private handleSessionChanges: boolean = true;
     private tenants: Tenant[] = [];
 
     public readonly onSignInStatusChangeEmitter = new EventEmitter<SignInStatus>();
@@ -41,13 +48,13 @@ class AzureSessionProvider extends VsCodeDisposable {
                 return;
             }
 
-            // Ignore events while we're initializing.
-            if (this.signInStatusValue === "Initializing") {
+            // Ignore events that we triggered.
+            if (!this.handleSessionChanges) {
                 return;
             }
 
             // Silently check authentication status and tenants
-            await this.signInAndUpdateTenants({ createIfNone: false, silent: true });
+            await this.signInAndUpdateTenants(AuthScenario.Initialization);
         });
 
         super(() => {
@@ -63,9 +70,13 @@ class AzureSessionProvider extends VsCodeDisposable {
     }
 
     private async initialize(): Promise<void> {
-        await this.signInAndUpdateTenants({ createIfNone: false, silent: true });
+        await this.signInAndUpdateTenants(AuthScenario.Initialization);
     }
 
+    /**
+     * Sign in to Azure interactively, i.e. prompt the user to sign in even if they have an active session.
+     * This allows the user to choose a different account or tenant.
+     */
     public async signIn(): Promise<void> {
         await this.initializePromise;
 
@@ -74,25 +85,32 @@ class AzureSessionProvider extends VsCodeDisposable {
             this.signInStatusValue = newSignInStatus;
             this.onSignInStatusChangeEmitter.fire(this.signInStatusValue);
         }
-        await this.signInAndUpdateTenants({ createIfNone: true, clearSessionPreference: true });
+
+        await this.signInAndUpdateTenants(AuthScenario.SignIn);
     }
 
-    private async signInAndUpdateTenants(options: AuthenticationGetSessionOptions): Promise<void> {
+    private async signInAndUpdateTenants(authScenario: AuthScenario): Promise<void> {
         // Initially, try to get a session using the 'organizations' tenant/authority:
         // https://learn.microsoft.com/en-us/entra/identity-platform/msal-client-application-configuration#authority
         // This allows the user to sign in to the Microsoft provider and list tenants,
         // but the resulting session will not allow tenant-level operations. For that,
         // we need to get a session for a specific tenant.
-        const getSessionResult = await getArmSession("organizations", options);
+        const getSessionResult = await this.getArmSession("organizations", authScenario);
         const getTenantsResult = await bindAsync(getSessionResult, (session) => getTenants(session));
-        this.tenants = succeeded(getTenantsResult) ? getTenantsResult.result : [];
-        const newSignInStatus = this.tenants.length > 0 ? "SignedIn" : "SignedOut";
-        if (newSignInStatus !== this.signInStatusValue) {
+        const newTenants = succeeded(getTenantsResult) ? getTenantsResult.result : [];
+        const newSignInStatus = newTenants.length > 0 ? "SignedIn" : "SignedOut";
+        if (newSignInStatus !== this.signInStatusValue || getIdString(newTenants) !== getIdString(this.tenants)) {
             this.signInStatusValue = newSignInStatus;
+            this.tenants = newTenants;
             this.onSignInStatusChangeEmitter.fire(this.signInStatusValue);
         }
     }
 
+    /**
+     * Get the current Azure session, silently if possible.
+     * @returns The current Azure session, if available. If the user is not signed in, or there are no tenants,
+     * an error message is returned.
+     */
     public async getSession(): Promise<Errorable<AzureAuthenticationSession>> {
         await this.initializePromise;
         if (this.signInStatusValue !== "SignedIn") {
@@ -116,7 +134,56 @@ class AzureSessionProvider extends VsCodeDisposable {
         }
 
         // Get a session for a specific tenant.
-        return await getArmSession(tenant.id, { createIfNone: true });
+        return await this.getArmSession(tenant.id, AuthScenario.GetSession);
+    }
+
+    private async getArmSession(
+        tenantId: string,
+        authScenario: AuthScenario,
+    ): Promise<Errorable<AzureAuthenticationSession>> {
+        this.handleSessionChanges = false;
+        try {
+            const tenantScopes = tenantId ? [`VSCODE_TENANT:${tenantId}`] : [];
+            const scopes = [getDefaultScope(getConfiguredAzureEnv().resourceManagerEndpointUrl), ...tenantScopes];
+
+            let options: AuthenticationGetSessionOptions;
+            let silentFirst = false;
+            switch (authScenario) {
+                case AuthScenario.Initialization:
+                    options = { createIfNone: false, clearSessionPreference: false, silent: true };
+                    break;
+                case AuthScenario.SignIn:
+                    options = { createIfNone: true, clearSessionPreference: true, silent: false };
+                    break;
+                case AuthScenario.GetSession:
+                    // the 'createIfNone' option cannot be used with 'silent', but really we want both
+                    // flags here (i.e. create a session silently, but do create one if it doesn't exist).
+                    // To allow this, we first try to get a session silently.
+                    silentFirst = true;
+                    options = { createIfNone: true, clearSessionPreference: false, silent: false };
+                    break;
+            }
+
+            let session: AuthenticationSession | undefined;
+            if (silentFirst) {
+                // The 'silent' option is incompatible with most other options, so we completely replace the options object here.
+                session = await authentication.getSession(getConfiguredAuthProviderId(), scopes, { silent: true });
+            }
+
+            if (!session) {
+                session = await authentication.getSession(getConfiguredAuthProviderId(), scopes, options);
+            }
+
+            if (!session) {
+                return { succeeded: false, error: "No Azure session found." };
+            }
+
+            return { succeeded: true, result: Object.assign(session, { tenantId }) };
+        } catch (e) {
+            return { succeeded: false, error: `Failed to retrieve Azure session: ${getErrorMessage(e)}` };
+        } finally {
+            this.handleSessionChanges = true;
+        }
     }
 }
 
@@ -196,25 +263,6 @@ interface Jwt {
     exp: number;
 }
 
-async function getArmSession(
-    tenantId: string,
-    options: AuthenticationGetSessionOptions,
-): Promise<Errorable<AzureAuthenticationSession>> {
-    try {
-        const tenantScopes = tenantId ? [`VSCODE_TENANT:${tenantId}`] : [];
-        const scopes = [getDefaultScope(getConfiguredAzureEnv().resourceManagerEndpointUrl), ...tenantScopes];
-
-        const session = await authentication.getSession(getConfiguredAuthProviderId(), scopes, options);
-        if (session) {
-            return { succeeded: true, result: Object.assign(session, { tenantId }) };
-        }
-
-        return { succeeded: false, error: "No Azure session found." };
-    } catch (e) {
-        return { succeeded: false, error: `Failed to retrieve Azure session: ${getErrorMessage(e)}` };
-    }
-}
-
 function getConfiguredAuthProviderId(): AuthProviderId {
     return getConfiguredAzureEnv().name === Environment.AzureCloud.name ? "microsoft" : "microsoft-sovereign-cloud";
 }
@@ -234,6 +282,13 @@ async function getTenants(session: AuthenticationSession): Promise<Errorable<Ten
 
 function asTenant(tenant: TenantIdDescription): tenant is { tenantId: string; displayName: string } {
     return tenant.tenantId !== undefined && tenant.displayName !== undefined;
+}
+
+function getIdString(tenants: Tenant[]): string {
+    return tenants
+        .map((t) => t.id)
+        .sort()
+        .join(",");
 }
 
 async function quickPickTenant(tenants: Tenant[]): Promise<Tenant | undefined> {
