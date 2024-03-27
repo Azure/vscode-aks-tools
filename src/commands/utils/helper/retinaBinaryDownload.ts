@@ -49,6 +49,8 @@ function getArchiveFilename(releaseTag: string) {
 
     if (operatingSystem === "win32") {
         operatingSystem = "windows";
+        // scaffolding but will find much better way to handle this
+        return `kubectl-retina-${operatingSystem}-${architecture}-${releaseTag}.zip`;
     }
 
     return `kubectl-retina-${operatingSystem}-${architecture}-${releaseTag}.tar.gz`;
