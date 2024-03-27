@@ -85,3 +85,8 @@ export type PickFilesResponse<TIdentifier> = {
     identifier: TIdentifier;
     paths: [string, ...string[]];
 };
+
+export enum VsCodeCommand {
+    DraftDeployment,
+    DraftWorkflow,
+}

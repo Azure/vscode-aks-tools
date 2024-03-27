@@ -19,6 +19,7 @@ export default defineConfig({
         // https://github.com/vitejs/vite/issues/4393#issuecomment-890996317
         checker({ typescript: true }),
     ],
+    base: "./",
     server: {
         port: 3000,
     },

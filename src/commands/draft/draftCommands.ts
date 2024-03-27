@@ -23,9 +23,13 @@ import { Remote } from "../../types/git";
 import { ForkInfo } from "../../webview-contract/webviewDefinitions/draft/types";
 import { ExistingFile } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
 import { basename, join } from "path";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 
-export async function draftDockerfile(): Promise<void> {
-    const commonDependencies = await getCommonDraftDependencies();
+export async function draftDockerfile(
+    _context: IActionContext,
+    suppliedWorkspaceFolder?: WorkspaceFolder,
+): Promise<void> {
+    const commonDependencies = await getCommonDraftDependencies(suppliedWorkspaceFolder);
     if (commonDependencies === null) {
         return;
     }
@@ -36,8 +40,11 @@ export async function draftDockerfile(): Promise<void> {
     panel.show(dataProvider);
 }
 
-export async function draftDeployment(): Promise<void> {
-    const commonDependencies = await getCommonDraftDependencies();
+export async function draftDeployment(
+    _context: IActionContext,
+    suppliedWorkspaceFolder?: WorkspaceFolder,
+): Promise<void> {
+    const commonDependencies = await getCommonDraftDependencies(suppliedWorkspaceFolder);
     if (commonDependencies === null) {
         return;
     }
@@ -66,8 +73,11 @@ export async function draftDeployment(): Promise<void> {
     panel.show(dataProvider);
 }
 
-export async function draftWorkflow(): Promise<void> {
-    const commonDependencies = await getCommonDraftDependencies();
+export async function draftWorkflow(
+    _context: IActionContext,
+    suppliedWorkspaceFolder?: WorkspaceFolder,
+): Promise<void> {
+    const commonDependencies = await getCommonDraftDependencies(suppliedWorkspaceFolder);
     if (commonDependencies === null) {
         return;
     }
@@ -135,19 +145,26 @@ export async function draftWorkflow(): Promise<void> {
     panel.show(dataProvider);
 }
 
-async function getCommonDraftDependencies(): Promise<DraftDependencies | null> {
-    if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
-        window.showErrorMessage("You must have a workspace open to run Draft commands.");
-        return null;
-    }
+async function getCommonDraftDependencies(
+    suppliedWorkspaceFolder?: WorkspaceFolder,
+): Promise<DraftDependencies | null> {
+    let workspaceFolder: WorkspaceFolder;
+    if (suppliedWorkspaceFolder) {
+        workspaceFolder = suppliedWorkspaceFolder;
+    } else {
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+            window.showErrorMessage("You must have a workspace open to run Draft commands.");
+            return null;
+        }
 
-    let workspaceFolder = workspace.workspaceFolders[0];
-    if (workspace.workspaceFolders.length > 1) {
-        const pickResult = await window.showWorkspaceFolderPick({
-            placeHolder: "Select a workspace folder to run this command.",
-        });
-        if (!pickResult) return null;
-        workspaceFolder = pickResult;
+        workspaceFolder = workspace.workspaceFolders[0];
+        if (workspace.workspaceFolders.length > 1) {
+            const pickResult = await window.showWorkspaceFolderPick({
+                placeHolder: "Select a workspace folder to run this command.",
+            });
+            if (!pickResult) return null;
+            workspaceFolder = pickResult;
+        }
     }
 
     const extension = getExtension();

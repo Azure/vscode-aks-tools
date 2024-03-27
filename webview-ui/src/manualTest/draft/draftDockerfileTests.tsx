@@ -6,6 +6,7 @@ import {
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/draftDockerfile";
+import { VsCodeCommand } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { OpenFileOptions } from "../../../../src/webview-contract/webviewDefinitions/shared/fileSystemTypes";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
 import { DraftDockerfile } from "../../Draft";
@@ -49,6 +50,7 @@ export function getDraftDockerfileScenarios() {
             pickLocationRequest: handlePickLocationRequest,
             createDockerfileRequest: handleCreateDockerfileRequest,
             openFileRequest: handleOpenFileRequest,
+            launchCommand: (cmd) => alert(`Launching command ${VsCodeCommand[cmd]}`),
         };
 
         async function handleCreateDockerfileRequest(createParams: CreateParams) {

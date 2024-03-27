@@ -68,6 +68,7 @@ export const vscode = getWebviewMessageContext<"draftDockerfile">({
     pickLocationRequest: null,
     createDockerfileRequest: null,
     openFileRequest: null,
+    launchCommand: null,
 });
 
 function getDefaultLanguageVersion(language: Validatable<LanguageInfo>): Validatable<LanguageVersionInfo> {

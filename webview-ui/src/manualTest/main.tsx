@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./vars.css";
 import "../main.css";
+import "@vscode/codicons/dist/codicon.css";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getCreateClusterScenarios } from "./createClusterTests";

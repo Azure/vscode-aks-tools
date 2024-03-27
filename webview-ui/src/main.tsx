@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./main.css";
+import "@vscode/codicons/dist/codicon.css";
 import { decodeState } from "../../src/webview-contract/initialState";
 import { CreateCluster } from "./CreateCluster/CreateCluster";
 import { ContentId } from "../../src/webview-contract/webviewTypes";

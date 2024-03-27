@@ -49,6 +49,7 @@
 
 .buttonContainer {
     margin-top: 1rem;
+    margin-bottom: 1rem;
     display: flex;
     flex-direction: row;
     column-gap: 0.5rem;
@@ -63,4 +64,28 @@ ul.existingFileList {
 
 ul.existingFileList > li {
     margin-bottom: 0.4rem;
+}
+
+.nextStepsContainer {
+    margin-top: 4rem;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--vscode-charts-foreground);
+    display: grid;
+    grid-template-columns: 1rem auto;
+    column-gap: 0.5rem;
+    row-gap: 0.5rem;
+}
+
+.nextStepsContainer .icon {
+    color: var(--vscode-charts-purple);
+    grid-column: 1 / 2;
+}
+
+.nextStepsContainer .content {
+    grid-column: 2 / 3;
+}
+
+.nextStepsContainer h3 {
+    margin-top: 0;
 }

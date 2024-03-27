@@ -13,6 +13,7 @@ import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
 import { ShellOptions, exec } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
 import { OpenFileOptions } from "../../webview-contract/webviewDefinitions/shared/fileSystemTypes";
+import { launchCommandInWorkspaceFolder } from "./commandUtils";
 
 export class DraftDockerfilePanel extends BasePanel<"draftDockerfile"> {
     constructor(extensionUri: Uri) {
@@ -53,6 +54,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
             createDockerfileRequest: true,
             openFileRequest: false,
             pickLocationRequest: false,
+            launchCommand: false,
         };
     }
 
@@ -69,6 +71,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
                     webview,
                 ),
             openFileRequest: (filePath) => this.handleOpenFileRequest(filePath),
+            launchCommand: (cmd) => launchCommandInWorkspaceFolder(cmd, this.workspaceFolder),
         };
     }
 

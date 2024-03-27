@@ -4,6 +4,7 @@ import {
     DeploymentSpecType,
     NewOrExisting,
     Subscription,
+    VsCodeCommand,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import styles from "../Draft.module.css";
 import { useStateManagement } from "../../utilities/state";
@@ -67,17 +68,6 @@ export function DraftDeployment(initialState: InitialState) {
         const validated =
             subscription === null ? missing<Subscription>("Subscription is required.") : valid(subscription);
         eventHandlers.onSetSubscription(validated);
-    }
-
-    function handleClusterResourceGroupSelect(resourceGroup: string | null) {
-        const validated =
-            resourceGroup === null ? missing<string>("Cluster resource group is required.") : valid(resourceGroup);
-        eventHandlers.onSetClusterResourceGroup(validated);
-    }
-
-    function handleClusterSelect(cluster: string | null) {
-        const validated = cluster === null ? missing<string>("Cluster is required.") : valid(cluster);
-        eventHandlers.onSetCluster(validated);
     }
 
     function handleAcrResourceGroupSelect(resourceGroup: string | null) {
@@ -188,6 +178,18 @@ export function DraftDeployment(initialState: InitialState) {
         }
     }
 
+    function handleNamespaceChange(e: Event | FormEvent<HTMLElement>) {
+        const namespace = (e.currentTarget as HTMLInputElement).value;
+        const validated = getValidatedNamespace(namespace);
+        eventHandlers.onSetNewClusterNamespace(namespace);
+        eventHandlers.onSetClusterNamespace(validated);
+
+        function getValidatedNamespace(namespace: string): Validatable<NewOrExisting<string>> {
+            if (!namespace) return missing("Namespace is required.");
+            return valid({ isNew: true, value: namespace });
+        }
+    }
+
     function handleNamespaceSelect(namespace: NewOrExisting<string> | null) {
         const validated =
             namespace === null ? missing<NewOrExisting<string>>("Namespace is required.") : valid(namespace);
@@ -256,15 +258,19 @@ export function DraftDeployment(initialState: InitialState) {
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
+                <h2>Draft a deployment</h2>
                 <p>
-                    DRAFT makes it easier for developers to get started building apps that run on Kubernetes by taking a
-                    non-containerized application and generating the Dockerfiles, Kubernetes manifest, Helm charts,
-                    Kustomize configuration, and other artifacts associated with a containerized application. Draft can
-                    also generate a GitHub actions workflow file to quickly build and deploy applications onto any
-                    Kubernetes cluster.
+                    Enter the appropriate values in the fields below to enable Draft to automatically create Kubernetes
+                    manifests, Helm charts, or Kustomize files for your application. Once created, you will be able to
+                    deploy your application to your AKS (Azure Kubernetes Service) cluster.
                 </p>
 
                 <fieldset className={styles.inputContainer} disabled={state.status !== "Editing"}>
+                    <h3 className={styles.fullWidth}>Azure resource details</h3>
+                    <p className={styles.fullWidth}>
+                        Select the Azure Container Registry (ACR) which will contain the image to use for your
+                        deployment. You may also select an AKS cluster to choose a Kubernetes namespace to deploy to.
+                    </p>
                     <label htmlFor="subscription-input" className={styles.label}>
                         Subscription *
                     </label>
@@ -286,54 +292,6 @@ export function DraftDeployment(initialState: InitialState) {
 
                     {isValid(state.subscription) && (
                         <>
-                            <h3>Cluster details</h3>
-                            <label htmlFor="cluster-rg-input" className={styles.label}>
-                                Cluster Resource Group *
-                            </label>
-                            <ResourceSelector<string>
-                                id="cluster-rg-input"
-                                className={styles.control}
-                                resources={lazyResourceGroups}
-                                selectedItem={toNullable(state.clusterResourceGroup)}
-                                valueGetter={(g) => g}
-                                labelGetter={(g) => g}
-                                onSelect={handleClusterResourceGroupSelect}
-                            />
-                            {hasMessage(state.clusterResourceGroup) && (
-                                <span className={styles.validationMessage}>
-                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.clusterResourceGroup.message}
-                                </span>
-                            )}
-                        </>
-                    )}
-
-                    {isValid(state.clusterResourceGroup) && (
-                        <>
-                            <label htmlFor="cluster-input" className={styles.label}>
-                                Cluster *
-                            </label>
-                            <ResourceSelector<string>
-                                id="cluster-input"
-                                className={styles.control}
-                                resources={lazyClusterNames}
-                                selectedItem={toNullable(state.cluster)}
-                                valueGetter={(c) => c}
-                                labelGetter={(c) => c}
-                                onSelect={handleClusterSelect}
-                            />
-                            {hasMessage(state.cluster) && (
-                                <span className={styles.validationMessage}>
-                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.cluster.message}
-                                </span>
-                            )}
-                        </>
-                    )}
-
-                    {isValid(state.subscription) && (
-                        <>
-                            <h3 className={styles.fullWidth}>Azure Container Registry details</h3>
                             <label htmlFor="acr-rg-input" className={styles.label}>
                                 ACR Resource Group *
                             </label>
@@ -462,9 +420,43 @@ export function DraftDeployment(initialState: InitialState) {
                         </>
                     )}
 
+                    {isValid(state.subscription) && (
+                        <>
+                            <label htmlFor="cluster-rg-input" className={styles.label}>
+                                Cluster Resource Group
+                            </label>
+                            <ResourceSelector<string>
+                                id="cluster-rg-input"
+                                className={styles.control}
+                                resources={lazyResourceGroups}
+                                selectedItem={state.clusterResourceGroup}
+                                valueGetter={(g) => g}
+                                labelGetter={(g) => g}
+                                onSelect={eventHandlers.onSetClusterResourceGroup}
+                            />
+                        </>
+                    )}
+
+                    {state.clusterResourceGroup && (
+                        <>
+                            <label htmlFor="cluster-input" className={styles.label}>
+                                Cluster
+                            </label>
+                            <ResourceSelector<string>
+                                id="cluster-input"
+                                className={styles.control}
+                                resources={lazyClusterNames}
+                                selectedItem={state.cluster}
+                                valueGetter={(c) => c}
+                                labelGetter={(c) => c}
+                                onSelect={eventHandlers.onSetCluster}
+                            />
+                        </>
+                    )}
+
                     <h3 className={styles.fullWidth}>Deployment details</h3>
                     <label htmlFor="location-input" className={styles.label}>
-                        Location
+                        Location *
                     </label>
                     <VSCodeTextField
                         id="location-input"
@@ -488,7 +480,7 @@ export function DraftDeployment(initialState: InitialState) {
                     )}
 
                     <label htmlFor="deployment-type-input" className={styles.label}>
-                        Type
+                        Deployment options *
                     </label>
                     <VSCodeRadioGroup
                         id="deployment-type-input"
@@ -536,11 +528,22 @@ export function DraftDeployment(initialState: InitialState) {
                         </span>
                     )}
 
-                    {isValid(state.cluster) && (
+                    <label htmlFor="namespace-input" className={styles.label}>
+                        Namespace *
+                    </label>
+
+                    {!isLoaded(lazyClusterNamespaces) && (
+                        <VSCodeTextField
+                            id="namespace-input"
+                            value={state.newClusterNamespace || ""}
+                            className={styles.control}
+                            onBlur={handleNamespaceChange}
+                            onInput={handleNamespaceChange}
+                        />
+                    )}
+
+                    {isLoaded(lazyClusterNamespaces) && (
                         <>
-                            <label htmlFor="namespace-input" className={styles.label}>
-                                Namespace *
-                            </label>
                             <ResourceSelector<NewOrExisting<string>>
                                 id="namespace-input"
                                 className={styles.control}
@@ -551,24 +554,22 @@ export function DraftDeployment(initialState: InitialState) {
                                 onSelect={handleNamespaceSelect}
                             />
 
-                            {isLoaded(lazyClusterNamespaces) && (
-                                <div className={styles.controlSupplement}>
-                                    <VSCodeButton appearance="icon" onClick={handleNewNamespaceClick}>
-                                        <span className={styles.iconButton}>
-                                            <FontAwesomeIcon icon={faPlus} />
-                                            &nbsp;Create new
-                                        </span>
-                                    </VSCodeButton>
-                                </div>
-                            )}
-
-                            {hasMessage(state.clusterNamespace) && (
-                                <span className={styles.validationMessage}>
-                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.clusterNamespace.message}
-                                </span>
-                            )}
+                            <div className={styles.controlSupplement}>
+                                <VSCodeButton appearance="icon" onClick={handleNewNamespaceClick}>
+                                    <span className={styles.iconButton}>
+                                        <FontAwesomeIcon icon={faPlus} />
+                                        &nbsp;Create new
+                                    </span>
+                                </VSCodeButton>
+                            </div>
                         </>
+                    )}
+
+                    {hasMessage(state.clusterNamespace) && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                            {state.clusterNamespace.message}
+                        </span>
                     )}
                 </fieldset>
 
@@ -579,6 +580,29 @@ export function DraftDeployment(initialState: InitialState) {
                         </VSCodeButton>
                     )}
                 </div>
+
+                {state.status === "Created" && (
+                    <div className={styles.nextStepsContainer}>
+                        <i className={`codicon codicon-sparkle ${styles.icon}`}></i>
+                        <div className={styles.content}>
+                            <h3>Next steps</h3>
+
+                            <p>
+                                To generate a GitHub Action, you can run{" "}
+                                <VSCodeLink
+                                    href="#"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        vscode.postLaunchCommand(VsCodeCommand.DraftWorkflow);
+                                    }}
+                                >
+                                    Draft: Create a GitHub workflow
+                                </VSCodeLink>
+                                .
+                            </p>
+                        </div>
+                    </div>
+                )}
             </form>
 
             {existingFiles.length > 0 && (
@@ -651,7 +675,7 @@ function prepareData(state: DraftDeploymentState, updates: EventHandlerFunc[]): 
         lazyClusterNames: ensureClusterNamesLoaded(
             state.azureReferenceData,
             toNullable(state.subscription),
-            toNullable(state.clusterResourceGroup),
+            state.clusterResourceGroup,
             updates,
         ),
         lazyAcrNames: ensureAcrNamesLoaded(
@@ -678,8 +702,8 @@ function prepareData(state: DraftDeploymentState, updates: EventHandlerFunc[]): 
         lazyClusterNamespaces: ensureClusterNamespacesLoaded(
             state.azureReferenceData,
             toNullable(state.subscription),
-            toNullable(state.clusterResourceGroup),
-            toNullable(state.cluster),
+            state.clusterResourceGroup,
+            state.cluster,
             updates,
         ),
     };

@@ -9,6 +9,7 @@ import {
     ResourceGroupKey,
     Subscription,
     SubscriptionKey,
+    VsCodeCommand,
 } from "./types";
 
 export type InitialState = {
@@ -47,6 +48,7 @@ export type ToVsCodeMsgDef = {
     getNamespacesRequest: ClusterKey;
     createDeploymentRequest: CreateParams;
     openFileRequest: string;
+    launchCommand: VsCodeCommand;
 };
 
 export type ToWebViewMsgDef = {

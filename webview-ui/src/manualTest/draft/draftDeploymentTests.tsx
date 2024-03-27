@@ -13,6 +13,7 @@ import {
     RepositoryKey,
     ResourceGroupKey,
     SubscriptionKey,
+    VsCodeCommand,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { OpenFileOptions } from "../../../../src/webview-contract/webviewDefinitions/shared/fileSystemTypes";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
@@ -110,6 +111,7 @@ export function getDraftDeploymentScenarios() {
             getNamespacesRequest: handleGetNamespacesRequest,
             createDeploymentRequest: handleCreateDeploymentRequest,
             openFileRequest: handleOpenFileRequest,
+            launchCommand: (cmd) => alert(`Launching command ${VsCodeCommand[cmd]}`),
         };
 
         async function handlePickLocationRequest(options: OpenFileOptions) {

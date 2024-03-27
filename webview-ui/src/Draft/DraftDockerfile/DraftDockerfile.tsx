@@ -4,13 +4,17 @@ import { ResourceSelector } from "../../components/ResourceSelector";
 import { useStateManagement } from "../../utilities/state";
 import styles from "../Draft.module.css";
 import { stateUpdater, vscode } from "./state";
-import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton, VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { getSupportedLanguages } from "../data";
 import { Maybe, isNothing, just, nothing } from "../../utilities/maybe";
-import { LanguageInfo, LanguageVersionInfo } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
+import {
+    LanguageInfo,
+    LanguageVersionInfo,
+    VsCodeCommand,
+} from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import {
     Validatable,
     hasMessage,
@@ -201,6 +205,44 @@ export function DraftDockerfile(initialState: InitialState) {
                     </VSCodeButton>
                 ))}
             </div>
+
+            {state.status === "Created" && (
+                <div className={styles.nextStepsContainer}>
+                    <i className={`codicon codicon-sparkle ${styles.icon}`}></i>
+                    <div className={styles.content}>
+                        <h3>Next steps</h3>
+
+                        <p>
+                            If you still need to generate the appropriate deployment files, you can run{" "}
+                            <VSCodeLink
+                                href="#"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    vscode.postLaunchCommand(VsCodeCommand.DraftDeployment);
+                                }}
+                            >
+                                Draft: Create a deployment
+                            </VSCodeLink>{" "}
+                            to easily create the appropriate files.
+                        </p>
+
+                        <p>
+                            If you already have all the files you need to deploy and would like to generate a GitHub
+                            Action, you can run{" "}
+                            <VSCodeLink
+                                href="#"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    vscode.postLaunchCommand(VsCodeCommand.DraftWorkflow);
+                                }}
+                            >
+                                Draft: Create a GitHub workflow
+                            </VSCodeLink>
+                            .
+                        </p>
+                    </div>
+                </div>
+            )}
         </form>
     );
 }

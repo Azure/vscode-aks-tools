@@ -20,6 +20,7 @@ import { DeploymentFiles } from "../../commands/utils/draft";
 import { getSubscriptions, SelectionType } from "../../commands/utils/subscriptions";
 import { getResourceGroups } from "../../commands/utils/resourceGroups";
 import { getAcrRegistry, getAcrs, getRepositories, getRepositoryTags } from "../../commands/utils/acrs";
+import { launchCommandInWorkspaceFolder } from "./commandUtils";
 
 export class DraftDeploymentPanel extends BasePanel<"draftDeployment"> {
     constructor(extensionUri: Uri) {
@@ -73,6 +74,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
             getNamespacesRequest: false,
             createDeploymentRequest: true,
             openFileRequest: false,
+            launchCommand: false,
         };
     }
 
@@ -97,6 +99,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
                 this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
             createDeploymentRequest: (args) => this.handleCreateDeploymentRequest(args, webview),
             openFileRequest: (filePath) => this.handleOpenFileRequest(filePath),
+            launchCommand: (cmd) => launchCommandInWorkspaceFolder(cmd, this.workspaceFolder),
         };
     }
 

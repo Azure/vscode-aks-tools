@@ -28,16 +28,16 @@ export type EventDef = DraftDialogEventDef & {
     setClustersLoading: ResourceGroupKey;
     setClusterNamespacesLoading: ClusterKey;
     setSubscription: Validatable<Subscription>;
-    setClusterResourceGroup: Validatable<string>;
-    setCluster: Validatable<string>;
-    setNewClusterNamespace: string;
-    setClusterNamespace: Validatable<NewOrExisting<string>>;
     setAcrResourceGroup: Validatable<string>;
     setAcr: Validatable<string>;
     setNewAcrRepository: string;
     setAcrRepository: Validatable<NewOrExisting<string>>;
     setNewAcrRepoTag: string;
     setAcrRepoTag: Validatable<NewOrExisting<string>>;
+    setClusterResourceGroup: string | null;
+    setCluster: string | null;
+    setNewClusterNamespace: string;
+    setClusterNamespace: Validatable<NewOrExisting<string>>;
     setApplicationName: Validatable<string>;
     setDeploymentSpecType: DeploymentSpecType;
     setPort: Validatable<number>;
@@ -51,16 +51,16 @@ export type DraftDeploymentState = DraftStateWithDialogsState & {
     status: Status;
     azureReferenceData: AzureReferenceData;
     subscription: Validatable<Subscription>;
-    clusterResourceGroup: Validatable<string>;
-    cluster: Validatable<string>;
-    newClusterNamespace: string | null;
-    clusterNamespace: Validatable<NewOrExisting<string>>;
     acrResourceGroup: Validatable<string>;
     acr: Validatable<string>;
     newAcrRepository: string | null;
     acrRepository: Validatable<NewOrExisting<string>>;
     newAcrRepoTag: string | null;
     acrRepoTag: Validatable<NewOrExisting<string>>;
+    clusterResourceGroup: string | null;
+    cluster: string | null;
+    newClusterNamespace: string | null;
+    clusterNamespace: Validatable<NewOrExisting<string>>;
     applicationName: Validatable<string>;
     deploymentSpecType: DeploymentSpecType;
     port: Validatable<number>;
@@ -78,8 +78,8 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
             subscriptions: newNotLoaded(),
         },
         subscription: unset(),
-        clusterResourceGroup: unset(),
-        cluster: unset(),
+        clusterResourceGroup: null,
+        cluster: null,
         newClusterNamespace: null,
         clusterNamespace: unset(),
         acrResourceGroup: unset(),
@@ -225,8 +225,8 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         setSubscription: (state, subscription) => ({
             ...state,
             subscription,
-            clusterResourceGroup: unset(),
-            cluster: unset(),
+            clusterResourceGroup: null,
+            cluster: null,
             clusterNamespace: unset(),
             acrResourceGroup: unset(),
             acr: unset(),
@@ -236,7 +236,7 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         setClusterResourceGroup: (state, clusterResourceGroup) => ({
             ...state,
             clusterResourceGroup,
-            cluster: unset(),
+            cluster: null,
             clusterNamespace: unset(),
         }),
         setCluster: (state, cluster) => ({
@@ -313,6 +313,7 @@ export const vscode = getWebviewMessageContext<"draftDeployment">({
     getNamespacesRequest: null,
     createDeploymentRequest: null,
     openFileRequest: null,
+    launchCommand: null,
 });
 
 function getValidatedLocation(
