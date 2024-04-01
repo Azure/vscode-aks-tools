@@ -463,7 +463,7 @@
         "@types/glob": "^8.1.0",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.6",
-        "@types/node": "^20.11.30",
+        "@types/node": "^20.12.2",
         "@types/node-fetch": "^2.6.11",
         "@types/semver": "^7.5.8",
         "@types/sinon": "^17.0.3",
