@@ -37,6 +37,7 @@ class AzureSessionProvider extends VsCodeDisposable {
     private readonly initializePromise: Promise<void>;
     private handleSessionChanges: boolean = true;
     private tenants: Tenant[] = [];
+    private selectedTenant: Tenant | null = null;
 
     public readonly onSignInStatusChangeEmitter = new EventEmitter<SignInStatus>();
     public signInStatusValue: SignInStatus = "Initializing";
@@ -98,10 +99,27 @@ class AzureSessionProvider extends VsCodeDisposable {
         const getSessionResult = await this.getArmSession("organizations", authScenario);
         const getTenantsResult = await bindAsync(getSessionResult, (session) => getTenants(session));
         const newTenants = succeeded(getTenantsResult) ? getTenantsResult.result : [];
-        const newSignInStatus = newTenants.length > 0 ? "SignedIn" : "SignedOut";
-        if (newSignInStatus !== this.signInStatusValue || getIdString(newTenants) !== getIdString(this.tenants)) {
-            this.signInStatusValue = newSignInStatus;
+        const tenantsChanged = getIdString(newTenants) !== getIdString(this.tenants);
+
+        if (tenantsChanged) {
+            const currentTenant = this.selectedTenant;
+            const isCurrentTenantInNewTenants = currentTenant && newTenants.some((t) => t.id === currentTenant.id);
+            if (!isCurrentTenantInNewTenants) {
+                this.selectedTenant =
+                    authScenario === AuthScenario.SignIn
+                        ? null // User is signing in; let them choose a tenant.
+                        : await this.getSelectedTenantId(newTenants);
+            }
             this.tenants = newTenants;
+        }
+
+        const newSignInStatus = newTenants.length > 0 ? "SignedIn" : "SignedOut";
+        const signInStatusChanged = newSignInStatus !== this.signInStatusValue;
+        if (signInStatusChanged) {
+            this.signInStatusValue = newSignInStatus;
+        }
+
+        if (signInStatusChanged || tenantsChanged) {
             this.onSignInStatusChangeEmitter.fire(this.signInStatusValue);
         }
     }
@@ -121,20 +139,28 @@ class AzureSessionProvider extends VsCodeDisposable {
             return { succeeded: false, error: "No tenants found." };
         }
 
-        let tenant: Tenant;
-        if (this.tenants.length > 1) {
-            const selectedTenant = await quickPickTenant(this.tenants);
-            if (!selectedTenant) {
-                return { succeeded: false, error: "No tenant selected." };
-            }
+        if (!this.selectedTenant) {
+            if (this.tenants.length > 1) {
+                const selectedTenant = await quickPickTenant(this.tenants);
+                if (!selectedTenant) {
+                    return { succeeded: false, error: "No tenant selected." };
+                }
 
-            tenant = selectedTenant;
-        } else {
-            tenant = this.tenants[0];
+                this.selectedTenant = selectedTenant;
+            } else {
+                this.selectedTenant = this.tenants[0];
+            }
         }
 
         // Get a session for a specific tenant.
-        return await this.getArmSession(tenant.id, AuthScenario.GetSession);
+        return await this.getArmSession(this.selectedTenant.id, AuthScenario.GetSession);
+    }
+
+    private async getSelectedTenantId(tenants: Tenant[]): Promise<Tenant | null> {
+        const getSessionPromises = tenants.map((t) => this.getArmSession(t.id, AuthScenario.Initialization));
+        const results = await Promise.all(getSessionPromises);
+        const accessibleTenants = results.filter(succeeded).map((r) => r.result);
+        return accessibleTenants.length > 0 ? findTenant(tenants, accessibleTenants[0].tenantId) : null;
     }
 
     private async getArmSession(
@@ -214,7 +240,7 @@ export function getCredential(): TokenCredential {
         getToken: async () => {
             const session = await sessionProvider.getSession();
             if (failed(session)) {
-                throw new Error("No Microsoft authentication session found.");
+                throw new Error(`No Microsoft authentication session found: ${session.error}`);
             }
 
             return { token: session.result.accessToken, expiresOnTimestamp: 0 };
@@ -278,6 +304,10 @@ async function getTenants(session: AuthenticationSession): Promise<Errorable<Ten
 
     const tenantsResult = await listAll(subscriptionClient.tenants.list());
     return errmap(tenantsResult, (t) => t.filter(asTenant).map((t) => ({ name: t.displayName, id: t.tenantId })));
+}
+
+function findTenant(tenants: Tenant[], tenantId: string): Tenant | null {
+    return tenants.find((t) => t.id === tenantId) || null;
 }
 
 function asTenant(tenant: TenantIdDescription): tenant is { tenantId: string; displayName: string } {
