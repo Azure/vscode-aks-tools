@@ -1,8 +1,7 @@
 import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { assetUri } from "../assets";
-import { parseResource } from "../azure-api-utils";
-import { DefinedManagedCluster } from "../commands/utils/clusters";
+import { DefinedResourceWithGroup } from "../commands/utils/azureResources";
 import { SubscriptionTreeNode } from "./subscriptionTreeItem";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
@@ -20,9 +19,9 @@ export interface AksClusterTreeNode {
 export function createClusterTreeNode(
     parent: AzExtParentTreeItem & SubscriptionTreeNode,
     subscriptionId: string,
-    cluster: DefinedManagedCluster,
+    clusterResource: DefinedResourceWithGroup,
 ): AzExtTreeItem {
-    return new AksClusterTreeItem(parent, subscriptionId, cluster);
+    return new AksClusterTreeItem(parent, subscriptionId, clusterResource);
 }
 
 class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
@@ -34,18 +33,16 @@ class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
     constructor(
         parent: AzExtParentTreeItem & SubscriptionTreeNode,
         readonly subscriptionId: string,
-        readonly cluster: DefinedManagedCluster,
+        readonly clusterResource: DefinedResourceWithGroup,
     ) {
         super(parent);
 
         this.iconPath = assetUri("resources/aks-tools.png");
         this.subscriptionTreeNode = parent;
-        // cluster.id is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-        const { resourceGroupName } = parseResource(cluster.id);
-        this.id = `${this.cluster.name} ${resourceGroupName!}`;
-        this.armId = this.cluster.id;
-        this.resourceGroupName = resourceGroupName!;
-        this.name = this.cluster.name;
+        this.id = `${this.clusterResource.name} ${clusterResource.resourceGroup}`;
+        this.armId = this.clusterResource.id;
+        this.resourceGroupName = clusterResource.resourceGroup;
+        this.name = this.clusterResource.name;
     }
 
     public readonly contextValue: string = `aks.cluster ${CloudExplorerV1.SHOW_KUBECONFIG_COMMANDS_CONTEXT}`;

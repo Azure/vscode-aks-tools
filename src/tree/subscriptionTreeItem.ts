@@ -8,7 +8,7 @@ import { createClusterTreeNode } from "./aksClusterTreeItem";
 import { assetUri } from "../assets";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { window } from "vscode";
-import { getClustersBySubscription } from "../commands/utils/clusters";
+import { getResources } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
@@ -65,15 +65,18 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
     }
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        const clusters = await getClustersBySubscription(this.subscription.subscriptionId);
-        if (failed(clusters)) {
+        const clusterResources = await getResources(
+            this.subscription.subscriptionId,
+            "Microsoft.ContainerService/managedClusters",
+        );
+        if (failed(clusterResources)) {
             window.showErrorMessage(
-                `Failed to list clusters in subscription ${this.subscription.subscriptionId}: ${clusters.error}`,
+                `Failed to list clusters in subscription ${this.subscription.subscriptionId}: ${clusterResources.error}`,
             );
             return [];
         }
 
-        return clusters.result.map((cluster) => createClusterTreeNode(this, this.subscriptionId, cluster));
+        return clusterResources.result.map((r) => createClusterTreeNode(this, this.subscriptionId, r));
     }
 
     public async refreshImpl(): Promise<void> {
