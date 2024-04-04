@@ -184,6 +184,11 @@
                 "category": "AKS"
             },
             {
+                "command": "aks.selectTenant",
+                "title": "Select Tenant...",
+                "category": "AKS"
+            },
+            {
                 "command": "aks.periscope",
                 "title": "Run AKS Periscope"
             },

@@ -4,9 +4,16 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getAksClusterTreeNode, rotateClusterCert } from "../utils/clusters";
 import { failed, succeeded } from "../utils/errorable";
 import { longRunning } from "../utils/host";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 export default async function aksRotateClusterCert(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
 
     const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
     if (failed(clusterNode)) {
@@ -28,7 +35,12 @@ export default async function aksRotateClusterCert(_context: IActionContext, tar
 
     if (answer === "Yes") {
         const result = await longRunning(`Rotating cluster certificate for ${clusterName}.`, async () =>
-            rotateClusterCert(clusterNode.result.subscriptionId, clusterNode.result.resourceGroupName, clusterName),
+            rotateClusterCert(
+                sessionProvider.result,
+                clusterNode.result.subscriptionId,
+                clusterNode.result.resourceGroupName,
+                clusterName,
+            ),
         );
 
         if (failed(result)) {

@@ -11,6 +11,8 @@ import * as tmpfile from "../utils/tempfile";
 import { longRunning } from "../utils/host";
 import { ManagedCluster } from "@azure/arm-containerservice";
 import { getAksClient, getResourceManagementClient } from "../utils/arm";
+import { ReadyAzureSessionProvider } from "../../auth/types";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 interface State {
     clusterGroupCompareFrom: ClusterNameItem;
@@ -44,7 +46,14 @@ export default async function aksCompareCluster(_context: IActionContext, target
         vscode.window.showErrorMessage(extension.error);
         return;
     }
-    const containerServiceClient = getAksClient(subscriptionNode.result.subscriptionId);
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
+    const containerServiceClient = getAksClient(sessionProvider.result, subscriptionNode.result.subscriptionId);
     const clusterList: ManagedCluster[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
@@ -91,14 +100,21 @@ export default async function aksCompareCluster(_context: IActionContext, target
     }
 
     // Call compare cluster at this instance
-    await compareManagedCluster(state, subscriptionNode.result);
+    await compareManagedCluster(sessionProvider.result, state, subscriptionNode.result);
 }
 
-async function compareManagedCluster(state: State, subscriptionNode: SubscriptionTreeNode) {
+async function compareManagedCluster(
+    sessionProvider: ReadyAzureSessionProvider,
+    state: State,
+    subscriptionNode: SubscriptionTreeNode,
+) {
     await longRunning(
         `Comparing AKS Cluster ${state.clusterGroupCompareWith.name} with ${state.clusterGroupCompareFrom.name}`,
         async () => {
-            const resourceManagementClient = getResourceManagementClient(subscriptionNode.subscriptionId);
+            const resourceManagementClient = getResourceManagementClient(
+                sessionProvider,
+                subscriptionNode.subscriptionId,
+            );
 
             const resourceArmIDWith = state.clusterGroupCompareWith.armid;
             const resourceArmIDFrom = state.clusterGroupCompareFrom.armid;

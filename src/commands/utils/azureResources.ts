@@ -2,6 +2,7 @@ import { GenericResourceExpanded } from "@azure/arm-resources";
 import { getResourceManagementClient, listAll } from "./arm";
 import { Errorable, map as errmap } from "./errorable";
 import { parseResource } from "../../azure-api-utils";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export type ResourceType = "Microsoft.ContainerService/managedClusters" | "Microsoft.ContainerRegistry/registries";
 
@@ -15,10 +16,11 @@ export type DefinedResourceWithGroup = DefinedResource & {
 };
 
 export async function getResources(
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceType: ResourceType,
 ): Promise<Errorable<DefinedResourceWithGroup[]>> {
-    const client = getResourceManagementClient(subscriptionId);
+    const client = getResourceManagementClient(sessionProvider, subscriptionId);
     const list = await listAll(client.resources.list({ filter: `resourceType eq '${resourceType}'` }));
     return errmap(list, (resources) => resources.filter(isDefinedResource).map(asResourceWithGroup));
 }

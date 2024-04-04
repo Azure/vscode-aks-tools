@@ -10,6 +10,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { window } from "vscode";
 import { getResources } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
+import { ReadyAzureSessionProvider } from "../auth/types";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -27,20 +28,27 @@ export function isSubscriptionTreeNode(node: unknown): node is SubscriptionTreeN
 
 export function createSubscriptionTreeItem(
     parent: AzExtParentTreeItem,
+    sessionProvider: ReadyAzureSessionProvider,
     subscription: ISubscriptionContext,
 ): AzExtTreeItem {
-    return new SubscriptionTreeItem(parent, subscription);
+    return new SubscriptionTreeItem(parent, sessionProvider, subscription);
 }
 
 class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTreeNode {
+    private readonly sessionProvider: ReadyAzureSessionProvider;
     public readonly subscriptionContext: ISubscriptionContext;
     public readonly subscriptionId: string;
     public readonly name: string;
     public readonly contextValue = "aks.subscription";
     public readonly label: string;
 
-    public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
+    public constructor(
+        parent: AzExtParentTreeItem,
+        sessionProvider: ReadyAzureSessionProvider,
+        subscription: ISubscriptionContext,
+    ) {
         super(parent);
+        this.sessionProvider = sessionProvider;
         this.subscriptionContext = subscription;
         this.subscriptionId = subscription.subscriptionId;
         this.name = subscription.subscriptionDisplayName;
@@ -66,6 +74,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const clusterResources = await getResources(
+            this.sessionProvider,
             this.subscription.subscriptionId,
             "Microsoft.ContainerService/managedClusters",
         );

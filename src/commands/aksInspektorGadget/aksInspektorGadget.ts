@@ -11,11 +11,18 @@ import { InspektorGadgetDataProvider, InspektorGadgetPanel } from "../../panels/
 import { KubectlClusterOperations } from "./clusterOperations";
 import { TraceWatcher } from "./traceWatcher";
 import { ensureDirectoryInPath } from "../utils/env";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 export async function aksInspektorGadgetShow(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
 
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
@@ -32,7 +39,7 @@ export async function aksInspektorGadgetShow(_context: IActionContext, target: u
         return;
     }
 
-    const clusterInfo = await getKubernetesClusterInfo(target, cloudExplorer, clusterExplorer);
+    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return;

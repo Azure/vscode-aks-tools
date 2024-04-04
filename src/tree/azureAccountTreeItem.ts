@@ -12,28 +12,25 @@ import { failed } from "../commands/utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { createSubscriptionTreeItem } from "./subscriptionTreeItem";
 import { getFilteredSubscriptionsChangeEvent } from "../commands/utils/config";
-import {
-    getAuthSession,
-    getCredential,
-    getEnvironment,
-    getSignInStatus,
-    getSignInStatusChangeEvent,
-} from "../auth/azureAuth";
+import { getCredential, getEnvironment } from "../auth/azureAuth";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import { Subscription } from "@azure/arm-resources-subscriptions";
+import { AzureSessionProvider, ReadyAzureSessionProvider, isReady } from "../auth/types";
 
-export function createAzureAccountTreeItem(): AzExtParentTreeItem & { dispose(): unknown } {
-    return new AzureAccountTreeItem();
+export function createAzureAccountTreeItem(
+    sessionProvider: AzureSessionProvider,
+): AzExtParentTreeItem & { dispose(): unknown } {
+    return new AzureAccountTreeItem(sessionProvider);
 }
 
 class AzureAccountTreeItem extends AzExtParentTreeItem {
     private subscriptionTreeItems: AzExtTreeItem[] | undefined;
 
-    constructor() {
+    constructor(private readonly sessionProvider: AzureSessionProvider) {
         super(undefined);
         this.autoSelectInTreeItemPicker = true;
 
-        const onStatusChange = getSignInStatusChangeEvent();
+        const onStatusChange = this.sessionProvider.signInStatusChangeEvent;
         const onFilteredSubscriptionsChange = getFilteredSubscriptionsChangeEvent();
         registerEvent("azureAccountTreeItem.onSignInStatusChange", onStatusChange, (context) => this.refresh(context));
         registerEvent("azureAccountTreeItem.onSubscriptionFilterChange", onFilteredSubscriptionsChange, (context) =>
@@ -75,7 +72,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         const existingSubscriptionTreeItems: AzExtTreeItem[] = this.subscriptionTreeItems || [];
         this.subscriptionTreeItems = [];
 
-        switch (getSignInStatus()) {
+        switch (this.sessionProvider.signInStatus) {
             case "Initializing":
                 return [
                     new GenericTreeItem(this, {
@@ -107,7 +104,35 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                 ];
         }
 
-        const subscriptions = await getSubscriptions(SelectionType.AllIfNoFilters);
+        if (this.sessionProvider.selectedTenant === null) {
+            // Signed in, but maybe no tenant selected
+            return [
+                new GenericTreeItem(this, {
+                    label: "Select tenant...",
+                    commandId: "aks.selectTenant",
+                    contextValue: "azureCommand",
+                    id: "aksAccountSelectTenant",
+                    iconPath: new ThemeIcon("account"),
+                    includeInTreeItemPicker: true,
+                }),
+            ];
+        }
+
+        // Check the session is ready and we can get an auth session
+        // (which will be used below for creating a subscription context).
+        const session = await this.sessionProvider.getAuthSession();
+        if (failed(session) || !isReady(this.sessionProvider)) {
+            return [
+                new GenericTreeItem(this, {
+                    label: "Error authenticating",
+                    contextValue: "azureCommand",
+                    id: "aksAccountError",
+                    iconPath: new ThemeIcon("error"),
+                }),
+            ];
+        }
+
+        const subscriptions = await getSubscriptions(this.sessionProvider, SelectionType.AllIfNoFilters);
         if (failed(subscriptions)) {
             return [
                 new GenericTreeItem(this, {
@@ -115,6 +140,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                     contextValue: "azureCommand",
                     id: "aksAccountError",
                     iconPath: new ThemeIcon("error"),
+                    description: subscriptions.error,
                 }),
             ];
         }
@@ -130,17 +156,8 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             ];
         }
 
-        const session = await getAuthSession();
-        if (failed(session)) {
-            return [
-                new GenericTreeItem(this, {
-                    label: "Error authenticating",
-                    contextValue: "azureCommand",
-                    id: "aksAccountError",
-                    iconPath: new ThemeIcon("error"),
-                }),
-            ];
-        }
+        // We've confirmed above that the provider is ready.
+        const readySessionProvider: ReadyAzureSessionProvider = this.sessionProvider;
 
         this.subscriptionTreeItems = await Promise.all(
             subscriptions.result.map(async (subscription) => {
@@ -151,8 +168,12 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                     // Return existing treeItem (which might have many 'cached' tree items underneath it) rather than creating a brand new tree item every time
                     return existingTreeItem;
                 } else {
-                    const subscriptionContext = getSubscriptionContext(session.result, subscription);
-                    return await createSubscriptionTreeItem(this, subscriptionContext);
+                    const subscriptionContext = getSubscriptionContext(
+                        readySessionProvider,
+                        session.result,
+                        subscription,
+                    );
+                    return await createSubscriptionTreeItem(this, readySessionProvider, subscriptionContext);
                 }
             }),
         );
@@ -161,8 +182,12 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
     }
 }
 
-function getSubscriptionContext(session: AuthenticationSession, subscription: Subscription): ISubscriptionContext {
-    const credentials = getCredential();
+function getSubscriptionContext(
+    sessionProvider: ReadyAzureSessionProvider,
+    session: AuthenticationSession,
+    subscription: Subscription,
+): ISubscriptionContext {
+    const credentials = getCredential(sessionProvider);
     const environment = getEnvironment();
 
     return {

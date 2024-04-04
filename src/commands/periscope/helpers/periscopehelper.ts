@@ -18,13 +18,15 @@ import { getWindowsNodePoolKubernetesVersions } from "../../utils/clusters";
 import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
 import { dirSync } from "tmp";
 import { getMonitorClient, getStorageManagementClient } from "../../utils/arm";
+import { ReadyAzureSessionProvider } from "../../../auth/types";
 
 export async function getClusterDiagnosticSettings(
+    sessionProvider: ReadyAzureSessionProvider,
     clusterNode: AksClusterTreeNode,
 ): Promise<DiagnosticSettingsResourceCollection | undefined> {
     try {
         // Get diagnostic setting via diagnostic monitor
-        const client = getMonitorClient(clusterNode.subscriptionId);
+        const client = getMonitorClient(sessionProvider, clusterNode.subscriptionId);
         const diagnosticSettings = await client.diagnosticSettings.list(clusterNode.armId);
 
         return diagnosticSettings;
@@ -78,6 +80,7 @@ export async function chooseStorageAccount(
 }
 
 export async function getStorageInfo(
+    sessionProvider: ReadyAzureSessionProvider,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     clusterNode: AksClusterTreeNode,
     diagnosticStorageAccountId: string,
@@ -94,7 +97,7 @@ export async function getStorageInfo(
         }
 
         // Get keys from storage client.
-        const storageClient = getStorageManagementClient(clusterNode.subscriptionId);
+        const storageClient = getStorageManagementClient(sessionProvider, clusterNode.subscriptionId);
         const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
         if (storageAccKeyList.keys === undefined) {
             return { succeeded: false, error: "No keys found for storage account." };

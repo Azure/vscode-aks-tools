@@ -5,9 +5,15 @@ import { getAksClusterTreeNode } from "../utils/clusters";
 import { getExtension } from "../utils/host";
 import { failed } from "../utils/errorable";
 import { ClusterPropertiesDataProvider, ClusterPropertiesPanel } from "../../panels/ClusterPropertiesPanel";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 export default async function aksClusterProperties(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
 
     const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
     if (failed(clusterNode)) {
@@ -22,6 +28,7 @@ export default async function aksClusterProperties(_context: IActionContext, tar
     }
 
     const dataProvider = new ClusterPropertiesDataProvider(
+        sessionProvider.result,
         clusterNode.result.subscriptionId,
         clusterNode.result.resourceGroupName,
         clusterNode.result.name,

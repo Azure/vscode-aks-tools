@@ -2,6 +2,7 @@ import { Subscription } from "@azure/arm-resources-subscriptions";
 import { getSubscriptionClient, listAll } from "./arm";
 import { Errorable, map as errmap } from "./errorable";
 import { getFilteredSubscriptions } from "./config";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export enum SelectionType {
     Filtered,
@@ -14,8 +15,11 @@ export enum SelectionType {
  */
 export type DefinedSubscription = Subscription & Required<Pick<Subscription, "subscriptionId" | "displayName">>;
 
-export async function getSubscriptions(selectionType: SelectionType): Promise<Errorable<DefinedSubscription[]>> {
-    const client = getSubscriptionClient();
+export async function getSubscriptions(
+    sessionProvider: ReadyAzureSessionProvider,
+    selectionType: SelectionType,
+): Promise<Errorable<DefinedSubscription[]>> {
+    const client = getSubscriptionClient(sessionProvider);
     const subsResult = await listAll(client.subscriptions.list());
     return errmap(subsResult, (subs) => sortAndFilter(subs.filter(asDefinedSubscription), selectionType));
 }

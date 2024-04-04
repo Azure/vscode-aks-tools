@@ -1,17 +1,45 @@
 import { QuickPickItem, Uri, env, window } from "vscode";
 import { failed } from "../utils/errorable";
 import { SubscriptionFilter, getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
-import { getAuthSession, signIn } from "../../auth/azureAuth";
+import { getSessionProvider } from "../../auth/azureSessionProvider";
 import { SelectionType, getSubscriptions } from "../utils/subscriptions";
+import { getReadySessionProvider, quickPickTenant } from "../../auth/azureAuth";
 
 export async function signInToAzure(): Promise<void> {
-    await signIn();
+    await getSessionProvider().signIn();
+}
+
+export async function selectTenant(): Promise<void> {
+    const sessionProvider = getSessionProvider();
+    if (sessionProvider.signInStatus !== "SignedIn") {
+        window.showInformationMessage("You must sign in before selecting a tenant.");
+        return;
+    }
+
+    if (sessionProvider.availableTenants.length === 1) {
+        window.showInformationMessage(`Only one tenant available (${sessionProvider.availableTenants[0].name}).`);
+        return;
+    }
+
+    const selectedTenant = await quickPickTenant(sessionProvider.availableTenants);
+    if (!selectedTenant) {
+        window.showInformationMessage("No tenant selected.");
+        return;
+    }
+
+    sessionProvider.selectedTenant = selectedTenant;
 }
 
 type SubscriptionQuickPickItem = QuickPickItem & { subscription: SubscriptionFilter };
 
 export async function selectSubscriptions(): Promise<void> {
-    const allSubscriptions = await getSubscriptions(SelectionType.All);
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
+    const allSubscriptions = await getSubscriptions(sessionProvider.result, SelectionType.All);
     if (failed(allSubscriptions)) {
         window.showErrorMessage(allSubscriptions.error);
         return;
@@ -28,7 +56,7 @@ export async function selectSubscriptions(): Promise<void> {
         return;
     }
 
-    const session = await getAuthSession();
+    const session = await sessionProvider.result.getAuthSession();
     if (failed(session)) {
         window.showErrorMessage(session.error);
         return;

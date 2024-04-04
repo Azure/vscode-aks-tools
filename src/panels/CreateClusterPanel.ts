@@ -18,7 +18,8 @@ import { getPortalResourceUrl } from "../commands/utils/env";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { getAksClient, getResourceManagementClient } from "../commands/utils/arm";
-import { getAuthSession, getEnvironment } from "../auth/azureAuth";
+import { getEnvironment } from "../auth/azureAuth";
+import { ReadyAzureSessionProvider } from "../auth/types";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -35,12 +36,13 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     private readonly containerServiceClient: ContainerServiceClient;
 
     public constructor(
+        readonly sessionProvider: ReadyAzureSessionProvider,
         readonly subscriptionId: string,
         readonly subscriptionName: string,
         readonly refreshTree: () => void,
     ) {
-        this.resourceManagementClient = getResourceManagementClient(this.subscriptionId);
-        this.containerServiceClient = getAksClient(this.subscriptionId);
+        this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
+        this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
     }
 
     getTitle(): string {
@@ -98,7 +100,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     }
 
     private async handleGetResourceGroupsRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const groups = await getResourceGroups(this.subscriptionId);
+        const groups = await getResourceGroups(this.sessionProvider, this.subscriptionId);
         if (failed(groups)) {
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
@@ -139,6 +141,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         }
 
         await createCluster(
+            this.sessionProvider,
             this.subscriptionId,
             groupName,
             location,
@@ -188,6 +191,7 @@ async function createResourceGroup(
 }
 
 async function createCluster(
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     groupName: string,
     location: string,
@@ -223,7 +227,7 @@ async function createCluster(
         return;
     }
 
-    const session = await getAuthSession();
+    const session = await sessionProvider.getAuthSession();
     if (failed(session)) {
         window.showErrorMessage(`Error getting authentication session: ${session.error}`);
         webview.postProgressUpdate({

@@ -6,25 +6,35 @@ import { ResourceManagementClient } from "@azure/arm-resources";
 import { ContainerServiceClient } from "@azure/arm-containerservice";
 import { MonitorClient } from "@azure/arm-monitor";
 import { StorageManagementClient } from "@azure/arm-storage";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
-export function getSubscriptionClient(): SubscriptionClient {
-    return new SubscriptionClient(getCredential(), { endpoint: getArmEndpoint() });
+export function getSubscriptionClient(sessionProvider: ReadyAzureSessionProvider): SubscriptionClient {
+    return new SubscriptionClient(getCredential(sessionProvider), { endpoint: getArmEndpoint() });
 }
 
-export function getResourceManagementClient(subscriptionId: string): ResourceManagementClient {
-    return new ResourceManagementClient(getCredential(), subscriptionId, { endpoint: getArmEndpoint() });
+export function getResourceManagementClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ResourceManagementClient {
+    return new ResourceManagementClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
 
-export function getAksClient(subscriptionId: string): ContainerServiceClient {
-    return new ContainerServiceClient(getCredential(), subscriptionId, { endpoint: getArmEndpoint() });
+export function getAksClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ContainerServiceClient {
+    return new ContainerServiceClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
 
-export function getMonitorClient(subscriptionId: string): MonitorClient {
-    return new MonitorClient(getCredential(), subscriptionId, { endpoint: getArmEndpoint() });
+export function getMonitorClient(sessionProvider: ReadyAzureSessionProvider, subscriptionId: string): MonitorClient {
+    return new MonitorClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
 
-export function getStorageManagementClient(subscriptionId: string): StorageManagementClient {
-    return new StorageManagementClient(getCredential(), subscriptionId, { endpoint: getArmEndpoint() });
+export function getStorageManagementClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): StorageManagementClient {
+    return new StorageManagementClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
 
 function getArmEndpoint(): string {

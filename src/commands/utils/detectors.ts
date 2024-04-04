@@ -12,15 +12,20 @@ import { dirSync } from "tmp";
 import { Environment } from "@azure/ms-rest-azure-env";
 import { getPortalResourceUrl } from "./env";
 import { getResourceManagementClient } from "./arm";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 /**
  * Can be used to store the JSON responses for a collection of category detectors and all their child detectors.
  */
-export async function saveAllDetectorResponses(clusterNode: AksClusterTreeNode, categoryDetectorIds: string[]) {
+export async function saveAllDetectorResponses(
+    sessionProvider: ReadyAzureSessionProvider,
+    clusterNode: AksClusterTreeNode,
+    categoryDetectorIds: string[],
+) {
     const outputDirObj = dirSync();
 
     for (const categoryDetectorId of categoryDetectorIds) {
-        const categoryDetector = await getDetectorInfo(clusterNode, categoryDetectorId);
+        const categoryDetector = await getDetectorInfo(sessionProvider, clusterNode, categoryDetectorId);
         if (failed(categoryDetector)) {
             throw new Error(
                 `Error getting category detector ${categoryDetectorId}: ${getErrorMessage(categoryDetector.error)}`,
@@ -29,7 +34,7 @@ export async function saveAllDetectorResponses(clusterNode: AksClusterTreeNode, 
 
         saveDetector(outputDirObj.name, categoryDetector.result);
 
-        const singleDetectors = await getDetectorListData(clusterNode, categoryDetector.result);
+        const singleDetectors = await getDetectorListData(sessionProvider, clusterNode, categoryDetector.result);
         if (failed(singleDetectors)) {
             throw new Error(
                 `Error getting single detectors for ${categoryDetectorId}: ${getErrorMessage(singleDetectors.error)}`,
@@ -50,6 +55,7 @@ function saveDetector(outputDir: string, detector: CategoryDetectorARMResponse |
 }
 
 export async function getDetectorListData(
+    sessionProvider: ReadyAzureSessionProvider,
     clusterNode: AksClusterTreeNode,
     categoryDetector: CategoryDetectorARMResponse,
 ): Promise<Errorable<SingleDetectorARMResponse[]>> {
@@ -61,7 +67,9 @@ export async function getDetectorListData(
 
     let results: Errorable<SingleDetectorARMResponse>[] = [];
     try {
-        const promiseResults = await Promise.all(detectorIds.map((name) => getDetectorInfo(clusterNode, name)));
+        const promiseResults = await Promise.all(
+            detectorIds.map((name) => getDetectorInfo(sessionProvider, clusterNode, name)),
+        );
         // Line below is added to handle edge case of applens detector list with missing implementation,
         // due to internal server error it causes rest of list to fail.
         results = promiseResults.filter((x) => x.succeeded);
@@ -75,11 +83,12 @@ export async function getDetectorListData(
 }
 
 export async function getDetectorInfo(
+    sessionProvider: ReadyAzureSessionProvider,
     clusterNode: AksClusterTreeNode,
     detectorName: string,
 ): Promise<Errorable<CategoryDetectorARMResponse>> {
     try {
-        const client = getResourceManagementClient(clusterNode.subscriptionId);
+        const client = getResourceManagementClient(sessionProvider, clusterNode.subscriptionId);
         const detectorInfo = await client.resources.get(
             clusterNode.resourceGroupName,
             clusterNode.resourceType,

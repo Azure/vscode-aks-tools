@@ -8,7 +8,7 @@ import {
 } from "vscode-kubernetes-tools-api";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import * as azcs from "@azure/arm-containerservice";
-import { Errorable, failed, getErrorMessage, map as errmap, succeeded } from "./errorable";
+import { Errorable, failed, getErrorMessage, succeeded } from "./errorable";
 import { SubscriptionTreeNode, isSubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
 import * as yaml from "js-yaml";
 import * as fs from "fs";
@@ -16,10 +16,10 @@ import * as path from "path";
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
 import { dirSync } from "tmp";
-import { TokenInfo } from "../../auth/types";
+import { ReadyAzureSessionProvider, TokenInfo } from "../../auth/types";
 import { AuthenticationSession, authentication } from "vscode";
 import { getTokenInfo } from "../../auth/azureAuth";
-import { getAksClient, listAll } from "./arm";
+import { getAksClient } from "./arm";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -33,6 +33,7 @@ export type DefinedManagedCluster = azcs.ManagedCluster &
     Required<Pick<azcs.ManagedCluster, "id" | "name" | "location">>;
 
 export async function getKubernetesClusterInfo(
+    sessionProvider: ReadyAzureSessionProvider,
     commandTarget: unknown,
     cloudExplorer: APIAvailable<CloudExplorerV1>,
     clusterExplorer: APIAvailable<ClusterExplorerV1>,
@@ -42,6 +43,7 @@ export async function getKubernetesClusterInfo(
     if (succeeded(clusterNode)) {
         const properties = await longRunning(`Getting properties for cluster ${clusterNode.result.name}.`, () =>
             getManagedCluster(
+                sessionProvider,
                 clusterNode.result.subscriptionId,
                 clusterNode.result.resourceGroupName,
                 clusterNode.result.name,
@@ -52,6 +54,7 @@ export async function getKubernetesClusterInfo(
         }
 
         const kubeconfigYaml = await getKubeconfigYaml(
+            sessionProvider,
             clusterNode.result.subscriptionId,
             clusterNode.result.resourceGroupName,
             properties.result,
@@ -154,11 +157,12 @@ export function getAksClusterSubscriptionNode(
 }
 
 export async function getKubeconfigYaml(
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: string,
     managedCluster: DefinedManagedCluster,
 ): Promise<Errorable<string>> {
-    const client = getAksClient(subscriptionId);
+    const client = getAksClient(sessionProvider, subscriptionId);
     return managedCluster.aadProfile
         ? getAadKubeconfig(client, resourceGroup, managedCluster.name)
         : getNonAadKubeconfig(client, resourceGroup, managedCluster.name);
@@ -371,27 +375,13 @@ function getClusterUserKubeconfig(credentialResults: azcs.CredentialResults, clu
     return { succeeded: true, result: kubeconfig };
 }
 
-export async function getClustersBySubscription(subscriptionId: string): Promise<Errorable<DefinedManagedCluster[]>> {
-    const client = getAksClient(subscriptionId);
-    const clusters = await listAll(client.managedClusters.list());
-    return errmap(clusters, (c) => c.filter(isDefinedManagedCluster));
-}
-
-export async function getClustersByResourceGroup(
-    subscriptionId: string,
-    resourceGroup: string,
-): Promise<Errorable<DefinedManagedCluster[]>> {
-    const client = getAksClient(subscriptionId);
-    const clusters = await listAll(client.managedClusters.listByResourceGroup(resourceGroup));
-    return errmap(clusters, (c) => c.filter(isDefinedManagedCluster));
-}
-
 export async function getManagedCluster(
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: string,
     clusterName: string,
 ): Promise<Errorable<DefinedManagedCluster>> {
-    const client = getAksClient(subscriptionId);
+    const client = getAksClient(sessionProvider, subscriptionId);
     try {
         const managedCluster = await client.managedClusters.get(resourceGroup, clusterName);
         if (isDefinedManagedCluster(managedCluster)) {
@@ -457,12 +447,13 @@ export async function getWindowsNodePoolKubernetesVersions(
 }
 
 export async function deleteCluster(
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: string,
     clusterName: string,
 ): Promise<Errorable<string>> {
     try {
-        const containerClient = getAksClient(subscriptionId);
+        const containerClient = getAksClient(sessionProvider, subscriptionId);
         await containerClient.managedClusters.beginDeleteAndWait(resourceGroup, clusterName);
 
         return { succeeded: true, result: "Delete cluster succeeded." };
@@ -472,18 +463,19 @@ export async function deleteCluster(
 }
 
 export async function reconcileUsingUpdateInCluster(
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: string,
     clusterName: string,
 ): Promise<Errorable<string>> {
-    const clusterInfo = await getManagedCluster(subscriptionId, resourceGroup, clusterName);
+    const clusterInfo = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
     if (failed(clusterInfo)) {
         return clusterInfo;
     }
 
     try {
         // Pleaset note: here is in the only place this way of reconcile is documented: https://learn.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest#az-aks-update()-examples
-        const containerClient = getAksClient(subscriptionId);
+        const containerClient = getAksClient(sessionProvider, subscriptionId);
         await containerClient.managedClusters.beginCreateOrUpdateAndWait(resourceGroup, clusterName, {
             location: clusterInfo.result.location,
         });
@@ -498,12 +490,13 @@ export async function reconcileUsingUpdateInCluster(
 }
 
 export async function rotateClusterCert(
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: string,
     clusterName: string,
 ): Promise<Errorable<string>> {
     try {
-        const containerClient = getAksClient(subscriptionId);
+        const containerClient = getAksClient(sessionProvider, subscriptionId);
         await containerClient.managedClusters.beginRotateClusterCertificatesAndWait(resourceGroup, clusterName);
 
         return { succeeded: true, result: `Rotate cluster certificate for ${clusterName} succeeded.` };

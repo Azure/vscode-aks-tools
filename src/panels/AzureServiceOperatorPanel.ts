@@ -18,6 +18,7 @@ import path from "path";
 import * as fs from "fs/promises";
 import { createTempFile } from "../commands/utils/tempfile";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { ReadyAzureSessionProvider } from "../auth/types";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
     constructor(extensionUri: vscode.Uri) {
@@ -34,6 +35,7 @@ export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
 
 export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"> {
     constructor(
+        readonly sessionProvider: ReadyAzureSessionProvider,
         readonly extension: vscode.Extension<vscode.ExtensionContext>,
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
@@ -85,7 +87,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         appSecret: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ): Promise<void> {
-        const servicePrincipalAccess = await getServicePrincipalAccess(appId, appSecret);
+        const servicePrincipalAccess = await getServicePrincipalAccess(this.sessionProvider, appId, appSecret);
         if (failed(servicePrincipalAccess)) {
             webview.postCheckSPResponse({
                 succeeded: false,

@@ -45,12 +45,18 @@ import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 import refreshSubscription from "./commands/refreshSubscriptions";
 import aksEraserTool from "./commands/aksEraserTool/erasertool";
 import { aksRetinaCapture } from "./commands/aksRetinaCapture/aksRetinaCapture";
-import { signInToAzure, selectSubscriptions } from "./commands/aksAccount/aksAccount";
+import { signInToAzure, selectSubscriptions, selectTenant } from "./commands/aksAccount/aksAccount";
+import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSessionProvider";
+import { getReadySessionProvider } from "./auth/azureAuth";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter());
     setAssetContext(context);
+
+    // Create and register the Azure session provider before accessing it.
+    activateAzureSessionProvider(context);
+    const sessionProvider = getSessionProvider();
 
     if (cloudExplorer.available) {
         // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
@@ -68,6 +74,7 @@ export async function activate(context: vscode.ExtensionContext) {
             category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
         });
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
+        registerCommandWithTelemetry("aks.selectTenant", selectTenant);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
         registerCommandWithTelemetry("aks.periscope", periscope);
         registerCommandWithTelemetry("aks.installAzureServiceOperator", installAzureServiceOperator);
@@ -101,7 +108,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         await registerAzureServiceNodes(context);
 
-        const azureAccountTreeItem = createAzureAccountTreeItem();
+        const azureAccountTreeItem = createAzureAccountTreeItem(sessionProvider);
         context.subscriptions.push(azureAccountTreeItem);
         const treeDataProvider = new AzExtTreeDataProvider(azureAccountTreeItem, "azureAks.loadMore");
 
@@ -136,8 +143,14 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 }
 
 async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<string | undefined> {
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
     const properties = await longRunning(`Getting properties for cluster ${treeNode.name}.`, () =>
-        getManagedCluster(treeNode.subscriptionId, treeNode.resourceGroupName, treeNode.name),
+        getManagedCluster(sessionProvider.result, treeNode.subscriptionId, treeNode.resourceGroupName, treeNode.name),
     );
     if (failed(properties)) {
         vscode.window.showErrorMessage(properties.error);
@@ -145,8 +158,14 @@ async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<strin
     }
 
     const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${treeNode.name}.`, () =>
-        getKubeconfigYaml(treeNode.subscriptionId, treeNode.resourceGroupName, properties.result),
+        getKubeconfigYaml(
+            sessionProvider.result,
+            treeNode.subscriptionId,
+            treeNode.resourceGroupName,
+            properties.result,
+        ),
     );
+
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);
         return undefined;

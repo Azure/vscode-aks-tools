@@ -9,8 +9,9 @@ import {
 } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { RoleAssignment } from "@azure/arm-authorization";
-import { getAuthSession, getDefaultScope, getEnvironment } from "../../auth/azureAuth";
+import { getDefaultScope, getEnvironment } from "../../auth/azureAuth";
 import { DefinedSubscription, getSubscriptions, SelectionType } from "./subscriptions";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export interface ServicePrincipalAccess {
     readonly cloudName: string;
@@ -34,16 +35,17 @@ interface ServicePrincipalInfo {
 }
 
 export async function getServicePrincipalAccess(
+    sessionProvider: ReadyAzureSessionProvider,
     appId: string,
     secret: string,
 ): Promise<Errorable<ServicePrincipalAccess>> {
     const cloudName = getEnvironment().name;
-    const filteredSubscriptions = await getSubscriptions(SelectionType.Filtered);
+    const filteredSubscriptions = await getSubscriptions(sessionProvider, SelectionType.Filtered);
     if (failed(filteredSubscriptions)) {
         return filteredSubscriptions;
     }
 
-    const session = await getAuthSession();
+    const session = await sessionProvider.getAuthSession();
     if (failed(session)) {
         return session;
     }
