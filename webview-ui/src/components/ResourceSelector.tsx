@@ -25,14 +25,21 @@ export function ResourceSelector<TResource>(props: ResourceSelectorProps<TResour
     }
 
     const selectedValue = props.selectedItem !== null ? props.valueGetter(props.selectedItem) : "";
+
     return (
         <>
             {isLoading(resources) && <VSCodeProgressRing style={{ height: "1rem" }} />}
             {isLoaded(resources) && (
                 <VSCodeDropdown className={props.className} id={props.id} value={selectedValue} onChange={handleChange}>
-                    <VSCodeOption value="">Select</VSCodeOption>
+                    <VSCodeOption value="" selected={selectedValue === ""}>
+                        Select
+                    </VSCodeOption>
                     {resources.value.map((r) => (
-                        <VSCodeOption key={props.valueGetter(r)} value={props.valueGetter(r)}>
+                        <VSCodeOption
+                            key={props.valueGetter(r)}
+                            value={props.valueGetter(r)}
+                            selected={selectedValue === props.valueGetter(r)}
+                        >
                             {props.labelGetter(r)}
                         </VSCodeOption>
                     ))}
