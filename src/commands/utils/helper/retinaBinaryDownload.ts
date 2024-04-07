@@ -24,9 +24,9 @@ export async function getRetinaBinaryPath(): Promise<Errorable<string>> {
         };
     }
     const archiveFilename = getArchiveFilename(releaseTag);
-    const pathToBinaryInArchive = getPathToBinaryInArchive();
 
     const downloadUrl = `https://github.com/microsoft/retina/releases/download/${releaseTag}/${archiveFilename}`;
+    const pathToBinaryInArchive = getPathToBinaryInArchive();
   
     // The plugin requires an '.exe' extension on Windows, but it doesn't have that in the archive
     // so we can't simply extract it from the path within the archive.
@@ -58,18 +58,20 @@ function getArchiveFilename(releaseTag: string) {
 
 
 function getPathToBinaryInArchive() {
-    return "kubectl-retina";
-}
-
-function getBinaryFileName() {
     let architecture = os.arch();
-    const operatingSystem = os.platform().toLocaleLowerCase();
+    let operatingSystem = os.platform().toLocaleLowerCase();
 
     if (architecture === "x64") {
         architecture = "amd64";
     }
 
-    const retinaBinaryFile = `kubectl-retina-${operatingSystem}-${architecture}`;
+    if (operatingSystem === "win32") {
+        operatingSystem = "windows";
+    }
 
-    return retinaBinaryFile;
+    return `kubectl-retina-${operatingSystem}-${architecture}`;
+}
+
+function getBinaryFileName() {
+    return `kubectl-retina`;
 }

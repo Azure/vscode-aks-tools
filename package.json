@@ -147,7 +147,7 @@
                 },
                 "aks.retinatool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.2",
+                    "default": "v0.0.4",
                     "title": "Retina repository release tag",
                     "description": "Release tag for the stable Retina tool release."
                 }
@@ -265,6 +265,10 @@
             {
                 "command": "aks.compareCluster",
                 "title": "Compare AKS Cluster"
+            },
+            {
+                "command": "aks.aksRetinaCapture",
+                "title": "Run Retina Capture"
             }
         ],
         "menus": {
@@ -350,6 +354,11 @@
                 {
                     "command": "aks.compareCluster",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
+                    "submenu": "aks.networkTroubleshootingSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@3"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -406,6 +415,20 @@
                     "group": "navigation"
                 }
             ],
+            "aks.networkTroubleshootingSubMenu": [
+                {
+                    "command": "aks.aksTCPDump",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetShow",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksRetinaCapture",
+                    "group": "navigation"
+                }
+            ],
             "aks.managedClusterOperationSubMenu": [
                 {
                     "command": "aks.aksDeleteCluster",
@@ -441,6 +464,10 @@
             {
                 "id": "aks.tcpDataCollectionSubMenu",
                 "label": "Collect TCP Dump"
+            },
+            {
+                "id": "aks.networkTroubleshootingSubMenu",
+                "label": "Troubleshoot Network Health"
             }
         ]
     },
