@@ -66,6 +66,13 @@ ul.existingFileList > li {
     margin-bottom: 0.4rem;
 }
 
+ul.existingFileList > li.removable {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .inlineIcon {
     vertical-align: middle;
     margin-left: 0.3rem;

@@ -43,6 +43,7 @@ export type EventDef = DraftDialogEventDef & {
     setNamespace: Validatable<NewOrExisting<string>>;
     setNewNamespace: string;
     setDeploymentSpecType: DeploymentSpecType;
+    setManifestPaths: Validatable<string[]>;
     setHelmOverrides: HelmOverrideState[];
     setCreating: void;
 };
@@ -262,11 +263,15 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             namespace: valid({ isNew: true, value: name }),
         }),
         setDeploymentSpecType: (state, type) => ({ ...state, deploymentSpecType: type }),
-        setCreating: (state) => ({ ...state, status: "Creating" }),
+        setManifestPaths: (state, paths) => ({
+            ...state,
+            manifestsParamsState: { ...state.manifestsParamsState, manifestPaths: paths },
+        }),
         setHelmOverrides: (state, overrides) => ({
             ...state,
             helmParamsState: { ...state.helmParamsState, overrides },
         }),
+        setCreating: (state) => ({ ...state, status: "Creating" }),
         ...getDialogEventHandler(),
     },
 };

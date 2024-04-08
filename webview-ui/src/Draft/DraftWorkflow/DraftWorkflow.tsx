@@ -206,6 +206,18 @@ export function DraftWorkflow(initialState: InitialState) {
         });
     }
 
+    function handleDeleteManifestPathClick(path: string) {
+        if (isValid(state.manifestsParamsState.manifestPaths)) {
+            const currentPaths = state.manifestsParamsState.manifestPaths.value;
+            const newPaths = currentPaths.filter((p) => p !== path);
+            if (newPaths.length === 0) {
+                eventHandlers.onSetManifestPaths(missing("Manifest paths are required."));
+            } else {
+                eventHandlers.onSetManifestPaths(valid(newPaths));
+            }
+        }
+    }
+
     function handleChooseHelmChartFolderClick() {
         vscode.postPickFilesRequest({
             identifier: "HelmCharts",
@@ -689,7 +701,10 @@ export function DraftWorkflow(initialState: InitialState) {
 
                     {state.deploymentSpecType === "manifests" && (
                         <>
-                            <div className={styles.controlSupplement}>
+                            <label htmlFor="manifest-paths" className={styles.label}>
+                                Manifest file paths *
+                            </label>
+                            <div className={styles.control}>
                                 <VSCodeButton appearance="icon" onClick={handleChooseManifestPathsClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faFolder} />
@@ -697,24 +712,10 @@ export function DraftWorkflow(initialState: InitialState) {
                                     </span>
                                 </VSCodeButton>
                             </div>
-                            {hasMessage(state.manifestsParamsState.manifestPaths) && (
-                                <span className={styles.validationMessage}>
-                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.manifestsParamsState.manifestPaths.message}
-                                </span>
-                            )}
-                        </>
-                    )}
-
-                    {state.deploymentSpecType === "manifests" && (
-                        <>
-                            <label htmlFor="manifest-paths" className={styles.label}>
-                                Manifest file paths
-                            </label>
                             {isValid(state.manifestsParamsState.manifestPaths) && (
                                 <ul className={`${styles.existingFileList} ${styles.control}`} id="manifest-paths">
                                     {state.manifestsParamsState.manifestPaths.value.map((path, i) => (
-                                        <li key={i}>
+                                        <li key={i} className={styles.removable}>
                                             <VSCodeLink
                                                 href="#"
                                                 onClick={(e) => {
@@ -724,9 +725,25 @@ export function DraftWorkflow(initialState: InitialState) {
                                             >
                                                 {path}
                                             </VSCodeLink>
+                                            <VSCodeButton
+                                                appearance="icon"
+                                                onClick={() => handleDeleteManifestPathClick(path)}
+                                                aria-label="Delete"
+                                                title="Delete"
+                                            >
+                                                <span className={styles.iconButton}>
+                                                    <FontAwesomeIcon icon={faTrash} />
+                                                </span>
+                                            </VSCodeButton>
                                         </li>
                                     ))}
                                 </ul>
+                            )}
+                            {hasMessage(state.manifestsParamsState.manifestPaths) && (
+                                <span className={styles.validationMessage}>
+                                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                    {state.manifestsParamsState.manifestPaths.message}
+                                </span>
                             )}
                         </>
                     )}

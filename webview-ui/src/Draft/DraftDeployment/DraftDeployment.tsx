@@ -340,7 +340,7 @@ export function DraftDeployment(initialState: InitialState) {
                     {isValid(state.acr) && (
                         <>
                             <label htmlFor="acr-repo-input" className={styles.label}>
-                                Repository *
+                                Azure Container Registry image *
                             </label>
                             <ResourceSelector<NewOrExisting<string>>
                                 id="acr-repo-input"
