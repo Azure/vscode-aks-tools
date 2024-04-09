@@ -13,7 +13,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.5.2",
     "@fortawesome/free-regular-svg-icons": "^6.5.1",
-    "@fortawesome/free-solid-svg-icons": "^6.5.1",
+    "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "react": "^18.2.0",
