@@ -8,6 +8,7 @@ import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
 import { ASODefinition } from "./webviewDefinitions/azureServiceOperator";
 import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
+import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
 
 /**
  * Groups all the related types for a single webview.
@@ -36,6 +37,7 @@ type AllWebviewDefinitions = {
     kubectl: KubectlDefinition;
     aso: ASODefinition;
     tcpDump: TCPDumpDefinition;
+    retinaCapture: RetinaCaptureDefinition;
 };
 
 type ContentIdLookup = {

@@ -38,6 +38,7 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kubectl: getKubectlScenarios(),
     aso: getASOScenarios(),
     tcpDump: getTCPDumpScenarios(),
+    retinaCapture: [],
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

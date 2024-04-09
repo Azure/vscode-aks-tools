@@ -12,6 +12,7 @@ import { Kubectl } from "./Kubectl/Kubectl";
 import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperator";
 import { ClusterProperties } from "./ClusterProperties/ClusterProperties";
 import { TcpDump } from "./TCPDump/TcpDump";
+import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -50,6 +51,7 @@ function getVsCodeContent(): JSX.Element {
         kubectl: () => <Kubectl {...getInitialState()} />,
         aso: () => <AzureServiceOperator {...getInitialState()} />,
         tcpDump: () => <TcpDump {...getInitialState()} />,
+        retinaCapture: () => <RetinaCapture {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
