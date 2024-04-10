@@ -2,19 +2,15 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getKubernetesClusterInfo } from "../utils/clusters";
-import { getExtension } from "../utils/host";
+import { getExtension, longRunning } from "../utils/host";
 import { failed } from "../utils/errorable";
 import * as tmpfile from "../utils/tempfile";
 import path from "path";
-// import { InspektorGadgetDataProvider, InspektorGadgetPanel } from "../../panels/InspektorGadgetPanel";
-// import { KubectlClusterOperations } from "./clusterOperations";
-// import { TraceWatcher } from "./traceWatcher";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
 import { invokeKubectlCommand } from "../utils/kubectl";
 // import { withOptionalTempFile } from "../utils/tempfile";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
-// import { fail } from "assert";
 
 export async function aksRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -58,64 +54,83 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
 
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
     console.log(`Kubeconfig file: ${kubeConfigFile}`);
-    const retinaCaptureResult = await invokeKubectlCommand(
-        kubectl,
-        kubeConfigFile.filePath, // Fix: Pass the file path instead of the TempFile object
-        `retina capture create --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux"`,
-    );
+
+    const retinaCaptureResult = await longRunning(`Retina Disctributed Capture running against cluster ${clusterInfo.result.name}.`, async () => {
+        return await invokeKubectlCommand(
+            kubectl,
+            kubeConfigFile.filePath,
+            `retina capture create --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux" --no-wait=false`,
+        );
+    });
+
     if (failed(retinaCaptureResult)) {
         vscode.window.showErrorMessage(`Failed to capture the cluster: ${retinaCaptureResult.error}`);
         return;
     }
     console.log(`Retina capture result: ${retinaCaptureResult}`);
-    vscode.window.showInformationMessage(`Retina capture result: ${retinaCaptureResult.result.stdout}`);
-    
-    const dataProvider = new RetinaCaptureProvider(clusterInfo.result.name, retinaCaptureResult.result.stdout); // Fix: Pass the result.stdout property instead of the retinaCaptureResult object
+    vscode.window.showInformationMessage(`Retina distributed capture ran successfully.`);
+
+    // Get Nodes For this Cluster
+    const nodelistResult = await invokeKubectlCommand(
+        kubectl,
+        kubeConfigFile.filePath, // Fix: Pass the file path instead of the TempFile object
+        `get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\\n"}{end}'`,
+    );
+
+    if (failed(nodelistResult)) {
+        vscode.window.showErrorMessage(`Failed to capture the cluster: ${nodelistResult.error}`);
+        return;
+    }
+    const dataProvider = new RetinaCaptureProvider(
+        clusterInfo.result.name,
+        retinaCaptureResult.result.stdout,
+        nodelistResult.result.stdout
+    );
 
     const panel = new RetinaCapturePanel(extension.result.extensionUri);
     panel.show(dataProvider);
     // lets get the log of the capture to local file
     // lets spin the daemonset for running in all nodes.
-//     const createDaemonYaml = 
-// `apiVersion: v1
-// kind: Pod
-// metadata:
-//   name: node-explorer
-// spec:
-//   nodeName: aks-agentpool-24994873-vmss000000
-//   volumes:
-//   - name: mnt-captures
-//     hostPath:
-//       path: /mnt/capture
-//   containers:
-//   - name: node-explorer
-//     image: alpine
-//     command: ["sleep", "9999999999"]
-//     volumeMounts:
-//     - name: mnt-captures
-//       mountPath: /mnt/capture
-// `;
+    // const createDaemonYaml =
+    //     `apiVersion: v1
+    // kind: Pod
+    // metadata:
+    //   name: node-explorer
+    // spec:
+    //   nodeName: aks-agentpool-19415718-vmss000000
+    //   volumes:
+    //   - name: mnt-captures
+    //     hostPath:
+    //       path: /mnt/capture
+    //   containers:
+    //   - name: node-explorer
+    //     image: alpine
+    //     command: ["sleep", "9999999999"]
+    //     volumeMounts:
+    //     - name: mnt-captures
+    //       mountPath: /mnt/capture
+    // `;
 
-//         const applyResult = await withOptionalTempFile(createDaemonYaml, "YAML", async (podSpecFile) => {
-//             const command = `apply -f ${podSpecFile}`;
-//             return await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
-//         });
+    // const applyResult = await withOptionalTempFile(createDaemonYaml, "YAML", async (podSpecFile) => {
+    //     const command = `apply -f ${podSpecFile}`;
+    //     return await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
+    // });
 
-//         if (failed(applyResult)) {
-//             vscode.window.showErrorMessage(`Failed to apply Pod: ${applyResult.error}`);
-//             return;
-//         }
+    // if (failed(applyResult)) {
+    //     vscode.window.showErrorMessage(`Failed to apply Pod: ${applyResult.error}`);
+    //     return;
+    // }
 
-//         // kubectl cp 
-//         const command = `cp node-explorer:mnt/capture /tmp/capture --request-timeout=10m`;
-//         const nodeExplorerResult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
-        
-//         if (failed(nodeExplorerResult)) {
-//             vscode.window.showErrorMessage(`Failed to apply copy command: ${nodeExplorerResult.error}`);
-//             return;
-//         }
+    // // kubectl cp 
+    // const command = `cp node-explorer:mnt/capture /tmp/capture --request-timeout=10m`;
+    // const nodeExplorerResult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
 
-//         vscode.window.showInformationMessage(`Yay !! Retina capture is done. Check the logs in /tmp/capture`);
+    // if (failed(nodeExplorerResult)) {
+    //     vscode.window.showErrorMessage(`Failed to apply copy command: ${nodeExplorerResult.error}`);
+    //     return;
+    // }
+
+    // vscode.window.showInformationMessage(`Yay !! Retina capture is done. Check the logs in /tmp/capture`);
 
     // const kubectlClusterOperations = new KubectlClusterOperations(kubectl.api, clusterInfo.result, kubeConfigFile);
 }

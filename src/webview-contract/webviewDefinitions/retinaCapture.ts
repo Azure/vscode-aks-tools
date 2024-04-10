@@ -23,6 +23,7 @@ export type ValueCommandResult<TCommandResult extends CommandResult, TValue> = T
 export type ToVsCodeMsgDef = {
     retinaCaptureResult: RetinaCaptureResult;
     getAllNodes: void;
+    openFolder: string;
 };
 
 export type ToWebViewMsgDef = {

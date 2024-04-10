@@ -25,5 +25,6 @@ export const stateUpdater: WebviewStateUpdater<"retinaCapture", EventDef, Retina
 
 export const vscode = getWebviewMessageContext<"retinaCapture">({
     retinaCaptureResult: undefined,
-    getAllNodes: undefined
+    getAllNodes: undefined,
+    openFolder: undefined,
 });
