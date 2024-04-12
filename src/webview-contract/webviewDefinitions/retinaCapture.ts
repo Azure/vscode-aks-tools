@@ -1,9 +1,11 @@
 import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
+    selectedNode: string;
     clusterName: string;
     retinaOutput: string[];
     allNodes: string[];
+    captureFolderName: string;
 }
 
 export type CommandResult = {
@@ -24,6 +26,7 @@ export type ToVsCodeMsgDef = {
     retinaCaptureResult: RetinaCaptureResult;
     getAllNodes: void;
     openFolder: string;
+    runRetinaCapture: NodeName;
 };
 
 export type ToWebViewMsgDef = {
