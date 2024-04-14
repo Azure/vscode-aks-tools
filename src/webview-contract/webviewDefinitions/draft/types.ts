@@ -3,14 +3,11 @@ import { OpenFileOptions } from "../shared/fileSystemTypes";
 export type LanguageInfo = {
     name: string;
     displayName: string;
-    defaultPort: number;
-    versions: LanguageVersionInfo[];
-};
-
-export type LanguageVersionInfo = {
-    name: string;
-    imageVersion: string;
-    builderVersion: string;
+    defaultPort?: number;
+    exampleVersions: string[];
+    versionDescription?: string;
+    getDefaultBuilderImageTag?: (version: string) => string;
+    getDefaultRuntimeImageTag: (version: string) => string;
 };
 
 export type ForkInfo = {

@@ -64,8 +64,8 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
             createDockerfileRequest: (args) =>
                 this.handleCreateDockerfileRequest(
                     args.language,
-                    args.imageVersion,
-                    args.builderVersion,
+                    args.builderImageTag,
+                    args.runtimeImageTag,
                     args.port,
                     args.location,
                     webview,
@@ -94,16 +94,16 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
 
     private async handleCreateDockerfileRequest(
         language: string,
-        imageVersion: string,
-        builderVersion: string,
+        builderImageTag: string | null,
+        runtimeImageTag: string,
         port: number,
         location: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         const variables = {
             PORT: port,
-            VERSION: imageVersion,
-            BUILDERVERSION: builderVersion,
+            VERSION: runtimeImageTag,
+            BUILDERVERSION: builderImageTag || "",
         };
 
         const variableArgs = Object.entries(variables)

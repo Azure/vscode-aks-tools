@@ -1,0 +1,28 @@
+.selectedValue {
+    display: inline; /* Prevents a small gap between text input and listbox options */
+    width: 100%;
+}
+
+.indicator {
+    cursor: pointer;
+    margin-right: -2px;
+}
+
+.listbox {
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-focusBorder);
+    border-radius: 2px;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex-direction: column;
+    left: 0px;
+    max-height: 200px;
+    padding: 0px;
+    overflow-y: auto;
+    width: 100%;
+    z-index: 1;
+}
+
+.listbox > * {
+    flex-shrink: 0;
+}

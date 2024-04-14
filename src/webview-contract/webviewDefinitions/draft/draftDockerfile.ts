@@ -13,8 +13,8 @@ export type ExistingFiles = string[];
 
 export type CreateParams = {
     language: string;
-    imageVersion: string;
-    builderVersion: string;
+    builderImageTag: string | null;
+    runtimeImageTag: string;
     port: number;
     location: string;
 };

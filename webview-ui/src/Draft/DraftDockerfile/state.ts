@@ -1,6 +1,6 @@
 import { WebviewStateUpdater } from "../../utilities/state";
 import { getWebviewMessageContext } from "../../utilities/vscode";
-import { LanguageInfo, LanguageVersionInfo } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
+import { LanguageInfo } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { Validatable, ValidatableValue, invalid, isValid, unset, valid } from "../../utilities/validation";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
 import { ExistingFiles } from "../../../../src/webview-contract/webviewDefinitions/draft/draftDockerfile";
@@ -9,7 +9,9 @@ const defaultPortNumber = 80;
 
 export type EventDef = {
     setSelectedLanguage: Validatable<LanguageInfo>;
-    setSelectedLanguageVersion: Validatable<LanguageVersionInfo>;
+    setSelectedLanguageVersion: Validatable<string>;
+    setBuilderImageTag: Validatable<string>;
+    setRuntimeImageTag: Validatable<string>;
     setSelectedPort: Validatable<number>;
     setCreating: void;
 };
@@ -20,7 +22,9 @@ export type DraftDockerfileState = {
     existingFiles: ExistingFiles;
     status: Status;
     selectedLanguage: Validatable<LanguageInfo>;
-    selectedLanguageVersion: Validatable<LanguageVersionInfo>;
+    selectedLanguageVersion: Validatable<string>;
+    builderImageTag: Validatable<string> | null;
+    runtimeImageTag: Validatable<string>;
     selectedPort: Validatable<number>;
 };
 
@@ -34,6 +38,8 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
         status: "Editing",
         selectedLanguage: unset(),
         selectedLanguageVersion: unset(),
+        builderImageTag: null,
+        runtimeImageTag: unset(),
         selectedPort: valid(defaultPortNumber),
     }),
     vscodeMessageHandler: {
@@ -52,13 +58,14 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
         setSelectedLanguage: (state, selectedLanguage) => ({
             ...state,
             selectedLanguage,
-            selectedLanguageVersion: getDefaultLanguageVersion(selectedLanguage),
-            selectedPort: getDefaultPort(selectedLanguage),
+            ...getLanguageVersionState(selectedLanguage, unset()),
         }),
         setSelectedLanguageVersion: (state, selectedLanguageVersion) => ({
             ...state,
-            selectedLanguageVersion,
+            ...getLanguageVersionState(state.selectedLanguage, selectedLanguageVersion),
         }),
+        setBuilderImageTag: (state, builderImageTag) => ({ ...state, builderImageTag }),
+        setRuntimeImageTag: (state, runtimeImageTag) => ({ ...state, runtimeImageTag }),
         setSelectedPort: (state, selectedPort) => ({ ...state, selectedPort }),
         setCreating: (state) => ({ ...state, status: "Creating" }),
     },
@@ -71,15 +78,41 @@ export const vscode = getWebviewMessageContext<"draftDockerfile">({
     launchCommand: null,
 });
 
-function getDefaultLanguageVersion(language: Validatable<LanguageInfo>): Validatable<LanguageVersionInfo> {
-    if (!isValid(language)) return unset();
-    if (language.value.versions.length !== 1) return unset();
-    return valid(language.value.versions[0]);
-}
+type LanguageVersionState = Pick<
+    DraftDockerfileState,
+    "selectedLanguageVersion" | "builderImageTag" | "runtimeImageTag" | "selectedPort"
+>;
 
-function getDefaultPort(language: Validatable<LanguageInfo>): Validatable<number> {
-    if (!isValid(language)) return valid(defaultPortNumber);
-    return valid(language.value.defaultPort ?? defaultPortNumber);
+function getLanguageVersionState(
+    language: Validatable<LanguageInfo>,
+    languageVersion: Validatable<string>,
+): LanguageVersionState {
+    if (!isValid(language)) {
+        return {
+            selectedLanguageVersion: languageVersion,
+            builderImageTag: null,
+            runtimeImageTag: unset(),
+            selectedPort: valid(defaultPortNumber),
+        };
+    }
+
+    if (!isValid(languageVersion)) {
+        return {
+            selectedLanguageVersion: languageVersion,
+            builderImageTag: language.value.getDefaultBuilderImageTag ? unset() : null,
+            runtimeImageTag: unset(),
+            selectedPort: valid(language.value.defaultPort ?? defaultPortNumber),
+        };
+    }
+
+    return {
+        selectedLanguageVersion: languageVersion,
+        builderImageTag: language.value.getDefaultBuilderImageTag
+            ? valid(language.value.getDefaultBuilderImageTag(languageVersion.value))
+            : null,
+        runtimeImageTag: valid(language.value.getDefaultRuntimeImageTag(languageVersion.value)),
+        selectedPort: valid(language.value.defaultPort ?? defaultPortNumber),
+    };
 }
 
 function getValidatedLocation(location: string, existingFiles: ExistingFiles): ValidatableValue<string> {
