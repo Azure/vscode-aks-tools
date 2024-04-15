@@ -29,7 +29,7 @@ import {
     ensureClusterNamespacesLoaded,
     ensureSubscriptionsLoaded,
 } from "./dataLoading";
-import { Lazy, isLoaded, map as lazyMap } from "../../utilities/lazy";
+import { Lazy, map as lazyMap } from "../../utilities/lazy";
 import { ResourceSelector } from "../../components/ResourceSelector";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
@@ -41,9 +41,6 @@ import {
     VSCodeTextField,
 } from "@vscode/webview-ui-toolkit/react";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
-import { NewImageTagDialog } from "../dialogs/NewImageTagDialog";
-import { NewNamespaceDialog } from "../dialogs/NewNamespaceDialog";
-import { NewRepositoryDialog } from "../dialogs/NewRepositoryDialog";
 import { distinct } from "../../utilities/array";
 import { TextWithDropdown } from "../../components/TextWithDropdown";
 
@@ -561,31 +558,6 @@ export function DraftDeployment(initialState: InitialState) {
                     </div>
                 )}
             </form>
-
-            {isLoaded(lazyClusterNamespaces) && (
-                <NewNamespaceDialog
-                    state={state.allDialogsState.newClusterNamespaceState}
-                    existingNamespaces={lazyClusterNamespaces.value}
-                    eventHandlers={eventHandlers}
-                    onSetNewClusterNamespace={eventHandlers.onSetNewClusterNamespace}
-                />
-            )}
-            {isLoaded(lazyRepositoryNames) && (
-                <NewRepositoryDialog
-                    state={state.allDialogsState.newRepositoryState}
-                    existingRepositories={lazyRepositoryNames.value}
-                    eventHandlers={eventHandlers}
-                    onSetNewAcrRepository={eventHandlers.onSetNewAcrRepository}
-                />
-            )}
-            {isLoaded(lazyImageTags) && (
-                <NewImageTagDialog
-                    state={state.allDialogsState.newImageTagState}
-                    existingTags={lazyImageTags.value}
-                    eventHandlers={eventHandlers}
-                    onSetNewAcrRepoTag={eventHandlers.onSetNewAcrRepoTag}
-                />
-            )}
         </>
     );
 }

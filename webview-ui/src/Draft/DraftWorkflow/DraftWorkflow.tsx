@@ -9,7 +9,7 @@ import {
     NewOrExisting,
     Subscription,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
-import { Lazy, isLoaded, map as lazyMap } from "../../utilities/lazy";
+import { Lazy, map as lazyMap } from "../../utilities/lazy";
 import {
     Validatable,
     hasMessage,
@@ -46,8 +46,6 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTimesCircle, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
-import { NewNamespaceDialog } from "../dialogs/NewNamespaceDialog";
-import { NewRepositoryDialog } from "../dialogs/NewRepositoryDialog";
 import { distinct, filterNulls, replaceItem } from "../../utilities/array";
 import { TextWithDropdown } from "../../components/TextWithDropdown";
 
@@ -837,23 +835,6 @@ export function DraftWorkflow(initialState: InitialState) {
                     )}
                 </div>
             </form>
-
-            {isLoaded(lazyNamespaces) && (
-                <NewNamespaceDialog
-                    state={state.allDialogsState.newClusterNamespaceState}
-                    existingNamespaces={lazyNamespaces.value}
-                    eventHandlers={eventHandlers}
-                    onSetNewClusterNamespace={eventHandlers.onSetNewNamespace}
-                />
-            )}
-            {isLoaded(lazyRepositoryNames) && (
-                <NewRepositoryDialog
-                    state={state.allDialogsState.newRepositoryState}
-                    existingRepositories={lazyRepositoryNames.value}
-                    eventHandlers={eventHandlers}
-                    onSetNewAcrRepository={eventHandlers.onSetNewRepositoryName}
-                />
-            )}
         </>
     );
 }

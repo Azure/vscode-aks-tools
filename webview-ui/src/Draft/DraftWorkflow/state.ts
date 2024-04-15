@@ -13,17 +13,15 @@ import {
     SubscriptionKey,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
-import { getDialogEventHandler } from "../../utilities/dialogState";
 import { newNotLoaded } from "../../utilities/lazy";
 import { WebviewStateUpdater } from "../../utilities/state";
 import { Validatable, isValueSet, unset, valid } from "../../utilities/validation";
 import { getWebviewMessageContext } from "../../utilities/vscode";
-import { DraftDialogEventDef, DraftStateWithDialogsState, initialDraftDialogState } from "../dialogs/dialogState";
 import { AzureReferenceData, GitHubReferenceData } from "../state/stateTypes";
 import * as AzureReferenceDataUpdate from "../state/update/azureReferenceDataUpdate";
 import * as GitHubReferenceDataUpdate from "../state/update/gitHubReferenceDataUpdate";
 
-export type EventDef = DraftDialogEventDef & {
+export type EventDef = {
     setBranchesLoading: ForkKey;
     setSubscriptionsLoading: void;
     setAcrsLoading: SubscriptionKey;
@@ -48,7 +46,7 @@ export type EventDef = DraftDialogEventDef & {
     setCreating: void;
 };
 
-export type DraftWorkflowState = DraftStateWithDialogsState & {
+export type DraftWorkflowState = {
     workspaceConfig: WorkspaceFolderConfig;
     existingWorkflowFiles: ExistingFile[];
     status: Status;
@@ -133,7 +131,6 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             deploymentType: "manifests",
             manifestPaths: unset(),
         },
-        ...initialDraftDialogState,
     }),
     vscodeMessageHandler: {
         pickFilesResponse: (state, args) => updatePickedFile(state, args.identifier, args.paths),
@@ -272,7 +269,6 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             helmParamsState: { ...state.helmParamsState, overrides },
         }),
         setCreating: (state) => ({ ...state, status: "Creating" }),
-        ...getDialogEventHandler(),
     },
 };
 

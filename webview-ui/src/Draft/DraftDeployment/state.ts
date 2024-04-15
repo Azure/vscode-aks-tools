@@ -15,10 +15,8 @@ import { getWebviewMessageContext } from "../../utilities/vscode";
 import { AzureReferenceData } from "../state/stateTypes";
 import * as AzureReferenceDataUpdate from "../state/update/azureReferenceDataUpdate";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
-import { DraftDialogEventDef, DraftStateWithDialogsState, initialDraftDialogState } from "../dialogs/dialogState";
-import { getDialogEventHandler } from "../../utilities/dialogState";
 
-export type EventDef = DraftDialogEventDef & {
+export type EventDef = {
     setSubscriptionsLoading: void;
     setAcrsLoading: SubscriptionKey;
     setRepositoriesLoading: AcrKey;
@@ -43,7 +41,7 @@ export type EventDef = DraftDialogEventDef & {
     setCreating: void;
 };
 
-export type DraftDeploymentState = DraftStateWithDialogsState & {
+export type DraftDeploymentState = {
     workspaceConfig: WorkspaceFolderConfig;
     location: ValidatableValue<string>;
     existingFiles: ExistingFiles;
@@ -92,7 +90,6 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         deploymentSpecType: "manifests",
         targetPort: valid(80),
         servicePort: valid(80),
-        ...initialDraftDialogState,
     }),
     vscodeMessageHandler: {
         pickLocationResponse: (state, response) => ({
@@ -255,7 +252,6 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
             servicePort,
         }),
         setCreating: (state) => ({ ...state, status: "Creating" }),
-        ...getDialogEventHandler(),
     },
 };
 
