@@ -29,7 +29,8 @@ export type CreateParams = {
     location: string;
     deploymentSpecType: DeploymentSpecType;
     applicationName: string;
-    port: number;
+    targetPort: number;
+    servicePort: number;
     namespace: string;
     acrName: string;
     repositoryName: string;

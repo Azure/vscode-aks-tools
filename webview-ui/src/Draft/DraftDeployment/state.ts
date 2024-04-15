@@ -38,7 +38,8 @@ export type EventDef = DraftDialogEventDef & {
     setClusterNamespace: Validatable<NewOrExisting<string>>;
     setApplicationName: Validatable<string>;
     setDeploymentSpecType: DeploymentSpecType;
-    setPort: Validatable<number>;
+    setTargetPort: Validatable<number>;
+    setServicePort: Validatable<number>;
     setCreating: void;
 };
 
@@ -61,7 +62,8 @@ export type DraftDeploymentState = DraftStateWithDialogsState & {
     clusterNamespace: Validatable<NewOrExisting<string>>;
     applicationName: Validatable<string>;
     deploymentSpecType: DeploymentSpecType;
-    port: Validatable<number>;
+    targetPort: Validatable<number>;
+    servicePort: Validatable<number>;
 };
 
 export type Status = "Editing" | "Creating" | "Created";
@@ -88,7 +90,8 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         acrRepoTag: unset(),
         applicationName: unset(),
         deploymentSpecType: "manifests",
-        port: valid(80),
+        targetPort: valid(80),
+        servicePort: valid(80),
         ...initialDraftDialogState,
     }),
     vscodeMessageHandler: {
@@ -243,9 +246,13 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
             deploymentSpecType,
             location: getValidatedLocation(state.location.value, deploymentSpecType, state.existingFiles),
         }),
-        setPort: (state, port) => ({
+        setTargetPort: (state, targetPort) => ({
             ...state,
-            port,
+            targetPort,
+        }),
+        setServicePort: (state, servicePort) => ({
+            ...state,
+            servicePort,
         }),
         setCreating: (state) => ({ ...state, status: "Creating" }),
         ...getDialogEventHandler(),

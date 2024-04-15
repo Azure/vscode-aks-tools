@@ -9,7 +9,7 @@ const defaultPortNumber = 80;
 
 export type EventDef = {
     setSelectedLanguage: Validatable<LanguageInfo>;
-    setSelectedLanguageVersion: Validatable<string>;
+    setSelectedLanguageVersion: string | null;
     setBuilderImageTag: Validatable<string>;
     setRuntimeImageTag: Validatable<string>;
     setSelectedPort: Validatable<number>;
@@ -22,7 +22,7 @@ export type DraftDockerfileState = {
     existingFiles: ExistingFiles;
     status: Status;
     selectedLanguage: Validatable<LanguageInfo>;
-    selectedLanguageVersion: Validatable<string>;
+    selectedLanguageVersion: string | null;
     builderImageTag: Validatable<string> | null;
     runtimeImageTag: Validatable<string>;
     selectedPort: Validatable<number>;
@@ -37,7 +37,7 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
         existingFiles: initialState.existingFiles,
         status: "Editing",
         selectedLanguage: unset(),
-        selectedLanguageVersion: unset(),
+        selectedLanguageVersion: null,
         builderImageTag: null,
         runtimeImageTag: unset(),
         selectedPort: valid(defaultPortNumber),
@@ -58,7 +58,7 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
         setSelectedLanguage: (state, selectedLanguage) => ({
             ...state,
             selectedLanguage,
-            ...getLanguageVersionState(selectedLanguage, unset()),
+            ...getLanguageVersionState(selectedLanguage, null),
         }),
         setSelectedLanguageVersion: (state, selectedLanguageVersion) => ({
             ...state,
@@ -85,7 +85,7 @@ type LanguageVersionState = Pick<
 
 function getLanguageVersionState(
     language: Validatable<LanguageInfo>,
-    languageVersion: Validatable<string>,
+    languageVersion: string | null,
 ): LanguageVersionState {
     if (!isValid(language)) {
         return {
@@ -96,21 +96,12 @@ function getLanguageVersionState(
         };
     }
 
-    if (!isValid(languageVersion)) {
-        return {
-            selectedLanguageVersion: languageVersion,
-            builderImageTag: language.value.getDefaultBuilderImageTag ? unset() : null,
-            runtimeImageTag: unset(),
-            selectedPort: valid(language.value.defaultPort ?? defaultPortNumber),
-        };
-    }
-
     return {
         selectedLanguageVersion: languageVersion,
         builderImageTag: language.value.getDefaultBuilderImageTag
-            ? valid(language.value.getDefaultBuilderImageTag(languageVersion.value))
+            ? valid(language.value.getDefaultBuilderImageTag(languageVersion || ""))
             : null,
-        runtimeImageTag: valid(language.value.getDefaultRuntimeImageTag(languageVersion.value)),
+        runtimeImageTag: valid(language.value.getDefaultRuntimeImageTag(languageVersion || "")),
         selectedPort: valid(language.value.defaultPort ?? defaultPortNumber),
     };
 }

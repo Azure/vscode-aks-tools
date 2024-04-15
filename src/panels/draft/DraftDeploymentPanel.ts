@@ -269,8 +269,8 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
             IMAGENAME: imageName,
             IMAGETAG: args.tag,
             NAMESPACE: args.namespace,
-            PORT: args.port,
-            SERVICEPORT: args.port, // TODO: Separate argument for service port?
+            PORT: args.targetPort,
+            SERVICEPORT: args.servicePort,
         };
 
         const variableArgs = Object.entries(variables)

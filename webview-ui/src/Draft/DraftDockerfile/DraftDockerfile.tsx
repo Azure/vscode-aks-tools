@@ -36,17 +36,8 @@ export function DraftDockerfile(initialState: InitialState) {
         eventHandlers.onSetSelectedLanguage(validated);
     }
 
-    function handleLanguageVersionChange(versionName: string | null) {
-        const validated = getValidatedLanguageVersion(versionName);
-        eventHandlers.onSetSelectedLanguageVersion(validated);
-
-        function getValidatedLanguageVersion(version: string | null): Validatable<string> {
-            if (version === null || version === "" || version.trim() === "") {
-                return missing("Language version is required.");
-            }
-
-            return valid(version);
-        }
+    function handleLanguageVersionChange(version: string | null) {
+        eventHandlers.onSetSelectedLanguageVersion(version);
     }
 
     function handleBuilderImageTagChange(e: ChangeEvent) {
@@ -107,7 +98,6 @@ export function DraftDockerfile(initialState: InitialState) {
     function validate(): Maybe<CreateParams> {
         if (!isValid(state.location)) return nothing();
         if (!isValid(state.selectedLanguage)) return nothing();
-        if (!isValid(state.selectedLanguageVersion)) return nothing();
         if (state.builderImageTag !== null && !isValid(state.builderImageTag)) return nothing();
         if (!isValid(state.runtimeImageTag)) return nothing();
         if (!isValid(state.selectedPort)) return nothing();
@@ -173,15 +163,9 @@ export function DraftDockerfile(initialState: InitialState) {
                             className={styles.control}
                             getAddItemText={(text) => `Use "${text}"`}
                             items={selectedLanguage.value.exampleVersions}
-                            selectedItem={toNullable(state.selectedLanguageVersion)}
+                            selectedItem={state.selectedLanguageVersion}
                             onSelect={handleLanguageVersionChange}
                         />
-                        {hasMessage(state.selectedLanguageVersion) && (
-                            <span className={styles.validationMessage}>
-                                <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                {state.selectedLanguageVersion.message}
-                            </span>
-                        )}
 
                         {state.builderImageTag !== null && (
                             <>

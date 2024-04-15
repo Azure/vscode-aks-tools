@@ -12,7 +12,6 @@ import {
 import { Lazy, isLoaded, map as lazyMap } from "../../utilities/lazy";
 import {
     Validatable,
-    fromNullable,
     hasMessage,
     invalid,
     isValid,
@@ -50,6 +49,7 @@ import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { NewNamespaceDialog } from "../dialogs/NewNamespaceDialog";
 import { NewRepositoryDialog } from "../dialogs/NewRepositoryDialog";
 import { distinct, filterNulls, replaceItem } from "../../utilities/array";
+import { TextWithDropdown } from "../../components/TextWithDropdown";
 
 export function DraftWorkflow(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -138,23 +138,14 @@ export function DraftWorkflow(initialState: InitialState) {
         eventHandlers.onSetAcr(validated);
     }
 
-    function handleRepositorySelect(repository: NewOrExisting<string> | null) {
-        const validated =
-            repository === null ? missing<NewOrExisting<string>>("Repository is required.") : valid(repository);
+    function handleRepositorySelect(repository: string | null, isNew: boolean) {
+        const validated = getValidatedRepository();
         eventHandlers.onSetRepositoryName(validated);
-    }
 
-    function handleNewRepositoryClick() {
-        eventHandlers.onSetDialogContent({
-            dialog: "newRepository",
-            content: {
-                repository: fromNullable(state.newRepositoryName),
-            },
-        });
-        eventHandlers.onSetDialogVisibility({
-            dialog: "newRepository",
-            shown: true,
-        });
+        function getValidatedRepository(): Validatable<NewOrExisting<string>> {
+            if (!repository) return missing("Repository name is required.");
+            return valid({ isNew, value: repository });
+        }
     }
 
     function handleClusterResourceGroupSelect(resourceGroup: string | null) {
@@ -168,23 +159,14 @@ export function DraftWorkflow(initialState: InitialState) {
         eventHandlers.onSetCluster(validated);
     }
 
-    function handleNamespaceSelect(namespace: NewOrExisting<string> | null) {
-        const validated =
-            namespace === null ? missing<NewOrExisting<string>>("Namespace is required.") : valid(namespace);
+    function handleNamespaceSelect(namespace: string | null, isNew: boolean) {
+        const validated = getValidatedNamespace();
         eventHandlers.onSetNamespace(validated);
-    }
 
-    function handleNewNamespaceClick() {
-        eventHandlers.onSetDialogContent({
-            dialog: "newClusterNamespace",
-            content: {
-                namespace: fromNullable(state.newNamespace),
-            },
-        });
-        eventHandlers.onSetDialogVisibility({
-            dialog: "newClusterNamespace",
-            shown: true,
-        });
+        function getValidatedNamespace(): Validatable<NewOrExisting<string>> {
+            if (!namespace) return missing("Namespace is required.");
+            return valid({ isNew, value: namespace });
+        }
     }
 
     function handleDeploymentSpecTypeChange(e: Event | FormEvent<HTMLElement>) {
@@ -572,26 +554,15 @@ export function DraftWorkflow(initialState: InitialState) {
                             <label htmlFor="acr-repo-input" className={styles.label}>
                                 Azure Container Registry image *
                             </label>
-                            <ResourceSelector<NewOrExisting<string>>
+
+                            <TextWithDropdown
                                 id="acr-repo-input"
                                 className={styles.control}
-                                resources={lazyAllRepositories}
-                                selectedItem={toNullable(state.repositoryName)}
-                                valueGetter={(r) => r.value}
-                                labelGetter={(r) => (r.isNew ? `(New) ${r.value}` : r.value)}
+                                getAddItemText={(text) => `Use "${text}"`}
+                                items={lazyMap(lazyAllRepositories, (repos) => repos.map((r) => r.value))}
+                                selectedItem={toNullable(state.repositoryName)?.value || null}
                                 onSelect={handleRepositorySelect}
                             />
-
-                            {isLoaded(lazyRepositoryNames) && (
-                                <div className={styles.controlSupplement}>
-                                    <VSCodeButton appearance="icon" onClick={handleNewRepositoryClick}>
-                                        <span className={styles.iconButton}>
-                                            <FontAwesomeIcon icon={faPlus} />
-                                            &nbsp;Create new
-                                        </span>
-                                    </VSCodeButton>
-                                </div>
-                            )}
 
                             {hasMessage(state.repositoryName) && (
                                 <span className={styles.validationMessage}>
@@ -655,26 +626,15 @@ export function DraftWorkflow(initialState: InitialState) {
                             <label htmlFor="namespace-input" className={styles.label}>
                                 Namespace *
                             </label>
-                            <ResourceSelector<NewOrExisting<string>>
+
+                            <TextWithDropdown
                                 id="namespace-input"
                                 className={styles.control}
-                                resources={lazyAllNamespaces}
-                                selectedItem={toNullable(state.namespace)}
-                                valueGetter={(n) => n.value}
-                                labelGetter={(n) => (n.isNew ? `(New) ${n.value}` : n.value)}
+                                getAddItemText={(text) => `Use "${text}"`}
+                                items={lazyMap(lazyAllNamespaces, (namespaces) => namespaces.map((n) => n.value))}
+                                selectedItem={toNullable(state.namespace)?.value || null}
                                 onSelect={handleNamespaceSelect}
                             />
-
-                            {isLoaded(lazyNamespaces) && (
-                                <div className={styles.controlSupplement}>
-                                    <VSCodeButton appearance="icon" onClick={handleNewNamespaceClick}>
-                                        <span className={styles.iconButton}>
-                                            <FontAwesomeIcon icon={faPlus} />
-                                            &nbsp;Create new
-                                        </span>
-                                    </VSCodeButton>
-                                </div>
-                            )}
 
                             {hasMessage(state.namespace) && (
                                 <span className={styles.validationMessage}>
