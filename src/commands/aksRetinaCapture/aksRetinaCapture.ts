@@ -99,6 +99,7 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
 
     if (retinaCaptureResult.result.stderr || retinaCaptureResult.result.code !== 0) {
         vscode.window.showInformationMessage(`Retina distributed capture failed with following error. ${retinaCaptureResult.result.stdout}`);
+        return;
     }
 
     if (retinaCaptureResult.result.stdout && retinaCaptureResult.result.code === 0) {
