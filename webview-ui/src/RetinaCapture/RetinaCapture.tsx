@@ -2,23 +2,21 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/r
 import { VSCodeButton, VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./state";
-import { faFolderOpen, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { NodeSelector } from "../components/NodeSelector";
 import styles from "./RetinaCapture.module.css";
 
 export function RetinaCapture(initialState: InitialState) {
-    const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode); //eventHandlers
+    const { state } = useStateManagement(stateUpdater, initialState, vscode); //eventHandlers
 
-    function handleNodeExplorerPod() {
-        const nodeName = (document.getElementById('node-dropdown') as HTMLSelectElement).value;
+    function handleNodeExplorerPod(nodeName: string) {
         vscode.postRunRetinaCapture(nodeName);
-        (document.getElementsByClassName('downloadednodes') as HTMLSelectElement).innerText = `Node ${nodeName} is capture here: ${state.captureFolderName}`;
+        document.getElementById(nodeName)?.showPopover();
     }
 
-    function handleOpenFolderClick(path: string) {
-        vscode.postOpenFolder(path);
-    }
+    // function handleOpenFolderClick(path: string) {
+    //     vscode.postOpenFolder(path);
+    // }
 
     return (
         <>
@@ -38,29 +36,31 @@ export function RetinaCapture(initialState: InitialState) {
 
             <div className={styles.content}>
                 <label htmlFor="node-dropdown" className={styles.label}>
-                    Select Node to Capture Traffic:
                 </label>
-                <NodeSelector
-                    nodes={state.allNodes}
-                    onNodeChanged={() => eventHandlers.onSetSelectedNode}
-                    id="node-dropdown"
-                    className={styles.controlDropdown}
-                />
-            </div>
-            <div className={styles.buttonContainer} style={{ justifyContent: "flex-end" }}>
-                <VSCodeButton type="submit" onClick={handleNodeExplorerPod} appearance="secondary">
-                    Capture Retina logs to Host Machine.
-                </VSCodeButton>
+                <table>
+                    <tbody>
+                        {state.allNodes.toString().split(",").map((node, index) => (
+                            <tr key={index}>
+                                <td>
+                                    {node} -
+                                    <VSCodeButton type="submit" onClick={() => handleNodeExplorerPod(node)} appearance="secondary">
+                                        Capture logs to Host Machine.
+                                    </VSCodeButton>
+                                    {/* <VSCodeButton appearance="icon" title="Open Folder" id={node} >
+                                        <FontAwesomeIcon
+                                            icon={faFolderOpen}
+                                            display={"block"}
+                                            onClick={() => handleOpenFolderClick(`${state.captureFolderName}`)}
+                                        />
+                                    </VSCodeButton> */}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                <VSCodeDivider style={{ marginBottom: "1rem" }} />
 
-                <span className="downloadednodes"></span> : <VSCodeButton appearance="icon" title="Open Folder">
-                    <FontAwesomeIcon
-                        icon={faFolderOpen}
-                        onClick={() => handleOpenFolderClick(`${state.captureFolderName}`)}
-                    />
-                </VSCodeButton>
             </div>
-            <VSCodeDivider style={{ marginBottom: "1rem" }} />
-
         </>
     );
 }

@@ -1,4 +1,4 @@
-import { Uri, commands } from "vscode";
+import { Uri, window, commands, workspace } from "vscode";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { InitialState, NodeName, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -9,6 +9,8 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
 import * as vscode from "vscode";
 import { longRunning } from "../commands/utils/host";
+import { relative } from "path";
+import { platform } from "os";
 
 
 export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
@@ -81,6 +83,18 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
 
     private async handleRunRetinaCapture(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
         console.log(webview);
+        const localCaptureUri = await window.showSaveDialog({
+            defaultUri: Uri.file(this.captureFolderName),
+            saveLabel: "Download",
+            title: "Download Retina File",
+        });
+
+        if (!localCaptureUri) {
+            return;
+        }
+
+        const localCpPath = getLocalKubectlCpPath(localCaptureUri);
+
         const createPodYaml = `
 apiVersion: v1
 kind: Pod
@@ -100,8 +114,6 @@ spec:
     - name: mnt-captures
       mountPath: /mnt/capture
 `;
-
-        vscode.window.showInformationMessage(`Lets start the pod to capture to local.`);
 
         const applyResult = await longRunning(`Deploying pod to capture ${node} retina data.`, async () => {
             return await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
@@ -126,8 +138,8 @@ spec:
 
 
         // // kubectl cp 
-        const nodeExplorerResult = await longRunning(`Copy captured data to local host location ${this.captureFolderName}.`, async () => {
-            const cpcommand = `cp node-explorer-${node}:mnt/capture ${this.captureFolderName} --request-timeout=10m`;
+        const nodeExplorerResult = await longRunning(`Copy captured data to local host location ${localCpPath}.`, async () => {
+            const cpcommand = `cp node-explorer-${node}:mnt/capture ${localCpPath} --retries 99`;
             return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, cpcommand);
         });
 
@@ -136,7 +148,33 @@ spec:
             return;
         }
 
-        vscode.window.showInformationMessage(`Successfully copied the Retina Capture data to ${this.captureFolderName}`);
-
+        const goToFolder = "Go to Folder";
+        vscode.window.showInformationMessage(`Successfully copied the Retina Capture data to ${localCpPath}`, goToFolder)
+            .then(selection => {
+                if (selection === goToFolder) {
+                    vscode.env.openExternal(vscode.Uri.parse(`${localCpPath}`));
+                }
+            });
     }
+}
+
+
+function getLocalKubectlCpPath(fileUri: Uri): string {
+    if (platform().toLowerCase() !== "win32") {
+        return fileUri.fsPath;
+    }
+
+    // Use a relative path to work around Windows path issues:
+    // - https://github.com/kubernetes/kubernetes/issues/77310
+    // - https://github.com/kubernetes/kubernetes/issues/110120
+    // To use a relative path we need to know the current working directory.
+    // This should be `process.cwd()` but it actually seems to be that of the first workspace folder, if any exist.
+    // TODO: Investigate why, and look at alternative ways of getting the working directory, or working around
+    //       the need to to this altogether by allowing absolute paths.
+    const workingDirectory =
+        workspace.workspaceFolders && workspace.workspaceFolders?.length > 0
+            ? workspace.workspaceFolders[0].uri.fsPath
+            : process.cwd();
+
+    return relative(workingDirectory, fileUri.fsPath);
 }

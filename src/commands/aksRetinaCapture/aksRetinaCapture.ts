@@ -58,20 +58,37 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     const nodelistResult = await invokeKubectlCommand(
         kubectl,
         kubeConfigFile.filePath,
-        `get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\\n"}{end}'`,
+        `get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{end}'`,
     );
 
     if (failed(nodelistResult)) {
         vscode.window.showErrorMessage(`Failed to capture the cluster: ${nodelistResult.error}`);
         return;
     }
+    const nodesList = nodelistResult.result.stdout.trim().split(" ").map((nodeName) => ({ label: nodeName }));
 
-    // Retina Run
+    // Pick a cluster from group to compare with
+    const nodeNamesSelected = vscode.window.showQuickPick(nodesList, {
+        canPickMany: true,
+        placeHolder: "Please select all the Nodes you want Retina to capture traffic from.",
+        title: "Select Nodes to Capture Traffic From",
+    });
+
+    const selectedNodes = await nodeNamesSelected.then((selectedItems) => {
+        const selectedNodes = selectedItems?.map((item) => item.label).join(",") ?? "";
+        return selectedNodes;
+    });
+
+    if (!selectedNodes) {
+        return;
+    }
+
+    // Retina Run Capture
     const retinaCaptureResult = await longRunning(`Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`, async () => {
         return await invokeKubectlCommand(
             kubectl,
             kubeConfigFile.filePath,
-            `retina capture create --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux" --no-wait=false`,
+            `retina capture create --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes}" --no-wait=false`,
         )
     });
 
@@ -79,7 +96,14 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
         vscode.window.showErrorMessage(`Failed to capture the cluster: ${retinaCaptureResult.error}`);
         return;
     }
-    vscode.window.showInformationMessage(`Retina distributed capture ran successfully. ${retinaCaptureResult.result.stdout}`);
+
+    if (retinaCaptureResult.result.stderr || retinaCaptureResult.result.code !== 0) {
+        vscode.window.showInformationMessage(`Retina distributed capture failed with following error. ${retinaCaptureResult.result.stdout}`);
+    }
+
+    if (retinaCaptureResult.result.stdout && retinaCaptureResult.result.code === 0) {
+        vscode.window.showInformationMessage(`Retina distributed capture is successfully completed for the cluster ${clusterInfo.result.name}`);
+    }
 
     const kubectlVersion = await getVersion(kubectl, kubeConfigFile.filePath);
     if (failed(kubectlVersion)) {
@@ -91,7 +115,7 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     const pat = /retina-capture-\w+/g;
     const match = retinaCaptureResult.result.stdout.match(pat);
     const startwith = match ? match[0] : null;
-    const foldername = `${startwith}_${(new Date().toJSON().replaceAll(":", ""))}`;
+    const foldername = `${clusterInfo.result.name}_${startwith}_${(new Date().toJSON().replaceAll(":", ""))}`;
 
     const dataProvider = new RetinaCaptureProvider(
         kubectl,
@@ -99,8 +123,8 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
         kubectlVersion.result,
         clusterInfo.result.name,
         retinaCaptureResult.result.stdout,
-        nodelistResult.result.stdout.trim().split("\n"),
-        `/tmp/capture/${foldername}`
+        selectedNodes.split(","),
+        `${foldername}`
     );
 
     const panel = new RetinaCapturePanel(extension.result.extensionUri);
