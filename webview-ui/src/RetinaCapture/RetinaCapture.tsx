@@ -14,10 +14,6 @@ export function RetinaCapture(initialState: InitialState) {
         document.getElementById(nodeName)?.showPopover();
     }
 
-    // function handleOpenFolderClick(path: string) {
-    //     vscode.postOpenFolder(path);
-    // }
-
     return (
         <>
             <header>
@@ -46,13 +42,6 @@ export function RetinaCapture(initialState: InitialState) {
                                     <VSCodeButton type="submit" onClick={() => handleNodeExplorerPod(node)} appearance="secondary">
                                         Capture logs to Host Machine.
                                     </VSCodeButton>
-                                    {/* <VSCodeButton appearance="icon" title="Open Folder" id={node} >
-                                        <FontAwesomeIcon
-                                            icon={faFolderOpen}
-                                            display={"block"}
-                                            onClick={() => handleOpenFolderClick(`${state.captureFolderName}`)}
-                                        />
-                                    </VSCodeButton> */}
                                 </td>
                             </tr>
                         ))}

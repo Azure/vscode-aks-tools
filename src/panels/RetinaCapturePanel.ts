@@ -1,7 +1,7 @@
-import { Uri, window, commands, workspace } from "vscode";
+import { Uri, window, workspace } from "vscode";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { InitialState, NodeName, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
-import { MessageHandler, MessageSink } from "../webview-contract/messaging";
+import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
+import { MessageHandler } from "../webview-contract/messaging";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
 import { KubectlVersion, invokeKubectlCommand } from "../commands/utils/kubectl";
@@ -39,10 +39,9 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
 
     getTelemetryDefinition(): TelemetryDefinition<"retinaCapture"> {
         return {
-            retinaCaptureResult: false, // Add the missing 'clusterName' property with the correct type signature
             getAllNodes: false,
-            openFolder: true,
             runRetinaCapture: true,
+            retinaCaptureResult: true,
         }
     }
 
@@ -56,33 +55,15 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         };
     }
 
-    getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+    getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
-            retinaCaptureResult: (node: string) => this.startCaptureResponse(node, webview),
-            getAllNodes: () => this.handleGetAllNodesResponse("", webview),
-            openFolder: (args: string) => this.handleOpenFolder(args), // Fix the argument name
-            runRetinaCapture: (node: string) => this.handleRunRetinaCapture(node, webview),
+            runRetinaCapture: (node: string) => this.handleRunRetinaCapture(node),
+            retinaCaptureResult: () => { },
+            getAllNodes: () => { }
         };
     }
 
-    handleGetAllNodesResponse(arg0: string, webview: MessageSink<ToWebViewMsgDef>): void {
-        console.log(arg0);
-        console.log(webview);
-        throw new Error("Method not implemented. 1");
-    }
-
-    startCaptureResponse(node: string, webview: MessageSink<ToWebViewMsgDef>): void {
-        console.log(node);
-        console.log(webview);
-        throw new Error("Method not implemented. 2");
-    }
-
-    private handleOpenFolder(path: string) {
-        commands.executeCommand("revealFileInOS", Uri.file(path));
-    }
-
-    private async handleRunRetinaCapture(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
-        console.log(webview);
+    private async handleRunRetinaCapture(node: string) {
         const localCaptureUri = await window.showSaveDialog({
             defaultUri: Uri.file(this.captureFolderName),
             saveLabel: "Download",

@@ -8,30 +8,12 @@ export interface InitialState {
     captureFolderName: string;
 }
 
-export type CommandResult = {
-    succeeded: boolean;
-    errorMessage: string | null;
-};
-
-export type RetinaCaptureResult = string;
-export type CaptureName = string;
-export type NodeName = string;
-export type NodeCaptureCommandResult = string;
-
-export type ValueCommandResult<TCommandResult extends CommandResult, TValue> = TCommandResult & {
-    value: TValue;
-};
-
 export type ToVsCodeMsgDef = {
-    retinaCaptureResult: RetinaCaptureResult;
+    retinaCaptureResult: string;
     getAllNodes: void;
-    openFolder: string;
-    runRetinaCapture: NodeName;
+    runRetinaCapture: string;
 };
 
-export type ToWebViewMsgDef = {
-    startCaptureResponse: NodeCaptureCommandResult;
-    getAllNodesResponse: ValueCommandResult<CommandResult, NodeName[]>;
-};
+export type ToWebViewMsgDef = { (): void };
 
-export type RetinaCaptureDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
+export type RetinaCaptureDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef & { [key: string]: unknown }>;

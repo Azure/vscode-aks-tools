@@ -58,7 +58,7 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     const nodelistResult = await invokeKubectlCommand(
         kubectl,
         kubeConfigFile.filePath,
-        `get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{end}'`,
+        `get nodes -o jsonpath="{range .items[*]}{.metadata.name}{' '}{end}"`,
     );
 
     if (failed(nodelistResult)) {
