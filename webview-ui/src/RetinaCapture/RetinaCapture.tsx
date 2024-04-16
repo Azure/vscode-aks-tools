@@ -38,17 +38,15 @@ export function RetinaCapture(initialState: InitialState) {
                         {state.allNodes.toString().split(",").map((node, index) => (
                             <tr key={index}>
                                 <td>
-                                    {node} -
+                                    Nodes: {node} -
                                     <VSCodeButton type="submit" onClick={() => handleNodeExplorerPod(node)} appearance="secondary">
-                                        Capture logs to Host Machine.
+                                        Download Retina Logs to Host Machine.
                                     </VSCodeButton>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-                <VSCodeDivider style={{ marginBottom: "1rem" }} />
-
             </div>
         </>
     );

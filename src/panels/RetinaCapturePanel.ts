@@ -11,6 +11,7 @@ import * as vscode from "vscode";
 import { longRunning } from "../commands/utils/host";
 import { relative } from "path";
 import { platform } from "os";
+import open from 'open';
 
 
 export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
@@ -83,6 +84,13 @@ metadata:
   name: node-explorer-${node}
 spec:
   nodeName: ${node}
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+    - effect: NoExecute
+      operator: Exists
+    - effect: NoSchedule
+      operator: Exists
   volumes:
   - name: mnt-captures
     hostPath:
@@ -94,7 +102,7 @@ spec:
     volumeMounts:
     - name: mnt-captures
       mountPath: /mnt/capture
-`;
+`  ;
 
         const applyResult = await longRunning(`Deploying pod to capture ${node} retina data.`, async () => {
             return await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
@@ -133,12 +141,12 @@ spec:
         vscode.window.showInformationMessage(`Successfully copied the Retina Capture data to ${localCpPath}`, goToFolder)
             .then(selection => {
                 if (selection === goToFolder) {
-                    vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(`${localCpPath}`));
+                    open(localCpPath);
+                    // vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(`${localCpPath}`));
                 }
             });
     }
 }
-
 
 function getLocalKubectlCpPath(fileUri: Uri): string {
     if (platform().toLowerCase() !== "win32") {
