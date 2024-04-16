@@ -133,7 +133,7 @@ spec:
         vscode.window.showInformationMessage(`Successfully copied the Retina Capture data to ${localCpPath}`, goToFolder)
             .then(selection => {
                 if (selection === goToFolder) {
-                    vscode.env.openExternal(vscode.Uri.parse(`${localCpPath}`));
+                    vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(`${localCpPath}`));
                 }
             });
     }
