@@ -1,17 +1,17 @@
+import open from 'open';
+import { platform } from "os";
+import { relative } from "path";
+import * as vscode from "vscode";
 import { Uri, window, workspace } from "vscode";
-import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
-import { MessageHandler } from "../webview-contract/messaging";
-import { TelemetryDefinition } from "../webview-contract/webviewTypes";
-import { withOptionalTempFile } from "../commands/utils/tempfile";
-import { KubectlVersion, invokeKubectlCommand } from "../commands/utils/kubectl";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
-import * as vscode from "vscode";
 import { longRunning } from "../commands/utils/host";
-import { relative } from "path";
-import { platform } from "os";
-import open from 'open';
+import { invokeKubectlCommand } from "../commands/utils/kubectl";
+import { withOptionalTempFile } from "../commands/utils/tempfile";
+import { MessageHandler } from "../webview-contract/messaging";
+import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { BasePanel, PanelDataProvider } from "./BasePanel";
 
 
 export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
@@ -27,7 +27,6 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     constructor(
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
-        readonly kubectlVersion: KubectlVersion,
         readonly clusterName: string,
         readonly retinaOutput: string,
         readonly allNodeOutput: string[],
@@ -41,8 +40,8 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     getTelemetryDefinition(): TelemetryDefinition<"retinaCapture"> {
         return {
             getAllNodes: false,
-            runRetinaCapture: true,
-            retinaCaptureResult: true,
+            handleCaptureFileDownload: true,
+            retinaCaptureResult: false,
         }
     }
 
@@ -58,13 +57,13 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
 
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
-            runRetinaCapture: (node: string) => this.handleRunRetinaCapture(node),
+            handleCaptureFileDownload: (node: string) => this.handleCaptureFileDownload(node),
             retinaCaptureResult: () => { },
             getAllNodes: () => { }
         };
     }
 
-    private async handleRunRetinaCapture(node: string) {
+    private async handleCaptureFileDownload(node: string) {
         const localCaptureUri = await window.showSaveDialog({
             defaultUri: Uri.file(this.captureFolderName),
             saveLabel: "Download",

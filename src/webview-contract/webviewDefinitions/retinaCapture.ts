@@ -11,7 +11,7 @@ export interface InitialState {
 export type ToVsCodeMsgDef = {
     retinaCaptureResult: string;
     getAllNodes: void;
-    runRetinaCapture: string;
+    handleCaptureFileDownload: string;
 };
 
 export type ToWebViewMsgDef = { (): void };

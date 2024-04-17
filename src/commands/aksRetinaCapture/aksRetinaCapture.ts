@@ -68,16 +68,18 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     const nodesList = nodelistResult.result.stdout.trim().split(" ").map((nodeName) => ({ label: nodeName }));
 
     // Pick a cluster from group to compare with
-    const nodeNamesSelected = vscode.window.showQuickPick(nodesList, {
+    const nodeNamesSelected = await vscode.window.showQuickPick(nodesList, {
         canPickMany: true,
         placeHolder: "Please select all the Nodes you want Retina to capture traffic from.",
         title: "Select Nodes to Capture Traffic From",
     });
 
-    const selectedNodes = await nodeNamesSelected.then((selectedItems) => {
-        const selectedNodes = selectedItems?.map((item) => item.label).join(",") ?? "";
-        return selectedNodes;
-    });
+    if (!nodeNamesSelected) {
+        vscode.window.showErrorMessage('No nodes were selected to capture traffic.');
+        return;
+    }
+
+    const selectedNodes = nodeNamesSelected.map((item) => item.label).join(",");
 
     if (!selectedNodes) {
         return;
@@ -121,7 +123,6 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     const dataProvider = new RetinaCaptureProvider(
         kubectl,
         kubeConfigFile.filePath,
-        kubectlVersion.result,
         clusterInfo.result.name,
         retinaCaptureResult.result.stdout,
         selectedNodes.split(","),

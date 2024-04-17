@@ -3,7 +3,7 @@ import { combine, failed, Errorable } from "./errorable";
 import { KubeloginConfig, KustomizeConfig } from "../periscope/models/config";
 import * as semver from "semver";
 import { CommandCategory, PresetCommand } from "../../webview-contract/webviewDefinitions/kubectl";
-import { DraftConfig } from "../periscope/models/DraftConfig";
+import { RetinaDownloadConfig } from "../periscope/models/RetinaDownloadConfig";
 import { isObject } from "./runtimeTypes";
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
@@ -74,7 +74,7 @@ export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
     return { succeeded: true, result: configresult };
 }
 
-export function getDraftConfig(): Errorable<DraftConfig> {
+export function getDraftConfig(): Errorable<RetinaDownloadConfig> {
     const draftConfig = vscode.workspace.getConfiguration("aks.drafttool");
     const props = getConfigValue(draftConfig, "releaseTag");
 
@@ -92,7 +92,7 @@ export function getDraftConfig(): Errorable<DraftConfig> {
     return { succeeded: true, result: config };
 }
 
-export function getRetinaConfig(): Errorable<DraftConfig> {
+export function getRetinaConfig(): Errorable<RetinaDownloadConfig> {
     const retinaconfig = vscode.workspace.getConfiguration("aks.retinatool");
     const props = getConfigValue(retinaconfig, "releaseTag");
 
