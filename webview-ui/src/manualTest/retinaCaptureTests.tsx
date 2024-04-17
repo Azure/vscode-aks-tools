@@ -18,10 +18,7 @@ export function getRetinaCaptureScenarios() {
             handleCaptureFileDownload: (node: string) => {
                 console.log(`Running retina capture on node ${node}`);
             },
-            getAllNodes: () => {
-                console.log("Getting all nodes");
-            },
-            retinaCaptureResult: (result: string) => {
+            deleteRetinaNodeExplorer: (result: string) => {
                 console.log(`Retina capture result: ${result}`);
             },
         };

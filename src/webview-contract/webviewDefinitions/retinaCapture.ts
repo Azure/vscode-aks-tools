@@ -9,8 +9,7 @@ export interface InitialState {
 }
 
 export type ToVsCodeMsgDef = {
-    retinaCaptureResult: string;
-    getAllNodes: void;
+    deleteRetinaNodeExplorer: string;
     handleCaptureFileDownload: string;
 };
 

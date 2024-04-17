@@ -39,9 +39,8 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
 
     getTelemetryDefinition(): TelemetryDefinition<"retinaCapture"> {
         return {
-            getAllNodes: false,
             handleCaptureFileDownload: true,
-            retinaCaptureResult: false,
+            deleteRetinaNodeExplorer: true,
         }
     }
 
@@ -58,9 +57,11 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
             handleCaptureFileDownload: (node: string) => this.handleCaptureFileDownload(node),
-            retinaCaptureResult: () => { },
-            getAllNodes: () => { }
+            deleteRetinaNodeExplorer: (node: string) => { this. handleDeleteRetinaNodeExplorer(node) }
         };
+    }
+
+    private async handleDeleteRetinaNodeExplorer(node: string) {
     }
 
     private async handleCaptureFileDownload(node: string) {
