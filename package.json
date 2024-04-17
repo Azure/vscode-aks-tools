@@ -147,7 +147,7 @@
                 },
                 "aks.retinatool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.5",
+                    "default": "v0.0.7",
                     "title": "Retina repository release tag",
                     "description": "Release tag for the stable Retina tool release."
                 }

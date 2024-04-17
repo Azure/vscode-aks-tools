@@ -86,21 +86,17 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     }
 
     // Retina Run Capture
+    const capturename = `retina-capture-${clusterInfo.result.name}`;
     const retinaCaptureResult = await longRunning(`Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`, async () => {
         return await invokeKubectlCommand(
             kubectl,
             kubeConfigFile.filePath,
-            `retina capture create --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes}" --no-wait=false`,
+            `retina capture create --namespace default --name ${capturename} --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes}" --no-wait=false`,
         )
     });
 
     if (failed(retinaCaptureResult)) {
         vscode.window.showErrorMessage(`Failed to capture the cluster: ${retinaCaptureResult.error}`);
-        return;
-    }
-
-    if (retinaCaptureResult.result.stderr || retinaCaptureResult.result.code !== 0) {
-        vscode.window.showInformationMessage(`Retina distributed capture failed with following error. ${retinaCaptureResult.result.stdout}`);
         return;
     }
 
@@ -114,11 +110,7 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
         return;
     }
 
-    // The pattern of the folder should reflect the pod names and time of the capture
-    const pat = /retina-capture-\w+/g;
-    const match = retinaCaptureResult.result.stdout.match(pat);
-    const startwith = match ? match[0] : null;
-    const foldername = `${clusterInfo.result.name}_${startwith}_${(new Date().toJSON().replaceAll(":", ""))}`;
+    const foldername = `${capturename}_${(new Date().toJSON().replaceAll(":", ""))}`;
 
     const dataProvider = new RetinaCaptureProvider(
         kubectl,
