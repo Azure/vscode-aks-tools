@@ -83,6 +83,9 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
     }
 
     function handleBlur(e: React.FocusEvent) {
+        const selectedItem = selectionItems.find((item) => item.isSelected) || null;
+        selectItem(selectedItem);
+
         // When we lose focus, collapse the listbox.
         if (listboxRef.current && !listboxRef.current.contains(e.relatedTarget)) {
             setIsExpanded(false);
@@ -105,15 +108,7 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
     }
 
     function handleItemClick(item: SelectionItem) {
-        if (item.isAddItem) {
-            const newItemValue = searchText;
-            setAllItems([newItemValue, ...allItems]);
-            setSelected(newItemValue);
-        } else {
-            setSelected(item.value);
-        }
-
-        setSearchText("");
+        selectItem(item);
         setIsExpanded(false);
     }
 
@@ -129,11 +124,25 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
             const newValue = selectionItems[newIndex].value;
             setSelected(newValue);
         } else if (e.key === "Enter" && currentIndex !== -1) {
-            handleItemClick(selectionItems[currentIndex]);
+            selectItem(selectionItems[currentIndex]);
             setIsExpanded(!isExpanded);
         } else if (e.key === "Escape") {
             setIsExpanded(false);
         }
+    }
+
+    function selectItem(item: SelectionItem | null) {
+        if (item === null) {
+            setSelected(null);
+        } else if (item.isAddItem) {
+            const newItemValue = searchText;
+            setAllItems([newItemValue, ...allItems]);
+            setSelected(newItemValue);
+        } else {
+            setSelected(item.value);
+        }
+
+        setSearchText("");
     }
 
     return (
@@ -171,7 +180,7 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
                 </span>
             </VSCodeTextField>
 
-            {isExpanded && (
+            {isExpanded && selectionItems.length > 0 && (
                 <div className={styles.listbox} tabIndex={-1} onFocus={handleListboxFocus} ref={listboxRef}>
                     {selectionItems.map((item) => (
                         <VSCodeOption onClick={() => handleItemClick(item)} key={item.value} selected={item.isSelected}>

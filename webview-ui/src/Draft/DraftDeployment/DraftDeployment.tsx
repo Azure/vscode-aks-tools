@@ -84,7 +84,7 @@ export function DraftDeployment(initialState: InitialState) {
         eventHandlers.onSetAcrRepository(validated);
 
         function getValidatedRepository(): Validatable<NewOrExisting<string>> {
-            if (!repository) return missing("Repository name is required.");
+            if (!repository) return missing("Azure Container Registry image is required.");
             return valid({ isNew, value: repository });
         }
     }

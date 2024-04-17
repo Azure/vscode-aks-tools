@@ -141,7 +141,7 @@ export function DraftWorkflow(initialState: InitialState) {
         eventHandlers.onSetRepositoryName(validated);
 
         function getValidatedRepository(): Validatable<NewOrExisting<string>> {
-            if (!repository) return missing("Repository name is required.");
+            if (!repository) return missing("Azure Container Registry image is required.");
             return valid({ isNew, value: repository });
         }
     }
@@ -178,8 +178,8 @@ export function DraftWorkflow(initialState: InitialState) {
             options: {
                 defaultPath: state.workspaceConfig.fullPath,
                 type: "file",
-                title: "Manifests",
-                buttonLabel: "Select",
+                title: "Select all Manifest Files",
+                buttonLabel: "Select Files",
                 filters: { YAML: ["yaml", "yml"] },
                 canSelectMany: true,
             },
@@ -368,6 +368,7 @@ export function DraftWorkflow(initialState: InitialState) {
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
+                <h2>Draft a GitHub Workflow</h2>
                 <p className={styles.fullWidth}>
                     Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make
                     sure you have run Draft Create and Draft Setup GitHub OpenID Connect (OIDC) to generate the
@@ -686,8 +687,8 @@ export function DraftWorkflow(initialState: InitialState) {
                                             <VSCodeButton
                                                 appearance="icon"
                                                 onClick={() => handleDeleteManifestPathClick(path)}
-                                                aria-label="Delete"
-                                                title="Delete"
+                                                aria-label="Remove"
+                                                title="Remove"
                                             >
                                                 <span className={styles.iconButton}>
                                                     <FontAwesomeIcon icon={faTrash} />
@@ -783,7 +784,12 @@ export function DraftWorkflow(initialState: InitialState) {
                                             onInput={(e) => handleOverrideValueChange(e, o)}
                                             value={orDefault(o.value, "")}
                                         />
-                                        <VSCodeButton appearance="icon" onClick={() => handleDeleteOverrideClick(o)}>
+                                        <VSCodeButton
+                                            appearance="icon"
+                                            onClick={() => handleDeleteOverrideClick(o)}
+                                            aria-label="Remove"
+                                            title="Remove"
+                                        >
                                             <span className={styles.iconButton}>
                                                 <FontAwesomeIcon icon={faTrash} />
                                             </span>
