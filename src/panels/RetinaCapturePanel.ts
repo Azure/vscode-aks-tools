@@ -144,11 +144,11 @@ spec:
         }
 
 
-        // // kubectl cp
-         // `kubectl cp` can fail with an EOF error for large files, and there's currently no good workaround:
-        // See: https://github.com/kubernetes/kubernetes/issues/60140
-        // The best advice I can see is to use the 'retries' option if it is supported, and the
-        // 'request-timeout' option otherwise.
+        /* kubectl cp functionality is used to copy the data from the pod to the local host.
+           `kubectl cp` can fail with an EOF error for large files, and there's currently no good workaround:
+           See: https://github.com/kubernetes/kubernetes/issues/60140
+           The best advice I can see is to use the 'retries' option if it is supported, and the
+           'request-timeout' option otherwise. */
         const clientVersion = this.kubectlVersion.clientVersion.gitVersion.replace(/^v/, "");
         const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
         const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
