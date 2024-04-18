@@ -182,7 +182,7 @@ export async function streamKubectlOutput(
                     succeeded: false,
                     error: `Failed to run 'kubectl ${args.join(" ")}': ${getErrorMessage(e)}`,
                 }),
-            complete: () => resolve({ succeeded: true, result: new OutputStream(() => { }, new Observable()) }),
+            complete: () => resolve({ succeeded: true, result: new OutputStream(() => {}, new Observable()) }),
         });
     });
 }
