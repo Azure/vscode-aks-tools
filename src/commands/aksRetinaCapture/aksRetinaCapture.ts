@@ -114,6 +114,7 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
 
     const dataProvider = new RetinaCaptureProvider(
         kubectl,
+        kubectlVersion.result,
         kubeConfigFile.filePath,
         clusterInfo.result.name,
         retinaCaptureResult.result.stdout,

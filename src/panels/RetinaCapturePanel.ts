@@ -1,17 +1,17 @@
 import open from 'open';
-import { platform } from "os";
-import { relative } from "path";
 import * as vscode from "vscode";
-import { Uri, window, workspace } from "vscode";
+import { Uri, window } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
-import { invokeKubectlCommand } from "../commands/utils/kubectl";
+import { KubectlVersion, invokeKubectlCommand } from "../commands/utils/kubectl";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
 import { MessageHandler } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { getLocalKubectlCpPath } from './utilities/KubectlNetworkHelper';
+import * as semver from 'semver';
 
 
 export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
@@ -26,6 +26,7 @@ export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
 export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture"> {
     constructor(
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+        readonly kubectlVersion: KubectlVersion,
         readonly kubeConfigFilePath: string,
         readonly clusterName: string,
         readonly retinaOutput: string,
@@ -143,9 +144,17 @@ spec:
         }
 
 
-        // // kubectl cp 
-        const nodeExplorerResult = await longRunning(`Copy captured data to local host location ${localCpPath}.`, async () => {
-            const cpcommand = `cp node-explorer-${node}:mnt/capture ${localCpPath} --retries 99`;
+        // // kubectl cp
+         // `kubectl cp` can fail with an EOF error for large files, and there's currently no good workaround:
+        // See: https://github.com/kubernetes/kubernetes/issues/60140
+        // The best advice I can see is to use the 'retries' option if it is supported, and the
+        // 'request-timeout' option otherwise.
+        const clientVersion = this.kubectlVersion.clientVersion.gitVersion.replace(/^v/, "");
+        const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
+        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
+        const captureHostFolderName = `${localCpPath}-${node}`;
+        const nodeExplorerResult = await longRunning(`Copy captured data to local host location ${captureHostFolderName}.`, async () => {
+            const cpcommand = `cp node-explorer-${node}:mnt/capture ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
             return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, cpcommand);
         });
 
@@ -155,31 +164,11 @@ spec:
         }
 
         const goToFolder = "Go to Folder";
-        vscode.window.showInformationMessage(`Successfully copied the Retina Capture data to ${localCpPath}`, goToFolder)
+        vscode.window.showInformationMessage(`Successfully copied the Retina Capture data to ${captureHostFolderName}`, goToFolder)
             .then(selection => {
                 if (selection === goToFolder) {
-                    open(localCpPath);
+                    open(captureHostFolderName);
                 }
             });
     }
-}
-
-function getLocalKubectlCpPath(fileUri: Uri): string {
-    if (platform().toLowerCase() !== "win32") {
-        return fileUri.fsPath;
-    }
-
-    // Use a relative path to work around Windows path issues:
-    // - https://github.com/kubernetes/kubernetes/issues/77310
-    // - https://github.com/kubernetes/kubernetes/issues/110120
-    // To use a relative path we need to know the current working directory.
-    // This should be `process.cwd()` but it actually seems to be that of the first workspace folder, if any exist.
-    // TODO: Investigate why, and look at alternative ways of getting the working directory, or working around
-    //       the need to to this altogether by allowing absolute paths.
-    const workingDirectory =
-        workspace.workspaceFolders && workspace.workspaceFolders?.length > 0
-            ? workspace.workspaceFolders[0].uri.fsPath
-            : process.cwd();
-
-    return relative(workingDirectory, fileUri.fsPath);
 }
