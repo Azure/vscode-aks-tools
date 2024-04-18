@@ -13,6 +13,6 @@ export type ToVsCodeMsgDef = {
     handleCaptureFileDownload: string;
 };
 
-export type ToWebViewMsgDef = { (): void };
+export type ToWebViewMsgDef = Record<string, never>;
 
-export type RetinaCaptureDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef & { [key: string]: unknown }>;
+export type RetinaCaptureDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
