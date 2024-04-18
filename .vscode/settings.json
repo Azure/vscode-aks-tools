@@ -10,8 +10,5 @@
     "eslint.workingDirectories": [".", "./webview-ui"],
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
-    "cloudcode.azureExplorerVisible": true,
-    "[typescriptreact]": {
-        "editor.defaultFormatter": "vscode.typescript-language-features"
-    }
+    "cloudcode.azureExplorerVisible": true
 }
