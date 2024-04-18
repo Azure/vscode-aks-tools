@@ -131,7 +131,7 @@ spec:
 
         if (failed(applyResult)) {
             vscode.window.showErrorMessage(`Failed to apply Pod: ${applyResult.error}`);
-            throw new Error(`Failed to apply Pod: ${applyResult.error}`);
+            return;
         }
         const waitResult = await longRunning(`waiting for pod to get ready node-explorer-${node}.`, async () => {
             const command = `wait pod -n default --for=condition=ready --timeout=300s node-explorer-${node}`;
