@@ -140,25 +140,25 @@ export function TcpDump(initialState: InitialState) {
                     NodeStatus.CaptureRunning,
                     NodeStatus.CaptureStopping,
                 ) && (
-                        <VSCodeButton
-                            onClick={handleRemoveDebugPod}
-                            disabled={!hasStatus(NodeStatus.DebugPodRunning)}
-                            className={styles.controlButton}
-                            appearance="secondary"
-                        >
-                            {hasStatus(NodeStatus.DeletingDebugPod) && (
-                                <span slot="start">
-                                    <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
-                                </span>
-                            )}
-                            {!hasStatus(NodeStatus.DeletingDebugPod) && (
-                                <span slot="start">
-                                    <FontAwesomeIcon icon={faTrash} />
-                                </span>
-                            )}
-                            Delete
-                        </VSCodeButton>
-                    )}
+                    <VSCodeButton
+                        onClick={handleRemoveDebugPod}
+                        disabled={!hasStatus(NodeStatus.DebugPodRunning)}
+                        className={styles.controlButton}
+                        appearance="secondary"
+                    >
+                        {hasStatus(NodeStatus.DeletingDebugPod) && (
+                            <span slot="start">
+                                <FontAwesomeIcon icon={faSpinner} className="fa-spin" />
+                            </span>
+                        )}
+                        {!hasStatus(NodeStatus.DeletingDebugPod) && (
+                            <span slot="start">
+                                <FontAwesomeIcon icon={faTrash} />
+                            </span>
+                        )}
+                        Delete
+                    </VSCodeButton>
+                )}
 
                 {state.selectedNode &&
                     nodeState &&
