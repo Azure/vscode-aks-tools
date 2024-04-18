@@ -62,6 +62,15 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     }
 
     private async handleDeleteRetinaNodeExplorer(node: string) {
+        const deleteResult = await longRunning(`Deleting pod node-explorer-${node}.`, async () => {
+            const command = `delete pod node-explorer-${node}`;
+            return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        });
+
+        if (failed(deleteResult)) {
+            vscode.window.showErrorMessage(`Failed to delete Pod: ${deleteResult.error}`);
+            return;
+        }
     }
 
     private async handleCaptureFileDownload(node: string) {
@@ -77,6 +86,14 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
 
         const localCpPath = getLocalKubectlCpPath(localCaptureUri);
 
+        const nodes = node.split(",");
+        for (const node of nodes) {
+            await this.copyRetinaCaptureData(node, localCpPath);
+        }
+        
+}
+
+    async copyRetinaCaptureData(node: string, localCpPath: string) {
         const createPodYaml = `
 apiVersion: v1
 kind: Pod

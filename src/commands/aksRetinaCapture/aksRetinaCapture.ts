@@ -86,7 +86,7 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     }
 
     // Retina Run Capture
-    const capturename = `retina-capture-${clusterInfo.result.name}`;
+    const capturename = `retina-capture-${clusterInfo.result.name.toLowerCase()}`;
     const retinaCaptureResult = await longRunning(`Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`, async () => {
         return await invokeKubectlCommand(
             kubectl,
@@ -122,5 +122,5 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
     );
 
     const panel = new RetinaCapturePanel(extension.result.extensionUri);
-    panel.show(dataProvider);
+    panel.show(dataProvider, kubeConfigFile);
 }
