@@ -76,7 +76,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
         readonly kubectlVersion: KubectlVersion,
         readonly clusterName: string,
         readonly linuxNodesList: string[],
-    ) { }
+    ) {}
 
     getTitle(): string {
         return `TCP Capture on ${this.clusterName}`;
