@@ -159,7 +159,6 @@ spec:
             .then(selection => {
                 if (selection === goToFolder) {
                     open(localCpPath);
-                    // vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(`${localCpPath}`));
                 }
             });
     }
