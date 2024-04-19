@@ -6,6 +6,7 @@ export interface InitialState {
     retinaOutput: string[];
     allNodes: string[];
     captureFolderName: string;
+    isNodeExplorerPodExists: boolean;
 }
 
 export type ToVsCodeMsgDef = {

@@ -112,6 +112,20 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
 
     const foldername = `${capturename}_${(new Date().toJSON().replaceAll(":", ""))}`;
 
+    // find if node explorer pod is already exists 
+    let nodeExplorerPodExists = false;
+    const nodeExplorerPod = await invokeKubectlCommand(
+        kubectl,
+        kubeConfigFile.filePath,
+        `get pods -n default -l app=node-explorer`,
+    );
+
+
+    if (nodeExplorerPod.succeeded && nodeExplorerPod.result.stdout && nodeExplorerPod.result.stdout.includes("node-explorer")) {
+        nodeExplorerPodExists = true;
+    }
+
+
     const dataProvider = new RetinaCaptureProvider(
         kubectl,
         kubectlVersion.result,
@@ -119,7 +133,8 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
         clusterInfo.result.name,
         retinaCaptureResult.result.stdout,
         selectedNodes.split(","),
-        `${foldername}`
+        `${foldername}`,
+        nodeExplorerPodExists,
     );
 
     const panel = new RetinaCapturePanel(extension.result.extensionUri);

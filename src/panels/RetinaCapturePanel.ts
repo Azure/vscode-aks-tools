@@ -31,7 +31,8 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         readonly clusterName: string,
         readonly retinaOutput: string,
         readonly allNodeOutput: string[],
-        readonly captureFolderName: string
+        readonly captureFolderName: string,
+        readonly isNodeExplorerPodExists : boolean
     ) { }
 
     getTitle(): string {
@@ -52,6 +53,7 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
             allNodes: this.allNodeOutput,
             selectedNode: "",
             captureFolderName: this.captureFolderName,
+            isNodeExplorerPodExists: this.isNodeExplorerPodExists
         };
     }
 
@@ -63,6 +65,15 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     }
 
     private async handleDeleteRetinaNodeExplorer(node: string) {
+        // node is a comma separated string of node names
+        // ex: "aks-nodepool1-12345678-vmss000000,aks-nodepool1-12345678-vmss000001"
+        const nodes = node.split(",");
+        for (const node of nodes) {
+            await this.deleteNodeExplorerUsingKubectl(node);
+        }
+    }
+
+    private async deleteNodeExplorerUsingKubectl(node: string) {
         const deleteResult = await longRunning(`Deleting pod node-explorer-${node}.`, async () => {
             const command = `delete pod node-explorer-${node}`;
             return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
@@ -100,6 +111,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: node-explorer-${node}
+  labels:
+    app: node-explorer
 spec:
   nodeName: ${node}
   tolerations:

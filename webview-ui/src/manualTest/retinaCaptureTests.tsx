@@ -11,6 +11,7 @@ export function getRetinaCaptureScenarios() {
         retinaOutput: ["Microsoft open sources Retina: A cloud-native container networking observability platform. The Microsoft Azure Container Networking team is excited to announce Retina, a cloud - native container networking observability platform that enables Kubernetes users, admins, and developers to visualize, observe, debug, and analyze Kubernetes’ workload traffic irrespective of Container Network Interface(CNI), operating system(OS), and cloud.We are excited to release Retina as an open - source repository that helps with DevOps and SecOps related networking cases for your Kubernetes clusters and we invite the open- source community to innovate along with us."],
         allNodes: ["aks-nodepool2-30344018-vmss000000", "aks-nodepool2-30344018-vmss000001", "aks-nodepool2-30344018-vmss000003"],
         captureFolderName: "test-capture",
+        isNodeExplorerPodExists: true,
     };
 
     function getMessageHandler() {

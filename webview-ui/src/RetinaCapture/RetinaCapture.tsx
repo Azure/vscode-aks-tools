@@ -4,6 +4,7 @@ import { VSCodeButton, VSCodeCheckbox, VSCodeDivider } from "@vscode/webview-ui-
 import { FormEvent, useState } from "react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/retinaCapture";
 import { useStateManagement } from "../utilities/state";
+import { DeleteNodeExplorerDialog } from "./DeleteNodeExplorerDialog";
 import styles from "./RetinaCapture.module.css";
 import { stateUpdater, vscode } from "./state";
 
@@ -13,6 +14,7 @@ type ChangeEvent = Event | FormEvent<HTMLElement>;
 export function RetinaCapture(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode); //eventHandlers
     const [selectedNode, setSelectedNode] = useState<Array<string>>([]);
+    const [showDeleteNodeExplorerDialog, setShowDeleteNodeExplorerDialog] = useState(false);
 
     function handleCaptureFileDownload() {
         const result = selectedNode.join(',');
@@ -31,8 +33,9 @@ export function RetinaCapture(initialState: InitialState) {
         return selectedNode.includes(node) && state.allNodes.includes(node);
     }
 
-    function handleDeleteExplorerPod(node: string) {
-        vscode.postDeleteRetinaNodeExplorer(node);
+    function handleDeleteExplorerPod() {
+        // show delete node explorer dialog
+        setShowDeleteNodeExplorerDialog(true);
     }
 
     return (
@@ -56,7 +59,7 @@ export function RetinaCapture(initialState: InitialState) {
 
 
             <div className={styles.content}>
-                <div style={{ flexDirection: 'row', width: '500px' }}>
+                <div style={{ flexDirection: 'row', width: '31.25rem' }}>
                     {state.allNodes.map((node) => (
                         <div key={node}>
                             <VSCodeCheckbox
@@ -64,19 +67,38 @@ export function RetinaCapture(initialState: InitialState) {
                                 checked={isNodeSelected(node)}>
                                 {node}
                             </VSCodeCheckbox>
-                            <VSCodeButton appearance="secondary" onClick={() => handleDeleteExplorerPod(node)}>
+                        </div>
+                    ))}
+                    <div style={{ display: 'flex' }}>
+                        <VSCodeButton type="submit" style={{ marginRight: '0.625rem' }} onClick={() => handleCaptureFileDownload()}>
+                            Download Retina Logs to Host Machine.
+                        </VSCodeButton>
+                        {state.isNodeExplorerPodExists && (
+                            <VSCodeButton appearance="secondary" onClick={() => handleDeleteExplorerPod()}>
                                 <span slot="start">
                                     <FontAwesomeIcon icon={faTrash} />
                                 </span>
                                 Delete Node Explorer Pod
                             </VSCodeButton>
-                        </div>
-                    ))}
-                    <VSCodeButton type="submit" onClick={() => handleCaptureFileDownload()}>
-                        Download Retina Logs to Host Machine.
-                    </VSCodeButton>
+                        )}
+
+                    </div>
+
                 </div>
             </div>
+
+            {showDeleteNodeExplorerDialog && (
+                <DeleteNodeExplorerDialog
+                    isShown={showDeleteNodeExplorerDialog}
+                    nodes={selectedNode}
+                    onCancel={() => setShowDeleteNodeExplorerDialog(false)}
+                    onAccept={(nodeName) => {
+                        console.log(nodeName);
+                        vscode.postDeleteRetinaNodeExplorer(nodeName);
+                        setShowDeleteNodeExplorerDialog(false);
+                    }}
+                />
+            )}
         </>
     );
 }
