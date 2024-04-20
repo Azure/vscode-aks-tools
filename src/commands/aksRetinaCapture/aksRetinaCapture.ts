@@ -10,6 +10,7 @@ import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
 import { getVersion, invokeKubectlCommand } from "../utils/kubectl";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
 import { failed } from "../utils/errorable";
+import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 
 export async function aksRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -51,24 +52,16 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
         return;
     }
 
+    // Get all Linux Nodes For this Cluster
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    console.log(`Kubeconfig file: ${kubeConfigFile}`);
-
-    // Get all Nodes For this Cluster
-    const nodelistResult = await invokeKubectlCommand(
-        kubectl,
-        kubeConfigFile.filePath,
-        `get nodes -o jsonpath="{range .items[*]}{.metadata.name}{' '}{end}"`,
-    );
-
-    if (failed(nodelistResult)) {
-        vscode.window.showErrorMessage(`Failed to capture the cluster: ${nodelistResult.error}`);
+    const linuxNodesList = await getLinuxNodes(kubectl, kubeConfigFile.filePath);
+    if (failed(linuxNodesList)) {
+        vscode.window.showErrorMessage(linuxNodesList.error);
         return;
     }
-    const nodesList = nodelistResult.result.stdout.trim().split(" ").map((nodeName) => ({ label: nodeName }));
 
-    // Pick a cluster from group to compare with
-    const nodeNamesSelected = await vscode.window.showQuickPick(nodesList, {
+    // Pick a Node to Capture Traffic From
+    const nodeNamesSelected = await vscode.window.showQuickPick(linuxNodesList.result, {
         canPickMany: true,
         placeHolder: "Please select all the Nodes you want Retina to capture traffic from.",
         title: "Select Nodes to Capture Traffic From",
@@ -79,7 +72,7 @@ export async function aksRetinaCapture(_context: IActionContext, target: unknown
         return;
     }
 
-    const selectedNodes = nodeNamesSelected.map((item) => item.label).join(",");
+    const selectedNodes = nodeNamesSelected.map((item) => item).join(",");
 
     if (!selectedNodes) {
         return;

@@ -1,6 +1,9 @@
 import { platform } from "os";
 import { Uri, workspace } from "vscode";
 import { relative } from "path";
+import { invokeKubectlCommand } from "../../commands/utils/kubectl";
+import { Errorable, map as errmap } from "../../commands/utils/errorable";
+import * as k8s from "vscode-kubernetes-tools-api";
 
 
 export function getLocalKubectlCpPath(fileUri: Uri): string {
@@ -21,4 +24,13 @@ export function getLocalKubectlCpPath(fileUri: Uri): string {
             : process.cwd();
 
     return relative(workingDirectory, fileUri.fsPath);
+}
+
+export async function getLinuxNodes(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+): Promise<Errorable<string[]>> {
+    const command = `get node -l kubernetes.io/os=linux --no-headers -o custom-columns=":metadata.name"`;
+    const commandResult = await invokeKubectlCommand(kubectl, kubeConfigFile, command);
+    return errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
 }
