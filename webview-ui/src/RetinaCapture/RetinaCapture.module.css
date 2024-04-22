@@ -1,0 +1,20 @@
+.content {
+    display: grid;
+    grid-template-columns: 6rem 50rem;
+    grid-gap: 1rem;
+    align-items: center;
+}
+
+.inputContainer {
+    display: grid;
+    grid-template-columns: 8rem 20rem 8rem;
+    grid-gap: 1rem;
+}
+
+.buttonContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.5rem;
+}
+

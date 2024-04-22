@@ -14,6 +14,7 @@ import { Scenario } from "../utilities/manualTest";
 import { getASOScenarios } from "./asoTests";
 import { getClusterPropertiesScenarios } from "./clusterPropertiesTests";
 import { getTCPDumpScenarios } from "./tcpDumpTests";
+import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -38,6 +39,7 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kubectl: getKubectlScenarios(),
     aso: getASOScenarios(),
     tcpDump: getTCPDumpScenarios(),
+    retinaCapture: getRetinaCaptureScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);
