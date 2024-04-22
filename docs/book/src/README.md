@@ -22,6 +22,7 @@ Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS
 * [Collect TCP Dumps](./features/tcp-dumps.md)
 * [Compare AKS Cluster](./features/aks-compare-cluster.md)
 * [Run Image Cleaner Eraser Tool](./features/image-cleaner-eraser-tool.md)
+* [Run Retina Capture](./features/retina-capture.md)
 
 ## Development and Release
 
