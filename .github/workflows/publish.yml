@@ -70,7 +70,7 @@ jobs:
       - name: Install dependencies
         run: npm run install:all
       # Ensure project builds successfully before creating release
-      - name: Build 
+      - name: Build
         run: npm run webpack
       - name: Create a Release
         id: create_release
