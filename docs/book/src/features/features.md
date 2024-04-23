@@ -31,3 +31,5 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 ![AKS Show Properties webview](../resources/show-properties-reconcile.png)
 
 ![Cloud Explorer Compare AKS Cluster](../resources/aks-compare-cluster-result.png)
+
+![Cloud Explorer Run Retina Capture on AKS Cluster](../resources/retina-success-run-download.png)

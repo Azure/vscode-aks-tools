@@ -2,7 +2,7 @@
 
 ### Deploy and Undeploy InspektorGadget
 
-Right click on your AKS cluster and click on **Show Inspektor Gadget** to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.
+Right click on your AKS cluster and select **Troubleshoot Network Health** and then click on **Show Inspektor Gadget** to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.
 
 ### Profile, Top, Trace and Snapshot Inspektor Gadget Commands
 

@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.4.3]
+
+* Retina integration with VsCode.
+* In-house download replacement implementation.
+* Show-properties page k8s version is now available with deprecated warning.
+* Dependabot updates and bumps.
+
+Thank you so much @sprab for continued effort for Retina User-Sceanrios testing changes, thanks you so much to  @hsubramanianaks for Retina help and U/X changes, thanks to, @sprab, @hsubramanianaks, & @peterbom for comments and testing. Thank you @rbtr and @vakalapa for async Retina Fixes and for `0.0.7` release. Thanks all for our other BAU contributors.
+
 ## [1.4.2]
 
 * Show Properties page new feature for help information with k8s version deprecated available .
