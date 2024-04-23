@@ -8,7 +8,7 @@ jobs:
   JobBuild:
       name: release
       runs-on: ubuntu-latest
-       # Expose step outputs as job outputs
+      # Expose step outputs as job outputs
       outputs:
         currentversion: ${{ steps.package_version.outputs.current-version }}
         changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
@@ -59,7 +59,16 @@ jobs:
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
         with:
           egress-policy: audit
-
+      # Checkout the code again for release
+      - name: Checkout
+        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      - name: Use Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: 20
+      # Run install dependencies
+      - name: Install dependencies
+        run: npm run install:all
       - name: Create a Release
         id: create_release
         uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
