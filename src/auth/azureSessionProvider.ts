@@ -6,6 +6,10 @@ import {
     authentication,
     AuthenticationGetSessionOptions,
     AuthenticationSession,
+    window,
+    ProgressOptions,
+    ProgressLocation,
+    commands,
 } from "vscode";
 import { AzureAuthenticationSession, AzureSessionProvider, SignInStatus, Tenant } from "./types";
 import { Errorable, bindAsync, getErrorMessage, map as errmap, succeeded } from "../commands/utils/errorable";
@@ -243,7 +247,28 @@ class AzureSessionProviderImpl extends VsCodeDisposable implements AzureSessionP
             }
 
             if (!session) {
-                session = await authentication.getSession(getConfiguredAuthProviderId(), scopes, options);
+                const authenticationPromise = authentication.getSession(getConfiguredAuthProviderId(), scopes, options);
+                const allowCancellation = options.silent !== true;
+                if (allowCancellation) {
+                    const progressOptions: ProgressOptions = {
+                        location: ProgressLocation.Notification,
+                        title: "Azure Sign In",
+                        cancellable: true,
+                    };
+
+                    session = await window.withProgress(progressOptions, async (progress, token) => {
+                        token.onCancellationRequested(() => {
+                            commands.executeCommand("workbench.action.reloadWindow");
+                        });
+
+                        const message =
+                            "If you dismiss any browser login page without completing login, you will need to cancel here. Please note this will reload your VS Code window.";
+                        progress.report({ message });
+                        return await authentication.getSession(getConfiguredAuthProviderId(), scopes, options);
+                    });
+                } else {
+                    session = await authenticationPromise;
+                }
             }
 
             if (!session) {
