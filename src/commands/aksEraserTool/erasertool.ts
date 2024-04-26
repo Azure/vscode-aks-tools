@@ -6,12 +6,18 @@ import { Errorable, failed, succeeded } from "../utils/errorable";
 import { longRunning } from "../utils/host";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import * as tmpfile from "../utils/tempfile";
-
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 export default async function aksEraserTool(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
 
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
@@ -28,12 +34,12 @@ export default async function aksEraserTool(_context: IActionContext, target: un
         return;
     }
 
-    const clusterInfo = await getKubernetesClusterInfo(target, cloudExplorer, clusterExplorer);
+    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
-    
+
     const clusterName = clusterInfo.result.name;
 
     const answer = await vscode.window.showInformationMessage(
@@ -52,7 +58,9 @@ export default async function aksEraserTool(_context: IActionContext, target: un
         }
 
         if (succeeded(result)) {
-            vscode.window.showInformationMessage(`Eraser tool is successfully deployed into cluster ${clusterName}. \n Output: \n ${result.result.stdout}`);
+            vscode.window.showInformationMessage(
+                `Eraser tool is successfully deployed into cluster ${clusterName}. \n Output: \n ${result.result.stdout}`,
+            );
         }
     }
 }
@@ -74,7 +82,11 @@ async function deployEraserAutomaticInstallationScenario(
             if (failed(deleteResult)) return deleteResult;
 
             // Deploy eraser tool: https://eraser-dev.github.io/eraser/docs/installation
-            const applyResult = await invokeKubectlCommand(kubectl, kubeConfigFile, `apply -f https://raw.githubusercontent.com/eraser-dev/eraser/v1.2.0/deploy/eraser.yaml`);
+            const applyResult = await invokeKubectlCommand(
+                kubectl,
+                kubeConfigFile,
+                `apply -f https://raw.githubusercontent.com/eraser-dev/eraser/v1.2.0/deploy/eraser.yaml`,
+            );
             if (failed(applyResult)) return applyResult;
 
             return applyResult;

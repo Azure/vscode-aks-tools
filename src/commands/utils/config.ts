@@ -5,6 +5,82 @@ import * as semver from "semver";
 import { CommandCategory, PresetCommand } from "../../webview-contract/webviewDefinitions/kubectl";
 import { RetinaDownloadConfig } from "../periscope/models/RetinaDownloadConfig";
 import { isObject } from "./runtimeTypes";
+import { Environment, EnvironmentParameters } from "@azure/ms-rest-azure-env";
+
+export function getConfiguredAzureEnv(): Environment {
+    // See:
+    // https://github.com/microsoft/vscode/blob/eac16e9b63a11885b538db3e0b533a02a2fb8143/extensions/microsoft-authentication/package.json#L40-L99
+    const section = "microsoft-sovereign-cloud";
+    const settingName = "environment";
+    const authProviderConfig = vscode.workspace.getConfiguration(section);
+    const environmentSettingValue = authProviderConfig.get<string | undefined>(settingName);
+
+    if (environmentSettingValue === "ChinaCloud") {
+        return Environment.ChinaCloud;
+    } else if (environmentSettingValue === "USGovernment") {
+        return Environment.USGovernment;
+    } else if (environmentSettingValue === "custom") {
+        const customCloud = authProviderConfig.get<EnvironmentParameters | undefined>("customEnvironment");
+        if (customCloud) {
+            return new Environment(customCloud);
+        }
+
+        throw new Error(
+            `The custom cloud choice is not configured. Please configure the setting ${section}.${settingName}.`,
+        );
+    }
+
+    return Environment.get(Environment.AzureCloud.name);
+}
+
+export interface SubscriptionFilter {
+    tenantId: string;
+    subscriptionId: string;
+}
+
+const onFilteredSubscriptionsChangeEmitter = new vscode.EventEmitter<void>();
+
+export function getFilteredSubscriptionsChangeEvent() {
+    return onFilteredSubscriptionsChangeEmitter.event;
+}
+
+export function getFilteredSubscriptions(): SubscriptionFilter[] {
+    try {
+        let values = vscode.workspace.getConfiguration("aks").get<string[]>("selectedSubscriptions", []);
+        if (values.length === 0) {
+            // Get filters from the Azure Account extension if the AKS extension has none.
+            values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceFilter", []);
+        }
+        return values.map(asSubscriptionFilter).filter((v) => v !== null) as SubscriptionFilter[];
+    } catch (e) {
+        return [];
+    }
+}
+
+function asSubscriptionFilter(value: string): SubscriptionFilter | null {
+    try {
+        const parts = value.split("/");
+        return { tenantId: parts[0], subscriptionId: parts[1] };
+    } catch (e) {
+        return null;
+    }
+}
+
+export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): Promise<void> {
+    const existingFilters = getFilteredSubscriptions();
+    const filtersChanged =
+        existingFilters.length !== filters.length ||
+        !filters.every((f) => existingFilters.some((ef) => ef.subscriptionId === f.subscriptionId));
+
+    const values = filters.map((f) => `${f.tenantId}/${f.subscriptionId}`).sort();
+
+    if (filtersChanged) {
+        await vscode.workspace
+            .getConfiguration("aks")
+            .update("selectedSubscriptions", values, vscode.ConfigurationTarget.Global, true);
+        onFilteredSubscriptionsChangeEmitter.fire();
+    }
+}
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration("aks.periscope");

@@ -1,10 +1,11 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterSubscriptionNode, getContainerClient, getResourceManagementClient } from "../utils/clusters";
+import { getAksClusterSubscriptionNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExtension } from "../utils/host";
 import { CreateClusterDataProvider, CreateClusterPanel } from "../../panels/CreateClusterPanel";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 /**
  * A multi-step input using window.createQuickPick() and window.createInputBox().
@@ -13,6 +14,12 @@ import { CreateClusterDataProvider, CreateClusterPanel } from "../../panels/Crea
  */
 export default async function aksCreateCluster(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
 
     const subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
     if (failed(subscriptionNode)) {
@@ -28,12 +35,10 @@ export default async function aksCreateCluster(_context: IActionContext, target:
 
     const panel = new CreateClusterPanel(extension.result.extensionUri);
 
-    const resourceManagementClient = getResourceManagementClient(subscriptionNode.result);
-    const containerServiceClient = getContainerClient(subscriptionNode.result);
     const dataProvider = new CreateClusterDataProvider(
-        resourceManagementClient,
-        containerServiceClient,
-        subscriptionNode.result.subscription,
+        sessionProvider.result,
+        subscriptionNode.result.subscriptionId,
+        subscriptionNode.result.name,
         () => vscode.commands.executeCommand("aks.refreshSubscription", target),
     );
 

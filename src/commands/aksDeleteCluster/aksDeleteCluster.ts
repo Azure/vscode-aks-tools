@@ -4,11 +4,18 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { deleteCluster, getAksClusterTreeNode } from "../utils/clusters";
 import { failed, succeeded } from "../utils/errorable";
 import { longRunning } from "../utils/host";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 const refreshIntervals = [1, 2, 5, 10, 30, 60, 120];
 
 export default async function aksDeleteCluster(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
 
     const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
     if (failed(clusterNode)) {
@@ -26,7 +33,12 @@ export default async function aksDeleteCluster(_context: IActionContext, target:
 
     if (answer === "Yes") {
         const result = await longRunning(`Deleting cluster ${clusterName}.`, async () => {
-            return await deleteCluster(clusterNode.result, clusterName);
+            return await deleteCluster(
+                sessionProvider.result,
+                clusterNode.result.subscriptionId,
+                clusterNode.result.resourceGroupName,
+                clusterName,
+            );
         });
 
         if (failed(result)) {

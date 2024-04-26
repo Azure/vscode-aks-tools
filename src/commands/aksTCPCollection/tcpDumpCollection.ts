@@ -8,12 +8,18 @@ import * as tmpfile from "../utils/tempfile";
 import { TcpDumpDataProvider, TcpDumpPanel } from "../../panels/TcpDumpPanel";
 import { getVersion } from "../utils/kubectl";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 export async function aksTCPDump(_context: IActionContext, target: unknown) {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
 
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return;
@@ -29,7 +35,7 @@ export async function aksTCPDump(_context: IActionContext, target: unknown) {
         return;
     }
 
-    const clusterInfo = await getKubernetesClusterInfo(target, cloudExplorer, clusterExplorer);
+    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return;

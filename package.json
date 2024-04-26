@@ -83,6 +83,13 @@
         "configuration": {
             "title": "AKS",
             "properties": {
+                "aks.selectedSubscriptions": {
+                    "type": "array",
+                    "description": "Selected Azure subscriptions",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "aks.periscope.repoOrg": {
                     "type": "string",
                     "default": "azure",
@@ -157,6 +164,7 @@
             {
                 "command": "aks.selectSubscriptions",
                 "title": "Select subscriptions...",
+                "category": "AKS",
                 "icon": {
                     "dark": "resources/dark/filter.svg",
                     "light": "resources/light/filter.svg"
@@ -169,6 +177,16 @@
                     "dark": "resources/dark/refresh.svg",
                     "light": "resources/light/refresh.svg"
                 }
+            },
+            {
+                "command": "aks.signInToAzure",
+                "title": "Sign in to Azure...",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.selectTenant",
+                "title": "Select Tenant...",
+                "category": "AKS"
             },
             {
                 "command": "aks.periscope",
@@ -273,10 +291,6 @@
         ],
         "menus": {
             "commandPalette": [
-                {
-                    "command": "aks.selectSubscriptions",
-                    "when": "never"
-                },
                 {
                     "command": "aks.refreshSubscription",
                     "when": "never"
@@ -477,7 +491,6 @@
         "test": "npm run test-compile && node ./out/src/tests/runTests.js"
     },
     "extensionDependencies": [
-        "ms-vscode.azure-account",
         "ms-kubernetes-tools.vscode-kubernetes-tools"
     ],
     "devDependencies": {
@@ -499,7 +512,6 @@
         "chai": "^5.1.0",
         "eslint": "^8.57.0",
         "eslint-webpack-plugin": "^4.1.0",
-        "filemanager-webpack-plugin": "^8.0.0",
         "glob": "^10.3.12",
         "mocha": "^10.4.0",
         "prettier": "^3.2.5",
@@ -514,15 +526,14 @@
         "@azure/arm-containerservice": "^19.7.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-resources": "^5.2.0",
+        "@azure/arm-resources-subscriptions": "^2.1.0",
         "@azure/arm-storage": "^18.2.0",
         "@azure/arm-subscriptions": "^5.1.0",
         "@azure/core-auth": "^1.7.2",
         "@azure/identity": "^4.1.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
-        "@azure/msal-node": "^2.6.6",
         "@azure/storage-blob": "^12.17.0",
         "@microsoft/microsoft-graph-client": "^3.0.7",
-        "@microsoft/vscode-azext-azureutils": "^3.0.1",
         "@microsoft/vscode-azext-utils": "^2.4.0",
         "@vscode/extension-telemetry": "^0.9.6",
         "cross-fetch": "^4.0.0",

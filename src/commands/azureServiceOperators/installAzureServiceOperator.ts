@@ -4,14 +4,20 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getExtension } from "../utils/host";
 import { failed } from "../utils/errorable";
-import { getAzureAccountExtensionApi } from "../utils/azureAccount";
 import { createTempFile } from "../utils/tempfile";
 import { AzureServiceOperatorDataProvider, AzureServiceOperatorPanel } from "../../panels/AzureServiceOperatorPanel";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 
 export default async function installAzureServiceOperator(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
 
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
@@ -28,13 +34,7 @@ export default async function installAzureServiceOperator(_context: IActionConte
         return undefined;
     }
 
-    const azureAccountApi = getAzureAccountExtensionApi();
-    if (failed(azureAccountApi)) {
-        vscode.window.showErrorMessage(azureAccountApi.error);
-        return undefined;
-    }
-
-    const clusterInfo = await getKubernetesClusterInfo(target, cloudExplorer, clusterExplorer);
+    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return undefined;
@@ -48,10 +48,10 @@ export default async function installAzureServiceOperator(_context: IActionConte
 
     const kubeConfigFile = await createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
     const dataProvider = new AzureServiceOperatorDataProvider(
+        sessionProvider.result,
         extension.result,
         kubectl,
         kubeConfigFile.filePath,
-        azureAccountApi.result,
         clusterInfo.result.name,
     );
     const panel = new AzureServiceOperatorPanel(extension.result.extensionUri);
