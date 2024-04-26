@@ -1,65 +1,91 @@
-import { AzureAccountTreeItemBase, SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 import {
-    AzExtTreeItem,
     AzExtParentTreeItem,
-    ISubscriptionContext,
     AzExtTreeDataProvider,
+    AzExtTreeItem,
+    ISubscriptionContext,
 } from "@microsoft/vscode-azext-utils";
-import { createChildClusterTreeNode } from "./aksClusterTreeItem";
-import { getResourceManagementClient } from "../commands/utils/clusters";
+import { createClusterTreeNode } from "./aksClusterTreeItem";
+import { assetUri } from "../assets";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { Resource } from "@azure/arm-resources";
+import { window } from "vscode";
+import { getResources } from "../commands/utils/azureResources";
+import { failed } from "../commands/utils/errorable";
+import { ReadyAzureSessionProvider } from "../auth/types";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
 export interface SubscriptionTreeNode {
     readonly nodeType: "subscription";
     readonly name: string;
-    readonly subscription: ISubscriptionContext;
+    readonly subscriptionId: string;
     readonly treeDataProvider: AzExtTreeDataProvider;
     readonly treeItem: AzExtTreeItem;
 }
 
 export function isSubscriptionTreeNode(node: unknown): node is SubscriptionTreeNode {
-    return node instanceof SubscriptionTreeItemBase;
+    return node instanceof SubscriptionTreeItem;
 }
 
-export function createChildSubscriptionTreeItem(
-    parent: AzureAccountTreeItemBase,
+export function createSubscriptionTreeItem(
+    parent: AzExtParentTreeItem,
+    sessionProvider: ReadyAzureSessionProvider,
     subscription: ISubscriptionContext,
-): SubscriptionTreeItemBase {
-    return new SubscriptionTreeItem(parent, subscription);
+): AzExtTreeItem {
+    return new SubscriptionTreeItem(parent, sessionProvider, subscription);
 }
 
-class SubscriptionTreeItem extends SubscriptionTreeItemBase implements SubscriptionTreeNode {
+class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTreeNode {
+    private readonly sessionProvider: ReadyAzureSessionProvider;
+    public readonly subscriptionContext: ISubscriptionContext;
+    public readonly subscriptionId: string;
     public readonly name: string;
+    public readonly contextValue = "aks.subscription";
+    public readonly label: string;
 
-    constructor(parent: AzExtParentTreeItem, root: ISubscriptionContext) {
-        super(parent, root);
-        this.name = root.subscriptionDisplayName || "";
+    public constructor(
+        parent: AzExtParentTreeItem,
+        sessionProvider: ReadyAzureSessionProvider,
+        subscription: ISubscriptionContext,
+    ) {
+        super(parent);
+        this.sessionProvider = sessionProvider;
+        this.subscriptionContext = subscription;
+        this.subscriptionId = subscription.subscriptionId;
+        this.name = subscription.subscriptionDisplayName;
+        this.label = subscription.subscriptionDisplayName;
+        this.id = subscription.subscriptionPath;
+        this.iconPath = assetUri("resources/azureSubscription.svg");
     }
 
     get treeItem(): AzExtTreeItem {
         return this;
     }
 
-    public readonly contextValue: string = "aks.subscription";
+    /**
+     * Needed by parent class.
+     */
+    get subscription(): ISubscriptionContext {
+        return this.subscriptionContext;
+    }
 
     public hasMoreChildrenImpl(): boolean {
         return false;
     }
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        const client = getResourceManagementClient(this);
-        const aksClusterResources: Resource[] = [];
-        const result = client.resources.list({
-            filter: "resourceType eq 'Microsoft.ContainerService/managedClusters'",
-        });
-        for await (const pageResources of result.byPage()) {
-            aksClusterResources.push(...pageResources);
+        const clusterResources = await getResources(
+            this.sessionProvider,
+            this.subscription.subscriptionId,
+            "Microsoft.ContainerService/managedClusters",
+        );
+        if (failed(clusterResources)) {
+            window.showErrorMessage(
+                `Failed to list clusters in subscription ${this.subscription.subscriptionId}: ${clusterResources.error}`,
+            );
+            return [];
         }
 
-        return aksClusterResources.map((aksClusterResource) => createChildClusterTreeNode(this, aksClusterResource));
+        return clusterResources.result.map((r) => createClusterTreeNode(this, this.subscriptionId, r));
     }
 
     public async refreshImpl(): Promise<void> {

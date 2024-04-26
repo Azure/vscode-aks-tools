@@ -7,6 +7,8 @@ import { getDetectorInfo, getDetectorListData } from "../utils/detectors";
 import { Errorable, failed } from "../utils/errorable";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import { DetectorDataProvider, DetectorPanel } from "../../panels/DetectorPanel";
+import { getEnvironment, getReadySessionProvider } from "../../auth/azureAuth";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export function aksBestPracticesDiagnostics(_context: IActionContext, target: unknown): Promise<void> {
     return runDetector(target, "aks-category-risk-assessment");
@@ -50,9 +52,15 @@ async function runDetector(commandTarget: unknown, categoryDetectorName: string)
         return;
     }
 
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
     const clustername = clusterNode.result.name;
     const dataProvider = await longRunning(`Loading ${clustername} diagnostics.`, () =>
-        getDataProvider(clusterNode.result, categoryDetectorName),
+        getDataProvider(sessionProvider.result, clusterNode.result, categoryDetectorName),
     );
 
     if (failed(dataProvider)) {
@@ -65,21 +73,22 @@ async function runDetector(commandTarget: unknown, categoryDetectorName: string)
 }
 
 async function getDataProvider(
+    sessionProvider: ReadyAzureSessionProvider,
     clusterNode: AksClusterTreeNode,
     categoryDetectorName: string,
 ): Promise<Errorable<DetectorDataProvider>> {
-    const detectorInfo = await getDetectorInfo(clusterNode, categoryDetectorName);
+    const detectorInfo = await getDetectorInfo(sessionProvider, clusterNode, categoryDetectorName);
     if (failed(detectorInfo)) {
         return detectorInfo;
     }
 
-    const detectors = await getDetectorListData(clusterNode, detectorInfo.result);
+    const detectors = await getDetectorListData(sessionProvider, clusterNode, detectorInfo.result);
     if (failed(detectors)) {
         return detectors;
     }
 
     const dataProvider = new DetectorDataProvider(
-        clusterNode.subscription.environment,
+        getEnvironment(),
         clusterNode.name,
         detectorInfo.result,
         detectors.result,

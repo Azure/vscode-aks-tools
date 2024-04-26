@@ -1,9 +1,7 @@
-import { AzExtParentTreeItem, AzExtTreeItem, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { assetUri } from "../assets";
-import { parseResource } from "../azure-api-utils";
-import { Resource } from "@azure/arm-resources";
-import { SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
+import { DefinedResourceWithGroup } from "../commands/utils/azureResources";
 import { SubscriptionTreeNode } from "./subscriptionTreeItem";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
@@ -14,30 +12,37 @@ export interface AksClusterTreeNode {
     readonly armId: string;
     readonly name: string;
     readonly subscriptionTreeNode: SubscriptionTreeNode;
-    readonly subscription: ISubscriptionContext;
+    readonly subscriptionId: string;
     readonly resourceGroupName: string;
 }
 
-export function createChildClusterTreeNode(
-    parent: SubscriptionTreeItemBase & SubscriptionTreeNode,
-    clusterResource: Resource,
+export function createClusterTreeNode(
+    parent: AzExtParentTreeItem & SubscriptionTreeNode,
+    subscriptionId: string,
+    clusterResource: DefinedResourceWithGroup,
 ): AzExtTreeItem {
-    return new AksClusterTreeItem(parent, clusterResource);
+    return new AksClusterTreeItem(parent, subscriptionId, clusterResource);
 }
 
 class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
-    public readonly armId: string;
     public readonly subscriptionTreeNode: SubscriptionTreeNode;
+    public readonly armId: string;
+    public readonly resourceGroupName: string;
+    public readonly name: string;
+
     constructor(
         parent: AzExtParentTreeItem & SubscriptionTreeNode,
-        readonly resource: Resource,
+        readonly subscriptionId: string,
+        readonly clusterResource: DefinedResourceWithGroup,
     ) {
         super(parent);
 
         this.iconPath = assetUri("resources/aks-tools.png");
-        this.id = `${this.resource.name!} ${parseResource(this.resource.id!).resourceGroupName!}`;
-        this.armId = this.resource.id!;
         this.subscriptionTreeNode = parent;
+        this.id = `${this.clusterResource.name} ${clusterResource.resourceGroup}`;
+        this.armId = this.clusterResource.id;
+        this.resourceGroupName = clusterResource.resourceGroup;
+        this.name = this.clusterResource.name;
     }
 
     public readonly contextValue: string = `aks.cluster ${CloudExplorerV1.SHOW_KUBECONFIG_COMMANDS_CONTEXT}`;
@@ -46,17 +51,8 @@ class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
         return this.name;
     }
 
-    public get name(): string {
-        return this.resource.name!;
-    }
-
     public get resourceType(): string {
-        return this.resource.type!;
-    }
-
-    public get resourceGroupName(): string {
-        // armid is in the format: /subscriptions/<sub_id>/resourceGroups/<resource_group>/providers/<container_service>/managedClusters/<aks_clustername>
-        return parseResource(this.armId).resourceGroupName!;
+        return "Microsoft.ContainerService/managedClusters";
     }
 
     public get clusterTreeItem(): AzExtTreeItem {
