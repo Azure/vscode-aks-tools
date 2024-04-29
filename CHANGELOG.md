@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.4.4]
+
+* Azure Account Sign-In Changes.
+* Dependabot updates and bumps.
+
+Thank you so much @peterbom for continued effort login improvement, thanks you so much to @qpetraroia,   @hsubramanianaks for testing this and for comments, special mention to both @TylerLeonhardt and @alexweininger for collaborations. Thanks all for our other BAU contributors.
+
 ## [1.4.3]
 
 * Retina integration with VsCode.
