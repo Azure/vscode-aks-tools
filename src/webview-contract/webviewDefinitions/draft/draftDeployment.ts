@@ -1,20 +1,20 @@
 import { WebviewDefinition } from "../../webviewTypes";
 import { OpenFileOptions } from "../shared/fileSystemTypes";
 import { WorkspaceFolderConfig } from "../shared/workspaceTypes";
-import {
-    AcrKey,
-    ClusterKey,
-    DeploymentSpecType,
-    RepositoryKey,
-    Subscription,
-    SubscriptionKey,
-    VsCodeCommand,
-} from "./types";
+import { AcrKey, ClusterKey, DeploymentSpecType, RepositoryKey, Subscription, SubscriptionKey } from "./types";
 
 export type InitialState = {
     workspaceConfig: WorkspaceFolderConfig;
     location: string;
     existingFiles: ExistingFiles;
+    initialSelection: InitialSelection;
+};
+
+export type InitialSelection = {
+    targetPort?: number;
+    subscriptionId?: string;
+    clusterResourceGroup?: string;
+    clusterName?: string;
 };
 
 export type ExistingFiles = {
@@ -47,7 +47,19 @@ export type ToVsCodeMsgDef = {
     getNamespacesRequest: ClusterKey;
     createDeploymentRequest: CreateParams;
     openFileRequest: string;
-    launchCommand: VsCodeCommand;
+    launchDraftWorkflow: LaunchDraftWorkflowParams;
+};
+
+export type LaunchDraftWorkflowParams = {
+    initialSubscriptionId: string | null;
+    initialAcrResourceGroup: string | null;
+    initialAcrName: string | null;
+    initialAcrRepository: string | null;
+    initialClusterResourceGroup: string | null;
+    initialClusterName: string | null;
+    initialClusterNamespace: string | null;
+    initialDeploymentSpecType: DeploymentSpecType;
+    deploymentLocation: string;
 };
 
 export type ToWebViewMsgDef = {

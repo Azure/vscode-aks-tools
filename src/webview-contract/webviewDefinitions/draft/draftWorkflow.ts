@@ -3,6 +3,7 @@ import { WorkspaceFolderConfig } from "../shared/workspaceTypes";
 import {
     AcrKey,
     ClusterKey,
+    DeploymentSpecType,
     ForkInfo,
     ForkKey,
     HelmDeploymentParams,
@@ -17,7 +18,24 @@ export interface InitialState {
     workspaceConfig: WorkspaceFolderConfig;
     existingWorkflowFiles: ExistingFile[];
     forks: ForkInfo[];
+    initialSelection: InitialSelection;
 }
+
+export type InitialSelection = {
+    dockerfilePath?: string;
+    dockerfileBuildContextPath?: string;
+    subscriptionId?: string;
+    acrResourceGroup?: string;
+    acrName?: string;
+    acrRepository?: string;
+    clusterResourceGroup?: string;
+    clusterName?: string;
+    clusterNamespace?: string;
+    deploymentSpecType?: DeploymentSpecType;
+    helmChartPath?: string;
+    helmValuesYamlPath?: string;
+    manifestFilePaths?: string[];
+};
 
 export type ExistingFile = {
     name: string;

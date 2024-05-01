@@ -1,4 +1,4 @@
-import { FormEvent } from "react";
+import { FormEvent, MouseEvent } from "react";
 import { CreateParams, InitialState } from "../../../../src/webview-contract/webviewDefinitions/draft/draftDockerfile";
 import { ResourceSelector } from "../../components/ResourceSelector";
 import { useStateManagement } from "../../utilities/state";
@@ -10,7 +10,7 @@ import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { getSupportedLanguages } from "../data";
 import { Maybe, isNothing, just, nothing } from "../../utilities/maybe";
-import { LanguageInfo, VsCodeCommand } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
+import { LanguageInfo } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import {
     Validatable,
     hasMessage,
@@ -120,6 +120,21 @@ export function DraftDockerfile(initialState: InitialState) {
 
         eventHandlers.onSetCreating();
         vscode.postCreateDockerfileRequest(createParams.value);
+    }
+
+    function handleDraftDeploymentClick(e: MouseEvent) {
+        e.preventDefault();
+        vscode.postLaunchDraftDeployment({
+            initialTargetPort: orDefault(state.selectedPort, null),
+            initialLocation: state.location.value,
+        });
+    }
+
+    function handleDraftWorkflowClick(e: MouseEvent) {
+        e.preventDefault();
+        vscode.postLaunchDraftWorkflow({
+            initialDockerfileLocation: state.location.value,
+        });
     }
 
     const selectedLanguage = state.selectedLanguage;
@@ -271,13 +286,7 @@ export function DraftDockerfile(initialState: InitialState) {
 
                         <p>
                             If you still need to generate the appropriate deployment files, you can run{" "}
-                            <VSCodeLink
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    vscode.postLaunchCommand(VsCodeCommand.DraftDeployment);
-                                }}
-                            >
+                            <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
                                 Draft: Create a deployment
                             </VSCodeLink>{" "}
                             to easily create the appropriate files.
@@ -286,13 +295,7 @@ export function DraftDockerfile(initialState: InitialState) {
                         <p>
                             If you already have all the files you need to deploy and would like to generate a GitHub
                             Action, you can run{" "}
-                            <VSCodeLink
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    vscode.postLaunchCommand(VsCodeCommand.DraftWorkflow);
-                                }}
-                            >
+                            <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
                                 Draft: Create a GitHub workflow
                             </VSCodeLink>
                             .

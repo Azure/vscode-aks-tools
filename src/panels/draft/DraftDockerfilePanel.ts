@@ -13,7 +13,7 @@ import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
 import { ShellOptions, exec } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
 import { OpenFileOptions } from "../../webview-contract/webviewDefinitions/shared/fileSystemTypes";
-import { launchCommandInWorkspaceFolder } from "./commandUtils";
+import { launchDraftCommand } from "./commandUtils";
 
 export class DraftDockerfilePanel extends BasePanel<"draftDockerfile"> {
     constructor(extensionUri: Uri) {
@@ -54,7 +54,8 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
             createDockerfileRequest: true,
             openFileRequest: false,
             pickLocationRequest: false,
-            launchCommand: false,
+            launchDraftDeployment: false,
+            launchDraftWorkflow: false,
         };
     }
 
@@ -71,7 +72,22 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
                     webview,
                 ),
             openFileRequest: (filePath) => this.handleOpenFileRequest(filePath),
-            launchCommand: (cmd) => launchCommandInWorkspaceFolder(cmd, this.workspaceFolder),
+            launchDraftDeployment: (args) =>
+                launchDraftCommand("aks.draftDeployment", {
+                    workspaceFolder: this.workspaceFolder,
+                    initialLocation: args.initialLocation,
+                    initialSelection: {
+                        targetPort: args.initialTargetPort || undefined,
+                    },
+                }),
+            launchDraftWorkflow: (args) =>
+                launchDraftCommand("aks.draftWorkflow", {
+                    workspaceFolder: this.workspaceFolder,
+                    initialSelection: {
+                        dockerfilePath: path.join(args.initialDockerfileLocation, "Dockerfile"),
+                        dockerfileBuildContextPath: args.initialDockerfileLocation,
+                    },
+                }),
         };
     }
 

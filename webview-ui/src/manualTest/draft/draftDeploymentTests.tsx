@@ -2,6 +2,7 @@ import { MessageHandler, MessageSink } from "../../../../src/webview-contract/me
 import {
     CreateParams,
     ExistingFiles,
+    InitialSelection,
     InitialState,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
@@ -12,7 +13,6 @@ import {
     DeploymentSpecType,
     RepositoryKey,
     SubscriptionKey,
-    VsCodeCommand,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { OpenFileOptions } from "../../../../src/webview-contract/webviewDefinitions/shared/fileSystemTypes";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
@@ -88,13 +88,16 @@ f ./charts/values.yaml
     ),
 };
 
-export function getDraftDeploymentScenarios() {
-    const initialState: InitialState = {
+function createInitialState(initialSelection: InitialSelection): InitialState {
+    return {
+        initialSelection,
         workspaceConfig,
         location: getRelativePath(asPathString(rootDir), "/code/aks-store-demo"),
         existingFiles: getExistingFiles(rootDir, "/code/aks-store-demo"),
     };
+}
 
+export function getDraftDeploymentScenarios() {
     function getMessageHandler(
         webview: MessageSink<ToWebViewMsgDef>,
         dialogEvents: TestDialogEvents,
@@ -109,7 +112,8 @@ export function getDraftDeploymentScenarios() {
             getNamespacesRequest: handleGetNamespacesRequest,
             createDeploymentRequest: handleCreateDeploymentRequest,
             openFileRequest: handleOpenFileRequest,
-            launchCommand: (cmd) => alert(`Launching command ${VsCodeCommand[cmd]}`),
+            launchDraftWorkflow: (args) =>
+                alert(`Launching Draft Workflow command with initial selection:\n${JSON.stringify(args, null, 2)}`),
         };
 
         async function handlePickLocationRequest(options: OpenFileOptions) {
@@ -213,10 +217,26 @@ export function getDraftDeploymentScenarios() {
     }
 
     const dialogEvents = new TestDialogEvents();
-    return [
-        Scenario.create(
+
+    function createUnpopulatedInitialSelection(): InitialSelection {
+        return {};
+    }
+
+    function createPopulatedInitialSelection(): InitialSelection {
+        return {
+            targetPort: 3333,
+            subscriptionId: allSubscriptionData[0].subscription.id,
+            clusterResourceGroup: allSubscriptionData[0].resourceGroups[0].group,
+            clusterName: allSubscriptionData[0].resourceGroups[0].clusters[0].cluster,
+        };
+    }
+
+    function createScenario(name: string, getInitialSelection: () => InitialSelection) {
+        const initialSelection = getInitialSelection();
+        const initialState = createInitialState(initialSelection);
+        return Scenario.create(
             "draftDeployment",
-            "",
+            name,
             () => (
                 <FilePickerWrapper events={dialogEvents} rootDir={rootDir}>
                     <DraftDeployment {...initialState} />
@@ -224,7 +244,12 @@ export function getDraftDeploymentScenarios() {
             ),
             (webview) => getMessageHandler(webview, dialogEvents),
             stateUpdater.vscodeMessageHandler,
-        ),
+        );
+    }
+
+    return [
+        createScenario("blank", createUnpopulatedInitialSelection),
+        createScenario("populated", createPopulatedInitialSelection),
     ];
 }
 

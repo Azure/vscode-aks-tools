@@ -1,10 +1,9 @@
-import { FormEvent, useEffect } from "react";
+import { FormEvent, MouseEvent, useEffect } from "react";
 import { CreateParams, InitialState } from "../../../../src/webview-contract/webviewDefinitions/draft/draftDeployment";
 import {
     DeploymentSpecType,
     NewOrExisting,
     Subscription,
-    VsCodeCommand,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import styles from "../Draft.module.css";
 import { useStateManagement } from "../../utilities/state";
@@ -213,6 +212,21 @@ export function DraftDeployment(initialState: InitialState) {
 
         eventHandlers.onSetCreating();
         vscode.postCreateDeploymentRequest(createParams.value);
+    }
+
+    function handleDraftWorkflowClick(e: MouseEvent) {
+        e.preventDefault();
+        vscode.postLaunchDraftWorkflow({
+            initialSubscriptionId: isValid(state.subscription) ? state.subscription.value.id : null,
+            initialAcrResourceGroup: orDefault(state.acrResourceGroup, null),
+            initialAcrName: orDefault(state.acr, null),
+            initialAcrRepository: isValid(state.acrRepository) ? state.acrRepository.value.value : null,
+            initialClusterResourceGroup: state.clusterResourceGroup,
+            initialClusterName: state.cluster,
+            initialClusterNamespace: isValid(state.clusterNamespace) ? state.clusterNamespace.value.value : null,
+            initialDeploymentSpecType: state.deploymentSpecType,
+            deploymentLocation: state.location.value,
+        });
     }
 
     const [manifests, helm, kustomize]: DeploymentSpecType[] = ["manifests", "helm", "kustomize"];
@@ -543,13 +557,7 @@ export function DraftDeployment(initialState: InitialState) {
 
                             <p>
                                 To generate a GitHub Action, you can run{" "}
-                                <VSCodeLink
-                                    href="#"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        vscode.postLaunchCommand(VsCodeCommand.DraftWorkflow);
-                                    }}
-                                >
+                                <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
                                     Draft: Create a GitHub workflow
                                 </VSCodeLink>
                                 .

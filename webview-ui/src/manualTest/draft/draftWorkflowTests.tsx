@@ -1,5 +1,6 @@
 import { MessageHandler, MessageSink } from "../../../../src/webview-contract/messaging";
 import {
+    InitialSelection,
     InitialState,
     PickFilesIdentifier,
     ToVsCodeMsgDef,
@@ -59,8 +60,9 @@ function isWorkflowFile(item: FileOrDirectory): boolean {
     return item.name.endsWith(".yml") || item.name.endsWith(".yaml");
 }
 
-export function getDraftWorkflowScenarios() {
-    const initialState: InitialState = {
+function createInitialState(initialSelection: InitialSelection): InitialState {
+    return {
+        initialSelection,
         workspaceConfig,
         existingWorkflowFiles,
         forks: allForkData.map((f) => ({
@@ -72,7 +74,9 @@ export function getDraftWorkflowScenarios() {
             defaultBranch: f.defaultBranch,
         })),
     };
+}
 
+export function getDraftWorkflowScenarios() {
     function getMessageHandler(
         webview: MessageSink<ToWebViewMsgDef>,
         dialogEvents: TestDialogEvents,
@@ -191,10 +195,35 @@ export function getDraftWorkflowScenarios() {
     }
 
     const dialogEvents = new TestDialogEvents();
-    return [
-        Scenario.create(
+
+    function createUnpopulatedInitialSelection(): InitialSelection {
+        return {};
+    }
+
+    function createPopulatedInitialSelection(): InitialSelection {
+        return {
+            dockerfilePath: "src/product-service/Dockerfile",
+            dockerfileBuildContextPath: "src/product-service",
+            subscriptionId: allSubscriptionData[0].subscription.id,
+            acrResourceGroup: allSubscriptionData[0].resourceGroups[0].group,
+            acrName: allSubscriptionData[0].resourceGroups[0].acrs[0].acr,
+            acrRepository: allSubscriptionData[0].resourceGroups[0].acrs[0].repositories[0].repository,
+            clusterResourceGroup: allSubscriptionData[0].resourceGroups[1].group,
+            clusterName: allSubscriptionData[0].resourceGroups[1].clusters[0].cluster,
+            clusterNamespace: allSubscriptionData[0].resourceGroups[1].clusters[0].namespaces[0],
+            deploymentSpecType: "helm",
+            helmChartPath: "charts/aks-store-demo",
+            helmValuesYamlPath: "charts/aks-store-demo/values.yaml",
+            manifestFilePaths: ["ai-service.yaml", "aks-store-all-in-one.yaml"],
+        };
+    }
+
+    function createScenario(name: string, getInitialSelection: () => InitialSelection) {
+        const initialSelection = getInitialSelection();
+        const initialState = createInitialState(initialSelection);
+        return Scenario.create(
             "draftWorkflow",
-            "",
+            name,
             () => (
                 <FilePickerWrapper events={dialogEvents} rootDir={rootDir}>
                     <DraftWorkflow {...initialState} />
@@ -202,6 +231,11 @@ export function getDraftWorkflowScenarios() {
             ),
             (webview) => getMessageHandler(webview, dialogEvents),
             stateUpdater.vscodeMessageHandler,
-        ),
+        );
+    }
+
+    return [
+        createScenario("blank", createUnpopulatedInitialSelection),
+        createScenario("populated", createPopulatedInitialSelection),
     ];
 }

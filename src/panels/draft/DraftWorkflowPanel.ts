@@ -18,7 +18,7 @@ import {
     ForkInfo,
     PickFilesRequestParams,
 } from "../../webview-contract/webviewDefinitions/draft/types";
-import { CreateParams } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
+import { CreateParams, InitialSelection } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
 import { failed } from "../../commands/utils/errorable";
 import { getClusterNamespaces } from "../../commands/utils/clusters";
 import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
@@ -58,6 +58,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
         readonly githubSession: AuthenticationSession,
         readonly forks: ForkInfo[],
         readonly existingWorkflowFiles: ExistingFile[],
+        readonly initialSelection: InitialSelection,
     ) {
         this.draftDirectory = path.dirname(draftBinaryPath);
         this.octokit = new Octokit({
@@ -78,6 +79,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
             },
             existingWorkflowFiles: this.existingWorkflowFiles,
             forks: this.forks,
+            initialSelection: this.initialSelection,
         };
     }
 
@@ -212,7 +214,11 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
     }
 
     private async handleGetClustersRequest(subscriptionId: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const clusters = await getResources(this.sessionProvider, subscriptionId, "Microsoft.ContainerService/managedClusters");
+        const clusters = await getResources(
+            this.sessionProvider,
+            subscriptionId,
+            "Microsoft.ContainerService/managedClusters",
+        );
         if (failed(clusters)) {
             window.showErrorMessage(clusters.error);
             return;

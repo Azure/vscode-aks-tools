@@ -83,11 +83,6 @@ export type PickFilesResponse<TIdentifier> = {
     paths: [string, ...string[]];
 };
 
-export enum VsCodeCommand {
-    DraftDeployment,
-    DraftWorkflow,
-}
-
 export function subscriptionKeysMatch(key1: SubscriptionKey, key2: SubscriptionKey): boolean {
     return key1.subscriptionId === key2.subscriptionId;
 }

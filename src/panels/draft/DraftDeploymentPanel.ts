@@ -5,7 +5,9 @@ import { BasePanel, PanelDataProvider } from "../BasePanel";
 import {
     CreateParams,
     ExistingFiles,
+    InitialSelection,
     InitialState,
+    LaunchDraftWorkflowParams,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
 } from "../../webview-contract/webviewDefinitions/draft/draftDeployment";
@@ -21,7 +23,7 @@ import { getSubscriptions, SelectionType } from "../../commands/utils/subscripti
 import { getAcrRegistry, getRepositories, getRepositoryTags } from "../../commands/utils/acrs";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getResources } from "../../commands/utils/azureResources";
-import { launchCommandInWorkspaceFolder } from "./commandUtils";
+import { launchDraftCommand } from "./commandUtils";
 import { AcrKey, ClusterKey } from "../../webview-contract/webviewDefinitions/draft/types";
 
 export class DraftDeploymentPanel extends BasePanel<"draftDeployment"> {
@@ -46,6 +48,8 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
         readonly draftBinaryPath: string,
         readonly kubectl: APIAvailable<KubectlV1>,
         readonly deploymentFiles: DeploymentFiles,
+        readonly initialLocation: string,
+        readonly initialSelection: InitialSelection,
     ) {}
 
     getTitle(): string {
@@ -59,8 +63,9 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
                 fullPath: this.workspaceFolder.uri.fsPath,
                 pathSeparator: path.sep,
             },
-            location: "",
-            existingFiles: getExistingFiles(this.workspaceFolder, "", this.deploymentFiles),
+            location: this.initialLocation,
+            existingFiles: getExistingFiles(this.workspaceFolder, this.initialLocation, this.deploymentFiles),
+            initialSelection: this.initialSelection,
         };
     }
 
@@ -75,7 +80,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
             getNamespacesRequest: false,
             createDeploymentRequest: true,
             openFileRequest: false,
-            launchCommand: false,
+            launchDraftWorkflow: false,
         };
     }
 
@@ -99,7 +104,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
                 this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
             createDeploymentRequest: (args) => this.handleCreateDeploymentRequest(args, webview),
             openFileRequest: (filePath) => this.handleOpenFileRequest(filePath),
-            launchCommand: (cmd) => launchCommandInWorkspaceFolder(cmd, this.workspaceFolder),
+            launchDraftWorkflow: (args) => this.handleLaunchDraftWorkflow(args),
         };
     }
 
@@ -298,6 +303,37 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
     private handleOpenFileRequest(relativeFilePath: string) {
         const filePath = path.join(this.workspaceFolder.uri.fsPath, relativeFilePath);
         window.showTextDocument(Uri.file(filePath));
+    }
+
+    private handleLaunchDraftWorkflow(params: LaunchDraftWorkflowParams) {
+        const dockerfilePath = path.join(params.deploymentLocation, "Dockerfile");
+        const dockerfileExists = fs.existsSync(path.join(this.workspaceFolder.uri.fsPath, dockerfilePath));
+        const existingFiles = getExistingFiles(this.workspaceFolder, params.deploymentLocation, this.deploymentFiles);
+        const helmChartYamlFilePath = existingFiles.helm.find((f) => path.basename(f) === "Chart.yaml");
+        const helmChartPath = helmChartYamlFilePath ? path.dirname(helmChartYamlFilePath) : undefined;
+        const helmValuesYamlPath = existingFiles.helm.find((f) => path.basename(f) === "values.yaml");
+        launchDraftCommand("aks.draftWorkflow", {
+            workspaceFolder: this.workspaceFolder,
+            initialSelection: {
+                subscriptionId: params.initialSubscriptionId || undefined,
+                acrResourceGroup: params.initialAcrResourceGroup || undefined,
+                acrName: params.initialAcrName || undefined,
+                acrRepository: params.initialAcrRepository || undefined,
+                clusterResourceGroup: params.initialClusterResourceGroup || undefined,
+                clusterName: params.initialClusterName || undefined,
+                clusterNamespace: params.initialClusterNamespace || undefined,
+                dockerfileBuildContextPath: dockerfileExists ? params.deploymentLocation : undefined,
+                dockerfilePath: dockerfileExists ? dockerfilePath : undefined,
+                deploymentSpecType:
+                    // Only helm and manifests are supported for now
+                    params.initialDeploymentSpecType === "manifests" || params.initialDeploymentSpecType === "helm"
+                        ? params.initialDeploymentSpecType
+                        : undefined,
+                helmChartPath,
+                helmValuesYamlPath,
+                manifestFilePaths: existingFiles.manifests,
+            },
+        });
     }
 }
 

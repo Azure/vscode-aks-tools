@@ -25,12 +25,13 @@ import { ExistingFile } from "../../webview-contract/webviewDefinitions/draft/dr
 import { basename, join } from "path";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { DraftCommandParamsType } from "./types";
 
 export async function draftDockerfile(
     _context: IActionContext,
-    suppliedWorkspaceFolder?: WorkspaceFolder,
+    params?: DraftCommandParamsType<"aks.draftDockerfile">,
 ): Promise<void> {
-    const commonDependencies = await getCommonDraftDependencies(suppliedWorkspaceFolder);
+    const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
     if (commonDependencies === null) {
         return;
     }
@@ -43,9 +44,9 @@ export async function draftDockerfile(
 
 export async function draftDeployment(
     _context: IActionContext,
-    suppliedWorkspaceFolder?: WorkspaceFolder,
+    params?: DraftCommandParamsType<"aks.draftDeployment">,
 ): Promise<void> {
-    const commonDependencies = await getCommonDraftDependencies(suppliedWorkspaceFolder);
+    const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
     if (commonDependencies === null) {
         return;
     }
@@ -77,15 +78,17 @@ export async function draftDeployment(
         draftBinaryPath,
         kubectl,
         deploymentFilesToWrite.result,
+        params?.initialLocation || "",
+        params?.initialSelection || {},
     );
     panel.show(dataProvider);
 }
 
 export async function draftWorkflow(
     _context: IActionContext,
-    suppliedWorkspaceFolder?: WorkspaceFolder,
+    params?: DraftCommandParamsType<"aks.draftWorkflow">,
 ): Promise<void> {
-    const commonDependencies = await getCommonDraftDependencies(suppliedWorkspaceFolder);
+    const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
     if (commonDependencies === null) {
         return;
     }
@@ -156,6 +159,7 @@ export async function draftWorkflow(
         session.result,
         forks,
         existingWorkflowFiles,
+        params?.initialSelection || {},
     );
     panel.show(dataProvider);
 }

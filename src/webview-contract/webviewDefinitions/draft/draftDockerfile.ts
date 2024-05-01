@@ -1,7 +1,6 @@
 import { WebviewDefinition } from "../../webviewTypes";
 import { OpenFileOptions } from "../shared/fileSystemTypes";
 import { WorkspaceFolderConfig } from "../shared/workspaceTypes";
-import { VsCodeCommand } from "./types";
 
 export interface InitialState {
     workspaceConfig: WorkspaceFolderConfig;
@@ -23,7 +22,13 @@ export type ToVsCodeMsgDef = {
     pickLocationRequest: OpenFileOptions;
     createDockerfileRequest: CreateParams;
     openFileRequest: string;
-    launchCommand: VsCodeCommand;
+    launchDraftDeployment: {
+        initialTargetPort: number | null;
+        initialLocation: string;
+    };
+    launchDraftWorkflow: {
+        initialDockerfileLocation: string;
+    };
 };
 
 export type ToWebViewMsgDef = {

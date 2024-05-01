@@ -75,7 +75,8 @@ export const vscode = getWebviewMessageContext<"draftDockerfile">({
     pickLocationRequest: null,
     createDockerfileRequest: null,
     openFileRequest: null,
-    launchCommand: null,
+    launchDraftDeployment: null,
+    launchDraftWorkflow: null,
 });
 
 type LanguageVersionState = Pick<

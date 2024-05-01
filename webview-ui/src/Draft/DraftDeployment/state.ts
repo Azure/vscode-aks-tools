@@ -7,7 +7,10 @@ import {
     Subscription,
     SubscriptionKey,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
-import { ExistingFiles } from "../../../../src/webview-contract/webviewDefinitions/draft/draftDeployment";
+import {
+    ExistingFiles,
+    InitialSelection,
+} from "../../../../src/webview-contract/webviewDefinitions/draft/draftDeployment";
 import { newNotLoaded } from "../../utilities/lazy";
 import { WebviewStateUpdater } from "../../utilities/state";
 import { Validatable, ValidatableValue, invalid, unset, valid } from "../../utilities/validation";
@@ -42,6 +45,7 @@ export type EventDef = {
 };
 
 export type DraftDeploymentState = {
+    pendingSelection: InitialSelection;
     workspaceConfig: WorkspaceFolderConfig;
     location: ValidatableValue<string>;
     existingFiles: ExistingFiles;
@@ -68,6 +72,7 @@ export type Status = "Editing" | "Creating" | "Created";
 
 export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, DraftDeploymentState> = {
     createState: (initialState) => ({
+        pendingSelection: { ...initialState.initialSelection, targetPort: undefined },
         workspaceConfig: initialState.workspaceConfig,
         location: getValidatedLocation(initialState.location, "manifests", initialState.existingFiles),
         existingFiles: initialState.existingFiles,
@@ -88,7 +93,7 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         acrRepoTag: unset(),
         applicationName: unset(),
         deploymentSpecType: "manifests",
-        targetPort: valid(80),
+        targetPort: valid(initialState.initialSelection.targetPort || 80),
         servicePort: valid(80),
     }),
     vscodeMessageHandler: {
@@ -99,6 +104,7 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         }),
         getSubscriptionsResponse: (state, subs) => ({
             ...state,
+            subscription: getSelectedValidatableValue(subs, (s) => s.id === state.pendingSelection.subscriptionId),
             azureReferenceData: AzureReferenceDataUpdate.updateSubscriptions(state.azureReferenceData, subs),
         }),
         getAcrsResponse: (state, args) => ({
@@ -123,6 +129,14 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         }),
         getClustersResponse: (state, args) => ({
             ...state,
+            clusterResourceGroup: getSelectedValue(
+                args.clusterKeys.map((c) => c.resourceGroup),
+                (rg) => rg === state.pendingSelection.clusterResourceGroup,
+            ),
+            cluster: getSelectedValue(
+                args.clusterKeys.map((c) => c.clusterName),
+                (c) => c === state.pendingSelection.clusterName,
+            ),
             azureReferenceData: AzureReferenceDataUpdate.updateClusterNames(
                 state.azureReferenceData,
                 args.subscriptionId,
@@ -173,6 +187,7 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         }),
         setSubscription: (state, subscription) => ({
             ...state,
+            pendingSelection: { ...state.pendingSelection, subscriptionId: undefined },
             subscription,
             clusterResourceGroup: null,
             cluster: null,
@@ -184,12 +199,14 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         }),
         setClusterResourceGroup: (state, clusterResourceGroup) => ({
             ...state,
+            pendingSelection: { ...state.pendingSelection, clusterResourceGroup: undefined },
             clusterResourceGroup,
             cluster: null,
             clusterNamespace: unset(),
         }),
         setCluster: (state, cluster) => ({
             ...state,
+            pendingSelection: { ...state.pendingSelection, clusterName: undefined },
             cluster,
             clusterNamespace: unset(),
         }),
@@ -265,7 +282,7 @@ export const vscode = getWebviewMessageContext<"draftDeployment">({
     getNamespacesRequest: null,
     createDeploymentRequest: null,
     openFileRequest: null,
-    launchCommand: null,
+    launchDraftWorkflow: null,
 });
 
 function getValidatedLocation(
@@ -277,6 +294,27 @@ function getValidatedLocation(
     return existingPaths.length === 0
         ? valid(location)
         : invalid(location, "At least one deployment file exists in the directory.");
+}
+
+function getSelectedValue<TItem>(items: TItem[], matchesInitialValue: (item: TItem) => boolean): TItem | null {
+    const initialItem = items.find(matchesInitialValue);
+    if (initialItem) {
+        return initialItem;
+    }
+
+    return null;
+}
+
+function getSelectedValidatableValue<TItem>(
+    items: TItem[],
+    matchesInitialValue: (item: TItem) => boolean,
+): Validatable<TItem> {
+    const initialItem = items.find(matchesInitialValue);
+    if (initialItem) {
+        return valid(initialItem);
+    }
+
+    return unset();
 }
 
 export function getExistingPaths(type: DeploymentSpecType, existingFiles: ExistingFiles): string[] {

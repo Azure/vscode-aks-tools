@@ -1,13 +1,9 @@
-import { WorkspaceFolder, commands } from "vscode";
-import { VsCodeCommand } from "../../webview-contract/webviewDefinitions/draft/types";
+import { commands } from "vscode";
+import { DraftCommandName, DraftCommandParamsType } from "../../commands/draft/types";
 
-export function launchCommandInWorkspaceFolder(command: VsCodeCommand, workspaceFolder: WorkspaceFolder): void {
-    switch (command) {
-        case VsCodeCommand.DraftDeployment:
-            commands.executeCommand("aks.draftDeployment", workspaceFolder);
-            break;
-        case VsCodeCommand.DraftWorkflow:
-            commands.executeCommand("aks.draftWorkflow", workspaceFolder);
-            break;
-    }
+export function launchDraftCommand<TCommand extends DraftCommandName>(
+    command: TCommand,
+    params: DraftCommandParamsType<TCommand>,
+): void {
+    commands.executeCommand(command, params);
 }
