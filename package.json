@@ -488,7 +488,7 @@
     },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
-        "@azure/arm-containerservice": "^19.8.0",
+        "@azure/arm-containerservice": "^20.0.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-storage": "^18.2.0",
@@ -512,6 +512,11 @@
         "tmp": "^0.2.3",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
+    "overrides": {
+        "@azure/core-rest-pipeline": {
+          "@azure/core-util": "^1.5.0"
+        }
+      },
     "repository": {
         "type": "git",
         "url": "https://github.com/Azure/vscode-aks-tools"
