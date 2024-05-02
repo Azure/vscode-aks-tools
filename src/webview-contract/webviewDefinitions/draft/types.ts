@@ -6,8 +6,12 @@ export type LanguageInfo = {
     defaultPort?: number;
     exampleVersions: string[];
     versionDescription?: string;
-    getDefaultBuilderImageTag?: (version: string) => string;
-    getDefaultRuntimeImageTag: (version: string) => string;
+    isBuilderImageRequired: boolean;
+};
+
+export type LanguageVersionInfo = {
+    builderImageTag?: string;
+    runtimeImageTag: string;
 };
 
 export type ForkInfo = {

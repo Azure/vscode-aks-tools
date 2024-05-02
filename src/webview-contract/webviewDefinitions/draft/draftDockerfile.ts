@@ -1,10 +1,12 @@
 import { WebviewDefinition } from "../../webviewTypes";
 import { OpenFileOptions } from "../shared/fileSystemTypes";
 import { WorkspaceFolderConfig } from "../shared/workspaceTypes";
+import { LanguageInfo, LanguageVersionInfo } from "./types";
 
 export interface InitialState {
     workspaceConfig: WorkspaceFolderConfig;
     location: string;
+    supportedLanguages: LanguageInfo[];
     existingFiles: ExistingFiles;
 }
 
@@ -20,6 +22,10 @@ export type CreateParams = {
 
 export type ToVsCodeMsgDef = {
     pickLocationRequest: OpenFileOptions;
+    getLanguageVersionInfoRequest: {
+        language: string;
+        version: string;
+    };
     createDockerfileRequest: CreateParams;
     openFileRequest: string;
     launchDraftDeployment: {
@@ -35,6 +41,10 @@ export type ToWebViewMsgDef = {
     pickLocationResponse: {
         location: string;
         existingFiles: ExistingFiles;
+    };
+    getLanguageVersionInfoResponse: {
+        language: string;
+        versionInfo: LanguageVersionInfo;
     };
     createDockerfileResponse: ExistingFiles;
 };

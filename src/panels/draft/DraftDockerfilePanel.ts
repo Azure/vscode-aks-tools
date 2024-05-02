@@ -14,11 +14,13 @@ import { ShellOptions, exec } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
 import { OpenFileOptions } from "../../webview-contract/webviewDefinitions/shared/fileSystemTypes";
 import { launchDraftCommand } from "./commandUtils";
+import { getLanguageVersionInfo, getSupportedLanguages } from "../../commands/draft/languages";
 
 export class DraftDockerfilePanel extends BasePanel<"draftDockerfile"> {
     constructor(extensionUri: Uri) {
         super(extensionUri, "draftDockerfile", {
             pickLocationResponse: null,
+            getLanguageVersionInfoResponse: null,
             createDockerfileResponse: null,
         });
     }
@@ -45,6 +47,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
                 pathSeparator: path.sep,
             },
             location: "",
+            supportedLanguages: getSupportedLanguages(),
             existingFiles: getExistingFiles(this.workspaceFolder, ""),
         };
     }
@@ -52,6 +55,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
     getTelemetryDefinition(): TelemetryDefinition<"draftDockerfile"> {
         return {
             createDockerfileRequest: true,
+            getLanguageVersionInfoRequest: false,
             openFileRequest: false,
             pickLocationRequest: false,
             launchDraftDeployment: false,
@@ -62,6 +66,8 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             pickLocationRequest: (openFileOptions) => this.handlePickLocationRequest(openFileOptions, webview),
+            getLanguageVersionInfoRequest: (args) =>
+                this.handleGetLanguageVersionInfoRequest(args.language, args.version, webview),
             createDockerfileRequest: (args) =>
                 this.handleCreateDockerfileRequest(
                     args.language,
@@ -106,6 +112,15 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
             location,
             existingFiles: getExistingFiles(this.workspaceFolder, location),
         });
+    }
+
+    private handleGetLanguageVersionInfoRequest(
+        language: string,
+        version: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        const versionInfo = getLanguageVersionInfo(language, version);
+        webview.postGetLanguageVersionInfoResponse({ language, versionInfo });
     }
 
     private async handleCreateDockerfileRequest(

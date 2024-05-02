@@ -1,6 +1,6 @@
 import { WebviewStateUpdater } from "../../utilities/state";
 import { getWebviewMessageContext } from "../../utilities/vscode";
-import { LanguageInfo } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
+import { LanguageInfo, LanguageVersionInfo } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { Validatable, ValidatableValue, invalid, isValid, unset, valid } from "../../utilities/validation";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
 import { ExistingFiles } from "../../../../src/webview-contract/webviewDefinitions/draft/draftDockerfile";
@@ -9,9 +9,7 @@ const defaultPortNumber = 80;
 
 export type EventDef = {
     setSelectedLanguage: Validatable<LanguageInfo>;
-    setSelectedLanguageVersion: string | null;
-    setBuilderImageTag: Validatable<string>;
-    setRuntimeImageTag: Validatable<string>;
+    setSelectedLanguageVersion: Validatable<string>;
     setSelectedPort: Validatable<number>;
     setCreating: void;
 };
@@ -19,11 +17,13 @@ export type EventDef = {
 export type DraftDockerfileState = {
     workspaceConfig: WorkspaceFolderConfig;
     location: ValidatableValue<string>;
+    supportedLanguages: LanguageInfo[];
     existingFiles: ExistingFiles;
     status: Status;
     selectedLanguage: Validatable<LanguageInfo>;
-    selectedLanguageVersion: string | null;
-    builderImageTag: Validatable<string> | null;
+    isBuilderImageRequired: boolean;
+    selectedLanguageVersion: Validatable<string>;
+    builderImageTag: Validatable<string>;
     runtimeImageTag: Validatable<string>;
     selectedPort: Validatable<number>;
 };
@@ -34,11 +34,13 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
     createState: (initialState) => ({
         workspaceConfig: initialState.workspaceConfig,
         location: getValidatedLocation(initialState.location, initialState.existingFiles),
+        supportedLanguages: initialState.supportedLanguages,
         existingFiles: initialState.existingFiles,
         status: "Editing",
         selectedLanguage: unset(),
-        selectedLanguageVersion: null,
-        builderImageTag: null,
+        isBuilderImageRequired: false,
+        selectedLanguageVersion: unset(),
+        builderImageTag: unset(),
         runtimeImageTag: unset(),
         selectedPort: valid(defaultPortNumber),
     }),
@@ -47,6 +49,10 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
             ...state,
             existingFiles: response.existingFiles,
             location: getValidatedLocation(response.location, response.existingFiles),
+        }),
+        getLanguageVersionInfoResponse: (state, response) => ({
+            ...state,
+            ...getLanguageVersionState(state, response.language, response.versionInfo),
         }),
         createDockerfileResponse: (state, existingFiles) => ({
             ...state,
@@ -58,14 +64,16 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
         setSelectedLanguage: (state, selectedLanguage) => ({
             ...state,
             selectedLanguage,
-            ...getLanguageVersionState(selectedLanguage, null),
+            isBuilderImageRequired: isValid(selectedLanguage) ? selectedLanguage.value.isBuilderImageRequired : false,
+            selectedLanguageVersion: unset(),
+            selectedPort: isValid(selectedLanguage)
+                ? valid(selectedLanguage.value.defaultPort ?? defaultPortNumber)
+                : valid(defaultPortNumber),
         }),
         setSelectedLanguageVersion: (state, selectedLanguageVersion) => ({
             ...state,
-            ...getLanguageVersionState(state.selectedLanguage, selectedLanguageVersion),
+            selectedLanguageVersion,
         }),
-        setBuilderImageTag: (state, builderImageTag) => ({ ...state, builderImageTag }),
-        setRuntimeImageTag: (state, runtimeImageTag) => ({ ...state, runtimeImageTag }),
         setSelectedPort: (state, selectedPort) => ({ ...state, selectedPort }),
         setCreating: (state) => ({ ...state, status: "Creating" }),
     },
@@ -73,37 +81,31 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
 
 export const vscode = getWebviewMessageContext<"draftDockerfile">({
     pickLocationRequest: null,
+    getLanguageVersionInfoRequest: null,
     createDockerfileRequest: null,
     openFileRequest: null,
     launchDraftDeployment: null,
     launchDraftWorkflow: null,
 });
 
-type LanguageVersionState = Pick<
-    DraftDockerfileState,
-    "selectedLanguageVersion" | "builderImageTag" | "runtimeImageTag" | "selectedPort"
->;
+type LanguageVersionState = Pick<DraftDockerfileState, "builderImageTag" | "runtimeImageTag">;
 
 function getLanguageVersionState(
-    language: Validatable<LanguageInfo>,
-    languageVersion: string | null,
+    state: DraftDockerfileState,
+    language: string,
+    versionInfo: LanguageVersionInfo,
 ): LanguageVersionState {
-    if (!isValid(language)) {
+    if (!isValid(state.selectedLanguage) || language !== state.selectedLanguage.value.name) {
+        // Keep the state unchanged.
         return {
-            selectedLanguageVersion: languageVersion,
-            builderImageTag: null,
-            runtimeImageTag: unset(),
-            selectedPort: valid(defaultPortNumber),
+            builderImageTag: state.builderImageTag,
+            runtimeImageTag: state.runtimeImageTag,
         };
     }
 
     return {
-        selectedLanguageVersion: languageVersion,
-        builderImageTag: language.value.getDefaultBuilderImageTag
-            ? valid(language.value.getDefaultBuilderImageTag(languageVersion || ""))
-            : null,
-        runtimeImageTag: valid(language.value.getDefaultRuntimeImageTag(languageVersion || "")),
-        selectedPort: valid(language.value.defaultPort ?? defaultPortNumber),
+        builderImageTag: versionInfo.builderImageTag ? valid(versionInfo.builderImageTag) : unset(),
+        runtimeImageTag: valid(versionInfo.runtimeImageTag),
     };
 }
 

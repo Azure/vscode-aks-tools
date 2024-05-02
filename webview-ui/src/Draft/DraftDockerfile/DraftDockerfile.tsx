@@ -8,7 +8,6 @@ import { VSCodeButton, VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-to
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-import { getSupportedLanguages } from "../data";
 import { Maybe, isNothing, just, nothing } from "../../utilities/maybe";
 import { LanguageInfo } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import {
@@ -26,8 +25,6 @@ import { TextWithDropdown } from "../../components/TextWithDropdown";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
-const supportedLanguages = getSupportedLanguages();
-
 export function DraftDockerfile(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -37,34 +34,21 @@ export function DraftDockerfile(initialState: InitialState) {
     }
 
     function handleLanguageVersionChange(version: string | null) {
-        eventHandlers.onSetSelectedLanguageVersion(version);
-    }
-
-    function handleBuilderImageTagChange(e: ChangeEvent) {
-        const elem = e.currentTarget as HTMLInputElement;
-        const validated = getValidatedBuilderImageTag(elem.value);
-        eventHandlers.onSetBuilderImageTag(validated);
-
-        function getValidatedBuilderImageTag(builderImageTag: string): Validatable<string> {
-            if (builderImageTag === "") {
-                return missing("Builder image tag is required.");
-            }
-
-            return valid(builderImageTag);
+        const validated = getValidatedLanguageVersion();
+        eventHandlers.onSetSelectedLanguageVersion(validated);
+        if (isValid(state.selectedLanguage) && isValid(validated)) {
+            vscode.postGetLanguageVersionInfoRequest({
+                language: state.selectedLanguage.value.name,
+                version: validated.value,
+            });
         }
-    }
 
-    function handleRuntimeImageTagChange(e: ChangeEvent) {
-        const elem = e.currentTarget as HTMLInputElement;
-        const validated = getValidatedRuntimeImageTag(elem.value);
-        eventHandlers.onSetRuntimeImageTag(validated);
-
-        function getValidatedRuntimeImageTag(runtimeImage: string): Validatable<string> {
-            if (runtimeImage === "") {
-                return missing("Runtime image tag is required.");
+        function getValidatedLanguageVersion(): Validatable<string> {
+            if (version === null || version.length === 0) {
+                return missing("Language version is required.");
             }
 
-            return valid(runtimeImage);
+            return valid(version);
         }
     }
 
@@ -98,13 +82,14 @@ export function DraftDockerfile(initialState: InitialState) {
     function validate(): Maybe<CreateParams> {
         if (!isValid(state.location)) return nothing();
         if (!isValid(state.selectedLanguage)) return nothing();
-        if (state.builderImageTag !== null && !isValid(state.builderImageTag)) return nothing();
+        if (!isValid(state.selectedLanguageVersion)) return nothing();
+        if (state.isBuilderImageRequired && !isValid(state.builderImageTag)) return nothing();
         if (!isValid(state.runtimeImageTag)) return nothing();
         if (!isValid(state.selectedPort)) return nothing();
 
         return just({
             language: state.selectedLanguage.value.name,
-            builderImageTag: state.builderImageTag !== null ? state.builderImageTag.value : null,
+            builderImageTag: orDefault(state.builderImageTag, null),
             runtimeImageTag: state.runtimeImageTag.value,
             port: state.selectedPort.value,
             location: state.location.value,
@@ -155,7 +140,7 @@ export function DraftDockerfile(initialState: InitialState) {
                 <ResourceSelector<LanguageInfo>
                     id="language-input"
                     className={styles.control}
-                    resources={supportedLanguages}
+                    resources={state.supportedLanguages}
                     selectedItem={toNullable(selectedLanguage)}
                     valueGetter={(l) => l.name}
                     labelGetter={(l) => l.displayName}
@@ -171,48 +156,28 @@ export function DraftDockerfile(initialState: InitialState) {
                 {isValueSet(selectedLanguage) && (
                     <>
                         <label htmlFor="version-input" className={styles.label}>
-                            {languageVersionLabel}
+                            {languageVersionLabel} *
                         </label>
                         <TextWithDropdown
                             id="version-input"
                             className={styles.control}
                             getAddItemText={(text) => `Use "${text}"`}
                             items={selectedLanguage.value.exampleVersions}
-                            selectedItem={state.selectedLanguageVersion}
+                            selectedItem={toNullable(state.selectedLanguageVersion)}
                             onSelect={handleLanguageVersionChange}
                         />
-
-                        {state.builderImageTag !== null && (
-                            <>
-                                <label htmlFor="builder-image-tag-input" className={styles.label}>
-                                    Builder image tag *
-                                </label>
-                                <VSCodeTextField
-                                    id="builder-image-tag-input"
-                                    value={orDefault(state.builderImageTag, "")}
-                                    className={styles.control}
-                                    onBlur={handleBuilderImageTagChange}
-                                    onInput={handleBuilderImageTagChange}
-                                />
-                                {hasMessage(state.builderImageTag) && (
-                                    <span className={styles.validationMessage}>
-                                        <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                        {state.builderImageTag.message}
-                                    </span>
-                                )}
-                            </>
+                        {hasMessage(state.selectedLanguageVersion) && (
+                            <span className={styles.validationMessage}>
+                                <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                {state.selectedLanguageVersion.message}
+                            </span>
                         )}
-
-                        <label htmlFor="runtime-image-tag-input" className={styles.label}>
-                            Runtime image tag *
-                        </label>
-                        <VSCodeTextField
-                            id="runtime-image-tag-input"
-                            value={orDefault(state.runtimeImageTag, "")}
-                            className={styles.control}
-                            onBlur={handleRuntimeImageTagChange}
-                            onInput={handleRuntimeImageTagChange}
-                        />
+                        {state.isBuilderImageRequired && hasMessage(state.builderImageTag) && (
+                            <span className={styles.validationMessage}>
+                                <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                                {state.builderImageTag.message}
+                            </span>
+                        )}
                         {hasMessage(state.runtimeImageTag) && (
                             <span className={styles.validationMessage}>
                                 <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />

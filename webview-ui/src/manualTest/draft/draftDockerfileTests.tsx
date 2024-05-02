@@ -25,6 +25,7 @@ import {
     getRelativePath,
 } from "../utilities/testFileSystemUtils";
 import { aksStoreDemoFiles } from "./testData/fileSystemData";
+import { getLanguageVersionInfo, getSupportedLanguages } from "../../../../src/commands/draft/languages";
 
 const workspaceConfig: WorkspaceFolderConfig = {
     fullPath: "/code/aks-store-demo",
@@ -38,6 +39,7 @@ export function getDraftDockerfileScenarios() {
     const initialState: InitialState = {
         workspaceConfig,
         location: getRelativePath(asPathString(rootDir), "/code/aks-store-demo"),
+        supportedLanguages: getSupportedLanguages(),
         existingFiles: getExistingFiles(rootDir, "/code/aks-store-demo"),
     };
 
@@ -47,6 +49,7 @@ export function getDraftDockerfileScenarios() {
     ): MessageHandler<ToVsCodeMsgDef> {
         return {
             pickLocationRequest: handlePickLocationRequest,
+            getLanguageVersionInfoRequest: (args) => handleGetLanguageVersionInfoRequest(args.language, args.version),
             createDockerfileRequest: handleCreateDockerfileRequest,
             openFileRequest: handleOpenFileRequest,
             launchDraftDeployment: (args) =>
@@ -72,6 +75,11 @@ export function getDraftDockerfileScenarios() {
                     existingFiles: getExistingFiles(rootDir, result.paths[0]),
                 });
             }
+        }
+
+        function handleGetLanguageVersionInfoRequest(language: string, version: string) {
+            const versionInfo = getLanguageVersionInfo(language, version);
+            webview.postGetLanguageVersionInfoResponse({ language, versionInfo });
         }
 
         async function handleOpenFileRequest(relativePath: string) {
