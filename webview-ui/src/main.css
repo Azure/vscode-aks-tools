@@ -133,17 +133,19 @@ input[type="number"]:disabled {
     content: attr(data-tooltip-text);
     position: absolute;
     margin-left: 0.5rem;
+    padding: 4px 8px;
+    z-index: 40;
 
+    color: var(--vscode-editorHoverWidget-foreground);
     background: var(--vscode-editorHoverWidget-background);
     border: 1px solid var(--vscode-editorHoverWidget-border);
     border-radius: 3px;
     box-shadow: 0 2px 8px var(--vscode-widget-shadow);
-    color: var(--vscode-editorHoverWidget-foreground);
+
     max-width: 500px;
-    overflow: hidden;
-    z-index: 40;
-    padding: 2px 8px;
-    white-space: pre;
+    width: max-content;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 
     display: none; /* hide by default */
 }
