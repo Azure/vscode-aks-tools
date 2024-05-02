@@ -1,7 +1,7 @@
 import { FormEvent, HTMLAttributes, useEffect, useRef, useState } from "react";
 import styles from "./TextWithDropdown.module.css";
 import { VSCodeOption, VSCodeProgressRing, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
-import { Lazy, asLazy, isLoaded, isLoading } from "../utilities/lazy";
+import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded, orDefault } from "../utilities/lazy";
 
 type AvailableHtmlAttributes = Pick<HTMLAttributes<HTMLElement>, "className" | "id">;
 type ChangeEvent = Event | FormEvent<HTMLElement>;
@@ -19,14 +19,47 @@ export interface TextWithDropdownProps extends AvailableHtmlAttributes {
     onSelect: (value: string | null, isNew: boolean) => void;
 }
 
+enum DisplayMode {
+    TextField,
+    Loader,
+    Dropdown,
+}
+
+function getDisplayMode(items: Lazy<string[]>): DisplayMode {
+    if (isLoading(items)) {
+        return DisplayMode.Loader;
+    }
+
+    if (isNotLoaded(items) || (isLoaded(items) && items.value.length === 0)) {
+        return DisplayMode.TextField;
+    }
+
+    return DisplayMode.Dropdown;
+}
+
 export function TextWithDropdown(props: TextWithDropdownProps) {
     const lazyItems = asLazy(props.items);
+    const displayMode = getDisplayMode(lazyItems);
     return (
         <>
-            {isLoading(lazyItems) && <VSCodeProgressRing style={{ height: "1rem" }} />}
-            {isLoaded(lazyItems) && <NonLazyTextWithDropdown {...{ ...props, items: lazyItems.value }} />}
+            {displayMode === DisplayMode.TextField && <TextOnly {...props} />}
+            {displayMode === DisplayMode.Loader && <VSCodeProgressRing style={{ height: "1rem" }} />}
+            {displayMode === DisplayMode.Dropdown && (
+                <NonLazyTextWithDropdown {...{ ...props, items: orDefault(lazyItems, []) }} />
+            )}
         </>
     );
+}
+
+type TextOnlyProps = Omit<TextWithDropdownProps, "items">;
+
+function TextOnly(props: TextOnlyProps) {
+    function handleTextChange(e: ChangeEvent) {
+        const newText = (e.currentTarget as HTMLInputElement).value;
+        props.onSelect(newText, true);
+    }
+
+    return <VSCodeTextField className={props.className} onInput={handleTextChange} value={props.selectedItem || ""} />;
 }
 
 type NonLazyTextWithDropdownProps = Omit<TextWithDropdownProps, "items"> & { items: string[] };
