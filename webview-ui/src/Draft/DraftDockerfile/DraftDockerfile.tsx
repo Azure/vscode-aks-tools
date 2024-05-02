@@ -28,6 +28,15 @@ type ChangeEvent = Event | FormEvent<HTMLElement>;
 export function DraftDockerfile(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
+    function handleChooseLocationClick() {
+        vscode.postPickLocationRequest({
+            defaultPath: state.workspaceConfig.fullPath,
+            type: "directory",
+            title: "Location to save Dockerfile",
+            buttonLabel: "Select",
+        });
+    }
+
     function handleLanguageChange(language: LanguageInfo | null) {
         const validated = language === null ? missing<LanguageInfo>("Language is required.") : valid(language);
         eventHandlers.onSetSelectedLanguage(validated);
@@ -68,15 +77,6 @@ export function DraftDockerfile(initialState: InitialState) {
 
             return valid(port);
         }
-    }
-
-    function handleChooseLocationClick() {
-        vscode.postPickLocationRequest({
-            defaultPath: state.workspaceConfig.fullPath,
-            type: "directory",
-            title: "Location to save Dockerfile",
-            buttonLabel: "Select",
-        });
     }
 
     function validate(): Maybe<CreateParams> {
@@ -122,9 +122,15 @@ export function DraftDockerfile(initialState: InitialState) {
         });
     }
 
+    const locationTooltipMessage = "The folder where the Dockerfile will be saved.";
+
     const selectedLanguage = state.selectedLanguage;
     const languageVersionLabel =
         (state.selectedLanguage.hasValue && state.selectedLanguage.value.versionDescription) || "Language version";
+
+    const languageVersionTooltipMessage =
+        "The language version will be used to determine the builder and runtime image tags in the Dockerfile.";
+
     return (
         <form className={styles.wrapper} onSubmit={handleFormSubmit}>
             <h2>Draft a Dockerfile</h2>
@@ -134,6 +140,33 @@ export function DraftDockerfile(initialState: InitialState) {
             </p>
 
             <fieldset className={styles.inputContainer} disabled={state.status !== "Editing"}>
+                <label htmlFor="location-input" className={styles.label}>
+                    Location
+                    <span className={"tooltip-holder"} data-tooltip-text={locationTooltipMessage}>
+                        <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                    </span>
+                </label>
+                <VSCodeTextField
+                    id="location-input"
+                    readOnly
+                    value={`.${state.workspaceConfig.pathSeparator}${state.location.value}`}
+                    className={styles.control}
+                />
+                <div className={styles.controlSupplement}>
+                    <VSCodeButton appearance="icon" onClick={handleChooseLocationClick}>
+                        <span className={styles.iconButton}>
+                            <FontAwesomeIcon icon={faFolder} />
+                            &nbsp;Choose location
+                        </span>
+                    </VSCodeButton>
+                </div>
+                {hasMessage(state.location) && (
+                    <span className={styles.validationMessage}>
+                        <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                        {state.location.message}
+                    </span>
+                )}
+
                 <label htmlFor="language-input" className={styles.label}>
                     Programming language *
                 </label>
@@ -157,6 +190,9 @@ export function DraftDockerfile(initialState: InitialState) {
                     <>
                         <label htmlFor="version-input" className={styles.label}>
                             {languageVersionLabel} *
+                            <span className={"tooltip-holder"} data-tooltip-text={languageVersionTooltipMessage}>
+                                <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                            </span>
                         </label>
                         <TextWithDropdown
                             id="version-input"
@@ -201,30 +237,6 @@ export function DraftDockerfile(initialState: InitialState) {
                     <span className={styles.validationMessage}>
                         <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
                         {state.selectedPort.message}
-                    </span>
-                )}
-
-                <label htmlFor="location-input" className={styles.label}>
-                    Location
-                </label>
-                <VSCodeTextField
-                    id="location-input"
-                    readOnly
-                    value={`.${state.workspaceConfig.pathSeparator}${state.location.value}`}
-                    className={styles.control}
-                />
-                <div className={styles.controlSupplement}>
-                    <VSCodeButton appearance="icon" onClick={handleChooseLocationClick}>
-                        <span className={styles.iconButton}>
-                            <FontAwesomeIcon icon={faFolder} />
-                            &nbsp;Choose location
-                        </span>
-                    </VSCodeButton>
-                </div>
-                {hasMessage(state.location) && (
-                    <span className={styles.validationMessage}>
-                        <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                        {state.location.message}
                     </span>
                 )}
             </fieldset>

@@ -241,10 +241,15 @@ export function DraftDeployment(initialState: InitialState) {
         "If you choose to use Draft's GitHub Action workflow for your deployment, it will automatically create and deploy the new resources through the workflow. The workflow can build new images and deploy to new namespaces.";
 
     const clusterResourceGroupTooltipMessage =
-        "You can select a resource group and cluster here if you wish to select an existing Kubernetes namespace to deploy to.\n\nLeave this field blank if you want to create a new namespace.";
+        "You can select a resource group and cluster here if you wish to select an existing Kubernetes namespace to deploy to.\n\nLeave this field blank to specify a namespace that does not exist yet.";
 
     const clusterNamespaceTooltipMessage =
         "If you choose to use Draft's GitHub Action workflow for your deployment, it will create this namespace when it runs.";
+
+    const targetPortTooltipMessage =
+        "The port on which your application listens in the deployment.\n\nThis will typically match the port exposed in the Dockerfile.";
+
+    const servicePortTooltipMessage = "The port on which the service will listen for incoming traffic.";
 
     return (
         <>
@@ -487,6 +492,9 @@ export function DraftDeployment(initialState: InitialState) {
 
                     <label htmlFor="target-port-input" className={styles.label}>
                         Target port *
+                        <span className={"tooltip-holder"} data-tooltip-text={targetPortTooltipMessage}>
+                            <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                        </span>
                     </label>
                     <input
                         type="number"
@@ -504,6 +512,9 @@ export function DraftDeployment(initialState: InitialState) {
 
                     <label htmlFor="service-port-input" className={styles.label}>
                         Service port *
+                        <span className={"tooltip-holder"} data-tooltip-text={servicePortTooltipMessage}>
+                            <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                        </span>
                     </label>
                     <input
                         type="number"
