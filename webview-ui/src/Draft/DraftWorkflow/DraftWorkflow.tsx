@@ -395,9 +395,9 @@ export function DraftWorkflow(initialState: InitialState) {
                         </span>
                     )}
 
-                    <label htmlFor="fork-input">
+                    <label htmlFor="fork-input" className={styles.label}>
                         Fork *
-                        <span className={`tooltip-holder ${styles.label}`} data-tooltip-text={forkTooltipMessage}>
+                        <span className={"tooltip-holder"} data-tooltip-text={forkTooltipMessage}>
                             <i className={`${styles.inlineIcon} codicon codicon-info`} />
                         </span>
                     </label>

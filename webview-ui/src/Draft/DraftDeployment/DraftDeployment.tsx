@@ -237,6 +237,15 @@ export function DraftDeployment(initialState: InitialState) {
 
     const existingFiles = getExistingPaths(state.deploymentSpecType, state.existingFiles);
 
+    const acrImageTooltipMessage =
+        "If you choose to use Draft's GitHub Action workflow for your deployment, it will automatically create and deploy the new resources through the workflow. The workflow can build new images and deploy to new namespaces.";
+
+    const clusterResourceGroupTooltipMessage =
+        "You can select a resource group and cluster here if you wish to select an existing Kubernetes namespace to deploy to.\n\nLeave this field blank if you want to create a new namespace.";
+
+    const clusterNamespaceTooltipMessage =
+        "If you choose to use Draft's GitHub Action workflow for your deployment, it will create this namespace when it runs.";
+
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
@@ -322,6 +331,9 @@ export function DraftDeployment(initialState: InitialState) {
                         <>
                             <label htmlFor="acr-repo-input" className={styles.label}>
                                 Azure Container Registry image *
+                                <span className={"tooltip-holder"} data-tooltip-text={acrImageTooltipMessage}>
+                                    <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                                </span>
                             </label>
                             <TextWithDropdown
                                 id="acr-repo-input"
@@ -380,6 +392,12 @@ export function DraftDeployment(initialState: InitialState) {
                         <>
                             <label htmlFor="cluster-rg-input" className={styles.label}>
                                 Cluster Resource Group
+                                <span
+                                    className={"tooltip-holder"}
+                                    data-tooltip-text={clusterResourceGroupTooltipMessage}
+                                >
+                                    <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                                </span>
                             </label>
                             <ResourceSelector<string>
                                 id="cluster-rg-input"
@@ -503,6 +521,9 @@ export function DraftDeployment(initialState: InitialState) {
 
                     <label htmlFor="namespace-input" className={styles.label}>
                         Namespace *
+                        <span className={"tooltip-holder"} data-tooltip-text={clusterNamespaceTooltipMessage}>
+                            <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                        </span>
                     </label>
 
                     <TextWithDropdown
