@@ -1,7 +1,7 @@
 import {
     AcrKey,
     ClusterKey,
-    ForkInfo,
+    GitHubRepo,
     RepositoryKey,
     Subscription,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
@@ -33,10 +33,10 @@ export type ClusterReferenceData = {
 };
 
 export type GitHubReferenceData = {
-    forks: ForkReferenceData[];
+    repositories: GitHubRepositoryReferenceData[];
 };
 
-export type ForkReferenceData = {
-    fork: ForkInfo;
+export type GitHubRepositoryReferenceData = {
+    repository: GitHubRepo;
     branches: Lazy<string[]>;
 };

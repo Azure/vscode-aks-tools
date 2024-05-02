@@ -20,7 +20,7 @@ import { getGitApi } from "../utils/git";
 import { DraftWorkflowDataProvider, DraftWorkflowPanel } from "../../panels/draft/DraftWorkflowPanel";
 import { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
 import { Remote } from "../../types/git";
-import { ForkInfo } from "../../webview-contract/webviewDefinitions/draft/types";
+import { GitHubRepo } from "../../webview-contract/webviewDefinitions/draft/types";
 import { ExistingFile } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
 import { basename, join } from "path";
 import { getReadySessionProvider } from "../../auth/azureAuth";
@@ -129,8 +129,8 @@ export async function draftWorkflow(
         auth: `token ${session.result.accessToken}`,
     });
 
-    const allForks = await Promise.all(workspaceRepository.state.remotes.map((r) => getForkInfo(octokit, r)));
-    const forks = allForks.filter((f) => f !== null) as ForkInfo[];
+    const reposFromRemotes = await Promise.all(workspaceRepository.state.remotes.map((r) => getRepo(octokit, r)));
+    const accessibleRepos = reposFromRemotes.filter((f) => f !== null) as GitHubRepo[];
 
     const workflowsUri = Uri.joinPath(workspaceFolder.uri, ".github", "workflows");
     let existingWorkflowFiles: ExistingFile[] = [];
@@ -155,9 +155,8 @@ export async function draftWorkflow(
         workspaceFolder,
         draftBinaryPath,
         kubectl,
-        workspaceRepository,
         session.result,
-        forks,
+        accessibleRepos,
         existingWorkflowFiles,
         params?.initialSelection || {},
     );
@@ -220,7 +219,7 @@ async function getGitHubAuthenticationSession(): Promise<Errorable<Authenticatio
     }
 }
 
-async function getForkInfo(octokit: Octokit, remote: Remote): Promise<ForkInfo | null> {
+async function getRepo(octokit: Octokit, remote: Remote): Promise<GitHubRepo | null> {
     const url = remote.fetchUrl || remote.pushUrl;
     if (!url) {
         return null;
@@ -238,10 +237,10 @@ async function getForkInfo(octokit: Octokit, remote: Remote): Promise<ForkInfo |
     }
 
     return {
-        name: remote.name,
+        forkName: remote.name,
         url,
-        owner: response.data.owner.login,
-        repo: response.data.name,
+        gitHubRepoOwner: response.data.owner.login,
+        gitHubRepoName: response.data.name,
         isFork: response.data.fork,
         defaultBranch: response.data.default_branch,
     };

@@ -1,7 +1,8 @@
 import {
     AcrKey,
     ClusterKey,
-    ForkInfo,
+    GitHubRepo,
+    GitHubRepoKey,
     Subscription,
     acrKeysMatch,
     clusterKeysMatch,
@@ -13,7 +14,7 @@ import {
     AcrReferenceData,
     AzureReferenceData,
     ClusterReferenceData,
-    ForkReferenceData,
+    GitHubRepositoryReferenceData,
     GitHubReferenceData,
     SubscriptionReferenceData,
 } from "../state/stateTypes";
@@ -21,23 +22,27 @@ import { EventDef, vscode } from "./state";
 
 export type EventHandlerFunc = (eventHandlers: EventHandlers<EventDef>) => void;
 
-export function ensureForkBranchNamesLoaded(
+export function ensureBranchNamesLoaded(
     referenceData: GitHubReferenceData,
-    fork: ForkInfo | null,
+    repo: GitHubRepo | null,
     updates: EventHandlerFunc[],
 ): Lazy<string[]> {
-    const forkData = getForkReferenceData(referenceData, fork);
-    if (forkData === null) {
+    const repoData = getGitHubRepoReferenceData(referenceData, repo);
+    if (repoData === null) {
         return newNotLoaded();
     }
 
-    if (isNotLoaded(forkData.branches)) {
-        const key = { forkName: forkData.fork.name };
+    if (isNotLoaded(repoData.branches)) {
+        const key: GitHubRepoKey = {
+            gitHubRepoOwner: repoData.repository.gitHubRepoOwner,
+            gitHubRepoName: repoData.repository.gitHubRepoName,
+        };
+
         vscode.postGetBranchesRequest(key);
         updates.push((e) => e.onSetBranchesLoading(key));
     }
 
-    return forkData.branches;
+    return repoData.branches;
 }
 
 export function ensureSubscriptionsLoaded(
@@ -140,12 +145,21 @@ export function ensureAcrRepositoryNamesLoaded(
     return lazyMap(acrData.repositories, (data) => data.map((r) => r.key.repositoryName));
 }
 
-function getForkReferenceData(referenceData: GitHubReferenceData, fork: ForkInfo | null): ForkReferenceData | null {
-    if (fork === null) {
+function getGitHubRepoReferenceData(
+    referenceData: GitHubReferenceData,
+    repo: GitHubRepo | null,
+): GitHubRepositoryReferenceData | null {
+    if (repo === null) {
         return null;
     }
 
-    return getOrThrow(referenceData.forks, (f) => f.fork.name === fork.name, `${fork.name} not found`);
+    return getOrThrow(
+        referenceData.repositories,
+        (r) =>
+            r.repository.gitHubRepoOwner === repo.gitHubRepoOwner &&
+            r.repository.gitHubRepoName === repo.gitHubRepoName,
+        `GitHub repository ${repo.gitHubRepoOwner}/${repo.gitHubRepoName} not found`,
+    );
 }
 
 function getSubscriptionReferenceData(

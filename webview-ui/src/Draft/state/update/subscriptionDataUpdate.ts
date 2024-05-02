@@ -20,7 +20,7 @@ export function updateAcrNames(data: SubscriptionReferenceData, newKeys: AcrKey[
     const updatedAcrs = updateValues(
         existingAcrs,
         newKeys,
-        (acr) => acr.key,
+        (acr, item) => acr.resourceGroup === item.key.resourceGroup && acr.acrName === item.key.acrName,
         (key) => ({
             key,
             repositories: newNotLoaded(),
@@ -71,7 +71,8 @@ export function updateClusterNames(data: SubscriptionReferenceData, newKeys: Clu
     const updatedClusters = updateValues(
         existingClusters,
         newKeys,
-        (cluster) => cluster.key,
+        (cluster, item) =>
+            cluster.resourceGroup === item.key.resourceGroup && cluster.clusterName === item.key.clusterName,
         (key) => ({
             key,
             namespaces: newNotLoaded(),

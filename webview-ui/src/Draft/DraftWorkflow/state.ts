@@ -7,8 +7,8 @@ import {
     AcrKey,
     ClusterKey,
     DeploymentSpecType,
-    ForkInfo,
-    ForkKey,
+    GitHubRepo,
+    GitHubRepoKey,
     NewOrExisting,
     Subscription,
     SubscriptionKey,
@@ -18,19 +18,19 @@ import { newNotLoaded } from "../../utilities/lazy";
 import { WebviewStateUpdater } from "../../utilities/state";
 import { Validatable, isValueSet, unset, valid } from "../../utilities/validation";
 import { getWebviewMessageContext } from "../../utilities/vscode";
-import { AzureReferenceData, GitHubReferenceData } from "../state/stateTypes";
+import { AzureReferenceData, GitHubReferenceData, GitHubRepositoryReferenceData } from "../state/stateTypes";
 import * as AzureReferenceDataUpdate from "../state/update/azureReferenceDataUpdate";
 import * as GitHubReferenceDataUpdate from "../state/update/gitHubReferenceDataUpdate";
 
 export type EventDef = {
-    setBranchesLoading: ForkKey;
+    setBranchesLoading: GitHubRepoKey;
     setSubscriptionsLoading: void;
     setAcrsLoading: SubscriptionKey;
     setRepositoriesLoading: AcrKey;
     setClustersLoading: SubscriptionKey;
     setNamespacesLoading: ClusterKey;
     setWorkflowName: Validatable<string>;
-    setFork: Validatable<ForkInfo>;
+    setGitHubRepo: Validatable<GitHubRepo>;
     setBranchName: Validatable<string>;
     setSubscription: Validatable<Subscription>;
     setAcrResourceGroup: Validatable<string>;
@@ -56,7 +56,7 @@ export type DraftWorkflowState = {
     azureReferenceData: AzureReferenceData;
     gitHubReferenceData: GitHubReferenceData;
     workflowName: Validatable<string>;
-    fork: Validatable<ForkInfo>;
+    gitHubRepo: Validatable<GitHubRepo>;
     branchName: Validatable<string>;
     dockerfilePath: Validatable<string>;
     buildContextPath: string;
@@ -112,13 +112,13 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             subscriptions: newNotLoaded(),
         },
         gitHubReferenceData: {
-            forks: initialState.forks.map((f) => ({
-                fork: f,
+            repositories: initialState.repos.map<GitHubRepositoryReferenceData>((repo) => ({
+                repository: repo,
                 branches: newNotLoaded(),
             })),
         },
         workflowName: unset(),
-        fork: unset(),
+        gitHubRepo: unset(),
         branchName: unset(),
         dockerfilePath:
             initialState.initialSelection.dockerfilePath !== undefined
@@ -159,10 +159,10 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
         pickFilesResponse: (state, args) => updatePickedFile(state, args.identifier, args.paths),
         getBranchesResponse: (state, args) => ({
             ...state,
-            branchName: getDefaultBranch(state, args.forkName, args.branches),
-            gitHubReferenceData: GitHubReferenceDataUpdate.updateForkBranches(
+            branchName: getSelectedBranch(state, args, args.branches),
+            gitHubReferenceData: GitHubReferenceDataUpdate.updateBranches(
                 state.gitHubReferenceData,
-                args.forkName,
+                args,
                 args.branches,
             ),
         }),
@@ -236,10 +236,7 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
     eventHandler: {
         setBranchesLoading: (state, args) => ({
             ...state,
-            gitHubReferenceData: GitHubReferenceDataUpdate.setForkBranchesLoading(
-                state.gitHubReferenceData,
-                args.forkName,
-            ),
+            gitHubReferenceData: GitHubReferenceDataUpdate.setBranchesLoading(state.gitHubReferenceData, args),
         }),
         setSubscriptionsLoading: (state) => ({
             ...state,
@@ -269,7 +266,7 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             workflowName: name,
             existingFile: getExistingFile(state, name),
         }),
-        setFork: (state, fork) => ({ ...state, fork }),
+        setGitHubRepo: (state, repo) => ({ ...state, gitHubRepo: repo }),
         setSubscription: (state, subscription) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, subscriptionId: undefined },
@@ -386,14 +383,17 @@ function getSelectedValidatableValue<TItem>(
     return unset();
 }
 
-function getDefaultBranch(state: DraftWorkflowState, forkName: string, branches: string[]): Validatable<string> {
-    if (!isValueSet(state.fork) || forkName !== state.fork.value.name) {
+function getSelectedBranch(state: DraftWorkflowState, key: GitHubRepoKey, branches: string[]): Validatable<string> {
+    if (
+        !isValueSet(state.gitHubRepo) ||
+        key.gitHubRepoOwner !== state.gitHubRepo.value.gitHubRepoOwner ||
+        key.gitHubRepoName !== state.gitHubRepo.value.gitHubRepoName
+    ) {
         return unset();
     }
 
-    const fork = state.fork.value;
-    const defaultBranch = branches.find((b) => b === fork.defaultBranch);
-    if (!defaultBranch) {
+    const defaultBranch = state.gitHubRepo.value.defaultBranch;
+    if (!branches.includes(defaultBranch)) {
         return unset();
     }
 

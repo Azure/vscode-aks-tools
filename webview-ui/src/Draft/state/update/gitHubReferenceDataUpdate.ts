@@ -1,26 +1,33 @@
+import { GitHubRepoKey } from "../../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { replaceItem } from "../../../utilities/array";
-import { ForkReferenceData, GitHubReferenceData } from "../stateTypes";
-import * as ForkDataUpdate from "./forkDataUpdate";
+import { GitHubReferenceData, GitHubRepositoryReferenceData } from "../stateTypes";
+import * as RepoDataUpdate from "./gitHubRepoDataUpdate";
 
-export function setForkBranchesLoading(data: GitHubReferenceData, forkName: string): GitHubReferenceData {
-    return updateFork(data, forkName, (fork) => ForkDataUpdate.setBranchesLoading(fork));
+export function setBranchesLoading(data: GitHubReferenceData, repoKey: GitHubRepoKey): GitHubReferenceData {
+    return updateRepository(data, repoKey, (repoData) => RepoDataUpdate.setBranchesLoading(repoData));
 }
 
-export function updateForkBranches(
+export function updateBranches(
     data: GitHubReferenceData,
-    forkName: string,
+    repoKey: GitHubRepoKey,
     branches: string[],
 ): GitHubReferenceData {
-    return updateFork(data, forkName, (fork) => ForkDataUpdate.updateBranches(fork, branches));
+    return updateRepository(data, repoKey, (repoData) => RepoDataUpdate.updateBranches(repoData, branches));
 }
 
-function updateFork(
+function updateRepository(
     data: GitHubReferenceData,
-    forkName: string,
-    updater: (data: ForkReferenceData) => ForkReferenceData,
+    repoKey: GitHubRepoKey,
+    updater: (data: GitHubRepositoryReferenceData) => GitHubRepositoryReferenceData,
 ): GitHubReferenceData {
     return {
         ...data,
-        forks: replaceItem(data.forks, (data) => data.fork.name === forkName, updater),
+        repositories: replaceItem(
+            data.repositories,
+            (data) =>
+                data.repository.gitHubRepoOwner === repoKey.gitHubRepoOwner &&
+                data.repository.gitHubRepoName === repoKey.gitHubRepoName,
+            updater,
+        ),
     };
 }

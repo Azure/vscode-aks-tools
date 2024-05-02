@@ -4,8 +4,8 @@ import {
     AcrKey,
     ClusterKey,
     DeploymentSpecType,
-    ForkInfo,
-    ForkKey,
+    GitHubRepo,
+    GitHubRepoKey,
     HelmDeploymentParams,
     ManifestsDeploymentParams,
     PickFilesRequestParams,
@@ -17,7 +17,7 @@ import {
 export interface InitialState {
     workspaceConfig: WorkspaceFolderConfig;
     existingWorkflowFiles: ExistingFile[];
-    forks: ForkInfo[];
+    repos: GitHubRepo[];
     initialSelection: InitialSelection;
 }
 
@@ -59,7 +59,7 @@ export type CreateParams = {
 
 export type ToVsCodeMsgDef = {
     pickFilesRequest: PickFilesRequestParams<PickFilesIdentifier>;
-    getBranchesRequest: ForkKey;
+    getBranchesRequest: GitHubRepoKey;
     getSubscriptionsRequest: void;
     getAcrsRequest: SubscriptionKey;
     getRepositoriesRequest: AcrKey;
@@ -71,7 +71,7 @@ export type ToVsCodeMsgDef = {
 
 export type ToWebViewMsgDef = {
     pickFilesResponse: PickFilesResponse<PickFilesIdentifier>;
-    getBranchesResponse: ForkKey & {
+    getBranchesResponse: GitHubRepoKey & {
         branches: string[];
     };
     getSubscriptionsResponse: Subscription[];

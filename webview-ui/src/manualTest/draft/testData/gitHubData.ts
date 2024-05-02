@@ -1,34 +1,34 @@
-export type ForkData = {
-    name: string;
-    owner: string;
-    repo: string;
+export type GitHubRepoData = {
+    forkName: string;
+    ownerName: string;
+    repoName: string;
     isFork: boolean;
     defaultBranch: string;
     branches: string[];
 };
 
-export function getAllForkData(): ForkData[] {
+export function getGitHubRepoData(): GitHubRepoData[] {
     return [
         {
-            name: "upstream",
-            owner: "Contoso",
-            repo: "aks-store-demo",
+            forkName: "upstream",
+            ownerName: "Contoso",
+            repoName: "aks-store-demo",
             isFork: false,
             defaultBranch: "main",
             branches: ["main", "feature1", "feature2"],
         },
         {
-            name: "origin",
-            owner: "developer",
-            repo: "aks-store-demo",
+            forkName: "origin",
+            ownerName: "developer",
+            repoName: "aks-store-demo",
             isFork: true,
             defaultBranch: "main",
             branches: ["main", "feature1", "feature2"],
         },
         {
-            name: "other-remote",
-            owner: "otherdev",
-            repo: "aks-store-demo",
+            forkName: "other-remote",
+            ownerName: "otherdev",
+            repoName: "aks-store-demo",
             isFork: true,
             defaultBranch: "main",
             branches: ["main", "feature1", "feature2"],

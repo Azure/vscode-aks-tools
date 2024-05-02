@@ -1,4 +1,3 @@
-import { RepositoryKey } from "../../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { replaceItem, updateValues } from "../../../utilities/array";
 import { map as lazyMap, newLoaded, newLoading, newNotLoaded, orDefault } from "../../../utilities/lazy";
 import { AcrReferenceData, RepositoryReferenceData } from "../stateTypes";
@@ -10,13 +9,17 @@ export function setRepositoriesLoading(data: AcrReferenceData): AcrReferenceData
 
 export function updateRepositoryNames(data: AcrReferenceData, repositoryNames: string[]): AcrReferenceData {
     const existingRepos = orDefault(data.repositories, []);
-    const newKeys: RepositoryKey[] = repositoryNames.map((repositoryName) => ({ ...data.key, repositoryName }));
     const updatedRepos = updateValues(
         existingRepos,
-        newKeys,
-        (repo) => repo.key,
-        (key) => ({
-            key,
+        repositoryNames,
+        (name, repo) => name === repo.key.repositoryName,
+        (name) => ({
+            key: {
+                subscriptionId: data.key.subscriptionId,
+                resourceGroup: data.key.resourceGroup,
+                acrName: data.key.acrName,
+                repositoryName: name,
+            },
             tags: newNotLoaded(),
         }),
     );

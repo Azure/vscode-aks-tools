@@ -2,7 +2,7 @@ import { FormEvent, useEffect } from "react";
 import { CreateParams, InitialState } from "../../../../src/webview-contract/webviewDefinitions/draft/draftWorkflow";
 import {
     DeploymentSpecType,
-    ForkInfo,
+    GitHubRepo,
     HelmDeploymentParams,
     HelmOverride,
     ManifestsDeploymentParams,
@@ -26,9 +26,9 @@ import {
     EventHandlerFunc,
     ensureAcrsLoaded,
     ensureAcrRepositoryNamesLoaded,
+    ensureBranchNamesLoaded,
     ensureClustersLoaded,
     ensureClusterNamespacesLoaded,
-    ensureForkBranchNamesLoaded,
     ensureSubscriptionsLoaded,
 } from "./dataLoading";
 import { DraftWorkflowState, HelmOverrideState, stateUpdater, vscode } from "./state";
@@ -84,9 +84,9 @@ export function DraftWorkflow(initialState: InitialState) {
         }
     }
 
-    function handleForkSelect(fork: ForkInfo | null) {
-        const validated = fork === null ? missing<ForkInfo>("Fork is required.") : valid(fork);
-        eventHandlers.onSetFork(validated);
+    function handleGitHubRepoSelect(repo: GitHubRepo | null) {
+        const validated = repo === null ? missing<GitHubRepo>("GitHub repository is required.") : valid(repo);
+        eventHandlers.onSetGitHubRepo(validated);
     }
 
     function handleBranchSelect(branch: string | null) {
@@ -362,7 +362,7 @@ export function DraftWorkflow(initialState: InitialState) {
 
     const existingFile = state.existingFile;
 
-    const forkTooltipMessage =
+    const gitHubRepoTooltipMessage =
         "Select the primary/upstream fork of this repository.\n\nThis will allow you to select which branch will trigger the workflow.";
 
     return (
@@ -395,23 +395,23 @@ export function DraftWorkflow(initialState: InitialState) {
                         </span>
                     )}
 
-                    <label htmlFor="fork-input" className={styles.label}>
-                        Fork *
-                        <span className={"tooltip-holder"} data-tooltip-text={forkTooltipMessage}>
+                    <label htmlFor="gh-repo-input" className={styles.label}>
+                        GitHub repository *
+                        <span className={"tooltip-holder"} data-tooltip-text={gitHubRepoTooltipMessage}>
                             <i className={`${styles.inlineIcon} codicon codicon-info`} />
                         </span>
                     </label>
-                    <ResourceSelector<ForkInfo>
-                        id="fork-input"
+                    <ResourceSelector<GitHubRepo>
+                        id="gh-repo-input"
                         className={styles.control}
-                        resources={state.gitHubReferenceData.forks.map((f) => f.fork)}
-                        selectedItem={toNullable(state.fork)}
-                        valueGetter={(f) => f.name}
-                        labelGetter={(f) => `${f.name} (${f.owner})`}
-                        onSelect={handleForkSelect}
+                        resources={state.gitHubReferenceData.repositories.map((r) => r.repository)}
+                        selectedItem={toNullable(state.gitHubRepo)}
+                        valueGetter={(r) => r.url}
+                        labelGetter={(r) => `${r.gitHubRepoOwner}/${r.gitHubRepoName} (${r.forkName})`}
+                        onSelect={handleGitHubRepoSelect}
                     />
 
-                    {isValid(state.fork) && (
+                    {isValid(state.gitHubRepo) && (
                         <>
                             <label htmlFor="branch-input" className={styles.label}>
                                 Branch *
@@ -873,7 +873,7 @@ function prepareData(state: DraftWorkflowState, updates: EventHandlerFunc[]): Lo
         acrs.filter((a) => a.resourceGroup === acrResourceGroup).map((a) => a.acrName),
     );
     return {
-        lazyBranchNames: ensureForkBranchNamesLoaded(state.gitHubReferenceData, toNullable(state.fork), updates),
+        lazyBranchNames: ensureBranchNamesLoaded(state.gitHubReferenceData, toNullable(state.gitHubRepo), updates),
         lazySubscriptions: ensureSubscriptionsLoaded(state.azureReferenceData, updates),
         lazyClusterResourceGroups,
         lazyClusterNames,

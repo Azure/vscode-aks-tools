@@ -10,12 +10,12 @@ import {
 } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
 import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
-import { Repository } from "../../types/git";
 import { Octokit } from "@octokit/rest";
 import {
     AcrKey,
     ClusterKey,
-    ForkInfo,
+    GitHubRepo,
+    GitHubRepoKey,
     PickFilesRequestParams,
 } from "../../webview-contract/webviewDefinitions/draft/types";
 import { CreateParams, InitialSelection } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
@@ -54,9 +54,8 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
         readonly workspaceFolder: WorkspaceFolder,
         readonly draftBinaryPath: string,
         readonly kubectl: APIAvailable<KubectlV1>,
-        readonly gitRepo: Repository,
         readonly githubSession: AuthenticationSession,
-        readonly forks: ForkInfo[],
+        readonly gitHubRepos: GitHubRepo[],
         readonly existingWorkflowFiles: ExistingFile[],
         readonly initialSelection: InitialSelection,
     ) {
@@ -78,7 +77,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
                 pathSeparator: path.sep,
             },
             existingWorkflowFiles: this.existingWorkflowFiles,
-            forks: this.forks,
+            repos: this.gitHubRepos,
             initialSelection: this.initialSelection,
         };
     }
@@ -100,7 +99,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             pickFilesRequest: (args) => this.handlePickFilesRequest(args, webview),
-            getBranchesRequest: (args) => this.handleGetBranchesRequest(args.forkName, webview),
+            getBranchesRequest: (args) => this.handleGetBranchesRequest(args, webview),
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
             getAcrsRequest: (key) => this.handleGetAcrsRequest(key.subscriptionId, webview),
             getRepositoriesRequest: (key) =>
@@ -136,20 +135,26 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
         });
     }
 
-    private async handleGetBranchesRequest(forkName: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const fork = this.forks.find((f) => f.name === forkName);
-        if (!fork) {
-            window.showErrorMessage(`Fork ${forkName} not found.`);
+    private async handleGetBranchesRequest(repoKey: GitHubRepoKey, webview: MessageSink<ToWebViewMsgDef>) {
+        const repo = this.gitHubRepos.find(
+            (r) => r.gitHubRepoOwner === repoKey.gitHubRepoOwner && r.gitHubRepoName === repoKey.gitHubRepoName,
+        );
+
+        if (!repo) {
+            window.showErrorMessage(
+                `GitHub repository ${repoKey.gitHubRepoOwner}/${repoKey.gitHubRepoName} not found.`,
+            );
             return;
         }
 
         const branches = await this.octokit.repos.listBranches({
-            owner: fork.owner,
-            repo: fork.repo,
+            owner: repoKey.gitHubRepoOwner,
+            repo: repoKey.gitHubRepoName,
         });
 
         webview.postGetBranchesResponse({
-            forkName,
+            gitHubRepoOwner: repoKey.gitHubRepoOwner,
+            gitHubRepoName: repoKey.gitHubRepoName,
             branches: branches.data.map((b) => b.name),
         });
     }

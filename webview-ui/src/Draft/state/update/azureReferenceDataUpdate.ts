@@ -18,7 +18,7 @@ export function updateSubscriptions(data: AzureReferenceData, subscriptions: Sub
     const updatedSubs = updateValues(
         existingSubs,
         subscriptions,
-        (sub) => sub.subscription,
+        (sub, item) => sub.id === item.subscription.id,
         (subscription) => ({
             subscription,
             acrs: newNotLoaded(),

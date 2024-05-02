@@ -9,7 +9,7 @@ import {
 import {
     AcrKey,
     ClusterKey,
-    ForkKey,
+    GitHubRepoKey,
     PickFilesRequestParams,
     SubscriptionKey,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
@@ -31,7 +31,7 @@ import {
 } from "../utilities/testFileSystemUtils";
 import { getAllSubscriptionData } from "./testData/azureData";
 import { aksStoreDemoFiles } from "./testData/fileSystemData";
-import { getAllForkData } from "./testData/gitHubData";
+import { getGitHubRepoData } from "./testData/gitHubData";
 import { FilePickerWrapper } from "../components/FilePickerWrapper";
 import { TestDialogEvents } from "../utilities/testDialogEvents";
 import { CreateParams } from "../../../../src/webview-contract/webviewDefinitions/draft/draftWorkflow";
@@ -50,7 +50,7 @@ const existingWorkflowFiles = workflowsDir.contents.filter(isWorkflowFile).map((
 }));
 
 const allSubscriptionData = getAllSubscriptionData();
-const allForkData = getAllForkData();
+const allGitHubRepoData = getGitHubRepoData();
 
 function isWorkflowFile(item: FileOrDirectory): boolean {
     if (isDirectory(item)) {
@@ -65,13 +65,13 @@ function createInitialState(initialSelection: InitialSelection): InitialState {
         initialSelection,
         workspaceConfig,
         existingWorkflowFiles,
-        forks: allForkData.map((f) => ({
-            name: f.name,
-            url: `https://github.com/${f.owner}/${f.name}.git`,
-            owner: f.owner,
-            repo: f.repo,
-            isFork: f.isFork,
-            defaultBranch: f.defaultBranch,
+        repos: allGitHubRepoData.map((r) => ({
+            gitHubRepoOwner: r.ownerName,
+            gitHubRepoName: r.repoName,
+            forkName: r.forkName,
+            url: `https://github.com/${r.ownerName}/${r.repoName}.git`,
+            isFork: r.isFork,
+            defaultBranch: r.defaultBranch,
         })),
     };
 }
@@ -103,12 +103,15 @@ export function getDraftWorkflowScenarios() {
             }
         }
 
-        async function handleGetBranchesRequest(forkKey: ForkKey) {
+        async function handleGetBranchesRequest(repoKey: GitHubRepoKey) {
             await delay(2000);
-            const forkData = allForkData.find((f) => f.name === forkKey.forkName);
-            const branches = forkData?.branches || [];
+            const repoData = allGitHubRepoData.find(
+                (r) => r.ownerName === repoKey.gitHubRepoOwner && r.repoName === repoKey.gitHubRepoName,
+            );
+            const branches = repoData?.branches || [];
             webview.postGetBranchesResponse({
-                ...forkKey,
+                gitHubRepoOwner: repoKey.gitHubRepoOwner,
+                gitHubRepoName: repoKey.gitHubRepoName,
                 branches,
             });
         }

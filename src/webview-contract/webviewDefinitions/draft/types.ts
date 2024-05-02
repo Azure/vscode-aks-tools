@@ -14,11 +14,14 @@ export type LanguageVersionInfo = {
     runtimeImageTag: string;
 };
 
-export type ForkInfo = {
-    name: string;
+export type GitHubRepoKey = {
+    gitHubRepoOwner: string;
+    gitHubRepoName: string;
+};
+
+export type GitHubRepo = GitHubRepoKey & {
+    forkName: string;
     url: string;
-    owner: string;
-    repo: string;
     isFork: boolean;
     defaultBranch: string;
 };
@@ -49,10 +52,6 @@ export type RepositoryKey = AcrKey & {
 
 export type ClusterKey = ResourceGroupKey & {
     clusterName: string;
-};
-
-export type ForkKey = {
-    forkName: string;
 };
 
 export type NewOrExisting<T> = {
