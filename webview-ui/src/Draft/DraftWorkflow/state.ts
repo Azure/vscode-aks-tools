@@ -395,15 +395,16 @@ function getSelectedValidatableValue<TItem>(
 }
 
 function getSelectedBranch(state: DraftWorkflowState, key: GitHubRepoKey, branches: string[]): Validatable<string> {
-    if (
-        !isValueSet(state.selectedGitHubRepo) ||
-        key.gitHubRepoOwner !== state.selectedGitHubRepo.value.gitHubRepoOwner ||
-        key.gitHubRepoName !== state.selectedGitHubRepo.value.gitHubRepoName
-    ) {
+    if (!isValueSet(state.selectedGitHubRepo)) {
         return unset();
     }
 
-    const defaultBranch = state.selectedGitHubRepo.value.defaultBranch;
+    const selectedRepo = state.selectedGitHubRepo.value;
+    if (key.gitHubRepoOwner !== selectedRepo.gitHubRepoOwner || key.gitHubRepoName !== selectedRepo.gitHubRepoName) {
+        return unset();
+    }
+
+    const defaultBranch = selectedRepo.defaultBranch;
     if (!branches.includes(defaultBranch)) {
         return unset();
     }

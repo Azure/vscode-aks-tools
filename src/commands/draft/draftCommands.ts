@@ -22,7 +22,7 @@ import { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
 import { Remote } from "../../types/git";
 import { GitHubRepo } from "../../webview-contract/webviewDefinitions/draft/types";
 import { ExistingFile } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
-import { basename, join } from "path";
+import { basename, extname, join } from "path";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { DraftCommandParamsType } from "./types";
@@ -141,7 +141,7 @@ export async function draftWorkflow(
             .map((f) => {
                 const [name] = f;
                 return {
-                    name: basename(name),
+                    name: basename(name, extname(name)),
                     path: join(".github", "workflows", name),
                 };
             });

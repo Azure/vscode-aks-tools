@@ -908,6 +908,6 @@ function getExistingFile(state: DraftWorkflowState, workflowName: Validatable<st
         return null;
     }
 
-    const file = state.existingWorkflowFiles.find((f) => f.name === workflowName.value);
+    const file = state.existingWorkflowFiles.find((f) => f.name.toLowerCase() === workflowName.value.toLowerCase());
     return file ? file.path : null;
 }
