@@ -186,10 +186,13 @@ export function getDraftWorkflowScenarios() {
                 [...rootDir.path, rootDir.name, ".github", "workflows", `${createParams.workflowName}.yaml`],
                 "file",
             );
-            webview.postCreateWorkflowResponse({
-                name: createParams.workflowName,
-                path: `.github/workflows/${createParams.workflowName}.yaml`,
-            });
+            webview.postCreateWorkflowResponse([
+                ...existingWorkflowFiles,
+                {
+                    name: createParams.workflowName,
+                    path: `.github/workflows/${createParams.workflowName}.yaml`,
+                },
+            ]);
         }
 
         function handleOpenFileRequest(relativePath: string) {

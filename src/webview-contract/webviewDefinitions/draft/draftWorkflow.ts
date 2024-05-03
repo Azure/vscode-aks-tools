@@ -87,7 +87,7 @@ export type ToWebViewMsgDef = {
     getNamespacesResponse: ClusterKey & {
         namespaceNames: string[];
     };
-    createWorkflowResponse: ExistingFile;
+    createWorkflowResponse: ExistingFile[];
 };
 
 export type PickFilesIdentifier = "Dockerfile" | "BuildContext" | "Manifests" | "HelmCharts" | "HelmValuesYaml";

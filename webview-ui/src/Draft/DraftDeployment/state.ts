@@ -20,91 +20,111 @@ import * as AzureReferenceDataUpdate from "../state/update/azureReferenceDataUpd
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
 
 export type EventDef = {
+    // Reference data loading
     setSubscriptionsLoading: void;
     setAcrsLoading: SubscriptionKey;
     setRepositoriesLoading: AcrKey;
     setRepoTagsLoading: RepositoryKey;
     setClustersLoading: SubscriptionKey;
     setClusterNamespacesLoading: ClusterKey;
-    setSubscription: Validatable<Subscription>;
-    setAcrResourceGroup: Validatable<string>;
-    setAcr: Validatable<string>;
-    setNewAcrRepository: string;
-    setAcrRepository: Validatable<NewOrExisting<string>>;
-    setNewAcrRepoTag: string;
-    setAcrRepoTag: Validatable<NewOrExisting<string>>;
-    setClusterResourceGroup: string | null;
-    setCluster: string | null;
-    setNewClusterNamespace: string;
-    setClusterNamespace: Validatable<NewOrExisting<string>>;
-    setApplicationName: Validatable<string>;
-    setDeploymentSpecType: DeploymentSpecType;
-    setTargetPort: Validatable<number>;
-    setServicePort: Validatable<number>;
+
+    // Setting selected values
+    setSelectedSubscription: Validatable<Subscription>;
+    setSelectedAcrResourceGroup: Validatable<string>;
+    setSelectedAcr: Validatable<string>;
+    setSelectedAcrRepository: Validatable<NewOrExisting<string>>;
+    setSelectedAcrRepoTag: Validatable<NewOrExisting<string>>;
+    setSelectedClusterResourceGroup: string | null;
+    setSelectedCluster: string | null;
+    setSelectedClusterNamespace: Validatable<NewOrExisting<string>>;
+    setSelectedApplicationName: Validatable<string>;
+    setSelectedDeploymentSpecType: DeploymentSpecType;
+    setSelectedTargetPort: Validatable<number>;
+    setSelectedServicePort: Validatable<number>;
+
+    // Updating status
     setCreating: void;
 };
 
 export type DraftDeploymentState = {
-    pendingSelection: InitialSelection;
-    workspaceConfig: WorkspaceFolderConfig;
-    location: ValidatableValue<string>;
-    existingFiles: ExistingFiles;
+    // Overall status
     status: Status;
+
+    // Reference data
+    workspaceConfig: WorkspaceFolderConfig;
     azureReferenceData: AzureReferenceData;
-    subscription: Validatable<Subscription>;
-    acrResourceGroup: Validatable<string>;
-    acr: Validatable<string>;
-    newAcrRepository: string | null;
-    acrRepository: Validatable<NewOrExisting<string>>;
-    newAcrRepoTag: string | null;
-    acrRepoTag: Validatable<NewOrExisting<string>>;
-    clusterResourceGroup: string | null;
-    cluster: string | null;
-    newClusterNamespace: string | null;
-    clusterNamespace: Validatable<NewOrExisting<string>>;
-    applicationName: Validatable<string>;
-    deploymentSpecType: DeploymentSpecType;
-    targetPort: Validatable<number>;
-    servicePort: Validatable<number>;
+
+    // Properties waiting to be automatically selected when data is available
+    pendingSelection: InitialSelection;
+
+    // Selected items
+    selectedLocation: ValidatableValue<string>;
+    selectedSubscription: Validatable<Subscription>;
+    selectedAcrResourceGroup: Validatable<string>;
+    selectedAcr: Validatable<string>;
+    selectedAcrRepository: Validatable<NewOrExisting<string>>;
+    selectedAcrRepoTag: Validatable<NewOrExisting<string>>;
+    selectedClusterResourceGroup: string | null;
+    selectedCluster: string | null;
+    selectedClusterNamespace: Validatable<NewOrExisting<string>>;
+    selectedApplicationName: Validatable<string>;
+    selectedDeploymentSpecType: DeploymentSpecType;
+    selectedTargetPort: Validatable<number>;
+    selectedServicePort: Validatable<number>;
+
+    // Deployment files that already exist in the selected location
+    existingFiles: ExistingFiles;
 };
 
 export type Status = "Editing" | "Creating" | "Created";
 
 export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, DraftDeploymentState> = {
     createState: (initialState) => ({
-        pendingSelection: { ...initialState.initialSelection, targetPort: undefined },
-        workspaceConfig: initialState.workspaceConfig,
-        location: getValidatedLocation(initialState.location, "manifests", initialState.existingFiles),
-        existingFiles: initialState.existingFiles,
         status: "Editing",
+
+        // Reference data
+        workspaceConfig: initialState.workspaceConfig,
         azureReferenceData: {
             subscriptions: newNotLoaded(),
         },
-        subscription: unset(),
-        clusterResourceGroup: null,
-        cluster: null,
-        newClusterNamespace: null,
-        clusterNamespace: unset(),
-        acrResourceGroup: unset(),
-        acr: unset(),
-        newAcrRepository: null,
-        acrRepository: unset(),
-        newAcrRepoTag: null,
-        acrRepoTag: unset(),
-        applicationName: unset(),
-        deploymentSpecType: "manifests",
-        targetPort: valid(initialState.initialSelection.targetPort || 80),
-        servicePort: valid(80),
+
+        // Pending selections (remove those we can select immediately)
+        pendingSelection: { ...initialState.initialSelection, targetPort: undefined },
+
+        // Selected items
+        selectedLocation: getValidatedLocation(initialState.location, "manifests", initialState.existingFiles),
+        selectedSubscription: unset(),
+        selectedClusterResourceGroup: null,
+        selectedCluster: null,
+        selectedClusterNamespace: unset(),
+        selectedAcrResourceGroup: unset(),
+        selectedAcr: unset(),
+        selectedAcrRepository: unset(),
+        selectedAcrRepoTag: unset(),
+        selectedApplicationName: unset(),
+        selectedDeploymentSpecType: "manifests",
+        selectedTargetPort: valid(initialState.initialSelection.targetPort || 80),
+        selectedServicePort: valid(80),
+
+        // Populate existing files from initial state
+        existingFiles: initialState.existingFiles,
     }),
     vscodeMessageHandler: {
         pickLocationResponse: (state, response) => ({
             ...state,
             existingFiles: response.existingFiles,
-            location: getValidatedLocation(response.location, state.deploymentSpecType, response.existingFiles),
+            selectedLocation: getValidatedLocation(
+                response.location,
+                state.selectedDeploymentSpecType,
+                response.existingFiles,
+            ),
         }),
         getSubscriptionsResponse: (state, subs) => ({
             ...state,
-            subscription: getSelectedValidatableValue(subs, (s) => s.id === state.pendingSelection.subscriptionId),
+            selectedSubscription: getSelectedValidatableValue(
+                subs,
+                (s) => s.id === state.pendingSelection.subscriptionId,
+            ),
             azureReferenceData: AzureReferenceDataUpdate.updateSubscriptions(state.azureReferenceData, subs),
         }),
         getAcrsResponse: (state, args) => ({
@@ -129,11 +149,11 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
         }),
         getClustersResponse: (state, args) => ({
             ...state,
-            clusterResourceGroup: getSelectedValue(
+            selectedClusterResourceGroup: getSelectedValue(
                 args.clusterKeys.map((c) => c.resourceGroup),
                 (rg) => rg === state.pendingSelection.clusterResourceGroup,
             ),
-            cluster: getSelectedValue(
+            selectedCluster: getSelectedValue(
                 args.clusterKeys.map((c) => c.clusterName),
                 (c) => c === state.pendingSelection.clusterName,
             ),
@@ -185,88 +205,73 @@ export const stateUpdater: WebviewStateUpdater<"draftDeployment", EventDef, Draf
             ...state,
             azureReferenceData: AzureReferenceDataUpdate.setClusterNamespacesLoading(state.azureReferenceData, args),
         }),
-        setSubscription: (state, subscription) => ({
+        setSelectedSubscription: (state, sub) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, subscriptionId: undefined },
-            subscription,
-            clusterResourceGroup: null,
-            cluster: null,
-            clusterNamespace: unset(),
-            acrResourceGroup: unset(),
-            acr: unset(),
-            acrRepository: unset(),
-            acrRepoTag: unset(),
+            selectedSubscription: sub,
+            selectedClusterResourceGroup: null,
+            selectedCluster: null,
+            selectedClusterNamespace: unset(),
+            selectedAcrResourceGroup: unset(),
+            selectedAcr: unset(),
+            selectedAcrRepository: unset(),
+            selectedAcrRepoTag: unset(),
         }),
-        setClusterResourceGroup: (state, clusterResourceGroup) => ({
+        setSelectedClusterResourceGroup: (state, rg) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, clusterResourceGroup: undefined },
-            clusterResourceGroup,
-            cluster: null,
-            clusterNamespace: unset(),
+            selectedClusterResourceGroup: rg,
+            selectedCluster: null,
+            selectedClusterNamespace: unset(),
         }),
-        setCluster: (state, cluster) => ({
+        setSelectedCluster: (state, cluster) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, clusterName: undefined },
-            cluster,
-            clusterNamespace: unset(),
+            selectedCluster: cluster,
+            selectedClusterNamespace: unset(),
         }),
-        setNewClusterNamespace: (state, newClusterNamespace) => ({
+        setSelectedClusterNamespace: (state, ns) => ({
             ...state,
-            newClusterNamespace,
-            clusterNamespace: valid({ isNew: true, value: newClusterNamespace }),
+            selectedClusterNamespace: ns,
         }),
-        setClusterNamespace: (state, clusterNamespace) => ({
+        setSelectedAcrResourceGroup: (state, rg) => ({
             ...state,
-            clusterNamespace,
+            selectedAcrResourceGroup: rg,
+            selectedAcr: unset(),
+            selectedAcrRepository: unset(),
+            selectedAcrRepoTag: unset(),
         }),
-        setAcrResourceGroup: (state, acrResourceGroup) => ({
+        setSelectedAcr: (state, acr) => ({
             ...state,
-            acrResourceGroup,
-            acr: unset(),
-            acrRepository: unset(),
-            acrRepoTag: unset(),
+            selectedAcr: acr,
+            selectedAcrRepository: unset(),
+            selectedAcrRepoTag: unset(),
         }),
-        setAcr: (state, acr) => ({
+        setSelectedAcrRepository: (state, repo) => ({
             ...state,
-            acr,
-            acrRepository: unset(),
-            acrRepoTag: unset(),
+            selectedAcrRepository: repo,
+            selectedAcrRepoTag: unset(),
         }),
-        setNewAcrRepository: (state, newAcrRepository) => ({
+        setSelectedAcrRepoTag: (state, tag) => ({
             ...state,
-            newAcrRepository,
-            acrRepository: valid({ isNew: true, value: newAcrRepository }),
+            selectedAcrRepoTag: tag,
         }),
-        setAcrRepository: (state, acrRepository) => ({
+        setSelectedApplicationName: (state, name) => ({
             ...state,
-            acrRepository,
-            acrRepoTag: unset(),
+            selectedApplicationName: name,
         }),
-        setNewAcrRepoTag: (state, newAcrRepoTag) => ({
+        setSelectedDeploymentSpecType: (state, specType) => ({
             ...state,
-            newAcrRepoTag,
-            acrRepoTag: valid({ isNew: true, value: newAcrRepoTag }),
+            selectedDeploymentSpecType: specType,
+            selectedLocation: getValidatedLocation(state.selectedLocation.value, specType, state.existingFiles),
         }),
-        setAcrRepoTag: (state, acrRepoTag) => ({
+        setSelectedTargetPort: (state, port) => ({
             ...state,
-            acrRepoTag,
+            selectedTargetPort: port,
         }),
-        setApplicationName: (state, applicationName) => ({
+        setSelectedServicePort: (state, port) => ({
             ...state,
-            applicationName,
-        }),
-        setDeploymentSpecType: (state, deploymentSpecType) => ({
-            ...state,
-            deploymentSpecType,
-            location: getValidatedLocation(state.location.value, deploymentSpecType, state.existingFiles),
-        }),
-        setTargetPort: (state, targetPort) => ({
-            ...state,
-            targetPort,
-        }),
-        setServicePort: (state, servicePort) => ({
-            ...state,
-            servicePort,
+            selectedServicePort: port,
         }),
         setCreating: (state) => ({ ...state, status: "Creating" }),
     },

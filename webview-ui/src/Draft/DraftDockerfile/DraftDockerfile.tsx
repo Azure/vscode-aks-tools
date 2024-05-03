@@ -80,7 +80,7 @@ export function DraftDockerfile(initialState: InitialState) {
     }
 
     function validate(): Maybe<CreateParams> {
-        if (!isValid(state.location)) return nothing();
+        if (!isValid(state.selectedLocation)) return nothing();
         if (!isValid(state.selectedLanguage)) return nothing();
         if (!isValid(state.selectedLanguageVersion)) return nothing();
         if (state.isBuilderImageRequired && !isValid(state.builderImageTag)) return nothing();
@@ -92,7 +92,7 @@ export function DraftDockerfile(initialState: InitialState) {
             builderImageTag: orDefault(state.builderImageTag, null),
             runtimeImageTag: state.runtimeImageTag.value,
             port: state.selectedPort.value,
-            location: state.location.value,
+            location: state.selectedLocation.value,
         });
     }
 
@@ -111,14 +111,14 @@ export function DraftDockerfile(initialState: InitialState) {
         e.preventDefault();
         vscode.postLaunchDraftDeployment({
             initialTargetPort: orDefault(state.selectedPort, null),
-            initialLocation: state.location.value,
+            initialLocation: state.selectedLocation.value,
         });
     }
 
     function handleDraftWorkflowClick(e: MouseEvent) {
         e.preventDefault();
         vscode.postLaunchDraftWorkflow({
-            initialDockerfileLocation: state.location.value,
+            initialDockerfileLocation: state.selectedLocation.value,
         });
     }
 
@@ -149,7 +149,7 @@ export function DraftDockerfile(initialState: InitialState) {
                 <VSCodeTextField
                     id="location-input"
                     readOnly
-                    value={`.${state.workspaceConfig.pathSeparator}${state.location.value}`}
+                    value={`.${state.workspaceConfig.pathSeparator}${state.selectedLocation.value}`}
                     className={styles.control}
                 />
                 <div className={styles.controlSupplement}>
@@ -160,10 +160,10 @@ export function DraftDockerfile(initialState: InitialState) {
                         </span>
                     </VSCodeButton>
                 </div>
-                {hasMessage(state.location) && (
+                {hasMessage(state.selectedLocation) && (
                     <span className={styles.validationMessage}>
                         <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                        {state.location.message}
+                        {state.selectedLocation.message}
                     </span>
                 )}
 

@@ -23,62 +23,73 @@ import * as AzureReferenceDataUpdate from "../state/update/azureReferenceDataUpd
 import * as GitHubReferenceDataUpdate from "../state/update/gitHubReferenceDataUpdate";
 
 export type EventDef = {
+    // Reference data loading
     setBranchesLoading: GitHubRepoKey;
     setSubscriptionsLoading: void;
     setAcrsLoading: SubscriptionKey;
     setRepositoriesLoading: AcrKey;
     setClustersLoading: SubscriptionKey;
     setNamespacesLoading: ClusterKey;
-    setWorkflowName: Validatable<string>;
-    setGitHubRepo: Validatable<GitHubRepo>;
-    setBranchName: Validatable<string>;
-    setSubscription: Validatable<Subscription>;
-    setAcrResourceGroup: Validatable<string>;
-    setAcr: Validatable<string>;
-    setRepositoryName: Validatable<NewOrExisting<string>>;
-    setNewRepositoryName: string;
-    setClusterResourceGroup: Validatable<string>;
-    setCluster: Validatable<string>;
-    setNamespace: Validatable<NewOrExisting<string>>;
-    setNewNamespace: string;
-    setDeploymentSpecType: DeploymentSpecType;
-    setManifestPaths: Validatable<string[]>;
-    setHelmOverrides: HelmOverrideState[];
+
+    // Setting selected values
+    setSelectedWorkflowName: Validatable<string>;
+    setSelectedGitHubRepo: Validatable<GitHubRepo>;
+    setSelectedBranchName: Validatable<string>;
+    setSelectedSubscription: Validatable<Subscription>;
+    setSelectedAcrResourceGroup: Validatable<string>;
+    setSelectedAcr: Validatable<string>;
+    setSelectedRepositoryName: Validatable<NewOrExisting<string>>;
+    setSelectedClusterResourceGroup: Validatable<string>;
+    setSelectedCluster: Validatable<string>;
+    setSelectedClusterNamespace: Validatable<NewOrExisting<string>>;
+    setSelectedDeploymentSpecType: DeploymentSpecType;
+    setSelectedManifestPaths: Validatable<string[]>;
+    setSelectedHelmOverrides: HelmOverrideState[];
+
+    // Updating status
     setCreating: void;
 };
 
 export type DraftWorkflowState = {
-    pendingSelection: InitialSelection;
-    workspaceConfig: WorkspaceFolderConfig;
-    existingWorkflowFiles: ExistingFile[];
+    // Overall status
     status: Status;
-    existingFile: string | null;
+
+    // Reference data
+    workspaceConfig: WorkspaceFolderConfig;
     azureReferenceData: AzureReferenceData;
     gitHubReferenceData: GitHubReferenceData;
-    workflowName: Validatable<string>;
-    gitHubRepo: Validatable<GitHubRepo>;
-    branchName: Validatable<string>;
-    dockerfilePath: Validatable<string>;
-    buildContextPath: string;
-    subscription: Validatable<Subscription>;
-    acrResourceGroup: Validatable<string>;
-    acr: Validatable<string>;
-    repositoryName: Validatable<NewOrExisting<string>>;
-    newRepositoryName: string | null;
-    clusterResourceGroup: Validatable<string>;
-    cluster: Validatable<string>;
-    namespace: Validatable<NewOrExisting<string>>;
-    newNamespace: string | null;
-    deploymentSpecType: DeploymentSpecType;
+
+    // Properties waiting to be automatically selected when data is available
+    pendingSelection: InitialSelection;
+
+    // Selected items
+    selectedWorkflowName: Validatable<string>;
+    selectedGitHubRepo: Validatable<GitHubRepo>;
+    selectedBranchName: Validatable<string>;
+    selectedDockerfilePath: Validatable<string>;
+    selectedBuildContextPath: string;
+    selectedSubscription: Validatable<Subscription>;
+    selectedAcrResourceGroup: Validatable<string>;
+    selectedAcr: Validatable<string>;
+    selectedRepositoryName: Validatable<NewOrExisting<string>>;
+    selectedClusterResourceGroup: Validatable<string>;
+    selectedCluster: Validatable<string>;
+    selectedClusterNamespace: Validatable<NewOrExisting<string>>;
+    selectedDeploymentSpecType: DeploymentSpecType;
+
+    // State that's specific to the selected deployment type
     helmParamsState: HelmParamsState;
     manifestsParamsState: ManifestsParamsState;
+
+    // Workflow files that already exist in the selected location
+    existingWorkflowFiles: ExistingFile[];
 };
 
 export type HelmParamsState = {
     deploymentType: "helm";
-    chartPath: Validatable<string>;
-    valuesYamlPath: Validatable<string>;
-    overrides: HelmOverrideState[];
+    selectedChartPath: Validatable<string>;
+    selectedValuesYamlPath: Validatable<string>;
+    selectedOverrides: HelmOverrideState[];
 };
 
 export type HelmOverrideState = {
@@ -88,26 +99,17 @@ export type HelmOverrideState = {
 
 export type ManifestsParamsState = {
     deploymentType: "manifests";
-    manifestPaths: Validatable<string[]>;
+    selectedManifestPaths: Validatable<string[]>;
 };
 
 export type Status = "Editing" | "Creating" | "Created";
 
 export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftWorkflowState> = {
     createState: (initialState) => ({
-        pendingSelection: {
-            ...initialState.initialSelection,
-            dockerfilePath: undefined,
-            dockerfileBuildContextPath: undefined,
-            deploymentSpecType: undefined,
-            helmChartPath: undefined,
-            helmValuesYamlPath: undefined,
-            manifestFilePaths: undefined,
-        },
-        workspaceConfig: initialState.workspaceConfig,
-        existingWorkflowFiles: initialState.existingWorkflowFiles,
         status: "Editing",
-        existingFile: null,
+
+        // Reference data
+        workspaceConfig: initialState.workspaceConfig,
         azureReferenceData: {
             subscriptions: newNotLoaded(),
         },
@@ -117,49 +119,63 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
                 branches: newNotLoaded(),
             })),
         },
-        workflowName: unset(),
-        gitHubRepo: unset(),
-        branchName: unset(),
-        dockerfilePath:
+
+        // Pending selections (remove those we can select immediately)
+        pendingSelection: {
+            ...initialState.initialSelection,
+            dockerfilePath: undefined,
+            dockerfileBuildContextPath: undefined,
+            deploymentSpecType: undefined,
+            helmChartPath: undefined,
+            helmValuesYamlPath: undefined,
+            manifestFilePaths: undefined,
+        },
+
+        // Selected items
+        selectedWorkflowName: unset(),
+        selectedGitHubRepo: unset(),
+        selectedBranchName: unset(),
+        selectedDockerfilePath:
             initialState.initialSelection.dockerfilePath !== undefined
                 ? valid(initialState.initialSelection.dockerfilePath)
                 : unset(),
-        buildContextPath: initialState.initialSelection.dockerfileBuildContextPath || "",
-        subscription: unset(),
-        clusterResourceGroup: unset(),
-        cluster: unset(),
-        namespace: unset(),
-        newNamespace: null,
-        acrResourceGroup: unset(),
-        acr: unset(),
-        repositoryName: unset(),
-        newRepositoryName: null,
-        deploymentSpecType: initialState.initialSelection.deploymentSpecType || "manifests",
+        selectedBuildContextPath: initialState.initialSelection.dockerfileBuildContextPath || "",
+        selectedSubscription: unset(),
+        selectedClusterResourceGroup: unset(),
+        selectedCluster: unset(),
+        selectedClusterNamespace: unset(),
+        selectedAcrResourceGroup: unset(),
+        selectedAcr: unset(),
+        selectedRepositoryName: unset(),
+        selectedDeploymentSpecType: initialState.initialSelection.deploymentSpecType || "manifests",
         helmParamsState: {
             deploymentType: "helm",
-            chartPath:
+            selectedChartPath:
                 initialState.initialSelection.helmChartPath !== undefined
                     ? valid(initialState.initialSelection.helmChartPath)
                     : unset(),
-            valuesYamlPath:
+            selectedValuesYamlPath:
                 initialState.initialSelection.helmValuesYamlPath !== undefined
                     ? valid(initialState.initialSelection.helmValuesYamlPath)
                     : unset(),
-            overrides: [],
+            selectedOverrides: [],
         },
         manifestsParamsState: {
             deploymentType: "manifests",
-            manifestPaths:
+            selectedManifestPaths:
                 initialState.initialSelection.manifestFilePaths !== undefined
                     ? valid(initialState.initialSelection.manifestFilePaths)
                     : unset(),
         },
+
+        // Populate existing files from initial state
+        existingWorkflowFiles: initialState.existingWorkflowFiles,
     }),
     vscodeMessageHandler: {
         pickFilesResponse: (state, args) => updatePickedFile(state, args.identifier, args.paths),
         getBranchesResponse: (state, args) => ({
             ...state,
-            branchName: getSelectedBranch(state, args, args.branches),
+            selectedBranchName: getSelectedBranch(state, args, args.branches),
             gitHubReferenceData: GitHubReferenceDataUpdate.updateBranches(
                 state.gitHubReferenceData,
                 args,
@@ -168,16 +184,19 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
         }),
         getSubscriptionsResponse: (state, subs) => ({
             ...state,
-            subscription: getSelectedValidatableValue(subs, (s) => s.id === state.pendingSelection.subscriptionId),
+            selectedSubscription: getSelectedValidatableValue(
+                subs,
+                (s) => s.id === state.pendingSelection.subscriptionId,
+            ),
             azureReferenceData: AzureReferenceDataUpdate.updateSubscriptions(state.azureReferenceData, subs),
         }),
         getAcrsResponse: (state, args) => ({
             ...state,
-            acrResourceGroup: getSelectedValidatableValue(
+            selectedAcrResourceGroup: getSelectedValidatableValue(
                 args.acrKeys.map((acr) => acr.resourceGroup),
                 (rg) => rg === state.pendingSelection.acrResourceGroup,
             ),
-            acr: getSelectedValidatableValue(
+            selectedAcr: getSelectedValidatableValue(
                 args.acrKeys.map((acr) => acr.acrName),
                 (acr) => acr === state.pendingSelection.acrName,
             ),
@@ -189,7 +208,7 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
         }),
         getRepositoriesResponse: (state, args) => ({
             ...state,
-            repositoryName: getSelectedValidatableValue(
+            selectedRepositoryName: getSelectedValidatableValue(
                 args.repositoryNames.map((name) => ({ isNew: false, value: name })),
                 (repo) => repo.value === state.pendingSelection.acrRepository,
             ),
@@ -201,11 +220,11 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
         }),
         getClustersResponse: (state, args) => ({
             ...state,
-            clusterResourceGroup: getSelectedValidatableValue(
+            selectedClusterResourceGroup: getSelectedValidatableValue(
                 args.clusterKeys.map((c) => c.resourceGroup),
                 (rg) => rg === state.pendingSelection.clusterResourceGroup,
             ),
-            cluster: getSelectedValidatableValue(
+            selectedCluster: getSelectedValidatableValue(
                 args.clusterKeys.map((c) => c.clusterName),
                 (c) => c === state.pendingSelection.clusterName,
             ),
@@ -217,7 +236,7 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
         }),
         getNamespacesResponse: (state, args) => ({
             ...state,
-            namespace: getSelectedValidatableValue(
+            selectedClusterNamespace: getSelectedValidatableValue(
                 args.namespaceNames.map((name) => ({ isNew: false, value: name })),
                 (ns) => ns.value === state.pendingSelection.clusterNamespace,
             ),
@@ -227,10 +246,10 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
                 args.namespaceNames,
             ),
         }),
-        createWorkflowResponse: (state, existingFile) => ({
+        createWorkflowResponse: (state, existingFiles) => ({
             ...state,
             status: "Created",
-            existingFile: existingFile.path,
+            existingWorkflowFiles: existingFiles,
         }),
     },
     eventHandler: {
@@ -261,78 +280,67 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             ...state,
             azureReferenceData: AzureReferenceDataUpdate.setClusterNamespacesLoading(state.azureReferenceData, args),
         }),
-        setWorkflowName: (state, name) => ({
+        setSelectedWorkflowName: (state, name) => ({
             ...state,
-            workflowName: name,
-            existingFile: getExistingFile(state, name),
+            selectedWorkflowName: name,
         }),
-        setGitHubRepo: (state, repo) => ({ ...state, gitHubRepo: repo }),
-        setSubscription: (state, subscription) => ({
+        setSelectedGitHubRepo: (state, repo) => ({ ...state, selectedGitHubRepo: repo }),
+        setSelectedSubscription: (state, sub) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, subscriptionId: undefined },
-            subscription,
-            acrResourceGroup: unset(),
-            acr: unset(),
-            repositoryName: unset(),
-            clusterResourceGroup: unset(),
-            cluster: unset(),
-            namespace: unset(),
+            selectedSubscription: sub,
+            selectedAcrResourceGroup: unset(),
+            selectedAcr: unset(),
+            selectedRepositoryName: unset(),
+            selectedClusterResourceGroup: unset(),
+            selectedCluster: unset(),
+            selectedClusterNamespace: unset(),
         }),
-        setBranchName: (state, branch) => ({ ...state, branchName: branch }),
-        setAcrResourceGroup: (state, acrResourceGroup) => ({
+        setSelectedBranchName: (state, branch) => ({ ...state, selectedBranchName: branch }),
+        setSelectedAcrResourceGroup: (state, rg) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, acrResourceGroup: undefined },
-            acrResourceGroup,
-            acr: unset(),
-            repositoryName: unset(),
+            selectedAcrResourceGroup: rg,
+            selectedAcr: unset(),
+            selectedRepositoryName: unset(),
         }),
-        setAcr: (state, acr) => ({
+        setSelectedAcr: (state, acr) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, acrName: undefined },
-            acr,
-            repositoryName: unset(),
+            selectedAcr: acr,
+            selectedRepositoryName: unset(),
         }),
-        setRepositoryName: (state, repository) => ({
+        setSelectedRepositoryName: (state, repository) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, acrRepository: undefined },
-            repositoryName: repository,
+            selectedRepositoryName: repository,
         }),
-        setNewRepositoryName: (state, name) => ({
-            ...state,
-            newRepositoryName: name,
-            repositoryName: valid({ isNew: true, value: name }),
-        }),
-        setClusterResourceGroup: (state, clusterResourceGroup) => ({
+        setSelectedClusterResourceGroup: (state, rg) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, clusterResourceGroup: undefined },
-            clusterResourceGroup,
-            cluster: unset(),
-            namespace: unset(),
+            selectedClusterResourceGroup: rg,
+            selectedCluster: unset(),
+            selectedClusterNamespace: unset(),
         }),
-        setCluster: (state, cluster) => ({
+        setSelectedCluster: (state, cluster) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, clusterName: undefined },
-            cluster,
-            namespace: unset(),
+            selectedCluster: cluster,
+            selectedClusterNamespace: unset(),
         }),
-        setNamespace: (state, namespace) => ({
+        setSelectedClusterNamespace: (state, ns) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, clusterNamespace: undefined },
-            namespace,
+            selectedClusterNamespace: ns,
         }),
-        setNewNamespace: (state, name) => ({
+        setSelectedDeploymentSpecType: (state, type) => ({ ...state, selectedDeploymentSpecType: type }),
+        setSelectedManifestPaths: (state, paths) => ({
             ...state,
-            newNamespace: name,
-            namespace: valid({ isNew: true, value: name }),
+            manifestsParamsState: { ...state.manifestsParamsState, selectedManifestPaths: paths },
         }),
-        setDeploymentSpecType: (state, type) => ({ ...state, deploymentSpecType: type }),
-        setManifestPaths: (state, paths) => ({
+        setSelectedHelmOverrides: (state, overrides) => ({
             ...state,
-            manifestsParamsState: { ...state.manifestsParamsState, manifestPaths: paths },
-        }),
-        setHelmOverrides: (state, overrides) => ({
-            ...state,
-            helmParamsState: { ...state.helmParamsState, overrides },
+            helmParamsState: { ...state.helmParamsState, selectedOverrides: overrides },
         }),
         setCreating: (state) => ({ ...state, status: "Creating" }),
     },
@@ -357,15 +365,18 @@ function updatePickedFile(
 ): DraftWorkflowState {
     switch (identifier) {
         case "Dockerfile":
-            return { ...state, dockerfilePath: valid(paths[0]) };
+            return { ...state, selectedDockerfilePath: valid(paths[0]) };
         case "BuildContext":
-            return { ...state, buildContextPath: paths[0] };
+            return { ...state, selectedBuildContextPath: paths[0] };
         case "Manifests":
-            return { ...state, manifestsParamsState: { ...state.manifestsParamsState, manifestPaths: valid(paths) } };
+            return {
+                ...state,
+                manifestsParamsState: { ...state.manifestsParamsState, selectedManifestPaths: valid(paths) },
+            };
         case "HelmCharts":
-            return { ...state, helmParamsState: { ...state.helmParamsState, chartPath: valid(paths[0]) } };
+            return { ...state, helmParamsState: { ...state.helmParamsState, selectedChartPath: valid(paths[0]) } };
         case "HelmValuesYaml":
-            return { ...state, helmParamsState: { ...state.helmParamsState, valuesYamlPath: valid(paths[0]) } };
+            return { ...state, helmParamsState: { ...state.helmParamsState, selectedValuesYamlPath: valid(paths[0]) } };
         default:
             throw new Error(`Unknown file identifier: ${identifier}`);
     }
@@ -385,26 +396,17 @@ function getSelectedValidatableValue<TItem>(
 
 function getSelectedBranch(state: DraftWorkflowState, key: GitHubRepoKey, branches: string[]): Validatable<string> {
     if (
-        !isValueSet(state.gitHubRepo) ||
-        key.gitHubRepoOwner !== state.gitHubRepo.value.gitHubRepoOwner ||
-        key.gitHubRepoName !== state.gitHubRepo.value.gitHubRepoName
+        !isValueSet(state.selectedGitHubRepo) ||
+        key.gitHubRepoOwner !== state.selectedGitHubRepo.value.gitHubRepoOwner ||
+        key.gitHubRepoName !== state.selectedGitHubRepo.value.gitHubRepoName
     ) {
         return unset();
     }
 
-    const defaultBranch = state.gitHubRepo.value.defaultBranch;
+    const defaultBranch = state.selectedGitHubRepo.value.defaultBranch;
     if (!branches.includes(defaultBranch)) {
         return unset();
     }
 
     return valid(defaultBranch);
-}
-
-function getExistingFile(state: DraftWorkflowState, workflowName: Validatable<string>): string | null {
-    if (!isValueSet(workflowName)) {
-        return null;
-    }
-
-    const file = state.existingWorkflowFiles.find((f) => f.name === workflowName.value);
-    return file ? file.path : null;
 }

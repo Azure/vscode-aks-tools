@@ -64,23 +64,23 @@ export function DraftDeployment(initialState: InitialState) {
     function handleSubscriptionSelect(subscription: Subscription | null) {
         const validated =
             subscription === null ? missing<Subscription>("Subscription is required.") : valid(subscription);
-        eventHandlers.onSetSubscription(validated);
+        eventHandlers.onSetSelectedSubscription(validated);
     }
 
     function handleAcrResourceGroupSelect(resourceGroup: string | null) {
         const validated =
             resourceGroup === null ? missing<string>("ACR resource group is required.") : valid(resourceGroup);
-        eventHandlers.onSetAcrResourceGroup(validated);
+        eventHandlers.onSetSelectedAcrResourceGroup(validated);
     }
 
     function handleAcrSelect(acr: string | null) {
         const validated = acr === null ? missing<string>("ACR is required.") : valid(acr);
-        eventHandlers.onSetAcr(validated);
+        eventHandlers.onSetSelectedAcr(validated);
     }
 
     function handleRepositorySelect(repository: string | null, isNew: boolean) {
         const validated = getValidatedRepository();
-        eventHandlers.onSetAcrRepository(validated);
+        eventHandlers.onSetSelectedAcrRepository(validated);
 
         function getValidatedRepository(): Validatable<NewOrExisting<string>> {
             if (!repository) return missing("Azure Container Registry image is required.");
@@ -90,7 +90,7 @@ export function DraftDeployment(initialState: InitialState) {
 
     function handleImageTagSelect(imageTag: string | null, isNew: boolean) {
         const validated = getValidatedImageTag();
-        eventHandlers.onSetAcrRepoTag(validated);
+        eventHandlers.onSetSelectedAcrRepoTag(validated);
 
         function getValidatedImageTag(): Validatable<NewOrExisting<string>> {
             if (!imageTag) return missing("Image tag is required.");
@@ -101,7 +101,7 @@ export function DraftDeployment(initialState: InitialState) {
     function handleImageTagChangeForNewRepository(e: Event | FormEvent<HTMLElement>) {
         const value = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedImageTagForNewRepository(value);
-        eventHandlers.onSetAcrRepoTag(validated);
+        eventHandlers.onSetSelectedAcrRepoTag(validated);
 
         function getValidatedImageTagForNewRepository(tag: string): Validatable<NewOrExisting<string>> {
             if (!tag) return missing("Image tag name is required.");
@@ -123,13 +123,13 @@ export function DraftDeployment(initialState: InitialState) {
 
     function handleDeploymentSpecTypeChange(e: Event | FormEvent<HTMLElement>) {
         const type = (e.currentTarget as HTMLInputElement).value as DeploymentSpecType;
-        eventHandlers.onSetDeploymentSpecType(type);
+        eventHandlers.onSetSelectedDeploymentSpecType(type);
     }
 
     function handleApplicationNameChange(e: Event | FormEvent<HTMLElement>) {
         const name = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedApplicationName(name);
-        eventHandlers.onSetApplicationName(validated);
+        eventHandlers.onSetSelectedApplicationName(validated);
 
         function getValidatedApplicationName(name: string): Validatable<string> {
             if (!name) return missing("Application name is required.");
@@ -143,14 +143,14 @@ export function DraftDeployment(initialState: InitialState) {
         const elem = e.currentTarget as HTMLInputElement;
         const port = parseInt(elem.value);
         const validated = getValidatedPort(port);
-        eventHandlers.onSetTargetPort(validated);
+        eventHandlers.onSetSelectedTargetPort(validated);
     }
 
     function handleServicePortChange(e: Event | FormEvent<HTMLElement>) {
         const elem = e.currentTarget as HTMLInputElement;
         const port = parseInt(elem.value);
         const validated = getValidatedPort(port);
-        eventHandlers.onSetServicePort(validated);
+        eventHandlers.onSetSelectedServicePort(validated);
     }
 
     function getValidatedPort(port: number): Validatable<number> {
@@ -166,7 +166,7 @@ export function DraftDeployment(initialState: InitialState) {
 
     function handleNamespaceSelect(namespace: string | null, isNew: boolean) {
         const validated = getValidatedNamespace();
-        eventHandlers.onSetClusterNamespace(validated);
+        eventHandlers.onSetSelectedClusterNamespace(validated);
 
         function getValidatedNamespace(): Validatable<NewOrExisting<string>> {
             if (!namespace) return missing("Namespace is required.");
@@ -175,29 +175,29 @@ export function DraftDeployment(initialState: InitialState) {
     }
 
     function validate(): Maybe<CreateParams> {
-        if (!isValid(state.subscription)) return nothing();
-        if (!isValid(state.location)) return nothing();
-        if (!isValid(state.applicationName)) return nothing();
-        if (!isValid(state.targetPort)) return nothing();
-        if (!isValid(state.servicePort)) return nothing();
-        if (!isValid(state.clusterNamespace)) return nothing();
-        if (!isValid(state.acrResourceGroup)) return nothing();
-        if (!isValid(state.acr)) return nothing();
-        if (!isValid(state.acrRepository)) return nothing();
-        if (!isValid(state.acrRepoTag)) return nothing();
+        if (!isValid(state.selectedSubscription)) return nothing();
+        if (!isValid(state.selectedLocation)) return nothing();
+        if (!isValid(state.selectedApplicationName)) return nothing();
+        if (!isValid(state.selectedTargetPort)) return nothing();
+        if (!isValid(state.selectedServicePort)) return nothing();
+        if (!isValid(state.selectedClusterNamespace)) return nothing();
+        if (!isValid(state.selectedAcrResourceGroup)) return nothing();
+        if (!isValid(state.selectedAcr)) return nothing();
+        if (!isValid(state.selectedAcrRepository)) return nothing();
+        if (!isValid(state.selectedAcrRepoTag)) return nothing();
 
         const result: CreateParams = {
-            subscriptionId: state.subscription.value.id,
-            location: state.location.value,
-            deploymentSpecType: state.deploymentSpecType,
-            applicationName: state.applicationName.value,
-            targetPort: state.targetPort.value,
-            servicePort: state.servicePort.value,
-            namespace: state.clusterNamespace.value.value,
-            acrResourceGroup: state.acrResourceGroup.value,
-            acrName: state.acr.value,
-            repositoryName: state.acrRepository.value.value,
-            tag: state.acrRepoTag.value.value,
+            subscriptionId: state.selectedSubscription.value.id,
+            location: state.selectedLocation.value,
+            deploymentSpecType: state.selectedDeploymentSpecType,
+            applicationName: state.selectedApplicationName.value,
+            targetPort: state.selectedTargetPort.value,
+            servicePort: state.selectedServicePort.value,
+            namespace: state.selectedClusterNamespace.value.value,
+            acrResourceGroup: state.selectedAcrResourceGroup.value,
+            acrName: state.selectedAcr.value,
+            repositoryName: state.selectedAcrRepository.value.value,
+            tag: state.selectedAcrRepoTag.value.value,
         };
 
         return just(result);
@@ -217,25 +217,22 @@ export function DraftDeployment(initialState: InitialState) {
     function handleDraftWorkflowClick(e: MouseEvent) {
         e.preventDefault();
         vscode.postLaunchDraftWorkflow({
-            initialSubscriptionId: isValid(state.subscription) ? state.subscription.value.id : null,
-            initialAcrResourceGroup: orDefault(state.acrResourceGroup, null),
-            initialAcrName: orDefault(state.acr, null),
-            initialAcrRepository: isValid(state.acrRepository) ? state.acrRepository.value.value : null,
-            initialClusterResourceGroup: state.clusterResourceGroup,
-            initialClusterName: state.cluster,
-            initialClusterNamespace: isValid(state.clusterNamespace) ? state.clusterNamespace.value.value : null,
-            initialDeploymentSpecType: state.deploymentSpecType,
-            deploymentLocation: state.location.value,
+            initialSubscriptionId: isValid(state.selectedSubscription) ? state.selectedSubscription.value.id : null,
+            initialAcrResourceGroup: orDefault(state.selectedAcrResourceGroup, null),
+            initialAcrName: orDefault(state.selectedAcr, null),
+            initialAcrRepository: isValid(state.selectedAcrRepository) ? state.selectedAcrRepository.value.value : null,
+            initialClusterResourceGroup: state.selectedClusterResourceGroup,
+            initialClusterName: state.selectedCluster,
+            initialClusterNamespace: isValid(state.selectedClusterNamespace)
+                ? state.selectedClusterNamespace.value.value
+                : null,
+            initialDeploymentSpecType: state.selectedDeploymentSpecType,
+            deploymentLocation: state.selectedLocation.value,
         });
     }
 
     const [manifests, helm, kustomize]: DeploymentSpecType[] = ["manifests", "helm", "kustomize"];
-
-    const lazyAllNamespaces = getNewAndExisting(lazyClusterNamespaces, state.newClusterNamespace);
-    const lazyAllRepositories = getNewAndExisting(lazyRepositoryNames, state.newAcrRepository);
-    const lazyAllImageTags = getNewAndExisting(lazyImageTags, state.newAcrRepoTag);
-
-    const existingFiles = getExistingPaths(state.deploymentSpecType, state.existingFiles);
+    const existingFiles = getExistingPaths(state.selectedDeploymentSpecType, state.existingFiles);
 
     const acrImageTooltipMessage =
         "If you choose to use Draft's GitHub Action workflow for your deployment, it will automatically create and deploy the new resources through the workflow. The workflow can build new images and deploy to new namespaces.";
@@ -274,19 +271,19 @@ export function DraftDeployment(initialState: InitialState) {
                         id="subscription-input"
                         className={styles.control}
                         resources={lazySubscriptions}
-                        selectedItem={toNullable(state.subscription)}
+                        selectedItem={toNullable(state.selectedSubscription)}
                         valueGetter={(l) => l.id}
                         labelGetter={(l) => l.name}
                         onSelect={handleSubscriptionSelect}
                     />
-                    {hasMessage(state.subscription) && (
+                    {hasMessage(state.selectedSubscription) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.subscription.message}
+                            {state.selectedSubscription.message}
                         </span>
                     )}
 
-                    {isValid(state.subscription) && (
+                    {isValid(state.selectedSubscription) && (
                         <>
                             <label htmlFor="acr-rg-input" className={styles.label}>
                                 ACR Resource Group *
@@ -295,21 +292,21 @@ export function DraftDeployment(initialState: InitialState) {
                                 id="acr-rg-input"
                                 className={styles.control}
                                 resources={lazyAcrResourceGroups}
-                                selectedItem={toNullable(state.acrResourceGroup)}
+                                selectedItem={toNullable(state.selectedAcrResourceGroup)}
                                 valueGetter={(g) => g}
                                 labelGetter={(g) => g}
                                 onSelect={handleAcrResourceGroupSelect}
                             />
-                            {hasMessage(state.acrResourceGroup) && (
+                            {hasMessage(state.selectedAcrResourceGroup) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.acrResourceGroup.message}
+                                    {state.selectedAcrResourceGroup.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.acrResourceGroup) && (
+                    {isValid(state.selectedAcrResourceGroup) && (
                         <>
                             <label htmlFor="acr-input" className={styles.label}>
                                 Container Registry *
@@ -318,21 +315,21 @@ export function DraftDeployment(initialState: InitialState) {
                                 id="acr-input"
                                 className={styles.control}
                                 resources={lazyAcrNames}
-                                selectedItem={toNullable(state.acr)}
+                                selectedItem={toNullable(state.selectedAcr)}
                                 valueGetter={(c) => c}
                                 labelGetter={(c) => c}
                                 onSelect={handleAcrSelect}
                             />
-                            {hasMessage(state.acr) && (
+                            {hasMessage(state.selectedAcr) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.acr.message}
+                                    {state.selectedAcr.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.acr) && (
+                    {isValid(state.selectedAcr) && (
                         <>
                             <label htmlFor="acr-repo-input" className={styles.label}>
                                 Azure Container Registry image *
@@ -344,56 +341,58 @@ export function DraftDeployment(initialState: InitialState) {
                                 id="acr-repo-input"
                                 className={styles.control}
                                 getAddItemText={(text) => `Use "${text}"`}
-                                items={lazyMap(lazyAllRepositories, (repos) => repos.map((r) => r.value))}
-                                selectedItem={toNullable(state.acrRepository)?.value || null}
+                                items={lazyRepositoryNames}
+                                selectedItem={toNullable(state.selectedAcrRepository)?.value || null}
                                 onSelect={handleRepositorySelect}
                             />
 
-                            {hasMessage(state.acrRepository) && (
+                            {hasMessage(state.selectedAcrRepository) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.acrRepository.message}
+                                    {state.selectedAcrRepository.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.acrRepository) && (
+                    {isValid(state.selectedAcrRepository) && (
                         <>
                             <label htmlFor="acr-image-tag-input" className={styles.label}>
                                 Image tag *
                             </label>
-                            {!state.acrRepository.value.isNew && (
+                            {!state.selectedAcrRepository.value.isNew && (
                                 <TextWithDropdown
                                     id="acr-image-tag-input"
                                     className={styles.control}
                                     getAddItemText={(text) => `Use "${text}"`}
-                                    items={lazyMap(lazyAllImageTags, (tags) => tags.map((t) => t.value))}
-                                    selectedItem={toNullable(state.acrRepoTag)?.value || null}
+                                    items={lazyImageTags}
+                                    selectedItem={toNullable(state.selectedAcrRepoTag)?.value || null}
                                     onSelect={handleImageTagSelect}
                                 />
                             )}
 
-                            {state.acrRepository.value.isNew && (
+                            {state.selectedAcrRepository.value.isNew && (
                                 <VSCodeTextField
                                     id="acr-image-tag-input"
                                     className={styles.control}
-                                    value={isValid(state.acrRepoTag) ? state.acrRepoTag.value.value : ""}
+                                    value={
+                                        isValid(state.selectedAcrRepoTag) ? state.selectedAcrRepoTag.value.value : ""
+                                    }
                                     onBlur={handleImageTagChangeForNewRepository}
                                     onInput={handleImageTagChangeForNewRepository}
                                 />
                             )}
 
-                            {hasMessage(state.acrRepoTag) && (
+                            {hasMessage(state.selectedAcrRepoTag) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.acrRepoTag.message}
+                                    {state.selectedAcrRepoTag.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.subscription) && (
+                    {isValid(state.selectedSubscription) && (
                         <>
                             <label htmlFor="cluster-rg-input" className={styles.label}>
                                 Cluster Resource Group
@@ -408,15 +407,15 @@ export function DraftDeployment(initialState: InitialState) {
                                 id="cluster-rg-input"
                                 className={styles.control}
                                 resources={lazyClusterResourceGroups}
-                                selectedItem={state.clusterResourceGroup}
+                                selectedItem={state.selectedClusterResourceGroup}
                                 valueGetter={(g) => g}
                                 labelGetter={(g) => g}
-                                onSelect={eventHandlers.onSetClusterResourceGroup}
+                                onSelect={eventHandlers.onSetSelectedClusterResourceGroup}
                             />
                         </>
                     )}
 
-                    {state.clusterResourceGroup && (
+                    {state.selectedClusterResourceGroup && (
                         <>
                             <label htmlFor="cluster-input" className={styles.label}>
                                 Cluster
@@ -425,10 +424,10 @@ export function DraftDeployment(initialState: InitialState) {
                                 id="cluster-input"
                                 className={styles.control}
                                 resources={lazyClusterNames}
-                                selectedItem={state.cluster}
+                                selectedItem={state.selectedCluster}
                                 valueGetter={(c) => c}
                                 labelGetter={(c) => c}
-                                onSelect={eventHandlers.onSetCluster}
+                                onSelect={eventHandlers.onSetSelectedCluster}
                             />
                         </>
                     )}
@@ -440,7 +439,7 @@ export function DraftDeployment(initialState: InitialState) {
                     <VSCodeTextField
                         id="location-input"
                         readOnly
-                        value={`.${state.workspaceConfig.pathSeparator}${state.location.value}`}
+                        value={`.${state.workspaceConfig.pathSeparator}${state.selectedLocation.value}`}
                         className={styles.control}
                     />
                     <div className={styles.controlSupplement}>
@@ -451,10 +450,10 @@ export function DraftDeployment(initialState: InitialState) {
                             </span>
                         </VSCodeButton>
                     </div>
-                    {hasMessage(state.location) && (
+                    {hasMessage(state.selectedLocation) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.location.message}
+                            {state.selectedLocation.message}
                         </span>
                     )}
 
@@ -464,7 +463,7 @@ export function DraftDeployment(initialState: InitialState) {
                     <VSCodeRadioGroup
                         id="deployment-type-input"
                         className={styles.control}
-                        value={state.deploymentSpecType}
+                        value={state.selectedDeploymentSpecType}
                         orientation="vertical"
                         onChange={handleDeploymentSpecTypeChange}
                     >
@@ -478,15 +477,15 @@ export function DraftDeployment(initialState: InitialState) {
                     </label>
                     <VSCodeTextField
                         id="app-name-input"
-                        value={orDefault(state.applicationName, "")}
+                        value={orDefault(state.selectedApplicationName, "")}
                         className={styles.control}
                         onBlur={handleApplicationNameChange}
                         onInput={handleApplicationNameChange}
                     />
-                    {hasMessage(state.applicationName) && (
+                    {hasMessage(state.selectedApplicationName) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.applicationName.message}
+                            {state.selectedApplicationName.message}
                         </span>
                     )}
 
@@ -500,13 +499,13 @@ export function DraftDeployment(initialState: InitialState) {
                         type="number"
                         id="target-port-input"
                         className={styles.control}
-                        value={orDefault(state.targetPort, "")}
+                        value={orDefault(state.selectedTargetPort, "")}
                         onInput={handleTargetPortChange}
                     />
-                    {hasMessage(state.targetPort) && (
+                    {hasMessage(state.selectedTargetPort) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.targetPort.message}
+                            {state.selectedTargetPort.message}
                         </span>
                     )}
 
@@ -520,13 +519,13 @@ export function DraftDeployment(initialState: InitialState) {
                         type="number"
                         id="service-port-input"
                         className={styles.control}
-                        value={orDefault(state.servicePort, "")}
+                        value={orDefault(state.selectedServicePort, "")}
                         onInput={handleServicePortChange}
                     />
-                    {hasMessage(state.servicePort) && (
+                    {hasMessage(state.selectedServicePort) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.servicePort.message}
+                            {state.selectedServicePort.message}
                         </span>
                     )}
 
@@ -541,15 +540,15 @@ export function DraftDeployment(initialState: InitialState) {
                         id="namespace-input"
                         className={styles.control}
                         getAddItemText={(text) => `Use "${text}"`}
-                        items={lazyMap(lazyAllNamespaces, (namespaces) => namespaces.map((n) => n.value))}
-                        selectedItem={toNullable(state.clusterNamespace)?.value || null}
+                        items={lazyClusterNamespaces}
+                        selectedItem={toNullable(state.selectedClusterNamespace)?.value || null}
                         onSelect={handleNamespaceSelect}
                     />
 
-                    {hasMessage(state.clusterNamespace) && (
+                    {hasMessage(state.selectedClusterNamespace) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.clusterNamespace.message}
+                            {state.selectedClusterNamespace.message}
                         </span>
                     )}
                 </fieldset>
@@ -614,16 +613,20 @@ type LocalData = {
 };
 
 function prepareData(state: DraftDeploymentState, updates: EventHandlerFunc[]): LocalData {
-    const lazyClusters = ensureClustersLoaded(state.azureReferenceData, toNullable(state.subscription), updates);
+    const lazyClusters = ensureClustersLoaded(
+        state.azureReferenceData,
+        toNullable(state.selectedSubscription),
+        updates,
+    );
     const lazyClusterResourceGroups = lazyMap(lazyClusters, (clusters) =>
         distinct(clusters.map((c) => c.resourceGroup)),
     );
     const lazyClusterNames = lazyMap(lazyClusters, (clusters) =>
-        clusters.filter((c) => c.resourceGroup === state.clusterResourceGroup).map((c) => c.clusterName),
+        clusters.filter((c) => c.resourceGroup === state.selectedClusterResourceGroup).map((c) => c.clusterName),
     );
 
-    const lazyAcrs = ensureAcrsLoaded(state.azureReferenceData, toNullable(state.subscription), updates);
-    const acrResourceGroup = toNullable(state.acrResourceGroup);
+    const lazyAcrs = ensureAcrsLoaded(state.azureReferenceData, toNullable(state.selectedSubscription), updates);
+    const acrResourceGroup = toNullable(state.selectedAcrResourceGroup);
     const lazyAcrResourceGroups = lazyMap(lazyAcrs, (acrs) => distinct(acrs.map((a) => a.resourceGroup)));
     const lazyAcrNames = lazyMap(lazyAcrs, (acrs) =>
         acrs.filter((a) => a.resourceGroup === acrResourceGroup).map((a) => a.acrName),
@@ -636,32 +639,27 @@ function prepareData(state: DraftDeploymentState, updates: EventHandlerFunc[]): 
         lazyAcrNames,
         lazyRepositoryNames: ensureAcrRepositoryNamesLoaded(
             state.azureReferenceData,
-            toNullable(state.subscription),
-            toNullable(state.acrResourceGroup),
-            toNullable(state.acr),
+            toNullable(state.selectedSubscription),
+            toNullable(state.selectedAcrResourceGroup),
+            toNullable(state.selectedAcr),
             updates,
         ),
         lazyImageTags: ensureAcrImageTagsLoaded(
             state.azureReferenceData,
-            toNullable(state.subscription),
-            toNullable(state.acrResourceGroup),
-            toNullable(state.acr),
-            isValid(state.acrRepository) && !state.acrRepository.value.isNew ? state.acrRepository.value.value : null,
+            toNullable(state.selectedSubscription),
+            toNullable(state.selectedAcrResourceGroup),
+            toNullable(state.selectedAcr),
+            isValid(state.selectedAcrRepository) && !state.selectedAcrRepository.value.isNew
+                ? state.selectedAcrRepository.value.value
+                : null,
             updates,
         ),
         lazyClusterNamespaces: ensureClusterNamespacesLoaded(
             state.azureReferenceData,
-            toNullable(state.subscription),
-            state.clusterResourceGroup,
-            state.cluster,
+            toNullable(state.selectedSubscription),
+            state.selectedClusterResourceGroup,
+            state.selectedCluster,
             updates,
         ),
     };
-}
-
-function getNewAndExisting<T>(existing: Lazy<T[]>, newItem: T | null): Lazy<NewOrExisting<T>[]> {
-    const wrappedExisting = lazyMap(existing, (items) => items.map((value) => ({ isNew: false, value })));
-    return newItem !== null
-        ? lazyMap(wrappedExisting, (items) => [{ isNew: true, value: newItem }, ...items])
-        : wrappedExisting;
 }

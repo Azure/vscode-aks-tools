@@ -291,10 +291,13 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
         await document.save();
         await setWorkflowLanguage(document);
 
-        webview.postCreateWorkflowResponse({
-            name: createParams.workflowName,
-            path: path.relative(this.workspaceFolder.uri.fsPath, fileUri.result.fsPath),
-        });
+        webview.postCreateWorkflowResponse([
+            ...this.existingWorkflowFiles,
+            {
+                name: createParams.workflowName,
+                path: path.relative(this.workspaceFolder.uri.fsPath, fileUri.result.fsPath),
+            },
+        ]);
     }
 
     private handleOpenFileRequest(relativeFilePath: string) {

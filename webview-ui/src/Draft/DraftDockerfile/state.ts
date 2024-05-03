@@ -16,10 +16,10 @@ export type EventDef = {
 
 export type DraftDockerfileState = {
     workspaceConfig: WorkspaceFolderConfig;
-    location: ValidatableValue<string>;
     supportedLanguages: LanguageInfo[];
     existingFiles: ExistingFiles;
     status: Status;
+    selectedLocation: ValidatableValue<string>;
     selectedLanguage: Validatable<LanguageInfo>;
     isBuilderImageRequired: boolean;
     selectedLanguageVersion: Validatable<string>;
@@ -33,10 +33,10 @@ export type Status = "Editing" | "Creating" | "Created";
 export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, DraftDockerfileState> = {
     createState: (initialState) => ({
         workspaceConfig: initialState.workspaceConfig,
-        location: getValidatedLocation(initialState.location, initialState.existingFiles),
         supportedLanguages: initialState.supportedLanguages,
         existingFiles: initialState.existingFiles,
         status: "Editing",
+        selectedLocation: getValidatedLocation(initialState.location, initialState.existingFiles),
         selectedLanguage: unset(),
         isBuilderImageRequired: false,
         selectedLanguageVersion: unset(),
@@ -48,7 +48,7 @@ export const stateUpdater: WebviewStateUpdater<"draftDockerfile", EventDef, Draf
         pickLocationResponse: (state, response) => ({
             ...state,
             existingFiles: response.existingFiles,
-            location: getValidatedLocation(response.location, response.existingFiles),
+            selectedLocation: getValidatedLocation(response.location, response.existingFiles),
         }),
         getLanguageVersionInfoResponse: (state, response) => ({
             ...state,

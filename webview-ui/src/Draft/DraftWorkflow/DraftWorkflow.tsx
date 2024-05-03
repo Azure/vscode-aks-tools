@@ -70,7 +70,7 @@ export function DraftWorkflow(initialState: InitialState) {
     function handleWorkflowNameChange(e: Event | FormEvent<HTMLElement>) {
         const name = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedWorkflowName(name);
-        eventHandlers.onSetWorkflowName(validated);
+        eventHandlers.onSetSelectedWorkflowName(validated);
 
         function getValidatedWorkflowName(name: string): Validatable<string> {
             if (!name) return missing("Workflow name is required.");
@@ -86,18 +86,18 @@ export function DraftWorkflow(initialState: InitialState) {
 
     function handleGitHubRepoSelect(repo: GitHubRepo | null) {
         const validated = repo === null ? missing<GitHubRepo>("GitHub repository is required.") : valid(repo);
-        eventHandlers.onSetGitHubRepo(validated);
+        eventHandlers.onSetSelectedGitHubRepo(validated);
     }
 
     function handleBranchSelect(branch: string | null) {
         const validated = branch === null ? missing<string>("Branch is required.") : valid(branch);
-        eventHandlers.onSetBranchName(validated);
+        eventHandlers.onSetSelectedBranchName(validated);
     }
 
     function handleSubscriptionSelect(subscription: Subscription | null) {
         const validated =
             subscription === null ? missing<Subscription>("Subscription is required.") : valid(subscription);
-        eventHandlers.onSetSubscription(validated);
+        eventHandlers.onSetSelectedSubscription(validated);
     }
 
     function handleChooseDockerfileClick() {
@@ -128,17 +128,17 @@ export function DraftWorkflow(initialState: InitialState) {
     function handleAcrResourceGroupSelect(resourceGroup: string | null) {
         const validated =
             resourceGroup === null ? missing<string>("ACR Resource Group is required.") : valid(resourceGroup);
-        eventHandlers.onSetAcrResourceGroup(validated);
+        eventHandlers.onSetSelectedAcrResourceGroup(validated);
     }
 
     function handleAcrSelect(acr: string | null) {
         const validated = acr === null ? missing<string>("ACR is required.") : valid(acr);
-        eventHandlers.onSetAcr(validated);
+        eventHandlers.onSetSelectedAcr(validated);
     }
 
     function handleRepositorySelect(repository: string | null, isNew: boolean) {
         const validated = getValidatedRepository();
-        eventHandlers.onSetRepositoryName(validated);
+        eventHandlers.onSetSelectedRepositoryName(validated);
 
         function getValidatedRepository(): Validatable<NewOrExisting<string>> {
             if (!repository) return missing("Azure Container Registry image is required.");
@@ -149,17 +149,17 @@ export function DraftWorkflow(initialState: InitialState) {
     function handleClusterResourceGroupSelect(resourceGroup: string | null) {
         const validated =
             resourceGroup === null ? missing<string>("Cluster Resource Group is required.") : valid(resourceGroup);
-        eventHandlers.onSetClusterResourceGroup(validated);
+        eventHandlers.onSetSelectedClusterResourceGroup(validated);
     }
 
     function handleClusterSelect(cluster: string | null) {
         const validated = cluster === null ? missing<string>("Cluster is required.") : valid(cluster);
-        eventHandlers.onSetCluster(validated);
+        eventHandlers.onSetSelectedCluster(validated);
     }
 
     function handleNamespaceSelect(namespace: string | null, isNew: boolean) {
         const validated = getValidatedNamespace();
-        eventHandlers.onSetNamespace(validated);
+        eventHandlers.onSetSelectedClusterNamespace(validated);
 
         function getValidatedNamespace(): Validatable<NewOrExisting<string>> {
             if (!namespace) return missing("Namespace is required.");
@@ -169,7 +169,7 @@ export function DraftWorkflow(initialState: InitialState) {
 
     function handleDeploymentSpecTypeChange(e: Event | FormEvent<HTMLElement>) {
         const type = (e.currentTarget as HTMLInputElement).value as DeploymentSpecType;
-        eventHandlers.onSetDeploymentSpecType(type);
+        eventHandlers.onSetSelectedDeploymentSpecType(type);
     }
 
     function handleChooseManifestPathsClick() {
@@ -187,13 +187,13 @@ export function DraftWorkflow(initialState: InitialState) {
     }
 
     function handleDeleteManifestPathClick(path: string) {
-        if (isValid(state.manifestsParamsState.manifestPaths)) {
-            const currentPaths = state.manifestsParamsState.manifestPaths.value;
+        if (isValid(state.manifestsParamsState.selectedManifestPaths)) {
+            const currentPaths = state.manifestsParamsState.selectedManifestPaths.value;
             const newPaths = currentPaths.filter((p) => p !== path);
             if (newPaths.length === 0) {
-                eventHandlers.onSetManifestPaths(missing("Manifest paths are required."));
+                eventHandlers.onSetSelectedManifestPaths(missing("Manifest paths are required."));
             } else {
-                eventHandlers.onSetManifestPaths(valid(newPaths));
+                eventHandlers.onSetSelectedManifestPaths(valid(newPaths));
             }
         }
     }
@@ -227,17 +227,17 @@ export function DraftWorkflow(initialState: InitialState) {
         const key = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedOverrideKey(key);
         const overrides = replaceItem(
-            state.helmParamsState.overrides,
-            (o) => o === override,
+            state.helmParamsState.selectedOverrides,
+            (o) => o === override, // reference equality works here because the override value comes directly from the state
             (o) => ({ ...o, key: validated }),
         );
-        eventHandlers.onSetHelmOverrides(overrides);
+        eventHandlers.onSetSelectedHelmOverrides(overrides);
 
         function getValidatedOverrideKey(key: string): Validatable<string> {
             key = key.trim();
 
             if (!key) return missing("Key is required.");
-            const otherKeys = state.helmParamsState.overrides
+            const otherKeys = state.helmParamsState.selectedOverrides
                 .filter((o) => o !== override)
                 .map((o) => o.key)
                 .filter(isValueSet)
@@ -253,11 +253,11 @@ export function DraftWorkflow(initialState: InitialState) {
         const value = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedOverrideValue(value);
         const overrides = replaceItem(
-            state.helmParamsState.overrides,
-            (o) => o === override,
+            state.helmParamsState.selectedOverrides,
+            (o) => o === override, // reference equality works here because the override value comes directly from the state
             (o) => ({ ...o, value: validated }),
         );
-        eventHandlers.onSetHelmOverrides(overrides);
+        eventHandlers.onSetSelectedHelmOverrides(overrides);
 
         function getValidatedOverrideValue(value: string): Validatable<string> {
             if (!value) return missing("Value is required.");
@@ -268,41 +268,44 @@ export function DraftWorkflow(initialState: InitialState) {
     }
 
     function handleDeleteOverrideClick(override: HelmOverrideState) {
-        const overrides = state.helmParamsState.overrides.filter((o) => o !== override);
-        eventHandlers.onSetHelmOverrides(overrides);
+        const overrides = state.helmParamsState.selectedOverrides.filter((o) => o !== override);
+        eventHandlers.onSetSelectedHelmOverrides(overrides);
     }
 
     function handleAddHelmOverrideClick() {
-        eventHandlers.onSetHelmOverrides([...state.helmParamsState.overrides, { key: unset(), value: unset() }]);
+        eventHandlers.onSetSelectedHelmOverrides([
+            ...state.helmParamsState.selectedOverrides,
+            { key: unset(), value: unset() },
+        ]);
     }
 
     function validate(): Maybe<CreateParams> {
-        if (!isValid(state.workflowName)) return nothing();
-        if (!isValid(state.branchName)) return nothing();
-        if (!isValid(state.subscription)) return nothing();
-        if (!isValid(state.dockerfilePath)) return nothing();
-        if (!isValid(state.acrResourceGroup)) return nothing();
-        if (!isValid(state.acr)) return nothing();
-        if (!isValid(state.repositoryName)) return nothing();
-        if (!isValid(state.clusterResourceGroup)) return nothing();
-        if (!isValid(state.cluster)) return nothing();
-        if (!isValid(state.namespace)) return nothing();
+        if (!isValid(state.selectedWorkflowName)) return nothing();
+        if (!isValid(state.selectedBranchName)) return nothing();
+        if (!isValid(state.selectedSubscription)) return nothing();
+        if (!isValid(state.selectedDockerfilePath)) return nothing();
+        if (!isValid(state.selectedAcrResourceGroup)) return nothing();
+        if (!isValid(state.selectedAcr)) return nothing();
+        if (!isValid(state.selectedRepositoryName)) return nothing();
+        if (!isValid(state.selectedClusterResourceGroup)) return nothing();
+        if (!isValid(state.selectedCluster)) return nothing();
+        if (!isValid(state.selectedClusterNamespace)) return nothing();
 
         const deploymentParams = validateDeploymentParams();
         if (isNothing(deploymentParams)) return nothing();
 
         const result: CreateParams = {
-            workflowName: state.workflowName.value,
-            branchName: state.branchName.value,
-            subscriptionId: state.subscription.value.id,
-            dockerfilePath: state.dockerfilePath.value,
-            buildContextPath: state.buildContextPath,
-            acrResourceGroup: state.acrResourceGroup.value,
-            acrName: state.acr.value,
-            repositoryName: state.repositoryName.value.value,
-            clusterResourceGroup: state.clusterResourceGroup.value,
-            clusterName: state.cluster.value,
-            namespace: state.namespace.value.value,
+            workflowName: state.selectedWorkflowName.value,
+            branchName: state.selectedBranchName.value,
+            subscriptionId: state.selectedSubscription.value.id,
+            dockerfilePath: state.selectedDockerfilePath.value,
+            buildContextPath: state.selectedBuildContextPath,
+            acrResourceGroup: state.selectedAcrResourceGroup.value,
+            acrName: state.selectedAcr.value,
+            repositoryName: state.selectedRepositoryName.value.value,
+            clusterResourceGroup: state.selectedClusterResourceGroup.value,
+            clusterName: state.selectedCluster.value,
+            namespace: state.selectedClusterNamespace.value.value,
             deploymentParams: deploymentParams.value,
         };
 
@@ -310,23 +313,23 @@ export function DraftWorkflow(initialState: InitialState) {
     }
 
     function validateDeploymentParams(): Maybe<ManifestsDeploymentParams | HelmDeploymentParams> {
-        switch (state.deploymentSpecType) {
+        switch (state.selectedDeploymentSpecType) {
             case "manifests": {
-                if (!isValid(state.manifestsParamsState.manifestPaths)) return nothing();
+                if (!isValid(state.manifestsParamsState.selectedManifestPaths)) return nothing();
                 return just({
                     deploymentType: "manifests",
-                    manifestPaths: state.manifestsParamsState.manifestPaths.value,
+                    manifestPaths: state.manifestsParamsState.selectedManifestPaths.value,
                 });
             }
             case "helm": {
-                if (!isValid(state.helmParamsState.chartPath)) return nothing();
-                if (!isValid(state.helmParamsState.valuesYamlPath)) return nothing();
-                const overrides = validateHelmOverrides(state.helmParamsState.overrides);
+                if (!isValid(state.helmParamsState.selectedChartPath)) return nothing();
+                if (!isValid(state.helmParamsState.selectedValuesYamlPath)) return nothing();
+                const overrides = validateHelmOverrides(state.helmParamsState.selectedOverrides);
                 if (isNothing(overrides)) return nothing();
                 return just({
                     deploymentType: "helm",
-                    chartPath: state.helmParamsState.chartPath.value,
-                    valuesYamlPath: state.helmParamsState.valuesYamlPath.value,
+                    chartPath: state.helmParamsState.selectedChartPath.value,
+                    valuesYamlPath: state.helmParamsState.selectedValuesYamlPath.value,
                     overrides: overrides.value,
                 });
             }
@@ -356,11 +359,7 @@ export function DraftWorkflow(initialState: InitialState) {
     }
 
     const [manifests, helm]: DeploymentSpecType[] = ["manifests", "helm"];
-
-    const lazyAllNamespaces = getNewAndExisting(lazyNamespaces, state.newNamespace);
-    const lazyAllRepositories = getNewAndExisting(lazyRepositoryNames, state.newRepositoryName);
-
-    const existingFile = state.existingFile;
+    const existingFile = getExistingFile(state, state.selectedWorkflowName);
 
     const gitHubRepoTooltipMessage =
         "Select the primary/upstream fork of this repository.\n\nThis will allow you to select which branch will trigger the workflow.";
@@ -383,15 +382,15 @@ export function DraftWorkflow(initialState: InitialState) {
                     </label>
                     <VSCodeTextField
                         id="workflow-name-input"
-                        value={orDefault(state.workflowName, "")}
+                        value={orDefault(state.selectedWorkflowName, "")}
                         className={styles.control}
                         onBlur={handleWorkflowNameChange}
                         onInput={handleWorkflowNameChange}
                     />
-                    {hasMessage(state.workflowName) && (
+                    {hasMessage(state.selectedWorkflowName) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.workflowName.message}
+                            {state.selectedWorkflowName.message}
                         </span>
                     )}
 
@@ -405,13 +404,13 @@ export function DraftWorkflow(initialState: InitialState) {
                         id="gh-repo-input"
                         className={styles.control}
                         resources={state.gitHubReferenceData.repositories.map((r) => r.repository)}
-                        selectedItem={toNullable(state.gitHubRepo)}
+                        selectedItem={toNullable(state.selectedGitHubRepo)}
                         valueGetter={(r) => r.url}
                         labelGetter={(r) => `${r.gitHubRepoOwner}/${r.gitHubRepoName} (${r.forkName})`}
                         onSelect={handleGitHubRepoSelect}
                     />
 
-                    {isValid(state.gitHubRepo) && (
+                    {isValid(state.selectedGitHubRepo) && (
                         <>
                             <label htmlFor="branch-input" className={styles.label}>
                                 Branch *
@@ -420,15 +419,15 @@ export function DraftWorkflow(initialState: InitialState) {
                                 id="branch-input"
                                 className={styles.control}
                                 resources={lazyBranchNames}
-                                selectedItem={toNullable(state.branchName)}
+                                selectedItem={toNullable(state.selectedBranchName)}
                                 valueGetter={(b) => b}
                                 labelGetter={(b) => b}
                                 onSelect={handleBranchSelect}
                             />
-                            {hasMessage(state.branchName) && (
+                            {hasMessage(state.selectedBranchName) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.branchName.message}
+                                    {state.selectedBranchName.message}
                                 </span>
                             )}
                         </>
@@ -441,15 +440,15 @@ export function DraftWorkflow(initialState: InitialState) {
                         id="subscription-input"
                         className={styles.control}
                         resources={lazySubscriptions}
-                        selectedItem={toNullable(state.subscription)}
+                        selectedItem={toNullable(state.selectedSubscription)}
                         valueGetter={(l) => l.id}
                         labelGetter={(l) => l.name}
                         onSelect={handleSubscriptionSelect}
                     />
-                    {hasMessage(state.subscription) && (
+                    {hasMessage(state.selectedSubscription) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.subscription.message}
+                            {state.selectedSubscription.message}
                         </span>
                     )}
 
@@ -461,8 +460,8 @@ export function DraftWorkflow(initialState: InitialState) {
                     <VSCodeTextField
                         id="dockerfile-input"
                         value={
-                            isValueSet(state.dockerfilePath)
-                                ? `.${state.workspaceConfig.pathSeparator}${state.dockerfilePath.value}`
+                            isValueSet(state.selectedDockerfilePath)
+                                ? `.${state.workspaceConfig.pathSeparator}${state.selectedDockerfilePath.value}`
                                 : ""
                         }
                         readOnly
@@ -476,10 +475,10 @@ export function DraftWorkflow(initialState: InitialState) {
                             </span>
                         </VSCodeButton>
                     </div>
-                    {hasMessage(state.dockerfilePath) && (
+                    {hasMessage(state.selectedDockerfilePath) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                            {state.dockerfilePath.message}
+                            {state.selectedDockerfilePath.message}
                         </span>
                     )}
 
@@ -488,7 +487,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     </label>
                     <VSCodeTextField
                         id="build-context-input"
-                        value={`.${state.workspaceConfig.pathSeparator}${state.buildContextPath}`}
+                        value={`.${state.workspaceConfig.pathSeparator}${state.selectedBuildContextPath}`}
                         readOnly
                         className={styles.control}
                     />
@@ -501,7 +500,7 @@ export function DraftWorkflow(initialState: InitialState) {
                         </VSCodeButton>
                     </div>
 
-                    {isValid(state.subscription) && (
+                    {isValid(state.selectedSubscription) && (
                         <>
                             <h3 className={styles.fullWidth}>Azure Container Registry details</h3>
                             <label htmlFor="acr-rg-input" className={styles.label}>
@@ -511,21 +510,21 @@ export function DraftWorkflow(initialState: InitialState) {
                                 id="acr-rg-input"
                                 className={styles.control}
                                 resources={lazyAcrResourceGroups}
-                                selectedItem={toNullable(state.acrResourceGroup)}
+                                selectedItem={toNullable(state.selectedAcrResourceGroup)}
                                 valueGetter={(g) => g}
                                 labelGetter={(g) => g}
                                 onSelect={handleAcrResourceGroupSelect}
                             />
-                            {hasMessage(state.acrResourceGroup) && (
+                            {hasMessage(state.selectedAcrResourceGroup) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.acrResourceGroup.message}
+                                    {state.selectedAcrResourceGroup.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.acrResourceGroup) && (
+                    {isValid(state.selectedAcrResourceGroup) && (
                         <>
                             <label htmlFor="acr-input" className={styles.label}>
                                 Container Registry *
@@ -534,21 +533,21 @@ export function DraftWorkflow(initialState: InitialState) {
                                 id="acr-input"
                                 className={styles.control}
                                 resources={lazyAcrNames}
-                                selectedItem={toNullable(state.acr)}
+                                selectedItem={toNullable(state.selectedAcr)}
                                 valueGetter={(c) => c}
                                 labelGetter={(c) => c}
                                 onSelect={handleAcrSelect}
                             />
-                            {hasMessage(state.acr) && (
+                            {hasMessage(state.selectedAcr) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.acr.message}
+                                    {state.selectedAcr.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.acr) && (
+                    {isValid(state.selectedAcr) && (
                         <>
                             <label htmlFor="acr-repo-input" className={styles.label}>
                                 Azure Container Registry image *
@@ -558,15 +557,15 @@ export function DraftWorkflow(initialState: InitialState) {
                                 id="acr-repo-input"
                                 className={styles.control}
                                 getAddItemText={(text) => `Use "${text}"`}
-                                items={lazyMap(lazyAllRepositories, (repos) => repos.map((r) => r.value))}
-                                selectedItem={toNullable(state.repositoryName)?.value || null}
+                                items={lazyRepositoryNames}
+                                selectedItem={toNullable(state.selectedRepositoryName)?.value || null}
                                 onSelect={handleRepositorySelect}
                             />
 
-                            {hasMessage(state.repositoryName) && (
+                            {hasMessage(state.selectedRepositoryName) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.repositoryName.message}
+                                    {state.selectedRepositoryName.message}
                                 </span>
                             )}
                         </>
@@ -574,7 +573,7 @@ export function DraftWorkflow(initialState: InitialState) {
 
                     <h3 className={styles.fullWidth}>Deployment details</h3>
 
-                    {isValid(state.subscription) && (
+                    {isValid(state.selectedSubscription) && (
                         <>
                             <label htmlFor="cluster-rg-input" className={styles.label}>
                                 Cluster Resource Group *
@@ -583,21 +582,21 @@ export function DraftWorkflow(initialState: InitialState) {
                                 id="cluster-rg-input"
                                 className={styles.control}
                                 resources={lazyClusterResourceGroups}
-                                selectedItem={toNullable(state.clusterResourceGroup)}
+                                selectedItem={toNullable(state.selectedClusterResourceGroup)}
                                 valueGetter={(g) => g}
                                 labelGetter={(g) => g}
                                 onSelect={handleClusterResourceGroupSelect}
                             />
-                            {hasMessage(state.clusterResourceGroup) && (
+                            {hasMessage(state.selectedClusterResourceGroup) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.clusterResourceGroup.message}
+                                    {state.selectedClusterResourceGroup.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.clusterResourceGroup) && (
+                    {isValid(state.selectedClusterResourceGroup) && (
                         <>
                             <label htmlFor="cluster-input" className={styles.label}>
                                 Cluster *
@@ -606,21 +605,21 @@ export function DraftWorkflow(initialState: InitialState) {
                                 id="cluster-input"
                                 className={styles.control}
                                 resources={lazyClusterNames}
-                                selectedItem={toNullable(state.cluster)}
+                                selectedItem={toNullable(state.selectedCluster)}
                                 valueGetter={(c) => c}
                                 labelGetter={(c) => c}
                                 onSelect={handleClusterSelect}
                             />
-                            {hasMessage(state.cluster) && (
+                            {hasMessage(state.selectedCluster) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.cluster.message}
+                                    {state.selectedCluster.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {isValid(state.cluster) && (
+                    {isValid(state.selectedCluster) && (
                         <>
                             <label htmlFor="namespace-input" className={styles.label}>
                                 Namespace *
@@ -630,15 +629,15 @@ export function DraftWorkflow(initialState: InitialState) {
                                 id="namespace-input"
                                 className={styles.control}
                                 getAddItemText={(text) => `Use "${text}"`}
-                                items={lazyMap(lazyAllNamespaces, (namespaces) => namespaces.map((n) => n.value))}
-                                selectedItem={toNullable(state.namespace)?.value || null}
+                                items={lazyNamespaces}
+                                selectedItem={toNullable(state.selectedClusterNamespace)?.value || null}
                                 onSelect={handleNamespaceSelect}
                             />
 
-                            {hasMessage(state.namespace) && (
+                            {hasMessage(state.selectedClusterNamespace) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.namespace.message}
+                                    {state.selectedClusterNamespace.message}
                                 </span>
                             )}
                         </>
@@ -650,7 +649,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     <VSCodeRadioGroup
                         id="deployment-type-input"
                         className={styles.control}
-                        value={state.deploymentSpecType}
+                        value={state.selectedDeploymentSpecType}
                         orientation="vertical"
                         onChange={handleDeploymentSpecTypeChange}
                     >
@@ -658,7 +657,7 @@ export function DraftWorkflow(initialState: InitialState) {
                         <VSCodeRadio value={helm}>Helm</VSCodeRadio>
                     </VSCodeRadioGroup>
 
-                    {state.deploymentSpecType === "manifests" && (
+                    {state.selectedDeploymentSpecType === "manifests" && (
                         <>
                             <label htmlFor="manifest-paths" className={styles.label}>
                                 Manifest file paths *
@@ -671,9 +670,9 @@ export function DraftWorkflow(initialState: InitialState) {
                                     </span>
                                 </VSCodeButton>
                             </div>
-                            {isValid(state.manifestsParamsState.manifestPaths) && (
+                            {isValid(state.manifestsParamsState.selectedManifestPaths) && (
                                 <ul className={`${styles.existingFileList} ${styles.control}`} id="manifest-paths">
-                                    {state.manifestsParamsState.manifestPaths.value.map((path, i) => (
+                                    {state.manifestsParamsState.selectedManifestPaths.value.map((path, i) => (
                                         <li key={i} className={styles.removable}>
                                             <VSCodeLink
                                                 href="#"
@@ -698,16 +697,16 @@ export function DraftWorkflow(initialState: InitialState) {
                                     ))}
                                 </ul>
                             )}
-                            {hasMessage(state.manifestsParamsState.manifestPaths) && (
+                            {hasMessage(state.manifestsParamsState.selectedManifestPaths) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.manifestsParamsState.manifestPaths.message}
+                                    {state.manifestsParamsState.selectedManifestPaths.message}
                                 </span>
                             )}
                         </>
                     )}
 
-                    {state.deploymentSpecType === "helm" && (
+                    {state.selectedDeploymentSpecType === "helm" && (
                         <>
                             <label htmlFor="chart-path-input" className={styles.label}>
                                 Chart path *
@@ -715,8 +714,8 @@ export function DraftWorkflow(initialState: InitialState) {
                             <VSCodeTextField
                                 id="chart-path-input"
                                 value={
-                                    isValid(state.helmParamsState.chartPath)
-                                        ? `.${state.workspaceConfig.pathSeparator}${state.helmParamsState.chartPath.value} `
+                                    isValid(state.helmParamsState.selectedChartPath)
+                                        ? `.${state.workspaceConfig.pathSeparator}${state.helmParamsState.selectedChartPath.value} `
                                         : ""
                                 }
                                 readOnly
@@ -730,10 +729,10 @@ export function DraftWorkflow(initialState: InitialState) {
                                     </span>
                                 </VSCodeButton>
                             </div>
-                            {hasMessage(state.helmParamsState.chartPath) && (
+                            {hasMessage(state.helmParamsState.selectedChartPath) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.helmParamsState.chartPath.message}
+                                    {state.helmParamsState.selectedChartPath.message}
                                 </span>
                             )}
 
@@ -743,8 +742,8 @@ export function DraftWorkflow(initialState: InitialState) {
                             <VSCodeTextField
                                 id="values-path-input"
                                 value={
-                                    isValid(state.helmParamsState.valuesYamlPath)
-                                        ? `.${state.workspaceConfig.pathSeparator}${state.helmParamsState.valuesYamlPath.value}`
+                                    isValid(state.helmParamsState.selectedValuesYamlPath)
+                                        ? `.${state.workspaceConfig.pathSeparator}${state.helmParamsState.selectedValuesYamlPath.value}`
                                         : ""
                                 }
                                 readOnly
@@ -758,15 +757,15 @@ export function DraftWorkflow(initialState: InitialState) {
                                     </span>
                                 </VSCodeButton>
                             </div>
-                            {hasMessage(state.helmParamsState.valuesYamlPath) && (
+                            {hasMessage(state.helmParamsState.selectedValuesYamlPath) && (
                                 <span className={styles.validationMessage}>
                                     <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                    {state.helmParamsState.valuesYamlPath.message}
+                                    {state.helmParamsState.selectedValuesYamlPath.message}
                                 </span>
                             )}
 
                             <label className={styles.label}>Overrides</label>
-                            {state.helmParamsState.overrides.map((o, i) => (
+                            {state.helmParamsState.selectedOverrides.map((o, i) => (
                                 <>
                                     <div key={i} className={styles.control} style={{ display: "flex" }}>
                                         <VSCodeTextField
@@ -811,7 +810,7 @@ export function DraftWorkflow(initialState: InitialState) {
                             ))}
                             <div
                                 className={
-                                    state.helmParamsState.overrides.length === 0
+                                    state.helmParamsState.selectedOverrides.length === 0
                                         ? styles.control
                                         : styles.controlSupplement
                                 }
@@ -857,48 +856,58 @@ type LocalData = {
 };
 
 function prepareData(state: DraftWorkflowState, updates: EventHandlerFunc[]): LocalData {
-    const lazyClusters = ensureClustersLoaded(state.azureReferenceData, toNullable(state.subscription), updates);
+    const lazyClusters = ensureClustersLoaded(
+        state.azureReferenceData,
+        toNullable(state.selectedSubscription),
+        updates,
+    );
     const lazyClusterResourceGroups = lazyMap(lazyClusters, (clusters) =>
         distinct(clusters.map((c) => c.resourceGroup)),
     );
-    const clusterResourceGroup = toNullable(state.clusterResourceGroup);
+    const clusterResourceGroup = toNullable(state.selectedClusterResourceGroup);
     const lazyClusterNames = lazyMap(lazyClusters, (clusters) =>
         clusters.filter((c) => c.resourceGroup === clusterResourceGroup).map((c) => c.clusterName),
     );
 
-    const lazyAcrs = ensureAcrsLoaded(state.azureReferenceData, toNullable(state.subscription), updates);
-    const acrResourceGroup = toNullable(state.acrResourceGroup);
+    const lazyAcrs = ensureAcrsLoaded(state.azureReferenceData, toNullable(state.selectedSubscription), updates);
+    const acrResourceGroup = toNullable(state.selectedAcrResourceGroup);
     const lazyAcrResourceGroups = lazyMap(lazyAcrs, (acrs) => distinct(acrs.map((a) => a.resourceGroup)));
     const lazyAcrNames = lazyMap(lazyAcrs, (acrs) =>
         acrs.filter((a) => a.resourceGroup === acrResourceGroup).map((a) => a.acrName),
     );
     return {
-        lazyBranchNames: ensureBranchNamesLoaded(state.gitHubReferenceData, toNullable(state.gitHubRepo), updates),
+        lazyBranchNames: ensureBranchNamesLoaded(
+            state.gitHubReferenceData,
+            toNullable(state.selectedGitHubRepo),
+            updates,
+        ),
         lazySubscriptions: ensureSubscriptionsLoaded(state.azureReferenceData, updates),
         lazyClusterResourceGroups,
         lazyClusterNames,
         lazyNamespaces: ensureClusterNamespacesLoaded(
             state.azureReferenceData,
-            toNullable(state.subscription),
-            toNullable(state.clusterResourceGroup),
-            toNullable(state.cluster),
+            toNullable(state.selectedSubscription),
+            toNullable(state.selectedClusterResourceGroup),
+            toNullable(state.selectedCluster),
             updates,
         ),
         lazyAcrResourceGroups,
         lazyAcrNames,
         lazyRepositoryNames: ensureAcrRepositoryNamesLoaded(
             state.azureReferenceData,
-            toNullable(state.subscription),
-            toNullable(state.acrResourceGroup),
-            toNullable(state.acr),
+            toNullable(state.selectedSubscription),
+            toNullable(state.selectedAcrResourceGroup),
+            toNullable(state.selectedAcr),
             updates,
         ),
     };
 }
 
-function getNewAndExisting<T>(existing: Lazy<T[]>, newItem: T | null): Lazy<NewOrExisting<T>[]> {
-    const wrappedExisting = lazyMap(existing, (items) => items.map((value) => ({ isNew: false, value })));
-    return newItem !== null
-        ? lazyMap(wrappedExisting, (items) => [{ isNew: true, value: newItem }, ...items])
-        : wrappedExisting;
+function getExistingFile(state: DraftWorkflowState, workflowName: Validatable<string>): string | null {
+    if (!isValueSet(workflowName)) {
+        return null;
+    }
+
+    const file = state.existingWorkflowFiles.find((f) => f.name === workflowName.value);
+    return file ? file.path : null;
 }
