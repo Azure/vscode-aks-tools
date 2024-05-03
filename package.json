@@ -512,11 +512,6 @@
         "tmp": "^0.2.3",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
-    "overrides": {
-        "@azure/core-rest-pipeline": {
-          "@azure/core-util": "^1.5.0"
-        }
-      },
     "repository": {
         "type": "git",
         "url": "https://github.com/Azure/vscode-aks-tools"
