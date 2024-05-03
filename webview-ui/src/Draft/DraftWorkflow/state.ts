@@ -14,9 +14,9 @@ import {
     SubscriptionKey,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/types";
 import { WorkspaceFolderConfig } from "../../../../src/webview-contract/webviewDefinitions/shared/workspaceTypes";
-import { newNotLoaded } from "../../utilities/lazy";
+import { isLoaded, newNotLoaded } from "../../utilities/lazy";
 import { WebviewStateUpdater } from "../../utilities/state";
-import { Validatable, isValueSet, unset, valid } from "../../utilities/validation";
+import { Validatable, isValid, unset, valid } from "../../utilities/validation";
 import { getWebviewMessageContext } from "../../utilities/vscode";
 import { AzureReferenceData, GitHubReferenceData, GitHubRepositoryReferenceData } from "../state/stateTypes";
 import * as AzureReferenceDataUpdate from "../state/update/azureReferenceDataUpdate";
@@ -175,7 +175,7 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
         pickFilesResponse: (state, args) => updatePickedFile(state, args.identifier, args.paths),
         getBranchesResponse: (state, args) => ({
             ...state,
-            selectedBranchName: getSelectedBranch(state, args, args.branches),
+            selectedBranchName: getSelectedBranch(state.selectedGitHubRepo, args, args.branches),
             gitHubReferenceData: GitHubReferenceDataUpdate.updateBranches(
                 state.gitHubReferenceData,
                 args,
@@ -284,7 +284,13 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             ...state,
             selectedWorkflowName: name,
         }),
-        setSelectedGitHubRepo: (state, repo) => ({ ...state, selectedGitHubRepo: repo }),
+        setSelectedGitHubRepo: (state, repo) => ({
+            ...state,
+            selectedGitHubRepo: repo,
+            selectedBranchName: isValid(repo)
+                ? getSelectedBranch(repo, repo.value, getKnownBranches(state, repo.value))
+                : unset(),
+        }),
         setSelectedSubscription: (state, sub) => ({
             ...state,
             pendingSelection: { ...state.pendingSelection, subscriptionId: undefined },
@@ -394,13 +400,33 @@ function getSelectedValidatableValue<TItem>(
     return unset();
 }
 
-function getSelectedBranch(state: DraftWorkflowState, key: GitHubRepoKey, branches: string[]): Validatable<string> {
-    if (!isValueSet(state.selectedGitHubRepo)) {
+function getKnownBranches(state: DraftWorkflowState, key: GitHubRepoKey): string[] {
+    const repo = state.gitHubReferenceData.repositories.find(
+        (r) =>
+            r.repository.gitHubRepoOwner === key.gitHubRepoOwner && r.repository.gitHubRepoName === key.gitHubRepoName,
+    );
+
+    if (!repo || !isLoaded(repo.branches)) {
+        return [];
+    }
+
+    return repo.branches.value;
+}
+
+function getSelectedBranch(
+    selectedRepoValidatable: Validatable<GitHubRepo>,
+    branchesRepo: GitHubRepoKey,
+    branches: string[],
+): Validatable<string> {
+    if (!isValid(selectedRepoValidatable)) {
         return unset();
     }
 
-    const selectedRepo = state.selectedGitHubRepo.value;
-    if (key.gitHubRepoOwner !== selectedRepo.gitHubRepoOwner || key.gitHubRepoName !== selectedRepo.gitHubRepoName) {
+    const selectedRepo = selectedRepoValidatable.value;
+    if (
+        branchesRepo.gitHubRepoOwner !== selectedRepo.gitHubRepoOwner ||
+        branchesRepo.gitHubRepoName !== selectedRepo.gitHubRepoName
+    ) {
         return unset();
     }
 
