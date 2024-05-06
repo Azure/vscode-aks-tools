@@ -67,6 +67,8 @@ export type ToVsCodeMsgDef = {
     getNamespacesRequest: ClusterKey;
     createWorkflowRequest: CreateParams;
     openFileRequest: string;
+    launchDraftDockerfile: void;
+    launchDraftDeployment: void;
 };
 
 export type ToWebViewMsgDef = {

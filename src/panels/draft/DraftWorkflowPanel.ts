@@ -30,6 +30,7 @@ import { SelectionType, getSubscriptions } from "../../commands/utils/subscripti
 import { getAcrRegistry, getRepositories } from "../../commands/utils/acrs";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getResources } from "../../commands/utils/azureResources";
+import { launchDraftCommand } from "./commandUtils";
 
 export class DraftWorkflowPanel extends BasePanel<"draftWorkflow"> {
     constructor(extensionUri: Uri) {
@@ -93,6 +94,8 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
             getNamespacesRequest: false,
             createWorkflowRequest: true,
             openFileRequest: false,
+            launchDraftDockerfile: false,
+            launchDraftDeployment: false,
         };
     }
 
@@ -109,6 +112,14 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
                 this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
             createWorkflowRequest: (args) => this.handleCreateWorkflowRequest(args, webview),
             openFileRequest: (filePath) => this.handleOpenFileRequest(filePath),
+            launchDraftDockerfile: () =>
+                launchDraftCommand("aks.draftDockerfile", {
+                    workspaceFolder: this.workspaceFolder,
+                }),
+            launchDraftDeployment: () =>
+                launchDraftCommand("aks.draftDeployment", {
+                    workspaceFolder: this.workspaceFolder,
+                }),
         };
     }
 

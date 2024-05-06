@@ -67,6 +67,16 @@ export function DraftWorkflow(initialState: InitialState) {
         updates.map((fn) => fn(eventHandlers));
     });
 
+    function handleDraftDockerfileClick(e: React.MouseEvent) {
+        e.preventDefault();
+        vscode.postLaunchDraftDockerfile();
+    }
+
+    function handleDraftDeploymentClick(e: React.MouseEvent) {
+        e.preventDefault();
+        vscode.postLaunchDraftDeployment();
+    }
+
     function handleWorkflowNameChange(e: Event | FormEvent<HTMLElement>) {
         const name = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedWorkflowName(name);
@@ -370,9 +380,15 @@ export function DraftWorkflow(initialState: InitialState) {
                 <h2>Draft a GitHub Workflow</h2>
                 <p className={styles.fullWidth}>
                     Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make
-                    sure you have run Draft Create and Draft Setup GitHub OpenID Connect (OIDC) to generate the
-                    necessary deployment files an authorize GitHub to access resources in Azure. You need a resource
-                    group, container registry and an AKS Cluster created on Azure and link the resources.
+                    sure you have created a Dockerfile and Deployment. You can do this using the{" "}
+                    <VSCodeLink href="#" onClick={handleDraftDockerfileClick}>
+                        Draft: Create a Dockerfile
+                    </VSCodeLink>{" "}
+                    and{" "}
+                    <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
+                        Draft: Create a Deployment
+                    </VSCodeLink>{" "}
+                    commands.
                 </p>
 
                 <h3 className={styles.fullWidth}>Workflow properties</h3>
@@ -839,6 +855,40 @@ export function DraftWorkflow(initialState: InitialState) {
                         </VSCodeButton>
                     )}
                 </div>
+
+                {state.status === "Created" && (
+                    <div className={styles.nextStepsContainer}>
+                        <i className={`codicon codicon-sparkle ${styles.icon}`}></i>
+                        <div className={styles.content}>
+                            <h3>Next steps</h3>
+
+                            <p>
+                                To ensure the generated workflow file runs correctly, you will need to ensure
+                                <ul>
+                                    <li>
+                                        The ACR {isValueSet(state.selectedAcr) ? `(${state.selectedAcr.value})` : ""}{" "}
+                                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-an-existing-aks-cluster">
+                                            is attached
+                                        </VSCodeLink>{" "}
+                                        to the cluster{" "}
+                                        {isValueSet(state.selectedCluster) ? `(${state.selectedCluster.value})` : ""}.
+                                        You can follow for guidance.
+                                    </li>
+                                    <li>
+                                        Your GitHub repository{" "}
+                                        {isValueSet(state.selectedGitHubRepo)
+                                            ? `(${state.selectedGitHubRepo.value.gitHubRepoOwner}/${state.selectedGitHubRepo.value.gitHubRepoName})`
+                                            : ""}{" "}
+                                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure">
+                                            is configured
+                                        </VSCodeLink>{" "}
+                                        to access the ACR and cluster.
+                                    </li>
+                                </ul>
+                            </p>
+                        </div>
+                    </div>
+                )}
             </form>
         </>
     );
