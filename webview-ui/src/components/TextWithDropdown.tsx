@@ -1,6 +1,6 @@
 import { FormEvent, HTMLAttributes, useEffect, useRef, useState } from "react";
 import styles from "./TextWithDropdown.module.css";
-import { VSCodeOption, VSCodeProgressRing, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded, orDefault } from "../utilities/lazy";
 
 type AvailableHtmlAttributes = Pick<HTMLAttributes<HTMLElement>, "className" | "id">;
@@ -69,7 +69,7 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
     const [searchText, setSearchText] = useState("");
     const [allItems, setAllItems] = useState([...props.items]);
 
-    const listboxRef = useRef<HTMLDivElement>(null);
+    const listboxRef = useRef<HTMLOListElement>(null);
 
     useEffect(() => {
         // If there are any items in props that aren't in allItems, reset allItems
@@ -80,7 +80,7 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
 
     const itemLookup = new Map(allItems.map((item) => [item.toLowerCase(), item]));
     const canAddItem = searchText ? !itemLookup.has(searchText.toLowerCase()) : false;
-    const addItems = createAddItems(canAddItem, props.getAddItemText(searchText), props.selectedItem);
+    const addItems = createAddItems(canAddItem, props.getAddItemText(searchText), searchText, props.selectedItem);
     const filteredItems = createFilteredItems(allItems, searchText, props.selectedItem);
     const selectionItems: SelectionItem[] = [...addItems, ...filteredItems];
     const inputText = props.selectedItem || searchText;
@@ -119,8 +119,16 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
         const selectedItem = selectionItems.find((item) => item.isSelected) || null;
         selectItem(selectedItem);
 
-        // When we lose focus, collapse the listbox.
-        if (listboxRef.current && !listboxRef.current.contains(e.relatedTarget)) {
+        // The relatedTarget property is the form element that took the focus away.
+        const newFocusTargetIsOutsideListbox =
+            e.relatedTarget === null || (listboxRef.current && !listboxRef.current.contains(e.relatedTarget));
+
+        // If the selected item was an "add" item, the fact that we just selected it will have caused
+        // it to disappear from the listbox, meaning it won't receive a 'click' event, which we rely on to
+        // collapse the listbox. If this is the case, we collapse the listbox here.
+        const collapseListbox = selectedItem?.isAddItem || newFocusTargetIsOutsideListbox;
+
+        if (collapseListbox) {
             setIsExpanded(false);
         }
     }
@@ -140,7 +148,9 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
         setSelected(newSelectedValue);
     }
 
-    function handleItemClick(item: SelectionItem) {
+    function handleItemClick(e: React.MouseEvent, item: SelectionItem) {
+        e.preventDefault();
+        e.stopPropagation();
         selectItem(item);
         setIsExpanded(false);
     }
@@ -178,9 +188,12 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
         setSearchText("");
     }
 
+    const displayListbox = isExpanded && selectionItems.length > 0;
+
     return (
         <div
             role="combobox"
+            style={{ position: "relative" }}
             className={props.className}
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -213,25 +226,37 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
                 </span>
             </VSCodeTextField>
 
-            {isExpanded && selectionItems.length > 0 && (
-                <div className={styles.listbox} tabIndex={-1} onFocus={handleListboxFocus} ref={listboxRef}>
-                    {selectionItems.map((item) => (
-                        <VSCodeOption onClick={() => handleItemClick(item)} key={item.value} selected={item.isSelected}>
-                            {item.displayText}
-                        </VSCodeOption>
-                    ))}
-                </div>
-            )}
+            <ol
+                className={`${styles.listbox} ${displayListbox ? "" : styles.hidden}`}
+                tabIndex={-1}
+                onFocus={handleListboxFocus}
+                ref={listboxRef}
+            >
+                {selectionItems.map((item) => (
+                    <li
+                        className={`${styles.listboxItem} ${item.isSelected ? styles.selected : ""}`}
+                        onClick={(e) => handleItemClick(e, item)}
+                        key={item.value}
+                    >
+                        {item.displayText}
+                    </li>
+                ))}
+            </ol>
         </div>
     );
 }
 
-function createAddItems(canAddItem: boolean, displayText: string, selectedItem: string | null): SelectionItem[] {
+function createAddItems(
+    canAddItem: boolean,
+    displayText: string,
+    value: string,
+    selectedItem: string | null,
+): SelectionItem[] {
     if (!canAddItem) {
         return [];
     }
 
-    return [{ isAddItem: true, value: "", displayText, isSelected: selectedItem === null }];
+    return [{ isAddItem: true, value, displayText, isSelected: selectedItem === null }];
 }
 
 function createFilteredItems(allItems: string[], searchText: string, selectedItem: string | null): SelectionItem[] {
