@@ -494,7 +494,7 @@
         "ms-kubernetes-tools.vscode-kubernetes-tools"
     ],
     "devDependencies": {
-        "@types/chai": "^4.3.14",
+        "@types/chai": "^4.3.16",
         "@types/download": "^8.0.5",
         "@types/glob": "^8.1.0",
         "@types/js-yaml": "^4.0.9",
