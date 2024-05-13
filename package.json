@@ -541,7 +541,7 @@
         "js-yaml": "^4.1.0",
         "move-file": "^3.1.0",
         "rxjs": "^7.8.1",
-        "semver": "^7.6.0",
+        "semver": "^7.6.2",
         "sinon": "^17.0.1",
         "tmp": "^0.2.3",
         "vscode-kubernetes-tools-api": "^1.0.0"
