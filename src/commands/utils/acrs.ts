@@ -15,7 +15,7 @@ export async function getAcrs(
 ): Promise<Errorable<DefinedRegistry[]>> {
     const client = getAcrManagementClient(sessionProvider, subscriptionId);
     const registriesResult = await listAll(client.registries.listByResourceGroup(resourceGroup));
-    return errmap(registriesResult, (registries) => registries.filter(asDefinedRegistry));
+    return errmap(registriesResult, (registries) => registries.filter(isDefinedRegistry));
 }
 
 export async function getAcrRegistry(
@@ -27,7 +27,7 @@ export async function getAcrRegistry(
     const client = getAcrManagementClient(sessionProvider, subscriptionId);
     try {
         const registryResult = await client.registries.get(resourceGroup, acrName);
-        if (asDefinedRegistry(registryResult)) {
+        if (isDefinedRegistry(registryResult)) {
             return { succeeded: true, result: registryResult };
         }
         return {
@@ -61,6 +61,6 @@ export async function getRepositoryTags(
     return errmap(propsResult, (props) => props.flatMap((p) => p.tags));
 }
 
-function asDefinedRegistry(rg: Registry): rg is DefinedRegistry {
+function isDefinedRegistry(rg: Registry): rg is DefinedRegistry {
     return rg.id !== undefined && rg.name !== undefined && rg.location !== undefined && rg.loginServer !== undefined;
 }

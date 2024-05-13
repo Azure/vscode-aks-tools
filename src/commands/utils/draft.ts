@@ -40,11 +40,13 @@ async function getDeploymentFiles(
     deploymentType: DeploymentSpecType,
     destDir: string,
 ): Promise<Errorable<string[]>> {
+    // To get the files that would be written by `draft create`, we need to run `draft create` with the `--dry-run` flag.
+    // The files that will be created do not depend on the actual values of the variables, so we can use dummy values here:
     const variables = {
-        APPNAME: "testapp",
-        IMAGENAME: "testimage",
+        APPNAME: "dummyapp",
+        IMAGENAME: "dummyimage",
         IMAGETAG: "latest",
-        NAMESPACE: "testns",
+        NAMESPACE: "dummyns",
         PORT: 80,
         SERVICEPORT: 80,
     };

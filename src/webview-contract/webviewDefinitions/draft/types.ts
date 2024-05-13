@@ -99,6 +99,9 @@ export function acrKeysMatch(key1: AcrKey, key2: AcrKey): boolean {
 }
 
 export function repositoryKeysMatch(key1: RepositoryKey, key2: RepositoryKey): boolean {
+    // Note: the use of 'key' here bears no relation to any secret or credential for a repository;
+    // rather it refers to the set of properties that uniquely identify a repository (in this case
+    // simply its name).
     return acrKeysMatch(key1, key2) && key1.repositoryName === key2.repositoryName;
 }
 

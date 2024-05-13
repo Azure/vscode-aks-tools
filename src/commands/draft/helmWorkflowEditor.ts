@@ -53,6 +53,8 @@ export class HelmWorkflowEditor extends BaseWorkflowEditor<"helm"> {
             { key: "image.tag", value: "${{ github.sha }}" },
             ...this.deploymentParams.overrides,
         ];
+
+        // Return formatted overrides as a comma-separated string for use in the `--set` argument in `helm upgrade`.
         return overrides.map((o) => `${o.key}=${o.value}`).join(",");
     }
 

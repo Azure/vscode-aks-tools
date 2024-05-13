@@ -52,6 +52,7 @@ export function getAcrClient(
     sessionProvider: ReadyAzureSessionProvider,
     registryLoginServer: string,
 ): ContainerRegistryClient {
+    // Endpoint should be in the form of "https://myregistryname.azurecr.io"
     return new ContainerRegistryClient(`https://${registryLoginServer}`, getCredential(sessionProvider));
 }
 

@@ -5,10 +5,19 @@ import { asPosixRelativePath, getMultilineStringValue } from "./workflowUtils";
 
 export type WorkflowDeploymentType = "manifests" | "helm";
 
+/**
+ * Interface representing a type that can perform updates to a local GitHub workflow file.
+ */
 export interface WorkflowEditor {
+    /**
+     * Applies updates to the workflow file.
+     */
     update(): Promise<Errorable<void>>;
 }
 
+/**
+ * Base class for editing a GitHub workflow file generated using the Draft tool.
+ */
 export abstract class BaseWorkflowEditor<TDeploymentType extends WorkflowDeploymentType> {
     readonly workspaceEdit: WorkspaceEdit = new WorkspaceEdit();
     protected constructor(
@@ -18,6 +27,10 @@ export abstract class BaseWorkflowEditor<TDeploymentType extends WorkflowDeploym
         readonly createParams: CreateParams,
     ) {}
 
+    /**
+     * Performs all updates applicable to all types of deployments. Any deployment-specific updates are
+     * delegated to derived classes.
+     */
     public async update(): Promise<Errorable<void>> {
         this.setName();
 
@@ -53,6 +66,10 @@ export abstract class BaseWorkflowEditor<TDeploymentType extends WorkflowDeploym
         return { succeeded: true, result: undefined };
     }
 
+    /**
+     * Gets the indentation depth for the YAML content of this file.
+     * @returns The indentation depth of the first symbol that has children. If no such symbol is found, returns 2.
+     */
     protected getIndentationDepth(): number {
         const symbolWithChildren = this.symbols.find((s) => s.children.length > 0);
         if (!symbolWithChildren) {
@@ -81,13 +98,21 @@ export abstract class BaseWorkflowEditor<TDeploymentType extends WorkflowDeploym
         this.updateEnvVar(envSymbol, "ACR_RESOURCE_GROUP", this.createParams.acrResourceGroup);
     }
 
+    /**
+     * Performs updates specific to the deployment type of the workflow.
+     */
     protected abstract makeDeploymentSpecificUpdates(): Errorable<void>;
 
+    /**
+     * Adds or updates an environment variable in the workflow file. The value of this variable can
+     * be either a string or an array. Array values will use YAML's block scalar syntax.
+     */
     protected updateEnvVar(envSymbol: DocumentSymbol, name: string, ...values: string[]): void {
         const symbol = envSymbol.children.find((s) => s.name === name);
         const indentationDepth = this.getIndentationDepth();
         if (symbol === undefined) {
-            const indentation = " ".repeat(indentationDepth);
+            const singleSpace = " ";
+            const indentation = singleSpace.repeat(indentationDepth);
             this.workspaceEdit.insert(
                 this.fileUri,
                 envSymbol.range.end,
@@ -128,6 +153,17 @@ export abstract class BaseWorkflowEditor<TDeploymentType extends WorkflowDeploym
         return { succeeded: true, result: undefined };
     }
 
+    /**
+     * Gets a symbol from a specified symbol collection (either the entire document or a subset of it) based on a path.
+     * For example, if the YAML represented by the `symbols` value looks like this:
+     * ```yaml
+     * jobs:
+     *  deploy:
+     *   steps:
+     *   - run: helm upgrade --wait
+     * ```
+     * Then `getSymbolFromProperties(symbols, "jobs", "deploy", "steps")` will return the symbol for the `steps` property.
+     */
     protected getSymbolFromProperties(symbols: DocumentSymbol[], ...pathParts: string[]): Errorable<DocumentSymbol> {
         let currentSymbols = symbols;
         let foundSymbol = undefined;
