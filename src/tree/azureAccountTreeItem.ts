@@ -104,8 +104,8 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
                 ];
         }
 
-        if (this.sessionProvider.selectedTenant === null) {
-            // Signed in, but maybe no tenant selected
+        if (this.sessionProvider.selectedTenant === null && this.sessionProvider.availableTenants.length > 1) {
+            // Signed in, but no tenant selected, AND there is more than one tenant to choose from.
             return [
                 new GenericTreeItem(this, {
                     label: "Select tenant...",
@@ -118,8 +118,9 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             ];
         }
 
-        // Check the session is ready and we can get an auth session
-        // (which will be used below for creating a subscription context).
+        // Either we have a selected tenant, or there is only one available tenant and it's not selected
+        // because it requires extra interaction. Calling `getAuthSession` will complete that process.
+        // We will need the returned auth session in any case for creating a subscription context.
         const session = await this.sessionProvider.getAuthSession();
         if (failed(session) || !isReady(this.sessionProvider)) {
             return [
