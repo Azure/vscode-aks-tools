@@ -101,6 +101,8 @@ export async function draftWorkflow(
         return;
     }
 
+    // The git API is used to infer the remote repositories associated with the selected workspace.
+    // This allows it to provide only the relevant GitHub repositories for the user to pick from.
     const gitApi = getGitApi();
     if (failed(gitApi)) {
         window.showErrorMessage(gitApi.error);
@@ -125,6 +127,8 @@ export async function draftWorkflow(
         return;
     }
 
+    // The Octokit instance is used to interact with the GitHub API. This allows the user to
+    // select the relevant repository and branch to associate with the workflow file.
     const octokit = new Octokit({
         auth: `token ${session.result.accessToken}`,
     });
@@ -208,11 +212,9 @@ type DraftDependencies = {
 
 async function getGitHubAuthenticationSession(): Promise<Errorable<AuthenticationSession>> {
     try {
-        const session = await authentication.getSession(
-            "github",
-            ["repo", "user:email", "workflow", "read:org", "actions:read"],
-            { createIfNone: true },
-        );
+        // No special scopes are required for GitHub - we are just listing repositories/branches.
+        const scopes: string[] = [];
+        const session = await authentication.getSession("github", scopes, { createIfNone: true });
         return { succeeded: true, result: session };
     } catch (e) {
         return { succeeded: false, error: `Failed to get GitHub authentication session: ${getErrorMessage(e)}` };
