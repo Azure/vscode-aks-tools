@@ -17,7 +17,16 @@ export async function selectTenant(): Promise<void> {
     }
 
     if (sessionProvider.availableTenants.length === 1) {
-        window.showInformationMessage(`Only one tenant available (${sessionProvider.availableTenants[0].name}).`);
+        sessionProvider.selectedTenant = sessionProvider.availableTenants[0];
+
+        // If this tenant wasn't previously selected, it was probably because it wasn't immediately
+        // accessible (the user's current token didn't have access to it). Calling getAuthSession
+        // will prompt the user to re-authenticate if necessary.
+        const sessionResult = await sessionProvider.getAuthSession();
+        if (failed(sessionResult)) {
+            window.showErrorMessage(sessionResult.error);
+        }
+
         return;
     }
 
