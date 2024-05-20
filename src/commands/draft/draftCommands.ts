@@ -11,7 +11,7 @@ import {
 } from "vscode";
 import { DraftDockerfileDataProvider, DraftDockerfilePanel } from "../../panels/draft/DraftDockerfilePanel";
 import { getExtension } from "../utils/host";
-import { Errorable, failed, getErrorMessage } from "../utils/errorable";
+import { Errorable, failed, getErrorMessage, succeeded } from "../utils/errorable";
 import { getDraftBinaryPath } from "../utils/helper/draftBinaryDownload";
 import { DraftDeploymentDataProvider, DraftDeploymentPanel } from "../../panels/draft/DraftDeploymentPanel";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -26,6 +26,9 @@ import { basename, extname, join } from "path";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { DraftCommandParamsType } from "./types";
+import { getAksClusterTreeNode } from "../utils/clusters";
+import { InitialSelection as DeploymentInitialSelection } from "../../webview-contract/webviewDefinitions/draft/draftDeployment";
+import { InitialSelection as WorkflowInitialSelection } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
 
 export async function draftDockerfile(
     _context: IActionContext,
@@ -53,6 +56,20 @@ export async function draftDeployment(
 
     const { workspaceFolder, extension, draftBinaryPath } = commonDependencies;
 
+    let initialSelection: DeploymentInitialSelection = params?.initialSelection || {};
+
+    // Get any initial selection values from the AKS cluster tree node (if applicable).
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const clusterNode = getAksClusterTreeNode(params, cloudExplorer);
+    if (succeeded(clusterNode)) {
+        initialSelection = {
+            ...initialSelection,
+            subscriptionId: clusterNode.result.subscriptionId,
+            clusterResourceGroup: clusterNode.result.resourceGroupName,
+            clusterName: clusterNode.result.name,
+        };
+    }
+
     const kubectl = await k8s.extension.kubectl.v1;
     if (!kubectl.available) {
         window.showErrorMessage(`Kubectl is unavailable.`);
@@ -79,7 +96,7 @@ export async function draftDeployment(
         kubectl,
         deploymentFilesToWrite.result,
         params?.initialLocation || "",
-        params?.initialSelection || {},
+        initialSelection,
     );
     panel.show(dataProvider);
 }
@@ -94,6 +111,20 @@ export async function draftWorkflow(
     }
 
     const { workspaceFolder, extension, draftBinaryPath } = commonDependencies;
+
+    let initialSelection: WorkflowInitialSelection = params?.initialSelection || {};
+
+    // Get any initial selection values from the AKS cluster tree node (if applicable).
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const clusterNode = getAksClusterTreeNode(params, cloudExplorer);
+    if (succeeded(clusterNode)) {
+        initialSelection = {
+            ...initialSelection,
+            subscriptionId: clusterNode.result.subscriptionId,
+            clusterResourceGroup: clusterNode.result.resourceGroupName,
+            clusterName: clusterNode.result.name,
+        };
+    }
 
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
@@ -162,7 +193,7 @@ export async function draftWorkflow(
         session.result,
         accessibleRepos,
         existingWorkflowFiles,
-        params?.initialSelection || {},
+        initialSelection,
     );
     panel.show(dataProvider);
 }

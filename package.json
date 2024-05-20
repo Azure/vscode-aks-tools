@@ -201,10 +201,6 @@
                 "title": "Install Azure Service Operator"
             },
             {
-                "command": "aks.configureStarterWorkflow",
-                "title": "Starter Workflow"
-            },
-            {
                 "command": "aks.aksCRUDDiagnostics",
                 "title": "Create, Upgrade, Delete and Scale"
             },
@@ -227,18 +223,6 @@
             {
                 "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
                 "title": "Known Issues, Availability and Performance"
-            },
-            {
-                "command": "aks.configureHelmStarterWorkflow",
-                "title": "Helm Workflow"
-            },
-            {
-                "command": "aks.configureKomposeStarterWorkflow",
-                "title": "Kompose Workflow"
-            },
-            {
-                "command": "aks.configureKustomizeStarterWorkflow",
-                "title": "Kustomize Workflow"
             },
             {
                 "command": "aks.draftDockerfile",
@@ -364,8 +348,8 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i"
                 },
                 {
-                    "submenu": "aks.ghWorkflowSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "submenu": "aks.draftSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && workspaceFolderCount >= 1",
                     "group": "9@1"
                 },
                 {
@@ -428,21 +412,13 @@
                     "group": "navigation"
                 }
             ],
-            "aks.ghWorkflowSubMenu": [
+            "aks.draftSubMenu": [
                 {
-                    "command": "aks.configureHelmStarterWorkflow",
+                    "command": "aks.draftDeployment",
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.configureKomposeStarterWorkflow",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.configureKustomizeStarterWorkflow",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.configureStarterWorkflow",
+                    "command": "aks.draftWorkflow",
                     "group": "navigation"
                 }
             ],
@@ -481,8 +457,8 @@
                 "label": "Run AKS Diagnostics"
             },
             {
-                "id": "aks.ghWorkflowSubMenu",
-                "label": "Create GitHub Workflow"
+                "id": "aks.draftSubMenu",
+                "label": "Draft"
             },
             {
                 "id": "aks.managedClusterOperationSubMenu",

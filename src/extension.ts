@@ -14,12 +14,6 @@ import { Reporter, reporter } from "./commands/utils/reporter";
 import installAzureServiceOperator from "./commands/azureServiceOperators/installAzureServiceOperator";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
 import { setAssetContext } from "./assets";
-import {
-    configureStarterWorkflow,
-    configureHelmStarterWorkflow,
-    configureKomposeStarterWorkflow,
-    configureKustomizeStarterWorkflow,
-} from "./commands/aksStarterWorkflow/configureStarterWorkflow";
 import { draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
 import {
     aksCRUDDiagnostics,
@@ -79,13 +73,9 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
         registerCommandWithTelemetry("aks.periscope", periscope);
         registerCommandWithTelemetry("aks.installAzureServiceOperator", installAzureServiceOperator);
-        registerCommandWithTelemetry("aks.configureStarterWorkflow", configureStarterWorkflow);
         registerCommandWithTelemetry("aks.aksCRUDDiagnostics", aksCRUDDiagnostics);
         registerCommandWithTelemetry("aks.aksBestPracticesDiagnostics", aksBestPracticesDiagnostics);
         registerCommandWithTelemetry("aks.aksIdentitySecurityDiagnostics", aksIdentitySecurityDiagnostics);
-        registerCommandWithTelemetry("aks.configureHelmStarterWorkflow", configureHelmStarterWorkflow);
-        registerCommandWithTelemetry("aks.configureKomposeStarterWorkflow", configureKomposeStarterWorkflow);
-        registerCommandWithTelemetry("aks.configureKustomizeStarterWorkflow", configureKustomizeStarterWorkflow);
         registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
         registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);
         registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);
