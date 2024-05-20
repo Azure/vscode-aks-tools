@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./main.css";
+import "@vscode/codicons/dist/codicon.css";
 import { decodeState } from "../../src/webview-contract/initialState";
 import { CreateCluster } from "./CreateCluster/CreateCluster";
 import { ContentId } from "../../src/webview-contract/webviewTypes";
@@ -13,6 +14,7 @@ import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperato
 import { ClusterProperties } from "./ClusterProperties/ClusterProperties";
 import { TcpDump } from "./TCPDump/TcpDump";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
+import { DraftDeployment, DraftDockerfile, DraftWorkflow } from "./Draft";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -47,6 +49,9 @@ function getVsCodeContent(): JSX.Element {
         clusterProperties: () => <ClusterProperties {...getInitialState()} />,
         periscope: () => <Periscope {...getInitialState()} />,
         detector: () => <Detector {...getInitialState()} />,
+        draftDeployment: () => <DraftDeployment {...getInitialState()} />,
+        draftDockerfile: () => <DraftDockerfile {...getInitialState()} />,
+        draftWorkflow: () => <DraftWorkflow {...getInitialState()} />,
         gadget: () => <InspektorGadget {...getInitialState()} />,
         kubectl: () => <Kubectl {...getInitialState()} />,
         aso: () => <AzureServiceOperator {...getInitialState()} />,

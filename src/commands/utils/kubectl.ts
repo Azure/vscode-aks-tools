@@ -2,11 +2,7 @@ import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
 import { Errorable, failed, getErrorMessage, map } from "./errorable";
 import { OutputStream } from "./commands";
 import { Observable, concat, of } from "rxjs";
-
-export enum NonZeroExitCodeBehaviour {
-    Succeed,
-    Fail,
-}
+import { NonZeroExitCodeBehaviour } from "./shell";
 
 type KubeconfigCommandConfig = {
     plainCommand: string;
