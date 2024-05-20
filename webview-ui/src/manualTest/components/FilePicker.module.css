@@ -1,0 +1,59 @@
+ul.nodeList {
+    list-style-type: none;
+    padding: 0;
+    padding-left: 0;
+    margin: 0;
+}
+
+ul.nodeList ul.nodeList {
+    padding-left: 1rem;
+    border-left: 1px solid var(--vscode-menu-border);
+}
+
+ul.nodeList > li {
+    margin: 0.2rem;
+}
+
+ul.nodeList > li > .item {
+    padding: 0.2rem;
+}
+
+ul.nodeList > li > .item.selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+ul.nodeList > li > .item:hover {
+    cursor: pointer;
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-list-hoverForeground);
+}
+
+.expander {
+    cursor: pointer;
+    padding-right: 0.3rem;
+}
+
+.inputContainer {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-auto-rows: min-content;
+    grid-gap: 1rem;
+    padding-bottom: 0.5rem;
+    padding-top: 0.5rem;
+}
+
+.inputContainer .label {
+    grid-column: 1 / 2;
+}
+
+.inputContainer .control {
+    grid-column: 2 / 3;
+}
+
+.buttonContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.5rem;
+}

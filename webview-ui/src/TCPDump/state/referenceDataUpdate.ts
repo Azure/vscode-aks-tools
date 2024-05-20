@@ -13,7 +13,7 @@ export function updateNodes(data: ReferenceData, nodes: NodeName[]): ReferenceDa
     const updatedNodes = updateValues(
         existingNodes,
         nodes,
-        (data) => data.node,
+        (node, item) => node === item.node,
         (node) => ({
             node,
             filterPods: newNotLoaded(),

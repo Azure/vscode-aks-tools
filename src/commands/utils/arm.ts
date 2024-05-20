@@ -7,6 +7,8 @@ import { ContainerServiceClient } from "@azure/arm-containerservice";
 import { MonitorClient } from "@azure/arm-monitor";
 import { StorageManagementClient } from "@azure/arm-storage";
 import { ReadyAzureSessionProvider } from "../../auth/types";
+import { ContainerRegistryManagementClient } from "@azure/arm-containerregistry";
+import { ContainerRegistryClient } from "@azure/container-registry";
 
 export function getSubscriptionClient(sessionProvider: ReadyAzureSessionProvider): SubscriptionClient {
     return new SubscriptionClient(getCredential(sessionProvider), { endpoint: getArmEndpoint() });
@@ -35,6 +37,23 @@ export function getStorageManagementClient(
     subscriptionId: string,
 ): StorageManagementClient {
     return new StorageManagementClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
+}
+
+export function getAcrManagementClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ContainerRegistryManagementClient {
+    return new ContainerRegistryManagementClient(getCredential(sessionProvider), subscriptionId, {
+        endpoint: getArmEndpoint(),
+    });
+}
+
+export function getAcrClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    registryLoginServer: string,
+): ContainerRegistryClient {
+    // Endpoint should be in the form of "https://myregistryname.azurecr.io"
+    return new ContainerRegistryClient(`https://${registryLoginServer}`, getCredential(sessionProvider));
 }
 
 function getArmEndpoint(): string {

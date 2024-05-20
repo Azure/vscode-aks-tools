@@ -1,0 +1,44 @@
+.selectedValue {
+    display: inline; /* Prevents a small gap between text input and listbox options */
+    width: 100%;
+}
+
+.indicator {
+    cursor: pointer;
+    margin-right: -2px;
+}
+
+.listbox {
+    position: absolute;
+    width: 100%;
+    margin: 0;
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-focusBorder);
+    border-radius: 2px;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex-direction: column;
+    left: 0px;
+    max-height: 200px;
+    padding: 0px;
+    overflow-y: auto;
+    z-index: 1;
+}
+
+.listbox.hidden {
+    display: none;
+}
+
+.listboxItem {
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.listboxItem:hover {
+    background: var(--vscode-list-activeSelectionBackground);
+}
+
+.listboxItem.selected {
+    background: var(--vscode-list-activeSelectionBackground);
+}

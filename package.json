@@ -148,7 +148,7 @@
                 },
                 "aks.drafttool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.30",
+                    "default": "v0.0.33",
                     "title": "Draft repository release tag",
                     "description": "Release tag for the stable Draft tool release."
                 },
@@ -241,6 +241,21 @@
                 "title": "Kustomize Workflow"
             },
             {
+                "command": "aks.draftDockerfile",
+                "title": "Create a Dockerfile",
+                "category": "Draft"
+            },
+            {
+                "command": "aks.draftDeployment",
+                "title": "Create a Deployment",
+                "category": "Draft"
+            },
+            {
+                "command": "aks.draftWorkflow",
+                "title": "Create a GitHub Workflow",
+                "category": "Draft"
+            },
+            {
                 "command": "aks.showInPortal",
                 "title": "Show In Azure Portal"
             },
@@ -294,6 +309,18 @@
                 {
                     "command": "aks.refreshSubscription",
                     "when": "never"
+                },
+                {
+                    "command": "aks.draftDockerfile",
+                    "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.draftDeployment",
+                    "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.draftWorkflow",
+                    "when": "workspaceFolderCount >= 1"
                 }
             ],
             "view/item/context": [
@@ -491,12 +518,12 @@
         "test": "npm run test-compile && node ./out/src/tests/runTests.js"
     },
     "extensionDependencies": [
+        "vscode.git",
         "ms-kubernetes-tools.vscode-kubernetes-tools"
     ],
     "devDependencies": {
         "@types/chai": "^4.3.16",
-        "@types/download": "^8.0.5",
-        "@types/glob": "^8.1.0",
+        "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.6",
         "@types/node": "^20.12.11",
@@ -523,18 +550,21 @@
     },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
+        "@azure/arm-containerregistry": "^10.1.0",
         "@azure/arm-containerservice": "^19.7.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-subscriptions": "^2.1.0",
         "@azure/arm-storage": "^18.2.0",
         "@azure/arm-subscriptions": "^5.1.0",
+        "@azure/container-registry": "^1.1.0",
         "@azure/core-auth": "^1.7.2",
         "@azure/identity": "^4.2.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.18.0",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^2.5.0",
+        "@octokit/rest": "^20.0.2",
         "@vscode/extension-telemetry": "^0.9.6",
         "cross-fetch": "^4.0.0",
         "decompress": "^4.2.1",

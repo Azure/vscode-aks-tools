@@ -20,6 +20,7 @@ import {
     configureKomposeStarterWorkflow,
     configureKustomizeStarterWorkflow,
 } from "./commands/aksStarterWorkflow/configureStarterWorkflow";
+import { draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
 import {
     aksCRUDDiagnostics,
     aksBestPracticesDiagnostics,
@@ -85,6 +86,9 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.configureHelmStarterWorkflow", configureHelmStarterWorkflow);
         registerCommandWithTelemetry("aks.configureKomposeStarterWorkflow", configureKomposeStarterWorkflow);
         registerCommandWithTelemetry("aks.configureKustomizeStarterWorkflow", configureKustomizeStarterWorkflow);
+        registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
+        registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);
+        registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);
         registerCommandWithTelemetry("aks.aksNodeHealthDiagnostics", aksNodeHealth);
         registerCommandWithTelemetry(
             "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",

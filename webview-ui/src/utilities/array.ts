@@ -45,20 +45,19 @@ export type ItemKey = { [key: string]: string } | string;
  * an item in the array.
  * @param items The existing collection of array items
  * @param updatedKeys The keys of the updated collection
- * @param keyFn A function that gets the key of an item
- * @param itemFn A function that creates a new item from a key
+ * @param isMatch A function that determines if a key matches an item
+ * @param makeItem A function that creates a new item from a key
  * @returns An updated collection of items with the new keys/
  */
-export function updateValues<TKey extends ItemKey, TItem>(
+export function updateValues<TKey, TItem>(
     items: TItem[],
     updatedKeys: TKey[],
-    keyFn: (item: TItem) => TKey,
-    itemFn: (key: TKey) => TItem,
+    isMatch: (key: TKey, item: TItem) => boolean,
+    makeItem: (key: TKey) => TItem,
 ): TItem[] {
-    const lookup = asLookup(items, keyFn);
     return updatedKeys.map((key) => {
-        const keyId = getKeyId(key);
-        return keyId in lookup ? lookup[keyId] : itemFn(key);
+        const matchingItem = items.find((item) => isMatch(key, item));
+        return matchingItem !== undefined ? matchingItem : makeItem(key);
     });
 }
 
@@ -70,4 +69,8 @@ function getKeyId(key: ItemKey): string {
     }
 
     return key;
+}
+
+export function filterNulls<T>(items: (T | null)[]): T[] {
+    return items.filter((item) => item !== null) as T[];
 }

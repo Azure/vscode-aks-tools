@@ -2,11 +2,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./vars.css";
 import "../main.css";
+import "@vscode/codicons/dist/codicon.css";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getCreateClusterScenarios } from "./createClusterTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getDetectorScenarios } from "./detectorTests";
+import { getDraftDeploymentScenarios, getDraftDockerfileScenarios, getDraftWorkflowScenarios } from "./draft";
 import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
 import { getKubectlScenarios } from "./kubectlTests";
 import { ContentId } from "../../../src/webview-contract/webviewTypes";
@@ -35,6 +37,9 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     createCluster: getCreateClusterScenarios(),
     periscope: getPeriscopeScenarios(),
     detector: getDetectorScenarios(),
+    draftDeployment: getDraftDeploymentScenarios(),
+    draftDockerfile: getDraftDockerfileScenarios(),
+    draftWorkflow: getDraftWorkflowScenarios(),
     gadget: getInspektorGadgetScenarios(),
     kubectl: getKubectlScenarios(),
     aso: getASOScenarios(),

@@ -43,6 +43,18 @@ export function newLoaded<T>(value: T): Loaded<T> {
     return { loadingState: LoadingState.Loaded, value };
 }
 
+export function isLazy<T>(value: T | Lazy<T>): value is Lazy<T> {
+    return value instanceof Object && "loadingState" in value;
+}
+
+export function asLazy<T>(item: Lazy<T> | T): Lazy<T> {
+    if (isLazy(item)) {
+        return item;
+    }
+
+    return newLoaded(item);
+}
+
 export function orDefault<T>(lazy: Lazy<T>, fallback: T): T {
     return isLoaded(lazy) ? lazy.value : fallback;
 }

@@ -21,7 +21,7 @@ export async function getSubscriptions(
 ): Promise<Errorable<DefinedSubscription[]>> {
     const client = getSubscriptionClient(sessionProvider);
     const subsResult = await listAll(client.subscriptions.list());
-    return errmap(subsResult, (subs) => sortAndFilter(subs.filter(asDefinedSubscription), selectionType));
+    return errmap(subsResult, (subs) => sortAndFilter(subs.filter(isDefinedSubscription), selectionType));
 }
 
 function sortAndFilter(subscriptions: DefinedSubscription[], selectionType: SelectionType): DefinedSubscription[] {
@@ -38,6 +38,6 @@ function sortAndFilter(subscriptions: DefinedSubscription[], selectionType: Sele
     return subscriptions.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
-function asDefinedSubscription(sub: Subscription): sub is DefinedSubscription {
+function isDefinedSubscription(sub: Subscription): sub is DefinedSubscription {
     return sub.subscriptionId !== undefined && sub.displayName !== undefined;
 }
