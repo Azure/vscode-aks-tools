@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.4.5]
+
+* Fix treeview stuck with only 'select tenant' node.
+* Add Draft Dockerfile, Deployment and Workflow commands.
+* Fix bump vscode 1.89 update.
+* Dependabot updates and bumps.
+
+Thank you so much to @peterbom, @qpetraroia, @hsubramanianaks for Draft work, testing this and for review comments.
+
 ## [1.4.4]
 
 * Azure Account Sign-In Changes.
