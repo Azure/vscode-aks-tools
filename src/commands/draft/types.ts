@@ -5,6 +5,7 @@ import { InitialSelection as WorkflowInitialSelection } from "../../webview-cont
 export type DraftCommandParamsTypes = {
     "aks.draftDockerfile": {
         workspaceFolder?: WorkspaceFolder;
+        initialLocation?: string;
     };
     "aks.draftDeployment": {
         workspaceFolder?: WorkspaceFolder;
