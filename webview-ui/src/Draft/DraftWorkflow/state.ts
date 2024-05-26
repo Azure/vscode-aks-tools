@@ -143,10 +143,18 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
         selectedSubscription: unset(),
         selectedClusterResourceGroup: unset(),
         selectedCluster: unset(),
-        selectedClusterNamespace: unset(),
+        selectedClusterNamespace:
+            initialState.initialSelection.clusterNamespace !== undefined
+                ? // As far as we know at this stage, the initial selection is 'new'.
+                  // If it turns out to be 'existing', we'll update this value when we get the namespaces.
+                  valid({ isNew: true, value: initialState.initialSelection.clusterNamespace })
+                : unset(),
         selectedAcrResourceGroup: unset(),
         selectedAcr: unset(),
-        selectedRepositoryName: unset(),
+        selectedRepositoryName:
+            initialState.initialSelection.acrRepository !== undefined
+                ? valid({ isNew: true, value: initialState.initialSelection.acrRepository })
+                : unset(),
         selectedDeploymentSpecType: initialState.initialSelection.deploymentSpecType || "manifests",
         helmParamsState: {
             deploymentType: "helm",
@@ -211,6 +219,7 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             selectedRepositoryName: getSelectedValidatableValue(
                 args.repositoryNames.map((name) => ({ isNew: false, value: name })),
                 (repo) => repo.value === state.pendingSelection.acrRepository,
+                state.selectedRepositoryName,
             ),
             azureReferenceData: AzureReferenceDataUpdate.updateAcrRepositoryNames(
                 state.azureReferenceData,
@@ -239,6 +248,7 @@ export const stateUpdater: WebviewStateUpdater<"draftWorkflow", EventDef, DraftW
             selectedClusterNamespace: getSelectedValidatableValue(
                 args.namespaceNames.map((name) => ({ isNew: false, value: name })),
                 (ns) => ns.value === state.pendingSelection.clusterNamespace,
+                state.selectedClusterNamespace,
             ),
             azureReferenceData: AzureReferenceDataUpdate.updateClusterNamespaces(
                 state.azureReferenceData,
@@ -393,13 +403,14 @@ function updatePickedFile(
 function getSelectedValidatableValue<TItem>(
     items: TItem[],
     matchesInitialValue: (item: TItem) => boolean,
+    defaultValue: Validatable<TItem> = unset(),
 ): Validatable<TItem> {
     const initialItem = items.find(matchesInitialValue);
     if (initialItem) {
         return valid(initialItem);
     }
 
-    return unset();
+    return defaultValue;
 }
 
 function getKnownBranches(state: DraftWorkflowState, key: GitHubRepoKey): string[] {
