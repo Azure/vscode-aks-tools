@@ -72,11 +72,16 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
     const listboxRef = useRef<HTMLOListElement>(null);
 
     useEffect(() => {
-        // If there are any items in props that aren't in allItems, reset allItems
-        if (props.items.some((item) => !allItems.includes(item))) {
-            setAllItems([...props.items]);
+        // If there are any items (including the selected item) in props that aren't in allItems, reset allItems
+        const propsHasExtraItems = props.items.some((item) => !allItems.includes(item));
+        const selectedItemNotInAllItems = props.selectedItem && !allItems.includes(props.selectedItem);
+        if (propsHasExtraItems || selectedItemNotInAllItems) {
+            const updatedAllItems = selectedItemNotInAllItems
+                ? [props.selectedItem!, ...props.items]
+                : [...props.items];
+            setAllItems(updatedAllItems);
         }
-    }, [props.items, allItems]);
+    }, [props.items, props.selectedItem, allItems]);
 
     const itemLookup = new Map(allItems.map((item) => [item.toLowerCase(), item]));
     const canAddItem = searchText ? !itemLookup.has(searchText.toLowerCase()) : false;
