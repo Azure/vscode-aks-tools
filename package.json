@@ -202,7 +202,7 @@
             },
             {
                 "command": "aks.configureStarterWorkflow",
-                "title": "Starter Workflow"
+                "title": "Starter Workflow (deprecated)"
             },
             {
                 "command": "aks.aksCRUDDiagnostics",
@@ -230,15 +230,15 @@
             },
             {
                 "command": "aks.configureHelmStarterWorkflow",
-                "title": "Helm Workflow"
+                "title": "Helm Workflow (deprecated)"
             },
             {
                 "command": "aks.configureKomposeStarterWorkflow",
-                "title": "Kompose Workflow"
+                "title": "Kompose Workflow (deprecated)"
             },
             {
                 "command": "aks.configureKustomizeStarterWorkflow",
-                "title": "Kustomize Workflow"
+                "title": "Kustomize Workflow (deprecated)"
             },
             {
                 "command": "aks.draftDockerfile",
@@ -323,6 +323,16 @@
                     "when": "workspaceFolderCount >= 1"
                 }
             ],
+            "explorer/context": [
+                {
+                    "command": "aks.draftDockerfile",
+                    "when": "explorerResourceIsFolder"
+                },
+                {
+                    "command": "aks.draftDeployment",
+                    "when": "explorerResourceIsFolder"
+                }
+            ],
             "view/item/context": [
                 {
                     "command": "aks.selectSubscriptions",
@@ -362,6 +372,11 @@
                 {
                     "command": "aks.installAzureServiceOperator",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i"
+                },
+                {
+                    "submenu": "aks.draftSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && workspaceFolderCount >= 1",
+                    "group": "9@1"
                 },
                 {
                     "submenu": "aks.ghWorkflowSubMenu",
@@ -428,6 +443,16 @@
                     "group": "navigation"
                 }
             ],
+            "aks.draftSubMenu": [
+                {
+                    "command": "aks.draftDeployment",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.draftWorkflow",
+                    "group": "navigation"
+                }
+            ],
             "aks.ghWorkflowSubMenu": [
                 {
                     "command": "aks.configureHelmStarterWorkflow",
@@ -481,8 +506,12 @@
                 "label": "Run AKS Diagnostics"
             },
             {
+                "id": "aks.draftSubMenu",
+                "label": "Draft"
+            },
+            {
                 "id": "aks.ghWorkflowSubMenu",
-                "label": "Create GitHub Workflow"
+                "label": "Create GitHub Workflow (deprecated)"
             },
             {
                 "id": "aks.managedClusterOperationSubMenu",
