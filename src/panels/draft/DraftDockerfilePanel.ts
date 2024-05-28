@@ -31,6 +31,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
     constructor(
         readonly workspaceFolder: WorkspaceFolder,
         readonly draftBinaryPath: string,
+        readonly initialLocation: string,
     ) {
         this.draftDirectory = path.dirname(draftBinaryPath);
     }
@@ -46,9 +47,9 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
                 fullPath: this.workspaceFolder.uri.fsPath,
                 pathSeparator: path.sep,
             },
-            location: "",
+            location: this.initialLocation,
             supportedLanguages: getSupportedLanguages(),
-            existingFiles: getExistingFiles(this.workspaceFolder, ""),
+            existingFiles: getExistingFiles(this.workspaceFolder, this.initialLocation),
         };
     }
 

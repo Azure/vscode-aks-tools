@@ -11,7 +11,7 @@ import {
 } from "vscode";
 import { DraftDockerfileDataProvider, DraftDockerfilePanel } from "../../panels/draft/DraftDockerfilePanel";
 import { getExtension } from "../utils/host";
-import { Errorable, failed, getErrorMessage } from "../utils/errorable";
+import { Errorable, failed, getErrorMessage, succeeded } from "../utils/errorable";
 import { getDraftBinaryPath } from "../utils/helper/draftBinaryDownload";
 import { DraftDeploymentDataProvider, DraftDeploymentPanel } from "../../panels/draft/DraftDeploymentPanel";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -26,11 +26,11 @@ import { basename, extname, join } from "path";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { DraftCommandParamsType } from "./types";
+import { getAksClusterTreeNode } from "../utils/clusters";
+import path from "path";
 
-export async function draftDockerfile(
-    _context: IActionContext,
-    params?: DraftCommandParamsType<"aks.draftDockerfile">,
-): Promise<void> {
+export async function draftDockerfile(_context: IActionContext, target: unknown): Promise<void> {
+    const params = getDraftDockerfileParams(target);
     const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
     if (commonDependencies === null) {
         return;
@@ -38,14 +38,17 @@ export async function draftDockerfile(
 
     const { workspaceFolder, extension, draftBinaryPath } = commonDependencies;
     const panel = new DraftDockerfilePanel(extension.extensionUri);
-    const dataProvider = new DraftDockerfileDataProvider(workspaceFolder, draftBinaryPath);
+    const dataProvider = new DraftDockerfileDataProvider(
+        workspaceFolder,
+        draftBinaryPath,
+        params?.initialLocation || "",
+    );
     panel.show(dataProvider);
 }
 
-export async function draftDeployment(
-    _context: IActionContext,
-    params?: DraftCommandParamsType<"aks.draftDeployment">,
-): Promise<void> {
+export async function draftDeployment(_context: IActionContext, target: unknown): Promise<void> {
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const params = getDraftDeploymentParams(cloudExplorer, target);
     const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
     if (commonDependencies === null) {
         return;
@@ -84,10 +87,9 @@ export async function draftDeployment(
     panel.show(dataProvider);
 }
 
-export async function draftWorkflow(
-    _context: IActionContext,
-    params?: DraftCommandParamsType<"aks.draftWorkflow">,
-): Promise<void> {
+export async function draftWorkflow(_context: IActionContext, target: unknown): Promise<void> {
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const params = getDraftWorkflowParams(cloudExplorer, target);
     const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
     if (commonDependencies === null) {
         return;
@@ -246,4 +248,70 @@ async function getRepo(octokit: Octokit, remote: Remote): Promise<GitHubRepo | n
         isFork: response.data.fork,
         defaultBranch: response.data.default_branch,
     };
+}
+
+function getDraftDockerfileParams(params: unknown): DraftCommandParamsType<"aks.draftDockerfile"> {
+    if (params instanceof Uri) {
+        const workspaceFolder = workspace.getWorkspaceFolder(params);
+        if (!workspaceFolder) {
+            return {};
+        }
+
+        const initialLocation = path.relative(workspaceFolder.uri.fsPath, params.fsPath);
+        return {
+            workspaceFolder: workspace.getWorkspaceFolder(params),
+            initialLocation,
+        };
+    }
+
+    return params as DraftCommandParamsType<"aks.draftDockerfile">;
+}
+
+function getDraftDeploymentParams(
+    cloudExplorer: k8s.API<k8s.CloudExplorerV1>,
+    params: unknown,
+): DraftCommandParamsType<"aks.draftDeployment"> {
+    if (params instanceof Uri) {
+        const workspaceFolder = workspace.getWorkspaceFolder(params);
+        if (!workspaceFolder) {
+            return {};
+        }
+
+        const initialLocation = path.relative(workspaceFolder.uri.fsPath, params.fsPath);
+        return {
+            workspaceFolder,
+            initialLocation,
+        };
+    }
+
+    const clusterNode = getAksClusterTreeNode(params, cloudExplorer);
+    if (succeeded(clusterNode)) {
+        return {
+            initialSelection: {
+                subscriptionId: clusterNode.result.subscriptionId,
+                clusterResourceGroup: clusterNode.result.resourceGroupName,
+                clusterName: clusterNode.result.name,
+            },
+        };
+    }
+
+    return params as DraftCommandParamsType<"aks.draftDeployment">;
+}
+
+function getDraftWorkflowParams(
+    cloudExplorer: k8s.API<k8s.CloudExplorerV1>,
+    params: unknown,
+): DraftCommandParamsType<"aks.draftWorkflow"> {
+    const clusterNode = getAksClusterTreeNode(params, cloudExplorer);
+    if (succeeded(clusterNode)) {
+        return {
+            initialSelection: {
+                subscriptionId: clusterNode.result.subscriptionId,
+                clusterResourceGroup: clusterNode.result.resourceGroupName,
+                clusterName: clusterNode.result.name,
+            },
+        };
+    }
+
+    return params as DraftCommandParamsType<"aks.draftWorkflow">;
 }
