@@ -5,7 +5,7 @@ on:
       - main
 
 env:
-  MAX_LINE_CHANGED: 1200 # Maximum number of lines changed allowed
+  MAX_LINE_CHANGED: 2 # Maximum number of lines changed allowed
   TARGET_BRANCH: main
 
 permissions:
