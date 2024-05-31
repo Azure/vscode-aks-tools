@@ -95,6 +95,10 @@ export function getDraftWorkflowScenarios() {
                 alert(`Launching Draft Workflow command with initial selection:\n${JSON.stringify(args, null, 2)}`),
             launchDraftDeployment: (args) =>
                 alert(`Launching Draft Deployment command with initial selection:\n${JSON.stringify(args, null, 2)}`),
+            launchConnectAcrToCluster: (args) =>
+                alert(
+                    `Launching Connect ACR to Cluster command with initial selection:\n${JSON.stringify(args, null, 2)}`,
+                ),
         };
 
         async function handlePickFilesRequest(params: PickFilesRequestParams<PickFilesIdentifier>) {
