@@ -241,6 +241,11 @@
                 "title": "Kustomize Workflow (deprecated)"
             },
             {
+                "command": "aks.connectAcrToCluster",
+                "title": "Connect ACR to Cluster",
+                "category": "AKS"
+            },
+            {
                 "command": "aks.draftDockerfile",
                 "title": "Create a Dockerfile",
                 "category": "Draft"
@@ -444,6 +449,10 @@
                 }
             ],
             "aks.draftSubMenu": [
+                {
+                    "command": "aks.connectAcrToCluster",
+                    "group": "navigation"
+                },
                 {
                     "command": "aks.draftDeployment",
                     "group": "navigation"
