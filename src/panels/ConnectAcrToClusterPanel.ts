@@ -256,6 +256,7 @@ async function getClusterPrincipalId(
     sessionProvider: ReadyAzureSessionProvider,
     clusterKey: ClusterKey,
 ): Promise<Errorable<string>> {
+    // This is adapted from the Azure CLI implementation of `az aks update --attach-acr`.
     const cluster = await getManagedCluster(
         sessionProvider,
         clusterKey.subscriptionId,
@@ -266,9 +267,12 @@ async function getClusterPrincipalId(
         return cluster;
     }
 
+    // See: https://github.com/Azure/azure-cli/blob/a267cc2ddcd09e39fcaf6af0bc20d409218a5bbc/src/azure-cli/azure/cli/command_modules/acs/_helpers.py#L79-L88
     const hasManagedIdentity =
         cluster.result.identity?.type === "SystemAssigned" || cluster.result.identity?.type === "UserAssigned";
     if (hasManagedIdentity) {
+        // For the case where the cluster _has_ a managed identity, use `objectId` from the `kubeletidentity` profile.
+        // see: https://github.com/Azure/azure-cli/blob/a267cc2ddcd09e39fcaf6af0bc20d409218a5bbc/src/azure-cli/azure/cli/command_modules/acs/managed_cluster_decorator.py#L6808-L6815
         if (
             cluster.result.identityProfile &&
             "kubeletidentity" in cluster.result.identityProfile &&
@@ -286,6 +290,9 @@ async function getClusterPrincipalId(
         };
     }
 
+    // Fall back to the `clientId` property of the service principal profile
+    // for the case where the cluster has no managed identity:
+    // See: https://github.com/Azure/azure-cli/blob/a267cc2ddcd09e39fcaf6af0bc20d409218a5bbc/src/azure-cli/azure/cli/command_modules/acs/managed_cluster_decorator.py#L5787-L5795
     const servicePrincipalId = cluster.result.servicePrincipalProfile?.clientId;
     if (servicePrincipalId) {
         return {
