@@ -42,7 +42,9 @@ jobs:
             echo $size
         shell: bash
       - run: |
-          if [[ $size -gt ${{ env.MAX_LINE_CHANGED }} ]]
+          COMMITMSG=$(git log --format=%B -n 1 ${{github.event.after}})
+          echo "${COMMITMSG}"
+          if [[ $size -gt ${{ env.MAX_LINE_CHANGED }} && "${COMMITMSG}" != *"[skip pr-size]"* ]]
           then
           echo "Warning - total lines changed is greater than" ${{ env.MAX_LINE_CHANGED }}.
           echo "Please consider breaking this PR down."
