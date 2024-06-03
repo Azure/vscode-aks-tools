@@ -9,9 +9,13 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { getAksClusterTreeNode } from "../utils/clusters";
 
 export type ConnectAcrToClusterParams = {
-    initialSelection: InitialSelection;
+    initialSelection?: InitialSelection;
 };
 
+/**
+ * Allows the command to be invoked programmatically, in this case from the message handler
+ * of the 'Draft Workflow' webview.
+ */
 export function launchConnectAcrToClusterCommand(params: ConnectAcrToClusterParams) {
     commands.executeCommand("aks.connectAcrToCluster", params);
 }
@@ -32,8 +36,11 @@ export async function connectAcrToCluster(_context: IActionContext, target: unkn
         return;
     }
 
+    // Explicitly pass empty initialSelection if not defined.
+    const initialSelection = params?.initialSelection || {};
+
     const panel = new ConnectAcrToClusterPanel(extension.result.extensionUri);
-    const dataProvider = new ConnectAcrToClusterDataProvider(sessionProvider.result, params?.initialSelection || {});
+    const dataProvider = new ConnectAcrToClusterDataProvider(sessionProvider.result, initialSelection);
     panel.show(dataProvider);
 }
 

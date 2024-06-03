@@ -123,11 +123,7 @@ function getAcrReferenceData(
     acr: Acr | null,
 ): AcrReferenceData | null {
     const subscriptionData = getSubscriptionReferenceData(referenceData, subscription);
-    if (subscriptionData === null || !isLoaded(subscriptionData.acrs)) {
-        return null;
-    }
-
-    if (subscription === null || acr === null) {
+    if (subscriptionData === null || !isLoaded(subscriptionData.acrs) || subscription === null || acr === null) {
         return null;
     }
 
