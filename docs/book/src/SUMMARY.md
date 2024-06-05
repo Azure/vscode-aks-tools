@@ -10,7 +10,7 @@
   - [Perform AKS Diagnostics checks on your AKS cluster](./features/aks-diagnostics.md)
   - [Run AKS Periscope within VS Code](./features/aks-periscope.md)
   - [Install Azure Service Operator on your AKS cluster](./features/install-azureserviceoperator.md)
-  - [Create GitHub Workflow from your AKS cluster](./features/create-gh-workflow.md)
+  - [Create GitHub Workflow from your AKS cluster (deprecated)](./features/create-gh-workflow.md)
   - [Show AKS cluster overview in Azure Portal](./features/show-properties-azureportal-start-stop.md)
   - [Show AKS cluster properties](./features/show-properties-azureportal-start-stop.md)
   - [Create AKS cluster from Azure Portal](./features/show-properties-azureportal-start-stop.md)
