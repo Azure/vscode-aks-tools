@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.4.6]
+
+* Ensure initial selection values are populated in Draft.
+* Add draft context menu commands and deprecate starter workflows.
+* PR Size Check with skip tag.
+* Dependabot updates and bumps.
+
+Thanks to @Tatsinnit, @qpetraroia, @hsubramanianaks for contributions, testing and reviews.
+
 ## [1.4.5]
 
 * Fix treeview stuck with only 'select tenant' node.
