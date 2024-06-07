@@ -2,17 +2,18 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { failed, getErrorMessage, map as errmap, combine } from "../commands/utils/errorable";
+import { failed, getErrorMessage, map as errmap, combine, Errorable, succeeded } from "../commands/utils/errorable";
 import {
     ASOCloudName,
     AzureCloudName,
     CommandResult,
     InitialState,
+    Subscription,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
     azureToASOCloudMap,
 } from "../webview-contract/webviewDefinitions/azureServiceOperator";
-import { getServicePrincipalAccess } from "../commands/utils/azureAccount";
+import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import path from "path";
 import * as fs from "fs/promises";
@@ -20,6 +21,11 @@ import { createTempFile } from "../commands/utils/tempfile";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { NonZeroExitCodeBehaviour } from "../commands/utils/shell";
+import { getServicePrincipalsForApp } from "../commands/utils/graph";
+import { getEnvironment } from "../auth/azureAuth";
+import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
+import { getAuthorizationManagementClient } from "../commands/utils/arm";
+import { getAllRoleAssignmentsForPrincipal } from "../commands/utils/roleAssignments";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
     constructor(extensionUri: vscode.Uri) {
@@ -38,6 +44,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly extension: vscode.Extension<vscode.ExtensionContext>,
+        readonly graphClient: GraphClient,
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
         readonly clusterName: string,
@@ -66,7 +73,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            checkSPRequest: (args) => this.handleCheckSPRequest(args.appId, args.appSecret, webview),
+            checkSPRequest: (args) => this.handleCheckSPRequest(args.appId, webview),
             installCertManagerRequest: () => this.handleInstallCertManagerRequest(webview),
             waitForCertManagerRequest: () => this.handleWaitForCertManagerRequest(webview),
             installOperatorRequest: () => this.handleInstallOperatorRequest(webview),
@@ -83,16 +90,12 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         };
     }
 
-    private async handleCheckSPRequest(
-        appId: string,
-        appSecret: string,
-        webview: MessageSink<ToWebViewMsgDef>,
-    ): Promise<void> {
-        const servicePrincipalAccess = await getServicePrincipalAccess(this.sessionProvider, appId, appSecret);
-        if (failed(servicePrincipalAccess)) {
+    private async handleCheckSPRequest(appId: string, webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+        const subscriptions = await this.getSubscriptionsForServicePrincipal(appId);
+        if (failed(subscriptions)) {
             webview.postCheckSPResponse({
                 succeeded: false,
-                errorMessage: servicePrincipalAccess.error,
+                errorMessage: subscriptions.error,
                 commandResults: [],
                 cloudName: null,
                 subscriptions: [],
@@ -105,10 +108,43 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
             succeeded: true,
             errorMessage: null,
             commandResults: [],
-            cloudName: servicePrincipalAccess.result.cloudName as AzureCloudName,
-            subscriptions: servicePrincipalAccess.result.subscriptions,
-            tenantId: servicePrincipalAccess.result.tenantId,
+            cloudName: getEnvironment().name as AzureCloudName,
+            subscriptions: subscriptions.result,
+            tenantId: this.sessionProvider.selectedTenant.id,
         });
+    }
+
+    private async getSubscriptionsForServicePrincipal(appId: string): Promise<Errorable<Subscription[]>> {
+        const servicePrincipals = await getServicePrincipalsForApp(this.graphClient, appId);
+        if (failed(servicePrincipals)) {
+            return servicePrincipals;
+        }
+
+        if (servicePrincipals.result.length === 0) {
+            return { succeeded: false, error: "No service principals associated with the provided app ID." };
+        }
+
+        const allSubscriptions = await getSubscriptions(this.sessionProvider, SelectionType.All);
+        if (failed(allSubscriptions)) {
+            return allSubscriptions;
+        }
+
+        if (allSubscriptions.result.length === 0) {
+            return { succeeded: false, error: "The provided application does not have access to any subscriptions." };
+        }
+
+        const promises = allSubscriptions.result.map(async (s) => {
+            const subscription: Subscription = { id: s.subscriptionId, name: s.displayName };
+            const client = getAuthorizationManagementClient(this.sessionProvider, s.subscriptionId);
+            const promises = servicePrincipals.result.map((sp) => getAllRoleAssignmentsForPrincipal(client, sp.id));
+            const roleAssignmentResults = await Promise.all(promises);
+            const roleAssignments = roleAssignmentResults.filter(succeeded).flatMap((r) => r.result);
+            return { subscription, hasRoleAssignment: roleAssignments.length > 0 };
+        });
+
+        const results = await Promise.all(promises);
+        const accessibleSubscriptions = results.filter((r) => r.hasRoleAssignment).map((r) => r.subscription);
+        return { succeeded: true, result: accessibleSubscriptions };
     }
 
     private async handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
