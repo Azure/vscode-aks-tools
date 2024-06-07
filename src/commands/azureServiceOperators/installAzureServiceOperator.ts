@@ -7,7 +7,6 @@ import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import { AzureServiceOperatorDataProvider, AzureServiceOperatorPanel } from "../../panels/AzureServiceOperatorPanel";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { createGraphClient } from "../utils/graph";
 
 export default async function installAzureServiceOperator(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -47,13 +46,10 @@ export default async function installAzureServiceOperator(_context: IActionConte
         return undefined;
     }
 
-    const graphClient = createGraphClient(sessionProvider.result);
-
     const kubeConfigFile = await createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
     const dataProvider = new AzureServiceOperatorDataProvider(
         sessionProvider.result,
         extension.result,
-        graphClient,
         kubectl,
         kubeConfigFile.filePath,
         clusterInfo.result.name,
