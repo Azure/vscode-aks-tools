@@ -23,6 +23,7 @@ export type ClusterKey = SubscriptionKey & {
 export type Cluster = ClusterKey; // Fully-defined by its key
 
 // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+// Role definition names are always guids. Here we want the role definition name for AcrPull.
 export const acrPullRoleDefinitionName = "7f951dda-4ed3-4680-a7ca-43fe172d538d";
 
 export type InitialSelection = {

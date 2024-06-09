@@ -40,8 +40,8 @@ export function ConnectAcrToCluster(initialState: InitialState) {
     });
 
     function getAcrAuthorizationActionItemProps(): ActionItemProps {
-        const createAction = makeFixAction(faSave, "Authorize", null);
-        const deleteAction = makeFixAction(faTrash, "Deauthorize", null);
+        const createAction = makeFixAction(faSave, "Authorize", null /* No action available yet */);
+        const deleteAction = makeFixAction(faTrash, "Deauthorize", null /* No action available yet */);
         const actionItemProps = makeActionItemProps("ACR Pull", createAction, deleteAction);
 
         if (state.selectedAcr === null) {
