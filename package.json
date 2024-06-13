@@ -241,6 +241,11 @@
                 "title": "Kustomize Workflow (deprecated)"
             },
             {
+                "command": "aks.connectAcrToCluster",
+                "title": "Connect ACR to Cluster",
+                "category": "AKS"
+            },
+            {
                 "command": "aks.draftDockerfile",
                 "title": "Create a Dockerfile",
                 "category": "Draft"
@@ -445,6 +450,10 @@
             ],
             "aks.draftSubMenu": [
                 {
+                    "command": "aks.connectAcrToCluster",
+                    "group": "navigation"
+                },
+                {
                     "command": "aks.draftDeployment",
                     "group": "navigation"
                 },
@@ -559,6 +568,7 @@
         "@types/semver": "^7.5.8",
         "@types/sinon": "^17.0.3",
         "@types/tmp": "^0.2.6",
+        "@types/uuid": "^9.0.8",
         "@types/vscode": "^1.89.0",
         "@typescript-eslint/eslint-plugin": "^7.13.0",
         "@typescript-eslint/parser": "^7.13.0",
@@ -603,6 +613,7 @@
         "semver": "^7.6.2",
         "sinon": "^18.0.0",
         "tmp": "^0.2.3",
+        "uuid": "^10.0.0",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
     "repository": {
