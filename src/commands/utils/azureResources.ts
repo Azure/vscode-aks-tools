@@ -4,7 +4,17 @@ import { Errorable, map as errmap } from "./errorable";
 import { parseResource } from "../../azure-api-utils";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 
-export type ResourceType = "Microsoft.ContainerService/managedClusters" | "Microsoft.ContainerRegistry/registries";
+export const clusterProvider = "Microsoft.ContainerService";
+export const acrProvider = "Microsoft.ContainerRegistry";
+
+export const clusterResourceName = "managedClusters";
+export const acrResourceName = "registries";
+
+export const clusterResourceType = `${clusterProvider}/${clusterResourceName}`;
+export const acrResourceType = `${acrProvider}/${acrResourceName}`;
+
+export const resourceTypes = [clusterResourceType, acrResourceType] as const;
+export type ResourceType = (typeof resourceTypes)[number];
 
 /**
  * A resource with the id and name properties guaranteed to be defined.

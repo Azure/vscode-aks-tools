@@ -1,5 +1,9 @@
 import { FormEvent, useEffect } from "react";
-import { CreateParams, InitialState } from "../../../../src/webview-contract/webviewDefinitions/draft/draftWorkflow";
+import {
+    CreateParams,
+    InitialState,
+    LaunchConnectAcrToClusterParams,
+} from "../../../../src/webview-contract/webviewDefinitions/draft/draftWorkflow";
 import {
     DeploymentSpecType,
     GitHubRepo,
@@ -287,6 +291,19 @@ export function DraftWorkflow(initialState: InitialState) {
             ...state.helmParamsState.selectedOverrides,
             { key: unset(), value: unset() },
         ]);
+    }
+
+    function handleLaunchConnectAcrToClusterClick(e: React.MouseEvent) {
+        e.preventDefault();
+        const params: LaunchConnectAcrToClusterParams = {
+            initialSubscriptionId: orDefault(state.selectedSubscription, null)?.id || null,
+            initialAcrResourceGroup: orDefault(state.selectedAcrResourceGroup, null) || null,
+            initialAcrName: orDefault(state.selectedAcr, null) || null,
+            initialClusterResourceGroup: orDefault(state.selectedClusterResourceGroup, null) || null,
+            initialClusterName: orDefault(state.selectedCluster, null) || null,
+        };
+
+        vscode.postLaunchConnectAcrToCluster(params);
     }
 
     function validate(): Maybe<CreateParams> {
@@ -867,7 +884,7 @@ export function DraftWorkflow(initialState: InitialState) {
                                 <ul>
                                     <li>
                                         The ACR {isValueSet(state.selectedAcr) ? `(${state.selectedAcr.value})` : ""}{" "}
-                                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-an-existing-aks-cluster">
+                                        <VSCodeLink href="#" onClick={handleLaunchConnectAcrToClusterClick}>
                                             is attached
                                         </VSCodeLink>{" "}
                                         to the cluster{" "}

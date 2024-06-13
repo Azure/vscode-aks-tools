@@ -4,6 +4,7 @@ import { BasePanel, PanelDataProvider } from "../BasePanel";
 import {
     ExistingFile,
     InitialState,
+    LaunchConnectAcrToClusterParams,
     PickFilesIdentifier,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
@@ -31,6 +32,10 @@ import { getAcrRegistry, getRepositories } from "../../commands/utils/acrs";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getResources } from "../../commands/utils/azureResources";
 import { launchDraftCommand } from "./commandUtils";
+import {
+    ConnectAcrToClusterParams,
+    launchConnectAcrToClusterCommand,
+} from "../../commands/aksConnectAcrToCluster/connectAcrToCluster";
 
 export class DraftWorkflowPanel extends BasePanel<"draftWorkflow"> {
     constructor(extensionUri: Uri) {
@@ -96,6 +101,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
             openFileRequest: false,
             launchDraftDockerfile: false,
             launchDraftDeployment: false,
+            launchConnectAcrToCluster: false,
         };
     }
 
@@ -120,6 +126,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
                 launchDraftCommand("aks.draftDeployment", {
                     workspaceFolder: this.workspaceFolder,
                 }),
+            launchConnectAcrToCluster: (params) => this.handleLaunchConnectAcrToCluster(params),
         };
     }
 
@@ -314,6 +321,20 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
     private handleOpenFileRequest(relativeFilePath: string) {
         const filePath = path.join(this.workspaceFolder.uri.fsPath, relativeFilePath);
         window.showTextDocument(Uri.file(filePath));
+    }
+
+    private handleLaunchConnectAcrToCluster(params: LaunchConnectAcrToClusterParams) {
+        const commandParams: ConnectAcrToClusterParams = {
+            initialSelection: {
+                subscriptionId: params.initialSubscriptionId || undefined,
+                acrResourceGroup: params.initialAcrResourceGroup || undefined,
+                acrName: params.initialAcrName || undefined,
+                clusterResourceGroup: params.initialClusterResourceGroup || undefined,
+                clusterName: params.initialClusterName || undefined,
+            },
+        };
+
+        launchConnectAcrToClusterCommand(commandParams);
     }
 }
 
