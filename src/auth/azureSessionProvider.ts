@@ -7,7 +7,7 @@ import {
     AuthenticationGetSessionOptions,
     AuthenticationSession,
 } from "vscode";
-import { AzureAuthenticationSession, AzureSessionProvider, SignInStatus, Tenant } from "./types";
+import { AzureAuthenticationSession, AzureSessionProvider, GetAuthSessionOptions, SignInStatus, Tenant } from "./types";
 import { Errorable, bindAsync, getErrorMessage, map as errmap, succeeded } from "../commands/utils/errorable";
 import { getDefaultScope, quickPickTenant } from "./azureAuth";
 import { getConfiguredAzureEnv } from "../commands/utils/config";
@@ -119,7 +119,9 @@ class AzureSessionProviderImpl extends VsCodeDisposable implements AzureSessionP
         // This allows the user to sign in to the Microsoft provider and list tenants,
         // but the resulting session will not allow tenant-level operations. For that,
         // we need to get a session for a specific tenant.
-        const getSessionResult = await this.getArmSession("organizations", authScenario);
+        const orgTenantId = "organizations";
+        const scopes = getScopes(orgTenantId, {});
+        const getSessionResult = await this.getArmSession(orgTenantId, scopes, authScenario);
 
         // Get the tenants
         const getTenantsResult = await bindAsync(getSessionResult, (session) => getTenants(session));
@@ -149,7 +151,7 @@ class AzureSessionProviderImpl extends VsCodeDisposable implements AzureSessionP
      * @returns The current Azure session, if available. If the user is not signed in, or there are no tenants,
      * an error message is returned.
      */
-    public async getAuthSession(): Promise<Errorable<AzureAuthenticationSession>> {
+    public async getAuthSession(options?: GetAuthSessionOptions): Promise<Errorable<AzureAuthenticationSession>> {
         await this.initializePromise;
         if (this.signInStatusValue !== "SignedIn") {
             return { succeeded: false, error: `Not signed in (${this.signInStatusValue}).` };
@@ -173,7 +175,9 @@ class AzureSessionProviderImpl extends VsCodeDisposable implements AzureSessionP
         }
 
         // Get a session for a specific tenant.
-        return await this.getArmSession(this.selectedTenantValue.id, AuthScenario.GetSession);
+        const tenantId = this.selectedTenantValue.id;
+        const scopes = getScopes(tenantId, options || {});
+        return await this.getArmSession(tenantId, scopes, AuthScenario.GetSession);
     }
 
     private async getNewSelectedTenant(
@@ -202,8 +206,17 @@ class AzureSessionProviderImpl extends VsCodeDisposable implements AzureSessionP
     }
 
     private async getDefaultTenantId(tenants: Tenant[]): Promise<Tenant | null> {
+        if (tenants.length === 1) {
+            return tenants[0];
+        }
+
+        // It may be the case that the user has access to multiple tenants, but only has a valid token for one of them.
+        // This might happen if the user has signed in to one recently, but not the others. In this case, we would want
+        // to default to the tenant that the user has a valid token for.
         // Use the 'Initialization' scenario to ensure this is silent (no user interaction).
-        const getSessionPromises = tenants.map((t) => this.getArmSession(t.id, AuthScenario.Initialization));
+        const getSessionPromises = tenants.map((t) =>
+            this.getArmSession(t.id, getScopes(t.id, {}), AuthScenario.Initialization),
+        );
         const results = await Promise.all(getSessionPromises);
         const accessibleTenants = results.filter(succeeded).map((r) => r.result);
         return accessibleTenants.length === 1 ? findTenant(tenants, accessibleTenants[0].tenantId) : null;
@@ -211,13 +224,11 @@ class AzureSessionProviderImpl extends VsCodeDisposable implements AzureSessionP
 
     private async getArmSession(
         tenantId: string,
+        scopes: string[],
         authScenario: AuthScenario,
     ): Promise<Errorable<AzureAuthenticationSession>> {
         this.handleSessionChanges = false;
         try {
-            const tenantScopes = tenantId ? [`VSCODE_TENANT:${tenantId}`] : [];
-            const scopes = [getDefaultScope(getConfiguredAzureEnv().resourceManagerEndpointUrl), ...tenantScopes];
-
             let options: AuthenticationGetSessionOptions;
             let silentFirst = false;
             switch (authScenario) {
@@ -263,6 +274,13 @@ function getConfiguredAuthProviderId(): AuthProviderId {
     return getConfiguredAzureEnv().name === Environment.AzureCloud.name ? "microsoft" : "microsoft-sovereign-cloud";
 }
 
+function getScopes(tenantId: string | null, options: GetAuthSessionOptions): string[] {
+    const defaultScopes = options.scopes || [getDefaultScope(getConfiguredAzureEnv().resourceManagerEndpointUrl)];
+    const tenantScopes = tenantId ? [`VSCODE_TENANT:${tenantId}`] : [];
+    const clientIdScopes = options.applicationClientId ? [`VSCODE_CLIENT_ID:${options.applicationClientId}`] : [];
+    return [...defaultScopes, ...tenantScopes, ...clientIdScopes];
+}
+
 async function getTenants(session: AuthenticationSession): Promise<Errorable<Tenant[]>> {
     const armEndpoint = getConfiguredAzureEnv().resourceManagerEndpointUrl;
     const credential: TokenCredential = {
@@ -273,14 +291,14 @@ async function getTenants(session: AuthenticationSession): Promise<Errorable<Ten
     const subscriptionClient = new SubscriptionClient(credential, { endpoint: armEndpoint });
 
     const tenantsResult = await listAll(subscriptionClient.tenants.list());
-    return errmap(tenantsResult, (t) => t.filter(asTenant).map((t) => ({ name: t.displayName, id: t.tenantId })));
+    return errmap(tenantsResult, (t) => t.filter(isTenant).map((t) => ({ name: t.displayName, id: t.tenantId })));
 }
 
 function findTenant(tenants: Tenant[], tenantId: string): Tenant | null {
     return tenants.find((t) => t.id === tenantId) || null;
 }
 
-function asTenant(tenant: TenantIdDescription): tenant is { tenantId: string; displayName: string } {
+function isTenant(tenant: TenantIdDescription): tenant is { tenantId: string; displayName: string } {
     return tenant.tenantId !== undefined && tenant.displayName !== undefined;
 }
 
