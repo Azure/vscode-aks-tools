@@ -17,13 +17,18 @@ export type Tenant = {
     id: string;
 };
 
+export type GetAuthSessionOptions = {
+    applicationClientId?: string;
+    scopes?: string[];
+};
+
 export type AzureSessionProvider = {
     signIn(): Promise<void>;
     signInStatus: SignInStatus;
     availableTenants: Tenant[];
     selectedTenant: Tenant | null;
     signInStatusChangeEvent: Event<SignInStatus>;
-    getAuthSession(): Promise<Errorable<AzureAuthenticationSession>>;
+    getAuthSession(options?: GetAuthSessionOptions): Promise<Errorable<AzureAuthenticationSession>>;
     dispose(): void;
 };
 
