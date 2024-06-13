@@ -16,7 +16,7 @@ import {
 } from "../webview-contract/webviewDefinitions/connectAcrToCluster";
 import { Errorable, failed, getErrorMessage } from "../commands/utils/errorable";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
-import { getResources } from "../commands/utils/azureResources";
+import { acrResourceType, clusterResourceType, getResources } from "../commands/utils/azureResources";
 import { getAuthorizationManagementClient } from "../commands/utils/arm";
 import { RoleAssignment } from "@azure/arm-authorization";
 import {
@@ -103,11 +103,7 @@ export class ConnectAcrToClusterDataProvider implements PanelDataProvider<"conne
     }
 
     private async handleGetAcrsRequest(key: SubscriptionKey, webview: MessageSink<ToWebViewMsgDef>) {
-        const sourceAcrsResult = await getResources(
-            this.sessionProvider,
-            key.subscriptionId,
-            "Microsoft.ContainerRegistry/registries",
-        );
+        const sourceAcrsResult = await getResources(this.sessionProvider, key.subscriptionId, acrResourceType);
         const sourceAcrs = defaultAndNotify(sourceAcrsResult, []);
 
         const acrs: AcrKey[] = sourceAcrs
@@ -122,11 +118,7 @@ export class ConnectAcrToClusterDataProvider implements PanelDataProvider<"conne
     }
 
     private async handleGetClustersRequest(key: SubscriptionKey, webview: MessageSink<ToWebViewMsgDef>) {
-        const sourceClustersResult = await getResources(
-            this.sessionProvider,
-            key.subscriptionId,
-            "Microsoft.ContainerService/managedClusters",
-        );
+        const sourceClustersResult = await getResources(this.sessionProvider, key.subscriptionId, clusterResourceType);
         const sourceClusters = defaultAndNotify(sourceClustersResult, []);
 
         const clusters: ClusterKey[] = sourceClusters
@@ -224,7 +216,16 @@ export class ConnectAcrToClusterDataProvider implements PanelDataProvider<"conne
 
         const client = getAuthorizationManagementClient(this.sessionProvider, acrKey.subscriptionId);
         const scope = getScopeForAcr(acrKey.subscriptionId, acrKey.resourceGroup, acrKey.acrName);
-        await deleteRoleAssignment(client, acrKey.subscriptionId, principalId.result, acrPullRoleDefinitionName, scope);
+        const deleteResult = await deleteRoleAssignment(
+            client,
+            acrKey.subscriptionId,
+            principalId.result,
+            acrPullRoleDefinitionName,
+            scope,
+        );
+        if (failed(deleteResult)) {
+            window.showErrorMessage(deleteResult.error);
+        }
 
         const roleAssignmentsResult = await getPrincipalRoleAssignmentsForAcr(
             client,

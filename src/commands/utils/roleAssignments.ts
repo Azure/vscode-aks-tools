@@ -3,9 +3,10 @@ import {
     RoleAssignment,
     RoleAssignmentCreateParameters,
 } from "@azure/arm-authorization";
-import { getRandomValues } from "crypto";
 import { Errorable, failed, getErrorMessage } from "./errorable";
 import { listAll } from "./arm";
+import { v4 as uuidv4 } from "uuid";
+import { acrProvider, acrResourceName } from "./azureResources";
 
 export function getPrincipalRoleAssignmentsForAcr(
     client: AuthorizationManagementClient,
@@ -14,39 +15,15 @@ export function getPrincipalRoleAssignmentsForAcr(
     acrName: string,
 ): Promise<Errorable<RoleAssignment[]>> {
     return listAll(
-        client.roleAssignments.listForResource(acrResourceGroup, "Microsoft.ContainerRegistry", "registries", acrName, {
+        client.roleAssignments.listForResource(acrResourceGroup, acrProvider, acrResourceName, acrName, {
             filter: `principalId eq '${principalId}'`,
         }),
     );
 }
 
-export function getPrincipalRoleAssignmentsForCluster(
-    client: AuthorizationManagementClient,
-    principalId: string,
-    clusterResourceGroup: string,
-    clusterName: string,
-): Promise<Errorable<RoleAssignment[]>> {
-    return listAll(
-        client.roleAssignments.listForResource(
-            clusterResourceGroup,
-            "Microsoft.ContainerService",
-            "managedClusters",
-            clusterName,
-            {
-                filter: `principalId eq '${principalId}'`,
-            },
-        ),
-    );
-}
-
 export function getScopeForAcr(subscriptionId: string, resourceGroup: string, acrName: string): string {
     // ARM resource ID for ACR
-    return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerRegistry/registries/${acrName}`;
-}
-
-export function getScopeForCluster(subscriptionId: string, resourceGroup: string, clusterName: string): string {
-    // ARM resource ID for AKS cluster
-    return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${clusterName}`;
+    return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/${acrProvider}/registries/${acrName}`;
 }
 
 // There are several permitted principal types, see: https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/create?view=rest-authorization-2022-04-01&tabs=HTTP#principaltype
@@ -121,8 +98,5 @@ export async function deleteRoleAssignment(
 function createRoleAssignmentName(): string {
     // https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments#name
     // "A role assignment's resource name must be a globally unique identifier"
-    // https://stackoverflow.com/a/2117523
-    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (+c ^ (getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16),
-    );
+    return uuidv4();
 }
