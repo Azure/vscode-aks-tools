@@ -5,6 +5,11 @@
     row-gap: 0.5rem;
 }
 
+.inputContainer p {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
 .inputContainer .label {
     grid-column: 1 / 2;
     margin: 0.2rem 0;

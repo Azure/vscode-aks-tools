@@ -18,7 +18,7 @@ import {
 import { AttachAcrToClusterState, stateUpdater, vscode } from "./state/state";
 import { distinct } from "../utilities/array";
 import { ResourceSelector } from "../components/ResourceSelector";
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconDefinition, faCheckCircle, faClock, faSave, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AcrRoleState } from "./state/stateTypes";
@@ -93,6 +93,22 @@ export function AttachAcrToCluster(initialState: InitialState) {
         <>
             <h2>Attach ACR to Cluster</h2>
             <fieldset className={styles.inputContainer}>
+                <p className={styles.fullWidth}>
+                    Select a cluster and Azure Container Registry (ACR) to attach. For more information on attaching an
+                    ACR to a cluster, see{" "}
+                    <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-an-existing-aks-cluster">
+                        Configure ACR integration for an existing AKS cluster
+                    </VSCodeLink>
+                    .
+                </p>
+                <p className={styles.fullWidth}>
+                    This operation assigns the{" "}
+                    <VSCodeLink href="https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#acrpull">
+                        AcrPull
+                    </VSCodeLink>{" "}
+                    role to the Microsoft Entra ID managed identity associated with your AKS cluster.
+                </p>
+
                 <label htmlFor="subscription-input" className={styles.label}>
                     Subscription
                 </label>
