@@ -106,57 +106,73 @@ export function AttachAcrToCluster(initialState: InitialState) {
                     onSelect={eventHandlers.onSetSelectedSubscription}
                 />
 
-                <label htmlFor="acr-rg-input" className={styles.label}>
-                    ACR Resource Group
-                </label>
-                <ResourceSelector<string>
-                    id="acr-rg-input"
-                    className={styles.control}
-                    resources={lazyAcrResourceGroups}
-                    selectedItem={state.selectedAcrResourceGroup}
-                    valueGetter={(g) => g}
-                    labelGetter={(g) => g}
-                    onSelect={eventHandlers.onSetSelectedAcrResourceGroup}
-                />
+                {isLoaded(lazyAcrResourceGroups) && (
+                    <>
+                        <label htmlFor="acr-rg-input" className={styles.label}>
+                            ACR Resource Group
+                        </label>
+                        <ResourceSelector<string>
+                            id="acr-rg-input"
+                            className={styles.control}
+                            resources={lazyAcrResourceGroups}
+                            selectedItem={state.selectedAcrResourceGroup}
+                            valueGetter={(g) => g}
+                            labelGetter={(g) => g}
+                            onSelect={eventHandlers.onSetSelectedAcrResourceGroup}
+                        />
+                    </>
+                )}
 
-                <label htmlFor="acr-input" className={styles.label}>
-                    Container Registry
-                </label>
-                <ResourceSelector<Acr>
-                    id="acr-input"
-                    className={styles.control}
-                    resources={lazyAcrs}
-                    selectedItem={state.selectedAcr}
-                    valueGetter={(acr) => acr.acrName}
-                    labelGetter={(acr) => acr.acrName}
-                    onSelect={eventHandlers.onSetSelectedAcr}
-                />
+                {isLoaded(lazyAcrs) && (
+                    <>
+                        <label htmlFor="acr-input" className={styles.label}>
+                            Container Registry
+                        </label>
+                        <ResourceSelector<Acr>
+                            id="acr-input"
+                            className={styles.control}
+                            resources={lazyAcrs}
+                            selectedItem={state.selectedAcr}
+                            valueGetter={(acr) => acr.acrName}
+                            labelGetter={(acr) => acr.acrName}
+                            onSelect={eventHandlers.onSetSelectedAcr}
+                        />
+                    </>
+                )}
 
-                <label htmlFor="cluster-rg-input" className={styles.label}>
-                    Cluster Resource Group
-                </label>
-                <ResourceSelector<string>
-                    id="cluster-rg-input"
-                    className={styles.control}
-                    resources={lazyClusterResourceGroups}
-                    selectedItem={state.selectedClusterResourceGroup}
-                    valueGetter={(g) => g}
-                    labelGetter={(g) => g}
-                    onSelect={eventHandlers.onSetSelectedClusterResourceGroup}
-                />
+                {isLoaded(lazyClusterResourceGroups) && (
+                    <>
+                        <label htmlFor="cluster-rg-input" className={styles.label}>
+                            Cluster Resource Group
+                        </label>
+                        <ResourceSelector<string>
+                            id="cluster-rg-input"
+                            className={styles.control}
+                            resources={lazyClusterResourceGroups}
+                            selectedItem={state.selectedClusterResourceGroup}
+                            valueGetter={(g) => g}
+                            labelGetter={(g) => g}
+                            onSelect={eventHandlers.onSetSelectedClusterResourceGroup}
+                        />
+                    </>
+                )}
 
-                <label htmlFor="cluster-input" className={styles.label}>
-                    Cluster
-                </label>
-                <ResourceSelector<Cluster>
-                    id="cluster-input"
-                    className={styles.control}
-                    resources={lazyClusters}
-                    selectedItem={state.selectedCluster}
-                    valueGetter={(c) => c.clusterName}
-                    labelGetter={(c) => c.clusterName}
-                    onSelect={eventHandlers.onSetSelectedCluster}
-                />
+                {isLoaded(lazyClusters) && (
+                    <>
+                        <label htmlFor="cluster-input" className={styles.label}>
+                            Cluster
+                        </label>
+                        <ResourceSelector<Cluster>
+                            id="cluster-input"
+                            className={styles.control}
+                            resources={lazyClusters}
+                            selectedItem={state.selectedCluster}
+                            valueGetter={(c) => c.clusterName}
+                            labelGetter={(c) => c.clusterName}
+                            onSelect={eventHandlers.onSetSelectedCluster}
+                        />
+                    </>
+                )}
 
                 <label className={styles.label}>Authorization</label>
                 <div className={`${styles.control} ${styles.actionItemList}`}>
