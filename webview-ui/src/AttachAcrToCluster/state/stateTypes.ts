@@ -3,7 +3,7 @@ import {
     Cluster,
     ClusterKey,
     Subscription,
-} from "../../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+} from "../../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { Lazy } from "../../utilities/lazy";
 
 export type AzureReferenceData = {

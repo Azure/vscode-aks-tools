@@ -1,4 +1,4 @@
-import { AcrKey, ClusterKey } from "../../../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+import { AcrKey, ClusterKey } from "../../../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { replaceItem, updateValues } from "../../../utilities/array";
 import { map as lazyMap, newLoaded, orDefault } from "../../../utilities/lazy";
 import { AcrReferenceData, SubscriptionReferenceData } from "../stateTypes";

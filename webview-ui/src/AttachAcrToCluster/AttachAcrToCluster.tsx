@@ -4,10 +4,10 @@ import {
     Cluster,
     InitialState,
     Subscription,
-} from "../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+} from "../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { Lazy, isLoaded, map as lazyMap } from "../utilities/lazy";
 import { useStateManagement } from "../utilities/state";
-import styles from "./ConnectAcrToCluster.module.css";
+import styles from "./AttachAcrToCluster.module.css";
 import {
     EventHandlerFunc,
     ensureAcrRoleAssignmentLoaded,
@@ -15,7 +15,7 @@ import {
     ensureClustersLoaded,
     ensureSubscriptionsLoaded,
 } from "./state/dataLoading";
-import { ConnectAcrToClusterState, stateUpdater, vscode } from "./state/state";
+import { AttachAcrToClusterState, stateUpdater, vscode } from "./state/state";
 import { distinct } from "../utilities/array";
 import { ResourceSelector } from "../components/ResourceSelector";
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
@@ -23,7 +23,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconDefinition, faCheckCircle, faClock, faSave, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AcrRoleState } from "./state/stateTypes";
 
-export function ConnectAcrToCluster(initialState: InitialState) {
+export function AttachAcrToCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
     const updates: EventHandlerFunc[] = [];
@@ -91,7 +91,7 @@ export function ConnectAcrToCluster(initialState: InitialState) {
 
     return (
         <>
-            <h2>Connect ACR to Cluster</h2>
+            <h2>Attach ACR to Cluster</h2>
             <fieldset className={styles.inputContainer}>
                 <label htmlFor="subscription-input" className={styles.label}>
                     Subscription
@@ -176,7 +176,7 @@ type LocalData = {
     lazyAcrRoleState: Lazy<AcrRoleState>;
 };
 
-function prepareData(state: ConnectAcrToClusterState, updates: EventHandlerFunc[]): LocalData {
+function prepareData(state: AttachAcrToClusterState, updates: EventHandlerFunc[]): LocalData {
     const lazySubscriptions = ensureSubscriptionsLoaded(state.azureReferenceData, updates);
     const lazySubscriptionAcrs = ensureAcrsLoaded(state.azureReferenceData, state.selectedSubscription, updates);
     const lazyAcrResourceGroups = lazyMap(lazySubscriptionAcrs, (acrs) => distinct(acrs.map((a) => a.resourceGroup)));

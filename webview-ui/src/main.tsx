@@ -14,7 +14,7 @@ import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperato
 import { ClusterProperties } from "./ClusterProperties/ClusterProperties";
 import { TcpDump } from "./TCPDump/TcpDump";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
-import { ConnectAcrToCluster } from "./ConnectAcrToCluster/ConnectAcrToCluster";
+import { AttachAcrToCluster } from "./AttachAcrToCluster/AttachAcrToCluster";
 import { DraftDeployment, DraftDockerfile, DraftWorkflow } from "./Draft";
 
 // There are two modes of launching this application:
@@ -47,7 +47,7 @@ function getVsCodeContent(): JSX.Element {
     const rendererLookup: Record<ContentId, () => JSX.Element> = {
         createCluster: () => <CreateCluster {...getInitialState()} />,
         style: () => <TestStyleViewer {...getInitialState()} />,
-        connectAcrToCluster: () => <ConnectAcrToCluster {...getInitialState()} />,
+        attachAcrToCluster: () => <AttachAcrToCluster {...getInitialState()} />,
         clusterProperties: () => <ClusterProperties {...getInitialState()} />,
         periscope: () => <Periscope {...getInitialState()} />,
         detector: () => <Detector {...getInitialState()} />,

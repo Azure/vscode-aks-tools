@@ -241,8 +241,8 @@
                 "title": "Kustomize Workflow (deprecated)"
             },
             {
-                "command": "aks.connectAcrToCluster",
-                "title": "Connect ACR to Cluster",
+                "command": "aks.attachAcrToCluster",
+                "title": "Attach ACR to Cluster",
                 "category": "AKS"
             },
             {
@@ -450,7 +450,7 @@
             ],
             "aks.draftSubMenu": [
                 {
-                    "command": "aks.connectAcrToCluster",
+                    "command": "aks.attachAcrToCluster",
                     "group": "navigation"
                 },
                 {
