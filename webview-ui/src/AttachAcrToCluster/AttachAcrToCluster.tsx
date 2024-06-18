@@ -20,7 +20,7 @@ import { distinct } from "../utilities/array";
 import { ResourceSelector } from "../components/ResourceSelector";
 import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition, faCheckCircle, faClock, faSave, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { IconDefinition, faCheckCircle, faClock, faLink, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
 import { AcrRoleState } from "./state/stateTypes";
 
 export function AttachAcrToCluster(initialState: InitialState) {
@@ -40,8 +40,8 @@ export function AttachAcrToCluster(initialState: InitialState) {
     });
 
     function getAcrAuthorizationActionItemProps(): ActionItemProps {
-        const createAction = makeFixAction(faSave, "Authorize", null /* No action available yet */);
-        const deleteAction = makeFixAction(faTrash, "Deauthorize", null /* No action available yet */);
+        const createAction = makeFixAction(faLink, "Attach", null /* No action available yet */);
+        const deleteAction = makeFixAction(faLinkSlash, "Detach", null /* No action available yet */);
         const actionItemProps = makeActionItemProps("ACR Pull", createAction, deleteAction);
 
         if (state.selectedAcr === null) {
@@ -174,7 +174,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
                     onSelect={eventHandlers.onSetSelectedCluster}
                 />
 
-                <label className={styles.label}>Authorization</label>
+                <label className={styles.label}>Role Assignment</label>
                 <div className={`${styles.control} ${styles.actionItemList}`}>
                     <ActionItem {...getAcrAuthorizationActionItemProps()} />
                 </div>
