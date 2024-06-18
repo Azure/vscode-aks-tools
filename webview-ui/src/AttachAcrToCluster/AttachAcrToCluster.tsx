@@ -40,8 +40,8 @@ export function AttachAcrToCluster(initialState: InitialState) {
     });
 
     function getAcrAuthorizationActionItemProps(): ActionItemProps {
-        const createAction = makeFixAction(faLink, "Attach", null /* No action available yet */);
-        const deleteAction = makeFixAction(faLinkSlash, "Detach", null /* No action available yet */);
+        const createAction = makeFixAction(faLink, "Attach", null /* No action available yet */, true);
+        const deleteAction = makeFixAction(faLinkSlash, "Detach", null /* No action available yet */, false);
         const actionItemProps = makeActionItemProps("ACR Pull", createAction, deleteAction);
 
         if (state.selectedAcr === null) {
@@ -228,8 +228,9 @@ function prepareData(state: AttachAcrToClusterState, updates: EventHandlerFunc[]
     };
 }
 
-function makeFixAction(icon: IconDefinition, name: string, action: (() => void) | null): FixAction {
+function makeFixAction(icon: IconDefinition, name: string, action: (() => void) | null, isPrimary: boolean): FixAction {
     return {
+        isPrimary,
         icon,
         name,
         action: action ? action : () => {},
@@ -254,6 +255,7 @@ type ActionItemProps = {
 };
 
 type FixAction = {
+    isPrimary: boolean;
     canPerformAction: boolean;
     icon: IconDefinition;
     action: () => void;
@@ -280,7 +282,7 @@ function ActionItem(props: ActionItemProps) {
                 {props.actions.map((action, i) => (
                     <VSCodeButton
                         key={i}
-                        appearance="secondary"
+                        appearance={action.isPrimary ? "primary" : "secondary"}
                         onClick={action.action}
                         disabled={!action.canPerformAction}
                     >
