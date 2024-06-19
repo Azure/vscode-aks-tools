@@ -1,5 +1,5 @@
 import { FormEvent } from "react";
-import { Lazy, asLazy, isLoaded, isLoading } from "../utilities/lazy";
+import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded } from "../utilities/lazy";
 import { VSCodeDropdown, VSCodeOption, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 
 export interface ResourceSelectorProps<TResource> {
@@ -29,6 +29,7 @@ export function ResourceSelector<TResource>(props: ResourceSelectorProps<TResour
     return (
         <>
             {isLoading(resources) && <VSCodeProgressRing style={{ height: "1rem" }} />}
+            {isNotLoaded(resources) && <VSCodeDropdown className={props.className} disabled={true} id={props.id} />}
             {isLoaded(resources) && (
                 <VSCodeDropdown className={props.className} id={props.id} value={selectedValue} onChange={handleChange}>
                     <VSCodeOption value="" selected={selectedValue === ""}>

@@ -9,9 +9,9 @@ import {
     SubscriptionKey,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
-} from "../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
-import { ConnectAcrToCluster } from "../ConnectAcrToCluster/ConnectAcrToCluster";
-import { stateUpdater } from "../ConnectAcrToCluster/state/state";
+} from "../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
+import { AttachAcrToCluster } from "../AttachAcrToCluster/AttachAcrToCluster";
+import { stateUpdater } from "../AttachAcrToCluster/state/state";
 import { Scenario } from "../utilities/manualTest";
 import { delay } from "../utilities/time";
 
@@ -86,7 +86,7 @@ function createPopulatedInitialSelection(referenceData: ReferenceData): InitialS
     };
 }
 
-export function getConnectAcrToClusterScenarios() {
+export function getAttachAcrToClusterScenarios() {
     function getMessageHandler(
         webview: MessageSink<ToWebViewMsgDef>,
         referenceData: ReferenceData,
@@ -199,9 +199,9 @@ export function getConnectAcrToClusterScenarios() {
         const initialSelection = getInitialSelection(referenceData);
         const initialState = { initialSelection };
         return Scenario.create(
-            "connectAcrToCluster",
+            "attachAcrToCluster",
             name,
-            () => <ConnectAcrToCluster {...initialState} />,
+            () => <AttachAcrToCluster {...initialState} />,
             (webview) => getMessageHandler(webview, referenceData),
             stateUpdater.vscodeMessageHandler,
         );

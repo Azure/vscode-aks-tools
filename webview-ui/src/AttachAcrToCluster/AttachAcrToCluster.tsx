@@ -4,10 +4,10 @@ import {
     Cluster,
     InitialState,
     Subscription,
-} from "../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+} from "../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { Lazy, isLoaded, map as lazyMap } from "../utilities/lazy";
 import { useStateManagement } from "../utilities/state";
-import styles from "./ConnectAcrToCluster.module.css";
+import styles from "./AttachAcrToCluster.module.css";
 import {
     EventHandlerFunc,
     ensureAcrRoleAssignmentLoaded,
@@ -15,15 +15,15 @@ import {
     ensureClustersLoaded,
     ensureSubscriptionsLoaded,
 } from "./state/dataLoading";
-import { ConnectAcrToClusterState, stateUpdater, vscode } from "./state/state";
+import { AttachAcrToClusterState, stateUpdater, vscode } from "./state/state";
 import { distinct } from "../utilities/array";
 import { ResourceSelector } from "../components/ResourceSelector";
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition, faCheckCircle, faClock, faSave, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { VSCodeLink } from "@vscode/webview-ui-toolkit/react";
+import { faLink, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
 import { AcrRoleState } from "./state/stateTypes";
+import { InlineAction, InlineActionProps, makeFixAction, makeInlineActionProps } from "../components/InlineAction";
 
-export function ConnectAcrToCluster(initialState: InitialState) {
+export function AttachAcrToCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
     const updates: EventHandlerFunc[] = [];
@@ -39,10 +39,10 @@ export function ConnectAcrToCluster(initialState: InitialState) {
         updates.map((fn) => fn(eventHandlers));
     });
 
-    function getAcrAuthorizationActionItemProps(): ActionItemProps {
-        const createAction = makeFixAction(faSave, "Authorize", null /* No action available yet */);
-        const deleteAction = makeFixAction(faTrash, "Deauthorize", null /* No action available yet */);
-        const actionItemProps = makeActionItemProps("ACR Pull", createAction, deleteAction);
+    function getAcrAuthorizationActionItemProps(): InlineActionProps {
+        const createAction = makeFixAction(faLink, "Attach", null /* No action available yet */, true);
+        const deleteAction = makeFixAction(faLinkSlash, "Detach", null /* No action available yet */, false);
+        const actionItemProps = makeInlineActionProps("ACR Pull", createAction, deleteAction);
 
         if (state.selectedAcr === null) {
             actionItemProps.extraInfo = "Please select an ACR.";
@@ -91,8 +91,24 @@ export function ConnectAcrToCluster(initialState: InitialState) {
 
     return (
         <>
-            <h2>Connect ACR to Cluster</h2>
+            <h2>Attach Azure Container Registry to Cluster</h2>
             <fieldset className={styles.inputContainer}>
+                <p className={styles.fullWidth}>
+                    Select a cluster and Azure Container Registry (ACR) to attach. For more information on attaching an
+                    ACR to a cluster, see{" "}
+                    <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-an-existing-aks-cluster">
+                        Configure ACR integration for an existing AKS cluster
+                    </VSCodeLink>
+                    .
+                </p>
+                <p className={styles.fullWidth}>
+                    This operation assigns the{" "}
+                    <VSCodeLink href="https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#acrpull">
+                        AcrPull
+                    </VSCodeLink>{" "}
+                    role to the Microsoft Entra ID managed identity associated with your AKS cluster.
+                </p>
+
                 <label htmlFor="subscription-input" className={styles.label}>
                     Subscription
                 </label>
@@ -158,9 +174,9 @@ export function ConnectAcrToCluster(initialState: InitialState) {
                     onSelect={eventHandlers.onSetSelectedCluster}
                 />
 
-                <label className={styles.label}>Authorization</label>
+                <label className={styles.label}>Role Assignment</label>
                 <div className={`${styles.control} ${styles.actionItemList}`}>
-                    <ActionItem {...getAcrAuthorizationActionItemProps()} />
+                    <InlineAction {...getAcrAuthorizationActionItemProps()} />
                 </div>
             </fieldset>
         </>
@@ -176,7 +192,7 @@ type LocalData = {
     lazyAcrRoleState: Lazy<AcrRoleState>;
 };
 
-function prepareData(state: ConnectAcrToClusterState, updates: EventHandlerFunc[]): LocalData {
+function prepareData(state: AttachAcrToClusterState, updates: EventHandlerFunc[]): LocalData {
     const lazySubscriptions = ensureSubscriptionsLoaded(state.azureReferenceData, updates);
     const lazySubscriptionAcrs = ensureAcrsLoaded(state.azureReferenceData, state.selectedSubscription, updates);
     const lazyAcrResourceGroups = lazyMap(lazySubscriptionAcrs, (acrs) => distinct(acrs.map((a) => a.resourceGroup)));
@@ -210,71 +226,4 @@ function prepareData(state: ConnectAcrToClusterState, updates: EventHandlerFunc[
         lazyClusters,
         lazyAcrRoleState,
     };
-}
-
-function makeFixAction(icon: IconDefinition, name: string, action: (() => void) | null): FixAction {
-    return {
-        icon,
-        name,
-        action: action ? action : () => {},
-        canPerformAction: action !== null,
-    };
-}
-
-function makeActionItemProps(description: string, ...actions: FixAction[]): ActionItemProps {
-    return {
-        isDone: false,
-        description,
-        actions,
-        extraInfo: "",
-    };
-}
-
-type ActionItemProps = {
-    isDone: boolean;
-    description: string;
-    actions: FixAction[];
-    extraInfo: string;
-};
-
-type FixAction = {
-    canPerformAction: boolean;
-    icon: IconDefinition;
-    action: () => void;
-    name: string;
-};
-
-function ActionItem(props: ActionItemProps) {
-    return (
-        <div className={styles.actionItem}>
-            <div className={styles.actionDescription}>
-                {props.isDone ? (
-                    <FontAwesomeIcon icon={faCheckCircle} className={styles.successIndicator} />
-                ) : (
-                    <FontAwesomeIcon icon={faClock} />
-                )}{" "}
-                {props.description}{" "}
-                {props.extraInfo && (
-                    <span className={"tooltip-holder"} data-tooltip-text={props.extraInfo}>
-                        <i className={`${styles.inlineIcon} codicon codicon-info`} />
-                    </span>
-                )}
-            </div>
-            <div className={styles.actionButtons}>
-                {props.actions.map((action, i) => (
-                    <VSCodeButton
-                        key={i}
-                        appearance="secondary"
-                        onClick={action.action}
-                        disabled={!action.canPerformAction}
-                        title={action.name}
-                    >
-                        <span className={styles.inlineIcon}>
-                            <FontAwesomeIcon icon={action.icon} />
-                        </span>
-                    </VSCodeButton>
-                ))}
-            </div>
-        </div>
-    );
 }

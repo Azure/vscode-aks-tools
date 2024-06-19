@@ -6,7 +6,7 @@ import {
     InitialSelection,
     Subscription,
     SubscriptionKey,
-} from "../../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+} from "../../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { newNotLoaded } from "../../utilities/lazy";
 import { WebviewStateUpdater } from "../../utilities/state";
 import { AzureReferenceData } from "./stateTypes";
@@ -31,7 +31,7 @@ export type EventDef = {
     setSelectedCluster: Cluster | null;
 };
 
-export type ConnectAcrToClusterState = {
+export type AttachAcrToClusterState = {
     // Reference data
     azureReferenceData: AzureReferenceData;
 
@@ -46,7 +46,7 @@ export type ConnectAcrToClusterState = {
     selectedCluster: Cluster | null;
 };
 
-export const stateUpdater: WebviewStateUpdater<"connectAcrToCluster", EventDef, ConnectAcrToClusterState> = {
+export const stateUpdater: WebviewStateUpdater<"attachAcrToCluster", EventDef, AttachAcrToClusterState> = {
     createState: (initialState) => ({
         // Reference data
         azureReferenceData: {
@@ -209,7 +209,7 @@ export const stateUpdater: WebviewStateUpdater<"connectAcrToCluster", EventDef, 
     },
 };
 
-export const vscode = getWebviewMessageContext<"connectAcrToCluster">({
+export const vscode = getWebviewMessageContext<"attachAcrToCluster">({
     getSubscriptionsRequest: null,
     getAcrsRequest: null,
     getClustersRequest: null,

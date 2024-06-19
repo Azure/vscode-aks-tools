@@ -2,7 +2,7 @@ import {
     AcrKey,
     ClusterKey,
     Subscription,
-} from "../../../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+} from "../../../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { replaceItem, updateValues } from "../../../utilities/array";
 import { map as lazyMap, newLoaded, newLoading, newNotLoaded, orDefault } from "../../../utilities/lazy";
 import { AzureReferenceData, SubscriptionReferenceData } from "../stateTypes";

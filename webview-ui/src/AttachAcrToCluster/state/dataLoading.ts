@@ -4,7 +4,7 @@ import {
     Cluster,
     ClusterKey,
     Subscription,
-} from "../../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+} from "../../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { getOrThrow } from "../../utilities/array";
 import { Lazy, isLoaded, isNotLoaded, map as lazyMap, newNotLoaded } from "../../utilities/lazy";
 import { EventHandlers } from "../../utilities/state";

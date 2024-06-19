@@ -1,4 +1,4 @@
-import { ClusterKey } from "../../../../../src/webview-contract/webviewDefinitions/connectAcrToCluster";
+import { ClusterKey } from "../../../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { newLoaded, newLoading } from "../../../utilities/lazy";
 import { AcrReferenceData, createClusterId } from "../stateTypes";
 

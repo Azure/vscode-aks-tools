@@ -91,4 +91,4 @@ export type ToWebViewMsgDef = {
     };
 };
 
-export type ConnectAcrToClusterDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
+export type AttachAcrToClusterDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

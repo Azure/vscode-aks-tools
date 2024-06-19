@@ -5,6 +5,11 @@
     row-gap: 0.5rem;
 }
 
+.inputContainer p {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
 .inputContainer .label {
     grid-column: 1 / 2;
     margin: 0.2rem 0;
@@ -13,7 +18,7 @@
 .inputContainer .control {
     grid-column: 2 / 3;
     margin: 0.2rem 0;
-    width: 20rem;
+    width: 25rem;
 }
 
 .inputContainer .controlSupplement {
@@ -26,42 +31,9 @@
     grid-column: 1 / 3;
 }
 
-.successIndicator {
-    color: var(--vscode-testing-iconPassed);
-}
-
-.errorIndicator {
-    color: var(--vscode-testing-iconFailed);
-}
-
 .actionItemList {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 0.2rem;
-}
-
-.actionItem {
-    display: grid;
-    grid-template-columns: auto auto;
-    justify-content: stretch;
-}
-
-.actionItem .actionDescription {
-    grid-column: 1 / 2;
-}
-
-.actionItem .actionButtons {
-    grid-column: 2 / 3;
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.inlineIcon {
-    vertical-align: middle;
-    margin-left: 0.3rem;
-    margin-right: 0.3rem;
 }

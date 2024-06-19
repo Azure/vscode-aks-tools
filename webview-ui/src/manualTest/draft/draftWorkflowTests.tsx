@@ -95,9 +95,9 @@ export function getDraftWorkflowScenarios() {
                 alert(`Launching Draft Workflow command with initial selection:\n${JSON.stringify(args, null, 2)}`),
             launchDraftDeployment: (args) =>
                 alert(`Launching Draft Deployment command with initial selection:\n${JSON.stringify(args, null, 2)}`),
-            launchConnectAcrToCluster: (args) =>
+            launchAttachAcrToCluster: (args) =>
                 alert(
-                    `Launching Connect ACR to Cluster command with initial selection:\n${JSON.stringify(args, null, 2)}`,
+                    `Launching Attach ACR to Cluster command with initial selection:\n${JSON.stringify(args, null, 2)}`,
                 ),
         };
 
