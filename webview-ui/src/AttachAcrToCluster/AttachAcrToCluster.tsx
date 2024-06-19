@@ -18,10 +18,10 @@ import {
 import { AttachAcrToClusterState, stateUpdater, vscode } from "./state/state";
 import { distinct } from "../utilities/array";
 import { ResourceSelector } from "../components/ResourceSelector";
-import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition, faCheckCircle, faClock, faLink, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
+import { VSCodeLink } from "@vscode/webview-ui-toolkit/react";
+import { faLink, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
 import { AcrRoleState } from "./state/stateTypes";
+import { InlineAction, InlineActionProps, makeFixAction, makeInlineActionProps } from "../components/InlineAction";
 
 export function AttachAcrToCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -39,10 +39,10 @@ export function AttachAcrToCluster(initialState: InitialState) {
         updates.map((fn) => fn(eventHandlers));
     });
 
-    function getAcrAuthorizationActionItemProps(): ActionItemProps {
+    function getAcrAuthorizationActionItemProps(): InlineActionProps {
         const createAction = makeFixAction(faLink, "Attach", null /* No action available yet */, true);
         const deleteAction = makeFixAction(faLinkSlash, "Detach", null /* No action available yet */, false);
-        const actionItemProps = makeActionItemProps("ACR Pull", createAction, deleteAction);
+        const actionItemProps = makeInlineActionProps("ACR Pull", createAction, deleteAction);
 
         if (state.selectedAcr === null) {
             actionItemProps.extraInfo = "Please select an ACR.";
@@ -176,7 +176,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
 
                 <label className={styles.label}>Role Assignment</label>
                 <div className={`${styles.control} ${styles.actionItemList}`}>
-                    <ActionItem {...getAcrAuthorizationActionItemProps()} />
+                    <InlineAction {...getAcrAuthorizationActionItemProps()} />
                 </div>
             </fieldset>
         </>
@@ -226,73 +226,4 @@ function prepareData(state: AttachAcrToClusterState, updates: EventHandlerFunc[]
         lazyClusters,
         lazyAcrRoleState,
     };
-}
-
-function makeFixAction(icon: IconDefinition, name: string, action: (() => void) | null, isPrimary: boolean): FixAction {
-    return {
-        isPrimary,
-        icon,
-        name,
-        action: action ? action : () => {},
-        canPerformAction: action !== null,
-    };
-}
-
-function makeActionItemProps(description: string, ...actions: FixAction[]): ActionItemProps {
-    return {
-        isDone: false,
-        description,
-        actions,
-        extraInfo: "",
-    };
-}
-
-type ActionItemProps = {
-    isDone: boolean;
-    description: string;
-    actions: FixAction[];
-    extraInfo: string;
-};
-
-type FixAction = {
-    isPrimary: boolean;
-    canPerformAction: boolean;
-    icon: IconDefinition;
-    action: () => void;
-    name: string;
-};
-
-function ActionItem(props: ActionItemProps) {
-    return (
-        <div className={styles.actionItem}>
-            <div className={styles.actionDescription}>
-                {props.isDone ? (
-                    <FontAwesomeIcon icon={faCheckCircle} className={styles.successIndicator} />
-                ) : (
-                    <FontAwesomeIcon icon={faClock} />
-                )}{" "}
-                {props.description}{" "}
-                {props.extraInfo && (
-                    <span className={"tooltip-holder"} data-tooltip-text={props.extraInfo}>
-                        <i className={`${styles.inlineIcon} codicon codicon-info`} />
-                    </span>
-                )}
-            </div>
-            <div className={styles.actionButtons}>
-                {props.actions.map((action, i) => (
-                    <VSCodeButton
-                        key={i}
-                        appearance={action.isPrimary ? "primary" : "secondary"}
-                        onClick={action.action}
-                        disabled={!action.canPerformAction}
-                    >
-                        <span className={styles.inlineIcon}>
-                            <FontAwesomeIcon icon={action.icon} />
-                        </span>{" "}
-                        {action.name}
-                    </VSCodeButton>
-                ))}
-            </div>
-        </div>
-    );
 }

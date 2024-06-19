@@ -1,0 +1,28 @@
+.actionItem {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: stretch;
+}
+
+.actionItem .actionDescription {
+    grid-column: 1 / 2;
+}
+
+.actionItem .actionButtons {
+    grid-column: 2 / 3;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.successIndicator {
+    color: var(--vscode-testing-iconPassed);
+}
+
+.inlineIcon {
+    vertical-align: middle;
+    margin-left: 0.3rem;
+    margin-right: 0.3rem;
+}
