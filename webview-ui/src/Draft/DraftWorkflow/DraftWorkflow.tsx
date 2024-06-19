@@ -2,7 +2,7 @@ import { FormEvent, useEffect } from "react";
 import {
     CreateParams,
     InitialState,
-    LaunchConnectAcrToClusterParams,
+    LaunchAttachAcrToClusterParams,
 } from "../../../../src/webview-contract/webviewDefinitions/draft/draftWorkflow";
 import {
     DeploymentSpecType,
@@ -293,9 +293,9 @@ export function DraftWorkflow(initialState: InitialState) {
         ]);
     }
 
-    function handleLaunchConnectAcrToClusterClick(e: React.MouseEvent) {
+    function handleLaunchAttachAcrToClusterClick(e: React.MouseEvent) {
         e.preventDefault();
-        const params: LaunchConnectAcrToClusterParams = {
+        const params: LaunchAttachAcrToClusterParams = {
             initialSubscriptionId: orDefault(state.selectedSubscription, null)?.id || null,
             initialAcrResourceGroup: orDefault(state.selectedAcrResourceGroup, null) || null,
             initialAcrName: orDefault(state.selectedAcr, null) || null,
@@ -303,7 +303,7 @@ export function DraftWorkflow(initialState: InitialState) {
             initialClusterName: orDefault(state.selectedCluster, null) || null,
         };
 
-        vscode.postLaunchConnectAcrToCluster(params);
+        vscode.postLaunchAttachAcrToCluster(params);
     }
 
     function validate(): Maybe<CreateParams> {
@@ -884,7 +884,7 @@ export function DraftWorkflow(initialState: InitialState) {
                                 <ul>
                                     <li>
                                         The ACR {isValueSet(state.selectedAcr) ? `(${state.selectedAcr.value})` : ""}{" "}
-                                        <VSCodeLink href="#" onClick={handleLaunchConnectAcrToClusterClick}>
+                                        <VSCodeLink href="#" onClick={handleLaunchAttachAcrToClusterClick}>
                                             is attached
                                         </VSCodeLink>{" "}
                                         to the cluster{" "}

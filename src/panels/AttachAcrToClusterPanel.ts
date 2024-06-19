@@ -13,7 +13,7 @@ import {
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
     acrPullRoleDefinitionName,
-} from "../webview-contract/webviewDefinitions/connectAcrToCluster";
+} from "../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { Errorable, failed, getErrorMessage } from "../commands/utils/errorable";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import { acrResourceType, clusterResourceType, getResources } from "../commands/utils/azureResources";
@@ -27,9 +27,9 @@ import {
 } from "../commands/utils/roleAssignments";
 import { getManagedCluster } from "../commands/utils/clusters";
 
-export class ConnectAcrToClusterPanel extends BasePanel<"connectAcrToCluster"> {
+export class AttachAcrToClusterPanel extends BasePanel<"attachAcrToCluster"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "connectAcrToCluster", {
+        super(extensionUri, "attachAcrToCluster", {
             // Reference data responses
             getSubscriptionsResponse: null,
             getAcrsResponse: null,
@@ -43,14 +43,14 @@ export class ConnectAcrToClusterPanel extends BasePanel<"connectAcrToCluster"> {
     }
 }
 
-export class ConnectAcrToClusterDataProvider implements PanelDataProvider<"connectAcrToCluster"> {
+export class AttachAcrToClusterDataProvider implements PanelDataProvider<"attachAcrToCluster"> {
     constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly initialSelection: InitialSelection,
     ) {}
 
     getTitle(): string {
-        return "Connect ACR to Cluster";
+        return "Attach ACR to Cluster";
     }
 
     getInitialState(): InitialState {
@@ -59,7 +59,7 @@ export class ConnectAcrToClusterDataProvider implements PanelDataProvider<"conne
         };
     }
 
-    getTelemetryDefinition(): TelemetryDefinition<"connectAcrToCluster"> {
+    getTelemetryDefinition(): TelemetryDefinition<"attachAcrToCluster"> {
         return {
             // Reference data requests
             getSubscriptionsRequest: false,

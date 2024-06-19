@@ -4,7 +4,7 @@ import { BasePanel, PanelDataProvider } from "../BasePanel";
 import {
     ExistingFile,
     InitialState,
-    LaunchConnectAcrToClusterParams,
+    LaunchAttachAcrToClusterParams,
     PickFilesIdentifier,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
@@ -33,9 +33,9 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getResources } from "../../commands/utils/azureResources";
 import { launchDraftCommand } from "./commandUtils";
 import {
-    ConnectAcrToClusterParams,
-    launchConnectAcrToClusterCommand,
-} from "../../commands/aksConnectAcrToCluster/connectAcrToCluster";
+    AttachAcrToClusterParams,
+    launchAttachAcrToClusterCommand,
+} from "../../commands/aksAttachAcrToCluster/attachAcrToCluster";
 
 export class DraftWorkflowPanel extends BasePanel<"draftWorkflow"> {
     constructor(extensionUri: Uri) {
@@ -101,7 +101,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
             openFileRequest: false,
             launchDraftDockerfile: false,
             launchDraftDeployment: false,
-            launchConnectAcrToCluster: false,
+            launchAttachAcrToCluster: false,
         };
     }
 
@@ -126,7 +126,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
                 launchDraftCommand("aks.draftDeployment", {
                     workspaceFolder: this.workspaceFolder,
                 }),
-            launchConnectAcrToCluster: (params) => this.handleLaunchConnectAcrToCluster(params),
+            launchAttachAcrToCluster: (params) => this.handleLaunchAttachAcrToCluster(params),
         };
     }
 
@@ -323,8 +323,8 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
         window.showTextDocument(Uri.file(filePath));
     }
 
-    private handleLaunchConnectAcrToCluster(params: LaunchConnectAcrToClusterParams) {
-        const commandParams: ConnectAcrToClusterParams = {
+    private handleLaunchAttachAcrToCluster(params: LaunchAttachAcrToClusterParams) {
+        const commandParams: AttachAcrToClusterParams = {
             initialSelection: {
                 subscriptionId: params.initialSubscriptionId || undefined,
                 acrResourceGroup: params.initialAcrResourceGroup || undefined,
@@ -334,7 +334,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
             },
         };
 
-        launchConnectAcrToClusterCommand(commandParams);
+        launchAttachAcrToClusterCommand(commandParams);
     }
 }
 

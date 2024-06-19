@@ -69,10 +69,10 @@ export type ToVsCodeMsgDef = {
     openFileRequest: string;
     launchDraftDockerfile: void;
     launchDraftDeployment: void;
-    launchConnectAcrToCluster: LaunchConnectAcrToClusterParams;
+    launchAttachAcrToCluster: LaunchAttachAcrToClusterParams;
 };
 
-export type LaunchConnectAcrToClusterParams = {
+export type LaunchAttachAcrToClusterParams = {
     initialSubscriptionId: string | null;
     initialAcrResourceGroup: string | null;
     initialAcrName: string | null;

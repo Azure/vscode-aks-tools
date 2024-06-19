@@ -2,13 +2,13 @@ import { commands, window } from "vscode";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed, succeeded } from "../utils/errorable";
-import { InitialSelection } from "../../webview-contract/webviewDefinitions/connectAcrToCluster";
-import { ConnectAcrToClusterDataProvider, ConnectAcrToClusterPanel } from "../../panels/ConnectAcrToClusterPanel";
+import { InitialSelection } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
+import { AttachAcrToClusterDataProvider, AttachAcrToClusterPanel } from "../../panels/AttachAcrToClusterPanel";
 import { getExtension } from "../utils/host";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getAksClusterTreeNode } from "../utils/clusters";
 
-export type ConnectAcrToClusterParams = {
+export type AttachAcrToClusterParams = {
     initialSelection?: InitialSelection;
 };
 
@@ -16,13 +16,13 @@ export type ConnectAcrToClusterParams = {
  * Allows the command to be invoked programmatically, in this case from the message handler
  * of the 'Draft Workflow' webview.
  */
-export function launchConnectAcrToClusterCommand(params: ConnectAcrToClusterParams) {
-    commands.executeCommand("aks.connectAcrToCluster", params);
+export function launchAttachAcrToClusterCommand(params: AttachAcrToClusterParams) {
+    commands.executeCommand("aks.attachAcrToCluster", params);
 }
 
-export async function connectAcrToCluster(_context: IActionContext, target: unknown): Promise<void> {
+export async function attachAcrToCluster(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    const params = getConnectAcrToClusterParams(cloudExplorer, target);
+    const params = getAttachAcrToClusterParams(cloudExplorer, target);
 
     const extension = getExtension();
     if (failed(extension)) {
@@ -39,15 +39,15 @@ export async function connectAcrToCluster(_context: IActionContext, target: unkn
     // Explicitly pass empty initialSelection if not defined.
     const initialSelection = params?.initialSelection || {};
 
-    const panel = new ConnectAcrToClusterPanel(extension.result.extensionUri);
-    const dataProvider = new ConnectAcrToClusterDataProvider(sessionProvider.result, initialSelection);
+    const panel = new AttachAcrToClusterPanel(extension.result.extensionUri);
+    const dataProvider = new AttachAcrToClusterDataProvider(sessionProvider.result, initialSelection);
     panel.show(dataProvider);
 }
 
-function getConnectAcrToClusterParams(
+function getAttachAcrToClusterParams(
     cloudExplorer: k8s.API<k8s.CloudExplorerV1>,
     params: unknown,
-): ConnectAcrToClusterParams {
+): AttachAcrToClusterParams {
     const clusterNode = getAksClusterTreeNode(params, cloudExplorer);
     if (succeeded(clusterNode)) {
         return {
@@ -59,5 +59,5 @@ function getConnectAcrToClusterParams(
         };
     }
 
-    return params as ConnectAcrToClusterParams;
+    return params as AttachAcrToClusterParams;
 }

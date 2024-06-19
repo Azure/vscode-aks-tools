@@ -14,7 +14,7 @@ import { Reporter, reporter } from "./commands/utils/reporter";
 import installAzureServiceOperator from "./commands/azureServiceOperators/installAzureServiceOperator";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
 import { setAssetContext } from "./assets";
-import { connectAcrToCluster } from "./commands/aksConnectAcrToCluster/connectAcrToCluster";
+import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrToCluster";
 import {
     configureStarterWorkflow,
     configureHelmStarterWorkflow,
@@ -87,7 +87,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.configureHelmStarterWorkflow", configureHelmStarterWorkflow);
         registerCommandWithTelemetry("aks.configureKomposeStarterWorkflow", configureKomposeStarterWorkflow);
         registerCommandWithTelemetry("aks.configureKustomizeStarterWorkflow", configureKustomizeStarterWorkflow);
-        registerCommandWithTelemetry("aks.connectAcrToCluster", connectAcrToCluster);
+        registerCommandWithTelemetry("aks.attachAcrToCluster", attachAcrToCluster);
         registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
         registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);
         registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);

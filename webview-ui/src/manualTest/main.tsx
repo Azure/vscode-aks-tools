@@ -9,7 +9,7 @@ import { getCreateClusterScenarios } from "./createClusterTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getDetectorScenarios } from "./detectorTests";
 import { getDraftDeploymentScenarios, getDraftDockerfileScenarios, getDraftWorkflowScenarios } from "./draft";
-import { getConnectAcrToClusterScenarios } from "./connectAcrToClusterTests";
+import { getAttachAcrToClusterScenarios } from "./attachAcrToClusterTests";
 import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
 import { getKubectlScenarios } from "./kubectlTests";
 import { ContentId } from "../../../src/webview-contract/webviewTypes";
@@ -35,7 +35,7 @@ const root = createRoot(rootElem!);
 const contentTestScenarios: Record<ContentId, Scenario[]> = {
     style: getTestStyleViewerScenarios(),
     clusterProperties: getClusterPropertiesScenarios(),
-    connectAcrToCluster: getConnectAcrToClusterScenarios(),
+    attachAcrToCluster: getAttachAcrToClusterScenarios(),
     createCluster: getCreateClusterScenarios(),
     periscope: getPeriscopeScenarios(),
     detector: getDetectorScenarios(),

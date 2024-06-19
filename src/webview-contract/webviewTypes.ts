@@ -1,6 +1,6 @@
 import { Message, MessageContext, MessageDefinition, MessageHandler, MessageSink } from "./messaging";
 import { ClusterPropertiesDefinition } from "./webviewDefinitions/clusterProperties";
-import { ConnectAcrToClusterDefinition } from "./webviewDefinitions/connectAcrToCluster";
+import { AttachAcrToClusterDefinition } from "./webviewDefinitions/attachAcrToCluster";
 import { CreateClusterDefinition } from "./webviewDefinitions/createCluster";
 import { DetectorDefinition } from "./webviewDefinitions/detector";
 import { DraftDeploymentDefinition } from "./webviewDefinitions/draft/draftDeployment";
@@ -34,7 +34,7 @@ export type WebviewDefinition<
 type AllWebviewDefinitions = {
     style: TestStyleViewerDefinition;
     clusterProperties: ClusterPropertiesDefinition;
-    connectAcrToCluster: ConnectAcrToClusterDefinition;
+    attachAcrToCluster: AttachAcrToClusterDefinition;
     periscope: PeriscopeDefinition;
     createCluster: CreateClusterDefinition;
     detector: DetectorDefinition;
