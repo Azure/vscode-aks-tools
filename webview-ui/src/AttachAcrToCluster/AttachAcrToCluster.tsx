@@ -91,7 +91,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
 
     return (
         <>
-            <h2>Attach ACR to Cluster</h2>
+            <h2>Attach Azure Container Registry to Cluster</h2>
             <fieldset className={styles.inputContainer}>
                 <p className={styles.fullWidth}>
                     Select a cluster and Azure Container Registry (ACR) to attach. For more information on attaching an
