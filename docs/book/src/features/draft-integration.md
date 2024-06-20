@@ -1,6 +1,6 @@
-# Draft Tool Integration
+# Automated Deployments: Draft Tool Integration
 
-This work adds commands for Draft tool integartion with this extension:
+The Automated Deployments commands integrate the Draft tool to provide:
 
 - Draft Dockerfile
 - Draft Deployment
@@ -18,6 +18,6 @@ This will allow user to have access to a complete power of Draft tool and allow 
 
 ![Step 3: Draft Dockerfile first](../resources/draft-dockerfile1.png)
 
-![Step 4: Draftr Deployment](../resources/draft-deployment.png)
+![Step 4: Draft Deployment](../resources/draft-deployment.png)
 
 ![Step 5: Draft GitHub Workflow](../resources/draft-gh-workflow.png)

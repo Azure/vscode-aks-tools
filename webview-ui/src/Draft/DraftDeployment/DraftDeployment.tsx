@@ -251,7 +251,7 @@ export function DraftDeployment(initialState: InitialState) {
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-                <h2>Draft a deployment</h2>
+                <h2>Automated Deployments: Draft a deployment</h2>
                 <p>
                     Enter the appropriate values in the fields below to enable Draft to automatically create Kubernetes
                     manifests, Helm charts, or Kustomize files for your application. Once created, you will be able to
@@ -589,7 +589,7 @@ export function DraftDeployment(initialState: InitialState) {
                             <p>
                                 To generate a GitHub Action, you can run{" "}
                                 <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
-                                    Draft: Create a GitHub workflow
+                                    Automated Deployments: Create a GitHub workflow
                                 </VSCodeLink>
                                 .
                             </p>

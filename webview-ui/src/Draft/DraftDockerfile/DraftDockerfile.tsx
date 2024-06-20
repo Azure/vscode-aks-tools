@@ -133,7 +133,7 @@ export function DraftDockerfile(initialState: InitialState) {
 
     return (
         <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-            <h2>Draft a Dockerfile</h2>
+            <h2>Automated Deployments: Draft a Dockerfile</h2>
             <p>
                 To automatically containerize the app, please define the application environment, the port to expose the
                 app, and the directory of the app source code to build.
@@ -264,7 +264,7 @@ export function DraftDockerfile(initialState: InitialState) {
                         <p>
                             If you still need to generate the appropriate deployment files, you can run{" "}
                             <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
-                                Draft: Create a deployment
+                                Automated Deployments: Create a deployment
                             </VSCodeLink>{" "}
                             to easily create the appropriate files.
                         </p>
@@ -273,7 +273,7 @@ export function DraftDockerfile(initialState: InitialState) {
                             If you already have all the files you need to deploy and would like to generate a GitHub
                             Action, you can run{" "}
                             <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
-                                Draft: Create a GitHub workflow
+                                Automated Deployments: Create a GitHub workflow
                             </VSCodeLink>
                             .
                         </p>
