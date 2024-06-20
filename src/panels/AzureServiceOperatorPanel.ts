@@ -2,17 +2,17 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { failed, getErrorMessage, map as errmap, combine } from "../commands/utils/errorable";
+import { failed, getErrorMessage, map as errmap, combine, Errorable } from "../commands/utils/errorable";
 import {
     ASOCloudName,
     AzureCloudName,
     CommandResult,
     InitialState,
+    Subscription,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
     azureToASOCloudMap,
 } from "../webview-contract/webviewDefinitions/azureServiceOperator";
-import { getServicePrincipalAccess } from "../commands/utils/azureAccount";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import path from "path";
 import * as fs from "fs/promises";
@@ -20,6 +20,8 @@ import { createTempFile } from "../commands/utils/tempfile";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { NonZeroExitCodeBehaviour } from "../commands/utils/shell";
+import { getEnvironment } from "../auth/azureAuth";
+import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
     constructor(extensionUri: vscode.Uri) {
@@ -66,7 +68,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            checkSPRequest: (args) => this.handleCheckSPRequest(args.appId, args.appSecret, webview),
+            checkSPRequest: () => this.handleCheckSPRequest(webview),
             installCertManagerRequest: () => this.handleInstallCertManagerRequest(webview),
             waitForCertManagerRequest: () => this.handleWaitForCertManagerRequest(webview),
             installOperatorRequest: () => this.handleInstallOperatorRequest(webview),
@@ -83,16 +85,12 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         };
     }
 
-    private async handleCheckSPRequest(
-        appId: string,
-        appSecret: string,
-        webview: MessageSink<ToWebViewMsgDef>,
-    ): Promise<void> {
-        const servicePrincipalAccess = await getServicePrincipalAccess(this.sessionProvider, appId, appSecret);
-        if (failed(servicePrincipalAccess)) {
+    private async handleCheckSPRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
+        const subscriptions = await this.getSubscriptionsForServicePrincipal();
+        if (failed(subscriptions)) {
             webview.postCheckSPResponse({
                 succeeded: false,
-                errorMessage: servicePrincipalAccess.error,
+                errorMessage: subscriptions.error,
                 commandResults: [],
                 cloudName: null,
                 subscriptions: [],
@@ -105,10 +103,30 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
             succeeded: true,
             errorMessage: null,
             commandResults: [],
-            cloudName: servicePrincipalAccess.result.cloudName as AzureCloudName,
-            subscriptions: servicePrincipalAccess.result.subscriptions,
-            tenantId: servicePrincipalAccess.result.tenantId,
+            cloudName: getEnvironment().name as AzureCloudName,
+            subscriptions: subscriptions.result,
+            tenantId: this.sessionProvider.selectedTenant.id,
         });
+    }
+
+    private async getSubscriptionsForServicePrincipal(): Promise<Errorable<Subscription[]>> {
+        // TODO: This *should* return all the subscriptions that are accessible to the service principal.
+        // However, doing that requires querying graph APIs, which requires delegated permissions that
+        // the default VS Code client application does not have.
+        // For this and other future work, we should create a new first party client application that has
+        // the appropriate graph permissions. But for now, we will just return all the subscriptions that
+        // the user has access to.
+        const allSubscriptions = await getSubscriptions(this.sessionProvider, SelectionType.All);
+        if (failed(allSubscriptions)) {
+            return allSubscriptions;
+        }
+
+        const result: Subscription[] = allSubscriptions.result.map((s) => ({
+            id: s.subscriptionId,
+            name: s.displayName,
+        }));
+
+        return { succeeded: true, result };
     }
 
     private async handleInstallCertManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {

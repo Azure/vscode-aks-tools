@@ -54,7 +54,7 @@ export default async function installAzureServiceOperator(_context: IActionConte
         kubeConfigFile.filePath,
         clusterInfo.result.name,
     );
-    const panel = new AzureServiceOperatorPanel(extension.result.extensionUri);
 
+    const panel = new AzureServiceOperatorPanel(extension.result.extensionUri);
     panel.show(dataProvider, kubeConfigFile);
 }
