@@ -248,17 +248,17 @@
             {
                 "command": "aks.draftDockerfile",
                 "title": "Create a Dockerfile",
-                "category": "Draft"
+                "category": "Automated Deployments"
             },
             {
                 "command": "aks.draftDeployment",
                 "title": "Create a Deployment",
-                "category": "Draft"
+                "category": "Automated Deployments"
             },
             {
                 "command": "aks.draftWorkflow",
                 "title": "Create a GitHub Workflow",
-                "category": "Draft"
+                "category": "Automated Deployments"
             },
             {
                 "command": "aks.showInPortal",
@@ -379,7 +379,7 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i"
                 },
                 {
-                    "submenu": "aks.draftSubMenu",
+                    "submenu": "aks.automatedDeploymentsSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && workspaceFolderCount >= 1",
                     "group": "9@1"
                 },
@@ -448,7 +448,7 @@
                     "group": "navigation"
                 }
             ],
-            "aks.draftSubMenu": [
+            "aks.automatedDeploymentsSubMenu": [
                 {
                     "command": "aks.attachAcrToCluster",
                     "group": "navigation"
@@ -515,8 +515,8 @@
                 "label": "Run AKS Diagnostics"
             },
             {
-                "id": "aks.draftSubMenu",
-                "label": "Draft"
+                "id": "aks.automatedDeploymentsSubMenu",
+                "label": "Automated Deployments"
             },
             {
                 "id": "aks.ghWorkflowSubMenu",

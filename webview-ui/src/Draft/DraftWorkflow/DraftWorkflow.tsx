@@ -394,7 +394,7 @@ export function DraftWorkflow(initialState: InitialState) {
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-                <h2>Draft a GitHub Workflow</h2>
+                <h2>Automated Deployments: Draft a GitHub Workflow</h2>
                 <p className={styles.fullWidth}>
                     Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make
                     sure you have created a Dockerfile and Deployment. You can do this using the{" "}

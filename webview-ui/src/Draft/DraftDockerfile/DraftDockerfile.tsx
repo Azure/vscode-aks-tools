@@ -133,7 +133,7 @@ export function DraftDockerfile(initialState: InitialState) {
 
     return (
         <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-            <h2>Draft a Dockerfile</h2>
+            <h2>Automated Deployments: Draft a Dockerfile</h2>
             <p>
                 To automatically containerize the app, please define the application environment, the port to expose the
                 app, and the directory of the app source code to build.
