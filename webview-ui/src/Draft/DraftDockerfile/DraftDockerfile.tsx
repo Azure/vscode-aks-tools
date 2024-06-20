@@ -264,7 +264,7 @@ export function DraftDockerfile(initialState: InitialState) {
                         <p>
                             If you still need to generate the appropriate deployment files, you can run{" "}
                             <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
-                                Draft: Create a deployment
+                                Automated Deployments: Create a deployment
                             </VSCodeLink>{" "}
                             to easily create the appropriate files.
                         </p>
@@ -273,7 +273,7 @@ export function DraftDockerfile(initialState: InitialState) {
                             If you already have all the files you need to deploy and would like to generate a GitHub
                             Action, you can run{" "}
                             <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
-                                Draft: Create a GitHub workflow
+                                Automated Deployments: Create a GitHub workflow
                             </VSCodeLink>
                             .
                         </p>

@@ -589,7 +589,7 @@ export function DraftDeployment(initialState: InitialState) {
                             <p>
                                 To generate a GitHub Action, you can run{" "}
                                 <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
-                                    Draft: Create a GitHub workflow
+                                    Automated Deployments: Create a GitHub workflow
                                 </VSCodeLink>
                                 .
                             </p>

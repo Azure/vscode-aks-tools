@@ -399,11 +399,11 @@ export function DraftWorkflow(initialState: InitialState) {
                     Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make
                     sure you have created a Dockerfile and Deployment. You can do this using the{" "}
                     <VSCodeLink href="#" onClick={handleDraftDockerfileClick}>
-                        Draft: Create a Dockerfile
+                        Automated Deployments: Create a Dockerfile
                     </VSCodeLink>{" "}
                     and{" "}
                     <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
-                        Draft: Create a Deployment
+                        Automated Deployments: Create a Deployment
                     </VSCodeLink>{" "}
                     commands.
                 </p>
