@@ -201,10 +201,6 @@
                 "title": "Install Azure Service Operator"
             },
             {
-                "command": "aks.configureStarterWorkflow",
-                "title": "Starter Workflow (deprecated)"
-            },
-            {
                 "command": "aks.aksCRUDDiagnostics",
                 "title": "Create, Upgrade, Delete and Scale"
             },
@@ -227,18 +223,6 @@
             {
                 "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
                 "title": "Known Issues, Availability and Performance"
-            },
-            {
-                "command": "aks.configureHelmStarterWorkflow",
-                "title": "Helm Workflow (deprecated)"
-            },
-            {
-                "command": "aks.configureKomposeStarterWorkflow",
-                "title": "Kompose Workflow (deprecated)"
-            },
-            {
-                "command": "aks.configureKustomizeStarterWorkflow",
-                "title": "Kustomize Workflow (deprecated)"
             },
             {
                 "command": "aks.attachAcrToCluster",
@@ -380,11 +364,6 @@
                 },
                 {
                     "submenu": "aks.automatedDeploymentsSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && workspaceFolderCount >= 1",
-                    "group": "9@1"
-                },
-                {
-                    "submenu": "aks.ghWorkflowSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@1"
                 },
@@ -455,29 +434,13 @@
                 },
                 {
                     "command": "aks.draftDeployment",
-                    "group": "navigation"
+                    "group": "navigation",
+                    "when": "workspaceFolderCount >= 1"
                 },
                 {
                     "command": "aks.draftWorkflow",
-                    "group": "navigation"
-                }
-            ],
-            "aks.ghWorkflowSubMenu": [
-                {
-                    "command": "aks.configureHelmStarterWorkflow",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.configureKomposeStarterWorkflow",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.configureKustomizeStarterWorkflow",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.configureStarterWorkflow",
-                    "group": "navigation"
+                    "group": "navigation",
+                    "when": "workspaceFolderCount >= 1"
                 }
             ],
             "aks.networkTroubleshootingSubMenu": [
@@ -517,10 +480,6 @@
             {
                 "id": "aks.automatedDeploymentsSubMenu",
                 "label": "Automated Deployments"
-            },
-            {
-                "id": "aks.ghWorkflowSubMenu",
-                "label": "Create GitHub Workflow (deprecated)"
             },
             {
                 "id": "aks.managedClusterOperationSubMenu",
