@@ -1,5 +1,19 @@
 # Change Log
 
+## [1.4.7]
+
+* Add developer-focused discussion of authentication and Draft work.
+* Recategorize Draft commands as Automated Deployments.
+* UX enhancements for Attach ACR to Cluster.
+* Connect ACR to Cluster implementation.
+* Avoid querying graph APIs for ASO.
+* Add direct node-fetch dependency.
+* Remove deprecated starter workflow commands.
+* Remove starter workflow traces as its removed now. 
+* Dependabot updates and bumps.
+
+Thanks to @peterbom, @ivelisseca, @qpetraroia, @hsubramanianaks for contributions, testing and reviews.
+
 ## [1.4.6]
 
 * Ensure initial selection values are populated in Draft.
