@@ -52,26 +52,32 @@ const supportedVersions: KubernetesVersionInfo[] = [
     {
         version: "1.24",
         patchVersions: ["1.24.6"],
+        capabilities: [""],
     },
     {
         version: "1.25",
         patchVersions: ["1.25.3"],
+        capabilities: [""],
     },
     {
         version: "1.26",
         patchVersions: ["1.26.1"],
+        capabilities: [""],
     },
     {
         version: "1.27",
         patchVersions: ["1.27.0"],
+        capabilities: [""],
     },
     {
         version: "1.28",
         patchVersions: ["1.28.0"],
+        capabilities: [""],
     },
     {
         version: "1.29",
         patchVersions: ["1.29.0"],
+        capabilities: [""],
     },
 ];
 

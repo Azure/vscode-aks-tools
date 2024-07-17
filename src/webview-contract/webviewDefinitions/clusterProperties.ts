@@ -27,6 +27,7 @@ export type AgentPoolProfileInfo = {
 export type KubernetesVersionInfo = {
     version: string;
     patchVersions: string[];
+    capabilities: string[];
 };
 
 export type ToVsCodeMsgDef = {

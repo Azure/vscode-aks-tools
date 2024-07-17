@@ -153,11 +153,13 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                             <tr>
                                 <th>Version</th>
                                 <th>Patch Versions</th>
+                                <th>Support Plan</th>
                             </tr>
                             {props.clusterInfo.supportedVersions.map((v) => (
                                 <tr key={v.version}>
                                     <td>{v.version}</td>
                                     <td>{v.patchVersions.join(", ")}</td>
+                                    <td>{v.capabilities.join(", ")}</td>
                                 </tr>
                             ))}
                         </table>
