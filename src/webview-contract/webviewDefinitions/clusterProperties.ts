@@ -28,6 +28,7 @@ export type KubernetesVersionInfo = {
     version: string;
     patchVersions: string[];
     capabilities: string[];
+    isPreview: boolean;
 };
 
 export type ToVsCodeMsgDef = {

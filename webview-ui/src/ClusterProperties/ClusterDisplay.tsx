@@ -148,24 +148,32 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                         <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
                     </span>
                     <span className={styles.tooltiptext}>
-                        Current Versions available:
                         <table>
+                            <caption>Current Versions Available</caption>
                             <tr>
                                 <th>Version</th>
                                 <th>Patch Versions</th>
                                 <th>Support Plan</th>
+                                <th>Preview</th>
                             </tr>
                             {props.clusterInfo.supportedVersions.map((v) => (
                                 <tr key={v.version}>
                                     <td>{v.version}</td>
                                     <td>{v.patchVersions.join(", ")}</td>
                                     <td>{v.capabilities.join(", ")}</td>
+                                    <td>{v.isPreview ? "Yes" : "No"}</td>
                                 </tr>
                             ))}
+                            <tfoot>
+                                <tr>
+                                    <td colSpan={3} style={{ textAlign: "center" }}>
+                                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
+                                            Learn more
+                                        </VSCodeLink>
+                                    </td>
+                                </tr>
+                            </tfoot>
                         </table>
-                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
-                            Learn more
-                        </VSCodeLink>
                     </span>
                 </span>
             </dd>

@@ -32,7 +32,6 @@
 
 .tooltip .tooltiptext {
     visibility: hidden;
-    width: 20rem;
     background-color: var(--vscode-editorHoverWidget-background);
     color: var(--vscode-editorHoverWidget-foreground);
     border-color: var(--vscode-editorHoverWidget-border);
@@ -42,7 +41,7 @@
     padding: 0.5rem;
 
     /* Position the tooltip */
-    position: absolute;
+    position: fixed;
     z-index: 1;
 }
 
