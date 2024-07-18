@@ -25,7 +25,7 @@
 }
 
 .tooltip {
-    position: relative;
+    position: fixed;
     display: inline-block;
     border-bottom: 1px dotted black;
 }
@@ -37,7 +37,7 @@
     border-color: var(--vscode-editorHoverWidget-border);
     border-width: 1px;
     border-style: solid;
-    text-align: center;
+    text-align: left;
     padding: 0.5rem;
 
     /* Position the tooltip */
@@ -47,4 +47,13 @@
 
 .tooltip:hover .tooltiptext {
     visibility: visible;
+}
+
+.secondaryButton {
+    margin-left: 25px;
+}
+
+th:not(:last-child),
+td:not(:last-child) {
+    padding-right: 6px; /* Adds space to the right except for the last <th> and <td> in each row */
 }

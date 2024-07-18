@@ -1,10 +1,9 @@
-import styles from "./ClusterProperties.module.css";
 import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
-import { EventDef, vscode } from "./state";
 import { EventHandlers } from "../utilities/state";
+import styles from "./ClusterProperties.module.css";
+import { EventDef, vscode } from "./state";
+import { ClusterDisplayToolTip } from "./ClusterDisplayToolTip";
 
 export interface ClusterDisplayProps {
     clusterInfo: ClusterInfo;
@@ -64,45 +63,51 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
     const supportedPatchVersions = props.clusterInfo.supportedVersions.flatMap((v) => v.patchVersions);
     const isSupported = supportedPatchVersions.includes(props.clusterInfo.kubernetesVersion);
+    console.log("capabilities array", props.clusterInfo.supportedVersions);
+    console.log("capabilities array length", props.clusterInfo.supportedVersions[3].capabilities.length);
 
     return (
         <dl className={styles.propertyList}>
             <dt>Provisioning State</dt>
             <dd>
                 {props.clusterInfo.provisioningState}
-                {showAbortButton && (
-                    <>
-                        &nbsp;
-                        <VSCodeButton
-                            disabled={props.clusterOperationRequested}
-                            onClick={() => handleAbortClick()}
-                            appearance="secondary"
-                        >
-                            Abort
-                        </VSCodeButton>
-                    </>
-                )}
-                {showReconcileButton && (
-                    <>
-                        &nbsp;
-                        <VSCodeButton
-                            disabled={props.clusterOperationRequested}
-                            onClick={() => handleReconcileClick()}
-                            appearance="secondary"
-                        >
-                            Reconcile
-                        </VSCodeButton>
-                    </>
-                )}
+                <div style={{ marginBottom: "10px", marginLeft: "126px", marginTop: "5px" }}>
+                    {showAbortButton && (
+                        <>
+                            &nbsp;
+                            <VSCodeButton
+                                disabled={props.clusterOperationRequested}
+                                onClick={() => handleAbortClick()}
+                                appearance="secondary"
+                            >
+                                Abort
+                            </VSCodeButton>
+                        </>
+                    )}
+                    {showReconcileButton && (
+                        <>
+                            &nbsp;
+                            <VSCodeButton
+                                disabled={props.clusterOperationRequested}
+                                onClick={() => handleReconcileClick()}
+                                appearance="secondary"
+                            >
+                                Reconcile
+                            </VSCodeButton>
+                        </>
+                    )}
+                </div>
             </dd>
 
             <dt>Power State</dt>
-            <dd className={styles.inlineButtonContainer}>
+            <dd>
                 {props.clusterInfo.powerStateCode}
                 &nbsp;
                 <span className={styles.tooltip}>
-                    <span>
-                        <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
+                    <span className={styles.infoIndicator}>
+                        <div className="icon">
+                            <i className="codicon codicon-info"></i>
+                        </div>
                     </span>
                     <span className={styles.tooltiptext}>
                         It is important that you don&#39;t repeatedly start/stop your cluster. Repeatedly
@@ -113,28 +118,31 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                         </VSCodeLink>
                     </span>
                 </span>
-                {startStopState === "Started" && (
-                    <VSCodeButton
-                        disabled={props.clusterOperationRequested}
-                        onClick={handleStopCluster}
-                        className={styles.controlButton}
-                        appearance="secondary"
-                    >
-                        Stop Cluster
-                    </VSCodeButton>
-                )}
-                {startStopState === "Stopped" && (
-                    <VSCodeButton
-                        disabled={props.clusterOperationRequested}
-                        onClick={handleStartCluster}
-                        className={styles.controlButton}
-                        appearance="secondary"
-                    >
-                        Start Cluster
-                    </VSCodeButton>
-                )}
-                {(startStopState === "Starting" || startStopState === "Stopping") &&
-                    `Cluster is in ${startStopState} state`}
+                <div style={{ marginBottom: "10px", marginLeft: "126px", marginTop: "5px" }}>
+                    {startStopState === "Started" && (
+                        <VSCodeButton
+                            disabled={props.clusterOperationRequested}
+                            onClick={handleStopCluster}
+                            className={styles.controlButton}
+                            appearance="secondary"
+                        >
+                            Stop Cluster
+                        </VSCodeButton>
+                    )}
+                    {startStopState === "Stopped" && (
+                        <VSCodeButton
+                            disabled={props.clusterOperationRequested}
+                            onClick={handleStartCluster}
+                            className={styles.controlButton}
+                            appearance="secondary"
+                        >
+                            Start Cluster
+                        </VSCodeButton>
+                    )}
+                    {(startStopState === "Starting" || startStopState === "Stopping") && (
+                        <span>{`Cluster is in ${startStopState} state`}</span>
+                    )}
+                </div>
             </dd>
 
             <dt>FQDN</dt>
@@ -143,39 +151,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
             <dd>
                 {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
                 &nbsp;
-                <span className={styles.tooltip}>
-                    <span>
-                        <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIndicator} />
-                    </span>
-                    <span className={styles.tooltiptext}>
-                        <table>
-                            <caption>Current Versions Available</caption>
-                            <tr>
-                                <th>Version</th>
-                                <th>Patch Versions</th>
-                                <th>Support Plan</th>
-                                <th>Preview</th>
-                            </tr>
-                            {props.clusterInfo.supportedVersions.map((v) => (
-                                <tr key={v.version}>
-                                    <td>{v.version}</td>
-                                    <td>{v.patchVersions.join(", ")}</td>
-                                    <td>{v.capabilities.join(", ")}</td>
-                                    <td>{v.isPreview ? "Yes" : "No"}</td>
-                                </tr>
-                            ))}
-                            <tfoot>
-                                <tr>
-                                    <td colSpan={3} style={{ textAlign: "center" }}>
-                                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
-                                            Learn more
-                                        </VSCodeLink>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </span>
-                </span>
+                <ClusterDisplayToolTip clusterInfo={props.clusterInfo} ></ClusterDisplayToolTip>
             </dd>
         </dl>
     );
