@@ -63,15 +63,13 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
     const supportedPatchVersions = props.clusterInfo.supportedVersions.flatMap((v) => v.patchVersions);
     const isSupported = supportedPatchVersions.includes(props.clusterInfo.kubernetesVersion);
-    console.log("capabilities array", props.clusterInfo.supportedVersions);
-    console.log("capabilities array length", props.clusterInfo.supportedVersions[3].capabilities.length);
 
     return (
         <dl className={styles.propertyList}>
             <dt>Provisioning State</dt>
             <dd>
                 {props.clusterInfo.provisioningState}
-                <div style={{ marginBottom: "10px", marginLeft: "126px", marginTop: "5px" }}>
+                <div className={styles.buttonDiv}>
                     {showAbortButton && (
                         <>
                             &nbsp;
@@ -118,7 +116,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                         </VSCodeLink>
                     </span>
                 </span>
-                <div style={{ marginBottom: "10px", marginLeft: "126px", marginTop: "5px" }}>
+                <div className={styles.buttonDiv}>
                     {startStopState === "Started" && (
                         <VSCodeButton
                             disabled={props.clusterOperationRequested}
@@ -151,7 +149,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
             <dd>
                 {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
                 &nbsp;
-                <ClusterDisplayToolTip clusterInfo={props.clusterInfo} ></ClusterDisplayToolTip>
+                <ClusterDisplayToolTip clusterInfo={props.clusterInfo}></ClusterDisplayToolTip>
             </dd>
         </dl>
     );

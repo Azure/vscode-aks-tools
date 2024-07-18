@@ -11,7 +11,7 @@ export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
         <span className={styles.tooltip}>
             <span className={styles.infoIndicator}>
                 <div className="icon">
-                    <i className="codicon codicon-info"></i>
+                    <i className="codicon codicon-info" aria-label="info icon using vscode icons"></i>
                 </div>
             </span>
             <span className={styles.tooltiptext}>

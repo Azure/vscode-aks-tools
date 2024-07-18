@@ -49,11 +49,11 @@
     visibility: visible;
 }
 
-.secondaryButton {
-    margin-left: 25px;
-}
-
 th:not(:last-child),
 td:not(:last-child) {
     padding-right: 6px; /* Adds space to the right except for the last <th> and <td> in each row */
+}
+
+.buttonDiv {
+    margin: 0.3125rem 0 0.625rem 7.875rem;
 }
