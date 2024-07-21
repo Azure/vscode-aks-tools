@@ -32,8 +32,8 @@ export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
                                 ))}
                             </td>
                             <td>
-                                {v.capabilities.map((capability, index) => (
-                                    <div key={`capability-${index}`}>{capability}</div>
+                                {v.supportPlan.map((supportPlan, index) => (
+                                    <div key={`capability-${index}`}>{supportPlan}</div>
                                 ))}
                             </td>
                             <td>{v.isPreview ? "Yes" : "No"}</td>

@@ -52,37 +52,37 @@ const supportedVersions: KubernetesVersionInfo[] = [
     {
         version: "1.24",
         patchVersions: ["1.24.6"],
-        capabilities: ["KubernetesOfficial"],
+        supportPlan: ["KubernetesOfficial"],
         isPreview: false,
     },
     {
         version: "1.25",
         patchVersions: ["1.25.3"],
-        capabilities: ["AKSLongTermSupport", "KubernetesOfficial"],
+        supportPlan: ["AKSLongTermSupport", "KubernetesOfficial"],
         isPreview: false,
     },
     {
         version: "1.26",
         patchVersions: ["1.26.1", "1.26.2"],
-        capabilities: ["AKSLongTermSupport"],
+        supportPlan: ["AKSLongTermSupport"],
         isPreview: false,
     },
     {
         version: "1.27",
         patchVersions: ["1.27.0"],
-        capabilities: ["AKSLongTermSupport"],
+        supportPlan: ["AKSLongTermSupport"],
         isPreview: false,
     },
     {
         version: "1.28",
         patchVersions: ["1.28.0", "1.28.1"],
-        capabilities: ["AKSLongTermSupport", "KubernetesOfficial"],
+        supportPlan: ["AKSLongTermSupport", "KubernetesOfficial"],
         isPreview: false,
     },
     {
         version: "1.29",
         patchVersions: ["1.29.0"],
-        capabilities: ["AKSLongTermSupport"],
+        supportPlan: ["AKSLongTermSupport"],
         isPreview: true,
     },
 ];
