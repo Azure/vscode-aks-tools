@@ -25,27 +25,35 @@
 }
 
 .tooltip {
-    position: relative;
+    position: fixed;
     display: inline-block;
     border-bottom: 1px dotted black;
 }
 
 .tooltip .tooltiptext {
     visibility: hidden;
-    width: 20rem;
     background-color: var(--vscode-editorHoverWidget-background);
     color: var(--vscode-editorHoverWidget-foreground);
     border-color: var(--vscode-editorHoverWidget-border);
     border-width: 1px;
     border-style: solid;
-    text-align: center;
+    text-align: left;
     padding: 0.5rem;
 
     /* Position the tooltip */
-    position: absolute;
+    position: fixed;
     z-index: 1;
 }
 
 .tooltip:hover .tooltiptext {
     visibility: visible;
+}
+
+th:not(:last-child),
+td:not(:last-child) {
+    padding-right: 6px; /* Adds space to the right except for the last <th> and <td> in each row */
+}
+
+.buttonDiv {
+    margin: 0.3125rem 0 0.625rem 7.875rem;
 }
