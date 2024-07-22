@@ -260,5 +260,7 @@ function asKubernetesVersionInfo(version: KubernetesVersion): KubernetesVersionI
     return {
         version: version.version || "",
         patchVersions: version.patchVersions ? Object.keys(version.patchVersions) : [],
+        supportPlan: version.capabilities ? Object.values(version.capabilities.supportPlan || {}) : [],
+        isPreview: version.isPreview || false,
     };
 }
