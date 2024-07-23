@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.4.8]
+
+* Add Support Plan and Preview information in cluster Properties Page.
+* Fix Code Scanning Checkout to be pinned to the commit sha. 
+* Dependabot updates and bumps.
+
+Welcome new contributor @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC for contributions, testing and reviews.
+
+
 ## [1.4.7]
 
 * Add developer-focused discussion of authentication and Draft work.
