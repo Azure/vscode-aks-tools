@@ -24,7 +24,7 @@ export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
                         <th>Preview</th>
                     </tr>
                     {props.clusterInfo.supportedVersions.map((v) => (
-                        <tr key={v.version}>
+                        <tr key={v.version} style={{ outline: "thin solid" }}>
                             <td>{v.version}</td>
                             <td>
                                 {v.patchVersions.map((patchVersion, index) => (
