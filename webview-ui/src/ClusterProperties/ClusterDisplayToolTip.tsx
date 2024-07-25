@@ -16,7 +16,7 @@ export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
             </span>
             <span className={styles.tooltiptext}>
                 <table>
-                    <caption style={{ fontWeight: "bold", textAlign: "left" }}>Current Versions Available</caption>
+                    <caption className={styles.tableHeader}>Current Versions Available</caption>
                     <tr>
                         <th>Version</th>
                         <th>Patch Versions</th>
@@ -24,7 +24,7 @@ export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
                         <th>Preview</th>
                     </tr>
                     {props.clusterInfo.supportedVersions.map((v) => (
-                        <tr key={v.version} style={{ outline: "thin solid" }}>
+                        <tr key={v.version} className={styles.separator}>
                             <td>{v.version}</td>
                             <td>
                                 {v.patchVersions.map((patchVersion, index) => (
@@ -41,7 +41,7 @@ export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
                     ))}
                     <tfoot>
                         <tr>
-                            <td colSpan={3} style={{ textAlign: "left" }}>
+                            <td colSpan={3} className={styles.textLeftAlign}>
                                 <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
                                     Learn more
                                 </VSCodeLink>
