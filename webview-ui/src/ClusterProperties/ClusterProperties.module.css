@@ -57,3 +57,17 @@ td:not(:last-child) {
 .buttonDiv {
     margin: 0.3125rem 0 0.625rem 7.875rem;
 }
+
+.separator {
+    outline: solid thin;
+}
+
+.textLeftAlign {
+    text-align: left;
+}
+
+.tableHeader {
+    font-weight: bold;
+    text-align: left;
+    margin-bottom: 0.375rem;
+}
