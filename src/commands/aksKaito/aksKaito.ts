@@ -1,16 +1,15 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { deleteCluster, getAksClusterTreeNode } from "../utils/clusters";
-import { failed, succeeded } from "../utils/errorable";
-import { longRunning } from "../utils/host";
+import { getAksClusterTreeNode } from "../utils/clusters";
+import { failed } from "../utils/errorable";
+import { getExtension } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { ModelEntry } from "@huggingface/hub";
 import axios from "axios";
+import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
 
 const HUGGINGFACE_API_URL = "https://huggingface.co/api/models";
-
-const refreshIntervals = [1, 2, 5, 10, 30, 60, 120];
 
 export default async function aksKaito(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -27,7 +26,13 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         return;
     }
 
-    const clusterName = clusterNode.result.name;
+    const extension = getExtension();
+    if (failed(extension)) {
+        vscode.window.showErrorMessage(extension.error);
+        return undefined;
+    }
+
+    // const clusterName = clusterNode.result.name;
     const foo = listModelsWithPrefix("azure");
 
     // for await (const model of listModels({ search: { query: "" } })) {
@@ -48,37 +53,59 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         return;
     }
 
-    const answer = await vscode.window.showInformationMessage(
-        `Do you want to delete cluster ${clusterName}?`,
-        "Yes",
-        "No",
+    const selectedNodes = nodeNamesSelected.map((item) => item).join(",");
+
+    // Configure the starter workflow data.
+    const starterWorkflowYaml = getWorkflowYaml("kaitoworkspace");
+    if (failed(starterWorkflowYaml)) {
+        vscode.window.showErrorMessage(starterWorkflowYaml.error);
+        return;
+    }
+
+    const substitutedYaml = substituteClusterInWorkflowYaml(
+        starterWorkflowYaml.result,
+        "Standard_NC12s_v3",
+        selectedNodes,
     );
+    // Display it to the end-user in their vscode editor.
+    const doc = await vscode.workspace.openTextDocument({
+        content: substitutedYaml,
+        language: "yaml",
+    });
 
-    if (answer === "Yes") {
-        const result = await longRunning(`Deleting cluster ${clusterName}.`, async () => {
-            return await deleteCluster(
-                sessionProvider.result,
-                clusterNode.result.subscriptionId,
-                clusterNode.result.resourceGroupName,
-                clusterName,
-            );
-        });
+    vscode.window.showTextDocument(doc);
 
-        if (failed(result)) {
-            vscode.window.showErrorMessage(result.error);
-        }
+    // const answer = await vscode.window.showInformationMessage(
+    //     `Do you want to delete cluster ${clusterName}?`,
+    //     "Yes",
+    //     "No",
+    // );
 
-        if (succeeded(result)) {
-            vscode.window.showInformationMessage(result.result);
+    // if (answer === "Yes") {
+    //     const result = await longRunning(`Deleting cluster ${clusterName}.`, async () => {
+    //         return await deleteCluster(
+    //             sessionProvider.result,
+    //             clusterNode.result.subscriptionId,
+    //             clusterNode.result.resourceGroupName,
+    //             clusterName,
+    //         );
+    //     });
 
-            // Periodically refresh the subscription treeview, because the list-clusters API
-            // call still includes the cluster for a while after it's been deleted.
-            refreshIntervals.forEach((interval) => {
-                setTimeout(() => {
-                    vscode.commands.executeCommand("aks.refreshSubscription", clusterNode.result.subscriptionTreeNode);
-                }, interval * 1000);
-            });
-        }
+    //     if (failed(result)) {
+    //         vscode.window.showErrorMessage(result.error);
+    //     }
+
+    //     if (succeeded(result)) {
+    //         vscode.window.showInformationMessage(result.result);
+
+    //         // Periodically refresh the subscription treeview, because the list-clusters API
+    //         // call still includes the cluster for a while after it's been deleted.
+    //         refreshIntervals.forEach((interval) => {
+    //             setTimeout(() => {
+    //                 vscode.commands.executeCommand("aks.refreshSubscription", clusterNode.result.subscriptionTreeNode);
+    //             }, interval * 1000);
+    //         });
+    //     }
     }
 
     async function listModelsWithPrefix(prefix: string) {
@@ -108,4 +135,4 @@ export default async function aksKaito(_context: IActionContext, target: unknown
             return [""];
         }
     }
-}
+

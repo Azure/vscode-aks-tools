@@ -298,7 +298,7 @@
             },
             {
                 "command": "aks.aksKaito",
-                "title": "Create Kaito Deployment"
+                "title": "Create Kaito Workspace"
             }
         ],
         "menus": {
