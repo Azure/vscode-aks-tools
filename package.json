@@ -561,7 +561,7 @@
         "@azure/storage-blob": "^12.23.0",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^2.5.1",
-        "@octokit/rest": "^21.0.0",
+        "@octokit/rest": "^21.0.1",
         "@vscode/extension-telemetry": "^0.9.6",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.0",
