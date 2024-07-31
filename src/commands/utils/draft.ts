@@ -56,7 +56,7 @@ async function getDeploymentFiles(
         .join(" ");
 
     const language = "java"; // So it doesn't attempt to autodetect the language
-    const command = `draft create --language ${language} --deployment-only --deploy-type ${deploymentType} --app testapp ${variableArgs} --destination ${destDir} --dry-run --silent`;
+    const command = `draft create --language ${language} --deployment-only --deploy-type ${deploymentType} ${variableArgs} --destination ${destDir} --dry-run --silent`;
 
     const execOptions: ShellOptions = {
         envPaths: [path.dirname(draftBinaryPath)],
