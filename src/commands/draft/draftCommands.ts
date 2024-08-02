@@ -214,8 +214,8 @@ type DraftDependencies = {
 
 async function getGitHubAuthenticationSession(): Promise<Errorable<AuthenticationSession>> {
     try {
-        // No special scopes are required for GitHub - we are just listing repositories/branches.
-        const scopes: string[] = [];
+        // Repo scope required to see public/private repos.
+        const scopes: string[] = ["repo"];
         const session = await authentication.getSession("github", scopes, { createIfNone: true });
         return { succeeded: true, result: session };
     } catch (e) {
@@ -229,13 +229,12 @@ async function getRepo(octokit: Octokit, remote: Remote): Promise<GitHubRepo | n
         return null;
     }
 
-    const [owner, repo] = url
-        .replace(/\.git$/, "")
-        .split("/")
-        .slice(-2);
+    const parts = url.replace(/\.git$/, "").split(/[:/]/); //Split on both : and /, Removes .git
+    const [owner, repo] = parts.slice(-2);
+
     let response: RestEndpointMethodTypes["repos"]["get"]["response"];
     try {
-        response = await octokit.repos.get({ owner, repo });
+        response = await octokit.rest.repos.get({ owner, repo });
     } catch (e) {
         return null;
     }
