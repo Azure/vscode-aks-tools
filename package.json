@@ -291,6 +291,10 @@
             {
                 "command": "aks.aksRetinaCapture",
                 "title": "Run Retina Capture"
+            },
+            {
+                "command": "aks.aksDeployLocalApp",
+                "title": "Deploy local app to an AKS cluster"
             }
         ],
         "menus": {
@@ -375,6 +379,9 @@
                     "submenu": "aks.managedClusterOperationSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
+                },
+                {
+                    "submenu": "aks.managedClusterDeploymentSubMenu"
                 },
                 {
                     "command": "aks.aksRunKubectlCommands",
@@ -470,6 +477,12 @@
                     "command": "aks.aksReconcileCluster",
                     "group": "navigation"
                 }
+            ],
+            "aks.managedClusterDeploymentSubMenu": [
+                {
+                    "command": "aks.aksDeployLocalApp",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
@@ -496,8 +509,16 @@
             {
                 "id": "aks.networkTroubleshootingSubMenu",
                 "label": "Troubleshoot Network Health"
+            },
+            {
+                "id": "aks.managedClusterDeploymentSubMenu",
+                "label": "Deploy application"
             }
         ]
+    },
+    "agentMetadata": {
+        "version": "2.0",
+        "getPluginsCommand": "aks.getCopilotForAzurePlugins"
     },
     "scripts": {
         "install:all": "npm install && cd webview-ui && npm install",
@@ -563,6 +584,7 @@
         "@microsoft/vscode-azext-utils": "^2.5.1",
         "@octokit/rest": "^21.0.0",
         "@vscode/extension-telemetry": "^0.9.6",
+        "copilot-for-azure-vscode-api": "^1.0.0-beta.18",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.0",
         "move-file": "^3.1.0",
