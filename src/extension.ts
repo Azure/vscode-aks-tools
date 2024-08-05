@@ -44,6 +44,8 @@ import { aksRetinaCapture } from "./commands/aksRetinaCapture/aksRetinaCapture";
 import { signInToAzure, selectSubscriptions, selectTenant } from "./commands/aksAccount/aksAccount";
 import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSessionProvider";
 import { getReadySessionProvider } from "./auth/azureAuth";
+import aksDeployLocalApp from "./commands/aksDeployLocalApp/aksDeployLocalApp";
+import { getPlugins } from "./getPlugins";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -101,6 +103,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.refreshSubscription", refreshSubscription);
         registerCommandWithTelemetry("aks.eraserTool", aksEraserTool);
         registerCommandWithTelemetry("aks.aksRetinaCapture", aksRetinaCapture);
+        registerCommandWithTelemetry("aks.aksDeployLocalApp", aksDeployLocalApp);
+        registerCommand("aks.getCopilotForAzurePlugins", getPlugins);
 
         await registerAzureServiceNodes(context);
 
