@@ -215,6 +215,7 @@ type DraftDependencies = {
 async function getGitHubAuthenticationSession(): Promise<Errorable<AuthenticationSession>> {
     try {
         // Repo scope required to see public/private repos.
+        // Reference for Github scopes: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
         const scopes: string[] = ["repo"];
         const session = await authentication.getSession("github", scopes, { createIfNone: true });
         return { succeeded: true, result: session };
