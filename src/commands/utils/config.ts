@@ -1,11 +1,11 @@
-import * as vscode from "vscode";
-import { combine, failed, Errorable } from "./errorable";
-import { KubeloginConfig, KustomizeConfig } from "../periscope/models/config";
-import * as semver from "semver";
-import { CommandCategory, PresetCommand } from "../../webview-contract/webviewDefinitions/kubectl";
-import { RetinaDownloadConfig } from "../periscope/models/RetinaDownloadConfig";
-import { isObject } from "./runtimeTypes";
 import { Environment, EnvironmentParameters } from "@azure/ms-rest-azure-env";
+import * as semver from "semver";
+import * as vscode from "vscode";
+import { CommandCategory, PresetCommand } from "../../webview-contract/webviewDefinitions/kubectl";
+import { KubeloginConfig, KustomizeConfig } from "../periscope/models/config";
+import { RetinaDownloadConfig } from "../periscope/models/RetinaDownloadConfig";
+import { combine, Errorable, failed } from "./errorable";
+import { isObject } from "./runtimeTypes";
 
 export function getConfiguredAzureEnv(): Environment {
     // See:
@@ -52,7 +52,7 @@ export function getFilteredSubscriptions(): SubscriptionFilter[] {
             values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceFilter", []);
         }
         return values.map(asSubscriptionFilter).filter((v) => v !== null) as SubscriptionFilter[];
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -61,7 +61,7 @@ function asSubscriptionFilter(value: string): SubscriptionFilter | null {
     try {
         const parts = value.split("/");
         return { tenantId: parts[0], subscriptionId: parts[1] };
-    } catch (e) {
+    } catch {
         return null;
     }
 }

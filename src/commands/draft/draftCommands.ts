@@ -1,33 +1,32 @@
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
+import path, { basename, extname, join } from "path";
 import {
     authentication,
+    AuthenticationSession,
     Extension,
     ExtensionContext,
-    WorkspaceFolder,
+    FileType,
+    Uri,
     window,
     workspace,
-    AuthenticationSession,
-    Uri,
-    FileType,
+    WorkspaceFolder,
 } from "vscode";
-import { DraftDockerfileDataProvider, DraftDockerfilePanel } from "../../panels/draft/DraftDockerfilePanel";
-import { getExtension } from "../utils/host";
-import { Errorable, failed, getErrorMessage, succeeded } from "../utils/errorable";
-import { getDraftBinaryPath } from "../utils/helper/draftBinaryDownload";
-import { DraftDeploymentDataProvider, DraftDeploymentPanel } from "../../panels/draft/DraftDeploymentPanel";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { getDeploymentFilesToWrite } from "../utils/draft";
-import { getGitApi } from "../utils/git";
-import { DraftWorkflowDataProvider, DraftWorkflowPanel } from "../../panels/draft/DraftWorkflowPanel";
-import { Octokit, RestEndpointMethodTypes } from "@octokit/rest";
-import { Remote } from "../../types/git";
-import { GitHubRepo } from "../../webview-contract/webviewDefinitions/draft/types";
-import { ExistingFile } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
-import { basename, extname, join } from "path";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { DraftCommandParamsType } from "./types";
+import { DraftDeploymentDataProvider, DraftDeploymentPanel } from "../../panels/draft/DraftDeploymentPanel";
+import { DraftDockerfileDataProvider, DraftDockerfilePanel } from "../../panels/draft/DraftDockerfilePanel";
+import { DraftWorkflowDataProvider, DraftWorkflowPanel } from "../../panels/draft/DraftWorkflowPanel";
+import { Remote } from "../../types/git";
+import { ExistingFile } from "../../webview-contract/webviewDefinitions/draft/draftWorkflow";
+import { GitHubRepo } from "../../webview-contract/webviewDefinitions/draft/types";
 import { getAksClusterTreeNode } from "../utils/clusters";
-import path from "path";
+import { getDeploymentFilesToWrite } from "../utils/draft";
+import { Errorable, failed, getErrorMessage, succeeded } from "../utils/errorable";
+import { getGitApi } from "../utils/git";
+import { getDraftBinaryPath } from "../utils/helper/draftBinaryDownload";
+import { getExtension } from "../utils/host";
+import { DraftCommandParamsType } from "./types";
 
 export async function draftDockerfile(_context: IActionContext, target: unknown): Promise<void> {
     const params = getDraftDockerfileParams(target);
@@ -151,7 +150,7 @@ export async function draftWorkflow(_context: IActionContext, target: unknown): 
                     path: join(".github", "workflows", name),
                 };
             });
-    } catch (e) {
+    } catch {
         // If the directory doesn't exist, that's fine - it just means there will be no existing workflow files.
     }
 
@@ -236,7 +235,7 @@ async function getRepo(octokit: Octokit, remote: Remote): Promise<GitHubRepo | n
     let response: RestEndpointMethodTypes["repos"]["get"]["response"];
     try {
         response = await octokit.repos.get({ owner, repo });
-    } catch (e) {
+    } catch {
         return null;
     }
 

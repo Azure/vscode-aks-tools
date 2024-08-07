@@ -1,18 +1,18 @@
-import { Errorable, combine, failed, getErrorMessage } from "./errorable";
-import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
+import { Environment } from "@azure/ms-rest-azure-env";
 import * as fs from "fs";
 import * as path from "path";
+import { dirSync } from "tmp";
+import { ReadyAzureSessionProvider } from "../../auth/types";
+import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import {
     ARMResponse,
     CategoryDetectorARMResponse,
     SingleDetectorARMResponse,
     isCategoryDataset,
 } from "../../webview-contract/webviewDefinitions/detector";
-import { dirSync } from "tmp";
-import { Environment } from "@azure/ms-rest-azure-env";
-import { getPortalResourceUrl } from "./env";
 import { getResourceManagementClient } from "./arm";
-import { ReadyAzureSessionProvider } from "../../auth/types";
+import { getPortalResourceUrl } from "./env";
+import { Errorable, combine, failed, getErrorMessage } from "./errorable";
 
 /**
  * Can be used to store the JSON responses for a collection of category detectors and all their child detectors.
@@ -76,7 +76,10 @@ export async function getDetectorListData(
     } catch (err) {
         // This would be unexpected even in the event of network failure, because the individual promises handle
         // their own errors.
-        return { succeeded: false, error: `Failed to retrieve detector data for ${categoryDetector.name}` };
+        return {
+            succeeded: false,
+            error: `Failed to retrieve detector data for ${categoryDetector.name} and error is ${err}`,
+        };
     }
 
     return combine(results);

@@ -1,18 +1,18 @@
+import { TokenCredential } from "@azure/core-auth";
+import { Environment } from "@azure/ms-rest-azure-env";
 import {
     AuthenticationSession,
-    Disposable as VsCodeDisposable,
     ProgressLocation,
     ProgressOptions,
     QuickPickItem,
+    Disposable as VsCodeDisposable,
     window,
 } from "vscode";
-import { AzureSessionProvider, ReadyAzureSessionProvider, Tenant, TokenInfo, isReady } from "./types";
-import { Environment } from "@azure/ms-rest-azure-env";
 import { getConfiguredAzureEnv } from "../commands/utils/config";
 import { Errorable, failed } from "../commands/utils/errorable";
-import { TokenCredential } from "@azure/core-auth";
 import { parseJson } from "../commands/utils/json";
 import { getSessionProvider } from "./azureSessionProvider";
+import { AzureSessionProvider, ReadyAzureSessionProvider, Tenant, TokenInfo, isReady } from "./types";
 
 export function getEnvironment(): Environment {
     return getConfiguredAzureEnv();
@@ -94,7 +94,7 @@ export function getTokenInfo(session: AuthenticationSession): Errorable<TokenInf
     try {
         jsonBody = Buffer.from(body, "base64").toString();
     } catch (e) {
-        return { succeeded: false, error: `Failed to decode JWT token body: ${body}` };
+        return { succeeded: false, error: `Failed to decode JWT token body: ${body} and error is: ${e}` };
     }
 
     const jwt = parseJson<Jwt>(jsonBody);
