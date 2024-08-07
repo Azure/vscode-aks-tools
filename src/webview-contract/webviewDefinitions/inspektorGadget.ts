@@ -1,6 +1,6 @@
 import { WebviewDefinition } from "../webviewTypes";
 
-export interface InitialState {}
+export type InitialState = object;
 
 export interface GadgetVersion {
     client: string;
