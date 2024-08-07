@@ -24,19 +24,18 @@ import {
 } from "./types";
 
 // Blocking IO
-const blockIOTopKeys = [
-    ...k8sKeys,
-    ...mountNsKeys,
-    "pid",
-    ...commandKeys,
-    "write",
-    "major",
-    "minor",
-    "bytes",
-    "us",
-    "ops",
-] as const;
-type BlockIOTopKey = (typeof blockIOTopKeys)[number];
+type BlockIOTopKey = 
+  | typeof k8sKeys[number]
+  | typeof mountNsKeys[number]
+  | "pid"
+  | typeof commandKeys[number]
+  | "write"
+  | "major"
+  | "minor"
+  | "bytes"
+  | "us"
+  | "ops";
+
 const blockIOTopKeyMetadata: ItemMetadata<BlockIOTopKey> = {
     ...k8sKeyMetadata,
     ...mountNsKeyMetadata,
@@ -78,25 +77,24 @@ export const blockIOTopMetadata: GadgetMetadata<BlockIOTopKey> = {
 };
 
 // eBPF
-const ebpfTopKeys = [
-    ...k8sKeys,
-    "progid",
-    "type",
-    "name",
-    "processes.pid",
-    "processes.comm",
-    "currentRuntime",
-    "currentRunCount",
-    "cumulRuntime",
-    "cumulRunCount",
-    "totalRuntime",
-    "totalRunCount",
-    "mapMemory",
-    "mapCount",
-    "totalCpuUsage",
-    "perCpuUsage",
-] as const;
-type EbpfTopKey = (typeof ebpfTopKeys)[number];
+type EbpfTopKey = 
+  | typeof k8sKeys[number]
+  | "progid"
+  | "type"
+  | "name"
+  | "processes.pid"
+  | "processes.comm"
+  | "currentRuntime"
+  | "currentRunCount"
+  | "cumulRuntime"
+  | "cumulRunCount"
+  | "totalRuntime"
+  | "totalRunCount"
+  | "mapMemory"
+  | "mapCount"
+  | "totalCpuUsage"
+  | "perCpuUsage";
+
 const ebpfTopKeyMetadata: ItemMetadata<EbpfTopKey> = {
     ...k8sKeyMetadata,
     progid: { identifier: "progid", name: "Program ID" },
@@ -144,19 +142,18 @@ export const ebpfTopMetadata: GadgetMetadata<EbpfTopKey> = {
 };
 
 // File
-const fileTopKeys = [
-    ...k8sKeys,
-    ...mountNsKeys,
-    "pid",
-    ...commandKeys,
-    "reads",
-    "rbytes",
-    "fileType",
-    "filename",
-    "wbytes",
-    "writes",
-] as const;
-type FileTopKey = (typeof fileTopKeys)[number];
+type FileTopKey = 
+  | typeof k8sKeys[number]
+  | typeof mountNsKeys[number]
+  | "pid"
+  | typeof commandKeys[number]
+  | "reads"
+  | "rbytes"
+  | "fileType"
+  | "filename"
+  | "wbytes"
+  | "writes";
+
 const fileTopKeyMetadata: ItemMetadata<FileTopKey> = {
     ...k8sKeyMetadata,
     ...mountNsKeyMetadata,
@@ -199,17 +196,16 @@ export const fileTopMetadata: GadgetMetadata<FileTopKey> = {
 };
 
 // TCP
-const tcpTopKeys = [
-    ...k8sKeys,
-    ...mountNsKeys,
-    "pid",
-    ...commandKeys,
-    "family",
-    ...networkEndpointKeys,
-    "sent",
-    "received",
-] as const;
-type TcpTopKey = (typeof tcpTopKeys)[number];
+type TcpTopKey = 
+  | typeof k8sKeys[number]
+  | typeof mountNsKeys[number]
+  | "pid"
+  | typeof commandKeys[number]
+  | "family"
+  | typeof networkEndpointKeys[number]
+  | "sent"
+  | "received";
+
 const tcpTopKeyMetadata: ItemMetadata<TcpTopKey> = {
     ...k8sKeyMetadata,
     ...mountNsKeyMetadata,
@@ -220,8 +216,10 @@ const tcpTopKeyMetadata: ItemMetadata<TcpTopKey> = {
     sent: { identifier: "sent", name: "Sent", valueType: ValueType.Bytes },
     received: { identifier: "recv", name: "Recv", valueType: ValueType.Bytes },
 };
-const derivedTcpTopKeys = ["ip", ...derivedNetworkEndpointKeys] as const;
-type DerivedTcpTopKey = (typeof derivedTcpTopKeys)[number];
+type DerivedTcpTopKey = 
+  | "ip"
+  | typeof derivedNetworkEndpointKeys[number];
+
 const allTcpTopProperties: ItemProperty<TcpTopKey | DerivedTcpTopKey>[] = [
     ...getLiteralProperties(tcpTopKeyMetadata),
     // https://github.com/inspektor-gadget/inspektor-gadget/blob/08056695b8cfc02698afcbd41add88acfac4d8cf/pkg/gadgets/top/tcp/types/types.go#L64-L69
