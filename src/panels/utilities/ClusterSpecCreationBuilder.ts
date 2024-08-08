@@ -1,6 +1,7 @@
 import { Deployment } from "@azure/arm-resources";
 import { Preset } from "../../webview-contract/webviewDefinitions/createCluster";
 import devTestTemplate from "../templates/DevTestCreateCluster.json";
+import automaticTemplate from "../templates/AutomaticCreateCluster.json";
 
 export type ClusterSpec = {
     location: string;
@@ -14,8 +15,10 @@ export type ClusterSpec = {
 type TemplateContent = Record<string, unknown>;
 
 const deploymentApiVersion = "2023-08-01";
+const deploymentApiVersionPreview = "2024-03-02-preview";
 const presetTemplates: Record<Preset, TemplateContent> = {
     dev: devTestTemplate,
+    automatic: automaticTemplate,
 };
 
 export class ClusterDeploymentBuilder {
@@ -27,7 +30,7 @@ export class ClusterDeploymentBuilder {
         },
     };
 
-    public buildCommonParameters(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
+    public buildCommonParameters(clusterSpec: ClusterSpec, preset: Preset): ClusterDeploymentBuilder {
         this.deployment.properties.parameters = {
             ...this.deployment.properties.parameters,
             location: {
@@ -40,7 +43,7 @@ export class ClusterDeploymentBuilder {
                 value: generateDnsPrefix(clusterSpec.name),
             },
             apiVersion: {
-                value: deploymentApiVersion,
+                value: preset == "automatic" ? deploymentApiVersionPreview : deploymentApiVersion,
             },
             nodeResourceGroup: {
                 value: generateNodeResourceGroup(clusterSpec.resourceGroupName, clusterSpec.name, clusterSpec.location),

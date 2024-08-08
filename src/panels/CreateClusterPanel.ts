@@ -252,7 +252,7 @@ async function createCluster(
     // Create a unique deployment name.
     const deploymentName = `${name}-${Math.random().toString(36).substring(5)}`;
     const deploymentSpec = new ClusterDeploymentBuilder()
-        .buildCommonParameters(clusterSpec)
+        .buildCommonParameters(clusterSpec, preset)
         .buildTemplate(preset)
         .getDeployment();
 
