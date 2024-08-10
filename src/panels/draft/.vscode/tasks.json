@@ -1,0 +1,60 @@
+// See https://go.microsoft.com/fwlink/?LinkId=733558
+// for the documentation about the tasks.json format
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "webpack-dev",
+      "type": "npm",
+      "script": "webpack-dev",
+      "problemMatcher": "$ts-webpack-watch",
+      "isBackground": true
+    },
+    {
+      "label": "webpack",
+      "type": "npm",
+      "script": "webpack"
+    },
+    {
+      "label": "test-compile",
+      "type": "npm",
+      "script": "test-compile"
+    },
+    {
+      "label": "dev:webview",
+      "type": "npm",
+      "script": "dev:webview",
+      "problemMatcher": {
+        "base": "$tsc-watch",
+        "fileLocation": "absolute",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^(?:.* page reload |\\[TypeScript\\]).*",
+          "endsPattern": "^.*\\[TypeScript\\].*"
+        }
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never"
+      }
+    },
+    {
+      "type": "markdownlint",
+      "problemMatcher": ["$markdownlint"],
+      "label": "markdownlint: Lint all Markdown files in the workspace with markdownlint"
+    },
+    {
+      "type": "deno",
+      "command": "upgrade",
+      "problemMatcher": ["$deno"],
+      "label": "deno: upgrade"
+    },
+    {
+      "type": "deno",
+      "command": "bundle",
+      "problemMatcher": ["$deno"],
+      "group": "build",
+      "label": "deno: bundle"
+    }
+  ]
+}

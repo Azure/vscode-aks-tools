@@ -8,7 +8,7 @@
             "type": "npm",
             "script": "webpack-dev",
             "problemMatcher": "$ts-webpack-watch",
-            "isBackground": true,
+            "isBackground": true
         },
         {
             "label": "webpack",
@@ -37,6 +37,25 @@
             "presentation": {
                 "reveal": "never"
             }
+        },
+        {
+            "type": "make",
+            "script": "build",
+            "target": "build",
+            "path": "docs/book/",
+            "fileName": "Makefile",
+            "uri": {
+                "$mid": 1,
+                "fsPath": "/Users/kthlke/Documents/GitHub/vscode-aks-tools/docs/book/Makefile",
+                "external": "file:///Users/kthlke/Documents/GitHub/vscode-aks-tools/docs/book/Makefile",
+                "path": "/Users/kthlke/Documents/GitHub/vscode-aks-tools/docs/book/Makefile",
+                "scheme": "file"
+            },
+            "problemMatcher": [
+                "$gccte"
+            ],
+            "group": "build",
+            "label": "make: build"
         }
     ]
 }

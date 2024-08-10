@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import { QuickPickItem, window, Disposable, QuickInputButtons } from 'vscode';
+import * as vscode from "vscode";
+import { QuickPickItem, window, Disposable, QuickInputButtons } from "vscode";
 
 // -------------------------------------------------------
 // Helper code that wraps the API for the multi-step case.
@@ -8,17 +8,21 @@ import { QuickPickItem, window, Disposable, QuickInputButtons } from 'vscode';
 enum InputFlowAction {
     Back,
     Cancel,
-    Next
+    Next,
 }
 
 // The result of a single 'step'
 type SingleStepOutput<T> = {
-    state: Partial<T>,
-    flowAction: InputFlowAction
-}
+    state: Partial<T>;
+    flowAction: InputFlowAction;
+};
 
 // The action that runs a single input step.
-type InputStep<T> = (state: Partial<T>, multiStepParams: MultiStepParameters, stepNumber: number) => Promise<SingleStepOutput<T>>;
+type InputStep<T> = (
+    state: Partial<T>,
+    multiStepParams: MultiStepParameters,
+    stepNumber: number,
+) => Promise<SingleStepOutput<T>>;
 
 // Properties applicable to the entire multi-step input.
 interface MultiStepParameters {
@@ -40,7 +44,11 @@ interface QuickPickParameters<TState, TItem extends QuickPickItem> extends StepP
     storeItem: (state: Partial<TState>, item: TItem) => Partial<TState>;
 }
 
-export async function runMultiStepInput<T>(title: string, state: Partial<T>, ...steps: [InputStep<T>, ...InputStep<T>[]]): Promise<T | void> {
+export async function runMultiStepInput<T>(
+    title: string,
+    state: Partial<T>,
+    ...steps: [InputStep<T>, ...InputStep<T>[]]
+): Promise<T | void> {
     let stepIndex = 0;
     while (stepIndex >= 0 && stepIndex < steps.length) {
         const step = steps[stepIndex];
@@ -60,10 +68,12 @@ export async function runMultiStepInput<T>(title: string, state: Partial<T>, ...
         }
     }
 
-    return stepIndex >= steps.length ? state as T : undefined;
+    return stepIndex >= steps.length ? (state as T) : undefined;
 }
 
-export function createQuickPickStep<TState, TItem extends QuickPickItem>(params: QuickPickParameters<TState, TItem>): InputStep<TState> {
+export function createQuickPickStep<TState, TItem extends QuickPickItem>(
+    params: QuickPickParameters<TState, TItem>,
+): InputStep<TState> {
     return async (state: Partial<TState>, multiStepParams: MultiStepParameters, stepNumber: number) => {
         const input = window.createQuickPick<TItem>();
         input.title = multiStepParams.title;
@@ -72,16 +82,16 @@ export function createQuickPickStep<TState, TItem extends QuickPickItem>(params:
         input.ignoreFocusOut = params.ignoreFocusOut ?? false;
         input.placeholder = params.placeholder;
         input.items = params.items;
-        const activeItem = params.getActiveItem(state)
+        const activeItem = params.getActiveItem(state);
         if (activeItem) {
             input.activeItems = [activeItem];
         }
         input.buttons = stepNumber > 1 ? [QuickInputButtons.Back] : [];
 
         let disposables: Disposable[] = [];
-        const inputPromise = new Promise<SingleStepOutput<TState>>(resolve => {
+        const inputPromise = new Promise<SingleStepOutput<TState>>((resolve) => {
             disposables = [
-                input.onDidTriggerButton(item => {
+                input.onDidTriggerButton((item) => {
                     if (item === QuickInputButtons.Back) {
                         resolve({ state, flowAction: InputFlowAction.Back });
                     } else {
@@ -89,7 +99,7 @@ export function createQuickPickStep<TState, TItem extends QuickPickItem>(params:
                         resolve({ state, flowAction: InputFlowAction.Cancel });
                     }
                 }),
-                input.onDidChangeSelection(items => {
+                input.onDidChangeSelection((items) => {
                     const newState = params.storeItem(state, items[0]);
                     resolve({ state: newState, flowAction: InputFlowAction.Next });
                 }),
@@ -97,7 +107,7 @@ export function createQuickPickStep<TState, TItem extends QuickPickItem>(params:
                     const resume = await params.shouldResume();
                     const flowAction = resume ? InputFlowAction.Back : InputFlowAction.Cancel;
                     resolve({ state, flowAction });
-                })
+                }),
             ];
         });
 
@@ -105,7 +115,7 @@ export function createQuickPickStep<TState, TItem extends QuickPickItem>(params:
             input.show();
             return await inputPromise;
         } finally {
-            disposables.forEach(d => d.dispose());
+            disposables.forEach((d) => d.dispose());
             input.dispose();
         }
     };

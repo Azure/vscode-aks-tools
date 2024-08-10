@@ -1,0 +1,403 @@
+ESLint Report
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/azure-api-utils.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/extension.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/assets.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/tests/runTests.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/tests/suite/index.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/tests/suite/webview.test.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/types/git.d.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/tree/subscriptionTreeItem.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/auth/azureSessionProvider.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/tree/aksClusterTreeItem.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksReconcileCluster/aksReconcileCluster.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/tree/azureResourceNodeContributor.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/tree/azureAccountTreeItem.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/auth/azureAuth.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/auth/types.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/refreshSubscriptions.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksAttachAcrToCluster/attachAcrToCluster.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksKubectlCommands/aksKubectlCommands.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/periscope/periscope.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/detectors/detectors.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksRotateClusterCert/aksRotateClusterCert.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewTypes.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksTCPCollection/tcpDumpCollection.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksCreateCluster/aksCreateCluster.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/periscope/helpers/periscopehelper.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/initialState.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/periscope/models/config.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/periscope/models/clusterFeatures.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/periscope/models/storage.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/periscope/models/RetinaDownloadConfig.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksDeleteCluster/aksDeleteCluster.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/messaging.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksAccount/aksAccount.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksInspektorGadget/traceWatcher.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksInspektorGadget/traceItems.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksNavToPortal/aksNavToPortal.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksInspektorGadget/aksInspektorGadget.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksInspektorGadget/clusterOperations.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/dictionary.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/inspektorGadget.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/periscope.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksRetinaCapture/aksRetinaCapture.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/sleep.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/clusterProperties.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksCompareCluster/aksCompareCluster.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/testStyleViewer.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/detectors.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/azureResources.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/arm.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/tcpDump.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/roleAssignments.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/createCluster.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/attachAcrToCluster.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/resourceGroups.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/retinaCapture.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/multiStepHelper.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/azureServiceOperator.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/shell.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/reporter.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/detector.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/json.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/azurestorage.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/subscriptions.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/clusters.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/commands.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksClusterProperties/aksClusterProperties.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/kubectl.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/draft.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/kubectl.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/env.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/aksEraserTool/erasertool.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/draft/workflowUtils.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/acrs.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/host.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/config.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/tempfile.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/draft/draftCommands.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/runtimeTypes.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/draft/draftDockerfile.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/draft/helmWorkflowEditor.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/errorable.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/draft/types.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/draft/baseWorkflowEditor.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/git.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/draft/languages.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/draft/draftWorkflow.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/draft/manifestsWorkflowEditor.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/draft/types.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/draft/draftDeployment.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/shared/fileSystemTypes.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/download/download.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/webview-contract/webviewDefinitions/shared/workspaceTypes.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/azureServiceOperators/installAzureServiceOperator.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/helper/kubeloginDownload.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/helper/kubectlGadgetDownload.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/helper/binaryDownloadHelper.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/helper/draftBinaryDownload.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/commands/utils/helper/retinaBinaryDownload.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/RetinaCapturePanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/AttachAcrToClusterPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/InspektorGadgetPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/DetectorPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/PeriscopePanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/BasePanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/KubectlPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/AzureServiceOperatorPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/ClusterPropertiesPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/TcpDumpPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/CreateClusterPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/draft/DraftWorkflowPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/draft/DraftDockerfilePanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/draft/DraftDeploymentPanel.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/draft/commandUtils.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/utilities/webview.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/utilities/ClusterSpecCreationBuilder.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Documents/GitHub/vscode-aks-tools/src/panels/utilities/KubectlNetworkHelper.ts
+  [NaN, NaN] Parsing error: Cannot read file '/Users/kthlke/.vscode/extensions/walkfares.opendatadsl-0.14.10/dist/tsconfig.json'. (null)
+
+File: /Users/kthlke/Library/Application Support/Code/User/settings.json
+  [2, 3] Strings must use singlequote. (quotes)
+  [2, 34] Strings must use singlequote. (quotes)
+  [3, 3] Strings must use singlequote. (quotes)
+  [4, 3] Strings must use singlequote. (quotes)
+  [5, 3] Strings must use singlequote. (quotes)
+  [5, 24] Strings must use singlequote. (quotes)
+  [6, 3] Strings must use singlequote. (quotes)
+  [7, 5] Strings must use singlequote. (quotes)
+  [7, 32] Strings must use singlequote. (quotes)
+  [9, 3] Strings must use singlequote. (quotes)
+  [9, 26] Strings must use singlequote. (quotes)
+  [10, 3] Strings must use singlequote. (quotes)
+  [11, 3] Strings must use singlequote. (quotes)
+  [12, 3] Strings must use singlequote. (quotes)
+  [13, 3] Strings must use singlequote. (quotes)
+  [14, 3] Strings must use singlequote. (quotes)
+  [15, 3] Strings must use singlequote. (quotes)
+  [16, 3] Strings must use singlequote. (quotes)
+  [17, 5] Strings must use singlequote. (quotes)
+  [17, 29] Strings must use singlequote. (quotes)
+  [19, 3] Strings must use singlequote. (quotes)
+  [20, 3] Strings must use singlequote. (quotes)
+  [21, 5] Strings must use singlequote. (quotes)
+  [21, 40] Strings must use singlequote. (quotes)
+  [22, 5] Strings must use singlequote. (quotes)
+  [22, 44] Strings must use singlequote. (quotes)
+  [24, 3] Strings must use singlequote. (quotes)
+  [25, 5] Strings must use singlequote. (quotes)
+  [26, 5] Strings must use singlequote. (quotes)
+  [27, 5] Strings must use singlequote. (quotes)
+  [28, 5] Strings must use singlequote. (quotes)
+  [30, 3] Strings must use singlequote. (quotes)
+  [30, 63] Strings must use singlequote. (quotes)
+  [31, 3] Strings must use singlequote. (quotes)
+  [32, 5] Strings must use singlequote. (quotes)
+  [33, 5] Strings must use singlequote. (quotes)
+  [34, 7] Strings must use singlequote. (quotes)
+  [34, 19] Strings must use singlequote. (quotes)
+  [35, 7] Strings must use singlequote. (quotes)
+  [35, 18] Strings must use singlequote. (quotes)
+  [36, 7] Strings must use singlequote. (quotes)
+  [36, 16] Strings must use singlequote. (quotes)
+  [39, 3] Strings must use singlequote. (quotes)
+  [39, 62] Strings must use singlequote. (quotes)
+  [40, 3] Strings must use singlequote. (quotes)
+  [40, 40] Strings must use singlequote. (quotes)
+  [41, 3] Strings must use singlequote. (quotes)
+  [41, 42] Strings must use singlequote. (quotes)
+

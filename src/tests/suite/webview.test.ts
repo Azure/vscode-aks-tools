@@ -11,8 +11,7 @@ const extensionUriResult = errmap(extensionPathResult, (p) => vscode.Uri.file(p)
 
 describe("Webview Styles", () => {
     it("should contain css variables and rules", async () => {
-
-        import("chai").then(chai => chai.expect(succeeded(extensionUriResult)).to.be.true);
+        import("chai").then((chai) => chai.expect(succeeded(extensionUriResult)).to.be.true);
 
         const extensionUri = (extensionUriResult as Succeeded<vscode.Uri>).result;
         const panel = new StyleTestPanel(extensionUri);
@@ -23,8 +22,8 @@ describe("Webview Styles", () => {
         const rules = await dataProvider.rulesPromise;
 
         // Place breakpoint here to see CSS variables and rules in test host webview.
-        import("chai").then(chai => chai.expect(cssVars).to.not.be.empty);
-        import("chai").then(chai => chai.expect(rules).to.not.be.empty);
+        import("chai").then((chai) => chai.expect(cssVars).to.not.be.empty);
+        import("chai").then((chai) => chai.expect(rules).to.not.be.empty);
     });
 });
 
