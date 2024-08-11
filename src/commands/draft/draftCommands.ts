@@ -151,7 +151,7 @@ export async function draftWorkflow(_context: IActionContext, target: unknown): 
                     path: join(".github", "workflows", name),
                 };
             });
-    } catch (e) {
+    } catch {
         // If the directory doesn't exist, that's fine - it just means there will be no existing workflow files.
     }
 
@@ -235,8 +235,8 @@ async function getRepo(octokit: Octokit, remote: Remote): Promise<GitHubRepo | n
 
     let response: RestEndpointMethodTypes["repos"]["get"]["response"];
     try {
-        response = await octokit.rest.repos.get({ owner, repo });
-    } catch (e) {
+        response = await octokit.repos.get({ owner, repo });
+    } catch {
         return null;
     }
 

@@ -38,7 +38,9 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
     }
 
     getInitialState(): InitialState {
-        return {};
+        return {
+            clusterName: this.clusterName,
+        };
     }
 
     getTelemetryDefinition(): TelemetryDefinition<"gadget"> {

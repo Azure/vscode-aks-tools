@@ -1,6 +1,8 @@
 import { WebviewDefinition } from "../webviewTypes";
 
-export interface InitialState {}
+export interface InitialState {
+    clusterName: string;
+}
 
 export interface GadgetVersion {
     client: string;

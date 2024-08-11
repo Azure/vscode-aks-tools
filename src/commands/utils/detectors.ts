@@ -76,7 +76,10 @@ export async function getDetectorListData(
     } catch (err) {
         // This would be unexpected even in the event of network failure, because the individual promises handle
         // their own errors.
-        return { succeeded: false, error: `Failed to retrieve detector data for ${categoryDetector.name}` };
+        return {
+            succeeded: false,
+            error: `Failed to retrieve detector data for ${categoryDetector.name}, with error ${err}`,
+        };
     }
 
     return combine(results);
