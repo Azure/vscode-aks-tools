@@ -1,25 +1,23 @@
 import { Deployment } from "@azure/arm-resources";
 import { Preset } from "../../webview-contract/webviewDefinitions/createCluster";
-import devTestTemplate from "../templates/DevTestCreateCluster.json";
+import automaticClusterTemplate from "../templates/AKSAutomaticCreateCluster.json";
 
-export type ClusterSpec = {
+export type AutomaticAKSClusterSpec = {
     location: string;
     name: string;
     resourceGroupName: string;
     subscriptionId: string;
-    kubernetesVersion: string;
-    username: string;
 };
 
 type TemplateContent = Record<string, unknown> | undefined;
 
 const deploymentApiVersion = "2023-08-01";
 const presetTemplates: Record<Preset, TemplateContent> = {
-    dev: devTestTemplate,
-    automatic: undefined
+    dev: undefined,
+    automatic: automaticClusterTemplate
 };
 
-export class ClusterDeploymentBuilder {
+export class AutomaticClusterDeploymentBuilder {
     private deployment: Deployment = {
         properties: {
             parameters: {},
@@ -28,7 +26,7 @@ export class ClusterDeploymentBuilder {
         },
     };
 
-    public buildCommonParameters(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
+    public buildCommonParameters(clusterSpec: AutomaticAKSClusterSpec): AutomaticClusterDeploymentBuilder {
         this.deployment.properties.parameters = {
             ...this.deployment.properties.parameters,
             location: {
@@ -36,9 +34,6 @@ export class ClusterDeploymentBuilder {
             },
             resourceName: {
                 value: clusterSpec.name,
-            },
-            dnsPrefix: {
-                value: generateDnsPrefix(clusterSpec.name),
             },
             apiVersion: {
                 value: deploymentApiVersion,
@@ -52,17 +47,11 @@ export class ClusterDeploymentBuilder {
             resourceGroupName: {
                 value: clusterSpec.resourceGroupName,
             },
-            kubernetesVersion: {
-                value: clusterSpec.kubernetesVersion,
-            },
             clusterIdentity: {
                 value: {
                     type: "SystemAssigned",
                 },
-            },
-            userEmailAddress: {
-                value: clusterSpec.username,
-            },
+            }
         };
 
         return this;
@@ -76,14 +65,6 @@ export class ClusterDeploymentBuilder {
     public getDeployment(): Deployment {
         return this.deployment;
     }
-}
-
-function generateDnsPrefix(clusterName: string): string {
-    return clusterName
-        .replaceAll(/[^a-z0-9-\\s]/gi, "")
-        .replace(/^-/, "")
-        .replace(/-$/, "")
-        .substring(0, 54);
 }
 
 function generateNodeResourceGroup(resourceGroupName: string, clusterName: string, location: string): string {
