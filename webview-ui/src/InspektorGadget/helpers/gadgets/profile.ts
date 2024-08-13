@@ -11,8 +11,14 @@ import {
 } from "./types";
 
 // CPU
-const cpuProfileKeys = [...k8sKeys, ...commandKeys, "pid", "userStack", "kernelStack", "count"] as const;
-type CpuProfileKey = (typeof cpuProfileKeys)[number];
+type CpuProfileKey = (
+    | typeof k8sKeys[number]
+    | typeof commandKeys[number]
+    | "pid"
+    | "userStack"
+    | "kernelStack"
+    | "count"
+  );
 const cpuProfileKeyMetadata: ItemMetadata<CpuProfileKey> = {
     ...k8sKeyMetadata,
     ...commandKeyMetadata,
@@ -21,8 +27,7 @@ const cpuProfileKeyMetadata: ItemMetadata<CpuProfileKey> = {
     kernelStack: { identifier: "kernelStack", name: "Kernel Stack" },
     count: { identifier: "gid", name: "GID" },
 };
-const derivedCpuProfileKeys = ["stack"] as const;
-type DerivedCpuProfileKey = (typeof derivedCpuProfileKeys)[number];
+type DerivedCpuProfileKey = "stack";
 const allCpuProfileProperties: ItemProperty<CpuProfileKey | DerivedCpuProfileKey>[] = [
     ...getLiteralProperties(cpuProfileKeyMetadata),
     getDerivedProperty(
