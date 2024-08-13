@@ -235,7 +235,7 @@ async function getRepo(octokit: Octokit, remote: Remote): Promise<GitHubRepo | n
 
     let response: RestEndpointMethodTypes["repos"]["get"]["response"];
     try {
-        response = await octokit.repos.get({ owner, repo });
+        response = await octokit.rest.repos.get({ owner, repo });
     } catch {
         return null;
     }
