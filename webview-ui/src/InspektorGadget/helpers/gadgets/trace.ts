@@ -28,25 +28,24 @@ import {
 } from "./types";
 
 // DNS
-const dnsTraceKeys = [
-    ...k8sKeys,
-    ...timestampKeys,
-    ...mountNsKeys,
-    "netnsid",
-    ...processThreadKeys,
-    ...commandKeys,
-    ...userKeys,
-    "id",
-    "qr",
-    "nameserver",
-    "pktType",
-    "qtype",
-    "name",
-    "rcode",
-    "numAnswers",
-    "addresses",
-] as const;
-type DnsTraceKey = (typeof dnsTraceKeys)[number];
+type DnsTraceKey = 
+  | typeof k8sKeys[number]
+  | typeof timestampKeys[number]
+  | typeof mountNsKeys[number]
+  | "netnsid"
+  | typeof processThreadKeys[number]
+  | typeof commandKeys[number]
+  | typeof userKeys[number]
+  | "id"
+  | "qr"
+  | "nameserver"
+  | "pktType"
+  | "qtype"
+  | "name"
+  | "rcode"
+  | "numAnswers"
+  | "addresses";
+
 const dnsTraceKeyMetadata: ItemMetadata<DnsTraceKey> = {
     ...k8sKeyMetadata,
     ...timestampKeyMetadata,
@@ -89,21 +88,20 @@ export const dnsTraceMetadata: GadgetMetadata<DnsTraceKey> = {
 };
 
 // Exec
-const execTraceKeys = [
-    ...k8sKeys,
-    ...timestampKeys,
-    ...mountNsKeys,
-    "pid",
-    "ppid",
-    ...commandKeys,
-    "ret",
-    "args",
-    ...userKeys,
-    "loginuid",
-    "sessionid",
-    "cwd",
-] as const;
-type ExecTraceKey = (typeof execTraceKeys)[number];
+type ExecTraceKey = 
+  | typeof k8sKeys[number]
+  | typeof timestampKeys[number]
+  | typeof mountNsKeys[number]
+  | "pid"
+  | "ppid"
+  | typeof commandKeys[number]
+  | "ret"
+  | "args"
+  | typeof userKeys[number]
+  | "loginuid"
+  | "sessionid"
+  | "cwd";
+
 const execTraceKeyMetadata: ItemMetadata<ExecTraceKey> = {
     ...k8sKeyMetadata,
     ...timestampKeyMetadata,
@@ -139,16 +137,15 @@ export const execTraceMetadata: GadgetMetadata<ExecTraceKey> = {
 };
 
 // TCP
-const tcpTraceKeys = [
-    ...k8sKeys,
-    "operation",
-    "pid",
-    ...commandKeys,
-    "ipversion",
-    ...networkEndpointKeys,
-    ...mountNsKeys,
-] as const;
-type TcpTraceKey = (typeof tcpTraceKeys)[number];
+type TcpTraceKey = 
+  | typeof k8sKeys[number]
+  | "operation"
+  | "pid"
+  | typeof commandKeys[number]
+  | "ipversion"
+  | typeof networkEndpointKeys[number]
+  | typeof mountNsKeys[number];
+
 const tcpTraceKeyMetadata: ItemMetadata<TcpTraceKey> = {
     ...k8sKeyMetadata,
     operation: { identifier: "t", name: "T" },
@@ -158,8 +155,10 @@ const tcpTraceKeyMetadata: ItemMetadata<TcpTraceKey> = {
     ...networkEndpointKeyMetadata,
     ...mountNsKeyMetadata,
 };
-const derivedTcpTraceKeys = ["t", ...derivedNetworkEndpointKeys] as const;
-type DerivedTcpTraceKey = (typeof derivedTcpTraceKeys)[number];
+type DerivedTcpTraceKey = 
+  | "t"
+  | typeof derivedNetworkEndpointKeys[number];
+
 const allTcpTraceProperties: ItemProperty<TcpTraceKey | DerivedTcpTraceKey>[] = [
     ...getLiteralProperties(tcpTraceKeyMetadata),
     ...derivedNetworkEndpointProperties,
