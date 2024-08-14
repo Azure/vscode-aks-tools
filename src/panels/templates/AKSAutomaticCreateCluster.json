@@ -195,6 +195,13 @@
             "metadata": {
                 "description": "The resource group name of the cluster."
             }
+        },
+        "rbacDeploymentName": {
+            "type": "string",
+            "defaultValue": "[newGuid()]",
+            "metadata": {
+                "description": "The name of the RBAC deployment."
+            }
         }
     },
     "resources": [
@@ -218,7 +225,7 @@
                         {
                             "type": "Microsoft.ContainerService/managedClusters/providers/roleAssignments",
                             "apiVersion": "2018-09-01-preview",
-                            "name": "[concat(parameters('resourceName'), '/Microsoft.Authorization/ec7abd01-2b45-8fcc-a894-8d71eba31473')]",
+                            "name": "[concat(parameters('resourceName'), '/Microsoft.Authorization/', parameters('rbacDeploymentName'))]",
                             "properties": {
                                 "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
                                 "principalId": "161768f6-0b84-4bfe-bebf-1f052105ea87",
