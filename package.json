@@ -297,12 +297,12 @@
                 "title": "Run Retina Capture"
             },
             {
-                "command": "aks.aksKaito",
+                "command": "aks.aksKaitoInstall",
                 "title": "Create Kaito Workspace",
                 "enablement": "hasKaitoInstalled"
             },
             {
-                "command": "aks.aksKaitoInstall",
+                "command": "aks.aksKaito",
                 "title": "Install Kaito"
             }
         ],
