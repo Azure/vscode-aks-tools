@@ -21,8 +21,8 @@ describe("testEscapeRegExp", function () {
     });
 
     it("should not double escape already escaped characters", function () {
-        //const input = "a\\.b\\*c\\?d\\+e\\^f\\$g\\|h\\(i\\)j\\{k\\}l\\[m\\]n\\\\o";
+        const input = "a\\.b\\*c\\?d\\+e\\^f\\$g\\|h\\(i\\)j\\{k\\}l\\[m\\]n\\\\o";
         const expected = "a\\.b\\*c\\?d\\+e\\^f\\$g\\|h\\(i\\)j\\{k\\}l\\[m\\]n\\\\o";
-        assert.equal("", expected);
+        assert.equal("escapeRegExp(input)", expected);
     });
 });
