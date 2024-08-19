@@ -8,6 +8,7 @@ import { getReadySessionProvider } from "../../auth/azureAuth";
 import { ModelEntry } from "@huggingface/hub";
 import axios from "axios";
 import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
+import { getAksClient, getResourceManagementClient } from "../utils/arm";
 
 const HUGGINGFACE_API_URL = "https://huggingface.co/api/models";
 
@@ -72,6 +73,13 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         content: substitutedYaml,
         language: "yaml",
     });
+
+    const resrourceServiceClient = getResourceManagementClient(sessionProvider.result, clusterNode.result.subscriptionId);
+    const result1 = await resrourceServiceClient.resources.getById(clusterNode.result.armId, "2023-10-02-preview");
+    console.log(result1);
+   const containerServiceClient = getAksClient(sessionProvider.result, clusterNode.result.subscriptionId);
+    const result = await containerServiceClient.managedClusters.get(clusterNode.result.resourceGroupName, clusterNode.result.name);
+    console.log(result);
 
     vscode.window.showTextDocument(doc);
 
