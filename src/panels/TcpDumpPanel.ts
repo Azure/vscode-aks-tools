@@ -28,7 +28,7 @@ const captureFileBasePathEscaped = escapeRegExp(captureFileBasePath);
 const captureFilePathRegex = `${captureFileBasePathEscaped}(.*)\\.cap`; // Matches the part of the filename after the prefix
 
 // Escape all regex meta characters to ensure sanitation and '/' for later use in regex pattern
-function escapeRegExp(input: string): string {
+export function escapeRegExp(input: string): string {
     return input.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&"); //Escapes by adding '\' to every matched string $&
 }
 //Reference for regex syntax chars: https://262.ecma-international.org/13.0/index.html#prod-SyntaxCharacter
@@ -59,20 +59,6 @@ function getCaptureFromFilePath(filePath: string): string | null {
     if (!fileMatch) return null;
     return fileMatch && fileMatch[1];
 }
-
-// Test function to verify escaping
-function testEscapeRegExp() {
-    const testString = "/tmp/vscodenodecap_*+?^${}()|[]\\";
-    const expectedEscapedString = "\\/tmp\\/vscodenodecap_\\*\\+\\?\\^\\$\\{\\}\\(\\)\\|\\[\\]\\\\";
-
-    const actualEscapedString = escapeRegExp(testString);
-    console.assert(
-        actualEscapedString === expectedEscapedString,
-        `Expected ${expectedEscapedString}, but got ${actualEscapedString}`,
-    );
-}
-
-testEscapeRegExp();
 
 export class TcpDumpPanel extends BasePanel<"tcpDump"> {
     constructor(extensionUri: Uri) {
