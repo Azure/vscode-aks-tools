@@ -29,9 +29,11 @@ const captureFilePathRegex = `${captureFileBasePathEscaped}(.*)\\.cap`; // Match
 
 // Escape all regex meta characters to ensure sanitation and '/' for later use in regex pattern
 export function escapeRegExp(input: string): string {
-    return input.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&"); //Escapes by adding '\' to every matched string $&
-}
-//Reference for regex syntax chars: https://262.ecma-international.org/13.0/index.html#prod-SyntaxCharacter
+    return input.replace(/(\\)?([.*+?^${}()|[\]\\/])/g, (match, backslash, char) => {
+        // If there's a backslash before the character, return the match unchanged. (To prevent double escaping)
+        return backslash ? match : `\\${char}`;
+    });
+} //Reference for regex syntax chars: https://262.ecma-international.org/13.0/index.html#prod-SyntaxCharacter
 
 function getPodName(node: NodeName) {
     return `debug-${node}`;
