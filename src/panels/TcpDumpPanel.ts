@@ -24,7 +24,16 @@ const tcpDumpCommandBase = "tcpdump --snapshot-length=0 -vvv";
 const captureDir = "/tmp";
 const captureFilePrefix = "vscodenodecap_";
 const captureFileBasePath = `${captureDir}/${captureFilePrefix}`;
-const captureFilePathRegex = `${captureFileBasePath.replace(/\//g, "\\$&")}(.*)\\.cap`; // Matches the part of the filename after the prefix
+const captureFileBasePathEscaped = escapeRegExp(captureFileBasePath);
+const captureFilePathRegex = `${captureFileBasePathEscaped}(.*)\\.cap`; // Matches the part of the filename after the prefix
+
+// Escape all regex meta characters to ensure sanitation and '/' for later use in regex pattern
+export function escapeRegExp(input: string): string {
+    return input.replace(/(\\)?([.*+?^${}()|[\]\\/])/g, (match, backslash, char) => {
+        // If there's a backslash before the character, return the match unchanged. (To prevent double escaping)
+        return backslash ? match : `\\${char}`;
+    });
+} //Reference for regex syntax chars: https://262.ecma-international.org/13.0/index.html#prod-SyntaxCharacter
 
 function getPodName(node: NodeName) {
     return `debug-${node}`;
