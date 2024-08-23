@@ -297,13 +297,8 @@
                 "title": "Run Retina Capture"
             },
             {
-                "command": "aks.aksKaitoInstall",
-                "title": "Create Kaito Workspace",
-                "enablement": "hasKaitoInstalled"
-            },
-            {
                 "command": "aks.aksKaito",
-                "title": "Install Kaito"
+                "title": "Deploy LLM with Kaito"
             }
         ],
         "menus": {
@@ -409,9 +404,14 @@
                     "group": "9@3"
                 },
                 {
+<<<<<<< HEAD
                     "submenu": "aks.kaitoInstallSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
+=======
+                    "command": "aks.aksKaito",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+>>>>>>> 74ef0b6 (initial kaito extension + webview communication)
                 }
             ],
             "aks.createClusterSubMenu": [
