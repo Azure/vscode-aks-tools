@@ -148,7 +148,7 @@
                 },
                 "aks.drafttool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.33",
+                    "default": "v0.0.38",
                     "title": "Draft repository release tag",
                     "description": "Release tag for the stable Draft tool release."
                 },
