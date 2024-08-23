@@ -19,6 +19,7 @@ import aksCreateClusterNavToAzurePortal from "./commands/aksCreateClusterNavToAz
 import aksDeleteCluster from "./commands/aksDeleteCluster/aksDeleteCluster";
 import aksEraserTool from "./commands/aksEraserTool/erasertool";
 import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
+import aksKaito from "./commands/aksKaito/aksKaito";
 import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
 import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
 import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
@@ -44,7 +45,6 @@ import { Reporter, reporter } from "./commands/utils/reporter";
 import { AksClusterTreeNode } from "./tree/aksClusterTreeItem";
 import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
-import aksKaito from "./commands/aksKaito/aksKaito";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
