@@ -537,7 +537,7 @@
         "eslint": "^9.9.0",
         "eslint-webpack-plugin": "^4.2.0",
         "glob": "^11.0.0",
-        "mocha": "^10.7.0",
+        "mocha": "^10.7.3",
         "prettier": "^3.3.3",
         "sinon": "^18.0.0",
         "ts-loader": "^9.5.1",
