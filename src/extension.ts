@@ -46,6 +46,7 @@ import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSe
 import { getReadySessionProvider } from "./auth/azureAuth";
 import aksDeployLocalApp from "./commands/aksDeployLocalApp/aksDeployLocalApp";
 import { getPlugins } from "./getPlugins";
+import { aksRunKubectlCommandsForCopilot } from "./commands/aksKubectlCommands/aksKubectlCommandsForCopilot";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -92,6 +93,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.clusterProperties", aksClusterProperties);
         registerCommandWithTelemetry("aks.createClusterNavToAzurePortal", aksCreateClusterNavToAzurePortal);
         registerCommandWithTelemetry("aks.aksRunKubectlCommands", aksRunKubectlCommands);
+        registerCommandWithTelemetry("aks.aksRunKubectlCommandsForCopilot", aksRunKubectlCommandsForCopilot);
         registerCommandWithTelemetry("aks.aksCategoryConnectivity", aksCategoryConnectivity);
         registerCommandWithTelemetry("aks.aksDeleteCluster", aksDeleteCluster);
         registerCommandWithTelemetry("aks.aksRotateClusterCert", aksRotateClusterCert);

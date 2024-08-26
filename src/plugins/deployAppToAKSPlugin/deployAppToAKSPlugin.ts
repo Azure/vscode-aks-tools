@@ -583,10 +583,8 @@ async function handleDeployment(agentRequest: AgentRequest): Promise<LocalPlugin
 }
 
 const deployAppToAKSFunctionName = "deployAppToAKS";
-type Parameters = {
-    resourceContext: string;
-    queryAppLogsIntent: string;
-};
+// eslint-disable-next-line @typescript-eslint/ban-types
+type Parameters = {};
 
 const deployAppToAKSPluginManifest: LocalPluginManifest = {
     name: "DeployAppToAKSPlugin",

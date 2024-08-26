@@ -538,3 +538,11 @@ export async function rotateClusterCert(
 function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is DefinedManagedCluster {
     return cluster.id !== undefined && cluster.name !== undefined && cluster.location !== undefined;
 }
+
+export type CurrentClusterContext = {
+    subscriptionId: string;
+    subscriptionName: string;
+    clusterName: string;
+    clusterId: string;
+    kubeConfig: string;
+}

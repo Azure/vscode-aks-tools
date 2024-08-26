@@ -22,6 +22,14 @@ export function assetUri(relativePath: string): Uri {
     return Uri.file(assetPath(relativePath));
 }
 
+export function getAssetContext(): ExtensionContext {
+    if (EXTENSION_CONTEXT) {
+        return EXTENSION_CONTEXT;
+    }
+    throw new Error("Asset context not set");
+}
+
+
 export function getResourceFileContent(relativePath: string): Errorable<Buffer> {
     const fileUri = assetUri(relativePath);
     try {

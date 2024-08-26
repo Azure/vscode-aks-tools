@@ -1,0 +1,51 @@
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+// import { DefinedManagedCluster, getKubeconfigYaml } from "../utils/clusters";
+import { getExtension } from "../utils/host";
+import { failed } from "../utils/errorable";
+// import * as tmpfile from "../utils/tempfile";
+import { KubectlDataProvider, KubectlPanel } from "../../panels/KubectlPanel";
+import { getKubectlCustomCommands } from "../utils/config";
+import { CurrentClusterContext } from "../utils/clusters";
+import { getAssetContext } from "../../assets";
+import { createTempFile } from "../utils/tempfile";
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function aksRunKubectlCommandsForCopilot(_context: IActionContext, _target: unknown) {
+    const kubectl = await k8s.extension.kubectl.v1;
+
+    if (!kubectl.available) {
+        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+        return;
+    }
+    
+    const extension = getExtension();
+    const asset = getAssetContext();
+    const currentCluster = await asset.globalState.get("currentCluster") as string;
+
+    if(!currentCluster) {
+        vscode.window.showErrorMessage("AKS cluster is not set. Please set the AKS cluster first.");
+        return
+    }
+
+    const parsedCurrentCluster = JSON.parse(currentCluster) as CurrentClusterContext;
+    
+    const kubeConfigFile = await createTempFile(parsedCurrentCluster.kubeConfig, "yaml");
+
+    if (failed(extension)) {
+        vscode.window.showErrorMessage(extension.error);
+        return;
+    }
+
+    const customCommands = getKubectlCustomCommands();
+    const dataProvider = new KubectlDataProvider(
+        kubectl,
+        kubeConfigFile.filePath,
+        parsedCurrentCluster.clusterName,
+        customCommands,
+    );
+    const panel = new KubectlPanel(extension.result.extensionUri);
+
+    panel.show(dataProvider, kubeConfigFile);
+}

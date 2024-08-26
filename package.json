@@ -281,6 +281,10 @@
                 "title": "Run Kubectl Commands"
             },
             {
+                "command": "aks.aksRunKubectlCommandsForCopilot",
+                "title": "Run Kubectl Commands from Copilot"
+            },            
+            {
                 "command": "aks.aksTCPDump",
                 "title": "Collect TCP Dumps"
             },
