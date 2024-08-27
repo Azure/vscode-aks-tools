@@ -1,16 +1,16 @@
+import { ContainerServiceClient, ManagedCluster } from "@azure/arm-containerservice";
 import { FeatureClient } from "@azure/arm-features";
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import * as vscode from "vscode";
 import { ReadyAzureSessionProvider } from "../auth/types";
-import { getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
+import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getErrorMessage } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { ClusterDeploymentBuilder, ClusterSpec, Preset } from "./utilities/ClusterSpecCreationBuilder";
 
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
@@ -26,7 +26,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     // private readonly containerServiceClient: ContainerServiceClient;
     private readonly featureClient: FeatureClient;
     private readonly resourceManagementClient: ResourceManagementClient;
-    // private readonly containerServiceClient: ContainerServiceClient;
+    private readonly containerServiceClient: ContainerServiceClient;
 
     public constructor(
         readonly clusterName: string,
@@ -41,7 +41,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         this.armId = armId;
         this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
-        // this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
+        this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
     }
     getTitle(): string {
         return `KAITO`;
@@ -174,25 +174,16 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
         console.log(currentJson);
 
-        const clusterSpec: ClusterSpec = {
+        const managedClusterSpec: ManagedCluster = {
             location: "eastus2euap", //TODO get location from cluster
-            name: this.clusterName,
-            resourceGroupName: this.resourceGroupName,
-            subscriptionId: this.subscriptionId,
-            kubernetesVersion: "1.28", // TODO k8s version from cluster
+            aiToolchainOperatorProfile: { enabled: true },
+            oidcIssuerProfile: { enabled: true },
         };
-
-        const deploymentName = `${this.clusterName}-${Math.random().toString(36).substring(5)}`;
-
-        const deploymentSpec = new ClusterDeploymentBuilder()
-            .buildCommonParametersForKaito(clusterSpec)
-            .buildTemplate(Preset.KaitoAddon)
-            .getDeployment();
         try {
-            const poller = await this.resourceManagementClient.deployments.beginCreateOrUpdate(
+            const poller = await this.containerServiceClient.managedClusters.beginCreateOrUpdate(
                 this.resourceGroupName,
-                deploymentName,
-                deploymentSpec,
+                this.clusterName,
+                managedClusterSpec,
             );
             // kaito installation in progress
             webview.postKaitoInstallProgressUpdate({
@@ -218,6 +209,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                     });
                 }
             });
+            await poller.pollUntilDone();
         } catch (ex) {
             const errorMessage = isInvalidTemplateDeploymentError(ex)
                 ? getInvalidTemplateErrorMessage(ex)
