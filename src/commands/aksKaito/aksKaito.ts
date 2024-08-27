@@ -29,6 +29,7 @@ export default async function aksKaito(_context: IActionContext, target: unknown
     }
 
     const clusterName = clusterNode.result.name;
+    const armId = clusterNode.result.armId;
     const subscriptionId = clusterNode.result.subscriptionId;
     const resourceGroupName = clusterNode.result.resourceGroupName;
 
@@ -38,6 +39,7 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         clusterName,
         subscriptionId,
         resourceGroupName,
+        armId,
         sessionProvider.result,
     );
 

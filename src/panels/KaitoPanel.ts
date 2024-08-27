@@ -4,9 +4,10 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { getFeatureClient } from "../commands/utils/arm";
+import { getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
 import { FeatureClient } from "@azure/arm-features";
 import { longRunning } from "../commands/utils/host";
+import { ResourceManagementClient } from "@azure/arm-resources";
 
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
@@ -21,19 +22,22 @@ export class KaitoPanel extends BasePanel<"kaito"> {
 export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     // private readonly containerServiceClient: ContainerServiceClient;
     private readonly featureClient: FeatureClient;
-    // private readonly resourceManagementClient: ResourceManagementClient;
+    private readonly resourceManagementClient: ResourceManagementClient;
+    // private readonly containerServiceClient: ContainerServiceClient;
 
     public constructor(
         readonly clusterName: string,
         readonly subscriptionId: string,
         readonly resourceGroupName: string,
+        readonly armId: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
         this.resourceGroupName = resourceGroupName;
+        this.armId = armId;
         this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
-        // this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
+        this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         // this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
     }
     getTitle(): string {
@@ -120,6 +124,22 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         }
 
         // Install kaito enablement
+        // Get current json
+        const currentJson = await longRunning(`Get current json.`, () => {
+            return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
+        });
+        console.log(currentJson);
+
+        // Update json
+        if (currentJson.properties) {
+            currentJson.properties.aiToolchainOperatorProfile = { enabled: true };
+        }
+
+        const updateJson = await longRunning(`Update json.`, () => {
+            return this.resourceManagementClient.resources.beginCreateOrUpdateByIdAndWait(this.armId, "2023-08-01", currentJson);
+        });
+        console.log(updateJson);
+        
         // const kaitoEnablement = await longRunning(`Enable KAITO Feature.`, () =>
         //     this.resourceManagementClient.deployments.beginCreateOrUpdate(
         //         this.resourceGroupName,
