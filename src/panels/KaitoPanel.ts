@@ -4,6 +4,9 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { getFeatureClient } from "../commands/utils/arm";
+import { FeatureClient } from "@azure/arm-features";
+import { longRunning } from "../commands/utils/host";
 
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
@@ -16,8 +19,9 @@ export class KaitoPanel extends BasePanel<"kaito"> {
 }
 
 export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
-    // private readonly resourceManagementClient: ResourceManagementClient;
     // private readonly containerServiceClient: ContainerServiceClient;
+    private readonly featureClient: FeatureClient;
+    // private readonly resourceManagementClient: ResourceManagementClient;
 
     public constructor(
         readonly clusterName: string,
@@ -28,6 +32,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
         this.resourceGroupName = resourceGroupName;
+        this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
         // this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         // this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
     }
@@ -98,6 +103,34 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
     }
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
+
+        // register feature
+        const featureRegister = await longRunning(`Register KAITO Feature.`, () =>
+            this.featureClient.features.register("Microsoft.ContainerService", "AIToolchainOperatorPreview"),
+        );
+
+        if (featureRegister.properties?.state !== "Registered") {
+            webview.postKaitoInstallProgressUpdate({
+                operationDescription: "Installing Kaito",
+                event: 3,
+                errorMessage: "Failed to register feature",
+                models: [],
+            });
+            return;
+        }
+
+        // Install kaito enablement
+        // const kaitoEnablement = await longRunning(`Enable KAITO Feature.`, () =>
+        //     this.resourceManagementClient.deployments.beginCreateOrUpdate(
+        //         this.resourceGroupName,
+        //         "Microsoft.ContainerService",
+        //         "",
+        //         "providers/Microsoft.ContainerService/enableKaito",
+        //         "2021-11-01-preview",
+        //         {},
+        //     ),
+        // );
+
         // install kaito
         webview.postKaitoInstallProgressUpdate({
             operationDescription: "Installing Kaito",
