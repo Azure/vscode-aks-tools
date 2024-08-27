@@ -2,20 +2,20 @@ import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
+import { Preset } from "../../../src/panels/utilities/ClusterSpecCreationBuilder";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     CreateClusterParams,
-    Preset,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
 import { CreateClusterPresetInput } from "./CreateClusterPresetInput";
 import { CreateResourceGroupDialog } from "./CreateResourceGroup";
 import { EventDef } from "./helpers/state";
-import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -31,7 +31,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
     const [newResourceGroupName, setNewResourceGroupName] = useState<string | null>(null);
-    const [presetSelected, setPresetSelected] = useState<Preset>("dev");
+    const [presetSelected, setPresetSelected] = useState<Preset>(Preset.Dev);
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
     const [location, setLocation] = useState<Validatable<string>>(unset());
 

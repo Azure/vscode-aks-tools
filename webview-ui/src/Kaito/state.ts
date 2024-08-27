@@ -7,7 +7,7 @@ export type EventDef = Record<string, never>;
 export type KaitoState = InitialState & {
     operationDescription: string;
     kaitoInstallStatus: ProgressEventType;
-    errors: string | null;
+    errors: string | undefined;
     models: ModelDetails[];
 };
 
@@ -16,7 +16,7 @@ export const stateUpdater: WebviewStateUpdater<"kaito", EventDef, KaitoState> = 
         ...initialState,
         operationDescription: "",
         kaitoInstallStatus: ProgressEventType.NotStarted,
-        errors: null,
+        errors: undefined,
         models: [],
     }),
     vscodeMessageHandler: {

@@ -34,7 +34,7 @@ export type ToWebViewMsgDef = {
     kaitoInstallProgressUpdate: {
         operationDescription: string;
         event: ProgressEventType;
-        errorMessage: string | null;
+        errorMessage: string | undefined;
         models: ModelDetails[];
     }; // to webview during kaito installation
     getLLMModelsResponse: {

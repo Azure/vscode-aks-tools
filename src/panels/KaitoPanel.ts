@@ -1,13 +1,16 @@
+import { FeatureClient } from "@azure/arm-features";
+import { ResourceManagementClient } from "@azure/arm-resources";
+import { RestError } from "@azure/storage-blob";
 import * as vscode from "vscode";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
+import { getErrorMessage } from "../commands/utils/errorable";
+import { longRunning } from "../commands/utils/host";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
-import { FeatureClient } from "@azure/arm-features";
-import { longRunning } from "../commands/utils/host";
-import { ResourceManagementClient } from "@azure/arm-resources";
+import { ClusterDeploymentBuilder, ClusterSpec, Preset } from "./utilities/ClusterSpecCreationBuilder";
 
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
@@ -107,13 +110,55 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
     }
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
-
         // register feature
-        const featureRegister = await longRunning(`Register KAITO Feature.`, () =>
-            this.featureClient.features.register("Microsoft.ContainerService", "AIToolchainOperatorPreview"),
+        // const featureRegister = await longRunning(`Register KAITO Feature.`, () =>
+        //     this.featureClient.features.register("Microsoft.ContainerService", "AIToolchainOperatorPreview"),
+        // );
+
+        // if (featureRegister.properties?.state !== "Registered") {
+        //     webview.postKaitoInstallProgressUpdate({
+        //         operationDescription: "Installing Kaito",
+        //         event: 3,
+        //         errorMessage: "Failed to register feature",
+        //         models: [],
+        //     });
+        //     return;
+        // }
+
+        // // Install kaito enablement
+        // // Get current json
+        // const currentJson = await longRunning(`Get current json.`, () => {
+        //     return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
+        // });
+        // console.log(currentJson);
+
+        // // Update json
+        // if (currentJson.properties) {
+        //     currentJson.properties.aiToolchainOperatorProfile = { enabled: true };
+        // }
+
+        // const updateJson = await longRunning(`Update json.`, () => {
+        //     return this.resourceManagementClient.resources.beginCreateOrUpdateByIdAndWait(
+        //         this.armId,
+        //         "2023-08-01",
+        //         currentJson,
+        //     );
+        // });
+        // console.log(updateJson);
+        const subscriptionFeatureRegistrationType = {
+            properties: {},
+        };
+        const options = {
+            subscriptionFeatureRegistrationType,
+        };
+
+        const featureRegistrationPoller = await this.featureClient.subscriptionFeatureRegistrations.createOrUpdate(
+            "Microsoft.ContainerService",
+            "AIToolchainOperatorPreview",
+            options,
         );
 
-        if (featureRegister.properties?.state !== "Registered") {
+        if (featureRegistrationPoller.properties?.state !== "Registered") {
             webview.postKaitoInstallProgressUpdate({
                 operationDescription: "Installing Kaito",
                 event: 3,
@@ -123,58 +168,103 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             return;
         }
 
-        // Install kaito enablement
         // Get current json
         const currentJson = await longRunning(`Get current json.`, () => {
             return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
         });
         console.log(currentJson);
 
-        // Update json
-        if (currentJson.properties) {
-            currentJson.properties.aiToolchainOperatorProfile = { enabled: true };
-        }
+        const clusterSpec: ClusterSpec = {
+            location: "eastus2euap", //TODO get location from cluster
+            name: this.clusterName,
+            resourceGroupName: this.resourceGroupName,
+            subscriptionId: this.subscriptionId,
+            kubernetesVersion: "1.28", // TODO k8s version from cluster
+        };
 
-        const updateJson = await longRunning(`Update json.`, () => {
-            return this.resourceManagementClient.resources.beginCreateOrUpdateByIdAndWait(this.armId, "2023-08-01", currentJson);
-        });
-        console.log(updateJson);
-        
-        // const kaitoEnablement = await longRunning(`Enable KAITO Feature.`, () =>
-        //     this.resourceManagementClient.deployments.beginCreateOrUpdate(
-        //         this.resourceGroupName,
-        //         "Microsoft.ContainerService",
-        //         "",
-        //         "providers/Microsoft.ContainerService/enableKaito",
-        //         "2021-11-01-preview",
-        //         {},
-        //     ),
-        // );
+        const deploymentName = `${this.clusterName}-${Math.random().toString(36).substring(5)}`;
 
-        // install kaito
-        webview.postKaitoInstallProgressUpdate({
-            operationDescription: "Installing Kaito",
-            event: 1,
-            errorMessage: null,
-            models: [],
-        });
-
-        // simulate kaito installation and success
-        setTimeout(() => {
+        const deploymentSpec = new ClusterDeploymentBuilder()
+            .buildCommonParametersForKaito(clusterSpec)
+            .buildTemplate(Preset.KaitoAddon)
+            .getDeployment();
+        try {
+            const poller = await this.resourceManagementClient.deployments.beginCreateOrUpdate(
+                this.resourceGroupName,
+                deploymentName,
+                deploymentSpec,
+            );
+            // kaito installation in progress
             webview.postKaitoInstallProgressUpdate({
-                operationDescription: "Kaito installed",
-                event: 4,
-                errorMessage: null,
-                models: [
-                    {
-                        family: "family",
-                        modelName: "modelName",
-                        minimumGpu: 1,
-                        kaitoVersion: "v1.0",
-                        modelSource: "modelSource",
-                    },
-                ],
+                operationDescription: "Installing Kaito",
+                event: 1,
+                errorMessage: undefined,
+                models: [],
             });
-        }, 5000);
+            poller.onProgress((state) => {
+                if (state.status === "succeeded") {
+                    webview.postKaitoInstallProgressUpdate({
+                        operationDescription: "Installing Kaito succeeded",
+                        event: 4,
+                        errorMessage: undefined,
+                        models: [],
+                    });
+                } else if (state.status === "failed") {
+                    webview.postKaitoInstallProgressUpdate({
+                        operationDescription: "Installing Kaito failed",
+                        event: 3,
+                        errorMessage: state.error?.message,
+                        models: [],
+                    });
+                }
+            });
+        } catch (ex) {
+            const errorMessage = isInvalidTemplateDeploymentError(ex)
+                ? getInvalidTemplateErrorMessage(ex)
+                : getErrorMessage(ex);
+            vscode.window.showErrorMessage(`Error installing Kaito addon for ${this.clusterName}: ${errorMessage}`);
+            webview.postKaitoInstallProgressUpdate({
+                operationDescription: "Installing Kaito failed",
+                event: 3,
+                errorMessage: ex instanceof Error ? ex.message : String(ex),
+                models: [],
+            });
+        }
     }
+}
+
+function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {
+    const innerDetails = ex.details.error?.details || [];
+    if (innerDetails.length > 0) {
+        const details = innerDetails.map((d) => `${d.code}: ${d.message}`).join("\n");
+        return `Invalid template:\n${details}`;
+    }
+
+    const innerError = ex.details.error?.message || "";
+    if (innerError) {
+        return `Invalid template:\n${innerError}`;
+    }
+
+    return `Invalid template: ${getErrorMessage(ex)}`;
+}
+
+type InvalidTemplateDeploymentRestError = RestError & {
+    details: {
+        error?: {
+            code: "InvalidTemplateDeployment";
+            message?: string;
+            details?: {
+                code?: string;
+                message?: string;
+            }[];
+        };
+    };
+};
+
+function isInvalidTemplateDeploymentError(ex: unknown): ex is InvalidTemplateDeploymentRestError {
+    return isRestError(ex) && ex.code === "InvalidTemplateDeployment";
+}
+
+function isRestError(ex: unknown): ex is RestError {
+    return typeof ex === "object" && ex !== null && ex.constructor.name === "RestError";
 }

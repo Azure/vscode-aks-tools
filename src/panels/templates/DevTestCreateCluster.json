@@ -776,6 +776,9 @@
                     "networkPolicy": "[parameters('networkPolicy')]",
                     "serviceCidr": "[parameters('serviceCidr')]",
                     "dnsServiceIP": "[parameters('dnsServiceIP')]"
+                },
+                "AiToolchainOperatorProfile": {
+                    "enabled": true
                 }
             },
             "tags": "[parameters('clusterTags')]"
