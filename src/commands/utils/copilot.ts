@@ -6,7 +6,7 @@ export function getCopilotClient(sessionProvider: ReadyAzureSessionProvider) {
 }
 
 type Config = {
-    requestId: string;
+    requestId?: string;
     message: string;
     scenario: string;
     intent: string;
@@ -115,7 +115,7 @@ export class CopilotClient {
 
         if (data?.Citations) {
             citationResponse = {
-                messageId: requestId,
+                messageId: requestId || "",
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 docs: Object.entries(data?.Citations).reduce((acc: any, entry: any) => {
                     const [idx, citation] = entry;
@@ -138,7 +138,7 @@ export class CopilotClient {
             );
 
             const response: ChatResponse = {
-                id: requestId,
+                id: requestId || "",
                 text,
             };
 
@@ -147,7 +147,7 @@ export class CopilotClient {
 
         return {
             succeeded: true,
-            result: { citation: citationResponse, messageId: requestId, response: chatResponse },
+            result: { citation: citationResponse, messageId: requestId || "", response: chatResponse },
         };
     }
 }

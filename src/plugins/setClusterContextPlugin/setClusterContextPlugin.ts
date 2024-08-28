@@ -1,30 +1,17 @@
 import { ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest } from "copilot-for-azure-vscode-api";
 import * as vscode from "vscode";
-import { failed, Succeeded } from "../../commands/utils/errorable";
+import { failed } from "../../commands/utils/errorable";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getAssetContext } from "../../assets";
 import { CurrentClusterContext, DefinedManagedCluster, getKubeconfigYaml } from "../../commands/utils/clusters";
-import { ReadyAzureSessionProvider } from "../../auth/types";
 import { parseResource } from "../../azure-api-utils";
 import { getAksClient } from "../../commands/utils/arm";
-import { getResources, DefinedResourceWithGroup } from "../../commands/utils/azureResources";
-import { SubscriptionFilter } from "../../commands/utils/config";
-import { getSubscriptions, SelectionType } from "../../commands/utils/subscriptions";
+import { getExistingClusterSelection, getSubscriptionSelection } from "../common/pluginHelpers";
 
 const setClusterContextFunctionName = "setClusterContext";
 const showClusterContextFunctionName = "showClusterContext";
 const removeClusterContextFunctionName = "removeClusterContext";
-
-type SubscriptionQuickPickItem = vscode.QuickPickItem & { subscription: SubscriptionFilter };
-
-type SuccessResult = { status: "success"; message?: string };
-type ErrorResult = { status: "error"; message: string };
-type CancelledResult = { status: "cancelled" };
-
-type ReturnResult = SuccessResult | ErrorResult | CancelledResult;
-type SubscriptionSelectionResult = { subscriptionName: string; subscriptionId: string } & ReturnResult;
-
 type Parameters = {
     commandGenerationIntent: string;
 };
@@ -64,115 +51,9 @@ const setClusterContextPluginManifest: LocalPluginManifest = {
             willHandleUserResponse: false,
         },
     ],
+    applicableTopicScopes: []
 };
 
-async function getSubscriptionResult(sessionProvider: ReadyAzureSessionProvider): Promise<SubscriptionSelectionResult> {
-    const allSubscriptions = await getSubscriptions(sessionProvider, SelectionType.All);
-
-    if (failed(allSubscriptions)) {
-        vscode.window.showErrorMessage(allSubscriptions.error);
-        return { status: "error", message: allSubscriptions.error, subscriptionId: "", subscriptionName: "" };
-    }
-
-    if (allSubscriptions.result.length === 0) {
-        const noSubscriptionsFound = "No subscriptions were found. Set up your account if you have yet to do so.";
-        const setupAccount = "Set up Account";
-        const response = await vscode.window.showInformationMessage(noSubscriptionsFound, setupAccount);
-        if (response === setupAccount) {
-            vscode.env.openExternal(vscode.Uri.parse("https://azure.microsoft.com/"));
-        }
-
-        return { status: "error", message: noSubscriptionsFound, subscriptionId: "", subscriptionName: "" };
-    }
-    const authSession = await sessionProvider.getAuthSession();
-
-    if (failed(authSession)) {
-        vscode.window.showErrorMessage(authSession.error);
-        return { status: "error", message: authSession.error, subscriptionId: "", subscriptionName: "" };
-    }
-
-    const filteredSubscriptions: SubscriptionFilter[] = await allSubscriptions.result
-        .filter((sub) => sub.tenantId === authSession.result.tenantId)
-        .map((sub) => ({
-            tenantId: sub.tenantId || "",
-            subscriptionId: sub.subscriptionId || "",
-            label: sub.displayName || "",
-        }));
-
-    const quickPickItems: SubscriptionQuickPickItem[] = allSubscriptions.result.map((sub) => {
-        return {
-            label: sub.displayName || "",
-            description: sub.subscriptionId,
-            picked: filteredSubscriptions.some((filteredSub) => filteredSub.subscriptionId === sub.subscriptionId), // Set to true if the subscription is in filteredSubscriptions,
-            subscription: {
-                subscriptionId: sub.subscriptionId || "",
-                tenantId: sub.tenantId || "",
-            },
-        };
-    });
-
-    const selectedSubscription = await vscode.window.showQuickPick(quickPickItems, {
-        canPickMany: false,
-        placeHolder: "Select Subscription",
-    });
-
-    if (!selectedSubscription) {
-        return { status: "cancelled", subscriptionId: "", subscriptionName: "" };
-    }
-
-    return {
-        status: "success",
-        subscriptionId: selectedSubscription.subscription.subscriptionId,
-        subscriptionName: selectedSubscription.label,
-    };
-}
-
-type ClusterResult = { clusterName: string; clusterId: string } & ReturnResult;
-async function getExistingCluster(
-    sessionProvider: ReadyAzureSessionProvider,
-    subscriptionId: string,
-): Promise<ClusterResult> {
-    const clusterResources = await getResources(
-        sessionProvider,
-        subscriptionId,
-        "Microsoft.ContainerService/managedClusters",
-    );
-
-    if (failed(clusterResources)) {
-        vscode.window.showErrorMessage(
-            `Failed to list clusters in subscription ${subscriptionId}: ${clusterResources.error}`,
-        );
-        return { status: "error", message: clusterResources.error, clusterName: "", clusterId: "" };
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const clusterItems: any[] = (clusterResources as unknown as Succeeded<DefinedResourceWithGroup[]>).result.map(
-        (cluster) => {
-            return {
-                label: cluster.name || "",
-                description: cluster.id,
-                picked: (clusterResources as unknown as Succeeded<DefinedResourceWithGroup[]>).result.some(
-                    (clusterItem) => clusterItem.name === cluster.name,
-                ), // Set to true if the cluster is in clusterResources,
-                subscription: {
-                    subscriptionId: subscriptionId || "",
-                    tenantId: cluster.identity?.tenantId || "",
-                },
-            };
-        },
-    );
-
-    const selectedClusterItem = await vscode.window.showQuickPick(clusterItems, {
-        canPickMany: false,
-        placeHolder: "Select existing AKS Cluster in subscription",
-    });
-
-    if (!selectedClusterItem) {
-        return { status: "cancelled", clusterName: "", clusterId: "" };
-    }
-
-    return { status: "success", clusterName: selectedClusterItem.label, clusterId: selectedClusterItem.description };
-}
 const setClusterContextPluginHandler: ILocalPluginHandler = {
     execute: async (args: LocalPluginArgs<typeof setClusterContextFunctionName, Parameters>) => {
         const pluginRequest = args.localPluginRequest;
@@ -180,8 +61,6 @@ const setClusterContextPluginHandler: ILocalPluginHandler = {
         if (pluginRequest.functionName === setClusterContextFunctionName) {
             const sessionProvider = await getReadySessionProvider();
             const kubectl = await k8s.extension.kubectl.v1;
-            const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-            const clusterExplorer = await k8s.extension.clusterExplorer.v1;
         
             if (failed(sessionProvider)) {
                 vscode.window.showErrorMessage(sessionProvider.error);
@@ -193,17 +72,7 @@ const setClusterContextPluginHandler: ILocalPluginHandler = {
                 return {status: "error", message: "Kubectl is unavailable."};
             }
         
-            if (!cloudExplorer.available) {
-                vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
-                return {status: "error", message: "Cloud explorer is unavailable."};
-            }
-        
-            if (!clusterExplorer.available) {
-                vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
-                return {status: "error", message: "Cluster explorer is unavailable."};
-            }
-        
-            const selectedSubscription = await getSubscriptionResult(sessionProvider.result);
+            const selectedSubscription = await getSubscriptionSelection(sessionProvider.result);
         
             if (selectedSubscription.status === "cancelled") {
                 return {status: "cancelled"};
@@ -213,7 +82,7 @@ const setClusterContextPluginHandler: ILocalPluginHandler = {
                 return { status: "error", message: selectedSubscription.message};
             }
         
-            const selectedClusterItem = await getExistingCluster(
+            const selectedClusterItem = await getExistingClusterSelection(
                 sessionProvider.result,
                 selectedSubscription.subscriptionId,
             );
@@ -260,6 +129,7 @@ const setClusterContextPluginHandler: ILocalPluginHandler = {
                 clusterName: selectedCluster,
                 subscriptionId: selectedSubscription.subscriptionId,
                 clusterId: selectedClusterId,
+                resourceGroup: parseResource(selectedClusterId).resourceGroupName!,
                 kubeConfig: kubeConfigYAMLResult,
                 subscriptionName: selectedSubscription.subscriptionName,
             }
@@ -280,7 +150,7 @@ const setClusterContextPluginHandler: ILocalPluginHandler = {
 
             const parsedCurrentCluster = JSON.parse(currentCluster) as CurrentClusterContext;
 
-            return {status: "success", message: `Current cluster : ${parsedCurrentCluster.clusterName} under subscription: ${parsedCurrentCluster.subscriptionName}`};
+            return {status: "success", message: `Current cluster : ${parsedCurrentCluster.clusterName}, resource group: ${parsedCurrentCluster.resourceGroup}, and subscription: ${parsedCurrentCluster.subscriptionName}`};
 
         } else if (pluginRequest.functionName === removeClusterContextFunctionName) { 
 

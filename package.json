@@ -295,10 +295,6 @@
             {
                 "command": "aks.aksRetinaCapture",
                 "title": "Run Retina Capture"
-            },
-            {
-                "command": "aks.aksDeployLocalApp",
-                "title": "Deploy local app to an AKS cluster"
             }
         ],
         "menus": {
@@ -481,12 +477,6 @@
                     "command": "aks.aksReconcileCluster",
                     "group": "navigation"
                 }
-            ],
-            "aks.managedClusterDeploymentSubMenu": [
-                {
-                    "command": "aks.aksDeployLocalApp",
-                    "group": "navigation"
-                }
             ]
         },
         "submenus": [
@@ -588,7 +578,7 @@
         "@microsoft/vscode-azext-utils": "^2.5.1",
         "@octokit/rest": "^21.0.0",
         "@vscode/extension-telemetry": "^0.9.6",
-        "copilot-for-azure-vscode-api": "^1.0.0-beta.18",
+        "copilot-for-azure-vscode-api": "^1.0.0-beta.19",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.0",
         "move-file": "^3.1.0",

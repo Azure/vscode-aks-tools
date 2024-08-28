@@ -11,8 +11,26 @@ import { CurrentClusterContext } from "../utils/clusters";
 import { getAssetContext } from "../../assets";
 import { createTempFile } from "../utils/tempfile";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function aksRunKubectlCommandsForCopilot(_context: IActionContext, _target: unknown) {
+function extractText(input: string): string[] {
+    const regex = /`{3}([\s\S]*)`{3}/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(input)) !== null) {
+        matches.push(match[1]);
+    }
+
+    return matches.map(txt => {
+        return txt.replace("bash", "")
+        .replace("shell", "")
+        .replace(/\\n/g, "")
+    });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+export async function aksRunKubectlCommandsForCopilot(_context: IActionContext, target: any) {
+
+    const generatedCommandsFromChat =  extractText(target["response"]);
+
     const kubectl = await k8s.extension.kubectl.v1;
 
     if (!kubectl.available) {
@@ -30,6 +48,11 @@ export async function aksRunKubectlCommandsForCopilot(_context: IActionContext, 
     }
 
     const parsedCurrentCluster = JSON.parse(currentCluster) as CurrentClusterContext;
+
+    if(!parsedCurrentCluster.kubeConfig) {
+        vscode.window.showErrorMessage("Kubeconfig is not set. Please set the AKS cluster first.");
+        return;
+    }
     
     const kubeConfigFile = await createTempFile(parsedCurrentCluster.kubeConfig, "yaml");
 
@@ -44,6 +67,7 @@ export async function aksRunKubectlCommandsForCopilot(_context: IActionContext, 
         kubeConfigFile.filePath,
         parsedCurrentCluster.clusterName,
         customCommands,
+        generatedCommandsFromChat[0]
     );
     const panel = new KubectlPanel(extension.result.extensionUri);
 

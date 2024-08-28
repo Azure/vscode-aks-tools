@@ -33,11 +33,15 @@ export interface PresetCommand {
 export interface InitialState {
     clusterName: string;
     customCommands: PresetCommand[];
+    initialCommand?: string;
 }
 
 export type ToVsCodeMsgDef = {
     runCommandRequest: {
         command: string;
+    };
+    initialCommandRequest: {
+        initialCommand: string;
     };
     addCustomCommandRequest: {
         name: string;

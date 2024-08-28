@@ -7,6 +7,7 @@ import { CommandOutput } from "./CommandOutput";
 import { SaveCommandDialog } from "./SaveCommandDialog";
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
+import React from "react";
 
 export function Kubectl(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -60,6 +61,15 @@ export function Kubectl(initialState: InitialState) {
     const allCommandNames = state.allCommands.map((cmd) => cmd.name);
     const commandLookup = Object.fromEntries(state.allCommands.map((cmd) => [cmd.command, cmd]));
     const matchesExisting = state.selectedCommand !== null ? state.selectedCommand.trim() in commandLookup : false;
+
+    React.useEffect(() => {
+        if(initialState.initialCommand) {
+            eventHandlers.onSetCommandRunning();
+            eventHandlers.onSetSelectedCommand({ command: initialState?.initialCommand.trim() } )
+            vscode.postRunCommandRequest({ command: initialState.initialCommand.trim() });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    },[]);
 
     return (
         <div className={styles.wrapper}>

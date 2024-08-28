@@ -544,5 +544,6 @@ export type CurrentClusterContext = {
     subscriptionName: string;
     clusterName: string;
     clusterId: string;
-    kubeConfig: string;
+    resourceGroup: string;
+    kubeConfig?: string;
 }

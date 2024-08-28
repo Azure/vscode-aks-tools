@@ -16,7 +16,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 export class KubectlPanel extends BasePanel<"kubectl"> {
     constructor(extensionUri: Uri) {
         super(extensionUri, "kubectl", {
-            runCommandResponse: null,
+            runCommandResponse: null
         });
     }
 }
@@ -27,6 +27,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         readonly kubeConfigFilePath: string,
         readonly clusterName: string,
         readonly customCommands: PresetCommand[],
+        readonly initialCommand?: string
     ) {}
 
     getTitle(): string {
@@ -37,6 +38,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         return {
             clusterName: this.clusterName,
             customCommands: this.customCommands,
+            initialCommand: this.initialCommand
         };
     }
 
@@ -45,18 +47,24 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             runCommandRequest: true,
             addCustomCommandRequest: true,
             deleteCustomCommandRequest: true,
+            initialCommandRequest: true
         };
     }
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             runCommandRequest: (args) => this.handleRunCommandRequest(args.command, webview),
+            initialCommandRequest: (args) => this.handleRunCommandRequest(args.initialCommand, webview),
             addCustomCommandRequest: (args) => this.handleAddCustomCommandRequest(args.name, args.command),
             deleteCustomCommandRequest: (args) => this.handleDeleteCustomCommandRequest(args.name),
         };
     }
 
     private async handleRunCommandRequest(command: string, webview: MessageSink<ToWebViewMsgDef>) {
+        if(command.includes("kubectl")) {
+            command = command.replace("kubectl", "").trim();
+        }
+
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
 
         if (failed(kubectlresult)) {
