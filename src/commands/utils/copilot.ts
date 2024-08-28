@@ -67,7 +67,7 @@ export class CopilotClient {
 
     public async sendRequest(
         config: Config,
-    ): Promise<Errorable<{ citation?: CitationResponse; messageId: string; response?: ChatResponse }>> {
+    ): Promise<Errorable<{ citation?: CitationResponse; messageId: string; response?: string }>> {
         await this.refreshToken();
 
         const { intent, message, scenario, requestId } = config;
@@ -101,8 +101,6 @@ export class CopilotClient {
         const data: any = await rawResponse.json();
         const status = rawResponse.status;
 
-        console.log("data", data);
-
         if (status === 424) {
             // 424 is a content moderation error
             throw new Error("424: Harmful content detected");
@@ -111,7 +109,7 @@ export class CopilotClient {
         }
 
         let citationResponse: CitationResponse | undefined  = undefined;
-        let chatResponse : ChatResponse | undefined = undefined;
+        let chatResponse : string | undefined = undefined;
 
         if (data?.Citations) {
             citationResponse = {
@@ -131,17 +129,7 @@ export class CopilotClient {
         }
 
         if (data?.Response) {
-            // Properly format the response: remove trailing im_start tag and replace all tags like [\\[doc0\\]] with [doc0]
-            const text = data?.Response.replace(/<\|im_start\|>(assistant\n|\n)/, "").replace(
-                /\[\\\[doc(\d+)\\\]\]/g,
-                "[doc$1]",
-            );
-
-            const response: ChatResponse = {
-                id: requestId || "",
-                text,
-            };
-
+            const response = data?.Response as string // JSON response
             chatResponse = response;
         }
 

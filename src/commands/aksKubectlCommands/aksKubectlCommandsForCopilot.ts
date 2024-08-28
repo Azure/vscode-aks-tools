@@ -10,26 +10,13 @@ import { getKubectlCustomCommands } from "../utils/config";
 import { CurrentClusterContext } from "../utils/clusters";
 import { getAssetContext } from "../../assets";
 import { createTempFile } from "../utils/tempfile";
-
-function extractText(input: string): string[] {
-    const regex = /`{3}([\s\S]*)`{3}/g;
-    const matches = [];
-    let match;
-    while ((match = regex.exec(input)) !== null) {
-        matches.push(match[1]);
-    }
-
-    return matches.map(txt => {
-        return txt.replace("bash", "")
-        .replace("shell", "")
-        .replace(/\\n/g, "")
-    });
-}
+// import { RunCommandResponse } from "../../plugins/generateKubectlCommandPlugin/generateKubectlCommandPlugin";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
 export async function aksRunKubectlCommandsForCopilot(_context: IActionContext, target: any) {
+    const response = target["response"];
 
-    const generatedCommandsFromChat =  extractText(target["response"]);
+    const generatedCommandsFromChat =  [response.code];
 
     const kubectl = await k8s.extension.kubectl.v1;
 
