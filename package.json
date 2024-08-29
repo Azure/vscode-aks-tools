@@ -201,6 +201,10 @@
                 "title": "Install Azure Service Operator"
             },
             {
+                "command": "aks.provideFeedback",
+                "title": "Report a Bug/Request a Feature"
+            },
+            {
                 "command": "aks.aksCRUDDiagnostics",
                 "title": "Create, Upgrade, Delete and Scale"
             },
@@ -360,7 +364,13 @@
                 },
                 {
                     "command": "aks.installAzureServiceOperator",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
+                    "group": "99@1"
+                },
+                {
+                    "command": "aks.provideFeedback",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
+                    "group": "999@1"
                 },
                 {
                     "submenu": "aks.automatedDeploymentsSubMenu",
