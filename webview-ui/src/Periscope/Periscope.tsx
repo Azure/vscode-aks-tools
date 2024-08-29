@@ -30,7 +30,7 @@ export function Periscope(initialState: InitialState) {
                 AKS Periscope collects and exports node and pod logs into an Azure Blob storage account to help you
                 analyse and identify potential problems or easily share the information during the troubleshooting
                 process.
-                <VSCodeLink href="https://aka.ms/vscode-aks-periscope">&nbsp;Learn more</VSCodeLink>
+                <VSCodeLink href="https://github.com/Azure/aks-periscope">&nbsp;Learn more</VSCodeLink>
             </p>
             <VSCodeDivider />
             {

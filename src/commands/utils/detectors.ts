@@ -98,7 +98,7 @@ export async function getDetectorInfo(
             clusterNode.name,
             "detectors",
             detectorName,
-            "2019-08-01",
+            "2024-05-01",
         );
 
         return { succeeded: true, result: <CategoryDetectorARMResponse>detectorInfo };
