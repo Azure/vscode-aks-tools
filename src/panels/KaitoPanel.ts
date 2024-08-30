@@ -110,41 +110,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
     }
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
-        // register feature
-        // const featureRegister = await longRunning(`Register KAITO Feature.`, () =>
-        //     this.featureClient.features.register("Microsoft.ContainerService", "AIToolchainOperatorPreview"),
-        // );
-
-        // if (featureRegister.properties?.state !== "Registered") {
-        //     webview.postKaitoInstallProgressUpdate({
-        //         operationDescription: "Installing Kaito",
-        //         event: 3,
-        //         errorMessage: "Failed to register feature",
-        //         models: [],
-        //     });
-        //     return;
-        // }
-
-        // // Install kaito enablement
-        // // Get current json
-        // const currentJson = await longRunning(`Get current json.`, () => {
-        //     return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
-        // });
-        // console.log(currentJson);
-
-        // // Update json
-        // if (currentJson.properties) {
-        //     currentJson.properties.aiToolchainOperatorProfile = { enabled: true };
-        // }
-
-        // const updateJson = await longRunning(`Update json.`, () => {
-        //     return this.resourceManagementClient.resources.beginCreateOrUpdateByIdAndWait(
-        //         this.armId,
-        //         "2023-08-01",
-        //         currentJson,
-        //     );
-        // });
-        // console.log(updateJson);
+        // Register feature
         const subscriptionFeatureRegistrationType = {
             properties: {},
         };
@@ -152,11 +118,13 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             subscriptionFeatureRegistrationType,
         };
 
-        const featureRegistrationPoller = await this.featureClient.subscriptionFeatureRegistrations.createOrUpdate(
-            "Microsoft.ContainerService",
-            "AIToolchainOperatorPreview",
-            options,
-        );
+        const featureRegistrationPoller = await longRunning(`Registering the AIToolchainOperator.`, () => {
+            return this.featureClient.subscriptionFeatureRegistrations.createOrUpdate(
+                "Microsoft.ContainerService",
+                "AIToolchainOperatorPreview",
+                options,
+            );
+        });
 
         if (featureRegistrationPoller.properties?.state !== "Registered") {
             webview.postKaitoInstallProgressUpdate({
@@ -169,22 +137,26 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         }
 
         // Get current json
-        const currentJson = await longRunning(`Get current json.`, () => {
+        const currentJson = await longRunning(`Get current cluster information.`, () => {
             return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
         });
-        console.log(currentJson);
 
+        console.log(currentJson);
+        // Install kaito enablement
         const managedClusterSpec: ManagedCluster = {
-            location: "eastus2euap", //TODO get location from cluster
+            location: currentJson.location!,
             aiToolchainOperatorProfile: { enabled: true },
             oidcIssuerProfile: { enabled: true },
         };
+
         try {
-            const poller = await this.containerServiceClient.managedClusters.beginCreateOrUpdate(
-                this.resourceGroupName,
-                this.clusterName,
-                managedClusterSpec,
-            );
+            const poller = await longRunning(`Enabling the kaito for this cluster.`, () => {
+                return this.containerServiceClient.managedClusters.beginCreateOrUpdate(
+                    this.resourceGroupName,
+                    this.clusterName,
+                    managedClusterSpec,
+                );
+            });
             // kaito installation in progress
             webview.postKaitoInstallProgressUpdate({
                 operationDescription: "Installing Kaito",

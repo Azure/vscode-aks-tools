@@ -372,11 +372,6 @@
                     "group": "8@3"
                 },
                 {
-                    "command": "aks.aksKaito",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "8@3"
-                },
-                {
                     "command": "aks.installAzureServiceOperator",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i"
                 },
@@ -397,7 +392,7 @@
                 {
                     "command": "aks.aksRunKubectlCommands",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
-                    "group": "9@3"
+                    "group": "8@3"
                 },
                 {
                     "command": "aks.compareCluster",
