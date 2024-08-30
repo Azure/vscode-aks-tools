@@ -10,7 +10,7 @@
 * changing draft version to .38 and removing manual appname.
 * Dependabot updates and bumps.
 
-Welcome new contributor @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC for contributions, testing and reviews.
+Welcome new contributors @tejhan & @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC, @tejhan for contributions, testing and reviews.
 
 ## [1.4.8]
 
