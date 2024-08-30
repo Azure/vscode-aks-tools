@@ -113,6 +113,12 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     }
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
         // Check if Kaito pods already exist
+        if (this.filterKaitoPodNames.length > 0) {
+            vscode.window.showInformationMessage(
+                `Kaito pods already exist in the cluster ${this.clusterName}. Skipping installation.`,
+            );
+            return;
+        }
         // Register feature
         const subscriptionFeatureRegistrationType = {
             properties: {},
