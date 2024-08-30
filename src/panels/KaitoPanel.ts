@@ -34,6 +34,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         readonly resourceGroupName: string,
         readonly armId: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
+        readonly filterKaitoPodNames: string[],
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -42,6 +43,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
+        this.filterKaitoPodNames = filterKaitoPodNames;
     }
     getTitle(): string {
         return `KAITO`;
@@ -110,6 +112,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
     }
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
+        // Check if Kaito pods already exist
         // Register feature
         const subscriptionFeatureRegistrationType = {
             properties: {},
