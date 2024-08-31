@@ -5,11 +5,8 @@ import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { ModelEntry } from "@huggingface/hub";
-import axios from "axios";
 import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
-
-const HUGGINGFACE_API_URL = "https://huggingface.co/api/models";
+import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
 
 export default async function aksKaitoGenrateYaml(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -64,28 +61,21 @@ export default async function aksKaitoGenrateYaml(_context: IActionContext, targ
         return;
     }
 
-    // const clusterName = clusterNode.result.name;
-    const foo = listModelsWithPrefix("azure");
+    console.log(kaitoSupporterModel);
 
-    // for await (const model of listModels({ search: { query: "" } })) {
-    //     // { search: { owner: username }, credentials }
-    //     console.log("My model:", model);
-    //     foo.push(model.name);
-    // }
-
-    // Pick a Node to Capture Traffic From
-    const nodeNamesSelected = await vscode.window.showQuickPick(foo, {
+    // Pick a standard supported models for KAITO from config file within
+    const kaitoSelectedModels = await vscode.window.showQuickPick(listKaitoSUpportedModel(), {
         canPickMany: true,
         placeHolder: "Please select all Hugging face model.",
         title: "Select LLM Hugging Face Model",
     });
 
-    if (!nodeNamesSelected) {
+    if (!kaitoSelectedModels) {
         vscode.window.showErrorMessage("No LLM Model Selected.");
         return;
     }
 
-    const selectedNodes = nodeNamesSelected.map((item) => item).join(",");
+    const selectedNodes = kaitoSelectedModels.map((item) => item).join(",");
 
     // Configure the starter workflow data.
     const starterWorkflowYaml = getWorkflowYaml("kaitoworkspace");
@@ -109,30 +99,14 @@ export default async function aksKaitoGenrateYaml(_context: IActionContext, targ
     vscode.window.showTextDocument(doc);
 }
 
-async function listModelsWithPrefix(prefix: string) {
-    try {
-        const response = await axios.get(HUGGINGFACE_API_URL, {
-            params: {
-                search: prefix,
-            },
-        });
-
-        const models = response.data;
-        const filteredModels = models.filter((model: ModelEntry) => model.id.startsWith(prefix));
-
-        console.log(`Models starting with "${prefix}":`);
-        filteredModels.forEach((model: ModelEntry) => {
-            console.log(model.id);
-        });
-
-        const filterModelList = [""];
-        filteredModels.forEach((model: ModelEntry) => {
-            filterModelList.push(model.id);
-        });
-
-        return filterModelList;
-    } catch (error) {
-        console.error("Error fetching models from Hugging Face:", error);
-        return [""];
-    }
+function listKaitoSUpportedModel() {
+    const modelList = [
+        kaitoSupporterModel.modelsupported.falcon,
+        kaitoSupporterModel.modelsupported.llama2,
+        kaitoSupporterModel.modelsupported.llma2chat,
+        kaitoSupporterModel.modelsupported.mistral,
+        kaitoSupporterModel.modelsupported["phi-2"],
+        kaitoSupporterModel.modelsupported["phi-3"],
+    ];
+    return modelList.flat();
 }
