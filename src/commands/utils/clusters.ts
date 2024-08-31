@@ -554,7 +554,7 @@ export async function filterPodName(
     }
 
     const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `get namespace --no-headers -o custom-columns=":metadata.name"`;
+        const command = `get pods --all-namespaces --no-headers -o custom-columns=":metadata.name"`;
         const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
         return errmap(output, (sr) => sr.stdout.trim().split("\n"));
     });
