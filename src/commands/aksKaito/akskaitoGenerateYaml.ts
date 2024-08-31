@@ -3,7 +3,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
-import { getExtension } from "../utils/host";
+import { getExtension, longRunning } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
 import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
@@ -39,14 +39,9 @@ export default async function aksKaitoGenrateYaml(_context: IActionContext, targ
     const subscriptionId = clusterNode.result.subscriptionId;
     const resourceGroupName = clusterNode.result.resourceGroupName;
 
-    const filterKaitoPodNames = await filterPodName(
-        sessionProvider.result,
-        kubectl,
-        subscriptionId,
-        resourceGroupName,
-        clusterName,
-        "kaito-",
-    );
+    const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
+        return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
+    });
 
     if (failed(filterKaitoPodNames)) {
         vscode.window.showErrorMessage(filterKaitoPodNames.error);
