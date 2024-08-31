@@ -61,13 +61,11 @@ export default async function aksKaitoGenrateYaml(_context: IActionContext, targ
         return;
     }
 
-    console.log(kaitoSupporterModel);
-
     // Pick a standard supported models for KAITO from config file within
     const kaitoSelectedModels = await vscode.window.showQuickPick(listKaitoSUpportedModel(), {
         canPickMany: true,
-        placeHolder: "Please select all Hugging face model.",
-        title: "Select LLM Hugging Face Model",
+        placeHolder: "Please select current supported KAITO model.",
+        title: "KAITO Supported Model.",
     });
 
     if (!kaitoSelectedModels) {
