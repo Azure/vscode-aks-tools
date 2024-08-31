@@ -117,7 +117,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             vscode.window.showInformationMessage(
                 `Kaito pods already exist in the cluster ${this.clusterName}. Skipping installation.`,
             );
-            vscode.commands.executeCommand("setContext", "vscode-aks-tools.aks.aksKaitoInstall", true);
             return;
         }
         // Register feature

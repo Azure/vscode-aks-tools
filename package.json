@@ -297,9 +297,8 @@
                 "title": "Run Retina Capture"
             },
             {
-                "command": "aks.aksKaitoInstall",
-                "title": "Create Kaito Workspace",
-                "enablement": "hasKaitoInstalled"
+                "command": "aks.aksKaitoGenrateYaml",
+                "title": "Create Kaito Workspace"
             },
             {
                 "command": "aks.aksKaito",
@@ -425,7 +424,7 @@
             ],
             "aks.kaitoInstallSubMenu": [
                 {
-                    "command": "aks.aksKaitoInstall",
+                    "command": "aks.aksKaitoGenrateYaml",
                     "group": "navigation"
                 },
                 {

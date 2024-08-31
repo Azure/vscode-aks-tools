@@ -50,8 +50,6 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         "kaito-",
     );
 
-    console.log(filterKaitoPodNames);
-
     const dataProvider = new KaitoPanelDataProvider(
         clusterName,
         subscriptionId,

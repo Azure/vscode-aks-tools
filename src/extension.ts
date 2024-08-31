@@ -45,6 +45,7 @@ import { Reporter, reporter } from "./commands/utils/reporter";
 import { AksClusterTreeNode } from "./tree/aksClusterTreeItem";
 import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
+import aksKaitoGenrateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -104,6 +105,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.eraserTool", aksEraserTool);
         registerCommandWithTelemetry("aks.aksRetinaCapture", aksRetinaCapture);
         registerCommandWithTelemetry("aks.aksKaito", aksKaito);
+        registerCommandWithTelemetry("aks.aksKaitoGenrateYaml", aksKaitoGenrateYaml);
 
         await registerAzureServiceNodes(context);
 

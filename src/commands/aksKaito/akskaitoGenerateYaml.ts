@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterTreeNode } from "../utils/clusters";
+import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
@@ -13,6 +13,7 @@ const HUGGINGFACE_API_URL = "https://huggingface.co/api/models";
 
 export default async function aksKaitoGenrateYaml(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const kubectl = await k8s.extension.kubectl.v1;
 
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
@@ -30,6 +31,37 @@ export default async function aksKaitoGenrateYaml(_context: IActionContext, targ
     if (failed(extension)) {
         vscode.window.showErrorMessage(extension.error);
         return undefined;
+    }
+
+    if (!kubectl.available) {
+        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+        return;
+    }
+
+    const clusterName = clusterNode.result.name;
+    const subscriptionId = clusterNode.result.subscriptionId;
+    const resourceGroupName = clusterNode.result.resourceGroupName;
+
+    const filterKaitoPodNames = await filterPodName(
+        sessionProvider.result,
+        kubectl,
+        subscriptionId,
+        resourceGroupName,
+        clusterName,
+        "kaito-",
+    );
+
+    if (failed(filterKaitoPodNames)) {
+        vscode.window.showErrorMessage(filterKaitoPodNames.error);
+        return;
+    }
+
+    // Check if Kaito pods  exist
+    if (filterKaitoPodNames.result.length === 0) {
+        vscode.window.showInformationMessage(
+            `Please install Kaito for this cluster. \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
+        );
+        return;
     }
 
     // const clusterName = clusterNode.result.name;
