@@ -1,4 +1,6 @@
-import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
+import { Disposable, Uri, ViewColumn, Webview, window } from "vscode";
+import { reporter } from "../commands/utils/reporter";
+import { encodeState } from "../webview-contract/initialState";
 import {
     CommandKeys,
     Message,
@@ -9,8 +11,6 @@ import {
     asMessageSink,
     isValidMessage,
 } from "../webview-contract/messaging";
-import { getNonce, getUri } from "./utilities/webview";
-import { encodeState } from "../webview-contract/initialState";
 import {
     ContentId,
     InitialState,
@@ -21,7 +21,7 @@ import {
     ToWebviewMsgDef,
     VsCodeMessageContext,
 } from "../webview-contract/webviewTypes";
-import { reporter } from "../commands/utils/reporter";
+import { getNonce, getUri } from "./utilities/webview";
 
 const viewType = "aksVsCodeTools";
 
@@ -110,7 +110,7 @@ export abstract class BasePanel<TContent extends ContentId> {
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} 'self'">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} 'self'; img-src ${webview.cspSource} 'self'">
                 <link rel="stylesheet" type="text/css" href="${stylesUri}">
                 <title>${title}</title>
             </head>

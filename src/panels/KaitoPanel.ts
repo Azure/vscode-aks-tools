@@ -3,12 +3,18 @@ import { FeatureClient } from "@azure/arm-features";
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import * as vscode from "vscode";
+import kaitoSupporterModel from "../../resources/kaitollmconfig/kaitollmconfig.json";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getErrorMessage } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaito";
+import {
+    InitialState,
+    ModelDetails,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+} from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 
@@ -179,7 +185,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                         operationDescription: "Installing Kaito succeeded",
                         event: 4,
                         errorMessage: undefined,
-                        models: [],
+                        models: listKaitoSupportedModels(),
                     });
                 } else if (state.status === "failed") {
                     webview.postKaitoInstallProgressUpdate({
@@ -240,4 +246,11 @@ function isInvalidTemplateDeploymentError(ex: unknown): ex is InvalidTemplateDep
 
 function isRestError(ex: unknown): ex is RestError {
     return typeof ex === "object" && ex !== null && ex.constructor.name === "RestError";
+}
+
+function listKaitoSupportedModels(): ModelDetails[] {
+    return kaitoSupporterModel.modelDetails.map((model) => ({
+        ...model,
+        minimumGpu: Number(model.minimumGpu),
+    }));
 }

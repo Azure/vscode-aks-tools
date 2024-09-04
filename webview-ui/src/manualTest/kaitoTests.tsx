@@ -1,4 +1,5 @@
-import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaito";
+import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
+import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { Kaito } from "../Kaito/Kaito";
 import { stateUpdater } from "../Kaito/state";
 import { Scenario } from "../utilities/manualTest";
@@ -10,10 +11,16 @@ export function getKaitoScenarios() {
         resourceGroupName: "MyResourceGroup",
     };
 
-    function getMessageHandler() {
+    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             installKaitoRequest: () => {
                 console.log("installKaitoRequest");
+                webview.postKaitoInstallProgressUpdate({
+                    operationDescription: "Installing Kaito",
+                    event: 1,
+                    errorMessage: undefined,
+                    models: [],
+                });
             },
             getLLMModelsRequest: () => {
                 console.log("getLLMModelsRequest");
