@@ -8,6 +8,7 @@
 * U/X add border for the row.
 * Fix the eslint no-unused-vars errors.
 * changing draft version to .38 and removing manual appname.
+* Add U/X tooltip changes.
 * Dependabot updates and bumps.
 
 Welcome new contributors @tejhan & @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC, @tejhan for contributions, testing and reviews.
