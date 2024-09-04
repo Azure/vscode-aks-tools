@@ -21,8 +21,9 @@ import {
     aksBestPracticesDiagnostics,
     aksIdentitySecurityDiagnostics,
     aksNodeHealth,
-    aksKnownIssuesAvailabilityPerformanceDiagnostics,
+    aksCCPAvailabilityPerformanceDiagnostics,
     aksCategoryConnectivity,
+    aksStorageDiagnostics,
 } from "./commands/detectors/detectors";
 import { failed } from "./commands/utils/errorable";
 import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
@@ -83,9 +84,10 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);
         registerCommandWithTelemetry("aks.aksNodeHealthDiagnostics", aksNodeHealth);
         registerCommandWithTelemetry(
-            "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
-            aksKnownIssuesAvailabilityPerformanceDiagnostics,
+            "aks.aksCCPAvailabilityPerformanceDiagnostics",
+            aksCCPAvailabilityPerformanceDiagnostics,
         );
+        registerCommandWithTelemetry("aks.aksStorageDiagnostics", aksStorageDiagnostics);
         registerCommandWithTelemetry("aks.showInPortal", aksNavToPortal);
         registerCommandWithTelemetry("aks.clusterProperties", aksClusterProperties);
         registerCommandWithTelemetry("aks.createClusterNavToAzurePortal", aksCreateClusterNavToAzurePortal);

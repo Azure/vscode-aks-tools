@@ -26,15 +26,16 @@ export function aksIdentitySecurityDiagnostics(_context: IActionContext, target:
     return runDetector(target, "aks-category-identity-security");
 }
 
-export function aksKnownIssuesAvailabilityPerformanceDiagnostics(
-    _context: IActionContext,
-    target: unknown,
-): Promise<void> {
-    return runDetector(target, "aks-category-availability-perf");
+export function aksCCPAvailabilityPerformanceDiagnostics(_context: IActionContext, target: unknown): Promise<void> {
+    return runDetector(target, "aks-ccp-availability-perf");
 }
 
 export function aksNodeHealth(_context: IActionContext, target: unknown): Promise<void> {
     return runDetector(target, "aks-category-node-health");
+}
+
+export function aksStorageDiagnostics(_context: IActionContext, target: unknown): Promise<void> {
+    return runDetector(target, "aks-category-storage");
 }
 
 async function runDetector(commandTarget: unknown, categoryDetectorName: string) {
