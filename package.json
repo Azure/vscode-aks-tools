@@ -221,8 +221,12 @@
                 "title": "Node Health"
             },
             {
-                "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
-                "title": "Known Issues, Availability and Performance"
+                "command": "aks.aksCCPAvailabilityPerformanceDiagnostics",
+                "title": "Cluster and Control Plane Availability and Performance"
+            },
+            {
+                "command": "aks.aksStorageDiagnostics",
+                "title": "Storage"
             },
             {
                 "command": "aks.attachAcrToCluster",
@@ -419,7 +423,11 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
+                    "command": "aks.aksCCPAvailabilityPerformanceDiagnostics",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksStorageDiagnostics",
                     "group": "navigation"
                 },
                 {
