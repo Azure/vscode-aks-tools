@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.4.9]
+
+* AKS diagnostic bug resolved & storage diagnostic added.
+* Updated github auth scope to repo.
+* Adding flag to prevent draft from checking for manifests.
+* U/X add border for the row.
+* Fix the eslint no-unused-vars errors.
+* changing draft version to .38 and removing manual appname.
+* Add U/X tooltip changes.
+* Dependabot updates and bumps.
+
+Welcome new contributors @tejhan & @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC, @tejhan for contributions, testing and reviews.
+
 ## [1.4.8]
 
 * Add Support Plan and Preview information in cluster Properties Page.
