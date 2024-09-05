@@ -25,7 +25,7 @@
 }
 
 .tooltip {
-    position: fixed;
+    position: absolute;
     display: inline-block;
     border-bottom: 1px dotted black;
 }
@@ -41,17 +41,20 @@
     padding: 0.5rem;
 
     /* Position the tooltip */
-    position: fixed;
+    position: absolute;
     z-index: 1;
+    width: max-content;
+    max-width: 55vw;
 }
 
 .tooltip:hover .tooltiptext {
     visibility: visible;
 }
 
-th:not(:last-child),
-td:not(:last-child) {
-    padding-right: 6px; /* Adds space to the right except for the last <th> and <td> in each row */
+td,
+th {
+    padding: 5px 3px 5px 3px;
+    text-align: center;
 }
 
 .buttonDiv {
