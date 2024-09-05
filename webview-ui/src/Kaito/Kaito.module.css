@@ -32,6 +32,7 @@
     font-style: normal;
     font-weight: 500;
     line-height: normal;
+    margin-bottom: 0.625rem;
 }
 
 .architectureSubHeader {
@@ -41,7 +42,7 @@
     font-style: normal;
     font-weight: 400;
     line-height: normal;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
 }
 
 .kaitoImage {
