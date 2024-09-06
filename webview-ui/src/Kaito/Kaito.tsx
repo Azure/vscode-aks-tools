@@ -51,7 +51,7 @@ export function Kaito(initialState: InitialState) {
                     )}
                     {state.kaitoInstallStatus === ProgressEventType.Success && state.models.length > 0 && (
                         // <KaitoFamilyModelInput modelDetails={state.models} />
-                        <p>Kaito is installed, tada..</p>
+                        <p>Kaito is installed</p>
                     )}
                 </div>
             </div>

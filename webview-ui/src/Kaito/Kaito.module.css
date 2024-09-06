@@ -17,7 +17,7 @@
 }
 
 .subHeaderForVersion {
-    margin-top: 15px;
+    margin-top: 0.9375rem; /* 15px */
     color: var(--Dark-Base-01, #fff);
     font-size: 0.8125rem;
     font-style: normal;
