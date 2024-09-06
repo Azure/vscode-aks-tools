@@ -302,7 +302,7 @@
             },
             {
                 "command": "aks.aksKaito",
-                "title": "Deploy LLM with Kaito"
+                "title": "Install Kaito"
             }
         ],
         "menus": {
