@@ -30,11 +30,10 @@ import installAzureServiceOperator from "./commands/azureServiceOperators/instal
 import {
     aksBestPracticesDiagnostics,
     aksCategoryConnectivity,
-    aksCCPAvailabilityPerformanceDiagnostics,
     aksCRUDDiagnostics,
     aksIdentitySecurityDiagnostics,
+    aksKnownIssuesAvailabilityPerformanceDiagnostics,
     aksNodeHealth,
-    aksStorageDiagnostics,
 } from "./commands/detectors/detectors";
 import { draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
 import periscope from "./commands/periscope/periscope";
