@@ -1,14 +1,14 @@
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
+import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
 import { failed } from "../utils/errorable";
 import { getExtension, longRunning } from "../utils/host";
-import { getReadySessionProvider } from "../../auth/azureAuth";
-import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
-import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
 
-export default async function aksKaitoGenrateYaml(_context: IActionContext, target: unknown): Promise<void> {
+export default async function aksKaitoGenerateYaml(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const kubectl = await k8s.extension.kubectl.v1;
 

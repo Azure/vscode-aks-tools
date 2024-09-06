@@ -11,6 +11,7 @@ import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     InitialState,
+    Preset,
     ProgressEventType,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
@@ -18,7 +19,7 @@ import {
 } from "../webview-contract/webviewDefinitions/createCluster";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { ClusterDeploymentBuilder, ClusterSpec, Preset } from "./utilities/ClusterSpecCreationBuilder";
+import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {

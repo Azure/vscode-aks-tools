@@ -20,6 +20,7 @@ import aksDeleteCluster from "./commands/aksDeleteCluster/aksDeleteCluster";
 import aksEraserTool from "./commands/aksEraserTool/erasertool";
 import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
 import aksKaito from "./commands/aksKaito/aksKaito";
+import aksKaitoGenerateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
 import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
 import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
 import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
@@ -46,7 +47,6 @@ import { Reporter, reporter } from "./commands/utils/reporter";
 import { AksClusterTreeNode } from "./tree/aksClusterTreeItem";
 import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
-import aksKaitoGenrateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -106,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.eraserTool", aksEraserTool);
         registerCommandWithTelemetry("aks.aksRetinaCapture", aksRetinaCapture);
         registerCommandWithTelemetry("aks.aksKaito", aksKaito);
-        registerCommandWithTelemetry("aks.aksKaitoGenrateYaml", aksKaitoGenrateYaml);
+        registerCommandWithTelemetry("aks.aksKaitoGenerateYaml", aksKaitoGenerateYaml);
 
         await registerAzureServiceNodes(context);
 

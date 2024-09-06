@@ -1,4 +1,4 @@
-import { Preset } from "../../../src/panels/utilities/ClusterSpecCreationBuilder";
+import { Preset } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { DevTestIcon } from "../icons/DevTestIcon";
 import styles from "./CreateCluster.module.css";
 
@@ -23,7 +23,7 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                     <a href="https://portal.azure.com/#create/Microsoft.AKS">click here</a>
                     &nbsp;to visit the Azure Portal.
                 </div>
-                <div className={styles.presetContainer} onClick={() => handlePresetClick(Preset.Dev)}>
+                <div className={styles.presetContainer} onClick={() => handlePresetClick("dev")}>
                     <div className={styles.flexContainer}>
                         <DevTestIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
                         <div className={styles.presetTitle}>Dev/Test</div>

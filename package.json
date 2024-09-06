@@ -297,7 +297,7 @@
                 "title": "Run Retina Capture"
             },
             {
-                "command": "aks.aksKaitoGenrateYaml",
+                "command": "aks.aksKaitoGenerateYaml",
                 "title": "Create Kaito Workspace"
             },
             {
@@ -424,7 +424,7 @@
             ],
             "aks.kaitoInstallSubMenu": [
                 {
-                    "command": "aks.aksKaitoGenrateYaml",
+                    "command": "aks.aksKaitoGenerateYaml",
                     "group": "navigation"
                 },
                 {
@@ -599,7 +599,6 @@
         "@azure/identity": "^4.4.1",
         "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.24.0",
-        "@huggingface/hub": "^0.15.1",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^2.5.7",
         "@octokit/rest": "^21.0.2",

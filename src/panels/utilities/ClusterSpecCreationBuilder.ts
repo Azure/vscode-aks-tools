@@ -1,6 +1,6 @@
 import { Deployment } from "@azure/arm-resources";
+import { Preset } from "../../webview-contract/webviewDefinitions/createCluster";
 import devTestTemplate from "../templates/DevTestCreateCluster.json";
-import kaitoTemplate from "../templates/UpdateClusterKaitoAddon.json";
 
 export type ClusterSpec = {
     location: string;
@@ -8,7 +8,7 @@ export type ClusterSpec = {
     resourceGroupName: string;
     subscriptionId: string;
     kubernetesVersion: string;
-    username?: string;
+    username: string;
 };
 
 type TemplateContent = Record<string, unknown>;
@@ -16,13 +16,7 @@ type TemplateContent = Record<string, unknown>;
 const deploymentApiVersion = "2023-08-01";
 const presetTemplates: Record<Preset, TemplateContent> = {
     dev: devTestTemplate,
-    kaitoAddon: kaitoTemplate,
 };
-
-export enum Preset {
-    Dev = "dev",
-    KaitoAddon = "kaitoAddon",
-}
 
 export class ClusterDeploymentBuilder {
     private deployment: Deployment = {
@@ -32,32 +26,6 @@ export class ClusterDeploymentBuilder {
             mode: "Incremental",
         },
     };
-
-    public buildCommonParametersForKaito(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
-        this.deployment.properties.parameters = {
-            ...this.deployment.properties.parameters,
-            location: {
-                value: clusterSpec.location,
-            },
-            resourceName: {
-                value: clusterSpec.name,
-            },
-            apiVersion: {
-                value: deploymentApiVersion,
-            },
-            subscriptionId: {
-                value: clusterSpec.subscriptionId,
-            },
-            resourceGroupName: {
-                value: clusterSpec.resourceGroupName,
-            },
-            kubernetesVersion: {
-                value: clusterSpec.kubernetesVersion,
-            },
-        };
-
-        return this;
-    }
 
     public buildCommonParameters(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
         this.deployment.properties.parameters = {

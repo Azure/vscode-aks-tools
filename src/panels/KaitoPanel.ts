@@ -29,7 +29,6 @@ export class KaitoPanel extends BasePanel<"kaito"> {
 }
 
 export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
-    // private readonly containerServiceClient: ContainerServiceClient;
     private readonly featureClient: FeatureClient;
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly containerServiceClient: ContainerServiceClient;
