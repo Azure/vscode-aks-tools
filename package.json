@@ -534,7 +534,7 @@
             },
             {
                 "id": "aks.kaitoInstallSubMenu",
-                "label": "Kaito Workspace (Beta)"
+                "label": "Deploy a LLM with KAITO (Beta)"
             }
         ]
     },
