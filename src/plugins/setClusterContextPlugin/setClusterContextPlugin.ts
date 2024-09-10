@@ -22,10 +22,10 @@ const setClusterContextPluginManifest: LocalPluginManifest = {
     functions: [
         {
             name: setClusterContextFunctionName,
-            description: "Set current AKS cluster context in VSCode",
+            description: "Set current AKS cluster in VSCode context to use for other AKS plugin skills.",
             parameters: [],
             returnParameter: {
-                description: "Return message.",
+                description: "",
                 type: "string",
             },
             willHandleUserResponse: false,
@@ -35,7 +35,7 @@ const setClusterContextPluginManifest: LocalPluginManifest = {
             description: "Show current AKS cluster context in VSCode",
             parameters: [],
             returnParameter: {
-                description: "Return message.",
+                description: "Return message showing the current AKS cluster context.",
                 type: "string",
             },
             willHandleUserResponse: false,

@@ -10,7 +10,6 @@ import { getKubectlCustomCommands } from "../utils/config";
 import { CurrentClusterContext } from "../utils/clusters";
 import { getAssetContext } from "../../assets";
 import { createTempFile } from "../utils/tempfile";
-// import { RunCommandResponse } from "../../plugins/generateKubectlCommandPlugin/generateKubectlCommandPlugin";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
 export async function aksRunKubectlCommandsForCopilot(_context: IActionContext, target: any) {

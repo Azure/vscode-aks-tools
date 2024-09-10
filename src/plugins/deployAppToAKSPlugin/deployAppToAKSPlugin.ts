@@ -86,11 +86,6 @@ async function deployApplicationToCluster(
     } = params;
 
     const kubectl = await k8s.extension.kubectl.v1;
-    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    if (!cloudExplorer.available) {
-        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
-        return { status: "error", message: "Cloud explorer is unavailable." };
-    }
 
     if (!kubectl.available) {
         vscode.window.showWarningMessage(`Kubectl is unavailable.`);
