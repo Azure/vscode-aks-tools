@@ -1,0 +1,12 @@
+apiVersion: kaito.sh/v1alpha1
+kind: Workspace
+metadata:
+  name: workspace-<APP_ID>
+resource:
+  instanceType: "<INSTANCE_TYPE>"
+  labelSelector:
+    matchLabels:
+      apps: <APP_ID>
+inference:
+  preset:
+    name: "<APP_ID>"

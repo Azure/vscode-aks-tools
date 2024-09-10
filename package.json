@@ -295,6 +295,14 @@
             {
                 "command": "aks.aksRetinaCapture",
                 "title": "Run Retina Capture"
+            },
+            {
+                "command": "aks.aksKaitoGenerateYaml",
+                "title": "Create Kaito Workspace"
+            },
+            {
+                "command": "aks.aksKaito",
+                "title": "Install Kaito"
             }
         ],
         "menus": {
@@ -383,7 +391,7 @@
                 {
                     "command": "aks.aksRunKubectlCommands",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
-                    "group": "9@3"
+                    "group": "8@3"
                 },
                 {
                     "command": "aks.compareCluster",
@@ -391,6 +399,15 @@
                 },
                 {
                     "submenu": "aks.networkTroubleshootingSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@3"
+                },
+                {
+                    "command": "aks.aksKaito",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                },
+                {
+                    "submenu": "aks.kaitoInstallSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
                 }
@@ -402,6 +419,16 @@
                 },
                 {
                     "command": "aks.createCluster",
+                    "group": "navigation"
+                }
+            ],
+            "aks.kaitoInstallSubMenu": [
+                {
+                    "command": "aks.aksKaitoGenerateYaml",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKaito",
                     "group": "navigation"
                 }
             ],
@@ -504,6 +531,10 @@
             {
                 "id": "aks.networkTroubleshootingSubMenu",
                 "label": "Troubleshoot Network Health"
+            },
+            {
+                "id": "aks.kaitoInstallSubMenu",
+                "label": "Deploy a LLM with KAITO (Beta)"
             }
         ]
     },
@@ -556,7 +587,8 @@
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
         "@azure/arm-containerregistry": "^10.1.0",
-        "@azure/arm-containerservice": "^21.0.0",
+        "@azure/arm-containerservice": "^21.1.0-beta.1",
+        "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-subscriptions": "^2.1.0",

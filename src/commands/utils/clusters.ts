@@ -535,6 +535,38 @@ export async function rotateClusterCert(
     }
 }
 
+export async function filterPodName(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    podNameStartsWith: string,
+): Promise<Errorable<string[]>> {
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `get pods --all-namespaces --no-headers -o custom-columns=":metadata.name"`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        return errmap(output, (sr) => sr.stdout.trim().split("\n"));
+    });
+
+    let filterPodName: string[] = [];
+    if (succeeded(result)) {
+        filterPodName = result.result.filter((podName) => podName.includes(podNameStartsWith));
+    }
+
+    return { succeeded: true, result: filterPodName };
+}
+
 function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is DefinedManagedCluster {
     return cluster.id !== undefined && cluster.name !== undefined && cluster.location !== undefined;
 }
