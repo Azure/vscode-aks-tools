@@ -75,3 +75,36 @@
     font-weight: 700;
     line-height: normal;
 }
+
+.commandContainer {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--Dark-Base-04, #9d9d9d);
+    padding: 10px;
+    border-radius: 5px;
+    width: fit-content;
+    margin-top: 10px;
+}
+
+.commandText {
+    margin-right: 10px;
+}
+
+.copyButton {
+    background-color: #007acc;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.copyButton:hover {
+    background-color: #005fa3;
+}
+
+pre {
+    width: auto;
+    white-space: pre-wrap; /* This ensures that long lines wrap instead of overflowing */
+    word-wrap: break-word; /* This ensures that long words break to fit within the container */
+}

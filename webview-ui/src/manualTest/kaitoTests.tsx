@@ -6,7 +6,7 @@ import { Scenario } from "../utilities/manualTest";
 
 export function getKaitoScenarios() {
     const initialState: InitialState = {
-        clusterName: "MyCluster",
+        clusterName: "MyAksCluster",
         subscriptionId: "MySubscriptionId",
         resourceGroupName: "MyResourceGroup",
     };
