@@ -1,0 +1,157 @@
+{
+    "name": "Kaito LLM Model Config",
+    "version": "1.0",
+    "modelsupported": {
+        "falcon": [
+            "falcon-7b-instruct",
+            "falcon-7b",
+            "falcon-40b-instruct",
+            "falcon-40b"
+        ],
+        "llama2": [
+            "llama2-7b",
+            "llama2-13b",
+            "llama2-70b"
+        ],
+        "llma2chat": [
+            "llama2-7b-chat",
+            "llama2-13b-chat",
+            "llama2-70b-chat"
+        ],
+        "mistral": [
+            "mistral-7b-instruct",
+            "mistral-7b"
+        ],
+        "phi-2": [
+            "phi-2"
+        ],
+        "phi-3": [
+            "phi-3-mini-4k-instruct",
+            "phi-3-mini-128k-instruct",
+            "phi-3-medium-4k-instruct",
+            "phi-3-medium-128k-instruct"
+        ]
+    },
+    "modelDetails": [
+        {
+            "family": "falcon",
+            "modelName": "falcon-7b-instruct",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/tiiuae/falcon-7b-instruct/commit/cf4b3c42ce2fdfe24f753f0f0d179202fea59c99"
+        },
+        {
+            "family": "falcon",
+            "modelName": "falcon-7b",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/tiiuae/falcon-7b/commit/898df1396f35e447d5fe44e0a3ccaaaa69f30d36"
+        },
+        {
+            "family": "falcon",
+            "modelName": "falcon-40b-instruct",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/tiiuae/falcon-40b-instruct/commit/ecb78d97ac356d098e79f0db222c9ce7c5d9ee5f"
+        },
+        {
+            "family": "falcon",
+            "modelName": "falcon-40b",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/tiiuae/falcon-40b/commit/4a70170c215b36a3cce4b4253f6d0612bb7d4146"
+        },
+        {
+            "family": "llama2",
+            "modelName": "llama2-7b",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/meta-llama"
+        },
+        {
+            "family": "llama2",
+            "modelName": "llama2-13b",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/meta-llama"
+        },
+        {
+            "family": "llama2",
+            "modelName": "llama2-70b",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/meta-llama"
+        },
+        {
+            "family": "llma2chat",
+            "modelName": "llama2-7b-chat",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/meta-llama"
+        },
+        {
+            "family": "llma2chat",
+            "modelName": "llama2-13b-chat",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/meta-llama"
+        },
+        {
+            "family": "llma2chat",
+            "modelName": "llama2-70b-chat",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/meta-llama"
+        },
+        {
+            "family": "mistral",
+            "modelName": "mistral-7b-instruct",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3/commit/0417f4babd26db0b5ed07c1d0bc85658ab526ea3"
+        },
+        {
+            "family": "mistral",
+            "modelName": "mistral-7b",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/mistralai/Mistral-7B-v0.3/commit/c882233d224d27b727b3d9299b12a9aab9dda6f7"
+        },
+        {
+            "family": "phi-2",
+            "modelName": "phi-2",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/microsoft/phi-2/commit/b10c3eba545ad279e7208ee3a5d644566f001670"
+        },
+        {
+            "family": "phi-3",
+            "modelName": "phi-3-mini-4k-instruct",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct/commit/d269012bea6fbe38ce7752c8940fea010eea3383"
+        },
+        {
+            "family": "phi-3",
+            "modelName": "phi-3-mini-128k-instruct",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/microsoft/Phi-3-mini-128k-instruct/commit/5be6479b4bc06a081e8f4c6ece294241ccd32dec"
+        },
+        {
+            "family": "phi-3",
+            "modelName": "phi-3-medium-4k-instruct",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/microsoft/Phi-3-medium-4k-instruct/commit/d194e4e74ffad5a5e193e26af25bcfc80c7f1ffc"
+        },
+        {
+            "family": "phi-3",
+            "modelName": "phi-3-medium-128k-instruct",
+            "kaitoVersion": "1.0",
+            "minimumGpu": "Standard_NC12s_v3",
+            "modelSource": "https://huggingface.co/microsoft/Phi-3-medium-128k-instruct/commit/cae1d42b5577398fd1be9f0746052562ae552886"
+        }
+    ],
+    "docref": "https://github.com/Azure/kaito/blob/main/presets/models/supported_models.yaml"
+}

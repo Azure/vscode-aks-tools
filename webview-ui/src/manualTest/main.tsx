@@ -1,23 +1,24 @@
+import "@vscode/codicons/dist/codicon.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "./vars.css";
-import "../main.css";
-import "@vscode/codicons/dist/codicon.css";
-import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
-import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
-import { getCreateClusterScenarios } from "./createClusterTests";
-import { getPeriscopeScenarios } from "./periscopeTests";
-import { getDetectorScenarios } from "./detectorTests";
-import { getDraftDeploymentScenarios, getDraftDockerfileScenarios, getDraftWorkflowScenarios } from "./draft";
-import { getAttachAcrToClusterScenarios } from "./attachAcrToClusterTests";
-import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
-import { getKubectlScenarios } from "./kubectlTests";
 import { ContentId } from "../../../src/webview-contract/webviewTypes";
+import "../main.css";
 import { Scenario } from "../utilities/manualTest";
 import { getASOScenarios } from "./asoTests";
+import { getAttachAcrToClusterScenarios } from "./attachAcrToClusterTests";
 import { getClusterPropertiesScenarios } from "./clusterPropertiesTests";
-import { getTCPDumpScenarios } from "./tcpDumpTests";
+import { getCreateClusterScenarios } from "./createClusterTests";
+import { getDetectorScenarios } from "./detectorTests";
+import { getDraftDeploymentScenarios, getDraftDockerfileScenarios, getDraftWorkflowScenarios } from "./draft";
+import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
+import { getKaitoScenarios } from "./kaitoTests";
+import { getKubectlScenarios } from "./kubectlTests";
+import { getPeriscopeScenarios } from "./periscopeTests";
 import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
+import { getTCPDumpScenarios } from "./tcpDumpTests";
+import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
+import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
+import "./vars.css";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -47,6 +48,7 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     aso: getASOScenarios(),
     tcpDump: getTCPDumpScenarios(),
     retinaCapture: getRetinaCaptureScenarios(),
+    kaito: getKaitoScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

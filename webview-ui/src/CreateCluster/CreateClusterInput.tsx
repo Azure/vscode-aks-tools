@@ -9,13 +9,13 @@ import {
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
 import { CreateClusterPresetInput } from "./CreateClusterPresetInput";
 import { CreateResourceGroupDialog } from "./CreateResourceGroup";
 import { EventDef } from "./helpers/state";
-import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
