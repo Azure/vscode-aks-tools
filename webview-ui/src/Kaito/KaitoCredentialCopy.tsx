@@ -78,7 +78,7 @@ az identity federated-credential create --name "kaito-federated-identity" --iden
                 <li>
                     <p>Rollout restart gpu provisioner pods after KAITO is installed</p>
                     <label>
-                        Restart the gpu provisioner pods to apply the new configuration after KAITO is installe.
+                        Restart the gpu provisioner pods to apply the new configuration after KAITO is installed.
                     </label>
                     <div className={styles.commandContainer}>
                         <pre className={styles.commandText}>{kubectlRolloutRestartCommand}</pre>
