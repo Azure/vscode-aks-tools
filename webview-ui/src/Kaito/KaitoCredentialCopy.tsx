@@ -8,23 +8,23 @@ export type KaitoCredentialCopyProps = {
 };
 
 export function KaitoCredentialCopy(props: KaitoCredentialCopyProps) {
-    const roleAssigmentCommand = `export IDENTITY_NAME="kaitoprovisioner"
-az identity create --name $IDENTITY_NAME -g $RESOURCE_GROUP
-export IDENTITY_PRINCIPAL_ID=$(az identity show --name $IDENTITY_NAME -g $RESOURCE_GROUP --subscription $SUBSCRIPTION --query 'principalId' -o tsv)\n
-export IDENTITY_CLIENT_ID=$(az identity show --name $IDENTITY_NAME -g $RESOURCE_GROUP --subscription $SUBSCRIPTION --query 'clientId' -o tsv)\n
-az role assignment create --assignee $IDENTITY_PRINCIPAL_ID --scope /subscriptions/$SUBSCRIPTION/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.ContainerService/managedClusters/$MY_CLUSTER  --role "Contributor"`
-        .replaceAll("$RESOURCE_GROUP", props.resourceGroup)
-        .replaceAll("$SUBSCRIPTION", props.subscription)
-        .replaceAll("$MY_CLUSTER", props.clusterName);
+    const roleAssigmentCommand =
+        `export MC_RESOURCE_GROUP=$(az aks show --resource-group $AZURE_RESOURCE_GROUP --name $CLUSTER_NAME --query nodeResourceGroup -o tsv)
+export PRINCIPAL_ID=$(az identity show --name ai-toolchain-operator-$CLUSTER_NAME --resource-group $MC_RESOURCE_GROUP --query 'principalId' -o tsv)
+export KAITO_IDENTITY_NAME="ai-toolchain-operator-$CLUSTER_NAME"
+az role assignment create --role "Contributor" --assignee $PRINCIPAL_ID --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$AZURE_RESOURCE_GROUP"`
+            .replaceAll("$AZURE_RESOURCE_GROUP", props.resourceGroup)
+            .replaceAll("$AZURE_SUBSCRIPTION_ID", props.subscription)
+            .replaceAll("$CLUSTER_NAME", props.clusterName);
 
     const federatedCredentialsCommand =
-        `export AKS_OIDC_ISSUER=$(az aks show -n $MY_CLUSTER -g $RESOURCE_GROUP --subscription $SUBSCRIPTION --query "oidcIssuerProfile.issuerUrl" -o tsv)
-az identity federated-credential create --name kaito-federatedcredential --identity-name $IDENTITY_NAME -g $RESOURCE_GROUP --issuer $AKS_OIDC_ISSUER --subject system:serviceaccount:"gpu-provisioner:gpu-provisioner" --audience api://AzureADTokenExchange --subscription $SUBSCRIPTION`
-            .replaceAll("$RESOURCE_GROUP", props.resourceGroup)
+        `export AKS_OIDC_ISSUER=$(az aks show --resource-group $AZURE_RESOURCE_GROUP --name $CLUSTER_NAME --query "oidcIssuerProfile.issuerUrl" -o tsv)
+az identity federated-credential create --name "kaito-federated-identity" --identity-name $KAITO_IDENTITY_NAME -g $MC_RESOURCE_GROUP --issuer $AKS_OIDC_ISSUER --subject system:serviceaccount:"kube-system:kaito-gpu-provisioner" --audience api://AzureADTokenExchange`
+            .replaceAll("$AZURE_RESOURCE_GROUP", props.resourceGroup)
             .replaceAll("$SUBSCRIPTION", props.subscription)
-            .replaceAll("$MY_CLUSTER", props.clusterName);
+            .replaceAll("$CLUSTER_NAME", props.clusterName);
 
-    const kubectlRolloutRestartCommand = `kubectl rollout restart deployment kaito-gpu-provisioner -n kube-system`;
+    const kubectlRolloutRestartCommand = `kubectl rollout restart deployment/kaito-gpu-provisioner -n kube-system`;
 
     const copyCommand = (text: string) => {
         navigator.clipboard
@@ -76,8 +76,10 @@ az identity federated-credential create --name kaito-federatedcredential --ident
                     </div>
                 </li>
                 <li>
-                    <p>Rollout restart gpu provisioner pods</p>
-                    <label>Restart the gpu provisioner pods to apply the new configuration.</label>
+                    <p>Rollout restart gpu provisioner pods after KAITO is installed</p>
+                    <label>
+                        Restart the gpu provisioner pods to apply the new configuration after KAITO is installe.
+                    </label>
                     <div className={styles.commandContainer}>
                         <pre className={styles.commandText}>{kubectlRolloutRestartCommand}</pre>
                         <VSCodeButton
