@@ -102,6 +102,8 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
         };
     });
 
+    console.log("Custom Resources:", customResources);
+
     // Filter the custom resources to only include Azure resources
     const azureResources = customResources.filter((r) => r.name.includes("azure.com"));
 
