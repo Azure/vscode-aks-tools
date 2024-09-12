@@ -1,7 +1,6 @@
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as vscode from "vscode";
 import { Errorable } from "../commands/utils/errorable";
-const fs = require("fs");
 
 export class AzureResourceNodeContributor implements k8s.ClusterExplorerV1.NodeContributor {
     constructor(
