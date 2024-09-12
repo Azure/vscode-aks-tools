@@ -1,13 +1,24 @@
+import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { ContainerServiceClient, ManagedCluster } from "@azure/arm-containerservice";
 import { FeatureClient } from "@azure/arm-features";
+import { ManagedServiceIdentityClient } from "@azure/arm-msi";
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import * as vscode from "vscode";
 import kaitoSupporterModel from "../../resources/kaitollmconfig/kaitollmconfig.json";
 import { ReadyAzureSessionProvider } from "../auth/types";
-import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
-import { getErrorMessage } from "../commands/utils/errorable";
+import {
+    getAksClient,
+    getAuthorizationManagementClient,
+    getFeatureClient,
+    getManagedServiceIdentityClient,
+    getResourceManagementClient,
+} from "../commands/utils/arm";
+import { getManagedCluster } from "../commands/utils/clusters";
+import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
+import { createFederatedCredential, getIdentity } from "../commands/utils/managedServiceIdentity";
+import { createRoleAssignment } from "../commands/utils/roleAssignments";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     InitialState,
@@ -32,6 +43,8 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     private readonly featureClient: FeatureClient;
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly containerServiceClient: ContainerServiceClient;
+    private readonly authorizationClient: AuthorizationManagementClient;
+    private readonly managedServiceIdentityClient: ManagedServiceIdentityClient;
 
     public constructor(
         readonly clusterName: string,
@@ -48,6 +61,8 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
+        this.authorizationClient = getAuthorizationManagementClient(sessionProvider, this.subscriptionId);
+        this.managedServiceIdentityClient = getManagedServiceIdentityClient(sessionProvider, this.subscriptionId);
         this.filterKaitoPodNames = filterKaitoPodNames;
     }
     getTitle(): string {
@@ -207,6 +222,102 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 errorMessage: ex instanceof Error ? ex.message : String(ex),
                 models: [],
             });
+        }
+
+        // install Kaito Federated Credentials and role Assignments
+        try {
+            await longRunning(`Installing Kaito Federated Credentials and role Assignments.`, async () => {
+                webview.postKaitoInstallProgressUpdate({
+                    operationDescription: "Kaito Federated Credentials and role Assignments",
+                    event: 1,
+                    errorMessage: undefined,
+                    models: [],
+                });
+                const clusterInfo = await getManagedCluster(
+                    this.sessionProvider,
+                    this.subscriptionId,
+                    this.resourceGroupName,
+                    this.clusterName,
+                );
+
+                if (failed(clusterInfo)) {
+                    vscode.window.showErrorMessage(`Error getting managed cluster info: ${clusterInfo.error}`);
+                    return;
+                }
+
+                await this.installKaitoRoleAssignments(
+                    clusterInfo.result.nodeResourceGroup!,
+                    this.subscriptionId,
+                    this.resourceGroupName,
+                    this.clusterName,
+                );
+
+                const aksOidcIssuerUrl = clusterInfo.result.oidcIssuerProfile?.issuerURL;
+                if (!aksOidcIssuerUrl) {
+                    vscode.window.showErrorMessage(`Error getting aks oidc issuer url`);
+                    return;
+                }
+                await this.installKaitoFederatedCredentials(
+                    clusterInfo.result.nodeResourceGroup!,
+                    this.clusterName,
+                    aksOidcIssuerUrl,
+                );
+            });
+        } catch (ex) {
+            vscode.window.showErrorMessage(
+                `Error installing Kaito Federated Credentials and role Assignments: ${getErrorMessage(ex)}`,
+            );
+        }
+    }
+    private async installKaitoRoleAssignments(
+        mcResourceGroup: string,
+        subscriptionId: string,
+        resourceGroupName: string,
+        clusterName: string,
+    ) {
+        // get principal id of managed service identity
+        const identityName = `ai-toolchain-operator-${clusterName}`;
+        const identityResult = await getIdentity(this.managedServiceIdentityClient, mcResourceGroup, identityName);
+
+        if (failed(identityResult)) {
+            vscode.window.showErrorMessage(`Error getting identity: ${identityResult.error}`);
+            return;
+        }
+
+        const roleAssignment = await createRoleAssignment(
+            this.authorizationClient,
+            subscriptionId,
+            identityResult.result.principalId!,
+            "b24988ac-6180-42a0-ab88-20f7382dd24c", // contributor role id
+            `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}`,
+        );
+
+        if (failed(roleAssignment)) {
+            vscode.window.showErrorMessage(
+                `Error installing Kaito Federated Credentials and role Assignments: ${roleAssignment.error}`,
+            );
+            return;
+        }
+    }
+
+    private async installKaitoFederatedCredentials(
+        nodeResourceGroup: string,
+        clusterName: string,
+        aksOidcIssuerUrl: string,
+    ) {
+        const result = await createFederatedCredential(
+            this.managedServiceIdentityClient,
+            nodeResourceGroup,
+            "kaito-federated-credential",
+            `ai-toolchain-operator-${clusterName}`,
+            aksOidcIssuerUrl,
+            'system:serviceaccount:"kube-system:kaito-gpu-provisioner"',
+            "api://AzureADTokenExchange",
+        );
+
+        if (failed(result)) {
+            vscode.window.showErrorMessage(`Error creating federated credentials: ${result.error}`);
+            return;
         }
     }
 }

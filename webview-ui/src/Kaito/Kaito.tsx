@@ -46,9 +46,17 @@ export function Kaito(initialState: InitialState) {
                     {state.kaitoInstallStatus === ProgressEventType.NotStarted && (
                         <VSCodeButton onClick={onClickKaitoInstall}>Install</VSCodeButton>
                     )}
-                    {state.kaitoInstallStatus === ProgressEventType.InProgress && (
-                        <p className={styles.installingMessage}>Installing KAITO, this may take a few minutes...</p>
-                    )}
+                    {state.kaitoInstallStatus === ProgressEventType.InProgress &&
+                        state.operationDescription.includes("Installing Kaito") && (
+                            <p className={styles.installingMessage}>Installing KAITO, this may take a few minutes...</p>
+                        )}
+                    {state.kaitoInstallStatus === ProgressEventType.InProgress &&
+                        state.operationDescription.includes("Kaito Federated Credentials and role Assignments") && (
+                            <p className={styles.installingMessage}>
+                                Enabling Role assignments and Federated Credentails for KAITO, this may take a few
+                                minutes...
+                            </p>
+                        )}
                     {state.kaitoInstallStatus === ProgressEventType.Success && state.models.length > 0 && (
                         // <KaitoFamilyModelInput modelDetails={state.models} />
                         <p>KAITO is installed</p>

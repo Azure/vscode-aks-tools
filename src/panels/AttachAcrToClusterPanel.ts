@@ -1,8 +1,18 @@
+import { RoleAssignment } from "@azure/arm-authorization";
 import { Uri, window } from "vscode";
-import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { getAuthorizationManagementClient } from "../commands/utils/arm";
+import { acrResourceType, clusterResourceType, getResources } from "../commands/utils/azureResources";
+import { getManagedCluster } from "../commands/utils/clusters";
+import { Errorable, failed, getErrorMessage } from "../commands/utils/errorable";
+import {
+    createRoleAssignment,
+    deleteRoleAssignment,
+    getPrincipalRoleAssignmentsForAcr,
+    getScopeForAcr,
+} from "../commands/utils/roleAssignments";
+import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
+import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     AcrKey,
     ClusterKey,
@@ -14,18 +24,8 @@ import {
     ToWebViewMsgDef,
     acrPullRoleDefinitionName,
 } from "../webview-contract/webviewDefinitions/attachAcrToCluster";
-import { Errorable, failed, getErrorMessage } from "../commands/utils/errorable";
-import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
-import { acrResourceType, clusterResourceType, getResources } from "../commands/utils/azureResources";
-import { getAuthorizationManagementClient } from "../commands/utils/arm";
-import { RoleAssignment } from "@azure/arm-authorization";
-import {
-    createRoleAssignment,
-    deleteRoleAssignment,
-    getPrincipalRoleAssignmentsForAcr,
-    getScopeForAcr,
-} from "../commands/utils/roleAssignments";
-import { getManagedCluster } from "../commands/utils/clusters";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { BasePanel, PanelDataProvider } from "./BasePanel";
 
 export class AttachAcrToClusterPanel extends BasePanel<"attachAcrToCluster"> {
     constructor(extensionUri: Uri) {
@@ -179,8 +179,8 @@ export class AttachAcrToClusterDataProvider implements PanelDataProvider<"attach
             acrKey.subscriptionId,
             principalId.result,
             acrPullRoleDefinitionName,
-            "ServicePrincipal",
             scope,
+            "ServicePrincipal",
         );
 
         if (failed(roleAssignment)) {
