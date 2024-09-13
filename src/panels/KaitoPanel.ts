@@ -154,6 +154,12 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             return this.featureClient.features.register("Microsoft.ContainerService", "AIToolchainOperatorPreview", {});
         });
 
+        // ToDo: Registering to Registered Transition API call
+        // "get" in here: with whats going on and then loop back for 5 mins.
+        // post 5 mins, check if it is registered or not.
+        // if not registered, then show error message.
+        // For 5 mins :  check if it is registered or not, if not we bail and ask user to check again..
+        // this.featureClient.features.get("Microsoft.ContainerService", "AIToolchainOperatorPreview");
         if (featureRegistrationPoller.properties?.state !== "Registered") {
             webview.postKaitoInstallProgressUpdate({
                 operationDescription: "Installing Kaito",
