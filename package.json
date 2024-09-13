@@ -403,10 +403,6 @@
                     "group": "9@3"
                 },
                 {
-                    "command": "aks.aksKaito",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
-                },
-                {
                     "submenu": "aks.kaitoInstallSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"

@@ -29,6 +29,9 @@ import {
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 
+const MAX_RETRY = 3;
+let RETRY_COUNT = 0;
+
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kaito", {
@@ -140,21 +143,23 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             return;
         }
         // Register feature
-        const subscriptionFeatureRegistrationType = {
-            properties: {},
-        };
-        const options = {
-            subscriptionFeatureRegistrationType,
-        };
+        // const subscriptionFeatureRegistrationType = {
+        //     properties: {},
+        // };
+        // const options = {
+        //     subscriptionFeatureRegistrationType,
+        // };
 
         const featureRegistrationPoller = await longRunning(`Registering the AIToolchainOperator.`, () => {
-            return this.featureClient.subscriptionFeatureRegistrations.createOrUpdate(
-                "Microsoft.ContainerService",
-                "AIToolchainOperatorPreview",
-                options,
-            );
+            return this.featureClient.features.register("Microsoft.ContainerService", "AIToolchainOperatorPreview", {});
         });
 
+        // ToDo: Registering to Registered Transition API call
+        // "get" in here: with whats going on and then loop back for 5 mins.
+        // post 5 mins, check if it is registered or not.
+        // if not registered, then show error message.
+        // For 5 mins :  check if it is registered or not, if not we bail and ask user to check again..
+        // this.featureClient.features.get("Microsoft.ContainerService", "AIToolchainOperatorPreview");
         if (featureRegistrationPoller.properties?.state !== "Registered") {
             webview.postKaitoInstallProgressUpdate({
                 operationDescription: "Installing Kaito",
@@ -215,7 +220,25 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             const errorMessage = isInvalidTemplateDeploymentError(ex)
                 ? getInvalidTemplateErrorMessage(ex)
                 : getErrorMessage(ex);
-            vscode.window.showErrorMessage(`Error installing Kaito addon for ${this.clusterName}: ${errorMessage}`);
+
+            // Retry the operation
+            if (RETRY_COUNT < MAX_RETRY) {
+                RETRY_COUNT++;
+                const answer = await vscode.window.showErrorMessage(
+                    `Error installing Kaito addon for ${this.clusterName}: ${errorMessage}`,
+                    { modal: true },
+                    "Retry",
+                );
+                // Here the retry logic exist
+                if (answer === "Retry") {
+                    this.handleKaitoInstallation(webview);
+                }
+            }
+
+            if (RETRY_COUNT >= MAX_RETRY) {
+                vscode.window.showErrorMessage(`Error installing Kaito addon for ${this.clusterName}: ${errorMessage}`);
+            }
+
             webview.postKaitoInstallProgressUpdate({
                 operationDescription: "Installing Kaito failed",
                 event: 3,
