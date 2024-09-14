@@ -142,17 +142,52 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             );
             return;
         }
-        // Register feature
-        // const subscriptionFeatureRegistrationType = {
-        //     properties: {},
-        // };
-        // const options = {
-        //     subscriptionFeatureRegistrationType,
-        // };
 
-        const featureRegistrationPoller = await longRunning(`Registering the AIToolchainOperator.`, () => {
-            return this.featureClient.features.register("Microsoft.ContainerService", "AIToolchainOperatorPreview", {});
-        });
+        // Get the feature registration state
+        const getFeatureClientRegisterState = await longRunning(
+            `Getting the AIToolchainOperator registration state.`,
+            () => {
+                return this.featureClient.features.get("Microsoft.ContainerService", "AIToolchainOperatorPreview");
+            },
+        );
+
+        if (getFeatureClientRegisterState.properties?.state !== "Registered") {
+            // Register the feature
+            const featureRegistrationPoller = await longRunning(`Registering the AIToolchainOperator.`, () => {
+                return this.featureClient.features.register(
+                    "Microsoft.ContainerService",
+                    "AIToolchainOperatorPreview",
+                    {},
+                );
+            });
+
+            if (featureRegistrationPoller.properties?.state !== "Registered") {
+                //Let's start delay for 5 mins
+                await longRunning(`Waiting for the AIToolchainOperator registration to complete.`, async () => {
+                    await new Promise((resolve) => setTimeout(resolve, 200000));
+                });
+                // Get the feature registration state
+                const getFeatureClientRegisterState = await longRunning(
+                    `Getting the AIToolchainOperator registration state.`,
+                    () => {
+                        return this.featureClient.features.get(
+                            "Microsoft.ContainerService",
+                            "AIToolchainOperatorPreview",
+                        );
+                    },
+                );
+
+                if (getFeatureClientRegisterState.properties?.state !== "Registered") {
+                    webview.postKaitoInstallProgressUpdate({
+                        operationDescription: "Installing Kaito",
+                        event: 3,
+                        errorMessage: "Failed to register feature",
+                        models: [],
+                    });
+                    return;
+                }
+            }
+        }
 
         // ToDo: Registering to Registered Transition API call
         // "get" in here: with whats going on and then loop back for 5 mins.
@@ -160,15 +195,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         // if not registered, then show error message.
         // For 5 mins :  check if it is registered or not, if not we bail and ask user to check again..
         // this.featureClient.features.get("Microsoft.ContainerService", "AIToolchainOperatorPreview");
-        if (featureRegistrationPoller.properties?.state !== "Registered") {
-            webview.postKaitoInstallProgressUpdate({
-                operationDescription: "Installing Kaito",
-                event: 3,
-                errorMessage: "Failed to register feature",
-                models: [],
-            });
-            return;
-        }
 
         // Get current json
         const currentJson = await longRunning(`Get current cluster information.`, () => {
