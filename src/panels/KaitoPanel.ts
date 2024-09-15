@@ -189,13 +189,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             }
         }
 
-        // ToDo: Registering to Registered Transition API call
-        // "get" in here: with whats going on and then loop back for 5 mins.
-        // post 5 mins, check if it is registered or not.
-        // if not registered, then show error message.
-        // For 5 mins :  check if it is registered or not, if not we bail and ask user to check again..
-        // this.featureClient.features.get("Microsoft.ContainerService", "AIToolchainOperatorPreview");
-
         // Get current json
         const currentJson = await longRunning(`Get current cluster information.`, () => {
             return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
