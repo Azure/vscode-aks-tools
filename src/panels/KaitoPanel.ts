@@ -162,7 +162,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             });
 
             if (featureRegistrationPoller.properties?.state !== "Registered") {
-                //Let's start delay for 5 mins
+                //Let's start delay for 3 mins
                 await longRunning(`Waiting for the AIToolchainOperator registration to complete.`, async () => {
                     await new Promise((resolve) => setTimeout(resolve, 200000));
                 });
