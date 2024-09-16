@@ -5,6 +5,7 @@ import { ManagedServiceIdentityClient } from "@azure/arm-msi";
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import kaitoSupporterModel from "../../resources/kaitollmconfig/kaitollmconfig.json";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import {
@@ -17,6 +18,7 @@ import {
 import { getManagedCluster } from "../commands/utils/clusters";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
+import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { createFederatedCredential, getIdentity } from "../commands/utils/managedServiceIdentity";
 import { createRoleAssignment } from "../commands/utils/roleAssignments";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -56,6 +58,8 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         readonly armId: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly filterKaitoPodNames: string[],
+        readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+        readonly kubeConfigFilePath: string,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -219,10 +223,10 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             poller.onProgress((state) => {
                 if (state.status === "succeeded") {
                     webview.postKaitoInstallProgressUpdate({
-                        operationDescription: "Installing Kaito succeeded",
-                        event: 4,
+                        operationDescription: "Kaito Federated Credentials and role Assignments",
+                        event: 1,
                         errorMessage: undefined,
-                        models: listKaitoSupportedModels(),
+                        models: [],
                     });
                 } else if (state.status === "failed") {
                     webview.postKaitoInstallProgressUpdate({
@@ -268,12 +272,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         // install Kaito Federated Credentials and role Assignments
         try {
             await longRunning(`Installing Kaito Federated Credentials and role Assignments.`, async () => {
-                webview.postKaitoInstallProgressUpdate({
-                    operationDescription: "Kaito Federated Credentials and role Assignments",
-                    event: 1,
-                    errorMessage: undefined,
-                    models: [],
-                });
                 const clusterInfo = await getManagedCluster(
                     this.sessionProvider,
                     this.subscriptionId,
@@ -303,6 +301,22 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                     this.clusterName,
                     aksOidcIssuerUrl,
                 );
+
+                //kubectl rollout restart deployment kaito-gpu-provisioner -n kube-system
+                const command = `rollout restart deployment kaito-gpu-provisioner -n kube-system`;
+                const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+                if (failed(kubectlresult)) {
+                    vscode.window.showErrorMessage(`Error restarting kaito-gpu-provisioner: ${kubectlresult.error}`);
+                    return;
+                }
+
+                //kaito installation succeeded
+                webview.postKaitoInstallProgressUpdate({
+                    operationDescription: "Installing Kaito succeeded",
+                    event: 4,
+                    errorMessage: undefined,
+                    models: listKaitoSupportedModels(),
+                });
             });
         } catch (ex) {
             vscode.window.showErrorMessage(
@@ -310,6 +324,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             );
         }
     }
+
     private async installKaitoRoleAssignments(
         mcResourceGroup: string,
         subscriptionId: string,
