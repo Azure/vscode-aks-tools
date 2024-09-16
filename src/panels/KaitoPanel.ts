@@ -194,7 +194,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
         });
 
-        console.log(currentJson);
         // Install kaito enablement
         const managedClusterSpec: ManagedCluster = {
             location: currentJson.location!,
@@ -353,7 +352,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             "kaito-federated-credential",
             `ai-toolchain-operator-${clusterName}`,
             aksOidcIssuerUrl,
-            'system:serviceaccount:"kube-system:kaito-gpu-provisioner"',
+            `system:serviceaccount:"kube-system:kaito-gpu-provisioner"`,
             "api://AzureADTokenExchange",
         );
 

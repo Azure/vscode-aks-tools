@@ -1,4 +1,8 @@
-import { ManagedServiceIdentityClient, UserAssignedIdentitiesGetResponse } from "@azure/arm-msi";
+import {
+    FederatedIdentityCredential,
+    ManagedServiceIdentityClient,
+    UserAssignedIdentitiesGetResponse,
+} from "@azure/arm-msi";
 import { Errorable, getErrorMessage } from "./errorable";
 
 export async function getIdentity(
@@ -27,10 +31,10 @@ export async function createFederatedCredential(
     audience: string,
 ): Promise<Errorable<void>> {
     try {
-        const federatedCredential = {
-            issuer,
-            subject,
-            audience,
+        const federatedCredential: FederatedIdentityCredential = {
+            issuer: issuer,
+            subject: subject,
+            audiences: [audience],
         };
         await client.federatedIdentityCredentials.createOrUpdate(
             resourceGroupName,
