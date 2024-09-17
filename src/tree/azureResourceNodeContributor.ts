@@ -70,7 +70,7 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
     // For this reason, we make the newline the *first* component of the range, and ensure the value
     // which might be null (shortNames[0] in this case) is right at the end.
     // This means we end up with a blank line at the start of the output, but it's otherwise consistent.
-    const command = `get crd -o jsonpath="{range .items[*]}{\\"\\n\\"}{.metadata.name}{\\" \\"}{.spec.names.kind}{\\" \\"}{.spec.names.singular}{\\" \\"}{.spec.names.plural}{\\" \\"}{.spec.names.shortNames[0]}{end}"`;
+    const command = `get crd -o jsonpath="{range .items[*]}{\\"\\n\\"}{.metadata.name}{\\" \\"}{.spec.names.kind}{\\" \\"}{.spec.names.singular}{\\" \\"}{.spec.names.plural}{\\" \\"}{.spec.group}{\\" \\"}{.spec.names.shortNames[0]}{end}"`;
     const crdShellResult = await kubectl.invokeCommand(command);
     if (crdShellResult === undefined) {
         return { succeeded: false, error: `Failed to run kubectl command: ${command}` };
@@ -91,19 +91,52 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
         const kind = parts[1];
         const singularName = parts[2];
         const pluralName = parts[3];
-        const shortName = parts[4];
+        const groupURL = parts[4];
+        const shortName = parts[5];
         const abbreviation = shortName || metadataName;
         return {
             name: metadataName,
             displayName: singularName,
             pluralDisplayName: pluralName,
             manifestKind: kind,
+            group: groupURL,
             abbreviation,
         };
     });
 
-    // Filter the custom resources to only include Azure resources
-    const azureResources = customResources.filter((r) => r.name.includes("azure.com"));
+    const approvedGroups: Set<string> = new Set([
+        "servicebus.azure.com",
+        "insights.azure.com",
+        "compute.azure.com",
+        "cdn.azure.com",
+        "dbforpostgresql.azure.com",
+        "keyvault.azure.com",
+        "eventgrid.azure.com",
+        "cache.azure.com",
+        "containerinstance.azure.com",
+        "eventhub.azure.com",
+        "sql.azure.com",
+        "network.azure.com",
+        "operationalinsights.azure.com",
+        "resources.azure.com",
+        "managedidentity.azure.com",
+        "storage.azure.com",
+        "machinelearningservices.azure.com",
+        "signalrservice.azure.com",
+        "batch.azure.com",
+        "dbformysql.azure.com",
+        "subscription.azure.com",
+        "appconfiguration.azure.com",
+        "containerservice.azure.com",
+        "dbformariadb.azure.com",
+        "web.azure.com",
+        "authorization.azure.com",
+        "synapse.azure.com",
+        "containerregistry.azure.com",
+        "documentdb.azure.com",
+    ]);
 
+    // Filter the custom resources to only include Azure resources
+    const azureResources = customResources.filter((r) => approvedGroups.has(r.group));
     return { succeeded: true, result: azureResources };
 }
