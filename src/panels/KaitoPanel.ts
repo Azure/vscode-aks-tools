@@ -74,7 +74,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         this.filterKaitoPodNames = filterKaitoPodNames;
     }
     getTitle(): string {
-        return `KAITO`;
+        return `Install KAITO`;
     }
     getInitialState(): InitialState {
         return {

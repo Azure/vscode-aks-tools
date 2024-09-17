@@ -302,7 +302,7 @@
             },
             {
                 "command": "aks.aksKaitoCreateCRD",
-                "title": "Create Kaito CRD"
+                "title": "Create Kaito Workspace"
             },
             {
                 "command": "aks.aksKaito",
@@ -423,10 +423,6 @@
                 }
             ],
             "aks.kaitoInstallSubMenu": [
-                {
-                    "command": "aks.aksKaitoGenerateYaml",
-                    "group": "navigation"
-                },
                 {
                     "command": "aks.aksKaito",
                     "group": "navigation"

@@ -46,7 +46,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         this.armId = armId;
     }
     getTitle(): string {
-        return `KAITO`;
+        return `Create KAITO Workspace`;
     }
     getInitialState(): InitialState {
         return {
@@ -60,13 +60,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             generateCRDRequest: true,
         };
     }
-    // getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-    //     return {
-    //         generateCRDRequest: () => {
-    //             this.handleGenerateCRDRequest(webview);
-    //         },
-    //     };
-    // }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             generateCRDRequest: (params) => {
@@ -74,31 +67,13 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             },
         };
     }
-    // private async handleGenerateCRDRequest(webview: MessageSink<ToWebViewMsgDef>) {
-    //     // Generate CRD logic here
-    //     const crdText = `Generated the CRD bro...`;
-    //     vscode.window.showInformationMessage(crdText);
 
-    //     webview.postGenerateCRDResponse({
-    //         crdText: crdText,
-    //     });
-    // }
     private async handleGenerateCRDRequest(webview: MessageSink<ToWebViewMsgDef>, yaml: string) {
-        // Generate CRD logic here
-
         const doc = await vscode.workspace.openTextDocument({
             content: yaml,
             language: "yaml",
         });
-
         vscode.window.showTextDocument(doc);
         void webview;
-
-        // const crdText = `Generated CRD for model: ${model}`;
-        // vscode.window.showInformationMessage(crdText);
-
-        // webview.postGenerateCRDResponse({
-        //     crdText: crdText,
-        // });
     }
 }
