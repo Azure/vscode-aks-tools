@@ -140,6 +140,20 @@ function getMessageContext<TContent extends ContentId>(
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }
 
+                    // interface CreateCRDParameters {
+                    //     crdtext: string;
+                    // }
+                    // // Type Guard to check if the parameters are of type CreateCRDParameters
+                    // function isCreateCRDParameters(params: unknown): params is CreateCRDParameters {
+                    //     return (
+                    //         typeof params === "object" &&
+                    //         params !== null &&
+                    //         typeof (params as CreateCRDParameters).crdtext === "string"
+                    //     );
+                    // }
+                    // if (isCreateCRDParameters(message.parameters)) {
+                    //     vscode.window.showInformationMessage(message.parameters.crdtext);
+                    // }
                     const telemetryData = getTelemetryData(contentId, telemetryDefinition, message);
                     if (telemetryData !== null) {
                         reporter.sendTelemetryEvent("command", telemetryData);

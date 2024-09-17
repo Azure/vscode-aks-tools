@@ -17,6 +17,7 @@ import {
 } from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
+// import { IActionContext } from "@microsoft/vscode-azext-utils";
 
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
@@ -96,11 +97,17 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
 
     private async handleGenerateWorkspaceRequest(webview: MessageSink<ToWebViewMsgDef>) {
         // after generate workspace CRD, deploy it.
-        webview.postGetWorkspaceResponse({
-            workspace: {
-                workspace: "workspace CRD yaml",
-            },
-        });
+        // webview.postGetWorkspaceResponse({
+        //     workspace: {
+        //         workspace: "workspace CRD yaml",
+        //     },
+        // });
+        // vscode.window.showInformationMessage("Clicked");
+
+        // This should just open the create crd panel...
+        // vscode.commands.executeCommand("aks.aksKaitoCreateCRD", context, this);
+
+        void webview;
     }
     private async handleLLMModelsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         // get supported llm models from static config

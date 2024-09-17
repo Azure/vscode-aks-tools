@@ -1,0 +1,163 @@
+body {
+    color: var(--vscode-editor-foreground, #fff);
+}
+
+.mainDiv {
+    margin-bottom: 2rem;
+}
+
+.modelsHeader {
+    font-size: 26px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.subHeader {
+    width: 100vw;
+    max-width: 41rem;
+    margin-top: 0.9rem;
+    color: var(--vscode-editor-foreground, #fff);
+    opacity: 0.95;
+    font-size: 0.8125rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    word-wrap: break-word;
+    margin-bottom: 0.6rem;
+}
+
+.dropdown {
+    margin: 0;
+}
+
+.dropdownButton {
+    color: var(--vscode-editor-foreground, #fff);
+    font-size: 1.1rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    cursor: pointer;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    font-family: var(--vscode-font-family);
+    width: 100%;
+    padding: 0.5rem 0 0.5rem 0.5rem;
+    transition: background-color 0.08s;
+    border-radius: 5px;
+}
+
+.dropdownButton:hover {
+    background-color: rgba(231, 188, 188, 0.05);
+}
+
+.arrow {
+    margin-right: 0.4rem;
+    transition: transform 0.1s;
+    font-weight: 500;
+    display: inline-block;
+    padding-top: 0.35rem;
+}
+
+.dropdownContent {
+    margin-top: 0.3rem;
+    margin-left: 23px;
+    margin-bottom: 0.2rem;
+}
+
+.gridContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 1rem;
+}
+
+.gridItem {
+    padding: 0.7rem 1.2rem;
+    border-radius: 6px;
+    border: 1px solid var(--Dark-Base-05, #868686);
+    text-align: left;
+    transition: background-color 0.08s;
+    color: var(--vscode-editor-foreground, #fff);
+}
+
+.gridItem:hover {
+    background: var(--editor-selectionHighlightBackground, rgba(173, 214, 255, 0.15));
+    cursor: pointer;
+}
+
+.gridItem.selected {
+    border: 1px solid var(--activityBar-activeBorder, #0078d4);
+    background: var(--editor-selectionHighlightBackground, rgba(173, 214, 255, 0.15));
+}
+
+.modelName {
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+
+.modelDetails {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.1rem;
+    margin-top: 0.5rem;
+    color: var(--vscode-editor-foreground, #fff);
+}
+
+.gray {
+    opacity: 0.75;
+}
+
+.link {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    text-decoration-line: underline;
+    color: var(--vscode-textLink-foreground, #0078d4);
+}
+
+.selectedModelBox {
+    position: fixed;
+    top: 10%;
+    right: 1%;
+    width: 30%;
+    height: 80%;
+    background-color: #f0f0f0;
+    border-left: 1px solid #ccc;
+    padding: 1rem;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+.generateButton {
+    color: var(--button-foreground, #fff);
+    border-radius: 2px;
+    border: 1px solid var(--vscode-button-border, rgba(255, 255, 255, 0.07));
+    background: var(--vscode-button-background, #0078d4);
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.4rem 0.2rem 0.4rem;
+    font-size: 11px;
+    font-weight: 400;
+    transition:
+        background-color 0.08s,
+        border 0.08s;
+}
+
+.generateButton:hover {
+    cursor: pointer;
+    background: var(
+        --vscode-selection-background,
+        var(--vscode-list-activeSelectionBackground, var(--vscode-button-background, #0078d4))
+    );
+    border: 1px solid var(--vscode-focusBorder, var(--vscode-button-border, #000));
+}

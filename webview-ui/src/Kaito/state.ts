@@ -45,3 +45,7 @@ export const vscode = getWebviewMessageContext<"kaito">({
     generateWorkspaceRequest: null,
     deployWorkspace: null,
 });
+
+export const vscode2 = getWebviewMessageContext<"kaitoModels">({
+    generateCRDRequest: null,
+});

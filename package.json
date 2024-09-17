@@ -301,6 +301,10 @@
                 "title": "Create Kaito Workspace"
             },
             {
+                "command": "aks.aksKaitoCreateCRD",
+                "title": "Create Kaito CRD"
+            },
+            {
                 "command": "aks.aksKaito",
                 "title": "Install Kaito"
             }
@@ -429,6 +433,10 @@
                 },
                 {
                     "command": "aks.aksKaito",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKaitoCreateCRD",
                     "group": "navigation"
                 }
             ],

@@ -1,16 +1,10 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaito";
-import { Kaito } from "../Kaito/Kaito";
+import { ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaito";
+import { KaitoModels } from "../Kaito/KaitoModels";
 import { stateUpdater } from "../Kaito/state";
 import { Scenario } from "../utilities/manualTest";
 
-export function getKaitoScenarios() {
-    const initialState: InitialState = {
-        clusterName: "MyCluster",
-        subscriptionId: "MySubscriptionId",
-        resourceGroupName: "MyResourceGroup",
-    };
-
+export function getKaitoModelScenarios() {
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             installKaitoRequest: () => {
@@ -35,12 +29,6 @@ export function getKaitoScenarios() {
     }
 
     return [
-        Scenario.create(
-            "kaito",
-            "Installation Page",
-            () => <Kaito {...initialState} />,
-            getMessageHandler,
-            stateUpdater.vscodeMessageHandler,
-        ),
+        Scenario.create("kaito", "Models", () => <KaitoModels />, getMessageHandler, stateUpdater.vscodeMessageHandler),
     ];
 }

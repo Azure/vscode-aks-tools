@@ -21,6 +21,7 @@ import aksEraserTool from "./commands/aksEraserTool/erasertool";
 import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
 import aksKaito from "./commands/aksKaito/aksKaito";
 import aksKaitoGenerateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
+import aksKaitoCreateCRD from "./commands/aksKaito/aksKaitoCreateCRD";
 import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
 import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
 import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
@@ -107,6 +108,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksRetinaCapture", aksRetinaCapture);
         registerCommandWithTelemetry("aks.aksKaito", aksKaito);
         registerCommandWithTelemetry("aks.aksKaitoGenerateYaml", aksKaitoGenerateYaml);
+        registerCommandWithTelemetry("aks.aksKaitoCreateCRD", aksKaitoCreateCRD);
 
         await registerAzureServiceNodes(context);
 
