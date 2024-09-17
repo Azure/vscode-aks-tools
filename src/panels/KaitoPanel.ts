@@ -344,15 +344,15 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             this.authorizationClient,
             subscriptionId,
             identityResult.result.principalId!,
-            "b24988ac-6180-42a0-ab88-20f7382dd24c", // contributor role id
+            "b24988ac-6180-42a0-ab88-20f7382dd24c", // contributor role id: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#general
             `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}`,
         );
 
         if (failed(roleAssignment)) {
-            vscode.window.showErrorMessage(
+            vscode.window.showWarningMessage(
                 `Error installing Kaito Federated Credentials and role Assignments: ${roleAssignment.error}`,
             );
-            return;
+            // return;
         }
     }
 
@@ -364,7 +364,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         const result = await createFederatedCredential(
             this.managedServiceIdentityClient,
             nodeResourceGroup,
-            "kaito-federated-credential",
+            "kaito-federated-identity", // https://learn.microsoft.com/en-us/azure/aks/ai-toolchain-operator#establish-a-federated-identity-credential
             `ai-toolchain-operator-${clusterName}`,
             aksOidcIssuerUrl,
             `system:serviceaccount:"kube-system:kaito-gpu-provisioner"`,
