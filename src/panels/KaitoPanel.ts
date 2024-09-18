@@ -51,7 +51,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     private readonly containerServiceClient: ContainerServiceClient;
     private readonly authorizationClient: AuthorizationManagementClient;
     private readonly managedServiceIdentityClient: ManagedServiceIdentityClient;
-
     public constructor(
         readonly clusterName: string,
         readonly subscriptionId: string,
@@ -61,6 +60,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         readonly filterKaitoPodNames: string[],
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
+        readonly newtarget: unknown,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -72,6 +72,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         this.authorizationClient = getAuthorizationManagementClient(sessionProvider, this.subscriptionId);
         this.managedServiceIdentityClient = getManagedServiceIdentityClient(sessionProvider, this.subscriptionId);
         this.filterKaitoPodNames = filterKaitoPodNames;
+        this.newtarget = newtarget;
     }
     getTitle(): string {
         return `Install KAITO`;
@@ -118,17 +119,13 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     }
 
     private async handleGenerateWorkspaceRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        // after generate workspace CRD, deploy it.
         // webview.postGetWorkspaceResponse({
         //     workspace: {
         //         workspace: "workspace CRD yaml",
         //     },
         // });
-        // vscode.window.showInformationMessage("Clicked");
-
         // This should just open the create crd panel...
-        // vscode.commands.executeCommand("aks.aksKaitoCreateCRD", context, this);
-
+        vscode.commands.executeCommand("aks.aksKaitoCreateCRD", this.newtarget);
         void webview;
     }
     private async handleLLMModelsRequest(webview: MessageSink<ToWebViewMsgDef>) {

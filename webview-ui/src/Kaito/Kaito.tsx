@@ -13,9 +13,9 @@ export function Kaito(initialState: InitialState) {
         vscode.postInstallKaitoRequest();
     }
 
-    // function onClickGenerateWorkspace() {
-    //     vscode.postGenerateWorkspaceRequest();
-    // }
+    function onClickGenerateWorkspace() {
+        vscode.postGenerateWorkspaceRequest();
+    }
 
     return (
         <>
@@ -84,25 +84,18 @@ export function Kaito(initialState: InitialState) {
                         )}
                     {state.kaitoInstallStatus === ProgressEventType.Success && state.models.length > 0 && (
                         // <KaitoFamilyModelInput modelDetails={state.models} />
-                        <>
-                            <p>
-                                KAITO is installed.
-                                <br />
-                                Now, you can right click on your cluster and select &quot;Create Kaito Workspace&quot;
-                                to create a CRD.
-                            </p>
-                            {/* <VSCodeButton onClick={onClickGenerateWorkspace}>Generate Workspace</VSCodeButton> */}
-                        </>
+                        <div className={styles.postInstall}>
+                            <p>KAITO is installed!</p>
+                            <p className={styles.thin}>You can now create a workspace by clicking the button below.</p>
+                            <div>
+                                {" "}
+                                <VSCodeButton className={styles.generateButton} onClick={onClickGenerateWorkspace}>
+                                    Generate Workspace
+                                </VSCodeButton>
+                            </div>
+                        </div>
                     )}
                 </div>
-                <p>
-                    KAITO is installed!
-                    <br />
-                    <br />
-                    You can now create a workspace by right-clicking on your cluster and selecting &quot;Create Kaito
-                    Workspace&quot;
-                </p>
-                <div className={styles.spacer}></div>
             </div>
         </>
     );
