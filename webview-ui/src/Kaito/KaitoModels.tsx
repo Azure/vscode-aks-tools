@@ -97,7 +97,7 @@ inference:
                                     fillRule="evenodd"
                                     clipRule="evenodd"
                                     d="M7.97612 10.0719L12.3334 5.71461L12.9521 6.33333L8.28548 11L7.66676 11L3.0001 6.33333L3.61882 5.71461L7.97612 10.0719Z"
-                                    fill="white"
+                                    className={styles.arrowPath}
                                 />
                             </svg>
                         </span>
