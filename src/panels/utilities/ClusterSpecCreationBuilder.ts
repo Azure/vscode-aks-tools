@@ -1,7 +1,7 @@
 import { Deployment } from "@azure/arm-resources";
 import { Preset } from "../../webview-contract/webviewDefinitions/createCluster";
-import devTestTemplate from "../templates/DevTestCreateCluster.json";
 import automaticTemplate from "../templates/AutomaticCreateCluster.json";
+import devTestTemplate from "../templates/DevTestCreateCluster.json";
 
 export type ClusterSpec = {
     location: string;
@@ -30,7 +30,41 @@ export class ClusterDeploymentBuilder {
         },
     };
 
-    public buildCommonParameters(clusterSpec: ClusterSpec, preset: Preset): ClusterDeploymentBuilder {
+    public buildCommonParameters(clusterSpec: ClusterSpec, preset: string): ClusterDeploymentBuilder {
+        return preset === "automatic"
+            ? this.buildParametersForAutomatic(clusterSpec)
+            : this.buildParametersForDev(clusterSpec);
+    }
+
+    public buildParametersForAutomatic(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
+        this.deployment.properties.parameters = {
+            ...this.deployment.properties.parameters,
+            location: {
+                value: clusterSpec.location,
+            },
+            resourceName: {
+                value: clusterSpec.name,
+            },
+            apiVersion: {
+                value: deploymentApiVersionPreview,
+            },
+            clusterIdentity: {
+                value: {
+                    type: "SystemAssigned",
+                },
+            },
+            clusterSku: {
+                value: {
+                    name: "Automatic",
+                    tier: "Standard",
+                },
+            },
+        };
+
+        return this;
+    }
+
+    public buildParametersForDev(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
         this.deployment.properties.parameters = {
             ...this.deployment.properties.parameters,
             location: {
@@ -43,7 +77,7 @@ export class ClusterDeploymentBuilder {
                 value: generateDnsPrefix(clusterSpec.name),
             },
             apiVersion: {
-                value: preset == "automatic" ? deploymentApiVersionPreview : deploymentApiVersion,
+                value: deploymentApiVersion,
             },
             nodeResourceGroup: {
                 value: generateNodeResourceGroup(clusterSpec.resourceGroupName, clusterSpec.name, clusterSpec.location),

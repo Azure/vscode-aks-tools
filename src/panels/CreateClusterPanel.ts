@@ -1,12 +1,17 @@
 import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
+import { FeatureClient } from "@azure/arm-features";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import { Uri, window } from "vscode";
 import { getEnvironment } from "../auth/azureAuth";
 import { ReadyAzureSessionProvider } from "../auth/types";
-import { getAksClient, getResourceManagementClient } from "../commands/utils/arm";
+import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getPortalResourceUrl } from "../commands/utils/env";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
+import {
+    createMultipleFeatureRegistrations,
+    MultipleFeatureRegistration,
+} from "../commands/utils/featureRegistrations";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
@@ -34,6 +39,7 @@ export class CreateClusterPanel extends BasePanel<"createCluster"> {
 export class CreateClusterDataProvider implements PanelDataProvider<"createCluster"> {
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly containerServiceClient: ContainerServiceClient;
+    private readonly featureClient: FeatureClient;
 
     public constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
@@ -43,6 +49,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     ) {
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
+        this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
     }
 
     getTitle(): string {
@@ -150,6 +157,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             webview,
             this.containerServiceClient,
             this.resourceManagementClient,
+            this.featureClient,
         );
 
         this.refreshTree();
@@ -200,6 +208,7 @@ async function createCluster(
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
+    featureClient: FeatureClient,
 ) {
     const operationDescription = `Creating cluster ${name}`;
     webview.postProgressUpdate({
@@ -257,6 +266,9 @@ async function createCluster(
         .getDeployment();
 
     const environment = getEnvironment();
+
+    // feature registration
+    await doFeatureRegistration(preset, featureClient);
 
     try {
         const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
@@ -320,6 +332,44 @@ async function createCluster(
             deploymentPortalUrl: null,
             createdCluster: null,
         });
+    }
+}
+
+async function doFeatureRegistration(preset: string, featureClient: FeatureClient) {
+    if (preset !== "automatic") {
+        return;
+    }
+    const features: MultipleFeatureRegistration[] = [
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "EnableAPIServerVnetIntegrationPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "NRGLockdownPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "SafeguardsPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "NodeAutoProvisioningPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "DisableSSHPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "AutomaticSKUPreview",
+        },
+    ];
+
+    try {
+        await createMultipleFeatureRegistrations(featureClient, features);
+    } catch (error) {
+        window.showErrorMessage(`${getErrorMessage(error)}`);
     }
 }
 
