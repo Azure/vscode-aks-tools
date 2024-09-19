@@ -283,7 +283,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
             .join(" ");
 
         const language = "java"; // So it doesn't attempt to autodetect the language
-        const command = `draft create --language ${language} --deployment-only --deploy-type ${args.deploymentSpecType} --app ${args.applicationName} ${variableArgs} --destination .${path.sep}${args.location} --skip-file-detection`;
+        const command = `draft create --language ${language} --deployment-only --deploy-type ${args.deploymentSpecType} ${variableArgs} --destination .${path.sep}${args.location} --skip-file-detection`;
 
         const execOptions: ShellOptions = {
             workingDir: this.workspaceFolder.uri.fsPath,

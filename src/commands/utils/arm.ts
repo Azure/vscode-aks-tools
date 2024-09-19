@@ -10,6 +10,7 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 import { ContainerRegistryManagementClient } from "@azure/arm-containerregistry";
 import { ContainerRegistryClient } from "@azure/container-registry";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
+import { FeatureClient } from "@azure/arm-features";
 
 export function getSubscriptionClient(sessionProvider: ReadyAzureSessionProvider): SubscriptionClient {
     return new SubscriptionClient(getCredential(sessionProvider), { endpoint: getArmEndpoint() });
@@ -21,6 +22,14 @@ export function getResourceManagementClient(
 ): ResourceManagementClient {
     return new ResourceManagementClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
+
+export function getFeatureClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): FeatureClient {
+    return new FeatureClient(getCredential(sessionProvider), subscriptionId);
+}
+
 
 export function getAksClient(
     sessionProvider: ReadyAzureSessionProvider,

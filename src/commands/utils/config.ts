@@ -52,7 +52,7 @@ export function getFilteredSubscriptions(): SubscriptionFilter[] {
             values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceFilter", []);
         }
         return values.map(asSubscriptionFilter).filter((v) => v !== null) as SubscriptionFilter[];
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -61,7 +61,7 @@ function asSubscriptionFilter(value: string): SubscriptionFilter | null {
     try {
         const parts = value.split("/");
         return { tenantId: parts[0], subscriptionId: parts[1] };
-    } catch (e) {
+    } catch {
         return null;
     }
 }

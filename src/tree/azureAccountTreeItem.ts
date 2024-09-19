@@ -16,6 +16,7 @@ import { getCredential, getEnvironment } from "../auth/azureAuth";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import { Subscription } from "@azure/arm-resources-subscriptions";
 import { AzureSessionProvider, ReadyAzureSessionProvider, isReady } from "../auth/types";
+import { TokenCredential } from "@azure/identity";
 
 export function createAzureAccountTreeItem(
     sessionProvider: AzureSessionProvider,
@@ -200,5 +201,17 @@ function getSubscriptionContext(
         userId: session.account.id,
         environment,
         isCustomCloud: environment.name === "AzureCustomCloud",
+        createCredentialsForScopes: async (scopes: string[]): Promise<TokenCredential> => {
+            const authSession = await sessionProvider.getAuthSession({ scopes });
+            if (failed(authSession)) {
+                throw new Error(`No Microsoft authentication session found: ${authSession.error}`);
+            }
+
+            return {
+                getToken: async () => {
+                    return { token: authSession.result.accessToken, expiresOnTimestamp: 0 };
+                },
+            };
+        }
     };
 }

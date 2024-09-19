@@ -76,7 +76,10 @@ export async function getDetectorListData(
     } catch (err) {
         // This would be unexpected even in the event of network failure, because the individual promises handle
         // their own errors.
-        return { succeeded: false, error: `Failed to retrieve detector data for ${categoryDetector.name}` };
+        return {
+            succeeded: false,
+            error: `Failed to retrieve detector data for ${categoryDetector.name}, with error ${err}`,
+        };
     }
 
     return combine(results);
@@ -95,7 +98,7 @@ export async function getDetectorInfo(
             clusterNode.name,
             "detectors",
             detectorName,
-            "2019-08-01",
+            "2024-05-01",
         );
 
         return { succeeded: true, result: <CategoryDetectorARMResponse>detectorInfo };
