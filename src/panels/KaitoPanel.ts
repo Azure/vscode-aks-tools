@@ -35,9 +35,6 @@ import { BasePanel, PanelDataProvider } from "./BasePanel";
 const MAX_RETRY = 3;
 let RETRY_COUNT = 0;
 
-const MAX_RETRY = 3;
-let RETRY_COUNT = 0;
-
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kaito", {
