@@ -403,10 +403,6 @@
                     "group": "9@3"
                 },
                 {
-                    "command": "aks.aksKaito",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
-                },
-                {
                     "submenu": "aks.kaitoInstallSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
@@ -590,6 +586,7 @@
         "@azure/arm-containerservice": "^21.1.0-beta.1",
         "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
+        "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-subscriptions": "^2.1.0",
         "@azure/arm-storage": "^18.3.0",
