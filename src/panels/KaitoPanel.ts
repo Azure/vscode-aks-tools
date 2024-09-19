@@ -35,6 +35,9 @@ import { BasePanel, PanelDataProvider } from "./BasePanel";
 const MAX_RETRY = 3;
 let RETRY_COUNT = 0;
 
+const MAX_RETRY = 3;
+let RETRY_COUNT = 0;
+
 export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kaito", {
@@ -143,14 +146,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
     }
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
-        // Check if Kaito pods already exist
-        if (this.filterKaitoPodNames.length > 0) {
-            vscode.window.showInformationMessage(
-                `Kaito pods already exist in the cluster ${this.clusterName}. Skipping installation.`,
-            );
-            return;
-        }
-
         // Get the feature registration state
         const getFeatureClientRegisterState = await longRunning(
             `Getting the AIToolchainOperator registration state.`,
@@ -371,7 +366,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             "kaito-federated-identity", // https://learn.microsoft.com/en-us/azure/aks/ai-toolchain-operator#establish-a-federated-identity-credential
             `ai-toolchain-operator-${clusterName}`,
             aksOidcIssuerUrl,
-            `system:serviceaccount:"kube-system:kaito-gpu-provisioner"`,
+            `system:serviceaccount:kube-system:kaito-gpu-provisioner`,
             "api://AzureADTokenExchange",
         );
 

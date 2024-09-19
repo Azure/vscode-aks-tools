@@ -18,12 +18,6 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         vscode.window.showErrorMessage(sessionProvider.error);
         return;
     }
-
-    if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
-        return;
-    }
-
     if (!cloudExplorer.available) {
         vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
         return;
