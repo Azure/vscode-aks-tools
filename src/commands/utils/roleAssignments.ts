@@ -3,10 +3,10 @@ import {
     RoleAssignment,
     RoleAssignmentCreateParameters,
 } from "@azure/arm-authorization";
-import { Errorable, failed, getErrorMessage } from "./errorable";
-import { listAll } from "./arm";
 import { v4 as uuidv4 } from "uuid";
+import { listAll } from "./arm";
 import { acrProvider, acrResourceName } from "./azureResources";
+import { Errorable, failed, getErrorMessage } from "./errorable";
 
 export function getPrincipalRoleAssignmentsForAcr(
     client: AuthorizationManagementClient,
@@ -36,8 +36,8 @@ export async function createRoleAssignment(
     subscriptionId: string,
     principalId: string,
     roleDefinitionName: string,
-    principalType: PrincipalType,
     scope: string,
+    principalType?: PrincipalType,
 ): Promise<Errorable<RoleAssignment>> {
     const newRoleAssignmentName = createRoleAssignmentName();
     const roleDefinitionId = `/subscriptions/${subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/${roleDefinitionName}`;
