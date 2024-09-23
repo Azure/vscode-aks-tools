@@ -35,6 +35,31 @@
             "metadata": {
                 "description": "The identity of the managed cluster, if configured."
             }
+        },
+        "disableLocalAccounts": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Enable or disable local accounts."
+            }
+        },
+        "upgradeChannel": {
+            "defaultValue": "stable",
+            "type": "string",
+            "metadata": {
+                "description": "Auto upgrade channel for a managed cluster."
+            }
+        },
+        "nodeOSUpgradeChannel": {
+            "defaultValue": "NodeImage",
+            "type": "string",
+            "metadata": {
+                "description": "Auto upgrade channel for node OS security."
+            }
+        },
+        "supportPlan": {
+            "type": "string",
+            "defaultValue": "KubernetesOfficial"
         }
     },
     "resources": [
@@ -53,7 +78,13 @@
                         "count": 3,
                         "osType": "Linux"
                     }
-                ]
+                ],
+                "autoUpgradeProfile": {
+                    "upgradeChannel": "[parameters('upgradeChannel')]",
+                    "nodeOSUpgradeChannel": "[parameters('nodeOSUpgradeChannel')]"
+                },
+                "disableLocalAccounts": "[parameters('disableLocalAccounts')]",
+                "supportPlan": "[parameters('supportPlan')]"
             },
             "identity": "[parameters('clusterIdentity')]"
         }

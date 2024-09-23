@@ -285,6 +285,10 @@
                 "title": "Run Kubectl Commands"
             },
             {
+                "command": "aks.aksCreateClusterFromCopilot",
+                "title": "Command to create AKS cluster from GitHub Copilot"
+            },                
+            {
                 "command": "aks.aksTCPDump",
                 "title": "Collect TCP Dumps"
             },
@@ -557,6 +561,10 @@
         "vscode.git",
         "ms-kubernetes-tools.vscode-kubernetes-tools"
     ],
+    "agentMetadata": {
+        "version": "2.0",
+        "getPluginsCommand": "aks.getAzureKubernetesServicePlugins"
+    },
     "devDependencies": {
         "@types/chai": "^4.3.19",
         "@types/decompress": "^4.2.7",
@@ -603,6 +611,7 @@
         "@microsoft/vscode-azext-utils": "^2.5.7",
         "@octokit/rest": "^21.0.2",
         "@vscode/extension-telemetry": "^0.9.7",
+        "copilot-for-azure-vscode-api": "^1.0.0-beta.20",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.0",
         "move-file": "^3.1.0",

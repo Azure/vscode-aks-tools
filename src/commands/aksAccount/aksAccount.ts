@@ -2,8 +2,9 @@ import { QuickPickItem, Uri, env, window } from "vscode";
 import { failed } from "../utils/errorable";
 import { SubscriptionFilter, getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
-import { SelectionType, getSubscriptions } from "../utils/subscriptions";
+import { DefinedSubscription, SelectionType, getSubscriptions } from "../utils/subscriptions";
 import { getReadySessionProvider, quickPickTenant } from "../../auth/azureAuth";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export async function signInToAzure(): Promise<void> {
     await getSessionProvider().signIn();
@@ -48,20 +49,11 @@ export async function selectSubscriptions(): Promise<void> {
         return;
     }
 
-    const allSubscriptions = await getSubscriptions(sessionProvider.result, SelectionType.All);
-    if (failed(allSubscriptions)) {
-        window.showErrorMessage(allSubscriptions.error);
-        return;
-    }
+    const allSubscriptions = await getAllSubscriptions(sessionProvider.result);
+    if (!allSubscriptions) return;
 
-    if (allSubscriptions.result.length === 0) {
-        const noSubscriptionsFound = "No subscriptions were found. Set up your account if you have yet to do so.";
-        const setupAccount = "Set up Account";
-        const response = await window.showInformationMessage(noSubscriptionsFound, setupAccount);
-        if (response === setupAccount) {
-            env.openExternal(Uri.parse("https://azure.microsoft.com/"));
-        }
-
+    if (allSubscriptions.length === 0) {
+        await handleNoSubscriptionsFound();
         return;
     }
 
@@ -78,7 +70,7 @@ export async function selectSubscriptions(): Promise<void> {
     );
     const subscriptionsInOtherTenants = filteredSubscriptions.filter((sub) => sub.tenantId !== session.result.tenantId);
 
-    const quickPickItems: SubscriptionQuickPickItem[] = allSubscriptions.result.map((sub) => {
+    const quickPickItems: SubscriptionQuickPickItem[] = allSubscriptions.map((sub) => {
         return {
             label: sub.displayName || "",
             description: sub.subscriptionId,
@@ -89,10 +81,13 @@ export async function selectSubscriptions(): Promise<void> {
             },
         };
     });
+    
+    // show picked items at the top
+    quickPickItems.sort((a, b) => (a.picked === b.picked ? 0 : a.picked ? -1 : 1));
 
     const selectedItems = await window.showQuickPick(quickPickItems, {
         canPickMany: true,
-        placeHolder: "Select Subscriptions",
+        placeHolder: "Select Subscriptions"
     });
 
     if (!selectedItems) {
@@ -105,4 +100,60 @@ export async function selectSubscriptions(): Promise<void> {
     ];
 
     await setFilteredSubscriptions(newFilteredSubscriptions);
+}
+
+export async function selectSubscription(): Promise<string | undefined> {
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
+    const allSubscriptions = await getAllSubscriptions(sessionProvider.result);
+    if (!allSubscriptions) return;
+
+    if (allSubscriptions.length === 0) {
+        await handleNoSubscriptionsFound();
+        return;
+    }
+
+    const quickPickItems: SubscriptionQuickPickItem[] = allSubscriptions.map((sub) => {
+        return {
+            label: sub.displayName || "",
+            description: sub.subscriptionId,
+            subscription: {
+                subscriptionId: sub.subscriptionId || "",
+                tenantId: sub.tenantId || "",
+            },
+        };
+    });
+
+    const selectedItem = await window.showQuickPick(quickPickItems, {
+        canPickMany: false,
+        placeHolder: "Select a Subscription",
+    });
+
+    if(!selectedItem) {
+        return undefined;
+    }
+
+    return selectedItem.subscription.subscriptionId;
+}
+
+async function getAllSubscriptions(sessionProvider: ReadyAzureSessionProvider): Promise<DefinedSubscription[] | null> {
+    const allSubscriptions = await getSubscriptions(sessionProvider, SelectionType.All);
+    if (failed(allSubscriptions)) {
+        await window.showErrorMessage(allSubscriptions.error);
+        return null;
+    }
+    return allSubscriptions.result;
+}
+
+async function handleNoSubscriptionsFound(): Promise<void> {
+    const noSubscriptionsFound = "No subscriptions were found. Set up your account if you have yet to do so.";
+    const setupAccount = "Set up Account";
+    const response = await window.showInformationMessage(noSubscriptionsFound, setupAccount);
+    if (response === setupAccount) {
+        env.openExternal(Uri.parse("https://azure.microsoft.com/"));
+    }
 }
