@@ -36,13 +36,6 @@
                 "description": "The identity of the managed cluster, if configured."
             }
         },
-        "disableLocalAccounts": {
-            "type": "bool",
-            "defaultValue": true,
-            "metadata": {
-                "description": "Enable or disable local accounts."
-            }
-        },
         "upgradeChannel": {
             "defaultValue": "stable",
             "type": "string",
@@ -83,7 +76,6 @@
                     "upgradeChannel": "[parameters('upgradeChannel')]",
                     "nodeOSUpgradeChannel": "[parameters('nodeOSUpgradeChannel')]"
                 },
-                "disableLocalAccounts": "[parameters('disableLocalAccounts')]",
                 "supportPlan": "[parameters('supportPlan')]"
             },
             "identity": "[parameters('clusterIdentity')]"
