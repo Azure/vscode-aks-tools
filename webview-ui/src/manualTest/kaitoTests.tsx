@@ -1,5 +1,10 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaito";
+import {
+    InitialState,
+    ModelDetails,
+    ToVsCodeMsgDef,
+    ToWebViewMsgDef,
+} from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { Kaito } from "../Kaito/Kaito";
 import { stateUpdater } from "../Kaito/state";
 import { Scenario } from "../utilities/manualTest";
@@ -21,6 +26,26 @@ export function getKaitoScenarios() {
                     errorMessage: undefined,
                     models: [],
                 });
+
+                // wait for 5 seconds
+                setTimeout(() => {
+                    webview.postKaitoInstallProgressUpdate({
+                        operationDescription: "Kaito Federated Credentials and role Assignments",
+                        event: 1,
+                        errorMessage: undefined,
+                        models: [],
+                    });
+                }, 5000);
+
+                // wait for 10 seconds
+                setTimeout(() => {
+                    webview.postKaitoInstallProgressUpdate({
+                        operationDescription: "Kaito installed successfully",
+                        event: 4,
+                        errorMessage: undefined,
+                        models: listKaitoSupportedModels(),
+                    });
+                }, 10000);
             },
             getLLMModelsRequest: () => {
                 console.log("getLLMModelsRequest");
@@ -42,5 +67,18 @@ export function getKaitoScenarios() {
             getMessageHandler,
             stateUpdater.vscodeMessageHandler,
         ),
+    ];
+}
+
+function listKaitoSupportedModels(): ModelDetails[] {
+    // sample model details array
+    return [
+        {
+            family: "Family1",
+            modelName: "Model1",
+            minimumGpu: 1,
+            kaitoVersion: "1.0",
+            modelSource: "source",
+        },
     ];
 }

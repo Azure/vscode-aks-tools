@@ -1,4 +1,4 @@
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { InitialState, ProgressEventType } from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { useStateManagement } from "../utilities/state";
 import styles from "./Kaito.module.css";
@@ -46,9 +46,35 @@ export function Kaito(initialState: InitialState) {
                     {state.kaitoInstallStatus === ProgressEventType.NotStarted && (
                         <VSCodeButton onClick={onClickKaitoInstall}>Install</VSCodeButton>
                     )}
-                    {state.kaitoInstallStatus === ProgressEventType.InProgress && (
-                        <p className={styles.installingMessage}>Installing KAITO, this may take a few minutes...</p>
-                    )}
+                    {state.kaitoInstallStatus === ProgressEventType.InProgress &&
+                        state.operationDescription.includes("Installing Kaito") && (
+                            <div
+                                style={{
+                                    flexDirection: "row",
+                                    display: "flex",
+                                }}
+                            >
+                                <VSCodeProgressRing />
+                                <p className={styles.installingMessage}>
+                                    Installing KAITO, this may take a few minutes...
+                                </p>
+                            </div>
+                        )}
+                    {state.kaitoInstallStatus === ProgressEventType.InProgress &&
+                        state.operationDescription.includes("Kaito Federated Credentials and role Assignments") && (
+                            <div
+                                style={{
+                                    flexDirection: "row",
+                                    display: "flex",
+                                }}
+                            >
+                                <VSCodeProgressRing />
+                                <p className={styles.installingMessage}>
+                                    Enabling Role assignments and Federated Credentails for KAITO, this may take a few
+                                    minutes...
+                                </p>
+                            </div>
+                        )}
                     {state.kaitoInstallStatus === ProgressEventType.Success && state.models.length > 0 && (
                         // <KaitoFamilyModelInput modelDetails={state.models} />
                         <p>KAITO is installed</p>

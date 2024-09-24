@@ -3,12 +3,14 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { KaitoPanel, KaitoPanelDataProvider } from "../../panels/KaitoPanel";
-import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
+import { filterPodName, getAksClusterTreeNode, getKubernetesClusterInfo } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
+import * as tmpfile from "../utils/tempfile";
 
 export default async function aksKaito(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const clusterExplorer = await k8s.extension.clusterExplorer.v1;
     const kubectl = await k8s.extension.kubectl.v1;
 
     const sessionProvider = await getReadySessionProvider();
@@ -17,9 +19,25 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         return;
     }
 
+    if (!cloudExplorer.available) {
+        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
+        return;
+    }
+
+    if (!clusterExplorer.available) {
+        vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
+        return;
+    }
+
     const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
     if (failed(clusterNode)) {
         vscode.window.showErrorMessage(clusterNode.error);
+        return;
+    }
+
+    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
+    if (failed(clusterInfo)) {
+        vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
 
@@ -50,6 +68,8 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         "kaito-",
     );
 
+    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
+
     const dataProvider = new KaitoPanelDataProvider(
         clusterName,
         subscriptionId,
@@ -57,6 +77,8 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         armId,
         sessionProvider.result,
         filterKaitoPodNames.succeeded ? filterKaitoPodNames.result : [],
+        kubectl,
+        kubeConfigFile.filePath,
     );
 
     panel.show(dataProvider);
