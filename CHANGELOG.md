@@ -3,6 +3,7 @@
 ## [1.4.10]
 
 * Fix for walkthrough and show welcome dependency.
+* Fixing freezing dockerfile create page.
 * Fix U/X Bugs.
 * Incremental In-Progress KAITO Work.
 * Dependabot updates and bumps.
