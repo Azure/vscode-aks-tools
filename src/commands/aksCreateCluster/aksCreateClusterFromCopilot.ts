@@ -2,6 +2,7 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { selectSubscription } from "../aksAccount/aksAccount";
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export async function aksCreateClusterFromCopilot(_context: IActionContext): Promise<void> {
     const subscriptionId = await selectSubscription();
 
