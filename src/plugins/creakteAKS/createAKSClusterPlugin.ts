@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
-import { ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "copilot-for-azure-vscode-api";
+import { ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/@azure/AzureAgent";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../../commands/utils/errorable";
 
-const createAKSClusterFunctionName = "createAKSCluter";
+const createAKSClusterFunctionName = "create_aks_cluster";
 export const createAKSClusterPluginManifest: LocalPluginManifest = {
     name: "createAKSClusterPlugin",
     version: "1.0.0",
@@ -11,7 +11,9 @@ export const createAKSClusterPluginManifest: LocalPluginManifest = {
         {
             name: createAKSClusterFunctionName,
             parameters: [],
-            returnParameter: null,
+            returnParameter: {
+                type: "object"
+            },
             willHandleUserResponse: false,
         }
     ]
@@ -21,12 +23,12 @@ export const CREATE_AKS_COMMANDID = 'aks.aksCreateClusterFromCopilot';
 
 async function handleCreateAKS(): Promise<ResponseForLanguageModelExtended> {
 
-    const result = "Create a new cluster using the Azure Kubernetes Service extension for VS Code. This extension provides a guided experience to create a new AKS cluster.";
+    const result = "To create a new AKS cluster, please use the Azure Kubernetes Service (AKS) extension in Visual Studio Code. This extension provides a guided experience, making it easier to configure your cluster. Follow the extension's instructions to complete the setup.";
     return {
         responseForLanguageModel: {result},
         chatResponseParts : [
             new vscode.ChatResponseCommandButtonPart({
-                title: vscode.l10n.t("Create an AKS cluster"),
+                title: vscode.l10n.t("Create"),
                 command: CREATE_AKS_COMMANDID,
                 arguments: []
             }),
