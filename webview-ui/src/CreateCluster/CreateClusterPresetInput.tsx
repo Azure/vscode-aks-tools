@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Preset } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { DevTestIcon } from "../icons/DevTestIcon";
 import styles from "./CreateCluster.module.css";
+import { AutomaticIcon } from "../icons/AutomaticIcon";
 
 export interface CreateClusterPresetInputProps {
     onPresetSelected: (presetSelected: Preset) => void;
@@ -9,6 +10,12 @@ export interface CreateClusterPresetInputProps {
 
 export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
     const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+
+    useEffect(() => {
+        handlePresetClick("automatic");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     function handlePresetClick(presetSelected: Preset) {
         console.log(presetSelected);
         props.onPresetSelected(presetSelected);
@@ -28,6 +35,25 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                 </div>
                 <div style={{ display: "flex" }}>
                     <div
+                        className={`${styles.presetContainer} ${selectedPreset === "automatic" ? styles.presetContainerHighlighted : ""}`}
+                        onClick={() => handlePresetClick("automatic")}
+                    >
+                        <div className={styles.flexContainer}>
+                            <AutomaticIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
+                            <div className={styles.presetTitle}>Automatic</div>
+                        </div>
+                        <div className={styles.presetDescription}>
+                            Best for production ready that automatically configures the cluster with recommended
+                            settings.
+                            <div className={styles.learnMoreContainer}>
+                                <a href="https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-portal">
+                                    Learn more
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
                         className={`${styles.presetContainer} ${selectedPreset === "dev" ? styles.presetContainerHighlighted : ""}`}
                         onClick={() => handlePresetClick("dev")}
                     >
@@ -39,25 +65,6 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                             Best for developing new workloads or testing existing workloads.
                             <div className={styles.learnMoreContainer}>
                                 <a href="https://learn.microsoft.com/en-us/azure/aks/quotas-skus-regions#cluster-configuration-presets-in-the-azure-portal">
-                                    Learn more
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        className={`${styles.presetContainer} ${selectedPreset === "automatic" ? styles.presetContainerHighlighted : ""}`}
-                        onClick={() => handlePresetClick("automatic")}
-                    >
-                        <div className={styles.flexContainer}>
-                            <DevTestIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
-                            <div className={styles.presetTitle}>Automatic</div>
-                        </div>
-                        <div className={styles.presetDescription}>
-                            Best for production ready that automatically configures the cluster with recommended
-                            settings.
-                            <div className={styles.learnMoreContainer}>
-                                <a href="https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-portal">
                                     Learn more
                                 </a>
                             </div>

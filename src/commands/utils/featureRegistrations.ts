@@ -23,14 +23,10 @@ export async function createFeatureRegistrationsWithRetry(
     let retries = 0;
     let registrationStatus = "Registering";
     //register the feature
-    await longRunning(`Registering the preview features.`, () => {
-        return featureClient.features.register(resourceProviderNamespace, featureName);
-    });
+    featureClient.features.register(resourceProviderNamespace, featureName);
     do {
         // get the registration status
-        const featureRegistrationResult = await longRunning(`Getting the preview feature registration status.`, () => {
-            return featureClient.features.get(resourceProviderNamespace, featureName);
-        });
+        const featureRegistrationResult = await featureClient.features.get(resourceProviderNamespace, featureName);
         const result = featureRegistrationResult.properties?.state || "Failed";
         if (result === "Registered") {
             registrationStatus = "Registered";
@@ -59,12 +55,14 @@ export async function createMultipleFeatureRegistrations(
     featureClient: FeatureClient,
     featureRegistrations: MultipleFeatureRegistration[],
 ): Promise<FeatureRegistrationResult[]> {
-    const featureRegistrationResults = featureRegistrations.map(async (featureRegistration) => {
-        return createFeatureRegistrationsWithRetry(
-            featureClient,
-            featureRegistration.resourceProviderNamespace,
-            featureRegistration.featureName,
-        );
+    return await longRunning(`Registering the preview features.`, async () => {
+        const featureRegistrationResults = featureRegistrations.map(async (featureRegistration) => {
+            return createFeatureRegistrationsWithRetry(
+                featureClient,
+                featureRegistration.resourceProviderNamespace,
+                featureRegistration.featureName,
+            );
+        });
+        return await Promise.all(featureRegistrationResults);
     });
-    return await Promise.all(featureRegistrationResults);
 }
