@@ -26,23 +26,26 @@ export default async function aksCreateCluster(_context: IActionContext, target:
         return;
     }
 
-    if (typeof target !== "string") {
-        subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
-        if (failed(subscriptionNode)) {
-            vscode.window.showErrorMessage(subscriptionNode.error);
-            return;
-        } else {
+    switch (typeof target) {
+        case "string":
+            const subscriptionResult = await getSubscription(sessionProvider.result, target);
+            if (failed(subscriptionResult)) {
+                vscode.window.showErrorMessage(subscriptionResult.error);
+                return;
+            }
+            subscriptionId = subscriptionResult.result?.id;
+            subscriptionName = subscriptionResult.result?.displayName;
+            break;
+
+        default:
+            subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
+            if (failed(subscriptionNode)) {
+                vscode.window.showErrorMessage(subscriptionNode.error);
+                return;
+            }
             subscriptionId = subscriptionNode.result?.subscriptionId;
             subscriptionName = subscriptionNode.result?.name;
-        }
-    } else if (typeof target === "string") {
-        const subscriptionResult = await getSubscription(sessionProvider.result, target);
-        if (failed(subscriptionResult)) {
-            vscode.window.showErrorMessage(subscriptionResult.error);
-            return;
-        }
-        subscriptionId = subscriptionResult.result?.id;
-        subscriptionName = subscriptionResult.result?.displayName;
+            break;
     }
 
     const extension = getExtension();
