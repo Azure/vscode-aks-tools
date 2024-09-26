@@ -339,6 +339,7 @@ async function doFeatureRegistration(preset: string, featureClient: FeatureClien
     if (preset !== "automatic") {
         return;
     }
+    //Doc link - https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-cli#register-the-feature-flags
     const features: MultipleFeatureRegistration[] = [
         {
             resourceProviderNamespace: "Microsoft.ContainerService",
