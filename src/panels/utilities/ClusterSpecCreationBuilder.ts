@@ -1,5 +1,5 @@
 import { Deployment } from "@azure/arm-resources";
-import { Preset } from "../../webview-contract/webviewDefinitions/createCluster";
+import { PresetType } from "../../webview-contract/webviewDefinitions/createCluster";
 import automaticTemplate from "../templates/AutomaticCreateCluster.json";
 import devTestTemplate from "../templates/DevTestCreateCluster.json";
 
@@ -16,9 +16,9 @@ type TemplateContent = Record<string, unknown>;
 
 const deploymentApiVersion = "2023-08-01";
 const deploymentApiVersionPreview = "2024-03-02-preview";
-const presetTemplates: Record<Preset, TemplateContent> = {
-    dev: devTestTemplate,
-    automatic: automaticTemplate,
+const presetTemplates: Record<PresetType, TemplateContent> = {
+    [PresetType.Automatic]: automaticTemplate,
+    [PresetType.Dev]: devTestTemplate,
 };
 
 export class ClusterDeploymentBuilder {
@@ -30,8 +30,8 @@ export class ClusterDeploymentBuilder {
         },
     };
 
-    public buildCommonParameters(clusterSpec: ClusterSpec, preset: string): ClusterDeploymentBuilder {
-        return preset === "automatic"
+    public buildCommonParameters(clusterSpec: ClusterSpec, preset: PresetType): ClusterDeploymentBuilder {
+        return preset === PresetType.Automatic
             ? this.buildParametersForAutomatic(clusterSpec)
             : this.buildParametersForDev(clusterSpec);
     }
@@ -104,7 +104,7 @@ export class ClusterDeploymentBuilder {
         return this;
     }
 
-    public buildTemplate(preset: Preset) {
+    public buildTemplate(preset: PresetType) {
         this.deployment.properties.template = presetTemplates[preset];
         return this;
     }

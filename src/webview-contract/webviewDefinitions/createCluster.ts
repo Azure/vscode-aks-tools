@@ -26,7 +26,12 @@ export interface CreateClusterParams {
     resourceGroupName: string;
     location: string;
     name: string;
-    preset: Preset;
+    preset: PresetType;
+}
+
+export enum PresetType {
+    Dev,
+    Automatic
 }
 
 // NOTE: This is intented to be a union of Preset strings, but for now we only have one.

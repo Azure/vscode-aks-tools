@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
-import { Preset } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { PresetType } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { AutomaticIcon } from "../icons/AutomaticIcon";
 import { DevTestIcon } from "../icons/DevTestIcon";
 import styles from "./CreateCluster.module.css";
-import { AutomaticIcon } from "../icons/AutomaticIcon";
 
 export interface CreateClusterPresetInputProps {
-    onPresetSelected: (presetSelected: Preset) => void;
+    onPresetSelected: (presetSelected: PresetType) => void;
 }
 
 export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
-    const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+    const [selectedPreset, setSelectedPreset] = useState<PresetType>(PresetType.Automatic);
 
     useEffect(() => {
-        handlePresetClick("automatic");
+        handlePresetClick(PresetType.Automatic);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    function handlePresetClick(presetSelected: Preset) {
+    function handlePresetClick(presetSelected: PresetType) {
         console.log(presetSelected);
         props.onPresetSelected(presetSelected);
         setSelectedPreset(presetSelected);
@@ -35,8 +35,8 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                 </div>
                 <div style={{ display: "flex" }}>
                     <div
-                        className={`${styles.presetContainer} ${selectedPreset === "automatic" ? styles.presetContainerHighlighted : ""}`}
-                        onClick={() => handlePresetClick("automatic")}
+                        className={`${styles.presetContainer} ${selectedPreset === PresetType.Automatic ? styles.presetContainerHighlighted : ""}`}
+                        onClick={() => handlePresetClick(PresetType.Automatic)}
                     >
                         <div className={styles.flexContainer}>
                             <AutomaticIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
@@ -54,8 +54,8 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                     </div>
 
                     <div
-                        className={`${styles.presetContainer} ${selectedPreset === "dev" ? styles.presetContainerHighlighted : ""}`}
-                        onClick={() => handlePresetClick("dev")}
+                        className={`${styles.presetContainer} ${selectedPreset === PresetType.Dev ? styles.presetContainerHighlighted : ""}`}
+                        onClick={() => handlePresetClick(PresetType.Dev)}
                     >
                         <div className={styles.flexContainer}>
                             <DevTestIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />

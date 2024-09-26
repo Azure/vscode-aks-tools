@@ -16,11 +16,11 @@ import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     InitialState,
-    Preset,
+    PresetType,
     ProgressEventType,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
-    ResourceGroup as WebviewResourceGroup,
+    ResourceGroup as WebviewResourceGroup
 } from "../webview-contract/webviewDefinitions/createCluster";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
@@ -136,7 +136,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         groupName: string,
         location: string,
         name: string,
-        preset: Preset,
+        preset: PresetType,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (isNewResourceGroup) {
@@ -204,7 +204,7 @@ async function createCluster(
     groupName: string,
     location: string,
     name: string,
-    preset: Preset,
+    preset: PresetType,
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
@@ -335,8 +335,8 @@ async function createCluster(
     }
 }
 
-async function doFeatureRegistration(preset: string, featureClient: FeatureClient) {
-    if (preset !== "automatic") {
+async function doFeatureRegistration(preset: PresetType, featureClient: FeatureClient) {
+    if (preset !== PresetType.Automatic) {
         return;
     }
     //Doc link - https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-cli#register-the-feature-flags
