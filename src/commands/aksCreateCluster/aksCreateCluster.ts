@@ -43,6 +43,10 @@ export default async function aksCreateCluster(_context: IActionContext, target:
                 vscode.window.showErrorMessage(subscriptionNode.error);
                 return;
             }
+            if (!subscriptionNode.result || !subscriptionNode.result.subscriptionId || !subscriptionNode.result.name) {
+                vscode.window.showErrorMessage("Subscription not found.");
+                return;
+            }
             subscriptionId = subscriptionNode.result?.subscriptionId;
             subscriptionName = subscriptionNode.result?.name;
             break;
