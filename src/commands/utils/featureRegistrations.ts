@@ -4,6 +4,12 @@ import { longRunning } from "./host";
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 5000; // 5 seconds
 
+export enum FeatureRegistrationState {
+    Registered = "Registered",
+    Registering = "Registering",
+    Failed = "Failed",
+}
+
 export type MultipleFeatureRegistration = {
     resourceProviderNamespace: string;
     featureName: string;
@@ -21,19 +27,19 @@ export async function createFeatureRegistrationsWithRetry(
     featureName: string,
 ): Promise<FeatureRegistrationResult> {
     let retries = 0;
-    let registrationStatus = "Registering";
+    let registrationStatus = FeatureRegistrationState.Registering;
     //register the feature
     featureClient.features.register(resourceProviderNamespace, featureName);
     do {
         // get the registration status
         const featureRegistrationResult = await featureClient.features.get(resourceProviderNamespace, featureName);
-        const result = featureRegistrationResult.properties?.state || "Failed";
-        if (result === "Registered") {
-            registrationStatus = "Registered";
+        const result = featureRegistrationResult?.properties?.state ?? FeatureRegistrationState.Failed;
+        if (result === FeatureRegistrationState.Registered) {
+            registrationStatus = FeatureRegistrationState.Registered;
             break;
-        } else if (result === "Registering" && retries < MAX_RETRIES) {
+        } else if (result === FeatureRegistrationState.Registering && retries < MAX_RETRIES) {
             // if the feature is still registering and we haven't reached the max retries, wait and try again
-            registrationStatus = "Registering";
+            registrationStatus = FeatureRegistrationState.Registering;
             retries++;
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         } else {
@@ -42,7 +48,7 @@ export async function createFeatureRegistrationsWithRetry(
                 `Failed to register the preview feature ${featureName} for ${resourceProviderNamespace}. Current state: ${result}`,
             );
         }
-    } while (registrationStatus === "Registering" && retries < MAX_RETRIES);
+    } while (registrationStatus === FeatureRegistrationState.Registering && retries < MAX_RETRIES);
 
     return {
         resourceProviderNamespace,

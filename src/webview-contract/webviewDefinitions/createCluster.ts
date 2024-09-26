@@ -34,9 +34,6 @@ export enum PresetType {
     Automatic
 }
 
-// NOTE: This is intented to be a union of Preset strings, but for now we only have one.
-export type Preset = "dev" | "automatic";
-
 export type ToVsCodeMsgDef = {
     getLocationsRequest: void;
     getResourceGroupsRequest: void;
