@@ -71,7 +71,7 @@ export function CreateCluster(initialState: InitialState) {
 
     return (
         <>
-            <h1>Create Cluster</h1>
+            <h1>Create AKS Cluster</h1>
             <label>Subscription: {state.subscriptionName}</label>
             {getBody()}
         </>

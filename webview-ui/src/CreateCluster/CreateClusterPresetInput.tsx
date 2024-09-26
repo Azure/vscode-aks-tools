@@ -29,9 +29,8 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                     <h3>Cluster preset configuration</h3>
                 </div>
                 <div className={styles.portalLink}>
-                    If you wish to create a more complex Azure Kubernetes Service (AKS) cluster, please&nbsp;
-                    <a href="https://portal.azure.com/#create/Microsoft.AKS">click here</a>
-                    &nbsp;to visit the Azure Portal.
+                    For more customized Azure Kubernetes Service (AKS) cluster setup, visit the Azure Portal by&nbsp;
+                    <a href="https://portal.azure.com/#create/Microsoft.AKS">clicking here</a>.
                 </div>
                 <div style={{ display: "flex" }}>
                     <div
@@ -43,8 +42,7 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                             <div className={styles.presetTitle}>Automatic</div>
                         </div>
                         <div className={styles.presetDescription}>
-                            Best for production ready that automatically configures the cluster with recommended
-                            settings.
+                            Fully Azure-managed with simplified setup for more streamlined app deployment.
                             <div className={styles.learnMoreContainer}>
                                 <a href="https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-portal">
                                     Learn more

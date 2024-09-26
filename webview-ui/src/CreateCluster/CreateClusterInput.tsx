@@ -192,7 +192,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="location-dropdown" className={styles.label}>
-                        Location*
+                        Region*
                     </label>
                     <VSCodeDropdown
                         id="location-dropdown"
