@@ -392,7 +392,7 @@ export function DraftWorkflow(initialState: InitialState) {
         "Select the primary/upstream fork of this repository.\n\nThis will allow you to select which branch will trigger the workflow.";
 
     const namespaceTooltipMessage =
-        "Select the namespace in which the deployment will be created.\n\nIf the namespace does not exist, it will be created.";
+        "To create a new namespace, write the desired name in the field. If the namespace does not already exist, it will be not be created until the workflow runs.";
 
     return (
         <>
