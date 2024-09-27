@@ -20,7 +20,7 @@ import {
     ProgressEventType,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
-    ResourceGroup as WebviewResourceGroup
+    ResourceGroup as WebviewResourceGroup,
 } from "../webview-contract/webviewDefinitions/createCluster";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
@@ -268,7 +268,19 @@ async function createCluster(
     const environment = getEnvironment();
 
     // feature registration
-    await doFeatureRegistration(preset, featureClient);
+    try {
+        await doFeatureRegistration(preset, featureClient);
+    } catch (error) {
+        window.showErrorMessage(`Error Registering preview features for AKS cluster ${name}: ${error}`);
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription: "Error Registering preview features for AKS cluster",
+            errorMessage: getErrorMessage(error),
+            deploymentPortalUrl: null,
+            createdCluster: null,
+        });
+        return;
+    }
 
     try {
         const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
@@ -367,11 +379,7 @@ async function doFeatureRegistration(preset: PresetType, featureClient: FeatureC
         },
     ];
 
-    try {
-        await createMultipleFeatureRegistrations(featureClient, features);
-    } catch (error) {
-        window.showErrorMessage(`${getErrorMessage(error)}`);
-    }
+    await createMultipleFeatureRegistrations(featureClient, features);
 }
 
 function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {

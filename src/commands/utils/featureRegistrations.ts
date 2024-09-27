@@ -2,7 +2,7 @@ import { FeatureClient } from "@azure/arm-features";
 import { longRunning } from "./host";
 
 const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 5000; // 5 seconds
+const RETRY_DELAY_MS = 60000; // 1 minute
 
 export enum FeatureRegistrationState {
     Registered = "Registered",
@@ -25,50 +25,61 @@ export async function createFeatureRegistrationsWithRetry(
     featureClient: FeatureClient,
     resourceProviderNamespace: string,
     featureName: string,
-): Promise<FeatureRegistrationResult> {
+): Promise<void> {
     let retries = 0;
-    let registrationStatus = FeatureRegistrationState.Registering;
     //register the feature
-    featureClient.features.register(resourceProviderNamespace, featureName);
-    do {
+    try {
+        await featureClient.features.register(resourceProviderNamespace, featureName);
+    } catch (error) {
+        throw new Error(
+            `Failed to initiate registration for feature ${featureName} in ${resourceProviderNamespace}: ${error}`,
+        );
+    }
+    while (retries < MAX_RETRIES) {
         // get the registration status
         const featureRegistrationResult = await featureClient.features.get(resourceProviderNamespace, featureName);
         const result = featureRegistrationResult?.properties?.state ?? FeatureRegistrationState.Failed;
-        if (result === FeatureRegistrationState.Registered) {
-            registrationStatus = FeatureRegistrationState.Registered;
-            break;
-        } else if (result === FeatureRegistrationState.Registering && retries < MAX_RETRIES) {
-            // if the feature is still registering and we haven't reached the max retries, wait and try again
-            registrationStatus = FeatureRegistrationState.Registering;
-            retries++;
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-        } else {
-            // if the feature registration failed or we reached the max retries but still feature registration status is registering, throw an error
-            throw new Error(
-                `Failed to register the preview feature ${featureName} for ${resourceProviderNamespace}. Current state: ${result}`,
-            );
-        }
-    } while (registrationStatus === FeatureRegistrationState.Registering && retries < MAX_RETRIES);
+        switch (result) {
+            case FeatureRegistrationState.Registered:
+                console.log(`Feature ${featureName} registered successfully for ${resourceProviderNamespace}.`);
+                return;
 
-    return {
-        resourceProviderNamespace,
-        featureName,
-        registrationStatus,
-    };
+            case FeatureRegistrationState.Registering:
+                retries++;
+                console.log(`Feature ${featureName} is still registering. Retry ${retries}/${MAX_RETRIES}.`);
+                await delay(RETRY_DELAY_MS);
+                break;
+
+            default:
+                throw new Error(
+                    `Failed to register the preview feature ${featureName} for ${resourceProviderNamespace}. Current state: ${result}, please try again.`,
+                );
+        }
+    }
+}
+
+async function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function createMultipleFeatureRegistrations(
     featureClient: FeatureClient,
     featureRegistrations: MultipleFeatureRegistration[],
-): Promise<FeatureRegistrationResult[]> {
-    return await longRunning(`Registering the preview features.`, async () => {
-        const featureRegistrationResults = featureRegistrations.map(async (featureRegistration) => {
-            return createFeatureRegistrationsWithRetry(
-                featureClient,
-                featureRegistration.resourceProviderNamespace,
-                featureRegistration.featureName,
-            );
-        });
-        return await Promise.all(featureRegistrationResults);
+): Promise<void> {
+    await longRunning(`Registering the preview features.`, async () => {
+        try {
+            const featureRegistrationResults = featureRegistrations.map(async (featureRegistration) => {
+                return createFeatureRegistrationsWithRetry(
+                    featureClient,
+                    featureRegistration.resourceProviderNamespace,
+                    featureRegistration.featureName,
+                );
+            });
+            await Promise.all(featureRegistrationResults);
+            console.log("All features registered successfully.");
+        } catch (error) {
+            console.error("Error registering features:", error);
+            throw error;
+        }
     });
 }
