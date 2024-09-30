@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.4.10]
+
+* Fix for walkthrough and show welcome dependency.
+* Fixing freezing dockerfile create page.
+* Fix U/X Bugs.
+* Incremental In-Progress KAITO Work.
+* Dependabot updates and bumps.
+
+Welcome new contributors @tejhan & @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC, @tejhan for contributions, testing and reviews.
+
 ## [1.4.9]
 
 * AKS diagnostic bug resolved & storage diagnostic added.

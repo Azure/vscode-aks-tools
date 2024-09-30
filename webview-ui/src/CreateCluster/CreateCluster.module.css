@@ -21,7 +21,7 @@
 
 .presetContainerHighlighted {
     border: 0.1875rem solid var(--Accent-Blue-05, #0097fb);
-    background: #333;
+    background: var(--vscode-editor-background);
     border-radius: 0.5rem;
     height: 10.375rem;
     margin-bottom: 1rem;

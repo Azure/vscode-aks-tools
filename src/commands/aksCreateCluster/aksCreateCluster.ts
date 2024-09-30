@@ -4,9 +4,10 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { CreateClusterDataProvider, CreateClusterPanel } from "../../panels/CreateClusterPanel";
 import { getAksClusterSubscriptionNode } from "../utils/clusters";
-import { failed } from "../utils/errorable";
+import { Errorable, failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 import { getSubscription } from "../utils/subscriptions";
+import { SubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
 
 /**
  * A multi-step input using window.createQuickPick() and window.createInputBox().
@@ -14,9 +15,9 @@ import { getSubscription } from "../utils/subscriptions";
  * This first part uses the helper class `MultiStepInput` that wraps the API for the multi-step case.
  */
 export default async function aksCreateCluster(_context: IActionContext, target: unknown): Promise<void> {
-    let subscriptionNode;
-    let subscriptionId;
-    let subscriptionName;
+    let subscriptionNode: Errorable<SubscriptionTreeNode>;
+    let subscriptionId: string | undefined;
+    let subscriptionName: string | undefined;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
     const sessionProvider = await getReadySessionProvider();
@@ -25,23 +26,33 @@ export default async function aksCreateCluster(_context: IActionContext, target:
         return;
     }
 
-    if (typeof target !== "string") {
-        subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
-        if (failed(subscriptionNode)) {
-            vscode.window.showErrorMessage(subscriptionNode.error);
-            return;
-        } else {
+    switch (typeof target) {
+        case "string": {
+            const subscriptionResult = await getSubscription(sessionProvider.result, target);
+            if (failed(subscriptionResult)) {
+                vscode.window.showErrorMessage(subscriptionResult.error);
+                return;
+            }
+            subscriptionId = subscriptionResult.result?.id;
+            subscriptionName = subscriptionResult.result?.displayName;
+            break;
+        }
+
+        default: {
+            subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
+            if (failed(subscriptionNode)) {
+                vscode.window.showErrorMessage(subscriptionNode.error);
+                return;
+            }
+            if (!subscriptionNode.result || !subscriptionNode.result.subscriptionId || !subscriptionNode.result.name) {
+                vscode.window.showErrorMessage("Subscription not found.");
+                return;
+            }
             subscriptionId = subscriptionNode.result?.subscriptionId;
             subscriptionName = subscriptionNode.result?.name;
+            break;
         }
-    } else if (typeof target === "string") {
-        const subscriptionResult = await getSubscription(sessionProvider.result, target);
-        if (failed(subscriptionResult)) {
-            vscode.window.showErrorMessage(subscriptionResult.error);
-            return;
-        }
-        subscriptionId = subscriptionResult.result?.subscriptionId;
-        subscriptionName = subscriptionResult.result?.displayName;
+
     }
 
     const extension = getExtension();

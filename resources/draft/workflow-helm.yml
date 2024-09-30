@@ -46,6 +46,7 @@ env:
   CHART_PATH: "your-chart-path"
   CHART_OVERRIDE_PATH: "your-chart-override-path"
   CHART_OVERRIDES: "your-chart-overrides"
+  NAMESPACE: 'your-namespace-name'
 
 jobs:
   buildImage:
@@ -102,6 +103,11 @@ jobs:
           cluster-name: ${{ env.CLUSTER_NAME }}
           admin: 'false'
           use-kubelogin: 'true'
+
+      # Check if namespace exists, if not create it
+      - name: Ensure Namespace exists
+        run: |
+          kubectl get namespace ${{ env.NAMESPACE }} || kubectl create namespace ${{ env.NAMESPACE }}
 
       # Deploys application based on manifest files from previous step
       - name: Deploy application

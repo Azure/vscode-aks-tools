@@ -16,7 +16,7 @@ import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     InitialState,
-    Preset,
+    PresetType,
     ProgressEventType,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
@@ -136,7 +136,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         groupName: string,
         location: string,
         name: string,
-        preset: Preset,
+        preset: PresetType,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (isNewResourceGroup) {
@@ -204,7 +204,7 @@ async function createCluster(
     groupName: string,
     location: string,
     name: string,
-    preset: Preset,
+    preset: PresetType,
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
@@ -268,7 +268,19 @@ async function createCluster(
     const environment = getEnvironment();
 
     // feature registration
-    await doFeatureRegistration(preset, featureClient);
+    try {
+        await doFeatureRegistration(preset, featureClient);
+    } catch (error) {
+        window.showErrorMessage(`Error Registering preview features for AKS cluster ${name}: ${error}`);
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription: "Error Registering preview features for AKS cluster",
+            errorMessage: getErrorMessage(error),
+            deploymentPortalUrl: null,
+            createdCluster: null,
+        });
+        return;
+    }
 
     try {
         const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
@@ -335,10 +347,11 @@ async function createCluster(
     }
 }
 
-async function doFeatureRegistration(preset: string, featureClient: FeatureClient) {
-    if (preset !== "automatic") {
+async function doFeatureRegistration(preset: PresetType, featureClient: FeatureClient) {
+    if (preset !== PresetType.Automatic) {
         return;
     }
+    //Doc link - https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-cli#register-the-feature-flags
     const features: MultipleFeatureRegistration[] = [
         {
             resourceProviderNamespace: "Microsoft.ContainerService",
@@ -366,11 +379,7 @@ async function doFeatureRegistration(preset: string, featureClient: FeatureClien
         },
     ];
 
-    try {
-        await createMultipleFeatureRegistrations(featureClient, features);
-    } catch (error) {
-        window.showErrorMessage(`${getErrorMessage(error)}`);
-    }
+    await createMultipleFeatureRegistrations(featureClient, features);
 }
 
 function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {
