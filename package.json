@@ -586,7 +586,7 @@
         "@azure/core-auth": "^1.8.0",
         "@azure/identity": "^4.4.1",
         "@azure/ms-rest-azure-env": "^2.0.0",
-        "@azure/storage-blob": "^12.24.0",
+        "@azure/storage-blob": "^12.25.0",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^2.5.8",
         "@octokit/rest": "^21.0.2",
