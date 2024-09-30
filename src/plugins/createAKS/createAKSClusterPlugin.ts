@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/@azure/AzureAgent";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../../commands/utils/errorable";
-import { getAKSClusterPluginResponse } from "../shared/responses";
+import { getAKSClusterPluginResponse } from "../shared/pluginResponses";
 
 const createAKSClusterFunctionName = "create_aks_cluster";
 export const createAKSClusterPluginManifest: LocalPluginManifest = {
