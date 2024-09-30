@@ -16,6 +16,18 @@
     height: 10.375rem;
     margin-bottom: 1rem;
     width: 13.5rem;
+    margin-right: 3rem;
+}
+
+.presetContainerHighlighted {
+    border: 0.1875rem solid var(--Accent-Blue-05, #0097fb);
+    background: var(--vscode-editor-background);
+    border-radius: 0.5rem;
+    height: 10.375rem;
+    margin-bottom: 1rem;
+    width: 13.5rem;
+    margin-right: 3rem;
+    border-color: var(--vscode-button-background);
 }
 
 .presetTitle {

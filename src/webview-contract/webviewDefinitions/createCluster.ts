@@ -26,11 +26,13 @@ export interface CreateClusterParams {
     resourceGroupName: string;
     location: string;
     name: string;
-    preset: Preset;
+    preset: PresetType;
 }
 
-// NOTE: This is intented to be a union of Preset strings, but for now we only have one.
-export type Preset = "dev";
+export enum PresetType {
+    Dev,
+    Automatic
+}
 
 export type ToVsCodeMsgDef = {
     getLocationsRequest: void;
