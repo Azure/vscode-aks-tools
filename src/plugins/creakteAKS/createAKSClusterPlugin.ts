@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/@azure/AzureAgent";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../../commands/utils/errorable";
+import { getAKSClusterPluginResponse } from "../shared/responses";
 
 const createAKSClusterFunctionName = "create_aks_cluster";
 export const createAKSClusterPluginManifest: LocalPluginManifest = {
@@ -19,17 +20,15 @@ export const createAKSClusterPluginManifest: LocalPluginManifest = {
     ]
 };
 
-export const CREATE_AKS_COMMANDID = 'aks.aksCreateClusterFromCopilot';
-
 async function handleCreateAKS(): Promise<ResponseForLanguageModelExtended> {
+    const { messageForLanguageModel, buttonLabel, commandID } = getAKSClusterPluginResponse();
 
-    const result = "To create a new AKS cluster, please use the Azure Kubernetes Service (AKS) extension in Visual Studio Code. This extension provides a guided experience, making it easier to configure your cluster. Follow the extension's instructions to complete the setup.";
     return {
-        responseForLanguageModel: {result},
+        responseForLanguageModel: { messageForLanguageModel },
         chatResponseParts : [
             new vscode.ChatResponseCommandButtonPart({
-                title: vscode.l10n.t("Get started"),
-                command: CREATE_AKS_COMMANDID,
+                title: vscode.l10n.t(buttonLabel),
+                command: commandID,
                 arguments: []
             }),
         ]
