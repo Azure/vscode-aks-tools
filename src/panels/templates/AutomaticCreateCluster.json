@@ -1,0 +1,61 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "apiVersion": {
+            "type": "string"
+        },
+        "resourceName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Managed Cluster resource."
+            }
+        },
+        "location": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of AKS resource."
+            }
+        },
+        "clusterSku": {
+            "defaultValue": {
+                "name": "Automatic",
+                "tier": "Standard"
+            },
+            "type": "object",
+            "metadata": {
+                "descirption": "The managed cluster SKU tier."
+            }
+        },
+        "clusterIdentity": {
+            "defaultValue": {
+                "type": "SystemAssigned"
+            },
+            "type": "object",
+            "metadata": {
+                "description": "The identity of the managed cluster, if configured."
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.ContainerService/managedClusters",
+            "apiVersion": "[parameters('apiVersion')]",
+            "sku": "[parameters('clusterSku')]",
+            "location": "[parameters('location')]",
+            "name": "[parameters('resourceName')]",
+            "properties": {
+                "agentPoolProfiles": [
+                    {
+                        "name": "systempool",
+                        "mode": "System",
+                        "vmSize": "Standard_DS4_v2",
+                        "count": 3,
+                        "osType": "Linux"
+                    }
+                ]
+            },
+            "identity": "[parameters('clusterIdentity')]"
+        }
+    ]
+}
