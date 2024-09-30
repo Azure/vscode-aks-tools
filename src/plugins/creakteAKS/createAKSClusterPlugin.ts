@@ -28,7 +28,7 @@ async function handleCreateAKS(): Promise<ResponseForLanguageModelExtended> {
         responseForLanguageModel: {result},
         chatResponseParts : [
             new vscode.ChatResponseCommandButtonPart({
-                title: vscode.l10n.t("Create"),
+                title: vscode.l10n.t("Get started"),
                 command: CREATE_AKS_COMMANDID,
                 arguments: []
             }),
