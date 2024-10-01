@@ -106,6 +106,9 @@ export class ClusterDeploymentBuilder {
             userPrincipalId: {
                 value: clusterSpec.servicePrincipalId,
             },
+            rbacName: {
+                value: generateRbacName(),
+            },
         };
 
         return this;
@@ -178,4 +181,8 @@ function generateNodeResourceGroup(resourceGroupName: string, clusterName: strin
 
 function removeWhitespace(str: string): string {
     return str.replace(/\s+/g, "");
+}
+
+function generateRbacName() {
+    return "AzureKubernetesServiceRbacAdmin".concat("-", new Date().toISOString().replace(/[^0-9]/g, ""));
 }
