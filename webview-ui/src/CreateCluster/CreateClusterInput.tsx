@@ -5,7 +5,7 @@ import { FormEvent, useState } from "react";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     CreateClusterParams,
-    Preset,
+    PresetType,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
@@ -31,7 +31,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
     const [newResourceGroupName, setNewResourceGroupName] = useState<string | null>(null);
-    const [presetSelected, setPresetSelected] = useState<Preset>("dev");
+    const [presetSelected, setPresetSelected] = useState<PresetType>(PresetType.Automatic);
     const [selectedIndex, setSelectedIndex] = useState<number>(0);
     const [location, setLocation] = useState<Validatable<string>>(unset());
 
@@ -54,7 +54,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         setSelectedIndex(1); // this is the index of the new resource group and the first option is "Select"
     }
 
-    function handlePresetSelection(presetSelected: Preset) {
+    function handlePresetSelection(presetSelected: PresetType) {
         setPresetSelected(presetSelected);
     }
 
@@ -192,7 +192,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="location-dropdown" className={styles.label}>
-                        Location*
+                        Region*
                     </label>
                     <VSCodeDropdown
                         id="location-dropdown"

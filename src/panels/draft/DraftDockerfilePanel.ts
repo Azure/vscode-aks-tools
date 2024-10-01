@@ -135,7 +135,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
         const variables = {
             PORT: port,
             VERSION: runtimeImageTag,
-            BUILDERVERSION: builderImageTag || "",
+            BUILDERVERSION: builderImageTag,
         };
 
         const variableArgs = Object.entries(variables)

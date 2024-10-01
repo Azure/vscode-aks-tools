@@ -391,6 +391,9 @@ export function DraftWorkflow(initialState: InitialState) {
     const gitHubRepoTooltipMessage =
         "Select the primary/upstream fork of this repository.\n\nThis will allow you to select which branch will trigger the workflow.";
 
+    const namespaceTooltipMessage =
+        "To create a new namespace, write the desired name in the field. If the namespace does not already exist, it will be not be created until the workflow runs.";
+
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
@@ -656,6 +659,9 @@ export function DraftWorkflow(initialState: InitialState) {
                         <>
                             <label htmlFor="namespace-input" className={styles.label}>
                                 Namespace *
+                                <span className={"tooltip-holder"} data-tooltip-text={namespaceTooltipMessage}>
+                                    <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                                </span>
                             </label>
 
                             <TextWithDropdown
