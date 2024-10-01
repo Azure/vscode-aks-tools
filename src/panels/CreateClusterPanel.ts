@@ -440,8 +440,7 @@ function isDefaultK8sVersion(version: KubernetesVersion): boolean {
     return "isDefault" in version && version.isDefault === true;
 }
 function getServicePrincipalId(result: AzureAuthenticationSession): string {
-    // we need servicePrincipalId of the logged in user which is after slash 
-    // example value: 'xxxxx-xxxx-xxxx-xxxx-2d7cd011db47/dcef9120-72c4-452c-8a69-xxxxxxx'
+    // we need servicePrincipalId of the logged in user which is after slash
     if (!result || !result.account || !result.account.id) {
         return "";
     }
