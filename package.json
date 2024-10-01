@@ -287,7 +287,11 @@
             {
                 "command": "aks.aksCreateClusterFromCopilot",
                 "title": "Command to create AKS cluster from GitHub Copilot"
-            },                
+            },
+            {            
+                "command": "aks.openKubectlPanel",
+                "title": "Run Kubectl Commands from Github Copilot Chat"
+            },      
             {
                 "command": "aks.aksTCPDump",
                 "title": "Collect TCP Dumps"
