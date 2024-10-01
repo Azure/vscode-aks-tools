@@ -96,6 +96,7 @@ export abstract class BaseWorkflowEditor<TDeploymentType extends WorkflowDeploym
         this.updateEnvVar(envSymbol, "AZURE_CONTAINER_REGISTRY", this.createParams.acrName);
         this.updateEnvVar(envSymbol, "CLUSTER_RESOURCE_GROUP", this.createParams.clusterResourceGroup);
         this.updateEnvVar(envSymbol, "ACR_RESOURCE_GROUP", this.createParams.acrResourceGroup);
+        this.updateEnvVar(envSymbol, "NAMESPACE", this.createParams.namespace);
     }
 
     /**
