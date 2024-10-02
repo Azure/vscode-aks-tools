@@ -8,9 +8,19 @@ import { getKubectlCustomCommands } from "../utils/config";
 import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { selectClusterOptions } from "../utils/githubCopilot/clusterOptions/selectClusterOptions";
+import { selectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
+import { GITHUBCOPILOT_FOR_AZURE_VSCODE_ID } from "../../plugins/shared/constants";
+import { checkExtension, handleExtensionDoesNotExist } from "../utils/extensions";
 
 export async function openKubectlPanel(_context: IActionContext, target: unknown) {
+
+    const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+
+    if(!checkGitHubCopilotExtension) {
+        handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+        return;
+    }
+
     const responseCode = (target as CommandOptions).response.code;
     const sessionProvider = await getReadySessionProvider();
 
