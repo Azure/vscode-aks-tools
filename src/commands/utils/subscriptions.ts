@@ -1,8 +1,9 @@
 import { Subscription, SubscriptionsGetResponse } from "@azure/arm-resources-subscriptions";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getSubscriptionClient, listAll } from "./arm";
-import { getFilteredSubscriptions } from "./config";
+import { getFilteredSubscriptions, SubscriptionFilter } from "./config";
 import { Errorable, map as errmap } from "./errorable";
+import { env, QuickPickItem, Uri, window } from "vscode";
 
 export enum SelectionType {
     Filtered,
@@ -14,6 +15,8 @@ export enum SelectionType {
  * A subscription with the subscriptionId and displayName properties guaranteed to be defined.
  */
 export type DefinedSubscription = Subscription & Required<Pick<Subscription, "subscriptionId" | "displayName">>;
+
+export type SubscriptionQuickPickItem = QuickPickItem & { subscription: SubscriptionFilter };
 
 export async function getSubscriptions(
     sessionProvider: ReadyAzureSessionProvider,
@@ -56,4 +59,13 @@ export async function getSubscription(
         return { succeeded: false, error: "Subscription is not found" };
     }
     return { succeeded: true, result: subResult };
+}
+
+export async function handleNoSubscriptionsFound(): Promise<void> {
+    const noSubscriptionsFound = "No subscriptions were found. Set up your account if you have yet to do so.";
+    const setupAccount = "Set up Account";
+    const response = await window.showInformationMessage(noSubscriptionsFound, setupAccount);
+    if (response === setupAccount) {
+        env.openExternal(Uri.parse("https://azure.microsoft.com/"));
+    }
 }
