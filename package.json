@@ -286,7 +286,7 @@
             },
             {
                 "command": "aks.aksCreateClusterFromCopilot",
-                "title": "Command to create AKS cluster from GitHub Copilot"
+                "title": "Command to create an AKS cluster"
             },                
             {
                 "command": "aks.aksTCPDump",

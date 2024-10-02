@@ -39,7 +39,7 @@ export function CreateClusterPresetInput(props: CreateClusterPresetInputProps) {
                     >
                         <div className={styles.flexContainer}>
                             <AutomaticIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
-                            <div className={styles.presetTitle}>Automatic</div>
+                            <div className={styles.presetTitle}>Automatic (preview)</div>
                         </div>
                         <div className={styles.presetDescription}>
                             Fully Azure-managed with simplified setup for more streamlined app deployment.

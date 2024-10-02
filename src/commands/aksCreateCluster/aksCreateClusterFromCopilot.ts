@@ -4,9 +4,19 @@ import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../utils/errorable";
 import { getSubscriptions, handleNoSubscriptionsFound, SelectionType, SubscriptionQuickPickItem } from "../utils/subscriptions";
 import { window } from "vscode";
+import { checkExtension, handleExtensionDoesNotExist } from "../utils/extensions";
+import { GITHUBCOPILOT_FOR_AZURE_VSCODE_ID } from "../../plugins/shared/constants";
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 export async function aksCreateClusterFromCopilot(_context: IActionContext): Promise<void> {
+
+    const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+
+    if(!checkGitHubCopilotExtension) {
+        handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+        return;
+    }
+
     const subscriptionId = await selectSubscription();
 
     if (!subscriptionId) {
