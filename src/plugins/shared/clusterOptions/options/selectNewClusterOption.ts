@@ -1,5 +1,5 @@
 import { commands } from "vscode";
-import { Errorable } from "../../../errorable";
+import { Errorable } from "../../../../commands/utils/errorable";
 
 export async function selectNewClusterOption(): Promise<Errorable<boolean>> {
     await commands.executeCommand("aks.aksCreateClusterFromCopilot");

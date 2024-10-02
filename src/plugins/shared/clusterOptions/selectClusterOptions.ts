@@ -1,14 +1,14 @@
 import { QuickPickItem, QuickPickItemKind, window } from "vscode";
-import { ReadyAzureSessionProvider } from "../../../../auth/types";
-import { ClusterPreference } from "../../../../plugins/shared/types";
-import { Errorable } from "../../errorable";
-import { DefaultClusterTemp } from "../state/defaultClusterTemp";
+import { ReadyAzureSessionProvider } from "../../../auth/types";
+import { ClusterPreference } from "../types";
+import { Errorable } from "../../../commands/utils/errorable";
+import { RecentCluster } from "./state/recentCluster";
 import { selectExistingClusterOption } from "./options/selectExistingClusterOption";
 import { selectNewClusterOption } from "./options/selectNewClusterOption";
-import { selectDefaultClusterOption } from "./options/selectDefaultClusterOption";
+import { selectRecentClusterOption } from "./options/selectRecentClusterOption";
 
 enum Options {
-    DefaultCluster = "DefaultCluster",
+    RecentCluster = "RecentCluster",
     ExistingCluster = "ExistingCluster",
     NewCluster = "NewCluster"
 }
@@ -19,11 +19,11 @@ const getClusterOptions = () => {
     const options = [
         {
             label: "", //seperator
-            type: Options.DefaultCluster
+            type: Options.RecentCluster
         },
         {
-            label: "Default cluster",
-            type: Options.DefaultCluster
+            label: "Recently used cluster",
+            type: Options.RecentCluster
         },
         {
             label: "Existing cluster from your subscription",
@@ -41,18 +41,18 @@ const getClusterOptions = () => {
 export async function selectClusterOptions(sessionProvider: ReadyAzureSessionProvider): Promise<Errorable<ClusterPreference | boolean>> {
     const options = getClusterOptions();
 
-    const doesTempClusterExist = await DefaultClusterTemp.doesTempClusterExist();
+    const doesTempClusterExist = await RecentCluster.doesTempClusterExist();
     let defaultCluster: Errorable<ClusterPreference> | undefined;
 
     if (!doesTempClusterExist) {
-        options.splice(0, 2); // remove defaultCluster options w/ seperator
+        options.splice(0, 2); // remove recently used options w/ seperator
     } else {
-        defaultCluster = await DefaultClusterTemp.getDefaultCluster();
+        defaultCluster = await RecentCluster.getRecentCluster();
     }
 
     const quickPickClusterOptions: QuickPickClusterOptions[] = options.map((option) => {
 
-        if (option.type === Options.DefaultCluster && doesTempClusterExist) {
+        if (option.type === Options.RecentCluster && doesTempClusterExist) {
             return {
                 label: option.label === "" ? `${defaultCluster &&  defaultCluster.succeeded ? defaultCluster.result.clusterName : ""}` : option.label,
                 type: option.type,
@@ -76,8 +76,8 @@ export async function selectClusterOptions(sessionProvider: ReadyAzureSessionPro
         return { succeeded: false, error: "Cluster option not selected." };
     }
 
-    if (selectedOption.type === Options.DefaultCluster) {
-        return await selectDefaultClusterOption();
+    if (selectedOption.type === Options.RecentCluster) {
+        return await selectRecentClusterOption();
 
     } else if (selectedOption.type === Options.ExistingCluster) {
         return await selectExistingClusterOption(sessionProvider);

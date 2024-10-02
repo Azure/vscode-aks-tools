@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
-import { ReadyAzureSessionProvider } from "../../../../../auth/types";
-import { ClusterPreference } from "../../../../../plugins/shared/types";
-import { selectSubscriptions } from "../../../../aksAccount/aksAccount";
-import { getClusters, getManagedCluster, getKubeconfigYaml, Cluster } from "../../../clusters";
-import { getFilteredSubscriptions } from "../../../config";
-import { Errorable, failed } from "../../../errorable";
-import { longRunning } from "../../../host";
-import { DefaultClusterTemp } from "../../state/defaultClusterTemp";
+import { ReadyAzureSessionProvider } from "../../../../auth/types";
+import { ClusterPreference } from "../../types";
+import { selectSubscriptions } from "../../../../commands/aksAccount/aksAccount";
+import { getClusters, getManagedCluster, getKubeconfigYaml, Cluster } from "../../../../commands/utils/clusters";
+import { getFilteredSubscriptions } from "../../../../commands/utils/config";
+import { Errorable, failed } from "../../../../commands/utils/errorable";
+import { longRunning } from "../../../../commands/utils/host";
+import { RecentCluster } from "../state/recentCluster";
 
 
 export async function selectExistingClusterOption(sessionProvider: ReadyAzureSessionProvider): Promise<Errorable<ClusterPreference>> {
@@ -62,8 +62,8 @@ export async function selectExistingClusterOption(sessionProvider: ReadyAzureSes
         kubeConfigYAML: kubeconfigYaml.result,
     };
 
-    // save selected cluster as default
-    const saved = await DefaultClusterTemp.saveDefaultCluster(cluster);
+    // save selected cluster as recently used cluster
+    const saved = await RecentCluster.saveRecentCluster(cluster);
 
     if(failed(saved)) {
         // no need to throw error 
