@@ -182,35 +182,14 @@
             "identity": "[parameters('clusterIdentity')]"
         },
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "[parameters('rbacName')]",
-            "apiVersion": "2019-05-01",
-            "resourceGroup": "[parameters('resourceGroupName')]",
-            "subscriptionId": "[parameters('subscriptionId')]",
-            "dependsOn": [
-                "[concat('Microsoft.ContainerService/managedClusters/', parameters('resourceName'))]"
-            ],
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2020-04-01-preview",
+            "name": "[guid(resourceGroup().id)]",
             "properties": {
-                "mode": "Incremental",
-                "template": {
-                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                    "contentVersion": "1.0.0.0",
-                    "parameters": {},
-                    "variables": {},
-                    "resources": [
-                        {
-                            "type": "Microsoft.ContainerService/managedClusters/providers/roleAssignments",
-                            "apiVersion": "2018-09-01-preview",
-                            "name": "[parameters('rbacName')]",
-                            "properties": {
-                                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
-                                "principalId": "[parameters('userPrincipalId')]",
-                                "scope": "[concat('/subscriptions/', subscription().subscriptionId, '/resourcegroups/', resourceGroup().name, '/providers/Microsoft.ContainerService/managedClusters/', parameters('resourceName'))]",
-                                "principalType": "User"
-                            }
-                        }
-                    ]
-                }
+                "roleDefinitionId": "[concat('/subscriptions/', parameters('subscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
+                "principalId": "[parameters('userPrincipalId')]",
+                "scope": "[resourceGroup().id]",
+                "principalType": "User"
             }
         }
     ]
