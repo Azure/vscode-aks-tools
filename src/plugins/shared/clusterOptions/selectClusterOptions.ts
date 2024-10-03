@@ -7,7 +7,7 @@ import { selectExistingClusterOption } from "./options/selectExistingClusterOpti
 import { selectNewClusterOption } from "./options/selectNewClusterOption";
 import { selectRecentClusterOption } from "./options/selectRecentClusterOption";
 
-enum Options {
+export enum Options {
     RecentCluster = "RecentCluster",
     ExistingCluster = "ExistingCluster",
     NewCluster = "NewCluster"
@@ -38,7 +38,7 @@ const getClusterOptions = () => {
     return options;
 }
 
-export async function selectClusterOptions(sessionProvider: ReadyAzureSessionProvider): Promise<Errorable<ClusterPreference | boolean>> {
+export async function selectClusterOptions(sessionProvider: ReadyAzureSessionProvider, exclude?: Options[]): Promise<Errorable<ClusterPreference | boolean>> {
     const options = getClusterOptions();
 
     const doesTempClusterExist = await RecentCluster.doesTempClusterExist();
@@ -48,6 +48,14 @@ export async function selectClusterOptions(sessionProvider: ReadyAzureSessionPro
         options.splice(0, 2); // remove recently used options w/ seperator
     } else {
         defaultCluster = await RecentCluster.getRecentCluster();
+    }
+
+    if (exclude && exclude.length > 0) {
+        for (let i = options.length - 1; i >= 0; i--) {
+            if (exclude.includes(options[i].type)) {
+                options.splice(i, 1);
+            }
+        }
     }
 
     const quickPickClusterOptions: QuickPickClusterOptions[] = options.map((option) => {

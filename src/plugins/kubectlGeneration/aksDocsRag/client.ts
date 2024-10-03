@@ -84,7 +84,7 @@ export class AKSDocsRAGClient {
             return { succeeded: false, error: `Error: ${data.message}` }
         }
 
-        let commandResponse: CommandResponse = {
+        const commandResponse: CommandResponse = {
             status: "",
             message: "",
             code: "",

@@ -4,8 +4,8 @@ type GitHubCopilotForAzureChatPluginResponse = {
     commandID: string;
 }
 
-type GitHubCopilotForAzureChatPluginResponseExtended = GitHubCopilotForAzureChatPluginResponse & {
-    arguments: any[] | undefined;
+type GitHubCopilotForAzureChatPluginResponseExtended<T> = GitHubCopilotForAzureChatPluginResponse & {
+    arguments: T[] | undefined;
 }
 
 // Create AKS cluster plugin
@@ -24,19 +24,11 @@ export interface CommandResponse {
     code: string;
 }
 
-export interface CommandOptions {
-    response: CommandResponse;
-}
-
-type CommandArguments = [CommandOptions | undefined]
-
-export const getKubectlCommandPluginResponse = (response: CommandResponse): GitHubCopilotForAzureChatPluginResponseExtended => {
+export const getKubectlCommandPluginResponse = (response: CommandResponse): GitHubCopilotForAzureChatPluginResponseExtended<CommandResponse> => {
     return {
-        messageForLanguageModel: response.message,
+        messageForLanguageModel: `To execute this command, 1. Select an AKS cluster. 2. Run the kubectl command within the dedicated AKS extension panel. 3. make sure to review the command before running. ${response.message} ${response.code}. (Make sure to always show steps to the user first, then command, then chat button)`,
         commandID: "aks.openKubectlPanel",
         buttonLabel: "Execute kubectl command",
-        arguments: [ 
-           /* options */ { response }
-         ] satisfies CommandArguments
+        arguments: [ response ]
     }
 }

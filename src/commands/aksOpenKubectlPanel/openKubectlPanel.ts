@@ -2,13 +2,13 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { KubectlDataProvider, KubectlPanel } from "../../panels/KubectlPanel";
-import { CommandOptions } from "../../plugins/shared/pluginResponses";
+import { CommandResponse } from "../../plugins/shared/pluginResponses";
 import { getExtension } from "../utils/host";
 import { getKubectlCustomCommands } from "../utils/config";
 import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { selectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
+import { Options, selectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
 import { GITHUBCOPILOT_FOR_AZURE_VSCODE_ID } from "../../plugins/shared/constants";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/extensions";
 
@@ -21,7 +21,7 @@ export async function openKubectlPanel(_context: IActionContext, target: unknown
         return;
     }
 
-    const responseCode = (target as CommandOptions).response.code;
+    const responseCode = (target as CommandResponse).code;
     const sessionProvider = await getReadySessionProvider();
 
     if(failed(sessionProvider)) {
@@ -29,7 +29,7 @@ export async function openKubectlPanel(_context: IActionContext, target: unknown
         return;
     }
 
-    const cluster = await selectClusterOptions(sessionProvider.result);
+    const cluster = await selectClusterOptions(sessionProvider.result, [Options.NewCluster]);
 
     if (failed(cluster)) {
         vscode.window.showErrorMessage(cluster.error);
