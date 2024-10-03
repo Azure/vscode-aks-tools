@@ -30,8 +30,7 @@ async function handleKubectlCommandGeneration(agentRequest: AgentRequest): Promi
     }
 
     const client = getAKSDocsRAGClient(sessionProvider.result);
-    const promptHistory = agentRequest.context.history.filter(c => Object.hasOwn(c, "prompt")) as vscode.ChatRequestTurn[];
-    const prompt = promptHistory[promptHistory.length - 1].prompt; // get latest prompt from chat history
+    const prompt = agentRequest.userPrompt;
 
     const request = await client.sendRequest({ message: prompt });
 
