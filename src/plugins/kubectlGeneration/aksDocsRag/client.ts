@@ -1,6 +1,6 @@
 import { ReadyAzureSessionProvider } from "../../../auth/types";
 import { Errorable, failed, getErrorMessage } from "../../../commands/utils/errorable";
-import { aksDocsRAGEndpoint, aksDocsRAGIntent, aksDocsRAGMessagePropmt, aksDocsRAGScenario, aksDocsRAGScopes, aksDocsRAGTenantId } from "./constants";
+import { aksDocsRAGEndpoint, aksDocsRAGIntent, aksDocsRAGScenario, aksDocsRAGScopes } from "./constants";
 
 export function getAKSDocsRAGClient(sessionProvider: ReadyAzureSessionProvider) {
     return new AKSDocsRAGClient(sessionProvider);
@@ -56,11 +56,11 @@ export class AKSDocsRAGClient {
                 headers: {
                     "Access-Control-Allow-Origin": "*",
                     Authorization: `Bearer ${this.authToken}`,
-                    "App-Tenant-Id": aksDocsRAGTenantId,
+                    "App-Tenant-Id": this.sessionProvider.selectedTenant.id,
                 },
                 body: JSON.stringify({
                     IsLocalEvaluation: false,
-                    Question: `${aksDocsRAGMessagePropmt}: ${message}`,
+                    Question: message,
                     Scenario: aksDocsRAGScenario,
                     Intent: aksDocsRAGIntent,
                 }),
