@@ -6,7 +6,7 @@ import { Uri, window } from "vscode";
 import { getEnvironment } from "../auth/azureAuth";
 import { AzureAuthenticationSession, ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
-import { getPortalResourceUrl } from "../commands/utils/env";
+import { getDeploymentPortalUrl, getPortalResourceUrl } from "../commands/utils/env";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import {
     createMultipleFeatureRegistrations,
@@ -307,7 +307,7 @@ async function createCluster(
             deploymentSpec,
         );
         const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
-        const deploymentPortalUrl = getPortalResourceUrl(environment, deploymentArmId);
+        const deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
         webview.postProgressUpdate({
             event: ProgressEventType.InProgress,
             operationDescription,
