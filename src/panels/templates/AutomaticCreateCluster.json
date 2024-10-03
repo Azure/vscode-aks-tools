@@ -1,6 +1,13 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
+    "variables": {
+        "defaultAadProfile": {
+            "managed": true,
+            "adminGroupObjectIDs": "[parameters('adminGroupObjectIDs')]",
+            "enableAzureRBAC": "[parameters('azureRbac')]"
+        }
+    },
     "parameters": {
         "apiVersion": {
             "type": "string"
@@ -35,6 +42,111 @@
             "metadata": {
                 "description": "The identity of the managed cluster, if configured."
             }
+        },
+        "enableRBAC": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Boolean flag to turn on and off of RBAC."
+            }
+        },
+        "nodeResourceGroup": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the resource group containing agent pool nodes."
+            }
+        },
+        "subscriptionId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "The subscription id of the cluster."
+            }
+        },
+        "resourceGroupName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "The resource group name of the cluster."
+            }
+        },
+        "rbacName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "The name of the role assignment."
+            }
+        },
+        "nodeResourceGroupProfile": {
+            "type": "object",
+            "defaultValue": {
+                "restrictionLevel": "ReadOnly"
+            },
+            "metadata": {
+                "description": "Node resource group lockdown profile for a managed cluster."
+            }
+        },
+        "nodeProvisioningProfile": {
+            "type": "object",
+            "defaultValue": {
+                "mode": "Auto"
+            },
+            "metadata": {
+                "description": "The node provisioning mode."
+            }
+        },
+        "upgradeChannel": {
+            "defaultValue": "stable",
+            "type": "string",
+            "metadata": {
+                "description": "Auto upgrade channel for a managed cluster."
+            }
+        },
+        "adminGroupObjectIDs": {
+            "type": "array",
+            "defaultValue": [],
+            "metadata": {
+                "description": "An array of Microsoft Entra group object ids to give administrative access."
+            }
+        },
+        "azureRbac": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Enable or disable Azure RBAC."
+            }
+        },
+        "disableLocalAccounts": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Enable or disable local accounts."
+            }
+        },
+        "enableAadProfile": {
+            "defaultValue": false,
+            "type": "bool",
+            "metadata": {
+                "description": "Flag to turn on or off of Microsoft Entra ID Profile."
+            }
+        },
+        "nodeOSUpgradeChannel": {
+            "defaultValue": "NodeImage",
+            "type": "string",
+            "metadata": {
+                "description": "Auto upgrade channel for node OS security."
+            }
+        },
+        "supportPlan": {
+            "type": "string",
+            "defaultValue": "KubernetesOfficial"
+        },
+        "userPrincipalId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "The user principal id."
+            }
         }
     },
     "resources": [
@@ -44,7 +156,18 @@
             "sku": "[parameters('clusterSku')]",
             "location": "[parameters('location')]",
             "name": "[parameters('resourceName')]",
+            "dependsOn": [],
             "properties": {
+                "enableRBAC": "[parameters('enableRBAC')]",
+                "nodeResourceGroup": "[parameters('nodeResourceGroup')]",
+                "nodeResourceGroupProfile": "[parameters('nodeResourceGroupProfile')]",
+                "nodeProvisioningProfile": "[parameters('nodeProvisioningProfile')]",
+                "disableLocalAccounts": "[parameters('disableLocalAccounts')]",
+                "aadProfile": "[if(parameters('enableAadProfile'), variables('defaultAadProfile'), null())]",
+                "autoUpgradeProfile": {
+                    "upgradeChannel": "[parameters('upgradeChannel')]",
+                    "nodeOSUpgradeChannel": "[parameters('nodeOSUpgradeChannel')]"
+                },
                 "agentPoolProfiles": [
                     {
                         "name": "systempool",
@@ -53,9 +176,24 @@
                         "count": 3,
                         "osType": "Linux"
                     }
-                ]
+                ],
+                "supportPlan": "[parameters('supportPlan')]"
             },
             "identity": "[parameters('clusterIdentity')]"
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[guid(resourceGroup().id)]",
+            "dependsOn": [
+                "[concat('Microsoft.ContainerService/managedClusters/', parameters('resourceName'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', parameters('subscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
+                "principalId": "[parameters('userPrincipalId')]",
+                "scope": "[resourceGroup().id]",
+                "principalType": "User"
+            }
         }
     ]
 }
