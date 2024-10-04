@@ -5,7 +5,8 @@ jobs:
   run:
     runs-on:
       labels: [self-hosted, "1ES.Pool=1es-vscode-aks-tools-pool"]
-    permissions: read
+    permissions:
+      contents: read
 
     steps:
 
