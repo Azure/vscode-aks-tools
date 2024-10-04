@@ -444,5 +444,13 @@ function getServicePrincipalId(result: AzureAuthenticationSession): string {
     if (!result || !result.account || !result.account.id) {
         return "";
     }
-    return result.account.id.split("/")[1];
+    // account id is in the format of tenantID/servicePrincipalId
+    // sometimes in case of non aad auth it is in the format of servicePrincipalId.tenantID
+    if (result.account.id.includes("/")) {
+        return result.account.id.split("/")[1];
+    } else if (result.account.id.includes(".")) {
+        return result.account.id.split(".")[0];
+    } else {
+        return "";
+    }
 }
