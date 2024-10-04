@@ -8,7 +8,7 @@ import {
     SubscriptionQuickPickItem,
 } from "../utils/subscriptions";
 import { window } from "vscode";
-import { checkExtension, handleExtensionDoesNotExist } from "../utils/extensions";
+import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
