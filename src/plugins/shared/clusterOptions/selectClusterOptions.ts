@@ -7,47 +7,61 @@ import { selectExistingClusterOption } from "./options/selectExistingClusterOpti
 import { selectNewClusterOption } from "./options/selectNewClusterOption";
 import { selectRecentClusterOption } from "./options/selectRecentClusterOption";
 
-export enum Options {
+export enum SelectClusterOptions {
     RecentCluster = "RecentCluster",
     ExistingCluster = "ExistingCluster",
     NewCluster = "NewCluster"
 }
 
-export type QuickPickClusterOptions = QuickPickItem & { type: Options }
+export type QuickPickClusterOptions = QuickPickItem & { type: SelectClusterOptions }
 
 const getClusterOptions = () => {
     const options = [
         {
             label: "", //seperator
-            type: Options.RecentCluster
+            type: SelectClusterOptions.RecentCluster
         },
         {
             label: "Recently used cluster",
-            type: Options.RecentCluster
+            type: SelectClusterOptions.RecentCluster
         },
         {
             label: "Existing cluster from your subscription",
-            type: Options.ExistingCluster
+            type: SelectClusterOptions.ExistingCluster
         },
         {
             label: "Create new cluster from AKS VS Extension",
-            type: Options.NewCluster
+            type: SelectClusterOptions.NewCluster
         }
     ];
 
     return options;
 }
 
-export async function selectClusterOptions(sessionProvider: ReadyAzureSessionProvider, exclude?: Options[]): Promise<Errorable<ClusterPreference | boolean>> {
+export async function selectClusterOptions(sessionProvider: ReadyAzureSessionProvider, exclude?: SelectClusterOptions[]): Promise<Errorable<ClusterPreference | boolean>> {
     const options = getClusterOptions();
 
-    const doesTempClusterExist = await RecentCluster.doesTempClusterExist();
-    let defaultCluster: Errorable<ClusterPreference> | undefined;
+    let doesRecentClusterExist = false;
+    try {
+        doesRecentClusterExist = await RecentCluster.doesRecentlyUsedClusterExist();
+    } catch (error) {
+        // do nothing if recent cluster does not exist, we do not show this option
+    }
 
-    if (!doesTempClusterExist) {
+    let recentCluster: Errorable<ClusterPreference> | undefined;
+
+    if (!doesRecentClusterExist) {
         options.splice(0, 2); // remove recently used options w/ seperator
     } else {
-        defaultCluster = await RecentCluster.getRecentCluster();
+        recentCluster = await RecentCluster.getRecentCluster();
+    }
+
+    if (exclude && exclude.length > 0) {
+        for (let i = options.length - 1; i >= 0; i--) {
+            if (exclude.includes(options[i].type)) {
+                options.splice(i, 1);
+            }
+        }
     }
 
     if (exclude && exclude.length > 0) {
@@ -60,9 +74,9 @@ export async function selectClusterOptions(sessionProvider: ReadyAzureSessionPro
 
     const quickPickClusterOptions: QuickPickClusterOptions[] = options.map((option) => {
 
-        if (option.type === Options.RecentCluster && doesTempClusterExist) {
+        if (option.type === SelectClusterOptions.RecentCluster && doesRecentClusterExist) {
             return {
-                label: option.label === "" ? `${defaultCluster &&  defaultCluster.succeeded ? defaultCluster.result.clusterName : ""}` : option.label,
+                label: option.label === "" ? `${recentCluster &&  recentCluster.succeeded ? recentCluster.result.clusterName : ""}` : option.label,
                 type: option.type,
                 kind: option.label === "" ? QuickPickItemKind.Separator : QuickPickItemKind.Default,
             }
@@ -84,16 +98,17 @@ export async function selectClusterOptions(sessionProvider: ReadyAzureSessionPro
         return { succeeded: false, error: "Cluster option not selected." };
     }
 
-    if (selectedOption.type === Options.RecentCluster) {
-        return await selectRecentClusterOption();
+    switch(selectedOption.type) {
+        case SelectClusterOptions.RecentCluster:
 
-    } else if (selectedOption.type === Options.ExistingCluster) {
-        return await selectExistingClusterOption(sessionProvider);
+            return await selectRecentClusterOption();
+        case SelectClusterOptions.ExistingCluster:
 
-    } else if (selectedOption.type === Options.NewCluster) {
-        return await selectNewClusterOption();
+            return await selectExistingClusterOption(sessionProvider);
+        case SelectClusterOptions.NewCluster:
 
-    } else {
-        return { succeeded: false, error: "Invalid cluster option selected." };
+            return await selectNewClusterOption();
+        default:
+            return { succeeded: false, error: "Invalid cluster option selected." };
     }
 }
