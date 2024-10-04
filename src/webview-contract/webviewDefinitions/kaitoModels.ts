@@ -1,34 +1,32 @@
 import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
-    clusterName: string;
-    subscriptionId: string;
-    resourceGroupName: string;
-}
-
-export interface Workspace {
-    name: string;
-    instanceType: string;
-}
-
-export interface WorkspaceCRD {
-    workspace: string; // workspace CRD yaml
+    modelName: string;
+    workspaceExists: boolean;
+    resourceReady: boolean | null;
+    inferenceReady: boolean | null;
+    workspaceReady: boolean | null;
+    age: number;
 }
 
 export type ToVsCodeMsgDef = {
     generateCRDRequest: { model: string };
+    deployKaitoRequest: { model: string; yaml: string };
+    workspaceExistsRequest: { model: string };
+    updateStateRequest: { model: string };
+    resetStateRequest: {};
+    cancelRequest: {};
 };
 
-export enum ProgressEventType {
-    NotStarted,
-    InProgress,
-    Cancelled,
-    Failed,
-    Success,
-}
-
 export type ToWebViewMsgDef = {
-    generateCRDResponse: { crdText: string };
+    deploymentProgressUpdate: {
+        modelName: string;
+        workspaceExists: boolean;
+        resourceReady: boolean | null;
+        inferenceReady: boolean | null;
+        workspaceReady: boolean | null;
+        age: number;
+    };
 };
 
 export type ModelDetails = {
