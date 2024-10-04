@@ -8,7 +8,7 @@ import { getKubectlCustomCommands } from "../utils/config";
 import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { Options, selectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
+import { selectClusterOptions, SelectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
 import { GITHUBCOPILOT_FOR_AZURE_VSCODE_ID } from "../../plugins/shared/constants";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/extensions";
 
@@ -29,7 +29,7 @@ export async function openKubectlPanel(_context: IActionContext, target: unknown
         return;
     }
 
-    const cluster = await selectClusterOptions(sessionProvider.result, [Options.NewCluster]);
+    const cluster = await selectClusterOptions(sessionProvider.result, [SelectClusterOptions.NewCluster]);
 
     if (failed(cluster)) {
         vscode.window.showErrorMessage(cluster.error);
