@@ -36,12 +36,12 @@ export async function selectSubscription(): Promise<string | undefined> {
 
     const allSubscriptions = await getSubscriptions(sessionProvider.result, SelectionType.All);
     if (failed(allSubscriptions)) {
-        await window.showErrorMessage(allSubscriptions.error);
+        window.showErrorMessage(allSubscriptions.error);
         return;
     }
 
     if (allSubscriptions.result.length === 0) {
-        await handleNoSubscriptionsFound();
+        handleNoSubscriptionsFound();
         return;
     }
 
