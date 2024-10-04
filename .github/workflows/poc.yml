@@ -3,7 +3,7 @@ on: [workflow_dispatch]
 
 jobs:
   run:
-    runs-on: 
+    runs-on:
       labels: [self-hosted, "1ES.Pool=1es-vscode-aks-tools-pool"]
     permissions: read-only
 
