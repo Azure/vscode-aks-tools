@@ -1,0 +1,21 @@
+name: poc
+on: [workflow_dispatch]
+
+jobs:
+  run:
+    runs-on: 
+      labels: [self-hosted, "1ES.Pool=${{ secrets.POOL_NAME }}"]
+    permissions: read-only
+
+    steps:
+
+      - name: federation login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Make az rest API call to VSSPS Profile API
+        run: |
+            az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me --resource ${{ secrets.MAGIC_NUMBER }}
