@@ -39,6 +39,7 @@ env:
   ACR_RESOURCE_GROUP: "your-cluster-resource-group"
   CLUSTER_NAME: "your-cluster-name"
   DEPLOYMENT_MANIFEST_PATH: 'your-deployment-manifest-path'
+  NAMESPACE: 'your-namespace-name'
 
 jobs:
   buildImage:
@@ -95,6 +96,11 @@ jobs:
           cluster-name: ${{ env.CLUSTER_NAME }}
           admin: 'false'
           use-kubelogin: 'true'
+
+       # Check if namespace exists, if not create it
+      - name: Ensure Namespace exists
+        run: |
+          kubectl get namespace ${{ env.NAMESPACE }} || kubectl create namespace ${{ env.NAMESPACE }}
 
       # Deploys application based on given manifest file
       - name: Deploys application

@@ -1,8 +1,8 @@
-import { Subscription } from "@azure/arm-resources-subscriptions";
-import { getSubscriptionClient, listAll } from "./arm";
-import { Errorable, map as errmap } from "./errorable";
-import { getFilteredSubscriptions } from "./config";
+import { Subscription, SubscriptionsGetResponse } from "@azure/arm-resources-subscriptions";
 import { ReadyAzureSessionProvider } from "../../auth/types";
+import { getSubscriptionClient, listAll } from "./arm";
+import { getFilteredSubscriptions } from "./config";
+import { Errorable, map as errmap } from "./errorable";
 
 export enum SelectionType {
     Filtered,
@@ -40,4 +40,20 @@ function sortAndFilter(subscriptions: DefinedSubscription[], selectionType: Sele
 
 function isDefinedSubscription(sub: Subscription): sub is DefinedSubscription {
     return sub.subscriptionId !== undefined && sub.displayName !== undefined;
+}
+
+function isDefinedSubscriptionGetResponse(sub: SubscriptionsGetResponse): sub is DefinedSubscription {
+    return sub.subscriptionId !== undefined && sub.displayName !== undefined;
+}
+
+export async function getSubscription(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): Promise<Errorable<DefinedSubscription>> {
+    const client = getSubscriptionClient(sessionProvider);
+    const subResult: SubscriptionsGetResponse = await client.subscriptions.get(subscriptionId);
+    if (!isDefinedSubscriptionGetResponse(subResult)) {
+        return { succeeded: false, error: "Subscription is not found" };
+    }
+    return { succeeded: true, result: subResult };
 }

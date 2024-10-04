@@ -70,9 +70,11 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerUIExtensionVariables(uiExtensionVariables);
-        vscode.commands.executeCommand("workbench.action.openWalkthrough", {
-            category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
-        });
+        if (vscode.workspace.getConfiguration("workbench").get("startupEditor") !== "none") {
+            vscode.commands.executeCommand("workbench.action.openWalkthrough", {
+                category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
+            });
+        }
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectTenant", selectTenant);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
