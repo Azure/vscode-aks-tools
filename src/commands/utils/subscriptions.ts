@@ -66,7 +66,7 @@ export function handleNoSubscriptionsFound(): void {
     const setupAccount = "Set up Account";
     window.showInformationMessage(noSubscriptionsFound, setupAccount).then((res) => {
         if(res === setupAccount) {
-            env.openExternal(Uri.parse("https://azure.microsoft.com/"));
+            env.openExternal(Uri.parse("https://learn.microsoft.com/en-us/azure/cost-management-billing/manage/"));
         }
     });
 }
