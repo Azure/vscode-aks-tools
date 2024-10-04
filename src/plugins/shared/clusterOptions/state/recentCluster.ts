@@ -42,7 +42,7 @@ export class RecentCluster {
         return { succeeded: true, result: recentCluster };
     }
 
-    public static async doesTempClusterExist(): Promise<boolean> {
+    public static async doesRecentlyUsedClusterExist(): Promise<boolean> {
         if (RecentCluster.RECENT_CLUSTER_TEMPFILE === undefined) {
             return false;
         }

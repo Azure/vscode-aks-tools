@@ -38,16 +38,22 @@ const getClusterOptions = () => {
     return options;
 }
 
-export async function selectClusterOptions(sessionProvider: ReadyAzureSessionProvider, exclude?: Options[]): Promise<Errorable<ClusterPreference | boolean>> {
+export async function selectClusterOptions(sessionProvider: ReadyAzureSessionProvider, exclude?: SelectClusterOptions[]): Promise<Errorable<ClusterPreference | boolean>> {
     const options = getClusterOptions();
 
-    const doesTempClusterExist = await RecentCluster.doesTempClusterExist();
-    let defaultCluster: Errorable<ClusterPreference> | undefined;
+    let doesRecentClusterExist = false;
+    try {
+        doesRecentClusterExist = await RecentCluster.doesRecentlyUsedClusterExist();
+    } catch (error) {
+        // do nothing if recent cluster does not exist, we do not show this option
+    }
 
-    if (!doesTempClusterExist) {
+    let recentCluster: Errorable<ClusterPreference> | undefined;
+
+    if (!doesRecentClusterExist) {
         options.splice(0, 2); // remove recently used options w/ seperator
     } else {
-        defaultCluster = await RecentCluster.getRecentCluster();
+        recentCluster = await RecentCluster.getRecentCluster();
     }
 
     if (exclude && exclude.length > 0) {
@@ -60,9 +66,9 @@ export async function selectClusterOptions(sessionProvider: ReadyAzureSessionPro
 
     const quickPickClusterOptions: QuickPickClusterOptions[] = options.map((option) => {
 
-        if (option.type === SelectClusterOptions.RecentCluster && doesTempClusterExist) {
+        if (option.type === SelectClusterOptions.RecentCluster && doesRecentClusterExist) {
             return {
-                label: option.label === "" ? `${defaultCluster &&  defaultCluster.succeeded ? defaultCluster.result.clusterName : ""}` : option.label,
+                label: option.label === "" ? `${recentCluster &&  recentCluster.succeeded ? recentCluster.result.clusterName : ""}` : option.label,
                 type: option.type,
                 kind: option.label === "" ? QuickPickItemKind.Separator : QuickPickItemKind.Default,
             }
@@ -84,16 +90,17 @@ export async function selectClusterOptions(sessionProvider: ReadyAzureSessionPro
         return { succeeded: false, error: "Cluster option not selected." };
     }
 
-    if (selectedOption.type === SelectClusterOptions.RecentCluster) {
-        return await selectRecentClusterOption();
+    switch(selectedOption.type) {
+        case SelectClusterOptions.RecentCluster:
 
-    } else if (selectedOption.type === SelectClusterOptions.ExistingCluster) {
-        return await selectExistingClusterOption(sessionProvider);
+            return await selectRecentClusterOption();
+        case SelectClusterOptions.ExistingCluster:
 
-    } else if (selectedOption.type === SelectClusterOptions.NewCluster) {
-        return await selectNewClusterOption();
+            return await selectExistingClusterOption(sessionProvider);
+        case SelectClusterOptions.NewCluster:
 
-    } else {
-        return { succeeded: false, error: "Invalid cluster option selected." };
+            return await selectNewClusterOption();
+        default:
+            return { succeeded: false, error: "Invalid cluster option selected." };
     }
 }
