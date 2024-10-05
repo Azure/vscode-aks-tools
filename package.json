@@ -291,7 +291,11 @@
             {            
                 "command": "aks.openKubectlPanel",
                 "title": "Run Kubectl Commands from Github Copilot Chat"
-            },                   
+            },          
+            {            
+                "command": "aks.deployManifest",
+                "title": "Deploy application manifest from Github Copilot Chat"
+            },                                        
             {
                 "command": "aks.aksTCPDump",
                 "title": "Collect TCP Dumps"
