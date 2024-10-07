@@ -33,7 +33,7 @@ export default async function aksCreateCluster(_context: IActionContext, target:
                 vscode.window.showErrorMessage(subscriptionResult.error);
                 return;
             }
-            subscriptionId = subscriptionResult.result?.id;
+            subscriptionId = subscriptionResult.result?.subscriptionId;
             subscriptionName = subscriptionResult.result?.displayName;
             break;
         }

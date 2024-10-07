@@ -4,9 +4,9 @@ import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@az
 import { RestError } from "@azure/storage-blob";
 import { Uri, window } from "vscode";
 import { getEnvironment } from "../auth/azureAuth";
-import { ReadyAzureSessionProvider } from "../auth/types";
+import { AzureAuthenticationSession, ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
-import { getPortalResourceUrl } from "../commands/utils/env";
+import { getDeploymentPortalUrl, getPortalResourceUrl } from "../commands/utils/env";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import {
     createMultipleFeatureRegistrations,
@@ -249,6 +249,23 @@ async function createCluster(
         return;
     }
 
+    // if automatic preset, we need role assignments for the cluster RBAC admin role which requires service principal id
+    let servicePrincipalId = "";
+    if (preset === PresetType.Automatic) {
+        servicePrincipalId = getServicePrincipalId(session.result);
+        if (!servicePrincipalId) {
+            window.showErrorMessage("No service principal id available for logged in user.");
+            webview.postProgressUpdate({
+                event: ProgressEventType.Failed,
+                operationDescription,
+                errorMessage: "No service principal id available for logged in user.",
+                deploymentPortalUrl: null,
+                createdCluster: null,
+            });
+            return;
+        }
+    }
+
     const clusterSpec: ClusterSpec = {
         location,
         name,
@@ -256,6 +273,7 @@ async function createCluster(
         subscriptionId: subscriptionId,
         kubernetesVersion: kubernetesVersion.version,
         username: session.result.account.label, // Account label seems to be email address
+        servicePrincipalId: servicePrincipalId,
     };
 
     // Create a unique deployment name.
@@ -289,7 +307,7 @@ async function createCluster(
             deploymentSpec,
         );
         const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
-        const deploymentPortalUrl = getPortalResourceUrl(environment, deploymentArmId);
+        const deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
         webview.postProgressUpdate({
             event: ProgressEventType.InProgress,
             operationDescription,
@@ -420,4 +438,11 @@ function isRestError(ex: unknown): ex is RestError {
 
 function isDefaultK8sVersion(version: KubernetesVersion): boolean {
     return "isDefault" in version && version.isDefault === true;
+}
+function getServicePrincipalId(result: AzureAuthenticationSession): string {
+    // we need servicePrincipalId of the logged in user which is after slash
+    if (!result || !result.account || !result.account.id) {
+        return "";
+    }
+    return result.account.id.split("/")[1];
 }

@@ -1,8 +1,8 @@
-import { QuickPickItem, Uri, env, window } from "vscode";
+import { window } from "vscode";
 import { failed } from "../utils/errorable";
-import { SubscriptionFilter, getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
+import { getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
-import { SelectionType, getSubscriptions } from "../utils/subscriptions";
+import { SelectionType, SubscriptionQuickPickItem, getSubscriptions, handleNoSubscriptionsFound } from "../utils/subscriptions";
 import { getReadySessionProvider, quickPickTenant } from "../../auth/azureAuth";
 
 export async function signInToAzure(): Promise<void> {
@@ -39,7 +39,6 @@ export async function selectTenant(): Promise<void> {
     sessionProvider.selectedTenant = selectedTenant;
 }
 
-type SubscriptionQuickPickItem = QuickPickItem & { subscription: SubscriptionFilter };
 
 export async function selectSubscriptions(): Promise<void> {
     const sessionProvider = await getReadySessionProvider();
@@ -55,13 +54,7 @@ export async function selectSubscriptions(): Promise<void> {
     }
 
     if (allSubscriptions.result.length === 0) {
-        const noSubscriptionsFound = "No subscriptions were found. Set up your account if you have yet to do so.";
-        const setupAccount = "Set up Account";
-        const response = await window.showInformationMessage(noSubscriptionsFound, setupAccount);
-        if (response === setupAccount) {
-            env.openExternal(Uri.parse("https://azure.microsoft.com/"));
-        }
-
+        handleNoSubscriptionsFound();
         return;
     }
 
@@ -89,10 +82,13 @@ export async function selectSubscriptions(): Promise<void> {
             },
         };
     });
+    
+    // show picked items at the top
+    quickPickItems.sort((itemA, itemB) => (itemA.picked === itemB.picked ? 0 : itemA.picked ? -1 : 1));
 
     const selectedItems = await window.showQuickPick(quickPickItems, {
         canPickMany: true,
-        placeHolder: "Select Subscriptions",
+        placeHolder: "Select Subscriptions"
     });
 
     if (!selectedItems) {

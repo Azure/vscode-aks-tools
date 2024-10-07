@@ -285,6 +285,10 @@
                 "title": "Run Kubectl Commands"
             },
             {
+                "command": "aks.aksCreateClusterFromCopilot",
+                "title": "Command to create an AKS cluster"
+            },                
+            {
                 "command": "aks.aksTCPDump",
                 "title": "Collect TCP Dumps"
             },
@@ -544,6 +548,10 @@
         "vscode.git",
         "ms-kubernetes-tools.vscode-kubernetes-tools"
     ],
+    "agentMetadata": {
+        "version": "2.0",
+        "getPluginsCommand": "aks.getAzureKubernetesServicePlugins"
+    },
     "devDependencies": {
         "@types/chai": "^4.3.19",
         "@types/decompress": "^4.2.7",
@@ -574,7 +582,7 @@
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
         "@azure/arm-containerregistry": "^10.1.0",
-        "@azure/arm-containerservice": "^21.1.0-beta.1",
+        "@azure/arm-containerservice": "21.2.0-beta.1",
         "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-msi": "^2.1.0",
