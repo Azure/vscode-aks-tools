@@ -441,8 +441,17 @@ function isDefaultK8sVersion(version: KubernetesVersion): boolean {
 }
 function getServicePrincipalId(result: AzureAuthenticationSession): string {
     // we need servicePrincipalId of the logged in user which is after slash
-    if (!result || !result.account || !result.account.id) {
+    if (!result?.account?.id) {
         return "";
     }
-    return result.account.id.split("/")[1];
+    // account id is in the format of tenantID/servicePrincipalId
+    // sometimes in case of non aad auth it is in the format of servicePrincipalId.tenantID
+    const accountId = result.account.id;
+    if (accountId.includes("/")) {
+        return accountId.split("/")[1];
+    } else if (accountId.includes(".")) {
+        return accountId.split(".")[0];
+    } else {
+        return "";
+    }
 }
