@@ -50,12 +50,13 @@ export async function selectClusterOptions(
 
     const quickPickClusterOptions: QuickPickClusterOptions[] = options.map((option) => {
         const isRecentCluster = option.type === SelectClusterOptions.RecentCluster;
-        const label = isRecentCluster && recentCluster?.succeeded ? recentCluster.result.clusterName : option.label;
-
+        const isSeperator = option.label === "";
+        const label = isSeperator && isRecentCluster && recentCluster?.succeeded ? recentCluster.result.clusterName : option.label;
+  
         return {
             label,
             type: option.type,
-            kind: label ? QuickPickItemKind.Default : QuickPickItemKind.Separator,
+            kind: isSeperator ? QuickPickItemKind.Separator : QuickPickItemKind.Default,
         };
     });
 

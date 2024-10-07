@@ -39,7 +39,7 @@ export class RecentCluster {
             const fileContent = await fs.readFile(filePath, "utf-8");
             const recentCluster = JSON.parse(fileContent) as ClusterPreference;
             return { succeeded: true, result: recentCluster };
-        } catch (error) {
+        } catch {
             return { succeeded: false, error: "Failed to read recent cluster data." };
         }
     }
