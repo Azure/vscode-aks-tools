@@ -7,6 +7,7 @@ import { getFilteredSubscriptions } from "../../../../commands/utils/config";
 import { Errorable, failed } from "../../../../commands/utils/errorable";
 import { longRunning } from "../../../../commands/utils/host";
 import { RecentCluster } from "../state/recentCluster";
+import { handleNoSubscriptionsFound } from "../../../../commands/utils/subscriptions";
 
 export async function selectExistingClusterOption(
     sessionProvider: ReadyAzureSessionProvider,
@@ -14,6 +15,11 @@ export async function selectExistingClusterOption(
     await selectSubscriptions();
 
     const subscriptions = getFilteredSubscriptions();
+    if(subscriptions.length === 0) { 
+        handleNoSubscriptionsFound();
+        return { succeeded: false, error: "No subscriptions found." };
+    }
+
     const clusters = (
         await Promise.all(subscriptions.map((sub) => getClusters(sessionProvider, sub.subscriptionId)))
     ).flat();
