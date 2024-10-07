@@ -1,6 +1,7 @@
 import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
+    clusterName: string;
     modelName: string;
     workspaceExists: boolean;
     resourceReady: boolean | null;
@@ -20,6 +21,7 @@ export type ToVsCodeMsgDef = {
 
 export type ToWebViewMsgDef = {
     deploymentProgressUpdate: {
+        clusterName: string;
         modelName: string;
         workspaceExists: boolean;
         resourceReady: boolean | null;

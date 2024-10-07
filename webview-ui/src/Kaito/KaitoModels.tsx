@@ -5,16 +5,9 @@ import { VSCodeDivider, VSCodeLink, VSCodeProgressRing } from "@vscode/webview-u
 import { stateUpdater2, vscode2 } from "./state";
 import { useStateManagement } from "../utilities/state";
 import { ArrowIcon } from "../icons/ArrowIcon";
+import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoModels";
 
-export function KaitoModels() {
-    const initialState = {
-        modelName: "",
-        workspaceExists: false,
-        resourceReady: false,
-        inferenceReady: false,
-        workspaceReady: false,
-        age: 0,
-    };
+export function KaitoModels(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater2, initialState, vscode2);
 
     function capitalizeFirstLetter(text: string) {
@@ -319,7 +312,7 @@ inference:
                 )}
                 {selectedModel !== null && <div className={styles.sidePanel}></div>}
                 <div className={styles.mainDiv}>
-                    <h2>Create a KAITO Workspace</h2>
+                    <h2>Create a KAITO Workspace ({state.clusterName})</h2>
                     <VSCodeDivider />
                     <div className={styles.subHeader}>
                         To get your model up and running, you can either create a CRD file with &quot;Generate CRD&quot;
@@ -345,20 +338,6 @@ inference:
                                     }}
                                 >
                                     <ArrowIcon className={styles.arrowPath} />
-                                    {/* <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 16 16"
-                                        fill="none"
-                                    >
-                                        <path
-                                            fillRule="evenodd"
-                                            clipRule="evenodd"
-                                            d="M7.97612 10.0719L12.3334 5.71461L12.9521 6.33333L8.28548 11L7.66676 11L3.0001 6.33333L3.61882 5.71461L7.97612 10.0719Z"
-                                            className={styles.arrowPath}
-                                        />
-                                    </svg> */}
                                 </span>
                                 {capitalizeFirstLetter(family)}
                             </button>

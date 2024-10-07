@@ -12,6 +12,7 @@ export type KaitoState = InitialState & {
 };
 
 export type DeploymentState = {
+    clusterName: string;
     modelName: string;
     workspaceExists: boolean;
     resourceReady: boolean | null;

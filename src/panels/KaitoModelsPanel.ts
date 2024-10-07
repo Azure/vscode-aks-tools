@@ -49,6 +49,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     }
     getInitialState(): InitialState {
         return {
+            clusterName: this.clusterName,
             modelName: "",
             workspaceExists: false,
             resourceReady: false,
@@ -174,6 +175,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     private async handleResetStateRequest(webview: MessageSink<ToWebViewMsgDef>) {
         // delay(1000);
         webview.postDeploymentProgressUpdate({
+            clusterName: this.clusterName,
             modelName: "",
             workspaceExists: false,
             resourceReady: null,
@@ -203,6 +205,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             if (failed(kubectlresult)) {
                 vscode.window.showErrorMessage(kubectlresult.error);
                 return {
+                    clusterName: this.clusterName,
                     modelName: "",
                     workspaceExists: false,
                     resourceReady: null,
@@ -227,6 +230,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             }
         });
         return {
+            clusterName: this.clusterName,
             modelName: model,
             workspaceExists: true,
             resourceReady: resourceReady,
@@ -246,6 +250,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                     `There was an error connecting to the workspace. ${kubectlresult.error}`,
                 );
                 webview.postDeploymentProgressUpdate({
+                    clusterName: this.clusterName,
                     modelName: "",
                     workspaceExists: false,
                     resourceReady: null,
@@ -273,6 +278,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         });
 
         webview.postDeploymentProgressUpdate({
+            clusterName: this.clusterName,
             modelName: model,
             workspaceExists: true,
             resourceReady: resourceReady,

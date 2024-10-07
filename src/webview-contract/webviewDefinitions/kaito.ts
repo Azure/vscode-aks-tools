@@ -46,6 +46,7 @@ export type ToWebViewMsgDef = {
 };
 export type ToWebViewMsgDef2 = {
     deploymentProgressUpdate: {
+        clusterName: string;
         modelName: string;
         workspaceExists: boolean;
         resourceReady: boolean | null;

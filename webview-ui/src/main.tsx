@@ -62,7 +62,7 @@ function getVsCodeContent(): JSX.Element {
         tcpDump: () => <TcpDump {...getInitialState()} />,
         retinaCapture: () => <RetinaCapture {...getInitialState()} />,
         kaito: () => <Kaito {...getInitialState()} />,
-        kaitoModels: () => <KaitoModels />,
+        kaitoModels: () => <KaitoModels {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
