@@ -4,4 +4,4 @@ export type ClusterPreference = {
     clusterId: string;
     resourceGroup: string;
     kubeConfigYAML: string;
-}
+};
