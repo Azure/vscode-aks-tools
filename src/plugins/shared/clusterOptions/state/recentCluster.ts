@@ -2,7 +2,7 @@ import * as fs from "fs/promises";
 import { getAssetContext } from "../../../../assets";
 import { ClusterPreference } from "../../types";
 import { Errorable } from "../../../../commands/utils/errorable";
-import { createTempFile, TempFile } from "../../../../commands/utils/tempfile";
+import { createTempFileWithPrefix, TempFile } from "../../../../commands/utils/tempfile";
 
 export class RecentCluster {
     private static readonly RECENT_CLUSTER_FILEPATH_KEY = "recent-cluster-file-path";
@@ -15,7 +15,7 @@ export class RecentCluster {
         }
 
         // Save cluster to JSON temp file
-        this.recentClusterTempFile = await createTempFile(JSON.stringify(cluster), "json", "current-cluster");
+        this.recentClusterTempFile = await createTempFileWithPrefix(JSON.stringify(cluster), "json", "current-cluster");
 
         // Save file path to global state
         asset.globalState.update(this.RECENT_CLUSTER_FILEPATH_KEY, this.recentClusterTempFile.filePath);
