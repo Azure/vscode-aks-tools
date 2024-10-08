@@ -49,7 +49,7 @@ export async function selectSubscriptions(): Promise<void> {
 
     const allSubscriptions = await getSubscriptions(sessionProvider.result, SelectionType.All);
     if (failed(allSubscriptions)) {
-        await window.showErrorMessage(allSubscriptions.error);
+        window.showErrorMessage(allSubscriptions.error);
         return;
     }
 
