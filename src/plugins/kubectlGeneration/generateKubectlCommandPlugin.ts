@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../../commands/utils/errorable";
 import { getAKSDocsRAGClient } from "./aksDocsRag/client";
-import { getKubectlCommandPluginResponse } from "../shared/pluginResponses";
+import { getKubectlCommandPluginErrorResponse, getKubectlCommandPluginResponse } from "../shared/pluginResponses";
 import { AgentRequest, ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/@azure/AzureAgent";
 
 const generateKubectlCommandFunctionName = "generate_kubectl_command";
@@ -35,13 +35,14 @@ async function handleKubectlCommandGeneration(agentRequest: AgentRequest): Promi
     const request = await client.sendRequest({ message: prompt });
 
     if (failed(request)) {
-        return { responseForLanguageModel: { status: "error", text: request.error } };
+        const { messageForLanguageModel } = getKubectlCommandPluginErrorResponse(request)
+        return { responseForLanguageModel:  messageForLanguageModel as object };
     }
 
     const { messageForLanguageModel, buttonLabel, commandID, arguments: returnArgs } = getKubectlCommandPluginResponse(request.result.response);
 
     return {
-        responseForLanguageModel: { messageForLanguageModel },
+        responseForLanguageModel: messageForLanguageModel as object,
         chatResponseParts: [
             new vscode.ChatResponseCommandButtonPart({
                 title: vscode.l10n.t(buttonLabel),

@@ -1,11 +1,17 @@
+import { Failed } from "../../commands/utils/errorable";
+
 type GitHubCopilotForAzureChatPluginResponse = {
-    messageForLanguageModel: string;
+    messageForLanguageModel: string | object;
     buttonLabel: string;
     commandID: string;
 }
 
 type GitHubCopilotForAzureChatPluginResponseExtended<T> = GitHubCopilotForAzureChatPluginResponse & {
     arguments: T[] | undefined;
+}
+
+type GitHubCopilotForAzureChatPluginErrorResponse = {
+    messageForLanguageModel: string | object;
 }
 
 // Create AKS cluster plugin
@@ -25,10 +31,28 @@ export interface CommandResponse {
 }
 
 export const getKubectlCommandPluginResponse = (response: CommandResponse): GitHubCopilotForAzureChatPluginResponseExtended<CommandResponse> => {
+    const messageForLanguageModel = {
+        description: response.message,
+        desciptionInstructions: "Remove any text that says `use the followin command:`, replace with `here's what we'll need to do`",
+        steps: ["1. Select an AKS cluster.", "2. Run the kubectl command within the AKS extension panel."],
+        kubectlCommand: response.code,
+        kubectlCommandInstructions: "Display the kubectl command *as is*, *do not alter the generated command, or suggest*. *KEEP ALL PLACEHOLDERS if present, DO NOT CHANGE COMMAND WHATSOEVER*",
+        responseInstructions: "*Important* Show the following in order without any titles, combine the description and steps together (make it flow), kubectl command, then display the chat response button to excute the command",
+    }
     return {
-        messageForLanguageModel: `To execute this command, 1. Select an AKS cluster. 2. Run the kubectl command within the dedicated AKS extension panel. 3. make sure to review the command before running. ${response.message} ${response.code}. (Make sure to always show steps to the user first, then command, then chat button)`,
+        messageForLanguageModel: messageForLanguageModel,
         commandID: "aks.openKubectlPanel",
         buttonLabel: "Execute kubectl command",
         arguments: [ response ]
+    }
+}
+
+export const getKubectlCommandPluginErrorResponse = (response: Failed): GitHubCopilotForAzureChatPluginErrorResponse => {
+    const messageForLanguageModel = {
+        description: response.error,
+        desciptionInstructions: "Display error message *as is*.",
+    }
+    return {
+        messageForLanguageModel: messageForLanguageModel,
     }
 }

@@ -94,7 +94,7 @@ export class AKSDocsRAGClient {
             const response = data.Response as string // JSON response
             const parsedResponse = JSON.parse(response) as CommandResponse;
 
-            if(parsedResponse.status === "error") {
+            if(parsedResponse.status.toLocaleLowerCase() === "error") {
                 return { succeeded: false, error: parsedResponse.message };
             }
 
