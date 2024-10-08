@@ -54,7 +54,7 @@ export async function selectSubscriptions(): Promise<void> {
     }
 
     if (allSubscriptions.result.length === 0) {
-        await handleNoSubscriptionsFound();
+        handleNoSubscriptionsFound();
         return;
     }
 
@@ -84,7 +84,7 @@ export async function selectSubscriptions(): Promise<void> {
     });
     
     // show picked items at the top
-    quickPickItems.sort((a, b) => (a.picked === b.picked ? 0 : a.picked ? -1 : 1));
+    quickPickItems.sort((itemA, itemB) => (itemA.picked === itemB.picked ? 0 : itemA.picked ? -1 : 1));
 
     const selectedItems = await window.showQuickPick(quickPickItems, {
         canPickMany: true,

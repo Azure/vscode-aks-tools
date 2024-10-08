@@ -5,9 +5,7 @@ import { RecentCluster } from "../state/recentCluster";
 export async function selectRecentClusterOption(): Promise<Errorable<ClusterPreference>> {
     const currentCluster = await RecentCluster.getRecentCluster();
 
-    if(failed(currentCluster)) {
-        return { succeeded: false, error: currentCluster.error };
-    }
-
-    return { succeeded: true, result: currentCluster.result };
+    return failed(currentCluster)
+        ? { succeeded: false, error: currentCluster.error }
+        : { succeeded: true, result: currentCluster.result };
 }

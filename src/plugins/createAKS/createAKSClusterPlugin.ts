@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/@azure/AzureAgent";
+import {
+    ILocalPluginHandler,
+    LocalPluginArgs,
+    LocalPluginEntry,
+    LocalPluginManifest,
+    ResponseForLanguageModelExtended,
+} from "../../types/aiazure/AzureAgent";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../../commands/utils/errorable";
 import { getAKSClusterPluginResponse } from "../shared/pluginResponses";
@@ -13,11 +19,11 @@ export const createAKSClusterPluginManifest: LocalPluginManifest = {
             name: createAKSClusterFunctionName,
             parameters: [],
             returnParameter: {
-                type: "object"
+                type: "object",
             },
             willHandleUserResponse: false,
-        }
-    ]
+        },
+    ],
 };
 
 async function handleCreateAKS(): Promise<ResponseForLanguageModelExtended> {
@@ -25,22 +31,22 @@ async function handleCreateAKS(): Promise<ResponseForLanguageModelExtended> {
 
     return {
         responseForLanguageModel: { messageForLanguageModel },
-        chatResponseParts : [
+        chatResponseParts: [
             new vscode.ChatResponseCommandButtonPart({
                 title: vscode.l10n.t(buttonLabel),
                 command: commandID,
-                arguments: []
+                arguments: [],
             }),
-        ]
+        ],
     };
 }
 
 const createAKSClusterPluginHandler: ILocalPluginHandler = {
     execute: async (args: LocalPluginArgs) => {
         const pluginRequest = args.localPluginRequest;
-        const sessionProvider = await getReadySessionProvider();   
+        const sessionProvider = await getReadySessionProvider();
 
-        if(failed(sessionProvider)) {
+        if (failed(sessionProvider)) {
             return { status: "error", message: sessionProvider.error };
         }
 
@@ -51,9 +57,9 @@ const createAKSClusterPluginHandler: ILocalPluginHandler = {
 
         return {
             status: "error",
-            message: "Unrecognized command."
-        }
-    }
+            message: "Unrecognized command.",
+        };
+    },
 };
 
 export const createAKSClusterPlugin: LocalPluginEntry = {
