@@ -3,7 +3,7 @@ import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../../commands/utils/errorable";
 import { getAKSDocsRAGClient } from "./aksDocsRag/client";
 import { getKubectlCommandPluginErrorResponse, getKubectlCommandPluginResponse } from "../shared/pluginResponses";
-import { AgentRequest, ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/@azure/AzureAgent";
+import { AgentRequest, ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/aiazure/AzureAgent";
 
 const generateKubectlCommandFunctionName = "generate_kubectl_command";
 

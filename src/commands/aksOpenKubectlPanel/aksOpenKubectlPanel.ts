@@ -9,10 +9,11 @@ import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { selectClusterOptions, SelectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
-import { GITHUBCOPILOT_FOR_AZURE_VSCODE_ID } from "../../plugins/shared/constants";
-import { checkExtension, handleExtensionDoesNotExist } from "../utils/extensions";
+import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 
-export async function openKubectlPanel(_context: IActionContext, target: unknown) {
+const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot"
+
+export async function aksOpenKubectlPanel(_context: IActionContext, target: unknown) {
 
     const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
 

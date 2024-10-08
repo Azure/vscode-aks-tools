@@ -289,7 +289,7 @@
                 "title": "Command to create an AKS cluster"
             },
             {            
-                "command": "aks.openKubectlPanel",
+                "command": "aks.aksOpenKubectlPanel",
                 "title": "Run Kubectl Commands from Github Copilot Chat"
             },                   
             {
