@@ -305,6 +305,10 @@
                 "title": "Create Kaito Workspace"
             },
             {
+                "command": "aks.aksKaitoCreateCRD",
+                "title": "Create Kaito Workspace"
+            },
+            {
                 "command": "aks.aksKaito",
                 "title": "Install Kaito"
             }
@@ -405,6 +409,11 @@
                     "submenu": "aks.networkTroubleshootingSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
+                },
+                {
+                    "submenu": "aks.kaitoInstallSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@3"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -419,11 +428,11 @@
             ],
             "aks.kaitoInstallSubMenu": [
                 {
-                    "command": "aks.aksKaitoGenerateYaml",
+                    "command": "aks.aksKaito",
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksKaito",
+                    "command": "aks.aksKaitoCreateCRD",
                     "group": "navigation"
                 }
             ],
@@ -526,6 +535,10 @@
             {
                 "id": "aks.networkTroubleshootingSubMenu",
                 "label": "Troubleshoot Network Health"
+            },
+            {
+                "id": "aks.kaitoInstallSubMenu",
+                "label": "Deploy a LLM with KAITO (Beta)"
             }
         ]
     },

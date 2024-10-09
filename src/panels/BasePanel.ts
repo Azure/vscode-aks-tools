@@ -139,7 +139,6 @@ function getMessageContext<TContent extends ContentId>(
                     if (!isValidMessage<ToVsCodeMsgDef<TContent>>(message)) {
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }
-
                     const telemetryData = getTelemetryData(contentId, telemetryDefinition, message);
                     if (telemetryData !== null) {
                         reporter.sendTelemetryEvent("command", telemetryData);
