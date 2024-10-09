@@ -10,6 +10,10 @@ type RequestConfig = {
     message: string;
 };
 
+interface DataResponse {
+    Response: string; // JSON string
+}
+
 export interface CommandResponse {
     status: string;
     message: string;
@@ -29,7 +33,7 @@ export class AKSDocsRAGClient {
         this.authScopes = aksDocsRAGScopes;
     }
 
-    private async fetchToken() : Promise<void> {
+    private async fetchToken(): Promise<void> {
         try {
             const token = await this.sessionProvider.getAuthSession({ scopes: this.authScopes });
 
@@ -43,10 +47,10 @@ export class AKSDocsRAGClient {
         }
     }
 
-    private async refreshToken() : Promise<void> {
+    private async refreshToken(): Promise<void> {
         try {
             if (!this.authToken || this.tokenExpiresAt < Date.now()) {
-            await this.fetchToken();
+                await this.fetchToken();
             }
         } catch (error) {
             throw new Error(`Failed to refresh token: ${getErrorMessage(error)}`);
@@ -81,42 +85,31 @@ export class AKSDocsRAGClient {
             return { succeeded: false, error: `Unable to fetch data from AKS Docs RAG endpoint` };
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data: any = await rawResponse.json();
-        const status = rawResponse.status;
+        const statusCode = rawResponse.status;
+        const data = await rawResponse.json() as DataResponse;
 
-        if (status === 424) {
-            // 424 is a content moderation error
-            return { succeeded: false, error: `Error 424: Harmful content detected` }
-        } else if (status >= 400) {
-            return { succeeded: false, error: `Error: ${data.message}` }
+        // Handle errors based on status code
+        if (statusCode === 424) {
+            return { succeeded: false, error: "Error 424: Harmful content detected" };
+        } else if (statusCode >= 400) {
+            return { succeeded: false, error: `Error: ${rawResponse.statusText}` };
         }
 
-        const commandResponse: CommandResponse = {
-            status: "",
-            message: "",
-            code: "",
-        };
-        
-        if (data?.Response) {
-            const response = data.Response as string;
-            const parsedResponse = JSON.parse(response) as CommandResponse;
+        // Process successful response
+        const responseData = data?.Response;
 
-            if(parsedResponse.status.toLocaleLowerCase() === "error") {
-                return { succeeded: false, error: parsedResponse.message };
-            }
+        if (!responseData) {
+            return { succeeded: false, error: "Error: Unable to get response" };
+        }
 
-            commandResponse.code = parsedResponse.code;
-            commandResponse.message = parsedResponse.message;
-            commandResponse.status = parsedResponse.status;
-
-        } else {
-            return { succeeded: false, error: `Error: Unable to get response` };
+        const parsedResponse = JSON.parse(responseData) as CommandResponse;
+        if (parsedResponse.status.toLowerCase() === "error") {
+            return { succeeded: false, error: parsedResponse.message };
         }
 
         return {
             succeeded: true,
-            result: { response: commandResponse },
+            result: { response: parsedResponse },
         };
     }
 }

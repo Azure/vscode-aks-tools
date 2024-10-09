@@ -1,23 +1,15 @@
 import { Failed } from "../../commands/utils/errorable";
-
-type GitHubCopilotForAzureChatPluginResponse = {
-    messageForLanguageModel: string | object;
-    buttonLabel: string;
-    commandID: string;
-}
-
-type GitHubCopilotForAzureChatPluginResponseExtended<T> = GitHubCopilotForAzureChatPluginResponse & {
-    arguments: T[] | undefined;
-}
-
-type GitHubCopilotForAzureChatPluginErrorResponse = {
-    messageForLanguageModel: string | object;
-}
+import { GitHubCopilotForAzureChatPluginResponse, MessageForLanguageModel, GitHubCopilotForAzureChatPluginResponseExtended, GitHubCopilotForAzureChatPluginErrorResponse } from "./types";
 
 // Create AKS cluster plugin
-export const getAKSClusterPluginResponse = (): GitHubCopilotForAzureChatPluginResponse => {
+export const getAKSClusterPluginResponse = (): GitHubCopilotForAzureChatPluginResponse<MessageForLanguageModel> => {
+    const messageForLanguageModel = {
+        description: "To create a new AKS cluster, please use the Azure Kubernetes Service (AKS) extension in Visual Studio Code. This extension provides a guided experience, making it easier to configure your cluster. Follow the extension's instructions to complete the setup.",
+        descriptionInstructions: "Focus on the description of the message, no need to add any other text.",
+    }
+
     return {
-        messageForLanguageModel: "To create a new AKS cluster, please use the Azure Kubernetes Service (AKS) extension in Visual Studio Code. This extension provides a guided experience, making it easier to configure your cluster. Follow the extension's instructions to complete the setup.",
+        messageForLanguageModel: messageForLanguageModel,
         commandID: "aks.aksCreateClusterFromCopilot",
         buttonLabel: "Get started"
     }
@@ -30,7 +22,9 @@ export interface CommandResponse {
     code: string;
 }
 
-export const getKubectlCommandPluginResponse = (response: CommandResponse): GitHubCopilotForAzureChatPluginResponseExtended<CommandResponse> => {
+type MessageForLanguageModelForKubectlCommandPlugin = MessageForLanguageModel & {kubectlCommand : string; kubectlCommandInstructions: string;}
+
+export const getKubectlCommandPluginResponse = (response: CommandResponse): GitHubCopilotForAzureChatPluginResponseExtended<MessageForLanguageModelForKubectlCommandPlugin, CommandResponse> => {
     const messageForLanguageModel = {
         description: response.message,
         desciptionInstructions: "Remove any text that says `use the followin command:`, replace with `here's what we'll need to do`",
@@ -47,7 +41,7 @@ export const getKubectlCommandPluginResponse = (response: CommandResponse): GitH
     }
 }
 
-export const getKubectlCommandPluginErrorResponse = (response: Failed): GitHubCopilotForAzureChatPluginErrorResponse => {
+export const getKubectlCommandPluginErrorResponse = (response: Failed): GitHubCopilotForAzureChatPluginErrorResponse<MessageForLanguageModel> => {
     const messageForLanguageModel = {
         description: response.error,
         desciptionInstructions: "Display error message *as is*.",

@@ -10,6 +10,7 @@ import { createTempFile } from "../utils/tempfile";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { selectClusterOptions, SelectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
+import { ClusterPreference } from "../../plugins/shared/types";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot"
 
@@ -19,6 +20,13 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
 
     if(!checkGitHubCopilotExtension) {
         handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+        return;
+    }
+    
+    const kubectl = await k8s.extension.kubectl.v1;
+
+    if (!kubectl.available) {
+        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
         return;
     }
 
@@ -37,17 +45,8 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
         return;
     }
 
-    if (typeof cluster.result === "boolean") {
-        vscode.window.showErrorMessage("No cluster selected.");
-        return;
-    }
-
-    const generatedCommandsFromChat = [responseCode];
-
-    const kubectl = await k8s.extension.kubectl.v1;
-
-    if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+    if (Boolean(cluster.result) === false) {
+        vscode.window.showErrorMessage("No cluster selected. Please select a valid cluster.");
         return;
     }
 
@@ -58,15 +57,17 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
         return;
     }
 
-    const kubeConfigFile = await createTempFile(cluster.result.kubeConfigYAML, "yaml");
+    const clusterPreference = cluster.result as ClusterPreference;
+
+    const kubeConfigFile = await createTempFile(clusterPreference.kubeConfigYAML, "yaml");
 
     const customCommands = getKubectlCustomCommands();
     const dataProvider = new KubectlDataProvider(
         kubectl,
         kubeConfigFile.filePath,
-        cluster.result.clusterName,
+        clusterPreference.clusterName,
         customCommands,
-        generatedCommandsFromChat[0]
+        responseCode
     );
     const panel = new KubectlPanel(extension.result.extensionUri);
 

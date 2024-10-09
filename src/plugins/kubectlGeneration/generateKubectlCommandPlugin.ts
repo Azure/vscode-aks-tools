@@ -53,8 +53,6 @@ async function handleKubectlCommandGeneration(agentRequest: AgentRequest): Promi
     };
 }
 
-
-
 const generateKubectlCommandPluginHandler: ILocalPluginHandler = {
     execute: async (args: LocalPluginArgs) => {
         const pluginRequest = args.localPluginRequest;
