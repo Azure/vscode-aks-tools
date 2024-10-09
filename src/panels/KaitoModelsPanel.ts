@@ -10,7 +10,6 @@ import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { tmpdir } from "os";
 import { writeFileSync } from "fs";
 import { join } from "path";
-// import { DeploymentState } from "../webview-contract/webviewDefinitions/periscope";
 
 export class KaitoModelsPanel extends BasePanel<"kaitoModels"> {
     constructor(extensionUri: vscode.Uri) {
@@ -19,14 +18,6 @@ export class KaitoModelsPanel extends BasePanel<"kaitoModels"> {
         });
     }
 }
-// interface DeploymentProgressUpdate {
-//     modelName: string;
-//     workspaceExists: boolean;
-//     resourceReady: boolean | null;
-//     inferenceReady: boolean | null;
-//     workspaceReady: boolean | null;
-//     age: number | null;
-// }
 export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoModels"> {
     public constructor(
         readonly clusterName: string,
@@ -60,7 +51,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     }
     cancel() {
         this.cancelToken = true;
-        // vscode.window.showInformationMessage("Operation cancelled"); - debug 1
     }
     getTelemetryDefinition(): TelemetryDefinition<"kaitoModels"> {
         return {
@@ -104,11 +94,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     }
 
     nullIsFalse(value: boolean | null): boolean {
-        if (value === null) {
-            return false;
-        } else {
-            return value;
-        }
+        return value ?? false;
     }
 
     private async handleDeployKaitoRequest(model: string, yaml: string, webview: MessageSink<ToWebViewMsgDef>) {
@@ -119,7 +105,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             const command = `apply -f ${tempFilePath}`;
             const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
-                // Can add additional error handling here
                 vscode.window.showErrorMessage(
                     `There was an error with deployment. Try deploying again. ${kubectlresult.error}`,
                 );
@@ -130,37 +115,15 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         }
         this.handleUpdateStateRequest(model, webview);
         let progress = await this.getProgress(model);
-        // vscode.window.showInformationMessage(`initial workspace rdy: ${progress.workspaceReady}`); - debug 2
-        // vscode.window.showInformationMessage(
-        //     `PROGRESSVALUES1 - Resource Ready: ${progress.resourceReady}, Inference Ready: ${progress.inferenceReady}, Workspace Ready: ${progress.workspaceReady}, Age: ${progress.age}`,
-        // ); - debug 3
         while (!this.nullIsFalse(progress.workspaceReady) && !this.cancelToken) {
-            // vscode.window.showInformationMessage(this.cancelToken.toString()); - debug 4
-            // vscode.window.showInformationMessage(
-            //     `exists: ${progress.workspaceExists.toString()}, ready: ${progress.workspaceReady}, inference: ${progress.inferenceReady}, resource: ${progress.resourceReady}`,
-            // ); - debug 5
-
-            // update delay
-            // await new Promise((resolve) => setTimeout(resolve, 5000));
-
             await this.handleUpdateStateRequest(model, webview);
             progress = await this.getProgress(model);
-            // vscode.window.showInformationMessage(
-            //     `PROGRESSVALUES2 - Resource Ready: ${progress.resourceReady}, Inference Ready: ${progress.inferenceReady}, Workspace Ready: ${progress.workspaceReady}, Age: ${progress.age}`,
-            // ); - debug 6
         }
-
-        // OLD CODE
-        // await this.handleUpdateStateRequest(model, webview);
-        // OLD CODE
-
-        // NEW CODE
         if (this.cancelToken) {
             await this.handleResetStateRequest(webview);
         } else {
             await this.handleUpdateStateRequest(model, webview);
         }
-        // NEW CODE
     }
 
     private async handleWorkspaceExistsRequest(model: string) {
@@ -173,7 +136,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         }
     }
     private async handleResetStateRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        // delay(1000);
         webview.postDeploymentProgressUpdate({
             clusterName: this.clusterName,
             modelName: "",
@@ -220,13 +182,17 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         let resourceReady = null;
         let inferenceReady = null;
         let workspaceReady = null;
-        conditions.forEach((condition) => {
-            if (condition.type === "ResourceReady") {
-                resourceReady = this.statusToBoolean(condition.status);
-            } else if (condition.type === "WorkspaceReady") {
-                workspaceReady = this.statusToBoolean(condition.status);
-            } else if (condition.type === "InferenceReady") {
-                inferenceReady = this.statusToBoolean(condition.status);
+        conditions.forEach(({ type, status }) => {
+            switch (type) {
+                case "ResourceReady":
+                    resourceReady = this.statusToBoolean(status);
+                    break;
+                case "WorkspaceReady":
+                    workspaceReady = this.statusToBoolean(status);
+                    break;
+                case "InferenceReady":
+                    inferenceReady = this.statusToBoolean(status);
+                    break;
             }
         });
         return {
@@ -286,10 +252,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             workspaceReady: workspaceReady,
             age: this.convertAgeToMinutes(data.metadata?.creationTimestamp),
         });
-        // vscode.window.showInformationMessage(`Data: ${data}`); - debug
-        // vscode.window.showInformationMessage(
-        //     `Resource Ready: ${resourceReady}, Inference Ready: ${inferenceReady}, Workspace Ready: ${workspaceReady}, Age: ${this.convertAgeToMinutes(data.metadata?.creationTimestamp)}`,
-        // ); - debug
         return;
     }
 }
