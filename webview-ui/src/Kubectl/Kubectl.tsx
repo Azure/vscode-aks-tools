@@ -67,7 +67,7 @@ export function Kubectl(initialState: InitialState) {
         if (command) {
             eventHandlers.onSetSelectedCommand({ command });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps - dependencies are not needed as this effect runs only once on mount.
     }, []);
 
     return (
