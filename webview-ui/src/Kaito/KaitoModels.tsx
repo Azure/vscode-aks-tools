@@ -96,6 +96,14 @@ export function KaitoModels(initialState: InitialState) {
         let appname = name;
         let metadataname = name;
         let inferencename = name;
+        let privateConfig = "";
+        if (name.substring(0, 7) === "llama-2") {
+            privateConfig = `
+    accessMode: private
+    presetOptions:
+      image: <YOUR IMAGE URL>`;
+        }
+
         if (name.substring(0, 5) === "phi-3") {
             appname = "phi-3";
             const match = name.match(/phi-3-(mini|medium)/);
@@ -115,7 +123,7 @@ resource:
       apps: ${appname}
 inference:
   preset:
-    name: ${inferencename}`;
+    name: ${inferencename}${privateConfig}`;
         return [yaml, gpu];
     }
 
