@@ -56,7 +56,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     }
     cancel() {
         this.cancelToken = true;
-        // vscode.window.showInformationMessage("Operation cancelled"); - debug 1
     }
     getTelemetryDefinition(): TelemetryDefinition<"kaitoModels"> {
         return {
@@ -100,11 +99,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     }
 
     nullIsFalse(value: boolean | null): boolean {
-        if (value === null) {
-            return false;
-        } else {
-            return value;
-        }
+        return value ?? false;
     }
 
     parseGPU(gpuRequirement: string): [string, number] {
@@ -209,21 +204,9 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         }
         this.handleUpdateStateRequest(model, webview);
         let progress = await this.getProgress(model);
-        // vscode.window.showInformationMessage(`initial workspace rdy: ${progress.workspaceReady}`); - debug 2
-        // vscode.window.showInformationMessage(
-        //     `PROGRESSVALUES1 - Resource Ready: ${progress.resourceReady}, Inference Ready: ${progress.inferenceReady}, Workspace Ready: ${progress.workspaceReady}, Age: ${progress.age}`,
-        // ); - debug 3
         while (!this.nullIsFalse(progress.workspaceReady) && !this.cancelToken) {
-            // vscode.window.showInformationMessage(this.cancelToken.toString()); - debug 4
-            // vscode.window.showInformationMessage(
-            //     `exists: ${progress.workspaceExists.toString()}, ready: ${progress.workspaceReady}, inference: ${progress.inferenceReady}, resource: ${progress.resourceReady}`,
-            // ); - debug 5
-
             await this.handleUpdateStateRequest(model, webview);
             progress = await this.getProgress(model);
-            // vscode.window.showInformationMessage(
-            //     `PROGRESSVALUES2 - Resource Ready: ${progress.resourceReady}, Inference Ready: ${progress.inferenceReady}, Workspace Ready: ${progress.workspaceReady}, Age: ${progress.age}`,
-            // ); - debug 6
         }
         if (this.cancelToken) {
             await this.handleResetStateRequest(webview);
@@ -288,13 +271,17 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         let resourceReady = null;
         let inferenceReady = null;
         let workspaceReady = null;
-        conditions.forEach((condition) => {
-            if (condition.type === "ResourceReady") {
-                resourceReady = this.statusToBoolean(condition.status);
-            } else if (condition.type === "WorkspaceReady") {
-                workspaceReady = this.statusToBoolean(condition.status);
-            } else if (condition.type === "InferenceReady") {
-                inferenceReady = this.statusToBoolean(condition.status);
+        conditions.forEach(({ type, status }) => {
+            switch (type) {
+                case "ResourceReady":
+                    resourceReady = this.statusToBoolean(status);
+                    break;
+                case "WorkspaceReady":
+                    workspaceReady = this.statusToBoolean(status);
+                    break;
+                case "InferenceReady":
+                    inferenceReady = this.statusToBoolean(status);
+                    break;
             }
         });
         return {
@@ -354,10 +341,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             workspaceReady: workspaceReady,
             age: this.convertAgeToMinutes(data.metadata?.creationTimestamp),
         });
-        // vscode.window.showInformationMessage(`Data: ${data}`); - debug
-        // vscode.window.showInformationMessage(
-        //     `Resource Ready: ${resourceReady}, Inference Ready: ${inferenceReady}, Workspace Ready: ${workspaceReady}, Age: ${this.convertAgeToMinutes(data.metadata?.creationTimestamp)}`,
-        // ); - debug
         return;
     }
 }
