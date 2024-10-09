@@ -29,19 +29,27 @@ export class AKSDocsRAGClient {
         this.authScopes = aksDocsRAGScopes;
     }
 
-    private async fetchToken() {
-        const token = await this.sessionProvider.getAuthSession({ scopes: this.authScopes });
+    private async fetchToken() : Promise<void> {
+        try {
+            const token = await this.sessionProvider.getAuthSession({ scopes: this.authScopes });
 
-        if ((!token || failed(token))) {
-            throw new Error(`No Microsoft authentication session found: ${token.error}`);
+            if (failed(token)) {
+                throw new Error(`No Microsoft authentication session found: ${token?.error}`);
+            }
+
+            this.authToken = token.result.accessToken;
+        } catch (error) {
+            throw new Error(`Failed to fetch token: ${getErrorMessage(error)}`);
         }
-
-        this.authToken = token.result.accessToken;
     }
 
-    protected async refreshToken() {
-        if (!this.authToken || this.tokenExpiresAt < Date.now()) {
+    private async refreshToken() : Promise<void> {
+        try {
+            if (!this.authToken || this.tokenExpiresAt < Date.now()) {
             await this.fetchToken();
+            }
+        } catch (error) {
+            throw new Error(`Failed to refresh token: ${getErrorMessage(error)}`);
         }
     }
 
@@ -91,7 +99,7 @@ export class AKSDocsRAGClient {
         };
         
         if (data?.Response) {
-            const response = data.Response as string // JSON response
+            const response = data.Response as string;
             const parsedResponse = JSON.parse(response) as CommandResponse;
 
             if(parsedResponse.status.toLocaleLowerCase() === "error") {

@@ -113,7 +113,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksKaito", aksKaito);
         registerCommandWithTelemetry("aks.aksKaitoGenerateYaml", aksKaitoGenerateYaml);
         registerCommandWithTelemetry("aks.aksCreateClusterFromCopilot", aksCreateClusterFromCopilot);
-        registerCommandWithTelemetry("aks.openKubectlPanel", aksOpenKubectlPanel);
+        registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
         registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
 
         await registerAzureServiceNodes(context);

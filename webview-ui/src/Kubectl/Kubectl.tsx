@@ -63,10 +63,12 @@ export function Kubectl(initialState: InitialState) {
     const matchesExisting = state.selectedCommand !== null ? state.selectedCommand.trim() in commandLookup : false;
 
     useEffect(() => {
-        if(initialState.initialCommand) {
-            eventHandlers.onSetSelectedCommand({ command: initialState?.initialCommand.trim() } )
+        const command = initialState?.initialCommand?.trim();
+        if (command) {
+            eventHandlers.onSetSelectedCommand({ command });
         }
-    },[]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div className={styles.wrapper}>

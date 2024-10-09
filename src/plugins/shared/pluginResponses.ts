@@ -41,7 +41,7 @@ export const getKubectlCommandPluginResponse = (response: CommandResponse): GitH
     }
     return {
         messageForLanguageModel: messageForLanguageModel,
-        commandID: "aks.openKubectlPanel",
+        commandID: "aks.aksOpenKubectlPanel",
         buttonLabel: "Execute kubectl command",
         arguments: [ response ]
     }
