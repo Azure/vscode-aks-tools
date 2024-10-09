@@ -1,78 +1,91 @@
-.kaitoPageHeader {
-    color: var(--Base-Base-01, #fff);
-    font-size: 1.625rem;
-    font-style: normal;
-    font-weight: 600;
-    line-height: normal;
-}
-
 .subHeader {
-    width: 41rem;
+    width: 100vw;
+    max-width: 41rem;
     margin-top: 0.5rem;
-    color: var(--Dark-Base-03, #ccc);
+    color: var(--vscode-editor-foreground, #fff);
+    opacity: 0.95;
     font-size: 0.8125rem;
     font-style: normal;
     font-weight: 400;
     line-height: normal;
+    word-wrap: break-word;
 }
 
 .subHeaderForVersion {
-    margin-top: 0.9375rem; /* 15px */
-    color: var(--Dark-Base-01, #fff);
-    font-size: 0.8125rem;
-    font-style: normal;
-    font-weight: 400;
-    line-height: normal;
+    margin-top: 0.4rem;
+    color: var(--vscode-editor-foreground, #fff);
 }
 
 .architecture {
-    margin-top: 1.56rem;
-    color: var(--Dark-Base-01, #fff);
-    font-size: 0.875rem;
-    font-style: normal;
-    font-weight: 500;
-    line-height: normal;
-    margin-bottom: 0.625rem;
+    margin-top: 1.4rem;
+    margin-bottom: 0.4rem;
+    color: var(--vscode-editor-foreground, #fff);
 }
 
 .architectureSubHeader {
-    width: 40.6rem;
-    color: var(--Dark-Base-03, #ccc);
+    width: 100vw;
+    max-width: 41rem;
+    color: var(--vscode-editor-foreground, #fff);
+    opacity: 0.95;
     font-size: 0.8125rem;
     font-style: normal;
     font-weight: 400;
     line-height: normal;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.6rem;
 }
 
 .kaitoImage {
-    margin-bottom: 1.56rem;
+    margin-bottom: 0.6rem;
     border-radius: 0.5625rem;
     background: #fff;
-    width: 41rem;
+    width: 100vw;
+    max-width: 41rem;
     height: 19rem;
 }
 
 .lastContent {
-    color: var(--Dark-Base-03, #ccc);
+    color: var(--vscode-editor-foreground, #fff);
+    opacity: 0.95;
     font-size: 0.8125rem;
     font-style: normal;
     font-weight: 400;
     line-height: normal;
-    margin-bottom: 1rem;
+    margin-bottom: 0.6rem;
 }
-
+.lastContent ul {
+    padding: 0 0 0 0;
+    list-style-position: inside;
+    margin: 0 0 0 0;
+}
 .container {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    margin-bottom: 1rem;
 }
-
 .installingMessage {
-    color: var(--Dark-Base-01, #fff);
+    color: var(--vscode-editor-foreground, #fff);
     font-size: 0.8125rem;
     font-style: normal;
     font-weight: 700;
     line-height: normal;
     margin-left: 0.625rem;
+}
+
+.spacer {
+    margin-top: 500px;
+    height: 500px;
+    width: 100px;
+}
+
+.generateButton {
+    margin-top: 0.2rem;
+    margin-bottom: 1.5rem;
+}
+
+.postInstall {
+    font-weight: 700;
+}
+.thin {
+    font-weight: 400;
 }
