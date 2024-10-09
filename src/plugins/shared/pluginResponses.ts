@@ -12,3 +12,12 @@ export const getAKSClusterPluginResponse = (): GitHubCopilotForAzureChatPluginRe
         buttonLabel: "Get started"
     }
 }
+
+//Deploy manifest to AKS cluster plugin
+export const getDeployManifestToAKSPluginResponse = (): GitHubCopilotForAzureChatPluginResponse => {
+    return {
+        messageForLanguageModel: `Absolutely, I'd be happy to assist you with deploying your application to an AKS cluster. To deploy an application to an AKS cluster, you will need to do the following: 1. Select the Kubernetes manifest files in your application. 2. Choose an existing cluster or create a new AKS Automatic or Dev/Test. 2.a. If you choose to create a new cluster, a page will guide you. 2.b. Once done, click 'Get Started' to continue deploying your application. 4. Deploy your application.`,
+        commandID: "aks.aksDeployManifest",
+        buttonLabel: "Get started"
+    }
+}
