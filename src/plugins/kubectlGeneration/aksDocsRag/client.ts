@@ -29,7 +29,7 @@ export class AKSDocsRAGClient {
     constructor(sessionProvider: ReadyAzureSessionProvider) {
         this.authToken = "";
         this.tokenExpiresAt = 0;
-        this.sessionProvider = sessionProvider
+        this.sessionProvider = sessionProvider;
         this.authScopes = aksDocsRAGScopes;
     }
 
@@ -78,29 +78,47 @@ export class AKSDocsRAGClient {
                 }),
             });
         } catch (err: unknown) {
-            return { succeeded: false, error: `Unable to fetch data from AKS Docs RAG endpoint: ${getErrorMessage(err)}` };
+            return {
+                succeeded: false,
+                error: `Unable to fetch data from AKS Docs RAG endpoint: ${getErrorMessage(err)}`,
+            };
         }
 
         if (!rawResponse) {
             return { succeeded: false, error: `Unable to fetch data from AKS Docs RAG endpoint` };
         }
 
-        const statusCode = rawResponse.status;
-        const data = await rawResponse.json() as DataResponse;
+        const statusCode = rawResponse?.status ?? 0; // Use a default value for statusCode
+        let data: DataResponse;
+        try {
+            data = (await rawResponse.json()) as DataResponse;
+        } catch (error) {
+            return {
+                succeeded: false,
+                error: `Failed to parse JSON response from AKS Docs RAG endpoint: ${getErrorMessage(error)}`,
+            };
+        }
 
-        // 424 error code is returned when harmful content is detected
-        if (statusCode === 424) {
-            return { succeeded: false, error: "Error 424: Harmful content detected" };
-        } else if (statusCode >= 400) {
-            return { succeeded: false, error: `Error: ${rawResponse.statusText}` };
+        // Handle various error scenarios based on status code and response data
+        switch (statusCode) {
+            case 424:
+                return { succeeded: false, error: "Error 424: Harmful content detected from RAGS endpoint" };
+            case 0:
+                return { succeeded: false, error: "Error: Invalid status code received from RAGS endpoint" };
+            default:
+                if (statusCode >= 400) {
+                    return {
+                        succeeded: false,
+                        error: `Error ${statusCode}: ${rawResponse.statusText} from RAGS endpoint`,
+                    };
+                } else if (!data) {
+                    return { succeeded: false, error: "Error: No response data received from RAGS endpoint" };
+                }
+                break;
         }
 
         // Process successful response
         const responseData = data?.Response;
-
-        if (!responseData) {
-            return { succeeded: false, error: "Error: Unable to get response" };
-        }
 
         const parsedResponse = JSON.parse(responseData) as CommandResponse;
         if (parsedResponse.status.toLowerCase() === "error") {
