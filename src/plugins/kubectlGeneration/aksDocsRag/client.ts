@@ -88,7 +88,7 @@ export class AKSDocsRAGClient {
         const statusCode = rawResponse.status;
         const data = await rawResponse.json() as DataResponse;
 
-        // Handle errors based on status code
+        // 424 error code is returned when harmful content is detected
         if (statusCode === 424) {
             return { succeeded: false, error: "Error 424: Harmful content detected" };
         } else if (statusCode >= 400) {
