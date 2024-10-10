@@ -50,6 +50,7 @@ import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributo
 import { getPlugins } from "./plugins/getPlugins";
 import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCreateClusterFromCopilot";
 import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
+import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -114,6 +115,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksKaitoGenerateYaml", aksKaitoGenerateYaml);
         registerCommandWithTelemetry("aks.aksCreateClusterFromCopilot", aksCreateClusterFromCopilot);
         registerCommandWithTelemetry("aks.aksDeployManifest", aksDeployManifest);
+        registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
         registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
 
         await registerAzureServiceNodes(context);
