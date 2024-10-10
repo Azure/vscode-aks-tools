@@ -44,13 +44,15 @@ export async function aksDeployManifest() {
         return;
     }
 
-    if (typeof cluster.result === "boolean") {
+    if (cluster.result === false) {
         vscode.window.showWarningMessage("No cluster selected.");
         return;
     }
 
+    const clusterPreference = cluster.result as ClusterPreference;
+
     // Confirm deployment
-    const confirmed = await confirmDeployment(cluster.result.clusterName);
+    const confirmed = await confirmDeployment(clusterPreference.clusterName);
 
     if(!confirmed) {
         vscode.window.showWarningMessage("Deployment cancelled.");
@@ -58,7 +60,7 @@ export async function aksDeployManifest() {
     }
 
     const deploymentResult = await deployApplicationToCluster({
-        cluster: cluster.result,
+        cluster: clusterPreference,
         manifestPath: manifest
     });
 
@@ -67,7 +69,7 @@ export async function aksDeployManifest() {
         return;
     }
 
-    vscode.window.showInformationMessage(`Your applicatoin has been successfully deployed to the ${cluster.result.clusterName} AKS cluster.`, "View resource in the Azure portal").then((res) => {
+    vscode.window.showInformationMessage(`Your applicatoin has been successfully deployed to the ${clusterPreference.clusterName} AKS cluster.`, "View resource in the Azure portal").then((res) => {
         if(res) {
             vscode.env.openExternal(vscode.Uri.parse(deploymentResult.result.url));
         }

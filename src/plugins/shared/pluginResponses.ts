@@ -20,9 +20,9 @@ export const getDeployManifestToAKSPluginResponse = (): GitHubCopilotForAzureCha
     const messageForLanguageModel = {
         description: "To deploy an application to an AKS cluster, you will need to do the following:",
         steps: [
-            "Select the Kubernetes manifest files in your application.",
-            "Choose an existing cluster or create a new AKS Automatic or Dev/Test - (hint: add bullet) If you choose to create a new cluster, a page will guide you. (hint: add bullet) Once done, click 'Get Started' to continue deploying your application.",
-            "Deploy your application."
+            "1. Select the Kubernetes manifest *file* in your application.",
+            "2. Choose an existing cluster or create a new AKS Automatic or Dev/Test - (hint: add bullet) If you choose to create a new cluster, a page will guide you. (hint: add bullet) Once done, click 'Get Started' to continue deploying your application.",
+            "3. Deploy your application."
         ],
         stepsInstructions: "Focus on the steps of the message, no need to add any other text."
     }
