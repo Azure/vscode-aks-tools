@@ -119,3 +119,10 @@ ul.commandList .commandDelete:hover {
 pre.error {
     color: var(--vscode-testing-iconFailed);
 }
+
+.buttonContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.5rem;
+}
