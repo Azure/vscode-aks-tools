@@ -55,7 +55,7 @@ export async function aksDeployManifest() {
     const confirmed = await confirmDeployment(clusterPreference.clusterName);
 
     if(!confirmed) {
-        vscode.window.showWarningMessage("Deployment cancelled.");
+        vscode.window.showWarningMessage("Manifest deployment cancelled.");
         return;
     }
 
@@ -76,42 +76,57 @@ export async function aksDeployManifest() {
     });
 }
 
-type ManifestQuickPickItem = vscode.QuickPickItem & {filePath: string};
+type ManifestQuickPickItem = vscode.QuickPickItem & { filePath: string };
 
 async function getManifestFile(): Promise<string | undefined> {
-    const items: ManifestQuickPickItem[] = [];
-    await vscode.workspace.findFiles(`**/**.yaml`, "**/node_modules/**").then((result) => {
-        result.forEach((fileUri) => {
-            const fileName = path.basename(fileUri.fsPath);
-            items.push({ label: fileName, description: fileUri.fsPath, filePath: fileUri.fsPath });
+    try {
+        // Find all YAML files in the workspace, excluding node_modules
+        const files = await vscode.workspace.findFiles("**/*.yaml", "**/node_modules/**");
+        
+        // If no files are found, show a warning and exit
+        if (files.length === 0) {
+            vscode.window.showWarningMessage("No manifest files found in the workspace.");
+            return undefined;
+        }
+
+        // Map the found files to QuickPick items
+        const items: ManifestQuickPickItem[] = files.map(fileUri => ({
+            label: path.basename(fileUri.fsPath),
+            description: fileUri.fsPath,
+            filePath: fileUri.fsPath
+        }));
+
+        // Show the QuickPick to the user to select a file
+        const fileSelected = await vscode.window.showQuickPick(items.sort((a, b) => a.label.localeCompare(b.label)), {
+            title: "Select YAML",
+            placeHolder: "Select manifest to deploy"
         });
-    });
 
-    if(items.length === 0) {
-        vscode.window.showWarningMessage("No manifest files found in the workspace.");
-        return;
+        // If no file was selected, show a warning and exit
+        if (!fileSelected) {
+            vscode.window.showWarningMessage("Manifest file not selected");
+            return undefined;
+        }
+
+        return fileSelected.filePath;
+    } catch {
+        vscode.window.showErrorMessage(`Error finding manifest files`);
+        return undefined;
     }
+}
 
-    const fileSelected = await vscode.window.showQuickPick(items.sort(), {
-        title: "Select YAML",
-        placeHolder: "Select manifest to deploy",
-    });
-
-    if (!fileSelected) {
-        vscode.window.showWarningMessage("Manifest file not selected");
-        return;
-    }
-
-    return fileSelected.filePath;
+const enum ConfirmDeployment {
+    Yes = "Yes",
+    No = "No",
 }
 
 async function confirmDeployment(clusterName: string): Promise<boolean> {
-    const confirmed = await vscode.window.showQuickPick(["Yes", "No"], {
+    const selection = await vscode.window.showQuickPick([ConfirmDeployment.Yes, ConfirmDeployment.No], {
         title: `Do you want to deploy to this cluster: ${clusterName}?`,
         placeHolder: "Select option",
     });
 
-    return confirmed === "Yes";
+    return selection === ConfirmDeployment.Yes;
 }
 
 type DeployApplicationToClusterOptions = {
@@ -120,26 +135,33 @@ type DeployApplicationToClusterOptions = {
 };
 type DeployApplicationToClusterResult = { url: string };
 
-async function deployApplicationToCluster(params: DeployApplicationToClusterOptions): Promise<Errorable<DeployApplicationToClusterResult>> {
+async function deployApplicationToCluster(
+    params: DeployApplicationToClusterOptions
+): Promise<Errorable<DeployApplicationToClusterResult>> {
     const { cluster, manifestPath } = params;
 
+    // Ensure kubectl is available
     const kubectl = await k8s.extension.kubectl.v1;
-
     if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+        vscode.window.showWarningMessage("Kubectl is unavailable.");
         return { succeeded: false, error: "Kubectl is unavailable." };
     }
 
+    // Create a temporary kubeconfig file
     const kubeConfigFile = await createTempFile(cluster.kubeConfigYAML, "yaml");
 
-    const result = await longRunning(`Deployment of application to cluster: ${cluster.clusterName} in progress`, async () => {
-        return await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `apply -f ${manifestPath}`);
-    });
+    // Execute the deployment command
+    const result = await longRunning(
+        `Deploying application to cluster: ${cluster.clusterName} in progress...`,
+        async () => invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `apply -f ${manifestPath}`)
+    );
 
+    // Check for errors during the kubectl command execution
     if (failed(result)) {
         return { succeeded: false, error: result.error };
     }
 
+    // Generate and return the resource URL
     const resourceUrl = getPortalResourceUrl(getEnvironment(), cluster.clusterId);
-    return { succeeded: true, result: { url : resourceUrl } };
+    return { succeeded: true, result: { url: resourceUrl } };
 }

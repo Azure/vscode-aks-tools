@@ -5,7 +5,7 @@ import { GitHubCopilotForAzureChatPluginResponse, MessageForLanguageModel, GitHu
 export const getAKSClusterPluginResponse = (): GitHubCopilotForAzureChatPluginResponse<MessageForLanguageModel> => {
     const messageForLanguageModel = {
         description: "To create a new AKS cluster, please use the Azure Kubernetes Service (AKS) extension in Visual Studio Code. This extension provides a guided experience, making it easier to configure your cluster. Follow the extension's instructions to complete the setup.",
-        descriptionInstructions: "Focus on the description of the message, no need to add any other text.",
+        descriptionInstructions: "Focus on the description of the message, no need to add any other text. Also mention that the creation of an AKS cluster might take a few minutes.",
     }
 
     return {
