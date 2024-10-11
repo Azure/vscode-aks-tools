@@ -4,7 +4,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { getEnvironment, getReadySessionProvider } from "../../auth/azureAuth";
 import { selectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
 import { ClusterPreference } from "../../plugins/shared/types";
-import { getDeploymentPortalUrl } from "../utils/env";
+import { getPortalResourceUrl } from "../utils/env";
 import { Errorable, failed } from "../utils/errorable";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { longRunning } from "../utils/host";
@@ -172,6 +172,6 @@ async function deployApplicationToCluster(
     }
 
     // Generate and return the resource URL
-    const resourceUrl = getDeploymentPortalUrl(getEnvironment(), cluster.clusterId);
+    const resourceUrl = getPortalResourceUrl(getEnvironment(), cluster.clusterId);
     return { succeeded: true, result: { url: resourceUrl } };
 }
