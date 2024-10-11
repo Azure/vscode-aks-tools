@@ -163,7 +163,7 @@ async function deployApplicationToCluster(
     // Execute the deployment command
     const result = await longRunning(
         `Deploying application to cluster: ${cluster.clusterName} in progress...`,
-        async () => invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `apply -f ${manifestPath}`),
+        async () => invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `apply -f "${manifestPath}"`),
     );
 
     // Check for errors during the kubectl command execution
