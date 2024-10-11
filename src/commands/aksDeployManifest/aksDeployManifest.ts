@@ -1,23 +1,25 @@
+import path from "path";
 import * as vscode from "vscode";
-import { Errorable, failed } from "../utils/errorable";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { getEnvironment, getReadySessionProvider } from "../../auth/azureAuth";
 import { selectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
-import path from "path";
 import { ClusterPreference } from "../../plugins/shared/types";
-import * as k8s from "vscode-kubernetes-tools-api";
+import { getDeploymentPortalUrl } from "../utils/env";
+import { Errorable, failed } from "../utils/errorable";
+import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { longRunning } from "../utils/host";
 import { invokeKubectlCommand } from "../utils/kubectl";
-import { getPortalResourceUrl } from "../utils/env";
 import { createTempFile } from "../utils/tempfile";
-import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
+const YAML_GLOB_PATTERN = "**/*.yaml";
+const EXCLUDE_PATTERN = "**/node_modules/**";
 
 export async function aksDeployManifest() {
     // Check if GitHub Copilot for Azure extension is installed
     const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
 
-    if(!checkGitHubCopilotExtension) {
+    if (!checkGitHubCopilotExtension) {
         handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
         return;
     }
@@ -25,14 +27,14 @@ export async function aksDeployManifest() {
     // Select manifest
     const manifest = await getManifestFile();
 
-    if(manifest === undefined) { 
+    if (manifest === undefined) {
         return;
     }
 
     // Select cluster
     const sessionProvider = await getReadySessionProvider();
 
-    if(failed(sessionProvider)) {
+    if (failed(sessionProvider)) {
         vscode.window.showErrorMessage(sessionProvider.error);
         return;
     }
@@ -54,26 +56,31 @@ export async function aksDeployManifest() {
     // Confirm deployment
     const confirmed = await confirmDeployment(clusterPreference.clusterName);
 
-    if(!confirmed) {
+    if (!confirmed) {
         vscode.window.showWarningMessage("Manifest deployment cancelled.");
         return;
     }
 
     const deploymentResult = await deployApplicationToCluster({
         cluster: clusterPreference,
-        manifestPath: manifest
+        manifestPath: manifest,
     });
 
-    if(failed(deploymentResult)) {
+    if (failed(deploymentResult)) {
         vscode.window.showErrorMessage(deploymentResult.error);
         return;
     }
 
-    vscode.window.showInformationMessage(`Your applicatoin has been successfully deployed to the ${clusterPreference.clusterName} AKS cluster.`, "View resource in the Azure portal").then((res) => {
-        if(res) {
-            vscode.env.openExternal(vscode.Uri.parse(deploymentResult.result.url));
-        }
-    });
+    vscode.window
+        .showInformationMessage(
+            `Your application has been successfully deployed to the ${clusterPreference.clusterName} AKS cluster.`,
+            "View resource in the Azure portal",
+        )
+        .then((res) => {
+            if (res) {
+                vscode.env.openExternal(vscode.Uri.parse(deploymentResult.result.url));
+            }
+        });
 }
 
 type ManifestQuickPickItem = vscode.QuickPickItem & { filePath: string };
@@ -81,8 +88,8 @@ type ManifestQuickPickItem = vscode.QuickPickItem & { filePath: string };
 async function getManifestFile(): Promise<string | undefined> {
     try {
         // Find all YAML files in the workspace, excluding node_modules
-        const files = await vscode.workspace.findFiles("**/*.yaml", "**/node_modules/**");
-        
+        const files = await vscode.workspace.findFiles(YAML_GLOB_PATTERN, EXCLUDE_PATTERN);
+
         // If no files are found, show a warning and exit
         if (files.length === 0) {
             vscode.window.showWarningMessage("No manifest files found in the workspace.");
@@ -90,17 +97,20 @@ async function getManifestFile(): Promise<string | undefined> {
         }
 
         // Map the found files to QuickPick items
-        const items: ManifestQuickPickItem[] = files.map(fileUri => ({
+        const items: ManifestQuickPickItem[] = files.map((fileUri) => ({
             label: path.basename(fileUri.fsPath),
             description: fileUri.fsPath,
-            filePath: fileUri.fsPath
+            filePath: fileUri.fsPath,
         }));
 
         // Show the QuickPick to the user to select a file
-        const fileSelected = await vscode.window.showQuickPick(items.sort((a, b) => a.label.localeCompare(b.label)), {
-            title: "Select YAML",
-            placeHolder: "Select manifest to deploy"
-        });
+        const fileSelected = await vscode.window.showQuickPick(
+            items.sort((a, b) => a.label.localeCompare(b.label)),
+            {
+                title: "Select YAML",
+                placeHolder: "Select manifest to deploy",
+            },
+        );
 
         // If no file was selected, show a warning and exit
         if (!fileSelected) {
@@ -136,7 +146,7 @@ type DeployApplicationToClusterOptions = {
 type DeployApplicationToClusterResult = { url: string };
 
 async function deployApplicationToCluster(
-    params: DeployApplicationToClusterOptions
+    params: DeployApplicationToClusterOptions,
 ): Promise<Errorable<DeployApplicationToClusterResult>> {
     const { cluster, manifestPath } = params;
 
@@ -153,7 +163,7 @@ async function deployApplicationToCluster(
     // Execute the deployment command
     const result = await longRunning(
         `Deploying application to cluster: ${cluster.clusterName} in progress...`,
-        async () => invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `apply -f ${manifestPath}`)
+        async () => invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `apply -f ${manifestPath}`),
     );
 
     // Check for errors during the kubectl command execution
@@ -162,6 +172,6 @@ async function deployApplicationToCluster(
     }
 
     // Generate and return the resource URL
-    const resourceUrl = getPortalResourceUrl(getEnvironment(), cluster.clusterId);
+    const resourceUrl = getDeploymentPortalUrl(getEnvironment(), cluster.clusterId);
     return { succeeded: true, result: { url: resourceUrl } };
 }
