@@ -5,7 +5,7 @@ import { GitHubCopilotForAzureChatPluginResponse, MessageForLanguageModel, GitHu
 export const getAKSClusterPluginResponse = (): GitHubCopilotForAzureChatPluginResponse<MessageForLanguageModel> => {
     const messageForLanguageModel = {
         description: "To create a new AKS cluster, please use the Azure Kubernetes Service (AKS) extension in Visual Studio Code. This extension provides a guided experience, making it easier to configure your cluster. Follow the extension's instructions to complete the setup.",
-        descriptionInstructions: "Focus on the description of the message, no need to add any other text.",
+        descriptionInstructions: "Focus on the description of the message, no need to add any other text. Also mention that the creation of an AKS cluster might take a few minutes.",
     }
 
     return {
@@ -15,6 +15,25 @@ export const getAKSClusterPluginResponse = (): GitHubCopilotForAzureChatPluginRe
     }
 }
 
+//Deploy manifest to AKS cluster plugin
+export const getDeployManifestToAKSPluginResponse = (): GitHubCopilotForAzureChatPluginResponse<MessageForLanguageModel> => {
+    const messageForLanguageModel = {
+        description: "To deploy an application to an AKS cluster, you will need to do the following:",
+        steps: [
+            "1. Select the Kubernetes manifest *file* in your application.",
+            "2. Choose an existing cluster or create a new AKS Automatic or Dev/Test - (hint: add bullet) If you choose to create a new cluster, a page will guide you. (hint: add bullet) Once done, click 'Get Started' to continue deploying your application.",
+            "3. Deploy your application."
+        ],
+        stepsInstructions: "Focus on the steps of the message, no need to add any other text."
+    }
+
+    return {
+        messageForLanguageModel: messageForLanguageModel,
+        commandID: "aks.aksDeployManifest",
+        buttonLabel: "Get started"
+    }
+};
+
 // Kubectl command generation plugin
 export interface CommandResponse {
     status: string;
@@ -22,7 +41,7 @@ export interface CommandResponse {
     code: string;
 }
 
-type MessageForLanguageModelForKubectlCommandPlugin = MessageForLanguageModel & {kubectlCommand : string; kubectlCommandInstructions: string;}
+type MessageForLanguageModelForKubectlCommandPlugin = MessageForLanguageModel & { kubectlCommand: string; kubectlCommandInstructions: string; }
 
 export const getKubectlCommandPluginResponse = (response: CommandResponse): GitHubCopilotForAzureChatPluginResponseExtended<MessageForLanguageModelForKubectlCommandPlugin, CommandResponse> => {
     const messageForLanguageModel = {
@@ -37,7 +56,7 @@ export const getKubectlCommandPluginResponse = (response: CommandResponse): GitH
         messageForLanguageModel: messageForLanguageModel,
         commandID: "aks.aksOpenKubectlPanel",
         buttonLabel: "Execute kubectl command",
-        arguments: [ response ]
+        arguments: [response]
     }
 }
 
