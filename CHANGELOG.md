@@ -2,7 +2,7 @@
 
 ## [1.4.11]
 
-* <Place Holder for last PR to be Reviewed>
+* Add deploy manifest handler for GH Copilot.
 * Kubectl savedialog UX changes.
 * Support creating automatic aks from GH Copilot.
 * Kubectl command generation plugin for GH Copilot.
