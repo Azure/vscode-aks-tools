@@ -10,9 +10,7 @@ export function getWorkflowYaml(workflowName: string): Errorable<string> {
         return extensionPath;
     }
 
-    const yamlPathOnDisk = vscode.Uri.file(
-        path.join(extensionPath.result, "resources", "yaml", `${workflowName}.yaml`),
-    );
+    const yamlPathOnDisk = vscode.Uri.file(path.join(extensionPath.result, "resources", "yaml", `${workflowName}.yaml`));
     try {
         const content = fs.readFileSync(yamlPathOnDisk.fsPath, "utf8");
         return { succeeded: true, result: content };
@@ -21,6 +19,10 @@ export function getWorkflowYaml(workflowName: string): Errorable<string> {
     }
 }
 
-export function substituteClusterInWorkflowYaml(workflowYaml: string, instanceType: string, appID: string): string {
+export function substituteClusterInWorkflowYaml(
+    workflowYaml: string,
+    instanceType: string,
+    appID: string,
+): string {
     return workflowYaml.replace("<INSTANCE_TYPE>", instanceType).replaceAll("<APP_ID>", appID);
 }

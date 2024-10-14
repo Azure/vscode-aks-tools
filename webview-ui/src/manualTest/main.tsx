@@ -12,7 +12,6 @@ import { getDetectorScenarios } from "./detectorTests";
 import { getDraftDeploymentScenarios, getDraftDockerfileScenarios, getDraftWorkflowScenarios } from "./draft";
 import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
 import { getKaitoScenarios } from "./kaitoTests";
-import { getKaitoModelScenarios } from "./kaitoModelTests";
 import { getKubectlScenarios } from "./kubectlTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
@@ -50,7 +49,6 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     tcpDump: getTCPDumpScenarios(),
     retinaCapture: getRetinaCaptureScenarios(),
     kaito: getKaitoScenarios(),
-    kaitoModels: getKaitoModelScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);
