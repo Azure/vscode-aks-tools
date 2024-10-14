@@ -44,17 +44,6 @@ export type ToWebViewMsgDef = {
         workspace: WorkspaceCRD;
     }; // to webview after workspace CRD is generated
 };
-export type ToWebViewMsgDef2 = {
-    deploymentProgressUpdate: {
-        clusterName: string;
-        modelName: string;
-        workspaceExists: boolean;
-        resourceReady: boolean | null;
-        inferenceReady: boolean | null;
-        workspaceReady: boolean | null;
-        age: number;
-    };
-};
 
 export type ModelDetails = {
     family: string;

@@ -62,7 +62,7 @@ export function getKaitoScenarios() {
     return [
         Scenario.create(
             "kaito",
-            "Installation Page",
+            "",
             () => <Kaito {...initialState} />,
             getMessageHandler,
             stateUpdater.vscodeMessageHandler,

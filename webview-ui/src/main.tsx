@@ -11,7 +11,6 @@ import { Detector } from "./Detector/Detector";
 import { DraftDeployment, DraftDockerfile, DraftWorkflow } from "./Draft";
 import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
 import { Kaito } from "./Kaito/Kaito";
-import { KaitoModels } from "./Kaito/KaitoModels";
 import { Kubectl } from "./Kubectl/Kubectl";
 import "./main.css";
 import { Periscope } from "./Periscope/Periscope";
@@ -62,7 +61,6 @@ function getVsCodeContent(): JSX.Element {
         tcpDump: () => <TcpDump {...getInitialState()} />,
         retinaCapture: () => <RetinaCapture {...getInitialState()} />,
         kaito: () => <Kaito {...getInitialState()} />,
-        kaitoModels: () => <KaitoModels {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
