@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as path from "path";
 import { dirSync } from "tmp";
-import { AuthenticationSession, authentication } from "vscode";
+import { AuthenticationSession, authentication, window } from "vscode";
 import {
     API,
     APIAvailable,
@@ -23,6 +23,7 @@ import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
 import { invokeKubectlCommand } from "./kubectl";
 import { withOptionalTempFile } from "./tempfile";
+import { getResources } from "./azureResources";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -574,4 +575,32 @@ function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is Defin
         cluster.location !== undefined &&
         cluster.nodeResourceGroup !== undefined
     );
+}
+
+export type Cluster = {
+    name: string;
+    clusterId: string;
+    resourceGroup: string;
+    subscriptionId: string;
+}
+
+export async function getClusters(sessionProvider: ReadyAzureSessionProvider, subscriptionId: string): Promise<Cluster[]> {
+    const clusters = await getResources(
+        sessionProvider,
+        subscriptionId,
+        "Microsoft.ContainerService/managedClusters",
+    );
+    if (failed(clusters)) {
+        window.showErrorMessage(clusters.error);
+        return [];
+    }
+
+    return clusters.result.map((cluster) => {
+        return {
+            name: cluster.name,
+            clusterId: cluster.id,
+            resourceGroup: cluster.resourceGroup,
+            subscriptionId: subscriptionId,
+        };
+    });
 }

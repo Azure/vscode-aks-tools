@@ -103,7 +103,6 @@ export function KaitoModels(initialState: InitialState) {
     presetOptions:
       image: <YOUR IMAGE URL>`;
         }
-
         if (name.substring(0, 5) === "phi-3") {
             appname = "phi-3";
             const match = name.match(/phi-3-(mini|medium)/);

@@ -27,7 +27,8 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         readonly kubeConfigFilePath: string,
         readonly clusterName: string,
         readonly customCommands: PresetCommand[],
-    ) {}
+        readonly initialCommand?: string
+    ) { }
 
     getTitle(): string {
         return `Run Kubectl on ${this.clusterName}`;
@@ -37,6 +38,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         return {
             clusterName: this.clusterName,
             customCommands: this.customCommands,
+            initialCommand: this.initialCommand
         };
     }
 
@@ -45,6 +47,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             runCommandRequest: true,
             addCustomCommandRequest: true,
             deleteCustomCommandRequest: true,
+            initialCommandRequest: true
         };
     }
 
@@ -53,10 +56,15 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             runCommandRequest: (args) => this.handleRunCommandRequest(args.command, webview),
             addCustomCommandRequest: (args) => this.handleAddCustomCommandRequest(args.name, args.command),
             deleteCustomCommandRequest: (args) => this.handleDeleteCustomCommandRequest(args.name),
+            initialCommandRequest: (args) => this.handleRunCommandRequest(args.initialCommand, webview),
         };
     }
 
     private async handleRunCommandRequest(command: string, webview: MessageSink<ToWebViewMsgDef>) {
+        if (command.includes("kubectl")) {
+            command = command.replace("kubectl", "").trim();
+        }
+
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
 
         if (failed(kubectlresult)) {

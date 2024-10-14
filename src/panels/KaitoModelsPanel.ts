@@ -101,7 +101,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     nullIsFalse(value: boolean | null): boolean {
         return value ?? false;
     }
-
     parseGPU(gpuRequirement: string): [string, number] {
         const regex = /^Standard_NC(\d+)(ads_A100_v4|s_v3)$/;
         const match = gpuRequirement.match(regex);
@@ -189,7 +188,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             if (!quotaAvailable) {
                 return;
             }
-
             const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
             writeFileSync(tempFilePath, yaml, "utf8");
             const command = `apply -f ${tempFilePath}`;
