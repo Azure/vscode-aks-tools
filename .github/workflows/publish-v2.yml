@@ -1,0 +1,121 @@
+name: Build & Publish
+on: [workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  JobBuild:
+      name: release
+      runs-on: [self-hosted, "1ES.Pool=1es-vscode-aks-tools-pool"]
+      # Expose step outputs as job outputs
+      outputs:
+        currentversion: ${{ steps.package_version.outputs.current-version }}
+        changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
+      permissions: 
+        actions: read
+        contents: read
+        deployments: read
+        packages: none
+      steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          disable-telemetry: true
+        
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
+        with:
+          node-version: 20
+
+      # Run install dependencies
+      - name: Install dependencies
+        run: npm run install:all
+
+      # Ensure project builds successfully before creating release
+      - name: Build 
+        run: npm run webpack
+
+      - name: Get current package version
+        id: package_version
+        uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b # v1.3.1
+
+      - name: Check version is mentioned in Changelog
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
+        with:
+            validation_depth: 10
+            version: ${{ steps.package_version.outputs.current-version }}
+            path: 'CHANGELOG.md'
+
+
+  JobsPublish:
+    name: publish
+    runs-on: [self-hosted, "1ES.Pool=1es-vscode-aks-tools-pool"]
+    needs: JobBuild
+    permissions: 
+        actions: read
+        contents: write
+        deployments: read
+        packages: none
+        id-token: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          disable-telemetry: true
+
+      # Checkout the code again for release
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
+        with:
+          node-version: 20
+
+      # Run install dependencies
+      - name: Install dependencies
+        run: npm run install:all
+
+      #Build and package
+      - name: Build 
+        run: npm run webpack
+
+      - name: federated login
+        uses: azure/login@v2
+        with:
+          auth-type: IDENTITY
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create a Github Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: '*.vsix'
+          fail_on_unmatched_files: true
+          tag_name : ${{ needs.JobBuild.outputs.currentversion }}
+          name: ${{ needs.JobBuild.outputs.currentversion}}
+          body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        
+      - name: Publish packaged extension
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          npx vsce publish --azure-credential --packagePath *.vsix
+
+      
+
+
+
