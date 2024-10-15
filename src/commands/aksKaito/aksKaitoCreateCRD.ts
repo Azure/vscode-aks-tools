@@ -1,15 +1,18 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import * as tmpfile from "../utils/tempfile";
 import * as k8s from "vscode-kubernetes-tools-api";
-import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
+import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getReadySessionProvider } from "../../auth/azureAuth";
+import { KaitoModelsPanelDataProvider } from "../../panels/KaitoModelsPanel";
+import { KaitoModelsPanel } from "../../panels/KaitoModelsPanel";
 import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
-import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
 import { failed } from "../utils/errorable";
 import { getExtension, longRunning } from "../utils/host";
 
-export default async function aksKaitoGenerateYaml(_context: IActionContext, target: unknown): Promise<void> {
+export default async function aksKaitoCreateCRD(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const clusterExplorer = await k8s.extension.clusterExplorer.v1;
     const kubectl = await k8s.extension.kubectl.v1;
 
     const sessionProvider = await getReadySessionProvider();
@@ -27,7 +30,7 @@ export default async function aksKaitoGenerateYaml(_context: IActionContext, tar
     const extension = getExtension();
     if (failed(extension)) {
         vscode.window.showErrorMessage(extension.error);
-        return undefined;
+        return;
     }
 
     if (!kubectl.available) {
@@ -35,10 +38,20 @@ export default async function aksKaitoGenerateYaml(_context: IActionContext, tar
         return;
     }
 
+    if (!cloudExplorer.available) {
+        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
+        return;
+    }
+
+    if (!clusterExplorer.available) {
+        vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
+        return;
+    }
+
     const clusterName = clusterNode.result.name;
+    const armId = clusterNode.result.armId;
     const subscriptionId = clusterNode.result.subscriptionId;
     const resourceGroupName = clusterNode.result.resourceGroupName;
-
     const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
         return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
     });
@@ -48,58 +61,27 @@ export default async function aksKaitoGenerateYaml(_context: IActionContext, tar
         return;
     }
 
-    // Check if Kaito pods  exist
     if (filterKaitoPodNames.result.length === 0) {
         vscode.window.showInformationMessage(
             `Please install Kaito for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
         );
         return;
     }
-
-    // Pick a standard supported models for KAITO from config file within
-    const kaitoSelectedModels = await vscode.window.showQuickPick(listKaitoSUpportedModel(), {
-        canPickMany: true,
-        placeHolder: "Please select current supported KAITO model.",
-        title: "KAITO Supported Model.",
-    });
-
-    if (!kaitoSelectedModels) {
-        vscode.window.showErrorMessage("No LLM Model Selected.");
+    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
+    if (failed(clusterInfo)) {
+        vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
+    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
 
-    const selectedNodes = kaitoSelectedModels.map((item) => item).join(",");
-
-    // Configure the starter workflow data.
-    const starterWorkflowYaml = getWorkflowYaml("kaitoworkspace");
-    if (failed(starterWorkflowYaml)) {
-        vscode.window.showErrorMessage(starterWorkflowYaml.error);
-        return;
-    }
-
-    const substitutedYaml = substituteClusterInWorkflowYaml(
-        starterWorkflowYaml.result,
-        "Standard_NC12s_v3",
-        selectedNodes,
+    const panel = new KaitoModelsPanel(extension.result.extensionUri);
+    const dataProvider = new KaitoModelsPanelDataProvider(
+        clusterName,
+        subscriptionId,
+        resourceGroupName,
+        armId,
+        kubectl,
+        kubeConfigFile.filePath,
     );
-
-    // Display it to the end-user in their vscode editor.
-    const doc = await vscode.workspace.openTextDocument({
-        content: substitutedYaml,
-        language: "yaml",
-    });
-
-    vscode.window.showTextDocument(doc);
-}
-
-function listKaitoSUpportedModel() {
-    const modelList = [
-        kaitoSupporterModel.modelsupported.falcon,
-        kaitoSupporterModel.modelsupported.llama2,
-        kaitoSupporterModel.modelsupported.llama2chat,
-        kaitoSupporterModel.modelsupported.mistral,
-        kaitoSupporterModel.modelsupported["phi-2"],
-        kaitoSupporterModel.modelsupported["phi-3"],
-    ];
-    return modelList.flat();
+    panel.show(dataProvider);
 }
