@@ -45,8 +45,8 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
         return;
     }
 
-    if (cluster.result === false) {
-        vscode.window.showErrorMessage("No cluster selected. Please select a valid cluster.");
+    if (cluster.result === true) {
+        vscode.window.showInformationMessage("No cluster selected. Please select a valid cluster.");
         return;
     }
 
