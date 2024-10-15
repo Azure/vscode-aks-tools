@@ -100,7 +100,6 @@ jobs:
       - name: Create a Github Release
         id: create_release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: '*.vsix'
           fail_on_unmatched_files: true
@@ -111,6 +110,5 @@ jobs:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         
       - name: Publish packaged extension
-        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           npx vsce publish --azure-credential --packagePath *.vsix
