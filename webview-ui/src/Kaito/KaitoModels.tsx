@@ -89,13 +89,20 @@ export function KaitoModels(initialState: InitialState) {
         return defaultMessage;
     }
 
-    function generateYAML(model: string) {
+    function generateYAML(model: string): [string, string | undefined] {
         const modelDetails = getModelDetails(model);
         const name = stringOrUndefined(modelDetails?.modelName);
         const gpu = stringOrUndefined(modelDetails?.minimumGpu);
         let appname = name;
         let metadataname = name;
         let inferencename = name;
+        let privateConfig = "";
+        if (name.substring(0, 7) === "llama-2") {
+            privateConfig = `
+    accessMode: private
+    presetOptions:
+      image: <YOUR IMAGE URL>`;
+        }
         if (name.substring(0, 5) === "phi-3") {
             appname = "phi-3";
             const match = name.match(/phi-3-(mini|medium)/);
@@ -115,19 +122,21 @@ resource:
       apps: ${appname}
 inference:
   preset:
-    name: ${inferencename}`;
-        return yaml;
+    name: ${inferencename}${privateConfig}`;
+        return [yaml, gpu];
     }
 
     function generateCRD(model: string) {
-        const yaml = generateYAML(model);
+        const yaml = generateYAML(model)[0];
         vscode2.postGenerateCRDRequest({ model: yaml });
         return;
     }
 
     function onClickDeployKaito(model: string) {
-        const yaml = generateYAML(model);
-        vscode2.postDeployKaitoRequest({ model: model, yaml: yaml });
+        const [yaml, gpu] = generateYAML(model);
+        if (!(gpu === undefined)) {
+            vscode2.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
+        }
     }
 
     function resetState() {
@@ -176,36 +185,38 @@ inference:
                                             {(!state.workspaceExists || !(selectedModel === state.modelName)) && (
                                                 /* {false && ( */
                                                 <>
-                                                    <button
-                                                        className={styles.generateButton}
-                                                        disabled={undeployable(selectedModel)}
-                                                        onClick={() => onClickDeployKaito(selectedModel)}
-                                                    >
-                                                        Deploy default workspace CRD
-                                                    </button>
+                                                    <div>
+                                                        <button
+                                                            className={styles.generateButton}
+                                                            disabled={undeployable(selectedModel)}
+                                                            onClick={() => onClickDeployKaito(selectedModel)}
+                                                        >
+                                                            Deploy default workspace CRD
+                                                        </button>
 
-                                                    <span className={styles.tooltip}>
-                                                        <span className={styles.infoIndicator}>
-                                                            <div className="icon">
-                                                                <i
-                                                                    className={`codicon codicon-info ${styles.iicon}`}
-                                                                ></i>
-                                                            </div>
+                                                        <span className={styles.tooltip}>
+                                                            <span className={styles.infoIndicator}>
+                                                                <div className="icon">
+                                                                    <i
+                                                                        className={`codicon codicon-info ${styles.iicon}`}
+                                                                    ></i>
+                                                                </div>
+                                                            </span>
+                                                            <span className={styles.tooltiptext}>
+                                                                {tooltipMessage(selectedModel)}
+                                                            </span>
                                                         </span>
-                                                        <span className={styles.tooltiptext}>
-                                                            {tooltipMessage(selectedModel)}
-                                                        </span>
-                                                    </span>
+                                                    </div>
                                                 </>
                                             )}
-                                            <br />
-
-                                            <button
-                                                onClick={() => generateCRD(selectedModel)}
-                                                className={styles.generateButton}
-                                            >
-                                                Customize workspace CRD
-                                            </button>
+                                            <div>
+                                                <button
+                                                    onClick={() => generateCRD(selectedModel)}
+                                                    className={styles.generateButton}
+                                                >
+                                                    Customize workspace CRD
+                                                </button>
+                                            </div>
 
                                             {selectedModel === state.modelName &&
                                                 state.workspaceExists &&
