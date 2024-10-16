@@ -158,21 +158,10 @@
             "name": "[parameters('resourceName')]",
             "dependsOn": [],
             "properties": {
-                "enableRBAC": "[parameters('enableRBAC')]",
-                "nodeResourceGroup": "[parameters('nodeResourceGroup')]",
-                "nodeResourceGroupProfile": "[parameters('nodeResourceGroupProfile')]",
-                "nodeProvisioningProfile": "[parameters('nodeProvisioningProfile')]",
-                "disableLocalAccounts": "[parameters('disableLocalAccounts')]",
-                "aadProfile": "[if(parameters('enableAadProfile'), variables('defaultAadProfile'), null())]",
-                "autoUpgradeProfile": {
-                    "upgradeChannel": "[parameters('upgradeChannel')]",
-                    "nodeOSUpgradeChannel": "[parameters('nodeOSUpgradeChannel')]"
-                },
                 "agentPoolProfiles": [
                     {
                         "name": "systempool",
                         "mode": "System",
-                        "vmSize": "Standard_DS4_v2",
                         "count": 3,
                         "osType": "Linux"
                     }
