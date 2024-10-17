@@ -1,19 +1,17 @@
-import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
+import { ReadyAzureSessionProvider } from "../auth/types";
+import { getAksClient, getComputeManagementClient } from "../commands/utils/arm";
 import { failed } from "../commands/utils/errorable";
-import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoModels";
-import { InitialState } from "../webview-contract/webviewDefinitions/kaitoModels";
-import { TelemetryDefinition } from "../webview-contract/webviewTypes";
-import { invokeKubectlCommand } from "../commands/utils/kubectl";
-import { tmpdir } from "os";
-import { writeFileSync } from "fs";
-import { join } from "path";
-import { DefaultAzureCredential } from "@azure/identity";
-import { ComputeManagementClient } from "@azure/arm-compute";
-import { ContainerServiceClient } from "@azure/arm-containerservice";
 import { longRunning } from "../commands/utils/host";
+import { invokeKubectlCommand } from "../commands/utils/kubectl";
+import { MessageHandler, MessageSink } from "../webview-contract/messaging";
+import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoModels";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { BasePanel, PanelDataProvider } from "./BasePanel";
 
 export class KaitoModelsPanel extends BasePanel<"kaitoModels"> {
     constructor(extensionUri: vscode.Uri) {
@@ -30,6 +28,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         readonly armId: string,
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
+        readonly sessionProvider: ReadyAzureSessionProvider,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -146,9 +145,8 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 await longRunning(`Verifying available subscription quota for deployment...`, async () => {
                     const [gpuFamily, requiredCPUs] = this.parseGPU(gpu);
                     void requiredCPUs;
-                    const credential = new DefaultAzureCredential();
-                    const computeClient = new ComputeManagementClient(credential, this.subscriptionId);
-                    const containerServiceClient = new ContainerServiceClient(credential, this.subscriptionId);
+                    const computeClient = getComputeManagementClient(this.sessionProvider, this.subscriptionId);
+                    const containerServiceClient = getAksClient(this.sessionProvider, this.subscriptionId);
                     const cluster = await containerServiceClient.managedClusters.get(
                         this.resourceGroupName,
                         this.clusterName,
