@@ -65,6 +65,10 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             command = command.replace("kubectl", "").trim();
         }
 
+        if (command.includes("jsonpath")) {
+            command = this.escapeAndReplaceQuotes(command);
+        }
+
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
 
         if (failed(kubectlresult)) {
@@ -93,5 +97,14 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
 
     private async handleDeleteCustomCommandRequest(name: string) {
         await deleteKubectlCustomCommand(name);
+    }
+
+    private escapeAndReplaceQuotes(command: string): string {
+        // Replace double quotes inside single quotes with escaped double quotes, then replace single outside with double quotes.
+        let escapedCommand = command.replace(/'([^']*)'/g, (_match, p1) => {
+            return '"' + p1.replace(/"/g, '\\"') + '"';
+        });
+
+        return escapedCommand;
     }
 }

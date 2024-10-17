@@ -14,6 +14,8 @@ import { createTempFile } from "../utils/tempfile";
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 const YAML_GLOB_PATTERN = "**/*.yaml";
 const EXCLUDE_PATTERN = "**/node_modules/**";
+const AUTOMATIC_WORKLOADS_PATH = "/aksAutomaticWorkloads";
+const BASE_WORKLOADS_PATH = "/workloads";
 
 export async function aksDeployManifest() {
     // Check if GitHub Copilot for Azure extension is installed
@@ -46,8 +48,8 @@ export async function aksDeployManifest() {
         return;
     }
 
-    if (cluster.result === false) {
-        vscode.window.showWarningMessage("No cluster selected.");
+    if (cluster.result === true) {
+        vscode.window.showInformationMessage("Please create AKS cluster before deploying the manifest.");
         return;
     }
 
@@ -172,6 +174,7 @@ async function deployApplicationToCluster(
     }
 
     // Generate and return the resource URL
-    const resourceUrl = getPortalResourceUrl(getEnvironment(), cluster.clusterId);
+    const clusterIdworkloadsPath = cluster.sku?.name === "Automatic" ? `${cluster.clusterId + AUTOMATIC_WORKLOADS_PATH}` : `${cluster.clusterId + BASE_WORKLOADS_PATH}`;
+    const resourceUrl = getPortalResourceUrl(getEnvironment(), clusterIdworkloadsPath);
     return { succeeded: true, result: { url: resourceUrl } };
 }

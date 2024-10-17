@@ -23,7 +23,7 @@ export async function aksCreateClusterFromCopilot(): Promise<void> {
     const subscriptionId = await selectSubscription();
 
     if (!subscriptionId) {
-        vscode.window.showErrorMessage("A Subscription Id is required to create an AKS cluster.");
+        vscode.window.showWarningMessage("Creating an AKS cluster requires a Subscription Id");
         return;
     }
 

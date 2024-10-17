@@ -1,9 +1,12 @@
+import { ManagedClusterSKU } from "@azure/arm-containerservice";
+
 export type ClusterPreference = {
     subscriptionId: string;
     clusterName: string;
     clusterId: string;
     resourceGroup: string;
     kubeConfigYAML: string;
+    sku?: ManagedClusterSKU;
 };
 
 export type MessageForLanguageModel = {
