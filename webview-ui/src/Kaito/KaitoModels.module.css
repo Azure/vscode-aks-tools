@@ -1,0 +1,413 @@
+body {
+    color: var(--vscode-editor-foreground, #fff);
+    overflow-x: hidden;
+}
+
+.mainDiv {
+    margin-bottom: 2rem;
+    grid-area: mainContent;
+    padding-right: 0.5rem;
+}
+
+.modelsHeader {
+    font-size: 1.625rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.subHeader {
+    width: 90%;
+    max-width: 90vw;
+    margin-top: 0.9rem;
+    color: var(--vscode-editor-foreground, #fff);
+    opacity: 0.95;
+    font-size: 0.8125rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    word-wrap: break-word;
+}
+
+.dropdown {
+    margin: 0;
+}
+
+.dropdownButton {
+    color: var(--vscode-editor-foreground, #fff);
+    font-size: 1.1rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    cursor: pointer;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    font-family: var(--vscode-font-family);
+    width: 100%;
+    padding: 0.5rem 0 0.5rem 0.3rem;
+    transition: background-color 0.08s;
+    border-radius: 0.3125rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.3rem;
+}
+
+.dropdownButton:hover {
+    background-color: rgba(231, 188, 188, 0.05);
+}
+
+.arrow {
+    margin-right: 0.25rem;
+    transition: transform 0.1s;
+    font-weight: 500;
+    display: inline-block;
+    padding-top: 0.21875rem;
+}
+.arrowPath {
+    fill: var(--vscode-editor-foreground, #fff);
+}
+.dropdownContent {
+    margin-top: 0.1875rem;
+    margin-left: 1.4375rem;
+    margin-bottom: 0.125rem;
+}
+
+.gridContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    padding: 0% 2% 0% 0.5%;
+    gap: 1rem;
+}
+
+.gridItem {
+    padding: 0.6rem 0rem 0.6rem 0.7rem;
+    border-radius: 0.3125rem;
+    border: 1px solid var(--Dark-Base-05, #868686);
+    text-align: left;
+    transition: background-color 0.08s ease-in-out;
+    color: var(--vscode-editor-foreground, #fff);
+}
+
+.gridItem:hover {
+    background: var(--editor-selectionHighlightBackground, rgba(58, 58, 58, 0.4));
+    cursor: pointer;
+}
+
+.gridItem.selected {
+    border: 1px solid var(--activityBar-activeBorder, #0078d4);
+    background: var(--editor-selectionHighlightBackground, rgba(58, 58, 58, 0.6));
+}
+
+.modelName {
+    font-size: 0.8125rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+
+.modelDetails {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.6875rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.1rem;
+    margin-top: 0rem;
+    color: var(--vscode-editor-foreground, #fff);
+    margin-bottom: 0.125rem;
+}
+
+.gray {
+    opacity: 0.75;
+}
+.bold {
+    color: var(--vscode-editor-foreground, #fff);
+    font-weight: 700;
+}
+.progressDiv {
+    margin-bottom: 0rem;
+    margin-top: 0.5rem;
+}
+.progress {
+    width: 1rem;
+    height: 1rem;
+    display: inline-block;
+    position: relative;
+    top: 0.125rem;
+    margin-right: 0.5rem;
+}
+.link {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.6875rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    text-decoration-line: underline;
+    color: var(--vscode-textLink-foreground, #0078d4);
+}
+
+.selectedModelBox {
+    position: fixed;
+    top: 10%;
+    right: 1%;
+    width: 30%;
+    height: 80%;
+    background-color: #f0f0f0;
+    border-left: 1px solid #ccc;
+    padding: 1rem;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+.generateButton {
+    color: var(--button-foreground, #fff);
+    border-radius: 0.125rem;
+    background: var(--vscode-button-background, #0078d4);
+    border: none;
+    border-radius: 0.3125rem;
+    outline: none;
+    margin-top: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 400;
+    transition: all 0.1s ease;
+    padding: 0.37rem 0.45rem 0.37rem 0.5rem;
+    font-family: var(--vscode-font-family);
+    border-radius: 0.17rem;
+    margin-bottom: 0.4rem;
+}
+
+.generateButton:hover {
+    cursor: pointer;
+    background: var(
+        --vscode-selection-background,
+        var(--vscode-list-activeSelectionBackground, var(--vscode-button-background, #0078d4))
+    );
+}
+
+button:disabled {
+    color: #6a6d70;
+    border: 1px solid #313539;
+    background-color: #2d3033;
+    margin-top: 0.25rem;
+}
+button:disabled:hover {
+    color: #6a6d70;
+    border: 1px solid #313539;
+    background-color: #2d3033;
+    margin-top: 0.25rem;
+    cursor: default;
+}
+
+.tooltip {
+    position: absolute;
+    margin: 0.6rem 0 0 0.35rem;
+    display: inline-block;
+    color: var(--vscode-notificationsInfoIcon-foreground);
+}
+
+.iicon {
+    font-size: 0.95rem !important;
+    display: inline-block;
+    width: auto;
+    height: auto;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    background-color: var(--vscode-editorHoverWidget-background);
+    color: var(--vscode-editorHoverWidget-foreground);
+    border-color: var(--vscode-editorHoverWidget-border);
+    border-width: 1px;
+    border-style: solid;
+    text-align: left;
+    padding: 0.5rem;
+    position: absolute;
+    z-index: 1;
+    width: max-content;
+    max-width: 15vw;
+    top: 1rem;
+    left: -5rem;
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+}
+.tooltip:hover .iicon {
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.652);
+    transition: all 0.2s ease;
+}
+.sucess {
+    margin-top: 0.5rem;
+}
+
+.statusTable {
+    display: table;
+    width: 100%;
+    margin-top: 0.4375rem;
+}
+
+.statusRow {
+    display: table-row;
+}
+
+.statusLabel,
+.statusValue {
+    display: table-cell;
+    padding: 0 0 0 0;
+    vertical-align: top;
+    text-align: left;
+}
+
+.statusLabel {
+    font-weight: 500;
+    padding-right: 1rem;
+    width: 30%;
+    min-width: 6rem;
+}
+
+.statusValue {
+    color: var(--vscode-editor-foreground, #fff);
+    opacity: 0.75;
+    width: auto;
+}
+
+.failure {
+    margin-top: 0.5rem;
+}
+
+.sidePanel {
+    grid-area: sidePanel;
+    padding: 1rem;
+    background: none;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(100%);
+}
+.panelDiv {
+    background-color: rgba(54, 52, 52, 0.2);
+    position: fixed;
+    right: 0;
+    top: 50vh;
+    transform: translateY(-50%);
+    z-index: 100;
+    min-height: 80vh;
+    right: 1%;
+    width: 39%;
+    padding: 0.4375rem 1.2rem;
+    border-radius: 0.25rem;
+    border: none;
+    text-align: left;
+    transition: background-color 0.08s;
+    color: var(--vscode-editor-foreground, #fff);
+    box-sizing: border-box;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.panelDiv h1 {
+    font-weight: 450;
+    margin-top: 0.8rem;
+    text-align: left;
+    margin-bottom: 1.3rem;
+}
+
+.mainGridContainer {
+    display: grid;
+    grid-template-columns: 1fr 0;
+    grid-template-areas: "mainContent sidePanel";
+    transition: grid-template-columns 0.3s ease;
+    width: 100%;
+    height: 100vh;
+}
+
+.mainGridContainer > .mainContent {
+    padding: 1rem;
+}
+
+.mainGridContainer.openSidebar {
+    grid-template-columns: 60% 40%;
+}
+
+.mainGridContainer.openSidebar > .sidePanel {
+    transform: translateX(0);
+}
+
+.nextSteps {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.8rem 0.625rem 0.1rem 0.8rem;
+    border-radius: 0.3rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--Dark-Base-05, hsl(0, 0%, 82%));
+    margin-bottom: 0.8rem;
+}
+
+.nextSteps h2 {
+    font-size: 0.875rem;
+    margin-bottom: 0.3125rem;
+    font-weight: 500;
+    margin-top: 0px;
+}
+
+.nextSteps p {
+    font-size: 0.6875rem;
+    margin-bottom: 0.2rem;
+    margin-top: 0.25rem;
+}
+
+.nextSteps ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 0px;
+}
+
+.nextSteps ul li {
+    font-size: 0.6875rem;
+    margin-bottom: 0.05rem;
+    position: relative;
+    padding-left: 1.25rem;
+}
+
+.nextSteps ul li:before {
+    content: "♦";
+    color: #d1aaff;
+    position: absolute;
+    left: 0;
+}
+
+.nextIcon {
+    margin-right: 0.3125rem;
+    flex-shrink: 0;
+}
+
+.nextIcon span i {
+    color: #d1aaff;
+}
+
+.content {
+    flex-grow: 1;
+}
+
+.closeButton {
+    position: absolute;
+    top: 1.6rem;
+    right: 1.52rem;
+    background: none;
+    border: none;
+    font-size: 1.65rem;
+    color: var(--vscode-editor-foreground, #fff);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    font-weight: 100;
+}
+
+.closeButton:hover {
+    color: #ff6b6b;
+}

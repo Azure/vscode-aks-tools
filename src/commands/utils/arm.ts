@@ -12,6 +12,7 @@ import { PagedAsyncIterableIterator } from "@azure/core-paging";
 import { getCredential, getEnvironment } from "../../auth/azureAuth";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { Errorable, getErrorMessage } from "./errorable";
+import { ComputeManagementClient } from "@azure/arm-compute";
 
 export function getSubscriptionClient(sessionProvider: ReadyAzureSessionProvider): SubscriptionClient {
     return new SubscriptionClient(getCredential(sessionProvider), { endpoint: getArmEndpoint() });
@@ -77,6 +78,13 @@ export function getManagedServiceIdentityClient(
     subscriptionId: string,
 ): ManagedServiceIdentityClient {
     return new ManagedServiceIdentityClient(getCredential(sessionProvider), subscriptionId);
+}
+
+export function getComputeManagementClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ComputeManagementClient {
+    return new ComputeManagementClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
 
 function getArmEndpoint(): string {
