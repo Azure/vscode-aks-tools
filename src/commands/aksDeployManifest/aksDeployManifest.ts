@@ -10,6 +10,7 @@ import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotH
 import { longRunning } from "../utils/host";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
+import { reporter } from "../utils/reporter";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 const YAML_GLOB_PATTERN = "**/*.yaml";
@@ -30,8 +31,11 @@ export async function aksDeployManifest() {
     const manifest = await getManifestFile();
 
     if (manifest === undefined) {
+        reporter.sendTelemetryEvent("aks.ghcp", { command: "aks.aksDeployManifest", manifestSelected: "false" });
         return;
     }
+
+    reporter.sendTelemetryEvent("aks.ghcp", { command: "aks.aksDeployManifest", manifestSelected: "true" });
 
     // Select cluster
     const sessionProvider = await getReadySessionProvider();
@@ -41,9 +45,10 @@ export async function aksDeployManifest() {
         return;
     }
 
-    const cluster = await selectClusterOptions(sessionProvider.result);
+    const cluster = await selectClusterOptions(sessionProvider.result, undefined, "aks.aksDeployManifest");
 
     if (failed(cluster)) {
+        reporter.sendTelemetryEvent("aks.ghcp", { command: "aks.aksDeployManifest", clusterSelected: "false" });
         vscode.window.showErrorMessage(cluster.error);
         return;
     }
@@ -60,6 +65,7 @@ export async function aksDeployManifest() {
 
     if (!confirmed) {
         vscode.window.showWarningMessage("Manifest deployment cancelled.");
+        reporter.sendTelemetryEvent("aks.ghcp", { command: "aks.aksDeployManifest", cancelledDeployment: "true" });
         return;
     }
 
@@ -70,8 +76,11 @@ export async function aksDeployManifest() {
 
     if (failed(deploymentResult)) {
         vscode.window.showErrorMessage(deploymentResult.error);
+        reporter.sendTelemetryEvent("aks.ghcp", { command: "aks.aksDeployManifest", deploymentSuccess: "false" });
         return;
     }
+
+    reporter.sendTelemetryEvent("aks.ghcp", { command: "aks.aksDeployManifest", deploymentSuccess: "true" });
 
     vscode.window
         .showInformationMessage(
@@ -80,6 +89,10 @@ export async function aksDeployManifest() {
         )
         .then((res) => {
             if (res) {
+                reporter.sendTelemetryEvent("aks.ghcp", {
+                    command: "aks.aksDeployManifest",
+                    externalLinkClicked: "true",
+                });
                 vscode.env.openExternal(vscode.Uri.parse(deploymentResult.result.url));
             }
         });
@@ -174,7 +187,10 @@ async function deployApplicationToCluster(
     }
 
     // Generate and return the resource URL
-    const clusterIdworkloadsPath = cluster.sku?.name === "Automatic" ? `${cluster.clusterId + AUTOMATIC_WORKLOADS_PATH}` : `${cluster.clusterId + BASE_WORKLOADS_PATH}`;
+    const clusterIdworkloadsPath =
+        cluster.sku?.name === "Automatic"
+            ? `${cluster.clusterId + AUTOMATIC_WORKLOADS_PATH}`
+            : `${cluster.clusterId + BASE_WORKLOADS_PATH}`;
     const resourceUrl = getPortalResourceUrl(getEnvironment(), clusterIdworkloadsPath);
     return { succeeded: true, result: { url: resourceUrl } };
 }

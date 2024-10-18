@@ -18,7 +18,7 @@ export const getAKSClusterPluginResponse = (): GitHubCopilotForAzureChatPluginRe
     return {
         messageForLanguageModel: messageForLanguageModel,
         commandID: "aks.aksCreateClusterFromCopilot",
-        buttonLabel: "Get started",
+        buttonLabel: "Create cluster",
     };
 };
 
@@ -69,7 +69,7 @@ export const getKubectlCommandPluginResponse = (
     return {
         messageForLanguageModel: messageForLanguageModel,
         commandID: "aks.aksOpenKubectlPanel",
-        buttonLabel: "Open kubectl command",
+        buttonLabel: "Open kubectl panel",
         arguments: [response],
     };
 };

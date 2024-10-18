@@ -18,6 +18,7 @@ export default async function aksCreateCluster(_context: IActionContext, target:
     let subscriptionNode: Errorable<SubscriptionTreeNode>;
     let subscriptionId: string | undefined;
     let subscriptionName: string | undefined;
+    let commandId: string = "";
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
     const sessionProvider = await getReadySessionProvider();
@@ -33,6 +34,7 @@ export default async function aksCreateCluster(_context: IActionContext, target:
                 vscode.window.showErrorMessage(subscriptionResult.error);
                 return;
             }
+            commandId = "aks.aksCreateClusterFromCopilot";
             subscriptionId = subscriptionResult.result?.subscriptionId;
             subscriptionName = subscriptionResult.result?.displayName;
             break;
@@ -48,11 +50,11 @@ export default async function aksCreateCluster(_context: IActionContext, target:
                 vscode.window.showErrorMessage("Subscription not found.");
                 return;
             }
+            commandId = "aks.createCluster";
             subscriptionId = subscriptionNode.result?.subscriptionId;
             subscriptionName = subscriptionNode.result?.name;
             break;
         }
-
     }
 
     const extension = getExtension();
@@ -68,8 +70,12 @@ export default async function aksCreateCluster(_context: IActionContext, target:
         return;
     }
 
-    const dataProvider = new CreateClusterDataProvider(sessionProvider.result, subscriptionId, subscriptionName, () =>
-        vscode.commands.executeCommand("aks.refreshSubscription", target),
+    const dataProvider = new CreateClusterDataProvider(
+        sessionProvider.result,
+        subscriptionId,
+        subscriptionName,
+        () => vscode.commands.executeCommand("aks.refreshSubscription", target),
+        commandId,
     );
 
     panel.show(dataProvider);
