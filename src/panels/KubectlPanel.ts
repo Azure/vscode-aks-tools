@@ -106,6 +106,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         // Replace single quotes with double quotes and escape inner double quotes
         const transformedCommand = command.replace(jsonpathRegex, (_match, jsonpath) => {
             const escapedJsonpath = jsonpath.replace(/"/g, '\\"').replace(/'/g, '"');
+            // eslint-disable-next-line no-useless-escape
             return `-o jsonpath=\"${escapedJsonpath}\"`;
         });
 
