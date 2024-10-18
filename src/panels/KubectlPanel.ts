@@ -103,14 +103,30 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         // Regular expression to match JSONPATH expressions
         const jsonpathRegex = /-o jsonpath='([^']+)'/g;
 
-        // Replace single quotes with double quotes and escape inner double quotes and backslashes
-        const transformedCommand = command.replace(jsonpathRegex, (_match, jsonpath) => {
-            const escapedJsonpath = jsonpath
-                .replace(/\\/g, "\\") // Escape backslashes
-                .replace(/"/g, '\\"') // Escape double quotes
-                .replace(/'/g, '"'); // Replace single quotes with double quotes
-            return `-o jsonpath="${escapedJsonpath}"`;
-        });
+        // Function to escape JSONPATH expression
+        function escapeJsonpath(jsonpath: string): string {
+            let escapedJsonpath = "";
+            for (let i = 0; i < jsonpath.length; i++) {
+                const char = jsonpath[i];
+                if (char === '"') {
+                    escapedJsonpath += '\\"';
+                } else if (char === "'") {
+                    escapedJsonpath += '"';
+                } else {
+                    escapedJsonpath += char;
+                }
+            }
+            return escapedJsonpath;
+        }
+
+        // Replace JSONPATH expressions in the command
+        let match;
+        let transformedCommand = command;
+        while ((match = jsonpathRegex.exec(command)) !== null) {
+            const jsonpath = match[1];
+            const escapedJsonpath = escapeJsonpath(jsonpath);
+            transformedCommand = transformedCommand.replace(match[0], `-o jsonpath="${escapedJsonpath}"`);
+        }
 
         return transformedCommand;
     }
