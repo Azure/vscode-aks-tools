@@ -12,13 +12,12 @@ export default async function aksKaito(_context: IActionContext, target: unknown
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
     const kubectl = await k8s.extension.kubectl.v1;
-
+    const maintarget = target;
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
         vscode.window.showErrorMessage(sessionProvider.error);
         return;
     }
-
     if (!cloudExplorer.available) {
         vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
         return;
@@ -79,6 +78,7 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         filterKaitoPodNames.succeeded ? filterKaitoPodNames.result : [],
         kubectl,
         kubeConfigFile.filePath,
+        maintarget,
     );
 
     panel.show(dataProvider);
