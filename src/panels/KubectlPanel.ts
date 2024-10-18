@@ -106,8 +106,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         // Function to escape JSONPATH expression
         function escapeJsonpath(jsonpath: string): string {
             let escapedJsonpath = "";
-            for (let i = 0; i < jsonpath.length; i++) {
-                const char = jsonpath[i];
+            for (const char of jsonpath) {
                 if (char === '"') {
                     escapedJsonpath += '\\"';
                 } else if (char === "'") {
@@ -120,13 +119,10 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         }
 
         // Replace JSONPATH expressions in the command
-        let match;
-        let transformedCommand = command;
-        while ((match = jsonpathRegex.exec(command)) !== null) {
-            const jsonpath = match[1];
+        const transformedCommand = command.replace(jsonpathRegex, (_match, jsonpath) => {
             const escapedJsonpath = escapeJsonpath(jsonpath);
-            transformedCommand = transformedCommand.replace(match[0], `-o jsonpath="${escapedJsonpath}"`);
-        }
+            return `-o jsonpath="${escapedJsonpath}"`;
+        });
 
         return transformedCommand;
     }
