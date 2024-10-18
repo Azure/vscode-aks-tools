@@ -53,6 +53,7 @@ export async function aksDeployManifest() {
         return;
     }
 
+    // Return value is boolean if user selects new cluster option, which should stop flow and guide user to create a new cluster first.
     if (cluster.result === true) {
         vscode.window.showInformationMessage("Please create AKS cluster before deploying the manifest.");
         return;
