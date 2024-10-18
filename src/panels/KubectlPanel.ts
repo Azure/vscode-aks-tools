@@ -27,8 +27,8 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         readonly kubeConfigFilePath: string,
         readonly clusterName: string,
         readonly customCommands: PresetCommand[],
-        readonly initialCommand?: string
-    ) { }
+        readonly initialCommand?: string,
+    ) {}
 
     getTitle(): string {
         return `Run Kubectl on ${this.clusterName}`;
@@ -38,7 +38,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         return {
             clusterName: this.clusterName,
             customCommands: this.customCommands,
-            initialCommand: this.initialCommand
+            initialCommand: this.initialCommand,
         };
     }
 
@@ -47,7 +47,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             runCommandRequest: true,
             addCustomCommandRequest: true,
             deleteCustomCommandRequest: true,
-            initialCommandRequest: true
+            initialCommandRequest: true,
         };
     }
 
@@ -66,7 +66,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         }
 
         if (command.includes("jsonpath")) {
-            command = this.escapeAndReplaceQuotes(command);
+            command = this.transformCommand(command);
         }
 
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
@@ -99,12 +99,16 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         await deleteKubectlCustomCommand(name);
     }
 
-    private escapeAndReplaceQuotes(command: string): string {
-        // Replace double quotes inside single quotes with escaped double quotes, then replace single outside with double quotes.
-        let escapedCommand = command.replace(/'([^']*)'/g, (_match, p1) => {
-            return '"' + p1.replace(/"/g, '\\"') + '"';
+    private transformCommand(command: string): string {
+        // Regular expression to match JSONPATH expressions
+        const jsonpathRegex = /-o jsonpath='([^']+)'/g;
+
+        // Replace single quotes with double quotes and escape inner double quotes
+        const transformedCommand = command.replace(jsonpathRegex, (_match, jsonpath) => {
+            const escapedJsonpath = jsonpath.replace(/"/g, '\\"').replace(/'/g, '"');
+            return `-o jsonpath="${escapedJsonpath}"`;
         });
 
-        return escapedCommand;
+        return transformedCommand;
     }
 }
