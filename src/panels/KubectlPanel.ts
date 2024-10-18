@@ -103,11 +103,13 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         // Regular expression to match JSONPATH expressions
         const jsonpathRegex = /-o jsonpath='([^']+)'/g;
 
-        // Replace single quotes with double quotes and escape inner double quotes
+        // Replace single quotes with double quotes and escape inner double quotes and backslashes
         const transformedCommand = command.replace(jsonpathRegex, (_match, jsonpath) => {
-            const escapedJsonpath = jsonpath.replace(/"/g, '\\"').replace(/'/g, '"');
-            // eslint-disable-next-line no-useless-escape
-            return `-o jsonpath=\"${escapedJsonpath}\"`;
+            const escapedJsonpath = jsonpath
+                .replace(/\\/g, "\\") // Escape backslashes
+                .replace(/"/g, '\\"') // Escape double quotes
+                .replace(/'/g, '"'); // Replace single quotes with double quotes
+            return `-o jsonpath="${escapedJsonpath}"`;
         });
 
         return transformedCommand;
