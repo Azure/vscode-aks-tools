@@ -1,15 +1,17 @@
-import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
+import { ReadyAzureSessionProvider } from "../auth/types";
+import { getAksClient, getComputeManagementClient } from "../commands/utils/arm";
 import { failed } from "../commands/utils/errorable";
-import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import { ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoModels";
-import { InitialState } from "../webview-contract/webviewDefinitions/kaitoModels";
-import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { longRunning } from "../commands/utils/host";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
-import { tmpdir } from "os";
-import { writeFileSync } from "fs";
-import { join } from "path";
+import { MessageHandler, MessageSink } from "../webview-contract/messaging";
+import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoModels";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
+import { BasePanel, PanelDataProvider } from "./BasePanel";
 
 export class KaitoModelsPanel extends BasePanel<"kaitoModels"> {
     constructor(extensionUri: vscode.Uri) {
@@ -26,6 +28,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         readonly armId: string,
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
+        readonly sessionProvider: ReadyAzureSessionProvider,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -35,6 +38,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         this.kubeConfigFilePath = kubeConfigFilePath;
     }
     private cancelToken: boolean = false;
+    private checkingGPU: boolean = false;
     getTitle(): string {
         return `Create KAITO Workspace`;
     }
@@ -68,7 +72,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 this.handleGenerateCRDRequest(params.model);
             },
             deployKaitoRequest: (params) => {
-                this.handleDeployKaitoRequest(params.model, params.yaml, webview);
+                this.handleDeployKaitoRequest(params.model, params.yaml, params.gpu, webview);
             },
             workspaceExistsRequest: (params) => {
                 this.handleWorkspaceExistsRequest(params.model);
@@ -96,21 +100,102 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     nullIsFalse(value: boolean | null): boolean {
         return value ?? false;
     }
+    parseGPU(gpuRequirement: string): [string, number] {
+        const regex = /^Standard_NC(\d+)(ads_A100_v4|s_v3)$/;
+        const match = gpuRequirement.match(regex);
+        if (match) {
+            const cpus = parseInt(match[1], 10);
+            let family: string;
+            switch (match[2]) {
+                case "ads_A100_v4":
+                    family = "StandardNCADSA100v4Family";
+                    break;
+                case "s_v3":
+                    family = "standardNCSv3Family";
+                    break;
+                default:
+                    throw new Error("Unknown gpu format");
+            }
 
-    private async handleDeployKaitoRequest(model: string, yaml: string, webview: MessageSink<ToWebViewMsgDef>) {
+            return [family, cpus];
+        } else {
+            throw new Error("Unknown gpu format");
+        }
+    }
+
+    private async handleDeployKaitoRequest(
+        model: string,
+        yaml: string,
+        gpu: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
         this.cancelToken = false;
+        if (this.checkingGPU) {
+            return;
+        }
         try {
+            this.checkingGPU = true;
+            let quotaAvailable = false;
+            let getResult = null;
+            await longRunning(`Checking if workspace exists...`, async () => {
+                const getCommand = `get workspace workspace-${model}`;
+                getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);
+            });
+            if (getResult === null || failed(getResult)) {
+                await longRunning(`Verifying available subscription quota for deployment...`, async () => {
+                    const [gpuFamily, requiredCPUs] = this.parseGPU(gpu);
+                    void requiredCPUs;
+                    const computeClient = getComputeManagementClient(this.sessionProvider, this.subscriptionId);
+                    const containerServiceClient = getAksClient(this.sessionProvider, this.subscriptionId);
+                    const cluster = await containerServiceClient.managedClusters.get(
+                        this.resourceGroupName,
+                        this.clusterName,
+                    );
+                    const quotas = computeClient.usageOperations.list(cluster.location);
+                    let foundQuota = null;
+                    for await (const quota of quotas) {
+                        if (quota.name.value === gpuFamily) {
+                            foundQuota = quota;
+                            break;
+                        }
+                    }
+                    if (!foundQuota || !(foundQuota.currentValue + requiredCPUs <= foundQuota.limit)) {
+                        vscode.window
+                            .showErrorMessage(
+                                `Your current Azure subscription doesn't have enough quota to deploy this model, proceed to request a quota increase.`,
+                                "Learn More",
+                            )
+                            .then((selection) => {
+                                if (selection === "Learn More") {
+                                    vscode.env.openExternal(
+                                        vscode.Uri.parse(
+                                            "https://learn.microsoft.com/en-us/azure/quotas/quickstart-increase-quota-portal",
+                                        ),
+                                    );
+                                }
+                            });
+                    } else {
+                        quotaAvailable = true;
+                    }
+                });
+            } else {
+                quotaAvailable = true;
+            }
+
+            this.checkingGPU = false;
+            if (!quotaAvailable) {
+                return;
+            }
             const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
             writeFileSync(tempFilePath, yaml, "utf8");
             const command = `apply -f ${tempFilePath}`;
             const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
-                vscode.window.showErrorMessage(
-                    `There was an error with deployment. Try deploying again. ${kubectlresult.error}`,
-                );
+                vscode.window.showErrorMessage(`Error during deployment: ${kubectlresult.error}`);
                 return;
             }
         } catch (error) {
+            this.checkingGPU = false;
             vscode.window.showErrorMessage(`Error during deployment: ${error}`);
         }
         this.handleUpdateStateRequest(model, webview);

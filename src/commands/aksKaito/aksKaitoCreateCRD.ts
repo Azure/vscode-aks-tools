@@ -82,6 +82,7 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
         armId,
         kubectl,
         kubeConfigFile.filePath,
+        sessionProvider.result,
     );
     panel.show(dataProvider);
 }
