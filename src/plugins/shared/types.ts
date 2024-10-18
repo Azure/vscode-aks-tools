@@ -15,18 +15,23 @@ export type MessageForLanguageModel = {
     steps?: string[];
     stepsInstructions?: string;
     chatResponseInstructions?: string;
-}
+};
 
 export type GitHubCopilotForAzureChatPluginResponse<T> = {
     messageForLanguageModel: T;
     buttonLabel: string;
-    commandID: string;
-}
+    commandID: CommandIdForPluginResponse;
+};
 
 export type GitHubCopilotForAzureChatPluginResponseExtended<E, T> = GitHubCopilotForAzureChatPluginResponse<E> & {
     arguments: T[] | undefined;
-}
+};
 
 export type GitHubCopilotForAzureChatPluginErrorResponse<T> = {
     messageForLanguageModel: T;
-}
+};
+
+export type CommandIdForPluginResponse =
+    | "aks.aksDeployManifest"
+    | "aks.aksOpenKubectlPanel"
+    | "aks.aksCreateClusterFromCopilot";

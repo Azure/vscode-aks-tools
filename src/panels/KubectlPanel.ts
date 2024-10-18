@@ -66,7 +66,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         }
 
         if (command.includes("jsonpath")) {
-            command = this.transformCommand(command);
+            command = this.transformCommandForJSONPath(command);
         }
 
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
@@ -99,7 +99,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         await deleteKubectlCustomCommand(name);
     }
 
-    private transformCommand(command: string): string {
+    private transformCommandForJSONPath(command: string): string {
         // Regular expression to match JSONPATH expressions
         const jsonpathRegex = /-o jsonpath='([^']+)'/g;
 

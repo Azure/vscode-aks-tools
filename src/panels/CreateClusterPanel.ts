@@ -335,7 +335,7 @@ async function createCluster(
                     createdCluster: null,
                 });
             } else if (state.status === "failed") {
-                reporter.sendTelemetryEvent(eventName, { command: commandId, creationSuccess: "false" });
+                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "false" });
                 const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                 window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
                 webview.postProgressUpdate({
@@ -346,7 +346,7 @@ async function createCluster(
                     createdCluster: null,
                 });
             } else if (state.status === "succeeded") {
-                reporter.sendTelemetryEvent(eventName, { command: commandId, creationSuccess: "true" });
+                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "true" });
                 window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
                 const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
                 webview.postProgressUpdate({

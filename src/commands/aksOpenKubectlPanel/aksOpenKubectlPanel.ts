@@ -11,7 +11,7 @@ import { getReadySessionProvider } from "../../auth/azureAuth";
 import { selectClusterOptions, SelectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { ClusterPreference } from "../../plugins/shared/types";
-import { reporter } from "../utils/reporter";
+import { logPluginHandlerEvent } from "../../plugins/shared/telemetry/logger";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
@@ -45,7 +45,7 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
     );
 
     if (failed(cluster)) {
-        reporter.sendTelemetryEvent("aks.ghcp", { command: "aks.aksOpenKubectlPanel", clusterSelected: "false" });
+        logPluginHandlerEvent({ commandId: "aks.aksOpenKubectlPanel", clusterSelected: "false" });
         vscode.window.showErrorMessage(cluster.error);
         return;
     }
