@@ -25,6 +25,7 @@ import {
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
+import { reporter } from "../commands/utils/reporter";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -40,16 +41,19 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly containerServiceClient: ContainerServiceClient;
     private readonly featureClient: FeatureClient;
+    private readonly commandId: string;
 
     public constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly subscriptionId: string,
         readonly subscriptionName: string,
         readonly refreshTree: () => void,
+        commandId: string,
     ) {
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
         this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
+        this.commandId = commandId;
     }
 
     getTitle(): string {
@@ -158,6 +162,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             this.containerServiceClient,
             this.resourceManagementClient,
             this.featureClient,
+            this.commandId,
         );
 
         this.refreshTree();
@@ -209,6 +214,7 @@ async function createCluster(
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
     featureClient: FeatureClient,
+    commandId: string,
 ) {
     const operationDescription = `Creating cluster ${name}`;
     webview.postProgressUpdate({
@@ -300,6 +306,9 @@ async function createCluster(
         return;
     }
 
+    // event name for telemetry reporter
+    const eventName = commandId === "aks.createCluster" ? "command" : "aks.ghcp";
+
     try {
         const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
             groupName,
@@ -326,6 +335,7 @@ async function createCluster(
                     createdCluster: null,
                 });
             } else if (state.status === "failed") {
+                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "false" });
                 const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                 window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
                 webview.postProgressUpdate({
@@ -336,6 +346,7 @@ async function createCluster(
                     createdCluster: null,
                 });
             } else if (state.status === "succeeded") {
+                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "true" });
                 window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
                 const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
                 webview.postProgressUpdate({
