@@ -12,6 +12,13 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoModels";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
+import { Usage } from "@azure/arm-compute";
+
+enum GpuFamilies {
+    NCSv3Family = "s_v3",
+    NCADSA100v4Family = "ads_A100_v4",
+}
 
 export class KaitoModelsPanel extends BasePanel<"kaitoModels"> {
     constructor(extensionUri: vscode.Uri) {
@@ -20,6 +27,7 @@ export class KaitoModelsPanel extends BasePanel<"kaitoModels"> {
         });
     }
 }
+
 export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoModels"> {
     public constructor(
         readonly clusterName: string,
@@ -37,8 +45,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         this.kubectl = kubectl;
         this.kubeConfigFilePath = kubeConfigFilePath;
     }
+    // When true, will break the loop that is watching the workspace progress
     private cancelToken: boolean = false;
+    // This is set to true while quota information is being fetched
     private checkingGPU: boolean = false;
+
     getTitle(): string {
         return `Create KAITO Workspace`;
     }
@@ -47,11 +58,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             clusterName: this.clusterName,
             modelName: "",
             workspaceExists: false,
-            resourceReady: false,
-            inferenceReady: false,
-            workspaceReady: false,
+            resourceReady: null,
+            inferenceReady: null,
+            workspaceReady: null,
             age: 0,
-        };
+        } as InitialState;
     }
     cancel() {
         this.cancelToken = true;
@@ -100,36 +111,92 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     nullIsFalse(value: boolean | null): boolean {
         return value ?? false;
     }
+
+    // Returns [family, cpus] where family is the family of the gpu and cpus is the number of cpus
     parseGPU(gpuRequirement: string): [string, number] {
         const regex = /^Standard_NC(\d+)(ads_A100_v4|s_v3)$/;
         const match = gpuRequirement.match(regex);
+        const gpuError = new Error("Unknown gpu format");
         if (match) {
             const cpus = parseInt(match[1], 10);
             let family: string;
+            // match[2] is the gpu family
             switch (match[2]) {
-                case "ads_A100_v4":
+                case GpuFamilies.NCADSA100v4Family:
                     family = "StandardNCADSA100v4Family";
                     break;
-                case "s_v3":
+                case GpuFamilies.NCSv3Family:
                     family = "standardNCSv3Family";
                     break;
                 default:
-                    throw new Error("Unknown gpu format");
+                    throw gpuError;
             }
-
             return [family, cpus];
         } else {
-            throw new Error("Unknown gpu format");
+            throw gpuError;
         }
     }
 
+    // Helper function for workspace readiness
+    getConditions(conditions: Array<{ type: string; status: string }>) {
+        let resourceReady = null;
+        let inferenceReady = null;
+        let workspaceReady = null;
+        conditions.forEach(({ type, status }) => {
+            switch (type.toLowerCase()) {
+                case "resourceready":
+                    resourceReady = this.statusToBoolean(status);
+                    break;
+                case "workspaceready":
+                    workspaceReady = this.statusToBoolean(status);
+                    break;
+                case "inferenceready":
+                    inferenceReady = this.statusToBoolean(status);
+                    break;
+            }
+        });
+        return { resourceReady, inferenceReady, workspaceReady };
+    }
+
+    async promptForQuotaIncrease() {
+        const selection = await vscode.window.showErrorMessage(
+            `Your current Azure subscription doesn't have enough quota to deploy this model. Proceed to request a quota increase.`,
+            "Learn More",
+        );
+
+        if (selection === "Learn More") {
+            vscode.env.openExternal(
+                vscode.Uri.parse("https://learn.microsoft.com/en-us/azure/quotas/quickstart-increase-quota-portal"),
+            );
+        }
+    }
+
+    private async findMatchingQuota(
+        quotas: PagedAsyncIterableIterator<Usage, Usage[], PageSettings>,
+        gpuFamily: string,
+    ) {
+        for await (const quota of quotas) {
+            if (quota.name.value === gpuFamily) {
+                return quota;
+            }
+        }
+        return null;
+    }
+
+    private isQuotaSufficient(quota: Usage, requiredCPUs: number) {
+        return quota.currentValue + requiredCPUs <= quota.limit;
+    }
+
+    // This function checks quota & existence of workspace, then deploys model
     private async handleDeployKaitoRequest(
         model: string,
         yaml: string,
         gpu: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        // Resetting cancelToken
         this.cancelToken = false;
+        // This prevents the user from redeploying while quota is being checked
         if (this.checkingGPU) {
             return;
         }
@@ -153,27 +220,9 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                     );
                     const quotas = computeClient.usageOperations.list(cluster.location);
                     let foundQuota = null;
-                    for await (const quota of quotas) {
-                        if (quota.name.value === gpuFamily) {
-                            foundQuota = quota;
-                            break;
-                        }
-                    }
-                    if (!foundQuota || !(foundQuota.currentValue + requiredCPUs <= foundQuota.limit)) {
-                        vscode.window
-                            .showErrorMessage(
-                                `Your current Azure subscription doesn't have enough quota to deploy this model, proceed to request a quota increase.`,
-                                "Learn More",
-                            )
-                            .then((selection) => {
-                                if (selection === "Learn More") {
-                                    vscode.env.openExternal(
-                                        vscode.Uri.parse(
-                                            "https://learn.microsoft.com/en-us/azure/quotas/quickstart-increase-quota-portal",
-                                        ),
-                                    );
-                                }
-                            });
+                    foundQuota = await this.findMatchingQuota(quotas, gpuFamily);
+                    if (!foundQuota || !this.isQuotaSufficient(foundQuota, requiredCPUs)) {
+                        this.promptForQuotaIncrease();
                     } else {
                         quotaAvailable = true;
                     }
@@ -221,15 +270,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         }
     }
     private async handleResetStateRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        webview.postDeploymentProgressUpdate({
-            clusterName: this.clusterName,
-            modelName: "",
-            workspaceExists: false,
-            resourceReady: null,
-            inferenceReady: null,
-            workspaceReady: null,
-            age: 0,
-        });
+        webview.postDeploymentProgressUpdate(this.getInitialState());
     }
     convertAgeToMinutes(creationTimestamp: string): number {
         const createdTime = new Date(creationTimestamp);
@@ -239,7 +280,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         return differenceInMinutes;
     }
     statusToBoolean(status: string): boolean {
-        if (status === "True") {
+        if (status.toLowerCase() === "true") {
             return true;
         }
         return false;
@@ -251,35 +292,12 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
                 vscode.window.showErrorMessage(kubectlresult.error);
-                return {
-                    clusterName: this.clusterName,
-                    modelName: "",
-                    workspaceExists: false,
-                    resourceReady: null,
-                    inferenceReady: null,
-                    workspaceReady: null,
-                    age: 0,
-                } as InitialState;
+                return this.getInitialState();
             }
         }
         const data = JSON.parse(kubectlresult.result.stdout);
         const conditions: Array<{ type: string; status: string }> = data.status?.conditions || [];
-        let resourceReady = null;
-        let inferenceReady = null;
-        let workspaceReady = null;
-        conditions.forEach(({ type, status }) => {
-            switch (type) {
-                case "ResourceReady":
-                    resourceReady = this.statusToBoolean(status);
-                    break;
-                case "WorkspaceReady":
-                    workspaceReady = this.statusToBoolean(status);
-                    break;
-                case "InferenceReady":
-                    inferenceReady = this.statusToBoolean(status);
-                    break;
-            }
-        });
+        const { resourceReady, inferenceReady, workspaceReady } = this.getConditions(conditions);
         return {
             clusterName: this.clusterName,
             modelName: model,
@@ -291,6 +309,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         } as InitialState;
     }
 
+    // Returns current state of workspace associated with given model
     private async handleUpdateStateRequest(model: string, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `get workspace workspace-${model} -o json`;
         let kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
@@ -300,33 +319,14 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 vscode.window.showErrorMessage(
                     `There was an error connecting to the workspace. ${kubectlresult.error}`,
                 );
-                webview.postDeploymentProgressUpdate({
-                    clusterName: this.clusterName,
-                    modelName: "",
-                    workspaceExists: false,
-                    resourceReady: null,
-                    inferenceReady: null,
-                    workspaceReady: null,
-                    age: 0,
-                });
+                webview.postDeploymentProgressUpdate(this.getInitialState());
+                this.cancelToken = true;
                 return;
             }
         }
         const data = JSON.parse(kubectlresult.result.stdout);
         const conditions: Array<{ type: string; status: string }> = data.status?.conditions || [];
-        let resourceReady = null;
-        let inferenceReady = null;
-        let workspaceReady = null;
-
-        conditions.forEach((condition) => {
-            if (condition.type === "ResourceReady") {
-                resourceReady = this.statusToBoolean(condition.status);
-            } else if (condition.type === "WorkspaceReady") {
-                workspaceReady = this.statusToBoolean(condition.status);
-            } else if (condition.type === "InferenceReady") {
-                inferenceReady = this.statusToBoolean(condition.status);
-            }
-        });
+        const { resourceReady, inferenceReady, workspaceReady } = this.getConditions(conditions);
 
         webview.postDeploymentProgressUpdate({
             clusterName: this.clusterName,

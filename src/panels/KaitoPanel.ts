@@ -169,9 +169,12 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
 
         // Install kaito enablement
-        const kaitoInstallationResult = await longRunning(`Enabling the kaito for this cluster.`, () => {
-            return this.handleKaitoInstallationLogic(currentJson, webview);
-        });
+        const kaitoInstallationResult = await longRunning(
+            `Enabling the kaito for cluster '${this.clusterName}'.`,
+            () => {
+                return this.handleKaitoInstallationLogic(currentJson, webview);
+            },
+        );
 
         if (kaitoInstallationResult && failed(kaitoInstallationResult)) {
             vscode.window.showErrorMessage(

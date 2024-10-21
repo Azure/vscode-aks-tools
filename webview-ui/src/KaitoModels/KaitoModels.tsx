@@ -2,13 +2,13 @@ import { useState } from "react";
 import styles from "./KaitoModels.module.css";
 import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
 import { VSCodeDivider, VSCodeLink, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
-import { stateUpdater2, vscode2 } from "./state";
+import { stateUpdater, vscode } from "./state";
 import { useStateManagement } from "../utilities/state";
 import { ArrowIcon } from "../icons/ArrowIcon";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoModels";
 
 export function KaitoModels(initialState: InitialState) {
-    const { state } = useStateManagement(stateUpdater2, initialState, vscode2);
+    const { state } = useStateManagement(stateUpdater, initialState, vscode);
 
     function capitalizeFirstLetter(text: string) {
         return text.charAt(0).toUpperCase() + text.slice(1);
@@ -44,7 +44,7 @@ export function KaitoModels(initialState: InitialState) {
     const handleModelClick = async (model: string) => {
         if (selectedModel !== null) {
             if (model !== selectedModel) {
-                vscode2.postCancelRequest({});
+                vscode.postCancelRequest({});
             }
         }
         if (selectedModel !== model) {
@@ -53,11 +53,11 @@ export function KaitoModels(initialState: InitialState) {
         setSelectedModel(model);
     };
 
-    // const selectedModelDetails = getModelDetails(selectedModel !== null ? selectedModel : "");
     function stringOrUndefined(s: string | undefined): string {
         return s !== undefined ? s : "";
     }
 
+    // Returns true if model cannot be deployed with one click
     function undeployable(model: string) {
         return model.substring(0, 7) === "llama-2" || model.substring(0, 5) === "phi-3";
     }
@@ -89,6 +89,7 @@ export function KaitoModels(initialState: InitialState) {
         return defaultMessage;
     }
 
+    // returns [yaml, gpu] where yaml is the generated yaml & gpu is the gpu specification string
     function generateYAML(model: string): [string, string | undefined] {
         const modelDetails = getModelDetails(model);
         const name = stringOrUndefined(modelDetails?.modelName);
@@ -97,12 +98,14 @@ export function KaitoModels(initialState: InitialState) {
         let metadataname = name;
         let inferencename = name;
         let privateConfig = "";
+        // Adds private configuration template for llama-2 models
         if (name.substring(0, 7) === "llama-2") {
             privateConfig = `
     accessMode: private
     presetOptions:
       image: <YOUR IMAGE URL>`;
         }
+        // Phi-3 Models follow a different naming pattern, this corrects for that
         if (name.substring(0, 5) === "phi-3") {
             appname = "phi-3";
             const match = name.match(/phi-3-(mini|medium)/);
@@ -123,24 +126,26 @@ resource:
 inference:
   preset:
     name: ${inferencename}${privateConfig}`;
+        // Passing along gpu specification for subsequent usage
         return [yaml, gpu];
     }
 
     function generateCRD(model: string) {
+        // model[0] is
         const yaml = generateYAML(model)[0];
-        vscode2.postGenerateCRDRequest({ model: yaml });
+        vscode.postGenerateCRDRequest({ model: yaml });
         return;
     }
 
     function onClickDeployKaito(model: string) {
         const [yaml, gpu] = generateYAML(model);
         if (!(gpu === undefined)) {
-            vscode2.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
+            vscode.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
         }
     }
 
     function resetState() {
-        vscode2.postResetStateRequest({});
+        vscode.postResetStateRequest({});
     }
 
     return (
@@ -169,7 +174,7 @@ inference:
                         <button
                             className={styles.closeButton}
                             onClick={() => {
-                                vscode2.postCancelRequest({});
+                                vscode.postCancelRequest({});
                                 setSelectedModel(null);
                             }}
                         >
