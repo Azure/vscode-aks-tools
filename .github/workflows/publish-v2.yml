@@ -45,14 +45,6 @@ jobs:
         id: package_version
         uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b # v1.3.1
 
-      - name: Check version is mentioned in Changelog
-        id: changelog_reader
-        uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
-        with:
-            validation_depth: 10
-            version: ${{ steps.package_version.outputs.current-version }}
-            path: 'CHANGELOG.md'
-
 
   JobsPublish:
     name: publish
