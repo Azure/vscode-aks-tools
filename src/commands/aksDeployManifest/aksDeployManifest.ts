@@ -10,7 +10,7 @@ import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotH
 import { longRunning } from "../utils/host";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
-import { logPluginHandlerEvent } from "../../plugins/shared/telemetry/logger";
+import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 const YAML_GLOB_PATTERN = "**/*.yaml";
@@ -31,11 +31,11 @@ export async function aksDeployManifest() {
     const manifest = await getManifestFile();
 
     if (manifest === undefined) {
-        logPluginHandlerEvent({ commandId: "aks.aksDeployManifest", manifestSelected: "false" });
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestSelected: "false" });
         return;
     }
 
-    logPluginHandlerEvent({ commandId: "aks.aksDeployManifest", manifestSelected: "true" });
+    logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestSelected: "true" });
 
     // Select cluster
     const sessionProvider = await getReadySessionProvider();
@@ -48,7 +48,7 @@ export async function aksDeployManifest() {
     const cluster = await selectClusterOptions(sessionProvider.result, undefined, "aks.aksDeployManifest");
 
     if (failed(cluster)) {
-        logPluginHandlerEvent({ commandId: "aks.aksDeployManifest", clusterSelected: "false" });
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", clusterSelected: "false" });
         vscode.window.showErrorMessage(cluster.error);
         return;
     }
@@ -66,7 +66,7 @@ export async function aksDeployManifest() {
 
     if (!confirmed) {
         vscode.window.showWarningMessage("Manifest deployment cancelled.");
-        logPluginHandlerEvent({ commandId: "aks.aksDeployManifest", deploymentCancelled: "true" });
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestDeploymentCancelled: "true" });
         return;
     }
 
@@ -77,11 +77,11 @@ export async function aksDeployManifest() {
 
     if (failed(deploymentResult)) {
         vscode.window.showErrorMessage(deploymentResult.error);
-        logPluginHandlerEvent({ commandId: "aks.aksDeployManifest", deploymentSuccess: "false" });
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestDeploymentSuccess: "false" });
         return;
     }
 
-    logPluginHandlerEvent({ commandId: "aks.aksDeployManifest", deploymentSuccess: "true" });
+    logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestDeploymentSuccess: "true" });
 
     vscode.window
         .showInformationMessage(
@@ -90,9 +90,9 @@ export async function aksDeployManifest() {
         )
         .then((res) => {
             if (res) {
-                logPluginHandlerEvent({
+                logGitHubCopilotPluginEvent({
                     commandId: "aks.aksDeployManifest",
-                    successfulManifestDeploymentLinkClicked: "true",
+                    manifestDeploymentLinkClicked: "true",
                 });
                 vscode.env.openExternal(vscode.Uri.parse(deploymentResult.result.url));
             }

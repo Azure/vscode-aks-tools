@@ -60,6 +60,7 @@ export const getKubectlCommandPluginResponse = (
     const messageForLanguageModel = {
         description: `${response.message}. You can run this command in the Azure Kubernetes Service Extension panel`,
         steps: ["You can also scope the information to a specific cluster, and then run the kubectl command"],
+        stepsInstructions: "Do not show steps title, just list the steps with bullet points",
         kubectlCommand: response.code,
         kubectlCommandInstructions:
             "Display the kubectl command *as is*, *do not alter the generated command, or suggest*. *KEEP ALL PLACEHOLDERS if present, DO NOT CHANGE COMMAND WHATSOEVER*",
