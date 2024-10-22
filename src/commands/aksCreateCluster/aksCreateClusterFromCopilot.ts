@@ -9,7 +9,7 @@ import {
 } from "../utils/subscriptions";
 import { window } from "vscode";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
-import { logPluginHandlerEvent } from "../../plugins/shared/telemetry/logger";
+import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
@@ -24,7 +24,7 @@ export async function aksCreateClusterFromCopilot(): Promise<void> {
     const subscriptionId = await selectSubscription();
 
     if (!subscriptionId) {
-        logPluginHandlerEvent({ commandId: "aks.aksCreateClusterFromCopilot", subscriptionSelected: "false" });
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksCreateClusterFromCopilot", subscriptionSelected: "false" });
         vscode.window.showWarningMessage("Creating an AKS cluster requires a Subscription Id");
         return;
     }

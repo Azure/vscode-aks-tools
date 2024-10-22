@@ -136,7 +136,7 @@ export class AKSDocsRAGClient {
 
     private isEUBoundary(countryCode: string | undefined): boolean {
         if (countryCode === undefined) {
-            // Default to EU if country code is not available, as this is the default used for the RAG endpoint
+            // Default to EU data boundary if country code is not available, an iterim solution to ensure compliance with EU data protection regulations.
             return true;
         }
         return EU_COUNTRIES.includes(countryCode);

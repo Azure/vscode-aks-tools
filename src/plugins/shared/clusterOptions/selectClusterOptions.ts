@@ -6,7 +6,7 @@ import { RecentCluster } from "./state/recentCluster";
 import { selectExistingClusterOption } from "./options/selectExistingClusterOption";
 import { selectNewClusterOption } from "./options/selectNewClusterOption";
 import { selectRecentClusterOption } from "./options/selectRecentClusterOption";
-import { logPluginHandlerEvent } from "../telemetry/logger";
+import { logGitHubCopilotPluginEvent } from "../telemetry/logger";
 
 export enum SelectClusterOptions {
     RecentCluster = "RecentCluster",
@@ -74,7 +74,7 @@ export async function selectClusterOptions(
         return { succeeded: false, error: "Cluster option not selected." };
     }
 
-    logPluginHandlerEvent({ clusterOptionSelected: selectedOption.type, commandId: commandId });
+    logGitHubCopilotPluginEvent({ clusterOptionSelected: selectedOption.type, commandId: commandId });
 
     switch (selectedOption.type) {
         case SelectClusterOptions.RecentCluster:
