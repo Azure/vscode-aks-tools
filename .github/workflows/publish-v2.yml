@@ -88,18 +88,6 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Create a Github Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: '*.vsix'
-          fail_on_unmatched_files: true
-          tag_name : ${{ needs.JobBuild.outputs.currentversion }}
-          name: ${{ needs.JobBuild.outputs.currentversion}}
-          body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         
       - name: Publish packaged extension
         run: |
