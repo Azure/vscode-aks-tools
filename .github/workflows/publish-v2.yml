@@ -83,7 +83,12 @@ jobs:
 
       - name: List files in current directory
         run: ls -al
+
+      - name: Find the .vsix file
+        id: find-vsix
+        run: |
+          vsix_file=$(find . -name '*.vsix')
         
       - name: Publish packaged extension
         run: |
-          npx vsce publish --azure-credential --packagePath *.vsix
+          npx vsce publish --azure-credential --packagePath ${{ steps.find-vsix.outputs.vsix_file }}
