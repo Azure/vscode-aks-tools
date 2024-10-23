@@ -86,7 +86,7 @@ jobs:
         run: npx vsce package
 
       - name: federated login
-        uses: azure/login@v2
+        uses: azure/login@a65d910e8af852a8061c627c456678983e180302 # v2.2.0
         with:
           auth-type: IDENTITY
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
