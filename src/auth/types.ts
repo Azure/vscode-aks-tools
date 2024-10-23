@@ -15,6 +15,7 @@ export type AzureAuthenticationSession = AuthenticationSession & {
 export type Tenant = {
     name: string;
     id: string;
+    countryCode?: string;
 };
 
 export type GetAuthSessionOptions = {

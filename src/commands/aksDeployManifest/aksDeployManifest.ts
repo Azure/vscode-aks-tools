@@ -10,10 +10,13 @@ import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotH
 import { longRunning } from "../utils/host";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
+import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 const YAML_GLOB_PATTERN = "**/*.yaml";
 const EXCLUDE_PATTERN = "**/node_modules/**";
+const AUTOMATIC_WORKLOADS_PATH = "/aksAutomaticWorkloads";
+const BASE_WORKLOADS_PATH = "/workloads";
 
 export async function aksDeployManifest() {
     // Check if GitHub Copilot for Azure extension is installed
@@ -28,8 +31,11 @@ export async function aksDeployManifest() {
     const manifest = await getManifestFile();
 
     if (manifest === undefined) {
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestSelected: "false" });
         return;
     }
+
+    logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestSelected: "true" });
 
     // Select cluster
     const sessionProvider = await getReadySessionProvider();
@@ -39,15 +45,17 @@ export async function aksDeployManifest() {
         return;
     }
 
-    const cluster = await selectClusterOptions(sessionProvider.result);
+    const cluster = await selectClusterOptions(sessionProvider.result, undefined, "aks.aksDeployManifest");
 
     if (failed(cluster)) {
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", clusterSelected: "false" });
         vscode.window.showErrorMessage(cluster.error);
         return;
     }
 
-    if (cluster.result === false) {
-        vscode.window.showWarningMessage("No cluster selected.");
+    // Return value is boolean if user selects new cluster option, which should stop flow and guide user to create a new cluster first.
+    if (cluster.result === true) {
+        vscode.window.showInformationMessage("Please create AKS cluster before deploying the manifest.");
         return;
     }
 
@@ -58,6 +66,7 @@ export async function aksDeployManifest() {
 
     if (!confirmed) {
         vscode.window.showWarningMessage("Manifest deployment cancelled.");
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestDeploymentCancelled: "true" });
         return;
     }
 
@@ -68,8 +77,11 @@ export async function aksDeployManifest() {
 
     if (failed(deploymentResult)) {
         vscode.window.showErrorMessage(deploymentResult.error);
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestDeploymentSuccess: "false" });
         return;
     }
+
+    logGitHubCopilotPluginEvent({ commandId: "aks.aksDeployManifest", manifestDeploymentSuccess: "true" });
 
     vscode.window
         .showInformationMessage(
@@ -78,6 +90,10 @@ export async function aksDeployManifest() {
         )
         .then((res) => {
             if (res) {
+                logGitHubCopilotPluginEvent({
+                    commandId: "aks.aksDeployManifest",
+                    manifestDeploymentLinkClicked: "true",
+                });
                 vscode.env.openExternal(vscode.Uri.parse(deploymentResult.result.url));
             }
         });
@@ -172,6 +188,10 @@ async function deployApplicationToCluster(
     }
 
     // Generate and return the resource URL
-    const resourceUrl = getPortalResourceUrl(getEnvironment(), cluster.clusterId);
+    const clusterIdworkloadsPath =
+        cluster.sku?.name === "Automatic"
+            ? `${cluster.clusterId + AUTOMATIC_WORKLOADS_PATH}`
+            : `${cluster.clusterId + BASE_WORKLOADS_PATH}`;
+    const resourceUrl = getPortalResourceUrl(getEnvironment(), clusterIdworkloadsPath);
     return { succeeded: true, result: { url: resourceUrl } };
 }

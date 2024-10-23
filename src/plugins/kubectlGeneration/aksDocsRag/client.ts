@@ -1,6 +1,6 @@
 import { ReadyAzureSessionProvider } from "../../../auth/types";
 import { Errorable, failed, getErrorMessage } from "../../../commands/utils/errorable";
-import { aksDocsRAGEndpoint, aksDocsRAGIntent, aksDocsRAGScenario, aksDocsRAGScopes } from "./constants";
+import { aksDocsRAGEndpoint, aksDocsRAGIntent, aksDocsRAGScenario, aksDocsRAGScopes, EU_COUNTRIES } from "./constants";
 
 export function getAKSDocsRAGClient(sessionProvider: ReadyAzureSessionProvider) {
     return new AKSDocsRAGClient(sessionProvider);
@@ -69,6 +69,9 @@ export class AKSDocsRAGClient {
                     "Access-Control-Allow-Origin": "*",
                     Authorization: `Bearer ${this.authToken}`,
                     "App-Tenant-Id": this.sessionProvider.selectedTenant.id,
+                    "User-Data-Boundary": this.isEUBoundary(this.sessionProvider.selectedTenant.countryCode)
+                        ? "EU"
+                        : "Global",
                 },
                 body: JSON.stringify({
                     IsLocalEvaluation: false,
@@ -129,5 +132,13 @@ export class AKSDocsRAGClient {
             succeeded: true,
             result: { response: parsedResponse },
         };
+    }
+
+    private isEUBoundary(countryCode: string | undefined): boolean {
+        if (countryCode === undefined) {
+            // Default to EU data boundary if country code is not available, an iterim solution to ensure compliance with EU data protection regulations.
+            return true;
+        }
+        return EU_COUNTRIES.includes(countryCode);
     }
 }
