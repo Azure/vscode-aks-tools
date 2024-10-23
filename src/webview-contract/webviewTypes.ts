@@ -9,6 +9,7 @@ import { DraftDockerfileDefinition } from "./webviewDefinitions/draft/draftDocke
 import { DraftWorkflowDefinition } from "./webviewDefinitions/draft/draftWorkflow";
 import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget";
 import { KaitoDefinition } from "./webviewDefinitions/kaito";
+import { KaitoModelsDefinition } from "./webviewDefinitions/kaitoModels";
 import { KubectlDefinition } from "./webviewDefinitions/kubectl";
 import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
@@ -48,6 +49,7 @@ type AllWebviewDefinitions = {
     tcpDump: TCPDumpDefinition;
     retinaCapture: RetinaCaptureDefinition;
     kaito: KaitoDefinition;
+    kaitoModels: KaitoModelsDefinition;
 };
 
 type ContentIdLookup = {

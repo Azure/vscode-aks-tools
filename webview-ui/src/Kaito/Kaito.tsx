@@ -1,10 +1,11 @@
-import { VSCodeButton, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton, VSCodeProgressRing, VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { InitialState, ProgressEventType } from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { useStateManagement } from "../utilities/state";
 import styles from "./Kaito.module.css";
 import kaitoimage from "./kaitoimage.png";
-import { stateUpdater, vscode } from "./state";
 
+// import { KaitoModels } from "./KaitoModels";
+import { stateUpdater, vscode } from "./state";
 export function Kaito(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -12,17 +13,23 @@ export function Kaito(initialState: InitialState) {
         vscode.postInstallKaitoRequest();
     }
 
+    function onClickGenerateWorkspace() {
+        vscode.postGenerateWorkspaceRequest();
+    }
+
     return (
         <>
             <div className={styles.container}>
-                <div className={styles.kaitoPageHeader}>Kubernetes AI Toolchain Operator (KAITO)</div>
+                {/* <div className={styles.kaitoPageHeader}>Kubernetes AI Toolchain Operator (KAITO)</div> */}
+                <h2>Kubernetes AI Toolchain Operator (KAITO)</h2>
+                <VSCodeDivider />
                 <div className={styles.subHeader}>
                     Using KAITO, the workflow of onboarding and deploying large AI inference models on your cluster is
                     largely simplified. KAITO manages large model files using container images and hosts them in the
                     public Microsoft Container Registry (MCR) if the license allows.
                 </div>
-                <div className={styles.subHeaderForVersion}>Version: v1.0</div>
-                <div className={styles.architecture}>Architecture</div>
+                <h4 className={styles.subHeaderForVersion}>Version: v1.0</h4>
+                <h3 className={styles.architecture}>Architecture</h3>
                 <div className={styles.architectureSubHeader}>
                     Kaito follows the classic Kubernetes Custom Resource Definition(CRD)/controller design pattern. User
                     manages a workspace custom resource which describes the GPU requirements and the inference or tuning
@@ -77,7 +84,16 @@ export function Kaito(initialState: InitialState) {
                         )}
                     {state.kaitoInstallStatus === ProgressEventType.Success && state.models.length > 0 && (
                         // <KaitoFamilyModelInput modelDetails={state.models} />
-                        <p>KAITO is installed</p>
+                        <div className={styles.postInstall}>
+                            <p>KAITO is installed!</p>
+                            <p className={styles.thin}>You can now create a workspace by clicking the button below.</p>
+                            <div>
+                                {" "}
+                                <VSCodeButton className={styles.generateButton} onClick={onClickGenerateWorkspace}>
+                                    Generate Workspace
+                                </VSCodeButton>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

@@ -1,5 +1,21 @@
 # Change Log
 
+## [1.4.11]
+
+* Add deploy manifest handler for GH Copilot.
+* Kubectl savedialog UX changes.
+* Support creating automatic aks from GH Copilot.
+* Kubectl command generation plugin for GH Copilot.
+* Add cluster options util for GH Copilot scenarios
+* Fix dependabot update for 1.94 with engine update.
+* Fix for different format of serviceprincal id from auth sessions.
+* Role assignments for automatic sku.
+* Support create automatic aks cluster.
+* New namespace creation in github workflow.
+* Dependabot updates and bumps.
+
+Welcome new contributors @kejatura-dev to the repo. Thanks to  @tejhan, @ReinierCC,  @ivelisseca, @qpetraroia, @hsubramanianaks, Joy for contributions, testing and reviews.
+
 ## [1.4.10]
 
 * Fix for walkthrough and show welcome dependency.
