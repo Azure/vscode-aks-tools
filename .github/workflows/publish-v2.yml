@@ -10,7 +10,7 @@ jobs:
       runs-on: ubuntu-latest
       # Expose step outputs as job outputs
       outputs:
-        currentversion: ${{ steps.package_version.outputs.current-version }}
+        currentversion: ${{ steps.package_version.outputs }}
         changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
       permissions: 
         actions: read
@@ -47,7 +47,7 @@ jobs:
           jq -r '.version' package.json
 
       - name: Test output of package version
-        run: echo "The current package version is ${{ steps.package_version.outputs.current-version  }}"
+        run: echo "The current package version is ${{ steps.package_version.outputs }}"
 
 
   JobsPublish:
