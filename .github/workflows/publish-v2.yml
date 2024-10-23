@@ -77,9 +77,11 @@ jobs:
       - name: Install dependencies
         run: npm run install:all
 
-      #Build and package
       - name: Build 
         run: npm run webpack
+
+      - name: Package 
+        run: npm vsce package
 
       - name: federated login
         uses: azure/login@v2
