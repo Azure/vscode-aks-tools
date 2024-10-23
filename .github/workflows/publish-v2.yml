@@ -91,4 +91,4 @@ jobs:
         
       - name: Publish packaged extension
         run: |
-          npx vsce publish --azure-credential --packagePath *.vsix
+          npx vsce publish --azure-credential --packagePath .vsix
