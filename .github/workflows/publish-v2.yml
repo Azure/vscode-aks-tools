@@ -77,6 +77,10 @@ jobs:
       - name: Install dependencies
         run: npm run install:all
 
+      - name: Build 
+        run: npm run webpack
+  
+
       #Build & Package
       - name: Package 
         run: npx vsce package
@@ -91,4 +95,4 @@ jobs:
         
       - name: Publish packaged extension
         run: |
-          npx vsce publish --azure-credential --packagePath .vsix
+          npx vsce publish --azure-credential --packagePath *.vsix
