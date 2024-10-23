@@ -82,7 +82,7 @@ jobs:
       - name: Build 
         run: npm run webpack
 
-      - name: Package 
+      - name: Package
         run: npx vsce package
 
       - name: federated login

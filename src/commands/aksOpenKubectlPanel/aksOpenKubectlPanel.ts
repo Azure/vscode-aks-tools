@@ -11,18 +11,18 @@ import { getReadySessionProvider } from "../../auth/azureAuth";
 import { selectClusterOptions, SelectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { ClusterPreference } from "../../plugins/shared/types";
+import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
 
-const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot"
+const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
 export async function aksOpenKubectlPanel(_context: IActionContext, target: unknown) {
-
     const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
 
-    if(!checkGitHubCopilotExtension) {
+    if (!checkGitHubCopilotExtension) {
         handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
         return;
     }
-    
+
     const kubectl = await k8s.extension.kubectl.v1;
 
     if (!kubectl.available) {
@@ -33,20 +33,26 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
     const responseCode = (target as CommandResponse).code;
     const sessionProvider = await getReadySessionProvider();
 
-    if(failed(sessionProvider)) {
+    if (failed(sessionProvider)) {
         vscode.window.showErrorMessage(sessionProvider.error);
         return;
     }
 
-    const cluster = await selectClusterOptions(sessionProvider.result, [SelectClusterOptions.NewCluster]);
+    const cluster = await selectClusterOptions(
+        sessionProvider.result,
+        [SelectClusterOptions.NewCluster],
+        "aks.aksOpenKubectlPanel",
+    );
 
     if (failed(cluster)) {
+        logGitHubCopilotPluginEvent({ commandId: "aks.aksOpenKubectlPanel", clusterSelected: "false" });
         vscode.window.showErrorMessage(cluster.error);
         return;
     }
 
-    if (cluster.result === false) {
-        vscode.window.showErrorMessage("No cluster selected. Please select a valid cluster.");
+    // This should never happen, since the new cluster option is excluded. Leaving here just in case.
+    if (cluster.result === true) {
+        vscode.window.showInformationMessage("No cluster selected. Please select a valid cluster.");
         return;
     }
 
@@ -67,7 +73,7 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
         kubeConfigFile.filePath,
         clusterPreference.clusterName,
         customCommands,
-        responseCode
+        responseCode,
     );
     const panel = new KubectlPanel(extension.result.extensionUri);
 
