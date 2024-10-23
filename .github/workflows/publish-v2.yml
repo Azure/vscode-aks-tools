@@ -44,7 +44,7 @@ jobs:
       - name: Get current version from package.json
         id: package_version
         run: |
-          jq -r '.version' package.json > $GITHUB_OUTPUT
+          jq -r '.version' package.json
 
       - name: Test output of package version
         run: echo "The current package version is ${{ steps.package_version.outputs.current-version  }}"
