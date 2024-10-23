@@ -41,9 +41,9 @@ jobs:
       - name: Build 
         run: npm run webpack
 
-      - name: Get current package version
-        id: package_version
-        uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b # v1.3.1
+      - name: Get package version
+        id: get_version
+        run: echo "::set-output name=version::$(node -p \"require('./package.json').version\")"
 
 
   JobsPublish:
