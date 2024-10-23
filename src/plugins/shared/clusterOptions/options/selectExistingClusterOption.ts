@@ -56,6 +56,7 @@ export async function selectExistingClusterOption(
         clusterId: properties.result.id,
         resourceGroup,
         kubeConfigYAML: kubeconfigYaml.result,
+        sku: properties.result.sku,
     };
 
     const saved = await RecentCluster.saveRecentCluster(cluster);

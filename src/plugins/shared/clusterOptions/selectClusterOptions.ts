@@ -1,11 +1,12 @@
 import { QuickPickItem, QuickPickItemKind, window } from "vscode";
 import { ReadyAzureSessionProvider } from "../../../auth/types";
-import { ClusterPreference } from "../types";
+import { ClusterPreference, CommandIdForPluginResponse } from "../types";
 import { Errorable } from "../../../commands/utils/errorable";
 import { RecentCluster } from "./state/recentCluster";
 import { selectExistingClusterOption } from "./options/selectExistingClusterOption";
 import { selectNewClusterOption } from "./options/selectNewClusterOption";
 import { selectRecentClusterOption } from "./options/selectRecentClusterOption";
+import { logGitHubCopilotPluginEvent } from "../telemetry/logger";
 
 export enum SelectClusterOptions {
     RecentCluster = "RecentCluster",
@@ -25,6 +26,7 @@ const getClusterOptions = (): { label: string; type: SelectClusterOptions }[] =>
 export async function selectClusterOptions(
     sessionProvider: ReadyAzureSessionProvider,
     exclude?: SelectClusterOptions[],
+    commandId?: CommandIdForPluginResponse,
 ): Promise<Errorable<ClusterPreference | boolean>> {
     const options = getClusterOptions();
     let recentCluster: Errorable<ClusterPreference> | undefined;
@@ -51,8 +53,11 @@ export async function selectClusterOptions(
     const quickPickClusterOptions: QuickPickClusterOptions[] = options.map((option) => {
         const isRecentCluster = option.type === SelectClusterOptions.RecentCluster;
         const isSeperator = option.label === "";
-        const label = isSeperator && isRecentCluster && recentCluster?.succeeded ? recentCluster.result.clusterName : option.label;
-  
+        const label =
+            isSeperator && isRecentCluster && recentCluster?.succeeded
+                ? recentCluster.result.clusterName
+                : option.label;
+
         return {
             label,
             type: option.type,
@@ -68,6 +73,8 @@ export async function selectClusterOptions(
     if (!selectedOption) {
         return { succeeded: false, error: "Cluster option not selected." };
     }
+
+    logGitHubCopilotPluginEvent({ clusterOptionSelected: selectedOption.type, commandId: commandId });
 
     switch (selectedOption.type) {
         case SelectClusterOptions.RecentCluster:
