@@ -83,7 +83,7 @@ jobs:
         run: npm run webpack
 
       - name: Package 
-        run: npm vsce package
+        run: npx vsce package
 
       - name: federated login
         uses: azure/login@v2
