@@ -82,8 +82,8 @@ jobs:
       - name: Build 
         run: npm run webpack
 
-      - name: Package 
-        run: npm vsce package
+      - name: Package
+        run: npx vsce package
 
       - name: federated login
         uses: azure/login@v2
