@@ -77,9 +77,12 @@ jobs:
       - name: Install dependencies
         run: npm run install:all
 
-      #Build and package
       - name: Build 
         run: npm run webpack
+
+      #Create VSIX File
+      - name: Package 
+        run: npx vsce package
 
       - name: List files in current directory
         run: ls -al
