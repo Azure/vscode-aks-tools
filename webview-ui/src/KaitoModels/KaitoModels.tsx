@@ -331,9 +331,6 @@ inference:
                 <div className={styles.mainDiv}>
                     <h2>Create a KAITO Workspace ({state.clusterName})</h2>
                     <VSCodeDivider />
-                    <h4>Workspace exists: {state.workspaceExists.toString()}</h4>
-                    <h4>Selected model (webview): {selectedModel}</h4>
-                    <h4>Selected model (state): {state.modelName}</h4>
                     <div className={styles.subHeader}>
                         To get your model up and running, you can either create a CRD file with &quot;Generate CRD&quot;
                         which you can then deploy using kubectl apply -f filename.yml, or to deploy a model with default
