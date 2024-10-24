@@ -16,7 +16,7 @@ export type ToVsCodeMsgDef = {
     workspaceExistsRequest: { model: string };
     updateStateRequest: { model: string };
     resetStateRequest: {};
-    cancelRequest: {};
+    cancelRequest: { model: string };
 };
 
 export type ToWebViewMsgDef = {

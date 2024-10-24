@@ -46,7 +46,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         this.kubeConfigFilePath = kubeConfigFilePath;
     }
     // When true, will break the loop that is watching the workspace progress
-    private cancelToken: boolean = false;
+    // private cancelToken: boolean = false;
+    private cancelTokens: Map<string, boolean> = new Map();
+    cancel(model: string) {
+        this.cancelTokens.set(model, true);
+    }
     // This is set to true while quota information is being fetched
     private checkingGPU: boolean = false;
 
@@ -64,9 +68,9 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             age: 0,
         } as InitialState;
     }
-    cancel() {
-        this.cancelToken = true;
-    }
+    // cancel() {
+    //     this.cancelToken = true;
+    // }
     getTelemetryDefinition(): TelemetryDefinition<"kaitoModels"> {
         return {
             generateCRDRequest: true,
@@ -94,8 +98,8 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             resetStateRequest: () => {
                 this.handleResetStateRequest(webview);
             },
-            cancelRequest: () => {
-                this.cancel();
+            cancelRequest: (params) => {
+                this.cancel(params.model);
             },
         };
     }
@@ -147,7 +151,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 case "resourceready":
                     resourceReady = this.statusToBoolean(status);
                     break;
-                case "workspaceready":
+                case "workspacesucceeded":
                     workspaceReady = this.statusToBoolean(status);
                     break;
                 case "inferenceready":
@@ -194,8 +198,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         gpu: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        this.cancelTokens.set(model, false);
+        this.handleResetStateRequest(webview);
+
         // Resetting cancelToken
-        this.cancelToken = false;
+        // this.cancelToken = false;
         // This prevents the user from redeploying while quota is being checked
         if (this.checkingGPU) {
             return;
@@ -247,13 +254,14 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             this.checkingGPU = false;
             vscode.window.showErrorMessage(`Error during deployment: ${error}`);
         }
+        this.cancelTokens.set(model, false);
         this.handleUpdateStateRequest(model, webview);
         let progress = await this.getProgress(model);
-        while (!this.nullIsFalse(progress.workspaceReady) && !this.cancelToken) {
+        while (!this.nullIsFalse(progress.workspaceReady) && !this.cancelTokens.get(model)) {
             await this.handleUpdateStateRequest(model, webview);
             progress = await this.getProgress(model);
         }
-        if (this.cancelToken) {
+        if (this.cancelTokens.get(model)) {
             await this.handleResetStateRequest(webview);
         } else {
             await this.handleUpdateStateRequest(model, webview);
@@ -320,7 +328,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                     `There was an error connecting to the workspace. ${kubectlresult.error}`,
                 );
                 webview.postDeploymentProgressUpdate(this.getInitialState());
-                this.cancelToken = true;
+                this.cancelTokens.set(model, true);
                 return;
             }
         }
