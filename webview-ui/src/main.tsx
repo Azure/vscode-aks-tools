@@ -11,7 +11,7 @@ import { Detector } from "./Detector/Detector";
 import { DraftDeployment, DraftDockerfile, DraftWorkflow } from "./Draft";
 import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
 import { Kaito } from "./Kaito/Kaito";
-import { KaitoModels } from "./Kaito/KaitoModels";
+import { KaitoModels } from "./KaitoModels/KaitoModels";
 import { Kubectl } from "./Kubectl/Kubectl";
 import "./main.css";
 import { Periscope } from "./Periscope/Periscope";

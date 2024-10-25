@@ -25,6 +25,8 @@
   - [Run Image Cleaner Eraser Tool](./features/image-cleaner-eraser-tool.md)
   - [Run Retina Capture](./features/retina-capture.md)
   - [Run Draft Command](./features/draft-integration.md)
+  - [Install & Deploy Kaito Models](./features/kaito-integration.md)
+
 - [Release](./release.md)
   - [Releasing Information](./release/releasing.md)
 - [Contributing](./contributing.md)
