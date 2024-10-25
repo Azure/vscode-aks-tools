@@ -31,7 +31,7 @@ export function Kaito(initialState: InitialState) {
                 <h4 className={styles.subHeaderForVersion}>Version: v1.0</h4>
                 <h3 className={styles.architecture}>Architecture</h3>
                 <div className={styles.architectureSubHeader}>
-                    Kaito follows the classic Kubernetes Custom Resource Definition(CRD)/controller design pattern. User
+                    KAITO follows the classic Kubernetes Custom Resource Definition(CRD)/controller design pattern. User
                     manages a workspace custom resource which describes the GPU requirements and the inference or tuning
                     specification. Kaito controllers will automate the deployment by reconciling the workspace custom
                     resource.

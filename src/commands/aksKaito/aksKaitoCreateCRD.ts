@@ -12,8 +12,22 @@ import { getExtension, longRunning } from "../utils/host";
 
 export default async function aksKaitoCreateCRD(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    if (!cloudExplorer.available) {
+        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
+        return;
+    }
+
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
+    if (!clusterExplorer.available) {
+        vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
+        return;
+    }
+
     const kubectl = await k8s.extension.kubectl.v1;
+    if (!kubectl.available) {
+        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
+        return;
+    }
 
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
@@ -33,21 +47,6 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
         return;
     }
 
-    if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
-        return;
-    }
-
-    if (!cloudExplorer.available) {
-        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
-        return;
-    }
-
-    if (!clusterExplorer.available) {
-        vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
-        return;
-    }
-
     const clusterName = clusterNode.result.name;
     const armId = clusterNode.result.armId;
     const subscriptionId = clusterNode.result.subscriptionId;
@@ -62,7 +61,7 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
     }
 
     if (filterKaitoPodNames.result.length === 0) {
-        vscode.window.showInformationMessage(
+        vscode.window.showWarningMessage(
             `Please install Kaito for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
         );
         return;
@@ -82,6 +81,7 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
         armId,
         kubectl,
         kubeConfigFile.filePath,
+        sessionProvider.result,
     );
     panel.show(dataProvider);
 }

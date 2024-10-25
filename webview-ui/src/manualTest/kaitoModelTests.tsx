@@ -1,6 +1,6 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
 import { ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaito";
-import { KaitoModels } from "../Kaito/KaitoModels";
+import { KaitoModels } from "../KaitoModels/KaitoModels";
 import { stateUpdater } from "../Kaito/state";
 import { Scenario } from "../utilities/manualTest";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoModels";
@@ -9,9 +9,9 @@ export function getKaitoModelScenarios() {
         clusterName: "Kaito cluster",
         modelName: "",
         workspaceExists: false,
-        resourceReady: false,
-        inferenceReady: false,
-        workspaceReady: false,
+        resourceReady: null,
+        inferenceReady: null,
+        workspaceReady: null,
         age: 0,
     };
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
