@@ -60,54 +60,14 @@ export class ClusterDeploymentBuilder {
                     tier: "Standard",
                 },
             },
-            enableRBAC: {
-                value: true,
-            },
-            nodeResourceGroup: {
-                value: generateNodeResourceGroup(clusterSpec.resourceGroupName, clusterSpec.name, clusterSpec.location),
-            },
             subscriptionId: {
                 value: clusterSpec.subscriptionId,
-            },
-            resourceGroupName: {
-                value: clusterSpec.resourceGroupName,
-            },
-            nodeResourceGroupProfile: {
-                value: {
-                    restrictionLevel: "ReadOnly",
-                },
-            },
-            nodeProvisioningProfile: {
-                value: {
-                    mode: "Auto",
-                },
-            },
-            upgradeChannel: {
-                value: "stable",
-            },
-            disableLocalAccounts: {
-                value: true,
-            },
-            enableAadProfile: {
-                value: true,
-            },
-            azureRbac: {
-                value: true,
-            },
-            adminGroupObjectIDs: {
-                value: [],
             },
             supportPlan: {
                 value: "KubernetesOfficial",
             },
-            nodeOSUpgradeChannel: {
-                value: "NodeImage",
-            },
             userPrincipalId: {
                 value: clusterSpec.servicePrincipalId,
-            },
-            rbacName: {
-                value: generateRbacName(),
             },
         };
 
@@ -181,8 +141,4 @@ function generateNodeResourceGroup(resourceGroupName: string, clusterName: strin
 
 function removeWhitespace(str: string): string {
     return str.replace(/\s+/g, "");
-}
-
-function generateRbacName() {
-    return "AzureKubernetesServiceRbacAdmin".concat("-", new Date().toISOString().replace(/[^0-9]/g, ""));
 }
