@@ -3,11 +3,18 @@ import { InitialState, ProgressEventType } from "../../../src/webview-contract/w
 import { useStateManagement } from "../utilities/state";
 import styles from "./Kaito.module.css";
 import kaitoimage from "./kaitoimage.png";
+import { useState } from "react";
 
 // import { KaitoModels } from "./KaitoModels";
 import { stateUpdater, vscode } from "./state";
 export function Kaito(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
+    const [isDisabled, setIsDisabled] = useState(false);
+
+    const handleClick = () => {
+        onClickKaitoInstall();
+        setIsDisabled(true); // Disable the button after click
+    };
 
     function onClickKaitoInstall() {
         vscode.postInstallKaitoRequest();
@@ -51,7 +58,9 @@ export function Kaito(initialState: InitialState) {
                 </div>
                 <div>
                     {state.kaitoInstallStatus === ProgressEventType.NotStarted && (
-                        <VSCodeButton onClick={onClickKaitoInstall}>Install</VSCodeButton>
+                        <VSCodeButton onClick={handleClick} disabled={isDisabled}>
+                            Install
+                        </VSCodeButton>
                     )}
                     {state.kaitoInstallStatus === ProgressEventType.InProgress &&
                         state.operationDescription.includes("Installing Kaito") && (
