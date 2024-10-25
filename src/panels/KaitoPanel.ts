@@ -119,12 +119,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     }
 
     private async handleGenerateWorkspaceRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        // webview.postGetWorkspaceResponse({
-        //     workspace: {
-        //         workspace: "workspace CRD yaml",
-        //     },
-        // });
-        // This should just open the create crd panel...
         vscode.commands.executeCommand("aks.aksKaitoCreateCRD", this.newtarget);
         void webview;
     }
@@ -175,9 +169,12 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
 
         // Install kaito enablement
-        const kaitoInstallationResult = await longRunning(`Enabling the kaito for this cluster.`, () => {
-            return this.handleKaitoInstallationLogic(currentJson, webview);
-        });
+        const kaitoInstallationResult = await longRunning(
+            `Enabling the kaito for cluster '${this.clusterName}'.`,
+            () => {
+                return this.handleKaitoInstallationLogic(currentJson, webview);
+            },
+        );
 
         if (kaitoInstallationResult && failed(kaitoInstallationResult)) {
             vscode.window.showErrorMessage(
@@ -318,8 +315,13 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
 
         const aksOidcIssuerUrl = clusterInfo.result.oidcIssuerProfile?.issuerURL;
         if (!aksOidcIssuerUrl) {
-            vscode.window.showErrorMessage(`Error getting aks oidc issuer url`);
-            return { succeeded: false, error: "Error getting aks oidc issuer url" };
+            vscode.window.showErrorMessage(
+                `Error getting aks oidc issuer url, oidc issuer url is undefined/null/empty`,
+            );
+            return {
+                succeeded: false,
+                error: "Error getting aks oidc issuer url, oidc issuer url is undefined/null/empty",
+            };
         }
         await this.installKaitoFederatedCredentials(
             clusterInfo.result.nodeResourceGroup!,
