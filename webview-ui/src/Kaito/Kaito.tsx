@@ -3,11 +3,18 @@ import { InitialState, ProgressEventType } from "../../../src/webview-contract/w
 import { useStateManagement } from "../utilities/state";
 import styles from "./Kaito.module.css";
 import kaitoimage from "./kaitoimage.png";
+import { useState } from "react";
 
 // import { KaitoModels } from "./KaitoModels";
 import { stateUpdater, vscode } from "./state";
 export function Kaito(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
+    const [isDisabled, setIsDisabled] = useState(false);
+
+    const handleClick = () => {
+        onClickKaitoInstall();
+        setIsDisabled(true); // Disable the button after click
+    };
 
     function onClickKaitoInstall() {
         vscode.postInstallKaitoRequest();
@@ -31,7 +38,7 @@ export function Kaito(initialState: InitialState) {
                 <h4 className={styles.subHeaderForVersion}>Version: v1.0</h4>
                 <h3 className={styles.architecture}>Architecture</h3>
                 <div className={styles.architectureSubHeader}>
-                    Kaito follows the classic Kubernetes Custom Resource Definition(CRD)/controller design pattern. User
+                    KAITO follows the classic Kubernetes Custom Resource Definition(CRD)/controller design pattern. User
                     manages a workspace custom resource which describes the GPU requirements and the inference or tuning
                     specification. Kaito controllers will automate the deployment by reconciling the workspace custom
                     resource.
@@ -51,7 +58,9 @@ export function Kaito(initialState: InitialState) {
                 </div>
                 <div>
                     {state.kaitoInstallStatus === ProgressEventType.NotStarted && (
-                        <VSCodeButton onClick={onClickKaitoInstall}>Install</VSCodeButton>
+                        <VSCodeButton onClick={handleClick} disabled={isDisabled}>
+                            Install
+                        </VSCodeButton>
                     )}
                     {state.kaitoInstallStatus === ProgressEventType.InProgress &&
                         state.operationDescription.includes("Installing Kaito") && (
