@@ -92,13 +92,19 @@ jobs:
       - name: Package
         run: npx vsce package
 
-      - name: Find the .vsix file
+      - name: Set vsix location
         id: find-vsix
         run: |
-          asset_path=$(find . -name '*.vsix')
-          asset_name=$(basename "$asset_path")  # Extract filename without the ./ prefix
+          asset_path='./vscode-aks-tools-${{needs.JobBuild.outputs.currentversion}}.vsix'
+          asset_name='vscode-aks-tools-${{needs.JobBuild.outputs.currentversion}}.vsix'
           echo "vsix_path=$asset_path" >> $GITHUB_OUTPUT
           echo "vsix_name=$asset_name" >> $GITHUB_OUTPUT
+
+      - name: Output name and path of vsix
+        id: output-vsix-name
+        run: |
+          echo "vsix name:" ${{ steps.find-vsix.outputs.vsix_name }}
+          echo "vsix path:" ${{ steps.find-vsix.outputs.vsix_path }}
 
       - name: Create a Release
         id: create_release
