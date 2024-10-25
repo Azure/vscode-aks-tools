@@ -47,6 +47,13 @@ jobs:
           VERSION=$(jq -r '.version' package.json)
           echo "current-version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Check version is mentioned in Changelog
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
+        with:
+            validation_depth: 10
+            version: ${{ steps.package_version.outputs.current-version }}
+            path: 'CHANGELOG.md'
 
   JobsPublish:
     name: publish
