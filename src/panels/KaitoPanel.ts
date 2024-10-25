@@ -224,7 +224,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         };
 
         try {
-            const poller = await longRunning(`Configuring the KAITO for ${this.clusterName} cluster.`, () => {
+            const poller = await longRunning("", () => {
                 return this.containerServiceClient.managedClusters.beginCreateOrUpdate(
                     this.resourceGroupName,
                     this.clusterName,
