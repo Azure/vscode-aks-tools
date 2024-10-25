@@ -51,7 +51,7 @@ export default async function aksKaitoGenerateYaml(_context: IActionContext, tar
     // Check if Kaito pods  exist
     if (filterKaitoPodNames.result.length === 0) {
         vscode.window.showWarningMessage(
-            `Please install Kaito for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
+            `Please install KAITO for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
         );
         return;
     }

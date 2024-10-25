@@ -310,15 +310,15 @@
             },
             {
                 "command": "aks.aksKaitoGenerateYaml",
-                "title": "Create Kaito Workspace"
+                "title": "Create KAITO Workspace"
             },
             {
                 "command": "aks.aksKaitoCreateCRD",
-                "title": "Create Kaito Workspace"
+                "title": "Create KAITO Workspace"
             },
             {
                 "command": "aks.aksKaito",
-                "title": "Install Kaito"
+                "title": "Install KAITO"
             }
         ],
         "menus": {
