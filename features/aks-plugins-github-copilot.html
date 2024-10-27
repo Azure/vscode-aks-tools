@@ -1,0 +1,243 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>AKS plugins for GitHub Copilot for Azure - Visual Studio Code AKS Tools</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Display Azure Kubernetes Services within VS Code">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../installation.html"><strong aria-hidden="true">2.</strong> Installation / Quick Start</a></li><li class="chapter-item expanded "><a href="../development.html"><strong aria-hidden="true">3.</strong> Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../development/development.html"><strong aria-hidden="true">3.1.</strong> Development</a></li><li class="chapter-item expanded "><a href="../development/webview-development.html"><strong aria-hidden="true">3.2.</strong> Webview Settings</a></li></ol></li><li class="chapter-item expanded "><a href="../features/features.html"><strong aria-hidden="true">4.</strong> Features</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../features/merge-save-kubeconfig.html"><strong aria-hidden="true">4.1.</strong> Add AKS clusters to kubeconfig</a></li><li class="chapter-item expanded "><a href="../features/aks-diagnostics.html"><strong aria-hidden="true">4.2.</strong> Perform AKS Diagnostics checks on your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/aks-periscope.html"><strong aria-hidden="true">4.3.</strong> Run AKS Periscope within VS Code</a></li><li class="chapter-item expanded "><a href="../features/install-azureserviceoperator.html"><strong aria-hidden="true">4.4.</strong> Install Azure Service Operator on your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/create-gh-workflow.html"><strong aria-hidden="true">4.5.</strong> Create GitHub Workflow from your AKS cluster (deprecated)</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.6.</strong> Show AKS cluster overview in Azure Portal</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.7.</strong> Show AKS cluster properties</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.8.</strong> Create AKS cluster from Azure Portal</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.9.</strong> Stop and Start the AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/run-kubectl-command.html"><strong aria-hidden="true">4.10.</strong> Run Kubectl Commands from your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/manage-cluster-operations.html"><strong aria-hidden="true">4.11.</strong> Run Managed Cluster Operations from your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/k8s-api-health-points.html"><strong aria-hidden="true">4.12.</strong> Run Kubernetes API Health Endpoints</a></li><li class="chapter-item expanded "><a href="../features/inspektor-gadget.html"><strong aria-hidden="true">4.13.</strong> Deploy and Undeploy InspektorGadget</a></li><li class="chapter-item expanded "><a href="../features/inspektor-gadget.html"><strong aria-hidden="true">4.14.</strong> Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot</a></li><li class="chapter-item expanded "><a href="../features/tcp-dumps.html"><strong aria-hidden="true">4.15.</strong> Collect TCP Dump</a></li><li class="chapter-item expanded "><a href="../features/aks-compare-cluster.html"><strong aria-hidden="true">4.16.</strong> Compare AKS Cluster</a></li><li class="chapter-item expanded "><a href="../features/image-cleaner-eraser-tool.html"><strong aria-hidden="true">4.17.</strong> Run Image Cleaner Eraser Tool</a></li><li class="chapter-item expanded "><a href="../features/retina-capture.html"><strong aria-hidden="true">4.18.</strong> Run Retina Capture</a></li><li class="chapter-item expanded "><a href="../features/draft-integration.html"><strong aria-hidden="true">4.19.</strong> Run Draft Command</a></li><li class="chapter-item expanded "><a href="../features/aks-plugins-github-copilot.html" class="active"><strong aria-hidden="true">4.20.</strong> AKS plugins for GitHub Copilot for Azure</a></li><li class="chapter-item expanded "><a href="../features/kaito-integration.html"><strong aria-hidden="true">4.21.</strong> Install & Deploy KAITO Models</a></li></ol></li><li class="chapter-item expanded "><a href="../release.html"><strong aria-hidden="true">5.</strong> Release</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../release/releasing.html"><strong aria-hidden="true">5.1.</strong> Releasing Information</a></li></ol></li><li class="chapter-item expanded "><a href="../contributing.html"><strong aria-hidden="true">6.</strong> Contributing</a></li><li class="chapter-item expanded "><a href="../telemetery.html"><strong aria-hidden="true">7.</strong> Telemetery</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Visual Studio Code AKS Tools</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/Azure/vscode-aks-tools" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="aks-plugins-for-github-copilot-for-azure"><a class="header" href="#aks-plugins-for-github-copilot-for-azure"><strong>AKS Plugins for GitHub Copilot for Azure</strong></a></h1>
+<h2 id="overview"><a class="header" href="#overview"><strong>Overview</strong></a></h2>
+<p>The AKS plugins (or skills) for GitHub Copilot for Azure (@azure) extension enable users to perform various tasks related to Azure Kubernetes Service (AKS) directly from the GitHub Copilot Chat view. These skills include creating an AKS cluster, deploying a manifest to an AKS cluster, and generating Kubectl commands.</p>
+<h2 id="features"><a class="header" href="#features"><strong>Features</strong></a></h2>
+<h3 id="create-an-aks-cluster"><a class="header" href="#create-an-aks-cluster"><strong>Create an AKS Cluster</strong></a></h3>
+<blockquote>
+<p>Users can quickly set up an AKS cluster using simple, natural language prompts. This reduces the complexity and time required to manually configure and deploy a Kubernetes cluster.</p>
+</blockquote>
+<img src="../resources/aks-gh-chat-create-cluster-1.png" width="700" height="400">
+<p>You can create an AKS cluster using the following prompts:</p>
+<ul>
+<li>[@azure] can you help me create a Kubernetes cluster</li>
+<li>[@azure] can you set up an AKS cluster for me?</li>
+<li>[@azure] I have a containerized application, can you help me create an AKS cluster to host it?</li>
+<li>[@azure] create AKS cluster</li>
+<li>[@azure] Help me create a Kubernetes cluster to host my application</li>
+</ul>
+<h3 id="deploy-a-manifest-to-an-aks-cluster"><a class="header" href="#deploy-a-manifest-to-an-aks-cluster"><strong>Deploy a Manifest to an AKS Cluster</strong></a></h3>
+<blockquote>
+<p>Users can deploy their application manifests to an AKS cluster directly from the GitHub Copilot Chat view. This simplifies the deployment process and ensures consistency. By using predefined prompts, the risk of errors during deployment is minimized, leading to more reliable and stable deployments.</p>
+</blockquote>
+<img src="../resources/aks-gh-chat-deploy-manifest-1.png" width="700" height="500">
+<p>To deploy a manifest file to an AKS cluster you can use these prompts:</p>
+<ul>
+<li>[@azure] help me deploy my manifest file</li>
+<li>[@azure] can you deploy my manifest to my AKS cluster?</li>
+<li>[@azure] can you deploy my manifest to my Kubernetes cluster?</li>
+<li>[@azure] deploy my application manifest to an AKS cluster</li>
+<li>[@azure] deploy manifest for AKS cluster</li>
+</ul>
+<h3 id="generate-kubectl-command"><a class="header" href="#generate-kubectl-command"><strong>Generate Kubectl Command</strong></a></h3>
+<blockquote>
+<p>Users can generate various Kubectl commands to manage their AKS clusters without needing to remember complex command syntax. This makes cluster management more accessible, especially for those who may not be Kubernetes experts. Quickly generating the necessary commands helps users perform cluster operations more efficiently, saving time and effort.</p>
+</blockquote>
+<img src="../resources/aks-gh-chat-kubectl-generation-1.png" width="700" height="500">
+<p>You can generate various Kubectl commands for your AKS cluster using these prompts:</p>
+<ul>
+<li>[@azure] list all services for my AKS cluster</li>
+<li>[@azure] kubectl command to get deployments with at least 2 replicas in AKS cluster</li>
+<li>[@azure] get me all services in my AKS cluster with external IPs</li>
+<li>[@azure] what is the kubectl command to get pod info for my AKS cluster?</li>
+<li>[@azure] Can you get kubectl command for getting all API resources</li>
+</ul>
+<p>Overall, these features enhance the user experience by making it easier to manage AKS clusters, deploy applications, and execute commands, all from within the GitHub Copilot Chat view. This integration promotes a more seamless and productive workflow for DevOps engineers and developers</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../features/draft-integration.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../features/kaito-integration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../features/draft-integration.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../features/kaito-integration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
