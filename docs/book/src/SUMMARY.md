@@ -25,6 +25,7 @@
   - [Run Image Cleaner Eraser Tool](./features/image-cleaner-eraser-tool.md)
   - [Run Retina Capture](./features/retina-capture.md)
   - [Run Draft Command](./features/draft-integration.md)
+  - [AKS plugins for GitHub Copilot for Azure](./features/aks-plugins-github-copilot.md)
   - [Install & Deploy KAITO Models](./features/kaito-integration.md)
 
 - [Release](./release.md)
