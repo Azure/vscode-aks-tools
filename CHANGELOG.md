@@ -1,5 +1,20 @@
 # Change Log
 
+## [1.5.0]
+
+* Kaito deployment & ux updates.
+* New Publish Action on Secure Runner.
+* Improvements for GH copilot handlers.
+* New Publish Workflow Fix.
+* Manually fetching package.json version.
+* Changing npm to npx.
+* Kaito additional error & quota handling.
+* kaito needs to be KAITO named.
+* Add documentation for GH Copilot handlers and telemetry.
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @ReinierCC, @kejatura-dev, @ivelisseca, @qpetraroia, @hsubramanianaks, Joy, Sachi for contributions, testing and reviews.
+
 ## [1.4.11]
 
 * Add deploy manifest handler for GH Copilot.
