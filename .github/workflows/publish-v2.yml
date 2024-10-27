@@ -47,6 +47,13 @@ jobs:
           VERSION=$(jq -r '.version' package.json)
           echo "current-version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Check version is mentioned in Changelog
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
+        with:
+            validation_depth: 10
+            version: ${{ steps.package_version.outputs.current-version }}
+            path: 'CHANGELOG.md'
 
   JobsPublish:
     name: publish
@@ -85,8 +92,32 @@ jobs:
       - name: Package
         run: npx vsce package
 
+      - name: Set vsix location
+        id: find-vsix
+        run: |
+          asset_path='./vscode-aks-tools-${{needs.JobBuild.outputs.currentversion}}.vsix'
+          asset_name='vscode-aks-tools-${{needs.JobBuild.outputs.currentversion}}.vsix'
+          echo "vsix_path=$asset_path" >> $GITHUB_OUTPUT
+          echo "vsix_name=$asset_name" >> $GITHUB_OUTPUT
+
+      - name: Output name and path of vsix
+        id: output-vsix-name
+        run: |
+          echo "vsix name:" ${{ steps.find-vsix.outputs.vsix_name }}
+          echo "vsix path:" ${{ steps.find-vsix.outputs.vsix_path }}
+
+      - name: Create a Release
+        id: create_release
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        with:
+            tag_name : ${{ needs.JobBuild.outputs.currentversion }}
+            release_name: ${{ needs.JobBuild.outputs.currentversion}}
+            body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
+
       - name: federated login
-        uses: azure/login@v2
+        uses: azure/login@a65d910e8af852a8061c627c456678983e180302 # v2.2.0
         with:
           auth-type: IDENTITY
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -95,4 +126,14 @@ jobs:
         
       - name: Publish packaged extension
         run: |
-          npx vsce publish --azure-credential --packagePath *.vsix
+          npx vsce publish --azure-credential --packagePath ${{ steps.find-vsix.outputs.vsix_path }}
+
+      - name: Attach vsix to release
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.find-vsix.outputs.vsix_path }}
+          asset_name: ${{ steps.find-vsix.outputs.vsix_name }}
+          asset_content_type: application/vsix
