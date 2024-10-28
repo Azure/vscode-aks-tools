@@ -574,7 +574,7 @@
         "getPluginsCommand": "aks.getAzureKubernetesServicePlugins"
     },
     "devDependencies": {
-        "@types/chai": "^5.0.0",
+        "@types/chai": "^5.0.1",
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.9",
@@ -588,7 +588,7 @@
         "@typescript-eslint/parser": "^8.11.0",
         "@vscode/test-electron": "^2.4.1",
         "@vscode/vsce": "^3.2.1",
-        "chai": "^5.1.1",
+        "chai": "^5.1.2",
         "eslint": "^9.13.0",
         "eslint-webpack-plugin": "^4.2.0",
         "glob": "^11.0.0",
