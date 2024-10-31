@@ -1,0 +1,29 @@
+import { WebviewDefinition } from "../webviewTypes";
+
+export interface InitialState {
+    clusterName: string;
+    models: ModelState[];
+}
+
+export type ModelState = {
+    name: string;
+    instance: string;
+    resourceReady: boolean | null;
+    inferenceReady: boolean | null;
+    workspaceReady: boolean | null;
+    age: number;
+};
+
+export type ToVsCodeMsgDef = {
+    monitorUpdateRequest: { models: ModelState[] };
+    deleteWorkspaceRequest: { model: string };
+};
+
+export type ToWebViewMsgDef = {
+    monitorUpdate: {
+        clusterName: string;
+        models: ModelState[];
+    };
+};
+
+export type KaitoManageDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
