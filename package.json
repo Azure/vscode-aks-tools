@@ -317,6 +317,10 @@
                 "title": "Create KAITO Workspace"
             },
             {
+                "command": "aks.aksKaitoManage",
+                "title": "Manage KAITO Models"
+            },
+            {
                 "command": "aks.aksKaito",
                 "title": "Install KAITO"
             }
@@ -441,6 +445,10 @@
                 },
                 {
                     "command": "aks.aksKaitoCreateCRD",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKaitoManage",
                     "group": "navigation"
                 }
             ],

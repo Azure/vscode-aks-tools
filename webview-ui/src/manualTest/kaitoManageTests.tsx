@@ -7,31 +7,31 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/k
 
 export function getKaitoManageScenarios() {
     const initialState: InitialState = {
-        clusterName: "Kaito cluster",
+        clusterName: "ai-chat-service",
         models: [
             {
-                name: "example-model-1",
+                name: "falcon-7b-instruct",
                 instance: "Standard_NC12s_v3",
                 resourceReady: null,
                 inferenceReady: null,
                 workspaceReady: null,
-                age: 10,
+                age: 4,
             },
             {
-                name: "example-model-2",
-                instance: "Standard_NC12s_v3",
+                name: "phi-2",
+                instance: "Standard_NC6s_v3",
                 resourceReady: true,
                 inferenceReady: true,
                 workspaceReady: true,
-                age: 30,
+                age: 43,
             },
             {
-                name: "example-model-3",
-                instance: "Standard_NC12s_v3",
+                name: "phi-3-medium-128k-instruct",
+                instance: "Standard_NC24ads_A100_v4",
                 resourceReady: false,
                 inferenceReady: false,
                 workspaceReady: false,
-                age: 300,
+                age: 381,
             },
         ],
     };
@@ -44,6 +44,12 @@ export function getKaitoManageScenarios() {
             },
             deleteWorkspaceRequest: ({ model }) => {
                 console.log("deleteWorkspaceRequest", model);
+            },
+            redeployWorkspaceRequest: ({ modelName, modelYaml }) => {
+                console.log("redeployWorkspaceRequest", modelName, modelYaml);
+            },
+            getLogsRequest: () => {
+                console.log("getLogsRequest");
             },
         };
     }

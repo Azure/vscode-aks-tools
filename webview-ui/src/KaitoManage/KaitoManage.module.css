@@ -2,12 +2,6 @@
     font-weight: bold;
 }
 
-.mainTitle {
-    /* font-size: 1.625rem; */
-    /* font-weight: 600; */
-    /* margin: 0.rem 0 0 0; */
-}
-
 .gridContainer {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(25rem, 1fr));
@@ -36,7 +30,7 @@
 
 .blurb {
     font-size: 0.7rem;
-    margin: 0.4rem 0rem 0.4rem 0rem;
+    margin: 0.5rem 0rem 0.5rem 0rem;
     opacity: 0.75;
 }
 
@@ -128,7 +122,6 @@
 .successIconContainer {
     display: inline-block;
     height: 100%;
-    /* height: 100%; */
 }
 .successIcon {
     color: #89d185;
@@ -157,5 +150,9 @@
 }
 
 .testButton {
-    margin-right: 0.58rem;
+    margin-left: 0.58rem;
+}
+
+.logButton {
+    margin-left: 0.58rem;
 }
