@@ -9,6 +9,8 @@ import { KaitoManagePanel } from "../../panels/KaitoManagePanel";
 import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getExtension, longRunning } from "../utils/host";
+import { getConditions, convertAgeToMinutes } from "../../panels/utilities/KaitoHelpers";
+import { invokeKubectlCommand } from "../utils/kubectl";
 
 export default async function aksKaitoManage(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -72,7 +74,28 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
+
+    // The logic below is to acquire the initial deployment data.
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
+    const command = `get workspace -o json`;
+    const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
+    if (failed(kubectlresult)) {
+        return;
+    }
+    const models = [];
+    const data = JSON.parse(kubectlresult.result.stdout);
+    for (const item of data.items) {
+        const conditions: Array<{ type: string; status: string }> = item.status?.conditions || [];
+        const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
+        models.push({
+            name: item.inference.preset.name,
+            instance: item.resource.instanceType,
+            resourceReady: resourceReady,
+            inferenceReady: inferenceReady,
+            workspaceReady: workspaceReady,
+            age: convertAgeToMinutes(item.metadata?.creationTimestamp),
+        });
+    }
 
     const panel = new KaitoManagePanel(extension.result.extensionUri);
     const dataProvider = new KaitoManagePanelDataProvider(
@@ -82,6 +105,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         armId,
         kubectl,
         kubeConfigFile.filePath,
+        models,
     );
     panel.show(dataProvider);
 }

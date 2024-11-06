@@ -53,13 +53,9 @@ export function KaitoModels(initialState: InitialState) {
         setSelectedModel(model);
     };
 
-    function stringOrUndefined(s: string | undefined): string {
-        return s !== undefined ? s : "";
-    }
-
     // Returns true if model cannot be deployed with one click
     function undeployable(model: string) {
-        return model.substring(0, 7) === "llama-2" || model.substring(0, 5) === "phi-3";
+        return model.substring(0, 7) === "llama-2";
     }
 
     const defaultMessage = <>Please note deployment time can vary from 10 minutes to 1hr+.</>;
@@ -78,58 +74,9 @@ export function KaitoModels(initialState: InitialState) {
                     </a>
                 </>
             );
-        } else if (model.substring(0, 5) === "phi-3") {
-            return (
-                <>
-                    Phi-3 is only supported in v0.3+ of KAITO. This cluster currently has version 0.2 of KAITO
-                    installed.
-                </>
-            );
         }
         return defaultMessage;
     }
-
-    // returns [yaml, gpu] where yaml is the generated yaml & gpu is the gpu specification string
-    function generateYAML(model: string): [string, string | undefined] {
-        const modelDetails = getModelDetails(model);
-        const name = stringOrUndefined(modelDetails?.modelName);
-        const gpu = stringOrUndefined(modelDetails?.minimumGpu);
-        let appname = name;
-        let metadataname = name;
-        let inferencename = name;
-        let privateConfig = "";
-        // Adds private configuration template for llama-2 models
-        if (name.substring(0, 7) === "llama-2") {
-            privateConfig = `
-    accessMode: private
-    presetOptions:
-      image: <YOUR IMAGE URL>`;
-        }
-        // Phi-3 Models follow a different naming pattern, this corrects for that
-        if (name.substring(0, 5) === "phi-3") {
-            appname = "phi-3";
-            const match = name.match(/phi-3-(mini|medium)/);
-            if (match !== null) {
-                metadataname = match[0];
-            }
-            inferencename = name;
-        }
-        const yaml = `apiVersion: kaito.sh/v1alpha1
-kind: Workspace
-metadata:
-  name: workspace-${metadataname}
-resource:
-  instanceType: "${gpu}"
-  labelSelector:
-    matchLabels:
-      apps: ${appname}
-inference:
-  preset:
-    name: ${inferencename}${privateConfig}`;
-        // Passing along gpu specification for subsequent usage
-        return [yaml, gpu];
-    }
-
     function generateCRD(model: string) {
         // model[0] is
         const yaml = generateYAML(model)[0];
@@ -409,4 +356,47 @@ inference:
             </div>
         </>
     );
+}
+
+// exported function to be shared in other kaito-related webviews
+export function generateYAML(model: string): [string, string | undefined] {
+    const allModelDetails = kaitoSupporterModel.modelDetails;
+    const getModelDetails = (modelName: string) => {
+        return allModelDetails.find((model) => model.modelName === modelName);
+    };
+    function stringOrUndefined(s: string | undefined): string {
+        return s !== undefined ? s : "";
+    }
+    const modelDetails = getModelDetails(model);
+    const name = stringOrUndefined(modelDetails?.modelName);
+    const gpu = stringOrUndefined(modelDetails?.minimumGpu);
+    let appname = name;
+    const metadataname = name;
+    const inferencename = name;
+    let privateConfig = "";
+    // Adds private configuration template for llama-2 models
+    if (name.substring(0, 7) === "llama-2") {
+        privateConfig = `
+accessMode: private
+presetOptions:
+  image: <YOUR IMAGE URL>`;
+    }
+    // Phi-3 Models follow a different naming pattern, this corrects for that
+    if (name.substring(0, 5) === "phi-3") {
+        appname = "phi-3";
+    }
+    const yaml = `apiVersion: kaito.sh/v1alpha1
+kind: Workspace
+metadata:
+  name: workspace-${metadataname}
+resource:
+  instanceType: "${gpu}"
+  labelSelector:
+    matchLabels:
+      apps: ${appname}
+inference:
+  preset:
+    name: ${inferencename}${privateConfig}`;
+    // Passing along gpu specification for subsequent usage
+    return [yaml, gpu];
 }

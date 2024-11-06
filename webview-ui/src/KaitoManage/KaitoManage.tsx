@@ -3,27 +3,38 @@ import styles from "./KaitoManage.module.css";
 import { stateUpdater, vscode } from "./state";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoManage";
 import { VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { generateYAML } from "../KaitoModels/KaitoModels";
+import { useEffect } from "react";
 
 export function KaitoManage(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
-
-    async function startChecking() {
+    // updates workspace status
+    async function updateStatus() {
         vscode.postMonitorUpdateRequest({ models: state.models });
     }
-    // async function stopChecking() {
-    //     vscode.postStopCheckingRequest({ models: state.models });
-    // }
+    // retrieves & outputs logs
+    async function getLogs() {
+        vscode.postGetLogsRequest({});
+    }
+    // polls workspace status every 5 seconds
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            updateStatus();
+        }, 5000);
+        return () => clearInterval(intervalId);
+    });
+
     async function deleteWorkspace(model: string) {
         vscode.postDeleteWorkspaceRequest({ model: model });
+    }
+    async function redeployWorkspace(modelName: string, modelYaml: string) {
+        vscode.postRedeployWorkspaceRequest({ modelName: modelName, modelYaml: modelYaml });
     }
 
     return (
         <>
-            <h2 className={styles.mainTitle}>Manage Kaito Deployments</h2>
+            <h2 className={styles.mainTitle}>Manage KAITO Deployments ({state.clusterName})</h2>
             <VSCodeDivider />
-            <button onClick={startChecking}>Start</button>
-            {/* <button onClick={stopChecking}>Stop</button> */}
-
             <p>Review models that you have generated custom resource documents and deployment status.</p>
 
             <div className={styles.gridContainer}>
@@ -31,13 +42,13 @@ export function KaitoManage(initialState: InitialState) {
                     <div key={index} className={styles.gridItem}>
                         <p className={styles.modelName}>{model.name}</p>
                         <p className={styles.blurb}>
-                            If this is your preferred model for deployment in your application, please proceed to
-                            generate the custom resource document and initiate the deployment process.
+                            Review the status of each model deployment and access available actions as needed.
+                            Deployment times vary greatly depending on model size.
                         </p>
                         <div className={styles.progressDiv}>
                             {!(model.workspaceReady ?? false) &&
                                 (() => {
-                                    if (model.age < 200 || model.resourceReady) {
+                                    if (model.age < 300 || model.resourceReady) {
                                         return (
                                             <>
                                                 <div className={styles.buttonDiv}>
@@ -46,6 +57,12 @@ export function KaitoManage(initialState: InitialState) {
                                                         className={styles.button}
                                                     >
                                                         Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={() => getLogs()}
+                                                        className={`${styles.button} ${styles.logButton}`}
+                                                    >
+                                                        Get Logs
                                                     </button>
                                                 </div>
                                                 <VSCodeProgressRing className={styles.progress} />
@@ -56,7 +73,12 @@ export function KaitoManage(initialState: InitialState) {
                                     return (
                                         <>
                                             <div className={styles.buttonDiv}>
-                                                <button className={`${styles.button} ${styles.testButton}`}>
+                                                <button
+                                                    onClick={() =>
+                                                        redeployWorkspace(model.name, generateYAML(model.name)[0])
+                                                    }
+                                                    className={`${styles.button} ${styles.testButton}`}
+                                                >
                                                     Re-deploy default CRD
                                                 </button>
                                                 <button
@@ -64,6 +86,12 @@ export function KaitoManage(initialState: InitialState) {
                                                     className={styles.button}
                                                 >
                                                     Delete Workspace
+                                                </button>
+                                                <button
+                                                    onClick={() => getLogs()}
+                                                    className={`${styles.button} ${styles.logButton}`}
+                                                >
+                                                    Get Logs
                                                 </button>
                                             </div>
                                             <div className={styles.sucessContainer}>
@@ -81,10 +109,24 @@ export function KaitoManage(initialState: InitialState) {
                                         <>
                                             <div className={styles.sucessContainer}>
                                                 <div className={styles.buttonDiv}>
-                                                    <button className={`${styles.button} ${styles.testButton}`}>
+                                                    <button
+                                                        className={styles.button}
+                                                        onClick={() => deleteWorkspace(model.name)}
+                                                    >
+                                                        Delete Workspace
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteWorkspace(model.name)}
+                                                        className={`${styles.button} ${styles.logButton}`}
+                                                    >
+                                                        Get Logs
+                                                    </button>
+                                                    <button
+                                                        className={`${styles.button} ${styles.testButton}`}
+                                                        disabled={true}
+                                                    >
                                                         Test
                                                     </button>
-                                                    <button className={styles.button}>Delete Workspace</button>
                                                 </div>
                                                 <div className={styles.successIconContainer}>
                                                     <i className={`codicon codicon-pass ${styles.successIcon}`}></i>
