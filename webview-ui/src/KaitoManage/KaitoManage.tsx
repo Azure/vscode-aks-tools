@@ -119,7 +119,7 @@ export function KaitoManage(initialState: InitialState) {
                                                         Delete Workspace
                                                     </button>
                                                     <button
-                                                        onClick={() => deleteWorkspace(model.name)}
+                                                        onClick={() => getLogs()}
                                                         className={`${styles.button} ${styles.logButton}`}
                                                     >
                                                         Get Logs
