@@ -35,7 +35,7 @@ export function KaitoManage(initialState: InitialState) {
         <>
             <h2 className={styles.mainTitle}>Manage KAITO Deployments ({state.clusterName})</h2>
             <VSCodeDivider />
-            <p>Review models that you have generated custom resource documents and deployment status.</p>
+            <p>Review the deployment status & perform operations on models in your cluster.</p>
 
             <div className={styles.gridContainer}>
                 {state.models.map((model, index) => (
