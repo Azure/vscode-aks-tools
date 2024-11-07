@@ -229,3 +229,54 @@ export async function deleteKubectlCustomCommand(name: string) {
         .getConfiguration()
         .update("azure.customkubectl.commands", commands, vscode.ConfigurationTarget.Global, true);
 }
+
+const EXTENSION_CONFIG_KEY = "vs-kubernetes";
+
+type ConfigUpdater<T> = (
+    configKey: string,
+    value: T,
+    scope: vscode.ConfigurationTarget,
+    valueAtScope: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    createIfNotExist: boolean,
+) => Promise<void>;
+
+async function atAllConfigScopes<T>(fn: ConfigUpdater<T>, configKey: string, value: T): Promise<void> {
+    const config = vscode.workspace.getConfiguration().inspect(EXTENSION_CONFIG_KEY)!;
+    await fn(configKey, value, vscode.ConfigurationTarget.Global, config.globalValue, true);
+    await fn(configKey, value, vscode.ConfigurationTarget.Workspace, config.workspaceValue, false);
+    await fn(configKey, value, vscode.ConfigurationTarget.WorkspaceFolder, config.workspaceFolderValue, false);
+}
+
+async function addValueToConfigAtScope(
+    configKey: string, // eslint-disable-line @typescript-eslint/no-explicit-any
+    value: any,
+    scope: vscode.ConfigurationTarget,
+    valueAtScope: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    createIfNotExist: boolean,
+): Promise<void> {
+    if (!createIfNotExist) {
+        if (!valueAtScope || !valueAtScope[configKey]) {
+            return;
+        }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let newValue: any = {};
+    if (valueAtScope) {
+        newValue = Object.assign({}, valueAtScope);
+    }
+    newValue[configKey] = value;
+    await vscode.workspace.getConfiguration().update(EXTENSION_CONFIG_KEY, newValue, scope);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function setConfigValue(configKey: string, value: any): Promise<void> {
+    await atAllConfigScopes(addValueToConfigAtScope, configKey, value);
+}
+
+export function getShowWelcomPageConfiguration(): boolean | undefined {
+    return vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY)["vs-kubernetes.showWelcomePageOnActivation"];
+}
+
+export async function setShowWelcomePageConfiguration(selectedoption: boolean): Promise<void> {
+    await setConfigValue("vs-kubernetes.showWelcomePageOnActivation", selectedoption);
+}

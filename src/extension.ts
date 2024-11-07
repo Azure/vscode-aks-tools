@@ -52,6 +52,10 @@ import { getPlugins } from "./plugins/getPlugins";
 import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCreateClusterFromCopilot";
 import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
 import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
+import { getShowWelcomPageConfiguration, setShowWelcomePageConfiguration } from "./commands/utils/config";
+import { checkExtension } from "./commands/utils/ghCopilotHandlers";
+
+const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -74,11 +78,9 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerUIExtensionVariables(uiExtensionVariables);
-        if (vscode.workspace.getConfiguration("workbench").get("startupEditor") !== "none") {
-            vscode.commands.executeCommand("workbench.action.openWalkthrough", {
-                category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
-            });
-        }
+
+        await showWelcomPageOnActivation();
+
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectTenant", selectTenant);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
@@ -201,4 +203,23 @@ function telemetrise(command: string, callback: CommandCallback): CommandCallbac
 
         return callback(context, target);
     };
+}
+
+async function showWelcomPageOnActivation(): Promise<void> {
+    const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+
+    if (checkGitHubCopilotExtension) {
+        await setShowWelcomePageConfiguration(false);
+    } else {
+        await setShowWelcomePageConfiguration(true);
+    }
+    const showWelcomePage = getShowWelcomPageConfiguration();
+
+    if (showWelcomePage && vscode.workspace.getConfiguration("workbench").get("startupEditor") !== "none") {
+        if (showWelcomePage) {
+            vscode.commands.executeCommand("workbench.action.openWalkthrough", {
+                category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
+            });
+        }
+    }
 }
