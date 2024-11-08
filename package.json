@@ -162,6 +162,10 @@
         },
         "commands": [
             {
+                "command": "aks.connectToGH",
+                "title": "Connect to GitHub with DevHub"
+            },
+            {
                 "command": "aks.selectSubscriptions",
                 "title": "Select subscriptions...",
                 "category": "AKS",
@@ -576,7 +580,9 @@
     "devDependencies": {
         "@types/chai": "^5.0.1",
         "@types/decompress": "^4.2.7",
+        "@types/dotenv": "^6.1.1",
         "@types/js-yaml": "^4.0.9",
+        "@types/libsodium-wrappers-sumo": "^0.7.8",
         "@types/mocha": "^10.0.9",
         "@types/node": "^22.7.7",
         "@types/semver": "^7.5.8",
@@ -605,6 +611,7 @@
         "@azure/arm-compute": "^22.1.0",
         "@azure/arm-containerregistry": "^10.1.0",
         "@azure/arm-containerservice": "21.2.0-beta.1",
+        "@azure/arm-devhub": "^1.0.0-beta.3",
         "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-msi": "^2.1.0",

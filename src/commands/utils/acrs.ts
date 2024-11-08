@@ -61,6 +61,54 @@ export async function getRepositoryTags(
     return errmap(propsResult, (props) => props.flatMap((p) => p.tags));
 }
 
+export async function createAcr( //TODO: proper name input checking
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    acrName: string,
+    location: string,
+): Promise<Errorable<DefinedRegistry>> {
+    const client = getAcrManagementClient(sessionProvider, subscriptionId);
+    try {
+        const registry = await client.registries.beginCreateAndWait(resourceGroup, acrName, {
+            location,
+            sku: {
+                name: "Basic",
+            },
+        });
+        if (isDefinedRegistry(registry)) {
+            return { succeeded: true, result: registry };
+        }
+        return {
+            succeeded: false,
+            error: `Failed to create ACR ${acrName} in ${resourceGroup} in ${subscriptionId}`,
+        };
+    } catch (e) {
+        return {
+            succeeded: false,
+            error: `Failed to create ACR ${acrName} in ${resourceGroup} in ${subscriptionId}: ${getErrorMessage(e)}`,
+        };
+    }
+}
+
+export async function deleteAcr(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    acrName: string,
+): Promise<Errorable<void>> {
+    const client = getAcrManagementClient(sessionProvider, subscriptionId);
+    try {
+        await client.registries.beginDeleteAndWait(resourceGroup, acrName);
+        return { succeeded: true, result: undefined };
+    } catch (e) {
+        return {
+            succeeded: false,
+            error: `Failed to delete ACR ${acrName} in ${resourceGroup} in ${subscriptionId}: ${getErrorMessage(e)}`,
+        };
+    }
+}
+
 function isDefinedRegistry(rg: Registry): rg is DefinedRegistry {
     return rg.id !== undefined && rg.name !== undefined && rg.location !== undefined && rg.loginServer !== undefined;
 }
