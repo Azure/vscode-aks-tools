@@ -28,9 +28,8 @@ export function getConditions(conditions: Array<{ type: string; status: string }
 }
 
 export function convertAgeToMinutes(creationTimestamp: string): number {
-    const createdTime = new Date(creationTimestamp);
-    const currentTime = new Date();
-    const differenceInMilliseconds = currentTime.getTime() - createdTime.getTime();
-    const differenceInMinutes = Math.floor(differenceInMilliseconds / 1000 / 60);
+    const createdTime = new Date(creationTimestamp).getTime();
+    const currentTime = Date.now();
+    const differenceInMinutes = Math.floor((currentTime - createdTime) / (1000 * 60));
     return differenceInMinutes;
 }
