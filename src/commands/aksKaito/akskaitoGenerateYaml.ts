@@ -39,6 +39,7 @@ export default async function aksKaitoGenerateYaml(_context: IActionContext, tar
     const subscriptionId = clusterNode.result.subscriptionId;
     const resourceGroupName = clusterNode.result.resourceGroupName;
 
+    // "kaito-" is assuming kaito pods are still named kaito-workspace & kaito-gpu-provisioner
     const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
         return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
     });
