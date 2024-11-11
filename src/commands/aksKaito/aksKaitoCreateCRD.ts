@@ -47,10 +47,7 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
         return;
     }
 
-    const clusterName = clusterNode.result.name;
-    const armId = clusterNode.result.armId;
-    const subscriptionId = clusterNode.result.subscriptionId;
-    const resourceGroupName = clusterNode.result.resourceGroupName;
+    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
     const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
         return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
     });
