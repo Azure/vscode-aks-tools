@@ -79,13 +79,13 @@ export function KaitoModels(initialState: InitialState) {
     }
     function generateCRD(model: string) {
         // model[0] is
-        const yaml = generateYAML(model)[0];
+        const yaml = generateKaitoYAML(model)[0];
         vscode.postGenerateCRDRequest({ model: yaml });
         return;
     }
 
     function onClickDeployKaito(model: string) {
-        const [yaml, gpu] = generateYAML(model);
+        const [yaml, gpu] = generateKaitoYAML(model);
         if (!(gpu === undefined)) {
             vscode.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
         }
@@ -359,44 +359,43 @@ export function KaitoModels(initialState: InitialState) {
 }
 
 // exported function to be shared in other kaito-related webviews
-export function generateYAML(model: string): [string, string | undefined] {
+export function generateKaitoYAML(model: string): [string, string | undefined] {
     const allModelDetails = kaitoSupporterModel.modelDetails;
+    // Helper function to fetch model details by name
     const getModelDetails = (modelName: string) => {
         return allModelDetails.find((model) => model.modelName === modelName);
     };
-    function stringOrUndefined(s: string | undefined): string {
-        return s !== undefined ? s : "";
-    }
+    const getStringOrEmpty = (value?: string): string => value ?? "";
+
     const modelDetails = getModelDetails(model);
-    const name = stringOrUndefined(modelDetails?.modelName);
-    const gpu = stringOrUndefined(modelDetails?.minimumGpu);
-    let appname = name;
-    const metadataname = name;
-    const inferencename = name;
-    let privateConfig = "";
+    const name = getStringOrEmpty(modelDetails?.modelName);
+    const gpu = getStringOrEmpty(modelDetails?.minimumGpu);
+
+    // Default application, metadata, and inference names
+    // Phi-3 Models follow a different naming pattern, this corrects for that
+    const appName = name.startsWith("phi-3") ? "phi-3" : name;
+    const metadataName = name;
+    const inferenceName = name;
     // Adds private configuration template for llama-2 models
-    if (name.substring(0, 7) === "llama-2") {
-        privateConfig = `
+    const privateConfig = name.startsWith("llama-2")
+        ? `
 accessMode: private
 presetOptions:
-  image: <YOUR IMAGE URL>`;
-    }
-    // Phi-3 Models follow a different naming pattern, this corrects for that
-    if (name.substring(0, 5) === "phi-3") {
-        appname = "phi-3";
-    }
+  image: <YOUR IMAGE URL>`
+        : "";
+
     const yaml = `apiVersion: kaito.sh/v1alpha1
 kind: Workspace
 metadata:
-  name: workspace-${metadataname}
+  name: workspace-${metadataName}
 resource:
   instanceType: "${gpu}"
   labelSelector:
     matchLabels:
-      apps: ${appname}
+      apps: ${appName}
 inference:
   preset:
-    name: ${inferencename}${privateConfig}`;
+    name: ${inferenceName}${privateConfig}`;
     // Passing along gpu specification for subsequent usage
     return [yaml, gpu];
 }
