@@ -170,8 +170,26 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     // Retrieves the logs from the Kaito workspace and outputs them in a new text editor.
     private async handleGetLogsRequest() {
         await longRunning(`Retrieving logs`, async () => {
-            const command = `get pods -l app=ai-toolchain-operator --all-namespaces --no-headers | awk '/kaito-workspace/ {print "kubectl logs -n " $1 " " $2}' | xargs -I {} bash -c '{}'`;
-            const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+            let command = `get po -l app=ai-toolchain-operator -A -o json`;
+            let kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+            if (failed(kubectlresult)) {
+                vscode.window.showErrorMessage(`Error fetching logs: ${kubectlresult.error}`);
+                return;
+            }
+            const data = JSON.parse(kubectlresult.result.stdout);
+            const items = data.items;
+            let pod = { name: null, date: new Date(`2000-01-01T12:00:00Z`) };
+            for (const item of items) {
+                const name = item.metadata.name;
+                if (name.startsWith("kaito-workspace")) {
+                    const date = new Date(item.metadata.creationTimestamp);
+                    if (date > pod.date) {
+                        pod = { name: name, date: date };
+                    }
+                }
+            }
+            command = `logs ${pod.name} -n kube-system --tail=500`;
+            kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
                 vscode.window.showErrorMessage(`Error fetching logs: ${kubectlresult.error}`);
                 return;
