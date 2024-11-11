@@ -19,6 +19,7 @@ export type ToVsCodeMsgDef = {
     deleteWorkspaceRequest: { model: string };
     redeployWorkspaceRequest: { modelName: string; modelYaml: string };
     getLogsRequest: {};
+    testWorkspaceRequest: { modelName: string };
 };
 
 export type ToWebViewMsgDef = {

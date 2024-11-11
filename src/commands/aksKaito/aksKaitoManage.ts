@@ -104,6 +104,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         kubectl,
         kubeConfigFile.filePath,
         models,
+        target,
     );
     panel.show(dataProvider);
 }

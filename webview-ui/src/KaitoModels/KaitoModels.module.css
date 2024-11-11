@@ -1,4 +1,4 @@
-body {
+.main {
     color: var(--vscode-editor-foreground, #fff);
     overflow-x: hidden;
 }
@@ -187,13 +187,13 @@ body {
     );
 }
 
-button:disabled {
+.main button:disabled {
     color: #6a6d70;
     border: 1px solid #313539;
     background-color: #2d3033;
     margin-top: 0.25rem;
 }
-button:disabled:hover {
+.main button:disabled:hover {
     color: #6a6d70;
     border: 1px solid #313539;
     background-color: #2d3033;

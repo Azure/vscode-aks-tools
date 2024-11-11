@@ -31,6 +31,10 @@ export function KaitoManage(initialState: InitialState) {
         vscode.postRedeployWorkspaceRequest({ modelName: modelName, modelYaml: modelYaml });
     }
 
+    function testWorkspace(modelName: string) {
+        vscode.postTestWorkspaceRequest({ modelName: modelName });
+    }
+
     return (
         <>
             <h2 className={styles.mainTitle}>Manage KAITO Deployments ({state.clusterName})</h2>
@@ -129,7 +133,7 @@ export function KaitoManage(initialState: InitialState) {
                                                     </button>
                                                     <button
                                                         className={`${styles.button} ${styles.testButton}`}
-                                                        disabled={true}
+                                                        onClick={() => testWorkspace(model.name)}
                                                     >
                                                         Test
                                                     </button>

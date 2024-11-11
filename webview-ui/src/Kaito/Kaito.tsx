@@ -5,7 +5,6 @@ import styles from "./Kaito.module.css";
 import kaitoimage from "./kaitoimage.png";
 import { useState } from "react";
 
-// import { KaitoModels } from "./KaitoModels";
 import { stateUpdater, vscode } from "./state";
 export function Kaito(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -27,7 +26,6 @@ export function Kaito(initialState: InitialState) {
     return (
         <>
             <div className={styles.container}>
-                {/* <div className={styles.kaitoPageHeader}>Kubernetes AI Toolchain Operator (KAITO)</div> */}
                 <h2>Kubernetes AI Toolchain Operator (KAITO)</h2>
                 <VSCodeDivider />
                 <div className={styles.subHeader}>
@@ -92,7 +90,6 @@ export function Kaito(initialState: InitialState) {
                             </div>
                         )}
                     {state.kaitoInstallStatus === ProgressEventType.Success && state.models.length > 0 && (
-                        // <KaitoFamilyModelInput modelDetails={state.models} />
                         <div className={styles.postInstall}>
                             <p>KAITO is installed!</p>
                             <p className={styles.thin}>You can now create a workspace by clicking the button below.</p>
