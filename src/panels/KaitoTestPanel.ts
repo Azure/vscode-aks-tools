@@ -75,6 +75,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
     nullIsFalse(value: boolean | null): boolean {
         return value ?? false;
     }
+    private sendingQuery: boolean = false;
 
     private escapeSpecialChars(input: string) {
         return input
@@ -98,11 +99,16 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         maxLength: number,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        if (this.sendingQuery) {
+            return;
+        }
         await longRunning(`Sending query...`, async () => {
+            this.sendingQuery = true;
             const command = `get svc workspace-${this.modelName} -o jsonpath="{.spec.clusterIPs[0]}"`;
             const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
                 vscode.window.showErrorMessage(`Error fetching logs: ${kubectlresult.error}`);
+                this.sendingQuery = false;
                 return;
             }
             void prompt;
@@ -131,6 +137,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     if (error) {
                         vscode.window.showErrorMessage(`Error executing curl command: ${stderr}`);
                         reject(error);
+                        this.sendingQuery = false;
                     } else {
                         webview.postTestUpdate({
                             clusterName: this.clusterName,
@@ -147,5 +154,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 });
             });
         });
+        this.sendingQuery = false;
     }
 }
