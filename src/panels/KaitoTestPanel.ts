@@ -131,7 +131,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
             const curlCommand = `curl -X POST http://localhost:${localPort}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "max_length":${maxLength}}}'`;
+"Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
             await new Promise<void>((resolve, reject) => {
                 exec(curlCommand, (error: ExecException | null, stdout: string, stderr: string) => {
                     if (error) {

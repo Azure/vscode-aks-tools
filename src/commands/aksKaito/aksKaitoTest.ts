@@ -49,10 +49,7 @@ export default async function aksKaitoTest(
         return;
     }
 
-    const clusterName = clusterNode.result.name;
-    const armId = clusterNode.result.armId;
-    const subscriptionId = clusterNode.result.subscriptionId;
-    const resourceGroupName = clusterNode.result.resourceGroupName;
+    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
     const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);

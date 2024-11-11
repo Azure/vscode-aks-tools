@@ -3,7 +3,7 @@
     grid-template-columns: auto minmax(200px, 1fr);
     gap: 0rem 2rem;
     padding: 0;
-    color: #fff;
+    color: var(--vscode-editor-foreground, #fff);
     background: none;
     margin: 1.8rem 0 0 0;
     width: 35vw;
@@ -24,19 +24,19 @@
 .blurb {
     grid-column: span 2;
     margin-bottom: 1.5rem;
-    color: #aaa;
+    color: var(--vscode-editor-foreground, #fff);
 }
 
 .main label {
-    color: #ddd;
+    color: var(--vscode-editor-foreground, #fff);
     align-self: center;
     margin: 0rem 0 1rem 0;
 }
 
 .main textarea {
     padding: 5px 8px 4.4px 8px;
-    background-color: #333;
-    color: #fff;
+    background: var(--vscode-input-background, #333); /* Track matches input background */
+    color: var(--vscode-editor-foreground, #fff);
     border: 1px solid #444;
     border-radius: 4px;
     margin: 0 0 0.4rem 0;
@@ -147,7 +147,7 @@
     border: 1.5px solid hsl(0, 0%, 47%);
     padding: 3px 5px 3px 5px;
     border-radius: 4px;
-    color: #ccc;
+    color: var(--vscode-editor-foreground, #fff);
     width: 2rem;
     text-align: center;
 }
@@ -172,7 +172,7 @@
     left: 50%;
     transform: translateX(-50%);
     background-color: #333;
-    color: #fff;
+    color: var(--vscode-editor-foreground, #fff);
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;

@@ -3,7 +3,7 @@ import styles from "./KaitoManage.module.css";
 import { stateUpdater, vscode } from "./state";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoManage";
 import { VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
-import { generateYAML } from "../KaitoModels/KaitoModels";
+import { generateKaitoYAML } from "../KaitoModels/KaitoModels";
 import { useEffect } from "react";
 
 export function KaitoManage(initialState: InitialState) {
@@ -82,7 +82,7 @@ export function KaitoManage(initialState: InitialState) {
                                             <div className={styles.buttonDiv}>
                                                 <button
                                                     onClick={() =>
-                                                        redeployWorkspace(model.name, generateYAML(model.name)[0])
+                                                        redeployWorkspace(model.name, generateKaitoYAML(model.name)[0])
                                                     }
                                                     className={`${styles.button} ${styles.redeployButton}`}
                                                 >

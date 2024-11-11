@@ -50,10 +50,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         return;
     }
 
-    const clusterName = clusterNode.result.name;
-    const armId = clusterNode.result.armId;
-    const subscriptionId = clusterNode.result.subscriptionId;
-    const resourceGroupName = clusterNode.result.resourceGroupName;
+    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
     const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
         return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
     });
@@ -80,6 +77,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     const command = `get workspace -o json`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
     if (failed(kubectlresult)) {
+        vscode.window.showErrorMessage(`Error retrieving workspaces: ${kubectlresult.error}`);
         return;
     }
     const models = [];

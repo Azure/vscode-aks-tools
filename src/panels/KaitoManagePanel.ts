@@ -84,6 +84,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     private operating: { [modelName: string]: boolean } = {};
     private async handleDeleteWorkspaceRequest(model: string, webview: MessageSink<ToWebViewMsgDef>) {
         if (this.operating[model]) {
+            vscode.window.showErrorMessage(`Operation in progress for 'workspace-${model}'. Please wait.`);
             return;
         }
 
@@ -113,6 +114,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (this.operating[modelName]) {
+            vscode.window.showErrorMessage(`Operation in progress for 'workspace-${modelName}'. Please wait.`);
             return;
         }
         try {
