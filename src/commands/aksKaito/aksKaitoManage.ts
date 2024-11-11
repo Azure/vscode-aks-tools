@@ -80,6 +80,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     const command = `get workspace -o json`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
     if (failed(kubectlresult)) {
+        vscode.window.showErrorMessage(`Error retrieving workspaces: ${kubectlresult.error}`);
         return;
     }
     const models = [];
