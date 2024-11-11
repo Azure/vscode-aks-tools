@@ -287,15 +287,15 @@
             {
                 "command": "aks.aksCreateClusterFromCopilot",
                 "title": "Command to create an AKS cluster"
-            },  
+            },
             {
                 "command": "aks.aksDeployManifest",
                 "title": "Deploy application manifest from Github Copilot Chat"
-            },               
-            {            
+            },
+            {
                 "command": "aks.aksOpenKubectlPanel",
                 "title": "Run Kubectl Commands from Github Copilot Chat"
-            },                   
+            },
             {
                 "command": "aks.aksTCPDump",
                 "title": "Collect TCP Dumps"
@@ -323,6 +323,10 @@
             {
                 "command": "aks.aksKaito",
                 "title": "Install KAITO"
+            },
+            {
+                "command": "aks.aksKaitoTest",
+                "title": "Test KAITO models"
             }
         ],
         "menus": {
@@ -630,6 +634,7 @@
         "@octokit/rest": "^21.0.2",
         "@vscode/extension-telemetry": "^0.9.7",
         "decompress": "^4.2.1",
+        "get-port": "^7.1.0",
         "js-yaml": "^4.1.0",
         "move-file": "^3.1.0",
         "node-fetch": "^3.3.2",

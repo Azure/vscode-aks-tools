@@ -51,6 +51,9 @@ export function getKaitoManageScenarios() {
             getLogsRequest: () => {
                 console.log("getLogsRequest");
             },
+            testWorkspaceRequest: ({ modelName }) => {
+                console.log("testWorkspaceRequest", modelName);
+            },
         };
     }
 

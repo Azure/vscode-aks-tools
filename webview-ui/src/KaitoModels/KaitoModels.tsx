@@ -96,7 +96,7 @@ export function KaitoModels(initialState: InitialState) {
     }
 
     return (
-        <>
+        <div className={styles.main}>
             <div className={`${styles.mainGridContainer} ${selectedModel ? styles.openSidebar : ""}`}>
                 {selectedModel !== null && (
                     <div className={styles.panelDiv}>
@@ -354,7 +354,7 @@ export function KaitoModels(initialState: InitialState) {
                     ))}
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 
