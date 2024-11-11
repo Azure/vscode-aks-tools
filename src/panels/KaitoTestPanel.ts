@@ -131,7 +131,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
             const curlCommand = `curl -X POST http://localhost:${localPort}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "max_length":${maxLength}}}' | jq '.Result'`;
+"Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "max_length":${maxLength}}}'`;
             await new Promise<void>((resolve, reject) => {
                 exec(curlCommand, (error: ExecException | null, stdout: string, stderr: string) => {
                     if (error) {
@@ -142,11 +142,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                         webview.postTestUpdate({
                             clusterName: this.clusterName,
                             modelName: this.modelName,
-                            output: stdout
-                                .slice(1, -2)
-                                .replace(/\\n/g, "\n")
-                                .replace(/\\\\/g, "\\")
-                                .replace(/\\"/g, '"'),
+                            output: JSON.parse(stdout).Result,
                         });
                         resolve();
                     }
