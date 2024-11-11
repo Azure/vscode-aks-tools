@@ -81,7 +81,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         return input
             .replace(/\\/g, "\\\\") // Escape backslashes
             .replace(/"/g, '\\"') // Escape double quotes
-            .replace(/'/g, "") // Escape single quotes
+            .replace(/'/g, "") // Remove single quotes
             .replace(/\n/g, "\\n") // Escape newlines
             .replace(/\r/g, "\\r") // Escape carriage returns
             .replace(/\t/g, "\\t") // Escape tabs
@@ -90,6 +90,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
             .replace(/\0/g, "\\0"); // Escape null characters
     }
 
+    // Sends a request to the inference server to generate a response to the given prompt
     private async handleQueryRequest(
         prompt: string,
         temperature: number,
@@ -99,6 +100,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         maxLength: number,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        // prevents user from re-submitting while a query is in progress
         if (this.sendingQuery) {
             return;
         }
@@ -111,14 +113,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 this.sendingQuery = false;
                 return;
             }
-            void prompt;
-            void temperature;
-            void topP;
-            void topK;
-            void repetitionPenalty;
-            void maxLength;
-            void webview;
-
             const localPort = await getPort();
             const portForwardProcess = spawn("kubectl", [
                 "port-forward",
@@ -128,10 +122,14 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 this.kubeConfigFilePath,
             ]);
 
+            // slight delay to allow for port forwarding to initialize
             await new Promise((resolve) => setTimeout(resolve, 2000));
-
             const curlCommand = `curl -X POST http://localhost:${localPort}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
+"Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", \
+"generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
+"repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
+
+            // Send the query to the inference server
             await new Promise<void>((resolve, reject) => {
                 exec(curlCommand, (error: ExecException | null, stdout: string, stderr: string) => {
                     if (error) {
