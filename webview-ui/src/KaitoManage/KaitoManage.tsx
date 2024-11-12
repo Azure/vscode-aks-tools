@@ -51,7 +51,7 @@ export function KaitoManage(initialState: InitialState) {
                         <div className={styles.progressDiv}>
                             {!(model.workspaceReady ?? false) &&
                                 (() => {
-                                    if (model.age < 300 || model.resourceReady) {
+                                    if (model.age < 300) {
                                         return (
                                             <>
                                                 <div className={styles.buttonDiv}>
@@ -80,7 +80,7 @@ export function KaitoManage(initialState: InitialState) {
                                                     onClick={() =>
                                                         redeployWorkspace(model.name, generateKaitoYAML(model.name)[0])
                                                     }
-                                                    className={`${styles.button} ${styles.testButton}`}
+                                                    className={`${styles.button} ${styles.redeployButton}`}
                                                 >
                                                     Re-deploy default CRD
                                                 </button>
