@@ -6,8 +6,8 @@
     color: var(--vscode-editor-foreground, #fff);
     background: none;
     margin: 1.8rem 0 0 0;
-    min-width: 31.5rem;
-    width: fit-content;
+    min-width: 20rem;
+    width: 31.5rem;
 }
 
 .formDiv > *:nth-child(even) {
@@ -44,12 +44,13 @@
 
 .main input[type="range"] {
     appearance: none;
-    width: 68.5%;
+    width: 16rem;
     height: 0.75rem;
     cursor: pointer;
-    background: none;
+    background: none; /* Use VSCode input background */
     border-radius: 5px;
     outline: none;
+    /* margin-top: 20px; */
 }
 
 /* Track styling */
