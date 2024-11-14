@@ -99,7 +99,7 @@
     );
 }
 .resetButton {
-    background-color: rgba(128, 128, 128, 0.1);
+    background-color: rgba(128, 128, 128, 0.5);
     margin-right: 0.58rem;
 }
 
@@ -134,7 +134,7 @@
     top: -30px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #333;
+    background-color: rgba(128, 128, 128, 0.5);
     color: var(--vscode-editor-foreground, #fff);
     padding: 4px 8px;
     border-radius: 4px;
