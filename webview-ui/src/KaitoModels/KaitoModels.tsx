@@ -87,7 +87,7 @@ export function KaitoModels(initialState: InitialState) {
     function onClickDeployKaito(model: string) {
         const { yaml, gpu } = generateKaitoYAML(model);
         if (!(gpu === undefined)) {
-            vscode.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
+            vscode.postDeployKaitoRequest({ model, yaml, gpu });
         }
     }
 
