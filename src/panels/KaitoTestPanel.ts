@@ -5,8 +5,6 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoTest";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { invokeKubectlCommand } from "../commands/utils/kubectl";
-import { failed } from "../commands/utils/errorable";
 import { exec, ExecException, spawn } from "child_process";
 import { longRunning } from "../commands/utils/host";
 import getPort from "get-port";
@@ -52,7 +50,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
     }
     getTelemetryDefinition(): TelemetryDefinition<"kaitoTest"> {
         return {
-            queryRequest: false,
+            queryRequest: true,
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
@@ -75,8 +73,10 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
     nullIsFalse(value: boolean | null): boolean {
         return value ?? false;
     }
+    // Tracks if query is currently beign sent. If so, prevents user from sending another query
     private sendingQuery: boolean = false;
 
+    // Sanitizing the input string
     private escapeSpecialChars(input: string) {
         return input
             .replace(/\\/g, "\\\\") // Escape backslashes
@@ -106,13 +106,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         }
         await longRunning(`Sending query...`, async () => {
             this.sendingQuery = true;
-            const command = `get svc workspace-${this.modelName} -o jsonpath="{.spec.clusterIPs[0]}"`;
-            const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-            if (failed(kubectlresult)) {
-                vscode.window.showErrorMessage(`Error fetching logs: ${kubectlresult.error}`);
-                this.sendingQuery = false;
-                return;
-            }
             const localPort = await getPort();
             const portForwardProcess = spawn("kubectl", [
                 "port-forward",

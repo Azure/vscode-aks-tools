@@ -54,17 +54,17 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     getTelemetryDefinition(): TelemetryDefinition<"kaitoManage"> {
         return {
             monitorUpdateRequest: false,
-            deleteWorkspaceRequest: false,
-            redeployWorkspaceRequest: false,
-            getLogsRequest: false,
-            testWorkspaceRequest: false,
+            deleteWorkspaceRequest: true,
+            redeployWorkspaceRequest: true,
+            getLogsRequest: true,
+            testWorkspaceRequest: true,
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         void webview;
         return {
-            monitorUpdateRequest: (params) => {
-                this.handleMonitorUpdateRequest(params.models, webview);
+            monitorUpdateRequest: () => {
+                this.handleMonitorUpdateRequest(webview);
             },
             deleteWorkspaceRequest: (params) => {
                 this.handleDeleteWorkspaceRequest(params.model, webview);
@@ -81,14 +81,14 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         };
     }
     // State tracker for ongoing operations
-    private operating: { [modelName: string]: boolean } = {};
+    private operatingState: Record<string, boolean> = {};
     private async handleDeleteWorkspaceRequest(model: string, webview: MessageSink<ToWebViewMsgDef>) {
-        if (this.operating[model]) {
+        if (this.operatingState[model]) {
             vscode.window.showErrorMessage(`Operation in progress for 'workspace-${model}'. Please wait.`);
             return;
         }
 
-        this.operating[model] = true;
+        this.operatingState[model] = true;
         try {
             await longRunning(`Deleting 'workspace-${model}'`, async () => {
                 const command = `delete workspace workspace-${model}`;
@@ -103,7 +103,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             vscode.window.showInformationMessage(`'workspace-${model}' was deleted successfully`);
             await this.updateModels(webview);
         } finally {
-            this.operating[model] = false;
+            this.operatingState[model] = false;
         }
     }
 
@@ -113,13 +113,13 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         modelYaml: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
-        if (this.operating[modelName]) {
+        if (this.operatingState[modelName]) {
             vscode.window.showErrorMessage(`Operation in progress for 'workspace-${modelName}'. Please wait.`);
             return;
         }
         try {
             await this.handleDeleteWorkspaceRequest(modelName, webview);
-            this.operating[modelName] = true;
+            this.operatingState[modelName] = true;
             await longRunning(`Re-deploying 'workspace-${modelName}'`, async () => {
                 const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
                 writeFileSync(tempFilePath, modelYaml, "utf8");
@@ -133,7 +133,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             vscode.window.showInformationMessage(`'workspace-${modelName}' has been redeployed.`);
             await this.updateModels(webview);
         } finally {
-            this.operating[modelName] = false;
+            this.operatingState[modelName] = false;
         }
     }
 
@@ -155,8 +155,8 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             const conditions: Array<{ type: string; status: string }> = item.status?.conditions || [];
             const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
             models.push({
-                name: item.inference.preset.name,
-                instance: item.resource.instanceType,
+                name: item.inference?.preset?.name,
+                instance: item.resource?.instanceType,
                 resourceReady: resourceReady,
                 inferenceReady: inferenceReady,
                 workspaceReady: workspaceReady,
@@ -170,8 +170,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         });
     }
 
-    private async handleMonitorUpdateRequest(models: ModelState[], webview: MessageSink<ToWebViewMsgDef>) {
-        void models;
+    private async handleMonitorUpdateRequest(webview: MessageSink<ToWebViewMsgDef>) {
         await this.updateModels(webview);
     }
 
@@ -186,15 +185,19 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             }
             const data = JSON.parse(kubectlresult.result.stdout);
             const items = data.items;
-            let pod = { name: null, date: new Date(`2000-01-01T12:00:00Z`) };
+            let pod = null;
             for (const item of items) {
                 const name = item.metadata.name;
                 if (name.startsWith("kaito-workspace")) {
                     const date = new Date(item.metadata.creationTimestamp);
-                    if (date > pod.date) {
+                    if (!pod || date > pod.date) {
                         pod = { name: name, date: date };
                     }
                 }
+            }
+            if (!pod) {
+                vscode.window.showErrorMessage(`Error finding workspace pod.`);
+                return;
             }
             command = `logs ${pod.name} -n kube-system --tail=500`;
             kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);

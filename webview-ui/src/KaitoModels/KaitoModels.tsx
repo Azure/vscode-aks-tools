@@ -79,15 +79,15 @@ export function KaitoModels(initialState: InitialState) {
     }
     function generateCRD(model: string) {
         // model[0] is
-        const yaml = generateKaitoYAML(model)[0];
+        const yaml = generateKaitoYAML(model).yaml;
         vscode.postGenerateCRDRequest({ model: yaml });
         return;
     }
 
     function onClickDeployKaito(model: string) {
-        const [yaml, gpu] = generateKaitoYAML(model);
+        const { yaml, gpu } = generateKaitoYAML(model);
         if (!(gpu === undefined)) {
-            vscode.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
+            vscode.postDeployKaitoRequest({ model, yaml, gpu });
         }
     }
 
@@ -359,7 +359,7 @@ export function KaitoModels(initialState: InitialState) {
 }
 
 // exported function to be shared in other kaito-related webviews
-export function generateKaitoYAML(model: string): [string, string | undefined] {
+export function generateKaitoYAML(model: string): { yaml: string; gpu: string | undefined } {
     const allModelDetails = kaitoSupporterModel.modelDetails;
     // Helper function to fetch model details by name
     const getModelDetails = (modelName: string) => {
@@ -397,5 +397,5 @@ inference:
   preset:
     name: ${inferenceName}${privateConfig}`;
     // Passing along gpu specification for subsequent usage
-    return [yaml, gpu];
+    return { yaml, gpu };
 }

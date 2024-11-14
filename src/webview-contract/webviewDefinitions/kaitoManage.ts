@@ -15,7 +15,7 @@ export type ModelState = {
 };
 
 export type ToVsCodeMsgDef = {
-    monitorUpdateRequest: { models: ModelState[] };
+    monitorUpdateRequest: {};
     deleteWorkspaceRequest: { model: string };
     redeployWorkspaceRequest: { modelName: string; modelYaml: string };
     getLogsRequest: {};
