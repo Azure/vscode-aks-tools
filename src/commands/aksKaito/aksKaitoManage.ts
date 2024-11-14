@@ -86,8 +86,8 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         const conditions: Array<{ type: string; status: string }> = item.status?.conditions || [];
         const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
         models.push({
-            name: item.inference.preset.name,
-            instance: item.resource.instanceType,
+            name: item.inference?.preset?.name,
+            instance: item.resource?.instanceType,
             resourceReady: resourceReady,
             inferenceReady: inferenceReady,
             workspaceReady: workspaceReady,

@@ -39,8 +39,8 @@ export function getKaitoManageScenarios() {
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         void webview;
         return {
-            monitorUpdateRequest: ({ models }) => {
-                console.log("monitorUpdateRequest", models);
+            monitorUpdateRequest: () => {
+                console.log("monitorUpdateRequest");
             },
             deleteWorkspaceRequest: ({ model }) => {
                 console.log("deleteWorkspaceRequest", model);
