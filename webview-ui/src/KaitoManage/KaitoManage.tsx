@@ -10,7 +10,7 @@ export function KaitoManage(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
     // updates workspace status
     async function updateStatus() {
-        vscode.postMonitorUpdateRequest({ models: state.models });
+        vscode.postMonitorUpdateRequest({});
     }
     // retrieves & outputs logs
     async function getLogs() {
@@ -78,7 +78,10 @@ export function KaitoManage(initialState: InitialState) {
                                             <div className={styles.buttonDiv}>
                                                 <button
                                                     onClick={() =>
-                                                        redeployWorkspace(model.name, generateKaitoYAML(model.name)[0])
+                                                        redeployWorkspace(
+                                                            model.name,
+                                                            generateKaitoYAML(model.name).yaml,
+                                                        )
                                                     }
                                                     className={`${styles.button} ${styles.redeployButton}`}
                                                 >
@@ -190,7 +193,6 @@ export function KaitoManage(initialState: InitialState) {
                     </div>
                 ))}
             </div>
-            {void state}
         </>
     );
 }
