@@ -42,10 +42,8 @@ export type FederatedIdentityCredential = FederatedIdentityCredentialParams & {
 };
 
 export function createGraphClient(sessionProvider: ReadyAzureSessionProvider): Client {
-    // The "Visual Studio Code" application (aebc6443-996d-45c2-90f0-388ff96faa56) does not have delegated
-    // permission to call the Microsoft Graph endpoints required here. We need to use a different application ID.
-    // TODO: This is the "Visual Studio" client ID. We should instead be using our own first party application.
-    const applicationClientId = "04f0c124-f2bc-4f59-8241-bf6df9866bbd";
+    // The "Visual Studio Code" application id.
+    const applicationClientId = "aebc6443-996d-45c2-90f0-388ff96faa56";
 
     const baseUrl = getMicrosoftGraphClientBaseUrl();
     const authProvider: AuthenticationProvider = {

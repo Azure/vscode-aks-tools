@@ -47,3 +47,23 @@ export async function createFederatedCredential(
         return { succeeded: false, error: getErrorMessage(e) };
     }
 }
+
+export async function createGitHubActionFederatedIdentityCredential(
+    client: ManagedServiceIdentityClient,
+    resourceGroupName: string,
+    resourceName: string,
+    organization: string,
+    repository: string,
+    branch: string,
+): Promise<Errorable<void>> {
+    const subject = `repo:${organization}/${repository}:ref:refs/heads/${branch}`;
+    return createFederatedCredential(
+        client,
+        resourceGroupName,
+        resourceName,
+        "gitHub_actions",
+        "https://token.actions.githubusercontent.com",
+        subject,
+        "api://AzureADTokenExchange",
+    );
+}

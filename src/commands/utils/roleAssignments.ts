@@ -26,6 +26,11 @@ export function getScopeForAcr(subscriptionId: string, resourceGroup: string, ac
     return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/${acrProvider}/registries/${acrName}`;
 }
 
+export function getScopeForCluster(subscriptionId: string, resourceGroup: string, clusterName: string): string {
+    // ARM resource ID for AKS
+    return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${clusterName}`;
+}
+
 // There are several permitted principal types, see: https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/create?view=rest-authorization-2022-04-01&tabs=HTTP#principaltype
 // For now, 'ServicePrincipal' and 'User' are the ones we're most likely to use here,
 // but we can add more as needed.
