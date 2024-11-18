@@ -101,8 +101,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 this.handleLLMModelsRequest(webview);
             },
             generateWorkspaceRequest: () => {
-                // workspace: Workspace
-                this.handleGenerateWorkspaceRequest(webview);
+                this.handleGenerateWorkspaceRequest();
             },
             deployWorkspace: () => {
                 this.handleDeployWorkspaceRequest(webview);
@@ -118,9 +117,8 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
     }
 
-    private async handleGenerateWorkspaceRequest(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleGenerateWorkspaceRequest() {
         vscode.commands.executeCommand("aks.aksKaitoCreateCRD", this.newtarget);
-        void webview;
     }
     private async handleLLMModelsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         // get supported llm models from static config

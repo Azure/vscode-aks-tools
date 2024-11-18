@@ -90,6 +90,9 @@ export function KaitoModels(initialState: InitialState) {
             vscode.postDeployKaitoRequest({ model, yaml, gpu });
         }
     }
+    function redirectKaitoManage() {
+        vscode.postKaitoManageRedirectRequest({});
+    }
 
     function resetState() {
         vscode.postResetStateRequest({});
@@ -140,7 +143,7 @@ export function KaitoModels(initialState: InitialState) {
                                                 <>
                                                     <div>
                                                         <button
-                                                            className={styles.generateButton}
+                                                            className={styles.button}
                                                             disabled={undeployable(selectedModel)}
                                                             onClick={() => onClickDeployKaito(selectedModel)}
                                                         >
@@ -165,7 +168,7 @@ export function KaitoModels(initialState: InitialState) {
                                             <div>
                                                 <button
                                                     onClick={() => generateCRD(selectedModel)}
-                                                    className={styles.generateButton}
+                                                    className={styles.button}
                                                 >
                                                     Customize workspace CRD
                                                 </button>
@@ -261,11 +264,14 @@ export function KaitoModels(initialState: InitialState) {
                                                 state.workspaceReady && (
                                                     /* {true && ( */
                                                     <>
-                                                        <div className={styles.sucess}>
-                                                            <span className={styles.bold}>
+                                                        <div className={styles.success}>
+                                                            <span className={styles.successSpan}>
                                                                 Model successfully deployed!
                                                             </span>
                                                         </div>
+                                                        <button onClick={redirectKaitoManage} className={styles.button}>
+                                                            View deployed models
+                                                        </button>
                                                     </>
                                                 )}
                                         </div>

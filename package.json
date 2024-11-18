@@ -558,7 +558,7 @@
             },
             {
                 "id": "aks.kaitoInstallSubMenu",
-                "label": "Deploy a LLM with KAITO (Beta)"
+                "label": "Deploy a LLM with KAITO"
             }
         ]
     },

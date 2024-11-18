@@ -11,6 +11,7 @@ import { failed } from "../utils/errorable";
 import { getExtension, longRunning } from "../utils/host";
 import { getConditions, convertAgeToMinutes } from "../../panels/utilities/KaitoHelpers";
 import { invokeKubectlCommand } from "../utils/kubectl";
+import { kaitoPodStatus } from "../utils/kaitoValidationHelpers";
 
 export default async function aksKaitoManage(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -71,9 +72,28 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
+    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
+
+    // Returns an object with the status of the kaito pods
+    const { kaitoWorkspaceReady, kaitoGPUProvisionerReady } = await kaitoPodStatus(
+        clusterName,
+        filterKaitoPodNames.result,
+        kubectl,
+        kubeConfigFile.filePath,
+    );
+    if (!kaitoWorkspaceReady) {
+        vscode.window.showWarningMessage(
+            `The 'kaito-workspace' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+        );
+        return;
+    } else if (!kaitoGPUProvisionerReady) {
+        vscode.window.showWarningMessage(
+            `The 'kaito-gpu-provisoner' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+        );
+        return;
+    }
 
     // The logic below is to acquire the initial deployment data.
-    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
     const command = `get workspace -o json`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
     if (failed(kubectlresult)) {
