@@ -5,9 +5,7 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoTest";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { exec, ExecException, spawn } from "child_process";
 import { longRunning } from "../commands/utils/host";
-import getPort from "get-port";
 
 export class KaitoTestPanel extends BasePanel<"kaitoTest"> {
     constructor(extensionUri: vscode.Uri) {
@@ -54,7 +52,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-        void webview;
         return {
             queryRequest: (params) => {
                 this.handleQueryRequest(
@@ -90,6 +87,18 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
             .replace(/\0/g, "\\0"); // Escape null characters
     }
 
+    private async getClusterIP() {
+        const ipCommand = `--kubeconfig="${this.kubeConfigFilePath}" get svc workspace-${this.modelName} -o jsonpath='{.spec.clusterIP}' `;
+        const ipResult = await this.kubectl.api.invokeCommand(ipCommand);
+        if (ipResult && ipResult.code === 0) {
+            return ipResult.stdout;
+        } else if (ipResult === undefined) {
+            vscode.window.showErrorMessage(`Failed to get cluster IP for model ${this.modelName}`);
+        } else if (ipResult.code !== 0) {
+            vscode.window.showErrorMessage(`Failed to connect to cluster: ${ipResult.code}\nError: ${ipResult.stderr}`);
+        }
+        return "";
+    }
     // Sends a request to the inference server to generate a response to the given prompt
     private async handleQueryRequest(
         prompt: string,
@@ -100,47 +109,58 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         maxLength: number,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
-        // prevents user from re-submitting while a query is in progress
         if (this.sendingQuery) {
+            vscode.window.showErrorMessage(`A query is currently being sent. Please wait.`);
             return;
         }
         await longRunning(`Sending query...`, async () => {
+            // prevents the user from sending another query while the current one is in progress
             this.sendingQuery = true;
-            const localPort = await getPort();
-            const portForwardProcess = spawn("kubectl", [
-                "port-forward",
-                `svc/workspace-${this.modelName}`,
-                `${localPort}:80`,
-                "--kubeconfig",
-                this.kubeConfigFilePath,
-            ]);
-
-            // slight delay to allow for port forwarding to initialize
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-            const curlCommand = `curl -X POST http://localhost:${localPort}/chat -H "accept: application/json" -H \
+            try {
+                // retrieving the cluster IP
+                const clusterIP = await this.getClusterIP();
+                if (clusterIP === "") {
+                    this.sendingQuery = false;
+                    return;
+                }
+                const podName = `curl-${Date.now()}`;
+                // this command creates a curl pod and executes the query
+                const createCommand = `--kubeconfig="${this.kubeConfigFilePath}" run -it --restart=Never ${podName} \
+--image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
 "Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", \
 "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
 "repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
+                let curlResult = null;
 
-            // Send the query to the inference server
-            await new Promise<void>((resolve, reject) => {
-                exec(curlCommand, (error: ExecException | null, stdout: string, stderr: string) => {
-                    if (error) {
-                        vscode.window.showErrorMessage(`Error executing curl command: ${stderr}`);
-                        reject(error);
-                        this.sendingQuery = false;
-                    } else {
-                        webview.postTestUpdate({
-                            clusterName: this.clusterName,
-                            modelName: this.modelName,
-                            output: JSON.parse(stdout).Result,
-                        });
-                        resolve();
-                    }
-                    portForwardProcess.kill();
-                });
-            });
+                // used to delete the curl pod after query is complete
+                const deleteCommand = `--kubeconfig="${this.kubeConfigFilePath}" delete pod ${podName}`;
+                await this.kubectl.api.invokeCommand(createCommand);
+
+                // retrieve the result of curl request from the pod
+                const logsCommand = `--kubeconfig="${this.kubeConfigFilePath}" logs ${podName}`;
+                const logsResult = await this.kubectl.api.invokeCommand(logsCommand);
+                if (logsResult && logsResult.code === 0) {
+                    curlResult = logsResult.stdout;
+                    webview.postTestUpdate({
+                        clusterName: this.clusterName,
+                        modelName: this.modelName,
+                        output: JSON.parse(curlResult).Result,
+                    });
+                } else if (logsResult) {
+                    vscode.window.showErrorMessage(
+                        `Failed to retrieve logs: ${logsResult.code}\nError: ${logsResult.stderr}`,
+                    );
+                } else {
+                    vscode.window.showErrorMessage(`Failed to connect to cluster`);
+                }
+                await this.kubectl.api.invokeCommand(deleteCommand);
+                this.sendingQuery = false;
+                return;
+            } catch (error) {
+                vscode.window.showErrorMessage(`Error during operation: ${error}`);
+                this.sendingQuery = false;
+                return;
+            }
         });
-        this.sendingQuery = false;
     }
 }

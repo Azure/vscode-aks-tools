@@ -14,6 +14,8 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
 import { Usage } from "@azure/arm-compute";
+import { kaitoPodStatus } from "./utilities/KaitoHelpers";
+import { filterPodName } from "../commands/utils/clusters";
 
 enum GpuFamilies {
     NCSv3Family = "s_v3",
@@ -37,6 +39,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
+        readonly newtarget: unknown,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -44,6 +47,8 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         this.armId = armId;
         this.kubectl = kubectl;
         this.kubeConfigFilePath = kubeConfigFilePath;
+        this.sessionProvider = sessionProvider;
+        this.newtarget = newtarget;
     }
     // When true, will break the loop that is watching the workspace progress
     // private cancelToken: boolean = false;
@@ -79,6 +84,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             updateStateRequest: false,
             resetStateRequest: false,
             cancelRequest: false,
+            kaitoManageRedirectRequest: true,
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
@@ -101,9 +107,15 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             cancelRequest: (params) => {
                 this.cancel(params.model);
             },
+            kaitoManageRedirectRequest: () => {
+                this.handleKaitoManageRedirectRequest();
+            },
         };
     }
 
+    private async handleKaitoManageRedirectRequest() {
+        vscode.commands.executeCommand("aks.aksKaitoManage", this.newtarget);
+    }
     private async handleGenerateCRDRequest(yaml: string) {
         const doc = await vscode.workspace.openTextDocument({
             content: yaml,
@@ -211,6 +223,45 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             this.checkingGPU = true;
             let quotaAvailable = false;
             let getResult = null;
+            // let status = false;
+            await longRunning(`Validating KAITO workspace staus`, async () => {
+                // Returns an object with the status of the kaito pods
+                const filterKaitoPodNames = await filterPodName(
+                    this.sessionProvider,
+                    this.kubectl,
+                    this.subscriptionId,
+                    this.resourceGroupName,
+                    this.clusterName,
+                    "kaito-",
+                );
+                if (failed(filterKaitoPodNames)) {
+                    vscode.window.showErrorMessage(filterKaitoPodNames.error);
+                    return;
+                }
+                const { kaitoWorkspaceReady, kaitoGPUProvisionerReady } = await kaitoPodStatus(
+                    filterKaitoPodNames.result,
+                    this.kubectl,
+                    this.kubeConfigFilePath,
+                );
+                if (!kaitoWorkspaceReady) {
+                    vscode.window.showWarningMessage(
+                        `The 'kaito-workspace' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+                    );
+                    return;
+                } else if (!kaitoGPUProvisionerReady) {
+                    vscode.window.showWarningMessage(
+                        `The 'kaito-gpu-provisoner' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+                    );
+                    return;
+                }
+                // else {
+                //     status = true;
+                // }
+            });
+            // if (status) {
+            //     this.checkingGPU = false;
+            //     return;
+            // }
             await longRunning(`Checking if workspace exists...`, async () => {
                 const getCommand = `get workspace workspace-${model}`;
                 getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);

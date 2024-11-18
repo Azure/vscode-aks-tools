@@ -1,9 +1,5 @@
-import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import {
-    InitialState,
-    ToVsCodeMsgDef,
-    ToWebViewMsgDef,
-} from "../../../src/webview-contract/webviewDefinitions/kaitoTest";
+import { MessageHandler } from "../../../src/webview-contract/messaging";
+import { InitialState, ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaitoTest";
 import { KaitoTest } from "../KaitoTest/KaitoTest";
 import { stateUpdater } from "../KaitoTest/state";
 import { Scenario } from "../utilities/manualTest";
@@ -15,8 +11,7 @@ export function getKaitoTestScenarios() {
         output: "What is the meaning of life?\n\nThe meaning of life is to be happy.",
     };
 
-    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-        void webview;
+    function getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
             queryRequest: (params) => {
                 console.log("queryRequest", params);

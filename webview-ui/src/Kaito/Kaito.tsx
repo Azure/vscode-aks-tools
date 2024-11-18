@@ -2,7 +2,7 @@ import { VSCodeButton, VSCodeProgressRing, VSCodeDivider } from "@vscode/webview
 import { InitialState, ProgressEventType } from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { useStateManagement } from "../utilities/state";
 import styles from "./Kaito.module.css";
-import kaitoimage from "./kaitoimage.png";
+import kaitoimage from "./kaito-image.png";
 import { useState } from "react";
 
 import { stateUpdater, vscode } from "./state";
@@ -26,14 +26,13 @@ export function Kaito(initialState: InitialState) {
     return (
         <>
             <div className={styles.container}>
-                <h2>Kubernetes AI Toolchain Operator (KAITO)</h2>
+                <h2>Kubernetes AI Toolchain Operator (KAITO) - {state.clusterName}</h2>
                 <VSCodeDivider />
                 <div className={styles.subHeader}>
                     Using KAITO, the workflow of onboarding and deploying large AI inference models on your cluster is
                     largely simplified. KAITO manages large model files using container images and hosts them in the
                     public Microsoft Container Registry (MCR) if the license allows.
                 </div>
-                <h4 className={styles.subHeaderForVersion}>Version: v1.0</h4>
                 <h3 className={styles.architecture}>Architecture</h3>
                 <div className={styles.architectureSubHeader}>
                     KAITO follows the classic Kubernetes Custom Resource Definition(CRD)/controller design pattern. User
@@ -52,16 +51,27 @@ export function Kaito(initialState: InitialState) {
                         </li>
                         <li>Auto-provisions cost-effective GPU nodes based on model requirements.</li>
                         <li>KAITO provides an HTTP server to perform inference calls using the model library.</li>
+                        <p className={styles.installBlurb}>
+                            (By pressing install, you will install the managed KAITO addon. To read the official
+                            documentation, click{" "}
+                            <a
+                                className={styles.link}
+                                href="https://learn.microsoft.com/en-us/azure/aks/ai-toolchain-operator"
+                            >
+                                here.
+                            </a>
+                            )
+                        </p>
                     </ul>
                 </div>
                 <div>
                     {state.kaitoInstallStatus === ProgressEventType.NotStarted && (
-                        <VSCodeButton onClick={handleClick} disabled={isDisabled}>
-                            Install
-                        </VSCodeButton>
+                        <button className={styles.button} onClick={handleClick} disabled={isDisabled}>
+                            Install KAITO
+                        </button>
                     )}
                     {state.kaitoInstallStatus === ProgressEventType.InProgress &&
-                        state.operationDescription.includes("Installing Kaito") && (
+                        state.operationDescription.includes("Installing KAITO") && (
                             <div
                                 style={{
                                     flexDirection: "row",
@@ -75,7 +85,7 @@ export function Kaito(initialState: InitialState) {
                             </div>
                         )}
                     {state.kaitoInstallStatus === ProgressEventType.InProgress &&
-                        state.operationDescription.includes("Kaito Federated Credentials and role Assignments") && (
+                        state.operationDescription.includes("KAITO Federated Credentials and role Assignments") && (
                             <div
                                 style={{
                                     flexDirection: "row",

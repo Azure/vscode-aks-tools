@@ -61,17 +61,17 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
 
     if (filterKaitoPodNames.result.length === 0) {
         vscode.window.showWarningMessage(
-            `Please install Kaito for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
+            `Please install Kaito for cluster ${clusterName}. \n \n KAITO Workspace generation is only enabled when KAITO is installed.`,
         );
         return;
     }
+
     const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-
     const panel = new KaitoModelsPanel(extension.result.extensionUri);
     const dataProvider = new KaitoModelsPanelDataProvider(
         clusterName,
@@ -81,6 +81,7 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
         kubectl,
         kubeConfigFile.filePath,
         sessionProvider.result,
+        target,
     );
     panel.show(dataProvider);
 }

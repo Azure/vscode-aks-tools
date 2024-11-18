@@ -61,7 +61,6 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-        void webview;
         return {
             monitorUpdateRequest: () => {
                 this.handleMonitorUpdateRequest(webview);

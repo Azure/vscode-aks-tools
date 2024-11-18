@@ -1,5 +1,5 @@
-import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import { ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaitoManage";
+import { MessageHandler } from "../../../src/webview-contract/messaging";
+import { ToVsCodeMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaitoManage";
 import { KaitoManage } from "../KaitoManage/KaitoManage";
 import { stateUpdater } from "../KaitoManage/state";
 import { Scenario } from "../utilities/manualTest";
@@ -36,8 +36,7 @@ export function getKaitoManageScenarios() {
         ],
     };
 
-    function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-        void webview;
+    function getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
             monitorUpdateRequest: () => {
                 console.log("monitorUpdateRequest");
