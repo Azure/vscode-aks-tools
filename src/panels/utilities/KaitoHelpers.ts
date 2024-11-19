@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../../commands/utils/errorable";
-import { invokeKubectlCommand } from "../../commands/utils/kubectl";
 import { longRunning } from "../../commands/utils/host";
+import { invokeKubectlCommand } from "../../commands/utils/kubectl";
 
 // helper for parsing the conditions object on a workspace
 function statusToBoolean(status: string): boolean {
@@ -77,4 +77,64 @@ export async function kaitoPodStatus(
         }
     });
     return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
+}
+
+export async function createCurlPodCommand(
+    kubeConfigFilePath: string,
+    podName: string,
+    clusterIP: string,
+    prompt: string,
+    temperature: number,
+    topP: number,
+    topK: number,
+    repetitionPenalty: number,
+    maxLength: number,
+) {
+    const createCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+--image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
+"Content-Type: application/json" -d '{"prompt":"${escapeSpecialChars(prompt)}", \
+"generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
+"repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
+    return createCommand;
+}
+
+export async function deleteCurlPodCommand(kubeConfigFilePath: string, podName: string) {
+    const deleteCommand = `--kubeconfig="${kubeConfigFilePath}" delete pod ${podName}`;
+    return deleteCommand;
+}
+
+export async function getCurlPodLogsCommand(kubeConfigFilePath: string, podName: string) {
+    const logsCommand = `--kubeconfig="${kubeConfigFilePath}" logs ${podName}`;
+    return logsCommand;
+}
+
+// Sanitizing the input string
+function escapeSpecialChars(input: string) {
+    return input
+        .replace(/\\/g, "\\\\") // Escape backslashes
+        .replace(/"/g, '\\"') // Escape double quotes
+        .replace(/'/g, "") // Remove single quotes
+        .replace(/\n/g, "\\n") // Escape newlines
+        .replace(/\r/g, "\\r") // Escape carriage returns
+        .replace(/\t/g, "\\t") // Escape tabs
+        .replace(/\f/g, "\\f") // Escape form feeds
+        .replace(/`/g, "") // Remove backticks
+        .replace(/\0/g, "\\0"); // Escape null characters
+}
+
+export async function getClusterIP(
+    kubeConfigFilePath: string,
+    modelName: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+) {
+    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc workspace-${modelName} -o jsonpath='{.spec.clusterIP}' `;
+    const ipResult = await kubectl.api.invokeCommand(ipCommand);
+    if (ipResult && ipResult.code === 0) {
+        return ipResult.stdout;
+    } else if (ipResult === undefined) {
+        vscode.window.showErrorMessage(`Failed to get cluster IP for model ${modelName}`);
+    } else if (ipResult.code !== 0) {
+        vscode.window.showErrorMessage(`Failed to connect to cluster: ${ipResult.code}\nError: ${ipResult.stderr}`);
+    }
+    return "";
 }

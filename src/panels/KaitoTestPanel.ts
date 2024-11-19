@@ -1,11 +1,17 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { longRunning } from "../commands/utils/host";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoTest";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { longRunning } from "../commands/utils/host";
+import {
+    createCurlPodCommand,
+    deleteCurlPodCommand,
+    getClusterIP,
+    getCurlPodLogsCommand,
+} from "./utilities/KaitoHelpers";
 
 export class KaitoTestPanel extends BasePanel<"kaitoTest"> {
     constructor(extensionUri: vscode.Uri) {
@@ -71,34 +77,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         return value ?? false;
     }
     // Tracks if query is currently beign sent. If so, prevents user from sending another query
-    private sendingQuery: boolean = false;
-
-    // Sanitizing the input string
-    private escapeSpecialChars(input: string) {
-        return input
-            .replace(/\\/g, "\\\\") // Escape backslashes
-            .replace(/"/g, '\\"') // Escape double quotes
-            .replace(/'/g, "") // Remove single quotes
-            .replace(/\n/g, "\\n") // Escape newlines
-            .replace(/\r/g, "\\r") // Escape carriage returns
-            .replace(/\t/g, "\\t") // Escape tabs
-            .replace(/\f/g, "\\f") // Escape form feeds
-            .replace(/`/g, "") // Remove backticks
-            .replace(/\0/g, "\\0"); // Escape null characters
-    }
-
-    private async getClusterIP() {
-        const ipCommand = `--kubeconfig="${this.kubeConfigFilePath}" get svc workspace-${this.modelName} -o jsonpath='{.spec.clusterIP}' `;
-        const ipResult = await this.kubectl.api.invokeCommand(ipCommand);
-        if (ipResult && ipResult.code === 0) {
-            return ipResult.stdout;
-        } else if (ipResult === undefined) {
-            vscode.window.showErrorMessage(`Failed to get cluster IP for model ${this.modelName}`);
-        } else if (ipResult.code !== 0) {
-            vscode.window.showErrorMessage(`Failed to connect to cluster: ${ipResult.code}\nError: ${ipResult.stderr}`);
-        }
-        return "";
-    }
+    private isQueryInProgress: boolean = false;
     // Sends a request to the inference server to generate a response to the given prompt
     private async handleQueryRequest(
         prompt: string,
@@ -109,35 +88,45 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         maxLength: number,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
-        if (this.sendingQuery) {
+        if (this.isQueryInProgress) {
             vscode.window.showErrorMessage(`A query is currently being sent. Please wait.`);
             return;
         }
         await longRunning(`Sending query...`, async () => {
             // prevents the user from sending another query while the current one is in progress
-            this.sendingQuery = true;
+            this.isQueryInProgress = true;
             try {
                 // retrieving the cluster IP
-                const clusterIP = await this.getClusterIP();
+                const clusterIP = await getClusterIP(this.kubeConfigFilePath, this.modelName, this.kubectl);
                 if (clusterIP === "") {
-                    this.sendingQuery = false;
+                    this.isQueryInProgress = false;
                     return;
                 }
                 const podName = `curl-${Date.now()}`;
                 // this command creates a curl pod and executes the query
-                const createCommand = `--kubeconfig="${this.kubeConfigFilePath}" run -it --restart=Never ${podName} \
---image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d '{"prompt":"${this.escapeSpecialChars(prompt)}", \
-"generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
-"repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
+                const createCommand = await createCurlPodCommand(
+                    this.kubeConfigFilePath,
+                    podName,
+                    clusterIP,
+                    prompt,
+                    temperature,
+                    topP,
+                    topK,
+                    repetitionPenalty,
+                    maxLength,
+                );
                 let curlResult = null;
 
                 // used to delete the curl pod after query is complete
-                const deleteCommand = `--kubeconfig="${this.kubeConfigFilePath}" delete pod ${podName}`;
-                await this.kubectl.api.invokeCommand(createCommand);
+                const deleteCommand = await deleteCurlPodCommand(this.kubeConfigFilePath, podName);
 
                 // retrieve the result of curl request from the pod
-                const logsCommand = `--kubeconfig="${this.kubeConfigFilePath}" logs ${podName}`;
+                const logsCommand = await getCurlPodLogsCommand(this.kubeConfigFilePath, podName);
+
+                // create the curl pod
+                await this.kubectl.api.invokeCommand(createCommand);
+
+                // retrieve the logs from the curl pod
                 const logsResult = await this.kubectl.api.invokeCommand(logsCommand);
                 if (logsResult && logsResult.code === 0) {
                     curlResult = logsResult.stdout;
@@ -154,11 +143,12 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     vscode.window.showErrorMessage(`Failed to connect to cluster`);
                 }
                 await this.kubectl.api.invokeCommand(deleteCommand);
-                this.sendingQuery = false;
+                this.isQueryInProgress = false;
                 return;
             } catch (error) {
+                // are we leaving curl pod without deleting if the error is NOT from curl create command?
                 vscode.window.showErrorMessage(`Error during operation: ${error}`);
-                this.sendingQuery = false;
+                this.isQueryInProgress = false;
                 return;
             }
         });
