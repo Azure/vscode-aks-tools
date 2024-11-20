@@ -14,8 +14,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
 import { Usage } from "@azure/arm-compute";
-import { kaitoPodStatus } from "./utilities/KaitoHelpers";
-import { filterPodName } from "../commands/utils/clusters";
+import { kaitoPodStatus, getKaitoPods } from "./utilities/KaitoHelpers";
 
 enum GpuFamilies {
     NCSv3Family = "s_v3",
@@ -212,9 +211,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     ) {
         this.cancelTokens.set(model, false);
         this.handleResetStateRequest(webview);
-
-        // Resetting cancelToken
-        // this.cancelToken = false;
         // This prevents the user from redeploying while quota is being checked
         if (this.checkingGPU) {
             return;
@@ -223,45 +219,31 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             this.checkingGPU = true;
             let quotaAvailable = false;
             let getResult = null;
-            // let status = false;
+            let readyStatus = { kaitoWorkspaceReady: false, kaitoGPUProvisionerReady: false };
             await longRunning(`Validating KAITO workspace staus`, async () => {
                 // Returns an object with the status of the kaito pods
-                const filterKaitoPodNames = await filterPodName(
+                const kaitoPods = await getKaitoPods(
                     this.sessionProvider,
                     this.kubectl,
                     this.subscriptionId,
                     this.resourceGroupName,
                     this.clusterName,
-                    "kaito-",
                 );
-                if (failed(filterKaitoPodNames)) {
-                    vscode.window.showErrorMessage(filterKaitoPodNames.error);
-                    return;
-                }
-                const { kaitoWorkspaceReady, kaitoGPUProvisionerReady } = await kaitoPodStatus(
-                    filterKaitoPodNames.result,
-                    this.kubectl,
-                    this.kubeConfigFilePath,
-                );
-                if (!kaitoWorkspaceReady) {
+                readyStatus = await kaitoPodStatus(kaitoPods, this.kubectl, this.kubeConfigFilePath);
+                if (!readyStatus.kaitoWorkspaceReady) {
                     vscode.window.showWarningMessage(
                         `The 'kaito-workspace' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
                     );
-                    return;
-                } else if (!kaitoGPUProvisionerReady) {
+                } else if (!readyStatus.kaitoGPUProvisionerReady) {
                     vscode.window.showWarningMessage(
                         `The 'kaito-gpu-provisoner' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
                     );
-                    return;
                 }
-                // else {
-                //     status = true;
-                // }
             });
-            // if (status) {
-            //     this.checkingGPU = false;
-            //     return;
-            // }
+            if (!readyStatus.kaitoWorkspaceReady || !readyStatus.kaitoGPUProvisionerReady) {
+                this.checkingGPU = false;
+                return;
+            }
             await longRunning(`Checking if workspace exists...`, async () => {
                 const getCommand = `get workspace workspace-${model}`;
                 getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);

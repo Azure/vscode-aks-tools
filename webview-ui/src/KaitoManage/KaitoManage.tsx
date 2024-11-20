@@ -5,6 +5,7 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/k
 import { VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { generateKaitoYAML } from "../KaitoModels/KaitoModels";
 import { useEffect } from "react";
+import { convertMinutesToFormattedAge } from "../KaitoModels/KaitoModels";
 
 export function KaitoManage(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -191,7 +192,7 @@ export function KaitoManage(initialState: InitialState) {
                             </div>
                             <div className={styles.statusRow}>
                                 <span className={styles.statusLabel}>Age</span>
-                                <span className={styles.gray}>{model.age}m</span>
+                                <span className={styles.gray}>{convertMinutesToFormattedAge(model.age)}</span>
                             </div>
                         </div>
                     </div>

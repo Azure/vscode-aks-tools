@@ -252,7 +252,9 @@ export function KaitoModels(initialState: InitialState) {
                                                                 </div>
                                                                 <div className={styles.statusRow}>
                                                                     <span className={styles.statusLabel}>Age:</span>
-                                                                    <span className={styles.gray}>{state.age}m</span>
+                                                                    <span className={styles.gray}>
+                                                                        {convertMinutesToFormattedAge(state.age)}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </>
@@ -262,7 +264,6 @@ export function KaitoModels(initialState: InitialState) {
                                             {selectedModel === state.modelName &&
                                                 state.workspaceExists &&
                                                 state.workspaceReady && (
-                                                    /* {true && ( */
                                                     <>
                                                         <div className={styles.success}>
                                                             <span className={styles.successSpan}>
@@ -405,4 +406,24 @@ inference:
     name: ${inferenceName}${privateConfig}`;
     // Passing along gpu specification for subsequent usage
     return { yaml, gpu };
+}
+
+// Used to display properly formatted age in the UI
+export function convertMinutesToFormattedAge(minutes: number) {
+    const days = Math.floor(minutes / (60 * 24));
+    const hours = Math.floor((minutes % (60 * 24)) / 60);
+    const remainingMinutes = minutes % 60;
+
+    let ageString = "";
+    if (days > 0) {
+        ageString += `${days}d`;
+    }
+    if (hours > 0 || days > 0) {
+        ageString += `${hours}h`;
+    }
+    if (days === 0 && hours <= 9 && remainingMinutes > 0) {
+        ageString += `${remainingMinutes}m`;
+    }
+
+    return ageString || "0m";
 }
