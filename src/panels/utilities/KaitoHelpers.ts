@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../../commands/utils/errorable";
-import { longRunning } from "../../commands/utils/host";
 import { invokeKubectlCommand } from "../../commands/utils/kubectl";
+import { longRunning } from "../../commands/utils/host";
+import { ReadyAzureSessionProvider } from "../../auth/types";
+import { filterPodName } from "../../commands/utils/clusters";
 
 // helper for parsing the conditions object on a workspace
 function statusToBoolean(status: string): boolean {
@@ -40,7 +42,7 @@ export function convertAgeToMinutes(creationTimestamp: string): number {
     return differenceInMinutes;
 }
 
-async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFilePath: string) {
+export async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFilePath: string) {
     const command = `get pod ${pod} -n kube-system -o jsonpath='{.status.containerStatuses[*].ready}'`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
     if (failed(kubectlresult)) {
@@ -77,6 +79,27 @@ export async function kaitoPodStatus(
         }
     });
     return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
+}
+
+export async function getKaitoPods(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    subscriptionId: string,
+    resourceGroupName: string,
+    clusterName: string,
+) {
+    const kaitoPodsPromise = await filterPodName(
+        sessionProvider,
+        kubectl,
+        subscriptionId,
+        resourceGroupName,
+        clusterName,
+        "kaito-",
+    );
+    if (failed(kaitoPodsPromise)) {
+        return [];
+    }
+    return kaitoPodsPromise.result;
 }
 
 export async function createCurlPodCommand(
