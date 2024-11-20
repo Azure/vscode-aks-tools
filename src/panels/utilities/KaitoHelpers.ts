@@ -121,12 +121,12 @@ export async function createCurlPodCommand(
     return createCommand;
 }
 
-export async function deleteCurlPodCommand(kubeConfigFilePath: string, podName: string) {
+export function deleteCurlPodCommand(kubeConfigFilePath: string, podName: string) {
     const deleteCommand = `--kubeconfig="${kubeConfigFilePath}" delete pod ${podName}`;
     return deleteCommand;
 }
 
-export async function getCurlPodLogsCommand(kubeConfigFilePath: string, podName: string) {
+export function getCurlPodLogsCommand(kubeConfigFilePath: string, podName: string) {
     const logsCommand = `--kubeconfig="${kubeConfigFilePath}" logs ${podName}`;
     return logsCommand;
 }

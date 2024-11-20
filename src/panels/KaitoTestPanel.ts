@@ -95,6 +95,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         await longRunning(`Sending query...`, async () => {
             // prevents the user from sending another query while the current one is in progress
             this.isQueryInProgress = true;
+            const podName = `curl-${Date.now()}`;
             try {
                 // retrieving the cluster IP
                 const clusterIP = await getClusterIP(this.kubeConfigFilePath, this.modelName, this.kubectl);
@@ -102,7 +103,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     this.isQueryInProgress = false;
                     return;
                 }
-                const podName = `curl-${Date.now()}`;
                 // this command creates a curl pod and executes the query
                 const createCommand = await createCurlPodCommand(
                     this.kubeConfigFilePath,
@@ -118,10 +118,10 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 let curlResult = null;
 
                 // used to delete the curl pod after query is complete
-                const deleteCommand = await deleteCurlPodCommand(this.kubeConfigFilePath, podName);
+                const deleteCommand = deleteCurlPodCommand(this.kubeConfigFilePath, podName);
 
                 // retrieve the result of curl request from the pod
-                const logsCommand = await getCurlPodLogsCommand(this.kubeConfigFilePath, podName);
+                const logsCommand = getCurlPodLogsCommand(this.kubeConfigFilePath, podName);
 
                 // create the curl pod
                 await this.kubectl.api.invokeCommand(createCommand);
@@ -146,7 +146,11 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 this.isQueryInProgress = false;
                 return;
             } catch (error) {
-                // are we leaving curl pod without deleting if the error is NOT from curl create command?
+                // deletes pod if an error occurs during log retrieval
+                const failsafeDeletion = deleteCurlPodCommand(this.kubeConfigFilePath, podName);
+                await this.kubectl.api.invokeCommand(failsafeDeletion);
+
+                // display error & reset query status
                 vscode.window.showErrorMessage(`Error during operation: ${error}`);
                 this.isQueryInProgress = false;
                 return;
