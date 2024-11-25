@@ -73,19 +73,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
-        const currentVersion = vscode.extensions.getExtension("ms-kubernetes-tools.vscode-aks-tools")?.packageJSON
-            .version;
-        const lastShownVersion = context.globalState.get<string>("vscode-aks-tools.lastWalkthroughVersion");
-        // Check if the walkthrough needs to be shown
-        if (currentVersion && currentVersion !== lastShownVersion) {
-            await vscode.commands.executeCommand("workbench.action.openWalkthrough", {
-                category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
-            });
-
-            // Update the version in global state after showing the walkthrough
-            await context.globalState.update("vscode-aks-tools.lastWalkthroughVersion", currentVersion);
-        }
-
         registerUIExtensionVariables(uiExtensionVariables);
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectTenant", selectTenant);
