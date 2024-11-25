@@ -55,7 +55,6 @@ export async function kaitoPodStatus(
             `The 'kaito-gpu-provisoner' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
         );
     }
-    console.log({ kaitoWorkspaceReady, kaitoGPUProvisionerReady });
     return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }
 

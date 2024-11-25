@@ -103,6 +103,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     for (const item of data.items) {
         const conditions: Array<{ type: string; status: string }> = item.status?.conditions || [];
         const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
+        // The data below is used to indicate the current progress of the active model deployments
         models.push({
             name: item.inference?.preset?.name,
             instance: item.resource?.instanceType,

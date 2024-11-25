@@ -35,6 +35,7 @@ export function getConditions(conditions: Array<{ type: string; status: string }
     return { resourceReady, inferenceReady, workspaceReady };
 }
 
+// This helper function converts the creation timestamp to minutes
 export function convertAgeToMinutes(creationTimestamp: string): number {
     const createdTime = new Date(creationTimestamp).getTime();
     const currentTime = Date.now();
