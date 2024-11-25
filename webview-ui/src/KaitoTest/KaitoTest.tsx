@@ -28,7 +28,6 @@ export function KaitoTest(initialState: InitialState) {
     };
 
     const handleSubmit = () => {
-        console.log(formData);
         vscode.postQueryRequest(formData);
     };
 

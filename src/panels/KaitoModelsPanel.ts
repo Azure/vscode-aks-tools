@@ -14,7 +14,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
 import { Usage } from "@azure/arm-compute";
-import { kaitoPodStatus, getKaitoPods } from "./utilities/KaitoHelpers";
+import { kaitoPodStatus, getKaitoPods, convertAgeToMinutes } from "./utilities/KaitoHelpers";
 
 enum GpuFamilies {
     NCSv3Family = "s_v3",
@@ -220,7 +220,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             let quotaAvailable = false;
             let getResult = null;
             let readyStatus = { kaitoWorkspaceReady: false, kaitoGPUProvisionerReady: false };
-            await longRunning(`Validating KAITO workspace staus`, async () => {
+            await longRunning(`Validating KAITO workspace status`, async () => {
                 // Returns an object with the status of the kaito pods
                 const kaitoPods = await getKaitoPods(
                     this.sessionProvider,
@@ -313,13 +313,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     private async handleResetStateRequest(webview: MessageSink<ToWebViewMsgDef>) {
         webview.postDeploymentProgressUpdate(this.getInitialState());
     }
-    convertAgeToMinutes(creationTimestamp: string): number {
-        const createdTime = new Date(creationTimestamp);
-        const currentTime = new Date();
-        const differenceInMilliseconds = currentTime.getTime() - createdTime.getTime();
-        const differenceInMinutes = Math.floor(differenceInMilliseconds / 1000 / 60);
-        return differenceInMinutes;
-    }
+
     statusToBoolean(status: string): boolean {
         if (status.toLowerCase() === "true") {
             return true;
@@ -346,7 +340,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             resourceReady: resourceReady,
             inferenceReady: inferenceReady,
             workspaceReady: workspaceReady,
-            age: this.convertAgeToMinutes(data.metadata?.creationTimestamp),
+            age: convertAgeToMinutes(data.metadata?.creationTimestamp),
         } as InitialState;
     }
 
@@ -376,7 +370,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             resourceReady: resourceReady,
             inferenceReady: inferenceReady,
             workspaceReady: workspaceReady,
-            age: this.convertAgeToMinutes(data.metadata?.creationTimestamp),
+            age: convertAgeToMinutes(data.metadata?.creationTimestamp),
         });
         return;
     }
