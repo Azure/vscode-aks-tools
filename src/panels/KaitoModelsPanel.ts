@@ -14,6 +14,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
 import { Usage } from "@azure/arm-compute";
+import { kaitoPodStatus, getKaitoPods, convertAgeToMinutes } from "./utilities/KaitoHelpers";
 
 enum GpuFamilies {
     NCSv3Family = "s_v3",
@@ -37,6 +38,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
+        readonly newtarget: unknown,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -44,6 +46,8 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         this.armId = armId;
         this.kubectl = kubectl;
         this.kubeConfigFilePath = kubeConfigFilePath;
+        this.sessionProvider = sessionProvider;
+        this.newtarget = newtarget;
     }
     // When true, will break the loop that is watching the workspace progress
     // private cancelToken: boolean = false;
@@ -79,6 +83,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             updateStateRequest: false,
             resetStateRequest: false,
             cancelRequest: false,
+            kaitoManageRedirectRequest: true,
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
@@ -101,9 +106,15 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             cancelRequest: (params) => {
                 this.cancel(params.model);
             },
+            kaitoManageRedirectRequest: () => {
+                this.handleKaitoManageRedirectRequest();
+            },
         };
     }
 
+    private async handleKaitoManageRedirectRequest() {
+        vscode.commands.executeCommand("aks.aksKaitoManage", this.newtarget);
+    }
     private async handleGenerateCRDRequest(yaml: string) {
         const doc = await vscode.workspace.openTextDocument({
             content: yaml,
@@ -200,9 +211,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     ) {
         this.cancelTokens.set(model, false);
         this.handleResetStateRequest(webview);
-
-        // Resetting cancelToken
-        // this.cancelToken = false;
         // This prevents the user from redeploying while quota is being checked
         if (this.checkingGPU) {
             return;
@@ -211,6 +219,31 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             this.checkingGPU = true;
             let quotaAvailable = false;
             let getResult = null;
+            let readyStatus = { kaitoWorkspaceReady: false, kaitoGPUProvisionerReady: false };
+            await longRunning(`Validating KAITO workspace status`, async () => {
+                // Returns an object with the status of the kaito pods
+                const kaitoPods = await getKaitoPods(
+                    this.sessionProvider,
+                    this.kubectl,
+                    this.subscriptionId,
+                    this.resourceGroupName,
+                    this.clusterName,
+                );
+                readyStatus = await kaitoPodStatus(kaitoPods, this.kubectl, this.kubeConfigFilePath);
+                if (!readyStatus.kaitoWorkspaceReady) {
+                    vscode.window.showWarningMessage(
+                        `The 'kaito-workspace' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+                    );
+                } else if (!readyStatus.kaitoGPUProvisionerReady) {
+                    vscode.window.showWarningMessage(
+                        `The 'kaito-gpu-provisoner' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+                    );
+                }
+            });
+            if (!readyStatus.kaitoWorkspaceReady || !readyStatus.kaitoGPUProvisionerReady) {
+                this.checkingGPU = false;
+                return;
+            }
             await longRunning(`Checking if workspace exists...`, async () => {
                 const getCommand = `get workspace workspace-${model}`;
                 getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);
@@ -280,13 +313,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     private async handleResetStateRequest(webview: MessageSink<ToWebViewMsgDef>) {
         webview.postDeploymentProgressUpdate(this.getInitialState());
     }
-    convertAgeToMinutes(creationTimestamp: string): number {
-        const createdTime = new Date(creationTimestamp);
-        const currentTime = new Date();
-        const differenceInMilliseconds = currentTime.getTime() - createdTime.getTime();
-        const differenceInMinutes = Math.floor(differenceInMilliseconds / 1000 / 60);
-        return differenceInMinutes;
-    }
+
     statusToBoolean(status: string): boolean {
         if (status.toLowerCase() === "true") {
             return true;
@@ -313,7 +340,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             resourceReady: resourceReady,
             inferenceReady: inferenceReady,
             workspaceReady: workspaceReady,
-            age: this.convertAgeToMinutes(data.metadata?.creationTimestamp),
+            age: convertAgeToMinutes(data.metadata?.creationTimestamp),
         } as InitialState;
     }
 
@@ -343,7 +370,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             resourceReady: resourceReady,
             inferenceReady: inferenceReady,
             workspaceReady: workspaceReady,
-            age: this.convertAgeToMinutes(data.metadata?.creationTimestamp),
+            age: convertAgeToMinutes(data.metadata?.creationTimestamp),
         });
         return;
     }

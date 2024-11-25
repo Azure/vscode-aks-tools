@@ -87,8 +87,11 @@ export function KaitoModels(initialState: InitialState) {
     function onClickDeployKaito(model: string) {
         const { yaml, gpu } = generateKaitoYAML(model);
         if (!(gpu === undefined)) {
-            vscode.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
+            vscode.postDeployKaitoRequest({ model, yaml, gpu });
         }
+    }
+    function redirectKaitoManage() {
+        vscode.postKaitoManageRedirectRequest({});
     }
 
     function resetState() {
@@ -96,7 +99,7 @@ export function KaitoModels(initialState: InitialState) {
     }
 
     return (
-        <>
+        <div className={styles.main}>
             <div className={`${styles.mainGridContainer} ${selectedModel ? styles.openSidebar : ""}`}>
                 {selectedModel !== null && (
                     <div className={styles.panelDiv}>
@@ -140,7 +143,7 @@ export function KaitoModels(initialState: InitialState) {
                                                 <>
                                                     <div>
                                                         <button
-                                                            className={styles.generateButton}
+                                                            className={styles.button}
                                                             disabled={undeployable(selectedModel)}
                                                             onClick={() => onClickDeployKaito(selectedModel)}
                                                         >
@@ -165,7 +168,7 @@ export function KaitoModels(initialState: InitialState) {
                                             <div>
                                                 <button
                                                     onClick={() => generateCRD(selectedModel)}
-                                                    className={styles.generateButton}
+                                                    className={styles.button}
                                                 >
                                                     Customize workspace CRD
                                                 </button>
@@ -249,7 +252,9 @@ export function KaitoModels(initialState: InitialState) {
                                                                 </div>
                                                                 <div className={styles.statusRow}>
                                                                     <span className={styles.statusLabel}>Age:</span>
-                                                                    <span className={styles.gray}>{state.age}m</span>
+                                                                    <span className={styles.gray}>
+                                                                        {convertMinutesToFormattedAge(state.age)}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </>
@@ -259,13 +264,15 @@ export function KaitoModels(initialState: InitialState) {
                                             {selectedModel === state.modelName &&
                                                 state.workspaceExists &&
                                                 state.workspaceReady && (
-                                                    /* {true && ( */
                                                     <>
-                                                        <div className={styles.sucess}>
-                                                            <span className={styles.bold}>
+                                                        <div className={styles.success}>
+                                                            <span className={styles.successSpan}>
                                                                 Model successfully deployed!
                                                             </span>
                                                         </div>
+                                                        <button onClick={redirectKaitoManage} className={styles.button}>
+                                                            View deployed models
+                                                        </button>
                                                     </>
                                                 )}
                                         </div>
@@ -354,7 +361,7 @@ export function KaitoModels(initialState: InitialState) {
                     ))}
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 
@@ -399,4 +406,24 @@ inference:
     name: ${inferenceName}${privateConfig}`;
     // Passing along gpu specification for subsequent usage
     return { yaml, gpu };
+}
+
+// Used to display properly formatted age in the UI
+export function convertMinutesToFormattedAge(minutes: number) {
+    const days = Math.floor(minutes / (60 * 24));
+    const hours = Math.floor((minutes % (60 * 24)) / 60);
+    const remainingMinutes = minutes % 60;
+
+    let ageString = "";
+    if (days > 0) {
+        ageString += `${days}d`;
+    }
+    if (hours > 0 || days > 0) {
+        ageString += `${hours}h`;
+    }
+    if (days === 0 && hours <= 9 && remainingMinutes > 0) {
+        ageString += `${remainingMinutes}m`;
+    }
+
+    return ageString || "0m";
 }

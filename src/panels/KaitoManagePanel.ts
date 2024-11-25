@@ -30,6 +30,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
         readonly models: ModelState[],
+        readonly newtarget: unknown,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -38,6 +39,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         this.kubectl = kubectl;
         this.kubeConfigFilePath = kubeConfigFilePath;
         this.models = models;
+        this.newtarget = newtarget;
     }
 
     getTitle(): string {
@@ -73,9 +75,12 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             },
         };
     }
+
     // State tracker for ongoing operations
     private operatingState: Record<string, boolean> = {};
     private async handleDeleteWorkspaceRequest(model: string, webview: MessageSink<ToWebViewMsgDef>) {
+        // Prevent multiple operations on the same model
+        // Expected to be false unless this function has already been called and is currently in progress
         if (this.operatingState[model]) {
             vscode.window.showErrorMessage(`Operation in progress for 'workspace-${model}'. Please wait.`);
             return;
@@ -105,6 +110,8 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         modelYaml: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        // Prevent multiple operations on the same model
+        // Expected to be false unless this function has already been called and is currently in progress
         if (this.operatingState[modelName]) {
             vscode.window.showErrorMessage(`Operation in progress for 'workspace-${modelName}'. Please wait.`);
             return;
@@ -112,6 +119,8 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         try {
             await this.handleDeleteWorkspaceRequest(modelName, webview);
             this.operatingState[modelName] = true;
+
+            // Redeploy the workspace
             await longRunning(`Re-deploying 'workspace-${modelName}'`, async () => {
                 const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
                 writeFileSync(tempFilePath, modelYaml, "utf8");
@@ -146,6 +155,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         for (const item of data.items) {
             const conditions: Array<{ type: string; status: string }> = item.status?.conditions || [];
             const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
+            // The data below is used to indicate the progress of the active model deployment
             models.push({
                 name: item.inference?.preset?.name,
                 instance: item.resource?.instanceType,

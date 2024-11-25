@@ -1,5 +1,20 @@
 # Change Log
 
+## [1.5.2]
+
+* Engine and VSCE package update.
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @qpetraroia, @hsubramanianaks, @Tatsinnit for contributions, testing and reviews.
+
+## [1.5.1]
+
+* Track Version in the Extension Code, for walkthrough.
+* Remove unused and unnecessary parameters for automatic cluster creation.
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @ReinierCC, @kejatura-dev, @qpetraroia, @hsubramanianaks, @joybb, @sabbour for contributions, testing and reviews.
+
 ## [1.5.0]
 
 * Kaito deployment & ux updates.

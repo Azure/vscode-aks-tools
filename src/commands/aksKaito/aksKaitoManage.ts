@@ -6,11 +6,12 @@ import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { KaitoManagePanelDataProvider } from "../../panels/KaitoManagePanel";
 import { KaitoManagePanel } from "../../panels/KaitoManagePanel";
-import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
+import { getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
-import { getExtension, longRunning } from "../utils/host";
+import { getExtension } from "../utils/host";
 import { getConditions, convertAgeToMinutes } from "../../panels/utilities/KaitoHelpers";
 import { invokeKubectlCommand } from "../utils/kubectl";
+import { getKaitoInstallationStatus } from "../utils/kaitoValidationHelpers";
 
 export default async function aksKaitoManage(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -49,31 +50,32 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
         return;
     }
-    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
-    // "kaito-" is assuming kaito pods are still named kaito-workspace & kaito-gpu-provisioner
-    const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
-        return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
-    });
 
-    if (failed(filterKaitoPodNames)) {
-        vscode.window.showErrorMessage(filterKaitoPodNames.error);
-        return;
-    }
-
-    if (filterKaitoPodNames.result.length === 0) {
-        vscode.window.showWarningMessage(
-            `Please install Kaito for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
-        );
-        return;
-    }
     const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
 
-    // The logic below is to acquire the initial deployment data.
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
+    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
+
+    // Returns an object with the status of the kaito pods
+    const kaitoStatus = await getKaitoInstallationStatus(
+        sessionProvider,
+        kubectl,
+        subscriptionId,
+        resourceGroupName,
+        clusterName,
+        clusterInfo,
+    );
+
+    // Only proceed if kaito is installed and both the workspace & gpu-provisioner pods are running
+    if (!kaitoStatus.kaitoInstalled || !kaitoStatus.kaitoWorkspaceReady || !kaitoStatus.kaitoGPUProvisionerReady) {
+        return;
+    }
+
+    // The logic below is to acquire the initial deployment data.
     const command = `get workspace -o json`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
     if (failed(kubectlresult)) {
@@ -85,6 +87,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     for (const item of data.items) {
         const conditions: Array<{ type: string; status: string }> = item.status?.conditions || [];
         const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
+        // The data below is used to indicate the current progress of the active model deployments
         models.push({
             name: item.inference?.preset?.name,
             instance: item.resource?.instanceType,
@@ -104,6 +107,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         kubectl,
         kubeConfigFile.filePath,
         models,
+        target,
     );
     panel.show(dataProvider);
 }

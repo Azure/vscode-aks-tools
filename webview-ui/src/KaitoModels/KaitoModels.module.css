@@ -1,4 +1,4 @@
-body {
+.main {
     color: var(--vscode-editor-foreground, #fff);
     overflow-x: hidden;
 }
@@ -126,6 +126,10 @@ body {
     color: var(--vscode-editor-foreground, #fff);
     font-weight: 700;
 }
+.successSpan {
+    color: var(--vscode-editor-foreground, #fff);
+    font-weight: 700;
+}
 .progressDiv {
     margin-bottom: 0rem;
     margin-top: 0.5rem;
@@ -162,7 +166,7 @@ body {
     overflow-y: auto;
 }
 
-.generateButton {
+.button {
     color: var(--button-foreground, #fff);
     border-radius: 0.125rem;
     background: var(--vscode-button-background, #0078d4);
@@ -179,7 +183,7 @@ body {
     margin-bottom: 0.4rem;
 }
 
-.generateButton:hover {
+.button:hover {
     cursor: pointer;
     background: var(
         --vscode-selection-background,
@@ -187,13 +191,13 @@ body {
     );
 }
 
-button:disabled {
+.button:disabled {
     color: #6a6d70;
     border: 1px solid #313539;
     background-color: #2d3033;
     margin-top: 0.25rem;
 }
-button:disabled:hover {
+.button:disabled:hover {
     color: #6a6d70;
     border: 1px solid #313539;
     background-color: #2d3033;
@@ -244,8 +248,9 @@ button:disabled:hover {
     color: rgba(255, 255, 255, 0.652);
     transition: all 0.2s ease;
 }
-.sucess {
+.success {
     margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .statusTable {
