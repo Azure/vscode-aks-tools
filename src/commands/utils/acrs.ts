@@ -61,6 +61,54 @@ export async function getRepositoryTags(
     return errmap(propsResult, (props) => props.flatMap((p) => p.tags));
 }
 
+export async function createAcr( //TODO: proper name input checking
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    acrName: string,
+    location: string,
+): Promise<Errorable<DefinedRegistry>> {
+    const client = getAcrManagementClient(sessionProvider, subscriptionId);
+    try {
+        const registry = await client.registries.beginCreateAndWait(resourceGroup, acrName, {
+            location,
+            sku: {
+                name: "Basic", //As quoted by azure doc, Basic SKU is the "cost optimized entry point for developers": https://learn.microsoft.com/en-us/azure/container-registry/container-registry-skus
+            }, //Future: Can provide users the ability to select their desired SKU
+        });
+        if (isDefinedRegistry(registry)) {
+            return { succeeded: true, result: registry };
+        }
+        return {
+            succeeded: false,
+            error: `Failed to create Azure Container Registry (ACR) "${acrName}" in resource group "${resourceGroup}" under subscription "${subscriptionId}".`,
+        };
+    } catch (error) {
+        return {
+            succeeded: false,
+            error: `An error occurred while creating ACR "${acrName}" in resource group "${resourceGroup}" under subscription "${subscriptionId}": ${getErrorMessage(error)}`,
+        };
+    }
+}
+
+export async function deleteAcr(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    acrName: string,
+): Promise<Errorable<void>> {
+    const client = getAcrManagementClient(sessionProvider, subscriptionId);
+    try {
+        await client.registries.beginDeleteAndWait(resourceGroup, acrName);
+        return { succeeded: true, result: undefined };
+    } catch (error) {
+        return {
+            succeeded: false,
+            error: `An error occurred while deleting ACR "${acrName}" in resource group "${resourceGroup}" under subscription "${subscriptionId}": ${getErrorMessage(error)}`,
+        };
+    }
+}
+
 function isDefinedRegistry(rg: Registry): rg is DefinedRegistry {
     return rg.id !== undefined && rg.name !== undefined && rg.location !== undefined && rg.loginServer !== undefined;
 }

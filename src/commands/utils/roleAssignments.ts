@@ -23,7 +23,14 @@ export function getPrincipalRoleAssignmentsForAcr(
 
 export function getScopeForAcr(subscriptionId: string, resourceGroup: string, acrName: string): string {
     // ARM resource ID for ACR
+    // Doc reference: https://learn.microsoft.com/en-us/azure/templates/microsoft.containerregistry/registries?pivots=deployment-language-arm-template#resource-format-1
     return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/${acrProvider}/registries/${acrName}`;
+}
+
+export function getScopeForCluster(subscriptionId: string, resourceGroup: string, clusterName: string): string {
+    // ARM resource ID for AKS
+    // Doc reference: https://learn.microsoft.com/en-us/azure/templates/microsoft.containerservice/managedclusters?pivots=deployment-language-arm-template#resource-format-1
+    return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${clusterName}`;
 }
 
 // There are several permitted principal types, see: https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/create?view=rest-authorization-2022-04-01&tabs=HTTP#principaltype
