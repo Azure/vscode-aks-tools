@@ -59,7 +59,7 @@ export function getKaitoManageScenarios() {
     return [
         Scenario.create(
             "kaitoManage",
-            "Manage",
+            "Manage Page",
             () => <KaitoManage {...initialState} />,
             getMessageHandler,
             stateUpdater.vscodeMessageHandler,

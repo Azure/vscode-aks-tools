@@ -10,7 +10,7 @@ import * as tmpfile from "../utils/tempfile";
 import { KubernetesClusterInfo } from "../utils/clusters";
 
 async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFilePath: string) {
-    const command = `get pod ${pod} -n kube-system -o jsonpath='{.status.containerStatuses[*].ready}'`;
+    const command = `get pod ${pod} -n kube-system -o jsonpath="{.status.containerStatuses[*].ready}"`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
     if (failed(kubectlresult)) {
         vscode.window.showErrorMessage(kubectlresult.error);

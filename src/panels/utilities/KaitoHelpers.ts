@@ -44,7 +44,7 @@ export function convertAgeToMinutes(creationTimestamp: string): number {
 }
 
 export async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFilePath: string) {
-    const command = `get pod ${pod} -n kube-system -o jsonpath='{.status.containerStatuses[*].ready}'`;
+    const command = `get pod ${pod} -n kube-system -o jsonpath="{.status.containerStatuses[*].ready}"`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
     if (failed(kubectlresult)) {
         vscode.window.showErrorMessage(kubectlresult.error);
@@ -114,12 +114,23 @@ export async function createCurlPodCommand(
     repetitionPenalty: number,
     maxLength: number,
 ) {
-    const createCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+    // Command for windows platforms (Needs custom character escaping)
+    if (process.platform === "win32") {
+        const windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+--image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
+"Content-Type: application/json" -d "{\\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
+\\"generate_kwargs\\":{\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
+\\"repetition_penalty\\":${repetitionPenalty}, \\"max_length\\":${maxLength}}}"`;
+        return windowsCreateCommand;
+    } else {
+        // Command for UNIX platforms (Should work for all other process.platform return values besides win32)
+        const unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
 --image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
 "Content-Type: application/json" -d '{"prompt":"${escapeSpecialChars(prompt)}", \
 "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
 "repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
-    return createCommand;
+        return unixCreateCommand;
+    }
 }
 
 export function deleteCurlPodCommand(kubeConfigFilePath: string, podName: string) {
@@ -151,7 +162,7 @@ export async function getClusterIP(
     modelName: string,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
 ) {
-    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc workspace-${modelName} -o jsonpath='{.spec.clusterIP}' `;
+    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc workspace-${modelName} -o jsonpath="{.spec.clusterIP}"`;
     const ipResult = await kubectl.api.invokeCommand(ipCommand);
     if (ipResult && ipResult.code === 0) {
         return ipResult.stdout;
