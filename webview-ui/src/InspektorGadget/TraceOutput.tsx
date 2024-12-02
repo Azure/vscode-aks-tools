@@ -53,7 +53,7 @@ function displayValue(value: unknown, property: ItemProperty<string>) {
         case ValueType.CharByte:
             return <>{String.fromCharCode(value as number)}</>;
         case ValueType.Bytes:
-            return <>{String(value)} B</>;
+            return <>{String(value ?? "")} B</>;
         case ValueType.StackTrace:
             return <pre>{value as string}</pre>;
         case ValueType.AddressArray:
@@ -61,7 +61,7 @@ function displayValue(value: unknown, property: ItemProperty<string>) {
         case ValueType.Timestamp:
             return <>{value ? formatTime(value as number) : ""}</>;
         default:
-            return <>{String(value)}</>;
+            return <>{String(value ?? "")}</>;
     }
 }
 
