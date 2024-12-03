@@ -28,7 +28,7 @@
     "@types/vscode-webview": "^1.57.5",
     "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@typescript-eslint/parser": "^8.17.0",
-    "@vitejs/plugin-react": "^4.3.3",
+    "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
