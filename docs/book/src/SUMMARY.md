@@ -26,7 +26,8 @@
   - [Run Retina Capture](./features/retina-capture.md)
   - [Run Draft Command](./features/draft-integration.md)
   - [AKS plugins for GitHub Copilot for Azure](./features/aks-plugins-github-copilot.md)
-  - [Install & Deploy KAITO Models](./features/kaito-integration.md)
+  - [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)
+  - [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
 
 - [Release](./release.md)
   - [Releasing Information](./release/releasing.md)
