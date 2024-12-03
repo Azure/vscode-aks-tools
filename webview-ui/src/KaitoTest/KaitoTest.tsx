@@ -52,116 +52,131 @@ export function KaitoTest(initialState: InitialState) {
                 model&apos;s response.
             </p>
             <VSCodeDivider />
+            <div className={styles.mainGrid}>
+                <div className={styles.formDiv}>
+                    <div className={styles.formDivGrid}>
+                        <label>Prompt</label>
+                        <textarea
+                            name="prompt"
+                            value={formData.prompt}
+                            onChange={handleInputChange}
+                            placeholder="Enter prompt here..."
+                            rows={5}
+                            maxLength={500}
+                            wrap="soft"
+                            style={{ overflow: "hidden", whiteSpace: "pre-wrap" }}
+                        />
+                        <span></span>
+                        <span className={styles.submitSpan}>
+                            <button className={styles.resetButton} onClick={resetParams}>
+                                Reset Params
+                            </button>
+                            <button className={styles.mainButton} onClick={handleSubmit}>
+                                Submit Prompt
+                            </button>
+                        </span>
+                        <label>Temperature</label>
+                        <div className={styles.sliderContainer}>
+                            <span className={styles.min}>0.01</span>
+                            <input
+                                type="range"
+                                min="0.01"
+                                max="1.00"
+                                step="0.01"
+                                name="temperature"
+                                value={formData.temperature}
+                                onChange={handleInputChange}
+                            />
+                            {activeSlider?.name === "temperature" && (
+                                <div className={styles.tooltip}>{activeSlider.value}</div>
+                            )}
+                            <span className={styles.max}>1.00</span>
+                        </div>
 
-            <div className={styles.formDiv}>
-                <label>Prompt</label>
-                <textarea
-                    name="prompt"
-                    value={formData.prompt}
-                    onChange={handleInputChange}
-                    placeholder="Enter prompt here..."
-                    rows={5}
-                    maxLength={500}
-                    wrap="soft"
-                    style={{ overflow: "hidden", whiteSpace: "pre-wrap" }}
-                />
-                <span></span>
-                <span className={styles.submitSpan}>
-                    <button className={styles.resetButton} onClick={resetParams}>
-                        Reset Params
-                    </button>
-                    <button className={styles.mainButton} onClick={handleSubmit}>
-                        Submit Prompt
-                    </button>
-                </span>
-                <label>Temperature</label>
-                <div className={styles.sliderContainer}>
-                    <span className={styles.min}>0.01</span>
-                    <input
-                        type="range"
-                        min="0.01"
-                        max="1.00"
-                        step="0.01"
-                        name="temperature"
-                        value={formData.temperature}
-                        onChange={handleInputChange}
-                    />
-                    {activeSlider?.name === "temperature" && <div className={styles.tooltip}>{activeSlider.value}</div>}
-                    <span className={styles.max}>1.00</span>
+                        <label>Top P</label>
+                        <div className={styles.sliderContainer}>
+                            <span className={styles.min}>0.01</span>
+
+                            <input
+                                type="range"
+                                min="0.01"
+                                max="1.00"
+                                step="0.01"
+                                name="topP"
+                                value={formData.topP}
+                                onChange={handleInputChange}
+                            />
+                            {activeSlider?.name === "topP" && (
+                                <div className={styles.tooltip}>{activeSlider.value}</div>
+                            )}
+                            <span className={styles.max}>1.00</span>
+                        </div>
+
+                        <label>Top K</label>
+                        <div className={styles.sliderContainer}>
+                            <span className={styles.min}>1</span>
+
+                            <input
+                                type="range"
+                                min="1"
+                                max="100"
+                                step="1"
+                                name="topK"
+                                value={formData.topK}
+                                onChange={handleInputChange}
+                            />
+                            {activeSlider?.name === "topK" && (
+                                <div className={styles.tooltip}>{activeSlider.value}</div>
+                            )}
+                            <span className={styles.max}>100</span>
+                        </div>
+
+                        <label>Repetition Penalty</label>
+                        <div className={styles.sliderContainer}>
+                            <span className={styles.min}>1.00</span>
+
+                            <input
+                                type="range"
+                                min="1.00"
+                                max="2.00"
+                                step="0.01"
+                                name="repetitionPenalty"
+                                value={formData.repetitionPenalty}
+                                onChange={handleInputChange}
+                            />
+                            {activeSlider?.name === "repetitionPenalty" && (
+                                <div className={styles.tooltip}>{activeSlider.value}</div>
+                            )}
+                            <span className={styles.max}>2.00</span>
+                        </div>
+
+                        <label>Max Length</label>
+                        <div className={styles.sliderContainer}>
+                            <span className={styles.min}>0</span>
+
+                            <input
+                                type="range"
+                                min="0"
+                                max="500"
+                                step="10"
+                                name="maxLength"
+                                value={formData.maxLength}
+                                onChange={handleInputChange}
+                            />
+                            {activeSlider?.name === "maxLength" && (
+                                <div className={styles.tooltip}>{activeSlider.value}</div>
+                            )}
+                            <span className={styles.max}>500</span>
+                        </div>
+                    </div>
                 </div>
-
-                <label>Top P</label>
-                <div className={styles.sliderContainer}>
-                    <span className={styles.min}>0.01</span>
-
-                    <input
-                        type="range"
-                        min="0.01"
-                        max="1.00"
-                        step="0.01"
-                        name="topP"
-                        value={formData.topP}
-                        onChange={handleInputChange}
-                    />
-                    {activeSlider?.name === "topP" && <div className={styles.tooltip}>{activeSlider.value}</div>}
-                    <span className={styles.max}>1.00</span>
-                </div>
-
-                <label>Top K</label>
-                <div className={styles.sliderContainer}>
-                    <span className={styles.min}>1</span>
-
-                    <input
-                        type="range"
-                        min="1"
-                        max="100"
-                        step="1"
-                        name="topK"
-                        value={formData.topK}
-                        onChange={handleInputChange}
-                    />
-                    {activeSlider?.name === "topK" && <div className={styles.tooltip}>{activeSlider.value}</div>}
-                    <span className={styles.max}>100</span>
-                </div>
-
-                <label>Repetition Penalty</label>
-                <div className={styles.sliderContainer}>
-                    <span className={styles.min}>1.00</span>
-
-                    <input
-                        type="range"
-                        min="1.00"
-                        max="2.00"
-                        step="0.01"
-                        name="repetitionPenalty"
-                        value={formData.repetitionPenalty}
-                        onChange={handleInputChange}
-                    />
-                    {activeSlider?.name === "repetitionPenalty" && (
-                        <div className={styles.tooltip}>{activeSlider.value}</div>
-                    )}
-                    <span className={styles.max}>2.00</span>
-                </div>
-
-                <label>Max Length</label>
-                <div className={styles.sliderContainer}>
-                    <span className={styles.min}>0</span>
-
-                    <input
-                        type="range"
-                        min="0"
-                        max="500"
-                        step="10"
-                        name="maxLength"
-                        value={formData.maxLength}
-                        onChange={handleInputChange}
-                    />
-                    {activeSlider?.name === "maxLength" && <div className={styles.tooltip}>{activeSlider.value}</div>}
-                    <span className={styles.max}>500</span>
-                </div>
-
-                <label>Output</label>
-                <div style={{ whiteSpace: "pre-wrap" }}>{state.output}</div>
+                {state.output !== "" && (
+                    <div className={styles.outputDiv}>
+                        <p className={styles.outputHeader}>Output</p>
+                        <VSCodeDivider className={styles.endDivider} />
+                        <p className={styles.output}>{state.output}</p>
+                    </div>
+                )}
             </div>
         </div>
     );
