@@ -16,7 +16,7 @@ import { OpenFileOptions } from "../../webview-contract/webviewDefinitions/share
 import { launchDraftCommand } from "./commandUtils";
 import { getLanguageVersionInfo, getSupportedLanguages } from "../../commands/draft/languages";
 
-export class DraftDockerfilePanel extends BasePanel<"draftDockerfile"> {
+export class DraftDockerfilePanel1 extends BasePanel<"draftDockerfile"> {
     constructor(extensionUri: Uri) {
         super(extensionUri, "draftDockerfile", {
             pickLocationResponse: null,
@@ -26,7 +26,7 @@ export class DraftDockerfilePanel extends BasePanel<"draftDockerfile"> {
     }
 }
 
-export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDockerfile"> {
+export class DraftDockerfileDataProvider1 implements PanelDataProvider<"draftDockerfile"> {
     readonly draftDirectory: string;
     constructor(
         readonly workspaceFolder: WorkspaceFolder,
@@ -69,15 +69,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
             pickLocationRequest: (openFileOptions) => this.handlePickLocationRequest(openFileOptions, webview),
             getLanguageVersionInfoRequest: (args) =>
                 this.handleGetLanguageVersionInfoRequest(args.language, args.version, webview),
-            createDockerfileRequest: (args) =>
-                this.handleCreateDockerfileRequest(
-                    args.language,
-                    args.builderImageTag,
-                    args.runtimeImageTag,
-                    args.port,
-                    args.location,
-                    webview,
-                ),
+            createDockerfileRequest: (args) => this.handleDraftValidateRequest(args.location, webview),
             openFileRequest: (filePath) => this.handleOpenFileRequest(filePath),
             launchDraftDeployment: (args) =>
                 launchDraftCommand("aks.draftDeployment", {
@@ -124,41 +116,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
         webview.postGetLanguageVersionInfoResponse({ language, versionInfo });
     }
 
-    private async handleCreateDockerfileRequest(
-        language: string,
-        builderImageTag: string | null,
-        runtimeImageTag: string,
-        port: number,
-        location: string,
-        webview: MessageSink<ToWebViewMsgDef>,
-    ) {
-        const variables = {
-            PORT: port,
-            VERSION: runtimeImageTag,
-            BUILDERVERSION: builderImageTag,
-        };
-
-        const variableArgs = Object.entries(variables)
-            .map(([key, value]) => `--variable ${key}=${value}`)
-            .join(" ");
-        const command = `draft create --language ${language} --dockerfile-only ${variableArgs} --destination .${path.sep}${location}`;
-
-        const execOptions: ShellOptions = {
-            workingDir: this.workspaceFolder.uri.fsPath,
-            envPaths: [this.draftDirectory],
-        };
-
-        const draftResult = await exec(command, execOptions);
-        if (failed(draftResult)) {
-            window.showErrorMessage(draftResult.error);
-            return;
-        }
-
-        const existingFiles = getExistingFiles(this.workspaceFolder, location);
-        webview.postCreateDockerfileResponse(existingFiles);
-    }
-
-    async handleDraftValidateRequest(location: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleDraftValidateRequest(location: string, webview: MessageSink<ToWebViewMsgDef>) {
         const command = `draft validate --manifest .${path.sep}${location}`;
 
         const execOptions: ShellOptions = {
