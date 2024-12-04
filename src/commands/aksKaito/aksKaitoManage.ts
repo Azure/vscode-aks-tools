@@ -8,10 +8,11 @@ import { KaitoManagePanelDataProvider } from "../../panels/KaitoManagePanel";
 import { KaitoManagePanel } from "../../panels/KaitoManagePanel";
 import { getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
-import { getExtension } from "../utils/host";
+import { getExtension, longRunning } from "../utils/host";
 import { getConditions, convertAgeToMinutes } from "../../panels/utilities/KaitoHelpers";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { getKaitoInstallationStatus } from "../utils/kaitoValidationHelpers";
+import { filterPodName } from "../utils/clusters";
 
 export default async function aksKaitoManage(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -74,7 +75,6 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     }
 
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
 
     // Returns an object with the status of the kaito pods
     const kaitoStatus = await getKaitoInstallationStatus(
