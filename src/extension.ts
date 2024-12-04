@@ -70,7 +70,6 @@ export async function activate(context: vscode.ExtensionContext) {
             outputChannel: createAzExtOutputChannel("Azure Identity", ""),
             prefix: "",
         };
-
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerUIExtensionVariables(uiExtensionVariables);
@@ -114,6 +113,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksDeployManifest", aksDeployManifest);
         registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
         registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
+        registerCommandWithTelemetry("aks.runDraftValidateYamlCommand", aksCreateCluster);
 
         await registerAzureServiceNodes(context);
 

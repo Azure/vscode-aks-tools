@@ -319,6 +319,10 @@
             {
                 "command": "aks.aksKaito",
                 "title": "Install KAITO"
+            },
+            {
+                "command": "aks.runDraftValidateYamlCommand",
+                "title": "Run Draft Validate for YAML"
             }
         ],
         "menus": {
@@ -347,6 +351,14 @@
                 },
                 {
                     "command": "aks.draftDeployment",
+                    "when": "explorerResourceIsFolder"
+                },
+                {
+                    "command": "aks.runDraftValidateYamlCommand",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml"
+                },
+                {
+                    "command": "aks.runDraftValidateYamlCommand",
                     "when": "explorerResourceIsFolder"
                 }
             ],
