@@ -14,7 +14,6 @@ import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
 import { getKaitoScenarios } from "./kaitoTests";
 import { getKaitoModelScenarios } from "./kaitoModelTests";
 import { getKaitoManageScenarios } from "./kaitoManageTests";
-import { getKaitoTestScenarios } from "./kaitoTestTests";
 import { getKubectlScenarios } from "./kubectlTests";
 import { getPeriscopeScenarios } from "./periscopeTests";
 import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
@@ -54,7 +53,6 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaito: getKaitoScenarios(),
     kaitoModels: getKaitoModelScenarios(),
     kaitoManage: getKaitoManageScenarios(),
-    kaitoTest: getKaitoTestScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

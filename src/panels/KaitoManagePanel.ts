@@ -73,9 +73,6 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             getLogsRequest: () => {
                 this.handleGetLogsRequest();
             },
-            testWorkspaceRequest: (params) => {
-                this.handleTestWorkspaceRequest(params.modelName);
-            },
         };
     }
 
@@ -216,10 +213,5 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             const doc = await vscode.workspace.openTextDocument(tempFilePath);
             vscode.window.showTextDocument(doc);
         });
-    }
-
-    private async handleTestWorkspaceRequest(modelName: string) {
-        const args = { target: this.newtarget, modelName: modelName };
-        vscode.commands.executeCommand("aks.aksKaitoTest", args);
     }
 }

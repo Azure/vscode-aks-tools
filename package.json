@@ -323,10 +323,6 @@
             {
                 "command": "aks.aksKaito",
                 "title": "Install KAITO"
-            },
-            {
-                "command": "aks.aksKaitoTest",
-                "title": "Test KAITO models"
             }
         ],
         "menus": {
