@@ -20,6 +20,7 @@ export const vscode = getWebviewMessageContext<"kaitoModels">({
     updateStateRequest: null,
     resetStateRequest: null,
     cancelRequest: null,
+    kaitoManageRedirectRequest: null,
 });
 
 export const stateUpdater: WebviewStateUpdater<"kaitoModels", EventDef, DeploymentState> = {

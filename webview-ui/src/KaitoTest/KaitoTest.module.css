@@ -1,0 +1,180 @@
+.mainGrid {
+    display: grid;
+    grid-template-columns: auto minmax(200px, 1fr);
+}
+.formDivGrid {
+    display: grid;
+    grid-template-columns: auto minmax(200px, 1fr);
+    gap: 0rem 2rem;
+    padding: 0;
+    color: var(--vscode-editor-foreground, #fff);
+    background: none;
+    margin: 1rem 0 0 0;
+    min-width: 20rem;
+    width: 31.5rem;
+}
+
+.formDivGrid > *:nth-child(even) {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.blurb {
+    grid-column: span 2;
+    margin-bottom: 1rem;
+    color: var(--vscode-editor-foreground, #fff);
+}
+
+.main label {
+    color: var(--vscode-editor-foreground, #fff);
+    align-self: center;
+    margin: 0rem 0 1rem 0;
+}
+
+.main textarea {
+    padding: 5px 8px 4.4px 8px;
+    background: var(--vscode-input-background, #333);
+    color: var(--vscode-editor-foreground, #fff);
+    border: 1px solid #444;
+    border-radius: 4px;
+    margin: 0 0 0.4rem 0;
+}
+
+.main input[type="range"] {
+    appearance: none;
+    width: 16rem;
+    height: 0.75rem;
+    cursor: pointer;
+    background: none;
+    border-radius: 5px;
+    outline: none;
+}
+
+/* Track styling */
+.main input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: var(--vscode-input-background, #333);
+    border-radius: 5px;
+}
+
+/* Filled portion of track */
+.main input[type="range"]::-webkit-slider-runnable-track {
+    background: linear-gradient(
+        to left,
+        var(--vscode-button-hoverBackground, #005a9e),
+        var(--vscode-input-background, #333)
+    );
+}
+
+/* Thumb styling */
+.main input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    height: 14px;
+    width: 14px;
+    background: var(--vscode-input-foreground, #fff);
+    border: 2px solid var(--vscode-focusBorder, #0066b3);
+    border-radius: 50%;
+    margin-top: -4px;
+    cursor: pointer;
+}
+
+.mainButton,
+.resetButton {
+    color: var(--button-foreground, #fff);
+    background: var(--vscode-button-background, #0078d4);
+    border: none;
+    outline: none;
+    margin-top: 0.25rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 400;
+    transition: all 0.1s ease;
+    padding: 0.31rem 0.5rem 0.31rem 0.5rem;
+    font-family: var(--vscode-font-family);
+    border-radius: 0.3rem;
+}
+
+.mainButton:hover,
+.resetButton:hover {
+    cursor: pointer;
+    background: var(
+        --vscode-selection-background,
+        var(--vscode-list-activeSelectionBackground, var(--vscode-button-background, #0078d4))
+    );
+}
+.resetButton {
+    background-color: rgba(128, 128, 128, 0.5);
+    margin-right: 0.58rem;
+}
+
+.min,
+.max {
+    display: inline-block;
+    vertical-align: center;
+    border: 1.5px solid hsl(0, 0%, 47%);
+    padding: 3px 5px 3px 5px;
+    border-radius: 4px;
+    color: var(--vscode-editor-foreground, #fff);
+    width: 2rem;
+    text-align: center;
+}
+
+.min {
+    margin: 0rem 0.6rem 1rem 0rem;
+}
+
+.max {
+    margin: 0rem 0rem 0rem 0.6rem;
+}
+
+.submitSpan {
+    display: flex;
+    margin: 0rem 0 2rem 0;
+    justify-content: right;
+}
+
+.tooltip {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(128, 128, 128, 0.5);
+    color: var(--vscode-editor-foreground, #fff);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+input[type="range"]:active + .tooltip {
+    opacity: 1;
+}
+
+input[type="range"]:not(:active) + .tooltip {
+    opacity: 0;
+}
+
+.sliderContainer {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.outputDiv {
+    text-align: center;
+    padding: 0 2rem 0 2rem;
+    white-space: pre-wrap;
+}
+
+.outputHeader {
+    margin: 0.8rem 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.endDivider {
+    width: 90%;
+    margin: 0 auto;
+}

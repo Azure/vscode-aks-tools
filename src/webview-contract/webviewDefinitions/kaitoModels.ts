@@ -17,6 +17,7 @@ export type ToVsCodeMsgDef = {
     updateStateRequest: { model: string };
     resetStateRequest: {};
     cancelRequest: { model: string };
+    kaitoManageRedirectRequest: {};
 };
 
 export type ToWebViewMsgDef = {

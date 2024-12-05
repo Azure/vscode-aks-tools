@@ -4,13 +4,15 @@ import * as tmpfile from "../utils/tempfile";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { KaitoModelsPanelDataProvider } from "../../panels/KaitoModelsPanel";
-import { KaitoModelsPanel } from "../../panels/KaitoModelsPanel";
-import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
+import { getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
-import { getExtension, longRunning } from "../utils/host";
+import { getExtension } from "../utils/host";
+import { KaitoTestPanel, KaitoTestPanelDataProvider } from "../../panels/KaitoTestPanel";
 
-export default async function aksKaitoCreateCRD(_context: IActionContext, target: unknown): Promise<void> {
+export default async function aksKaitoTest(
+    _context: IActionContext,
+    { target, modelName }: { target: unknown; modelName: string },
+): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     if (!cloudExplorer.available) {
         vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
@@ -48,32 +50,15 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
     }
 
     const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
-
-    // "kaito-" is assuming kaito pods are still named kaito-workspace & kaito-gpu-provisioner
-    const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
-        return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
-    });
-
-    if (failed(filterKaitoPodNames)) {
-        vscode.window.showErrorMessage(filterKaitoPodNames.error);
-        return;
-    }
-
-    if (filterKaitoPodNames.result.length === 0) {
-        vscode.window.showWarningMessage(
-            `Please install Kaito for cluster ${clusterName}. \n \n KAITO Workspace generation is only enabled when KAITO is installed.`,
-        );
-        return;
-    }
-
     const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return;
     }
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const panel = new KaitoModelsPanel(extension.result.extensionUri);
-    const dataProvider = new KaitoModelsPanelDataProvider(
+
+    const panel = new KaitoTestPanel(extension.result.extensionUri);
+    const dataProvider = new KaitoTestPanelDataProvider(
         clusterName,
         subscriptionId,
         resourceGroupName,
@@ -81,7 +66,7 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
         kubectl,
         kubeConfigFile.filePath,
         sessionProvider.result,
-        target,
+        modelName,
     );
     panel.show(dataProvider);
 }

@@ -53,13 +53,9 @@ export function KaitoModels(initialState: InitialState) {
         setSelectedModel(model);
     };
 
-    function stringOrUndefined(s: string | undefined): string {
-        return s !== undefined ? s : "";
-    }
-
     // Returns true if model cannot be deployed with one click
     function undeployable(model: string) {
-        return model.substring(0, 7) === "llama-2" || model.substring(0, 5) === "phi-3";
+        return model.substring(0, 7) === "llama-2";
     }
 
     const defaultMessage = <>Please note deployment time can vary from 10 minutes to 1hr+.</>;
@@ -78,70 +74,24 @@ export function KaitoModels(initialState: InitialState) {
                     </a>
                 </>
             );
-        } else if (model.substring(0, 5) === "phi-3") {
-            return (
-                <>
-                    Phi-3 is only supported in v0.3+ of KAITO. This cluster currently has version 0.2 of KAITO
-                    installed.
-                </>
-            );
         }
         return defaultMessage;
     }
-
-    // returns [yaml, gpu] where yaml is the generated yaml & gpu is the gpu specification string
-    function generateYAML(model: string): [string, string | undefined] {
-        const modelDetails = getModelDetails(model);
-        const name = stringOrUndefined(modelDetails?.modelName);
-        const gpu = stringOrUndefined(modelDetails?.minimumGpu);
-        let appname = name;
-        let metadataname = name;
-        let inferencename = name;
-        let privateConfig = "";
-        // Adds private configuration template for llama-2 models
-        if (name.substring(0, 7) === "llama-2") {
-            privateConfig = `
-    accessMode: private
-    presetOptions:
-      image: <YOUR IMAGE URL>`;
-        }
-        // Phi-3 Models follow a different naming pattern, this corrects for that
-        if (name.substring(0, 5) === "phi-3") {
-            appname = "phi-3";
-            const match = name.match(/phi-3-(mini|medium)/);
-            if (match !== null) {
-                metadataname = match[0];
-            }
-            inferencename = name;
-        }
-        const yaml = `apiVersion: kaito.sh/v1alpha1
-kind: Workspace
-metadata:
-  name: workspace-${metadataname}
-resource:
-  instanceType: "${gpu}"
-  labelSelector:
-    matchLabels:
-      apps: ${appname}
-inference:
-  preset:
-    name: ${inferencename}${privateConfig}`;
-        // Passing along gpu specification for subsequent usage
-        return [yaml, gpu];
-    }
-
     function generateCRD(model: string) {
         // model[0] is
-        const yaml = generateYAML(model)[0];
+        const yaml = generateKaitoYAML(model).yaml;
         vscode.postGenerateCRDRequest({ model: yaml });
         return;
     }
 
     function onClickDeployKaito(model: string) {
-        const [yaml, gpu] = generateYAML(model);
+        const { yaml, gpu } = generateKaitoYAML(model);
         if (!(gpu === undefined)) {
-            vscode.postDeployKaitoRequest({ model: model, yaml: yaml, gpu: gpu });
+            vscode.postDeployKaitoRequest({ model, yaml, gpu });
         }
+    }
+    function redirectKaitoManage() {
+        vscode.postKaitoManageRedirectRequest({});
     }
 
     function resetState() {
@@ -149,7 +99,7 @@ inference:
     }
 
     return (
-        <>
+        <div className={styles.main}>
             <div className={`${styles.mainGridContainer} ${selectedModel ? styles.openSidebar : ""}`}>
                 {selectedModel !== null && (
                     <div className={styles.panelDiv}>
@@ -193,7 +143,7 @@ inference:
                                                 <>
                                                     <div>
                                                         <button
-                                                            className={styles.generateButton}
+                                                            className={styles.button}
                                                             disabled={undeployable(selectedModel)}
                                                             onClick={() => onClickDeployKaito(selectedModel)}
                                                         >
@@ -218,7 +168,7 @@ inference:
                                             <div>
                                                 <button
                                                     onClick={() => generateCRD(selectedModel)}
-                                                    className={styles.generateButton}
+                                                    className={styles.button}
                                                 >
                                                     Customize workspace CRD
                                                 </button>
@@ -302,7 +252,9 @@ inference:
                                                                 </div>
                                                                 <div className={styles.statusRow}>
                                                                     <span className={styles.statusLabel}>Age:</span>
-                                                                    <span className={styles.gray}>{state.age}m</span>
+                                                                    <span className={styles.gray}>
+                                                                        {convertMinutesToFormattedAge(state.age)}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </>
@@ -312,13 +264,15 @@ inference:
                                             {selectedModel === state.modelName &&
                                                 state.workspaceExists &&
                                                 state.workspaceReady && (
-                                                    /* {true && ( */
                                                     <>
-                                                        <div className={styles.sucess}>
-                                                            <span className={styles.bold}>
+                                                        <div className={styles.success}>
+                                                            <span className={styles.successSpan}>
                                                                 Model successfully deployed!
                                                             </span>
                                                         </div>
+                                                        <button onClick={redirectKaitoManage} className={styles.button}>
+                                                            View deployed models
+                                                        </button>
                                                     </>
                                                 )}
                                         </div>
@@ -407,6 +361,68 @@ inference:
                     ))}
                 </div>
             </div>
-        </>
+        </div>
     );
+}
+
+// exported function to be shared in other kaito-related webviews
+export function generateKaitoYAML(model: string): { yaml: string; gpu: string | undefined } {
+    const allModelDetails = kaitoSupporterModel.modelDetails;
+    // Helper function to fetch model details by name
+    const getModelDetails = (modelName: string) => {
+        return allModelDetails.find((model) => model.modelName === modelName);
+    };
+    const getStringOrEmpty = (value?: string): string => value ?? "";
+
+    const modelDetails = getModelDetails(model);
+    const name = getStringOrEmpty(modelDetails?.modelName);
+    const gpu = getStringOrEmpty(modelDetails?.minimumGpu);
+
+    // Default application, metadata, and inference names
+    // Phi-3 Models follow a different naming pattern, this corrects for that
+    const appName = name.startsWith("phi-3") ? "phi-3" : name;
+    const metadataName = name;
+    const inferenceName = name;
+    // Adds private configuration template for llama-2 models
+    const privateConfig = name.startsWith("llama-2")
+        ? `
+accessMode: private
+presetOptions:
+  image: <YOUR IMAGE URL>`
+        : "";
+
+    const yaml = `apiVersion: kaito.sh/v1alpha1
+kind: Workspace
+metadata:
+  name: workspace-${metadataName}
+resource:
+  instanceType: "${gpu}"
+  labelSelector:
+    matchLabels:
+      apps: ${appName}
+inference:
+  preset:
+    name: ${inferenceName}${privateConfig}`;
+    // Passing along gpu specification for subsequent usage
+    return { yaml, gpu };
+}
+
+// Used to display properly formatted age in the UI
+export function convertMinutesToFormattedAge(minutes: number) {
+    const days = Math.floor(minutes / (60 * 24));
+    const hours = Math.floor((minutes % (60 * 24)) / 60);
+    const remainingMinutes = minutes % 60;
+
+    let ageString = "";
+    if (days > 0) {
+        ageString += `${days}d`;
+    }
+    if (hours > 0 || days > 0) {
+        ageString += `${hours}h`;
+    }
+    if (days === 0 && hours <= 9 && remainingMinutes > 0) {
+        ageString += `${remainingMinutes}m`;
+    }
+
+    return ageString || "0m";
 }

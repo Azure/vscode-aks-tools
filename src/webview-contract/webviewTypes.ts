@@ -10,6 +10,8 @@ import { DraftWorkflowDefinition } from "./webviewDefinitions/draft/draftWorkflo
 import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget";
 import { KaitoDefinition } from "./webviewDefinitions/kaito";
 import { KaitoModelsDefinition } from "./webviewDefinitions/kaitoModels";
+import { KaitoManageDefinition } from "./webviewDefinitions/kaitoManage";
+import { KaitoTestDefinition } from "./webviewDefinitions/kaitoTest";
 import { KubectlDefinition } from "./webviewDefinitions/kubectl";
 import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
@@ -50,6 +52,8 @@ type AllWebviewDefinitions = {
     retinaCapture: RetinaCaptureDefinition;
     kaito: KaitoDefinition;
     kaitoModels: KaitoModelsDefinition;
+    kaitoManage: KaitoManageDefinition;
+    kaitoTest: KaitoTestDefinition;
 };
 
 type ContentIdLookup = {

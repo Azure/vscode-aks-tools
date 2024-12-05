@@ -30,7 +30,7 @@ import {
 } from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-// import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { isPodReady, getKaitoPods } from "./utilities/KaitoHelpers";
 
 const MAX_RETRY = 3;
 let RETRY_COUNT = 0;
@@ -101,8 +101,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 this.handleLLMModelsRequest(webview);
             },
             generateWorkspaceRequest: () => {
-                // workspace: Workspace
-                this.handleGenerateWorkspaceRequest(webview);
+                this.handleGenerateWorkspaceRequest();
             },
             deployWorkspace: () => {
                 this.handleDeployWorkspaceRequest(webview);
@@ -118,9 +117,8 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         });
     }
 
-    private async handleGenerateWorkspaceRequest(webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleGenerateWorkspaceRequest() {
         vscode.commands.executeCommand("aks.aksKaitoCreateCRD", this.newtarget);
-        void webview;
     }
     private async handleLLMModelsRequest(webview: MessageSink<ToWebViewMsgDef>) {
         // get supported llm models from static config
@@ -335,6 +333,43 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         if (failed(kubectlresult)) {
             vscode.window.showErrorMessage(`Error restarting kaito-gpu-provisioner: ${kubectlresult.error}`);
             return { succeeded: false, error: kubectlresult.error };
+        }
+
+        // waiting for gpu provisioner to be ready, which usually takes around 30 seconds
+        await new Promise((resolve) => setTimeout(resolve, 35000));
+        let gpuProvisionerReady = false;
+        const kaitoPods = await getKaitoPods(
+            this.sessionProvider,
+            this.kubectl,
+            this.subscriptionId,
+            this.resourceGroupName,
+            this.clusterName,
+        );
+        const gpuProvisionerPod = kaitoPods.find((pod) => pod.startsWith("kaito-gpu-provisioner"));
+        if (gpuProvisionerPod === undefined) {
+            vscode.window.showErrorMessage(`GPU Provisioner not found`);
+            return { succeeded: false, error: "GPU Provisioner not found" };
+        }
+
+        // If the pod is already ready, we can skip the loop
+        if (await isPodReady(gpuProvisionerPod, this.kubectl, this.kubeConfigFilePath)) {
+            gpuProvisionerReady = true;
+        } else {
+            // If the pod is not ready, we will poll readiness for the next 2 minutes
+            const endTime = Date.now() + 120000;
+            while (Date.now() < endTime) {
+                if (await isPodReady(gpuProvisionerPod, this.kubectl, this.kubeConfigFilePath)) {
+                    gpuProvisionerReady = true;
+                    break;
+                }
+                // 5 second delay between checks
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+            }
+        }
+
+        if (!gpuProvisionerReady) {
+            vscode.window.showErrorMessage(`GPU Provisioner is not ready`);
+            return { succeeded: false, error: "GPU Provisioner is not ready" };
         }
 
         return { succeeded: true, result: "KAITO components installed successfully" };

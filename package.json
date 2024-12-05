@@ -287,15 +287,15 @@
             {
                 "command": "aks.aksCreateClusterFromCopilot",
                 "title": "Command to create an AKS cluster"
-            },  
+            },
             {
                 "command": "aks.aksDeployManifest",
                 "title": "Deploy application manifest from Github Copilot Chat"
-            },               
-            {            
+            },
+            {
                 "command": "aks.aksOpenKubectlPanel",
                 "title": "Run Kubectl Commands from Github Copilot Chat"
-            },                   
+            },
             {
                 "command": "aks.aksTCPDump",
                 "title": "Collect TCP Dumps"
@@ -317,8 +317,16 @@
                 "title": "Create KAITO Workspace"
             },
             {
+                "command": "aks.aksKaitoManage",
+                "title": "Manage KAITO Models"
+            },
+            {
                 "command": "aks.aksKaito",
                 "title": "Install KAITO"
+            },
+            {
+                "command": "aks.aksKaitoTest",
+                "title": "Test KAITO models"
             }
         ],
         "menus": {
@@ -442,6 +450,10 @@
                 {
                     "command": "aks.aksKaitoCreateCRD",
                     "group": "navigation"
+                },
+                {
+                    "command": "aks.aksKaitoManage",
+                    "group": "navigation"
                 }
             ],
             "aks.detectorsSubMenu": [
@@ -546,7 +558,7 @@
             },
             {
                 "id": "aks.kaitoInstallSubMenu",
-                "label": "Deploy a LLM with KAITO (Beta)"
+                "label": "Deploy a LLM with KAITO"
             }
         ]
     },

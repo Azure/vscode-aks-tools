@@ -1,7 +1,7 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import { ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaito";
+import { ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaitoModels";
 import { KaitoModels } from "../KaitoModels/KaitoModels";
-import { stateUpdater } from "../Kaito/state";
+import { stateUpdater } from "../KaitoModels/state";
 import { Scenario } from "../utilities/manualTest";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoModels";
 export function getKaitoModelScenarios() {
@@ -16,31 +16,44 @@ export function getKaitoModelScenarios() {
     };
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            installKaitoRequest: () => {
-                console.log("installKaitoRequest");
-                webview.postKaitoInstallProgressUpdate({
-                    operationDescription: "Installing Kaito",
-                    event: 1,
-                    errorMessage: undefined,
-                    models: [],
+            generateCRDRequest: ({ model }) => {
+                console.log("monitorUpdateRequest", model);
+            },
+            deployKaitoRequest: ({ model, yaml, gpu }) => {
+                console.log("monitorUpdateRequest", model, yaml, gpu);
+                webview.postDeploymentProgressUpdate({
+                    clusterName: initialState.clusterName,
+                    modelName: model,
+                    workspaceExists: true,
+                    resourceReady: null,
+                    inferenceReady: null,
+                    workspaceReady: null,
+                    age: 0,
                 });
             },
-            getLLMModelsRequest: () => {
-                console.log("getLLMModelsRequest");
+            workspaceExistsRequest: ({ model }) => {
+                console.log("monitorUpdateRequest", model);
             },
-            generateWorkspaceRequest: () => {
-                console.log("generateWorkspaceRequest");
+            updateStateRequest: ({ model }) => {
+                console.log("monitorUpdateRequest", model);
             },
-            deployWorkspace: () => {
-                console.log("deployWorkspace");
+            resetStateRequest: () => {
+                console.log("monitorUpdateRequest");
+            },
+            cancelRequest: ({ model }) => {
+                console.log("monitorUpdateRequest", model);
+                webview.postDeploymentProgressUpdate(initialState);
+            },
+            kaitoManageRedirectRequest: () => {
+                console.log("monitorUpdateRequest");
             },
         };
     }
 
     return [
         Scenario.create(
-            "kaito",
-            "Models",
+            "kaitoModels",
+            "Models Page",
             () => <KaitoModels {...initialState} />,
             getMessageHandler,
             stateUpdater.vscodeMessageHandler,
