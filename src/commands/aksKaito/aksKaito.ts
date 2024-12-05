@@ -50,11 +50,7 @@ export default async function aksKaito(_context: IActionContext, target: unknown
         return;
     }
 
-    const clusterName = clusterNode.result.name;
-    const armId = clusterNode.result.armId;
-    const subscriptionId = clusterNode.result.subscriptionId;
-    const resourceGroupName = clusterNode.result.resourceGroupName;
-
+    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
     const panel = new KaitoPanel(extension.result.extensionUri);
 
     const filterKaitoPodNames = await filterPodName(

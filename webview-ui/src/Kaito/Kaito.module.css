@@ -89,3 +89,37 @@
 .thin {
     font-weight: 400;
 }
+.button {
+    color: var(--button-foreground, #fff);
+    border-radius: 0.125rem;
+    background: var(--vscode-button-background, #0078d4);
+    border: none;
+    border-radius: 0.3125rem;
+    outline: none;
+    font-size: 0.7rem;
+    font-weight: 400;
+    transition: all 0.1s ease;
+    padding: 0.37rem 0.45rem 0.37rem 0.5rem;
+    font-family: var(--vscode-font-family);
+    border-radius: 0.17rem;
+    margin-bottom: 0.4rem;
+}
+
+.button:hover {
+    cursor: pointer;
+    background: var(
+        --vscode-selection-background,
+        var(--vscode-list-activeSelectionBackground, var(--vscode-button-background, #0078d4))
+    );
+}
+
+.button:disabled {
+    color: var(--vscode-button-foreground-disabled, #aaa);
+    background: var(--vscode-button-background-disabled, #333);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.installBlurb {
+    margin: 0.5rem 0rem 0.06rem 0rem;
+}

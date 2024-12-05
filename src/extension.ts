@@ -22,6 +22,8 @@ import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspekt
 import aksKaito from "./commands/aksKaito/aksKaito";
 import aksKaitoGenerateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
 import aksKaitoCreateCRD from "./commands/aksKaito/aksKaitoCreateCRD";
+import aksKaitoManage from "./commands/aksKaito/aksKaitoManage";
+import aksKaitoTest from "./commands/aksKaito/aksKaitoTest";
 import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
 import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
 import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
@@ -110,6 +112,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksKaito", aksKaito);
         registerCommandWithTelemetry("aks.aksKaitoGenerateYaml", aksKaitoGenerateYaml);
         registerCommandWithTelemetry("aks.aksKaitoCreateCRD", aksKaitoCreateCRD);
+        registerCommandWithTelemetry("aks.aksKaitoManage", aksKaitoManage);
+        registerCommandWithTelemetry("aks.aksKaitoTest", aksKaitoTest);
         registerCommandWithTelemetry("aks.aksCreateClusterFromCopilot", aksCreateClusterFromCopilot);
         registerCommandWithTelemetry("aks.aksDeployManifest", aksDeployManifest);
         registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
