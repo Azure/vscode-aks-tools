@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.5.3]
+
+* KAITO - Model Management & Chat Features.
+* Auto Deployments Utility Logic.
+* Remove activation event trigger.
+* kubectl-gadget: Update to v0.34.0.
+* Dependabot updates and bumps.
+
+Thank you so much to @burak-ok, @ReinierCC, @tejhan, @qpetraroia, @hsubramanianaks, @Tatsinnit for contributions, testing and reviews.
+
 ## [1.5.2]
 
 * Engine and VSCE package update.
