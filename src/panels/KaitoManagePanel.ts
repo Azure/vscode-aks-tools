@@ -121,6 +121,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             return;
         }
         try {
+            // Delete the workspace first (wait for deletion to finish)
             await this.handleDeleteWorkspaceRequest(modelName, webview);
             this.operatingState[modelName] = true;
 

@@ -229,16 +229,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                     this.resourceGroupName,
                     this.clusterName,
                 );
-                readyStatus = await kaitoPodStatus(kaitoPods, this.kubectl, this.kubeConfigFilePath);
-                if (!readyStatus.kaitoWorkspaceReady) {
-                    vscode.window.showWarningMessage(
-                        `The 'kaito-workspace' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-                    );
-                } else if (!readyStatus.kaitoGPUProvisionerReady) {
-                    vscode.window.showWarningMessage(
-                        `The 'kaito-gpu-provisoner' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-                    );
-                }
+                readyStatus = await kaitoPodStatus(this.clusterName, kaitoPods, this.kubectl, this.kubeConfigFilePath);
             });
             if (!readyStatus.kaitoWorkspaceReady || !readyStatus.kaitoGPUProvisionerReady) {
                 this.checkingGPU = false;
@@ -275,6 +266,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             if (!quotaAvailable) {
                 return;
             }
+            // Creating temporary taml file for deployment
             const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
             writeFileSync(tempFilePath, yaml, "utf8");
             const command = `apply -f ${tempFilePath}`;
@@ -288,6 +280,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             vscode.window.showErrorMessage(`Error during deployment: ${error}`);
         }
         this.cancelTokens.set(model, false);
+        // if cancel token is set for any other model, just return maybe?
         this.handleUpdateStateRequest(model, webview);
         let progress = await this.getProgress(model);
         while (!this.nullIsFalse(progress.workspaceReady) && !this.cancelTokens.get(model)) {

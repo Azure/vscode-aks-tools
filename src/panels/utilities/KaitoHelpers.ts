@@ -56,6 +56,7 @@ export async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.Kube
 }
 
 export async function kaitoPodStatus(
+    clusterName: string,
     pods: string[],
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFilePath: string,
@@ -79,9 +80,21 @@ export async function kaitoPodStatus(
             }
         }
     });
+
+    if (!kaitoWorkspaceReady) {
+        vscode.window.showWarningMessage(
+            `The 'kaito-workspace' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+        );
+    } else if (!kaitoGPUProvisionerReady) {
+        vscode.window.showWarningMessage(
+            `The 'kaito-gpu-provisoner' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
+        );
+    }
+
     return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }
 
+// returns an array with the names of all pods starting with "kaito-"
 export async function getKaitoPods(
     sessionProvider: ReadyAzureSessionProvider,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
@@ -157,6 +170,7 @@ function escapeSpecialChars(input: string) {
         .replace(/\0/g, "\\0"); // Escape null characters
 }
 
+// returns the cluster IP for the model
 export async function getClusterIP(
     kubeConfigFilePath: string,
     modelName: string,
