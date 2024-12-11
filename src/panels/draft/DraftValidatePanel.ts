@@ -1,32 +1,25 @@
 import { Uri, WorkspaceFolder, window } from "vscode";
 import path from "path";
-import * as fs from "fs";
 import { BasePanel, PanelDataProvider } from "../BasePanel";
 import {
-    ExistingFiles,
     InitialState,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
-} from "../../webview-contract/webviewDefinitions/draft/draftDockerfile";
+} from "../../webview-contract/webviewDefinitions/draft/draftValidate";
 import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
 import { ShellOptions, exec } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
-import { OpenFileOptions } from "../../webview-contract/webviewDefinitions/shared/fileSystemTypes";
-import { launchDraftCommand } from "./commandUtils";
-import { getLanguageVersionInfo, getSupportedLanguages } from "../../commands/draft/languages";
 
-export class DraftDockerfilePanel1 extends BasePanel<"draftDockerfile"> {
+export class DraftValidatePanel extends BasePanel<"draftValidate"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "draftDockerfile", {
-            pickLocationResponse: null,
-            getLanguageVersionInfoResponse: null,
-            createDockerfileResponse: null,
+        super(extensionUri, "draftValidate", {
+            validationResult: undefined,
         });
     }
 }
 
-export class DraftDockerfileDataProvider1 implements PanelDataProvider<"draftDockerfile"> {
+export class DraftValidateDataProvider implements PanelDataProvider<"draftValidate"> {
     readonly draftDirectory: string;
     constructor(
         readonly workspaceFolder: WorkspaceFolder,
@@ -37,87 +30,30 @@ export class DraftDockerfileDataProvider1 implements PanelDataProvider<"draftDoc
     }
 
     getTitle(): string {
-        return `Draft Dockerfile in ${this.workspaceFolder.name}`;
+        return `Draft Validate`;
     }
 
     getInitialState(): InitialState {
         return {
-            workspaceConfig: {
-                name: this.workspaceFolder.name,
-                fullPath: this.workspaceFolder.uri.fsPath,
-                pathSeparator: path.sep,
-            },
-            location: this.initialLocation,
-            supportedLanguages: getSupportedLanguages(),
-            existingFiles: getExistingFiles(this.workspaceFolder, this.initialLocation),
+            validationResults: "Initializing validation...",
         };
     }
 
-    getTelemetryDefinition(): TelemetryDefinition<"draftDockerfile"> {
+    getTelemetryDefinition(): TelemetryDefinition<"draftValidate"> {
         return {
-            createDockerfileRequest: true,
-            getLanguageVersionInfoRequest: false,
-            openFileRequest: false,
-            pickLocationRequest: false,
-            launchDraftDeployment: false,
-            launchDraftWorkflow: false,
+            createDraftValidateRequest: false,
         };
     }
 
+    //Messages from Webview to Vscode
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            pickLocationRequest: (openFileOptions) => this.handlePickLocationRequest(openFileOptions, webview),
-            getLanguageVersionInfoRequest: (args) =>
-                this.handleGetLanguageVersionInfoRequest(args.language, args.version, webview),
-            createDockerfileRequest: (args) => this.handleDraftValidateRequest(args.location, webview),
-            openFileRequest: (filePath) => this.handleOpenFileRequest(filePath),
-            launchDraftDeployment: (args) =>
-                launchDraftCommand("aks.draftDeployment", {
-                    workspaceFolder: this.workspaceFolder,
-                    initialLocation: args.initialLocation,
-                    initialSelection: {
-                        targetPort: args.initialTargetPort || undefined,
-                    },
-                }),
-            launchDraftWorkflow: (args) =>
-                launchDraftCommand("aks.draftWorkflow", {
-                    workspaceFolder: this.workspaceFolder,
-                    initialSelection: {
-                        dockerfilePath: path.join(args.initialDockerfileLocation, "Dockerfile"),
-                        dockerfileBuildContextPath: args.initialDockerfileLocation,
-                    },
-                }),
+            createDraftValidateRequest: () => this.handleDraftValidateRequest(webview),
         };
     }
 
-    private async handlePickLocationRequest(openFileOptions: OpenFileOptions, webview: MessageSink<ToWebViewMsgDef>) {
-        const result = await window.showOpenDialog({
-            canSelectFiles: openFileOptions.type === "file",
-            canSelectFolders: openFileOptions.type === "directory",
-            canSelectMany: false,
-            defaultUri: openFileOptions.defaultPath ? Uri.file(openFileOptions.defaultPath) : undefined,
-        });
-
-        if (!result || result.length === 0) return;
-
-        const location = path.relative(this.workspaceFolder.uri.fsPath, result[0].fsPath);
-        webview.postPickLocationResponse({
-            location,
-            existingFiles: getExistingFiles(this.workspaceFolder, location),
-        });
-    }
-
-    private handleGetLanguageVersionInfoRequest(
-        language: string,
-        version: string,
-        webview: MessageSink<ToWebViewMsgDef>,
-    ) {
-        const versionInfo = getLanguageVersionInfo(language, version);
-        webview.postGetLanguageVersionInfoResponse({ language, versionInfo });
-    }
-
-    private async handleDraftValidateRequest(location: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `draft validate --manifest .${path.sep}${location}`;
+    private async handleDraftValidateRequest(webview: MessageSink<ToWebViewMsgDef>) {
+        const command = `draft validate --manifest .${path.sep}${this.initialLocation}`;
 
         const execOptions: ShellOptions = {
             workingDir: this.workspaceFolder.uri.fsPath,
@@ -130,22 +66,8 @@ export class DraftDockerfileDataProvider1 implements PanelDataProvider<"draftDoc
             return;
         }
 
-        const existingFiles = getExistingFiles(this.workspaceFolder, location);
-        webview.postCreateDockerfileResponse(existingFiles);
-    }
+        const validationResults = draftResult.result.stdout;
 
-    private handleOpenFileRequest(relativeFilePath: string) {
-        const filePath = path.join(this.workspaceFolder.uri.fsPath, relativeFilePath);
-        window.showTextDocument(Uri.file(filePath));
+        webview.postValidationResult({ result: validationResults });
     }
-}
-
-function getExistingFiles(workspaceFolder: WorkspaceFolder, location: string): ExistingFiles {
-    const locationFullPath = path.join(workspaceFolder.uri.fsPath, location);
-    const dockerfilePath = path.join(locationFullPath, "Dockerfile");
-    const dockerignorePath = path.join(locationFullPath, ".dockerignore");
-    const existingFiles = [dockerfilePath, dockerignorePath]
-        .filter((p) => fs.existsSync(p))
-        .map((p) => path.relative(workspaceFolder.uri.fsPath, p));
-    return existingFiles;
 }

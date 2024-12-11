@@ -158,24 +158,6 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
         webview.postCreateDockerfileResponse(existingFiles);
     }
 
-    async handleDraftValidateRequest(location: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `draft validate --manifest .${path.sep}${location}`;
-
-        const execOptions: ShellOptions = {
-            workingDir: this.workspaceFolder.uri.fsPath,
-            envPaths: [this.draftDirectory],
-        };
-
-        const draftResult = await exec(command, execOptions);
-        if (failed(draftResult)) {
-            window.showErrorMessage(draftResult.error);
-            return;
-        }
-
-        const existingFiles = getExistingFiles(this.workspaceFolder, location);
-        webview.postCreateDockerfileResponse(existingFiles);
-    }
-
     private handleOpenFileRequest(relativeFilePath: string) {
         const filePath = path.join(this.workspaceFolder.uri.fsPath, relativeFilePath);
         window.showTextDocument(Uri.file(filePath));

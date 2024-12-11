@@ -44,6 +44,7 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     draftDeployment: getDraftDeploymentScenarios(),
     draftDockerfile: getDraftDockerfileScenarios(),
     draftWorkflow: getDraftWorkflowScenarios(),
+    draftValidate: [], //TODO ADD TEST FOR DRAFT VALIDATE
     gadget: getInspektorGadgetScenarios(),
     kubectl: getKubectlScenarios(),
     aso: getASOScenarios(),

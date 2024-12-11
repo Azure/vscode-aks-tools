@@ -321,7 +321,7 @@
                 "title": "Install KAITO"
             },
             {
-                "command": "aks.runDraftValidateYamlCommand",
+                "command": "aks.aksDraftValidate",
                 "title": "Run Draft Validate for YAML"
             }
         ],
@@ -354,11 +354,11 @@
                     "when": "explorerResourceIsFolder"
                 },
                 {
-                    "command": "aks.runDraftValidateYamlCommand",
+                    "command": "aks.aksDraftValidate",
                     "when": "resourceExtname == .yaml || resourceExtname == .yml"
                 },
                 {
-                    "command": "aks.runDraftValidateYamlCommand",
+                    "command": "aks.aksDraftValidate",
                     "when": "explorerResourceIsFolder"
                 }
             ],
