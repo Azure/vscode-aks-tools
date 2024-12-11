@@ -237,7 +237,8 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             }
             // Catches if the user cancelled deployment at this point
             if (this.cancelTokens.get(model)) {
-                vscode.window.showErrorMessage("Deployment Cancelled");
+                vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
+                this.checkingGPU = false;
                 return;
             }
             await longRunning(`Checking if workspace exists...`, async () => {
@@ -247,7 +248,8 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             if (getResult === null || failed(getResult)) {
                 // Deployment cancellation check
                 if (this.cancelTokens.get(model)) {
-                    vscode.window.showErrorMessage("Deployment Cancelled");
+                    vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
+                    this.checkingGPU = false;
                     return;
                 }
                 await longRunning(`Verifying available subscription quota for deployment...`, async () => {
@@ -278,7 +280,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             }
             // Deployment cancellation check
             if (this.cancelTokens.get(model)) {
-                vscode.window.showErrorMessage("Deployment Cancelled");
+                vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
                 return;
             }
             // Creating temporary yaml file for deployment
@@ -296,7 +298,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         }
         // end state updates if user cancelled out of view
         if (this.cancelTokens.get(model)) {
-            vscode.window.showErrorMessage("Deployment Cancelled");
+            vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
             return;
         }
         // if cancel token is set for any other model, just return maybe?
