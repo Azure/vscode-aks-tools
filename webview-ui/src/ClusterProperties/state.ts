@@ -42,4 +42,5 @@ export const vscode = getWebviewMessageContext<"clusterProperties">({
     abortAgentPoolOperation: null,
     abortClusterOperation: null,
     reconcileClusterRequest: null,
+    refreshRequest: null,
 });

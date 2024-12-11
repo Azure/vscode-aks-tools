@@ -6,6 +6,7 @@ import { ClusterDisplay } from "./ClusterDisplay";
 import { isLoaded, isNotLoaded } from "../utilities/lazy";
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { AgentPoolDisplay } from "./AgentPoolDisplay";
+import styles from "./ClusterProperties.module.css";
 
 export function ClusterProperties(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -17,10 +18,27 @@ export function ClusterProperties(initialState: InitialState) {
         }
     });
 
+    function handleRefreshRequest() {
+        vscode.postRefreshRequest();
+        eventHandlers.onSetPropertiesLoading();
+    }
+
     const clusterInfo = isLoaded(state.clusterInfo) && state.clusterInfo.value;
     return (
         <>
-            <h2>AKS Cluster Properties of {state.clusterName}</h2>
+            <div className={styles.header}>
+                <h2>
+                    AKS Cluster Properties of {state.clusterName}{" "}
+                    <button
+                        onClick={handleRefreshRequest}
+                        className={styles.refreshButton}
+                        aria-label="Refresh content"
+                        title="Refresh content"
+                    >
+                        <i className="codicon codicon-refresh" aria-hidden="true"></i>
+                    </button>
+                </h2>
+            </div>
             {clusterInfo ? (
                 <ClusterDisplay
                     clusterInfo={clusterInfo}

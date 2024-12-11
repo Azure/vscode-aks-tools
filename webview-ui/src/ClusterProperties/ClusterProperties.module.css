@@ -21,13 +21,14 @@
 
 .infoIndicator {
     color: var(--vscode-notificationsInfoIcon-foreground);
-    padding-right: 0.5rem;
+    height: 0;
+    width: 0;
+    box-sizing: border-box;
 }
 
 .tooltip {
     position: absolute;
     display: inline-block;
-    border-bottom: 1px dotted black;
 }
 
 .tooltip .tooltiptext {
@@ -45,6 +46,7 @@
     z-index: 1;
     width: max-content;
     max-width: 55vw;
+    left: 0.5rem;
 }
 
 .tooltip:hover .tooltiptext {
@@ -73,4 +75,29 @@ th {
     font-weight: bold;
     text-align: left;
     margin-bottom: 0.375rem;
+}
+
+.refreshButton {
+    position: relative;
+    background: none;
+    border: none;
+    color: var(--vscode-editor-foreground, #fff);
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+    margin-left: -0.1rem;
+    transition: all 0.1s ease;
+    border-radius: 10rem;
+    top: -0.02rem;
+}
+
+.refreshButton:hover {
+    background: var(--editor-selectionHighlightBackground, rgba(58, 58, 58, 0.4));
+    cursor: pointer;
+}
+
+.refreshButton i {
+    position: relative;
+    top: 6%;
+    transform: scale(1.3);
 }
