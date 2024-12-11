@@ -191,22 +191,24 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 return;
             }
             const data = JSON.parse(kubectlresult.result.stdout);
-            const items = data.items;
-            let pod = null;
-            for (const item of items) {
-                const name = item.metadata.name;
+            const pods = data.items;
+            let workspacePod = null;
+            // Find the most recent kaito-workspace pod in case of multiple pods
+            for (const pod of pods) {
+                const name = pod.metadata.name;
                 if (name.startsWith("kaito-workspace")) {
-                    const date = new Date(item.metadata.creationTimestamp);
-                    if (!pod || date > pod.date) {
-                        pod = { name: name, date: date };
+                    const date = new Date(pod.metadata.creationTimestamp);
+                    if (!workspacePod || date > workspacePod.date) {
+                        workspacePod = { name: name, date: date };
                     }
                 }
             }
-            if (!pod) {
+            if (!workspacePod) {
                 vscode.window.showErrorMessage(`Error finding workspace pod.`);
                 return;
             }
-            command = `logs ${pod.name} -n kube-system --tail=500`;
+            // retrieves up to 500 lines of logs
+            command = `logs ${workspacePod.name} -n kube-system --tail=500`;
             kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
                 vscode.window.showErrorMessage(`Error fetching logs: ${kubectlresult.error}`);

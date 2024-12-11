@@ -235,11 +235,21 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 this.checkingGPU = false;
                 return;
             }
+            // Catches if the user cancelled deployment at this point
+            if (this.cancelTokens.get(model)) {
+                vscode.window.showErrorMessage("Deployment Cancelled");
+                return;
+            }
             await longRunning(`Checking if workspace exists...`, async () => {
                 const getCommand = `get workspace workspace-${model}`;
                 getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);
             });
             if (getResult === null || failed(getResult)) {
+                // Deployment cancellation check
+                if (this.cancelTokens.get(model)) {
+                    vscode.window.showErrorMessage("Deployment Cancelled");
+                    return;
+                }
                 await longRunning(`Verifying available subscription quota for deployment...`, async () => {
                     const [gpuFamily, requiredCPUs] = this.parseGPU(gpu);
                     void requiredCPUs;
@@ -266,7 +276,12 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             if (!quotaAvailable) {
                 return;
             }
-            // Creating temporary taml file for deployment
+            // Deployment cancellation check
+            if (this.cancelTokens.get(model)) {
+                vscode.window.showErrorMessage("Deployment Cancelled");
+                return;
+            }
+            // Creating temporary yaml file for deployment
             const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
             writeFileSync(tempFilePath, yaml, "utf8");
             const command = `apply -f ${tempFilePath}`;
@@ -279,7 +294,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             this.checkingGPU = false;
             vscode.window.showErrorMessage(`Error during deployment: ${error}`);
         }
-        this.cancelTokens.set(model, false);
+        // end state updates if user cancelled out of view
+        if (this.cancelTokens.get(model)) {
+            vscode.window.showErrorMessage("Deployment Cancelled");
+            return;
+        }
         // if cancel token is set for any other model, just return maybe?
         this.handleUpdateStateRequest(model, webview);
         let progress = await this.getProgress(model);
