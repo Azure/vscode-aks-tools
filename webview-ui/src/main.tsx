@@ -1,5 +1,5 @@
 import "@vscode/codicons/dist/codicon.css";
-import { StrictMode } from "react";
+import { JSX, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { decodeState } from "../../src/webview-contract/initialState";
 import { ContentId } from "../../src/webview-contract/webviewTypes";
