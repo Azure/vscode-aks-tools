@@ -1,3 +1,4 @@
+import { JSX } from "react";
 import { CommandKeys, MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
 import { ContentId, ToVsCodeMsgDef, ToWebviewMsgDef } from "../../../src/webview-contract/webviewTypes";
 import { getTestVscodeMessageContext } from "./vscode";
