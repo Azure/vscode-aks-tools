@@ -1,5 +1,5 @@
 import "@vscode/codicons/dist/codicon.css";
-import { StrictMode } from "react";
+import { JSX, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { decodeState } from "../../src/webview-contract/initialState";
 import { ContentId } from "../../src/webview-contract/webviewTypes";
@@ -12,6 +12,8 @@ import { DraftDeployment, DraftDockerfile, DraftWorkflow, DraftValidate } from "
 import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
 import { Kaito } from "./Kaito/Kaito";
 import { KaitoModels } from "./KaitoModels/KaitoModels";
+import { KaitoManage } from "./KaitoManage/KaitoManage";
+import { KaitoTest } from "./KaitoTest/KaitoTest";
 import { Kubectl } from "./Kubectl/Kubectl";
 import "./main.css";
 import { Periscope } from "./Periscope/Periscope";
@@ -64,6 +66,8 @@ function getVsCodeContent(): JSX.Element {
         retinaCapture: () => <RetinaCapture {...getInitialState()} />,
         kaito: () => <Kaito {...getInitialState()} />,
         kaitoModels: () => <KaitoModels {...getInitialState()} />,
+        kaitoManage: () => <KaitoManage {...getInitialState()} />,
+        kaitoTest: () => <KaitoTest {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
