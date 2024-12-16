@@ -328,6 +328,7 @@
                 "command": "aks.aksDraftValidate",
                 "title": "Run Draft Validate for YAML"
             },
+            {
                 "command": "aks.aksKaitoTest",
                 "title": "Test KAITO models"
             }
