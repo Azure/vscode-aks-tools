@@ -6,6 +6,9 @@ import { ClusterDisplay } from "./ClusterDisplay";
 import { isLoaded, isNotLoaded } from "../utilities/lazy";
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { AgentPoolDisplay } from "./AgentPoolDisplay";
+import styles from "./ClusterProperties.module.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faRedoAlt } from "@fortawesome/free-solid-svg-icons";
 
 export function ClusterProperties(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -17,10 +20,27 @@ export function ClusterProperties(initialState: InitialState) {
         }
     });
 
+    function handleRefreshRequest() {
+        vscode.postRefreshRequest();
+        eventHandlers.onSetPropertiesLoading();
+    }
+
     const clusterInfo = isLoaded(state.clusterInfo) && state.clusterInfo.value;
     return (
         <>
-            <h2>AKS Cluster Properties of {state.clusterName}</h2>
+            <div className={styles.header}>
+                <h2>
+                    <span className={styles.headerTitle}>AKS Cluster Properties of {state.clusterName}</span>
+                    <button
+                        onClick={handleRefreshRequest}
+                        className={styles.refreshButton}
+                        aria-label="Refresh content"
+                        title="Refresh content"
+                    >
+                        <FontAwesomeIcon icon={faRedoAlt} className={styles.refreshIcon} />
+                    </button>
+                </h2>
+            </div>
             {clusterInfo ? (
                 <ClusterDisplay
                     clusterInfo={clusterInfo}

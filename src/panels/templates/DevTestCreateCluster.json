@@ -742,7 +742,8 @@
                 "disableLocalAccounts": "[parameters('disableLocalAccounts')]",
                 "aadProfile": "[if(parameters('enableAadProfile'), variables('defaultAadProfile'), null())]",
                 "autoUpgradeProfile": {
-                    "upgradeChannel": "[parameters('upgradeChannel')]"
+                    "upgradeChannel": "[parameters('upgradeChannel')]",
+                    "nodeOSUpgradeChannel": "[parameters('nodeOSUpgradeChannel')]"
                 },
                 "agentPoolProfiles": [
                     {

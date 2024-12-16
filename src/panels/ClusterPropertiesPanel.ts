@@ -60,6 +60,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             abortAgentPoolOperation: true,
             abortClusterOperation: true,
             reconcileClusterRequest: true,
+            refreshRequest: true,
         };
     }
 
@@ -71,6 +72,8 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             abortAgentPoolOperation: (poolName: string) => this.handleAbortAgentPoolOperation(webview, poolName),
             abortClusterOperation: () => this.handleAbortClusterOperation(webview),
             reconcileClusterRequest: () => this.handleReconcileClusterOperation(webview),
+            // refreshRequest is just for telemetry, so it will use the same getPropertiesRequest handler.
+            refreshRequest: () => this.handleGetPropertiesRequest(webview),
         };
     }
 
