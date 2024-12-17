@@ -7,6 +7,7 @@ import { DetectorDefinition } from "./webviewDefinitions/detector";
 import { DraftDeploymentDefinition } from "./webviewDefinitions/draft/draftDeployment";
 import { DraftDockerfileDefinition } from "./webviewDefinitions/draft/draftDockerfile";
 import { DraftWorkflowDefinition } from "./webviewDefinitions/draft/draftWorkflow";
+import { DraftValidateDefinition } from "./webviewDefinitions/draft/draftValidate";
 import { InspektorGadgetDefinition } from "./webviewDefinitions/inspektorGadget";
 import { KaitoDefinition } from "./webviewDefinitions/kaito";
 import { KaitoModelsDefinition } from "./webviewDefinitions/kaitoModels";
@@ -45,6 +46,7 @@ type AllWebviewDefinitions = {
     draftDeployment: DraftDeploymentDefinition;
     draftDockerfile: DraftDockerfileDefinition;
     draftWorkflow: DraftWorkflowDefinition;
+    draftValidate: DraftValidateDefinition;
     gadget: InspektorGadgetDefinition;
     kubectl: KubectlDefinition;
     aso: ASODefinition;

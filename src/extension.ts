@@ -40,7 +40,7 @@ import {
     aksNodeHealth,
     aksStorageDiagnostics,
 } from "./commands/detectors/detectors";
-import { draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
+import { draftValidate, draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
 import periscope from "./commands/periscope/periscope";
 import refreshSubscription from "./commands/refreshSubscriptions";
 import { getKubeconfigYaml, getManagedCluster } from "./commands/utils/clusters";
@@ -72,7 +72,6 @@ export async function activate(context: vscode.ExtensionContext) {
             outputChannel: createAzExtOutputChannel("Azure Identity", ""),
             prefix: "",
         };
-
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerUIExtensionVariables(uiExtensionVariables);
@@ -118,6 +117,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksDeployManifest", aksDeployManifest);
         registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
         registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
+        registerCommandWithTelemetry("aks.aksDraftValidate", draftValidate);
 
         await registerAzureServiceNodes(context);
 

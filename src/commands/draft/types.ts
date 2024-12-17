@@ -16,6 +16,10 @@ export type DraftCommandParamsTypes = {
         workspaceFolder?: WorkspaceFolder;
         initialSelection?: WorkflowInitialSelection;
     };
+    "aks.draftValidate": {
+        workspaceFolder?: WorkspaceFolder;
+        initialLocation?: string;
+    };
 };
 
 export type DraftCommandName = keyof DraftCommandParamsTypes;
