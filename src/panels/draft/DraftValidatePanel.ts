@@ -41,7 +41,7 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
 
     getTelemetryDefinition(): TelemetryDefinition<"draftValidate"> {
         return {
-            createDraftValidateRequest: false,
+            createDraftValidateRequest: true,
         };
     }
 
