@@ -30,7 +30,7 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
     }
 
     getTitle(): string {
-        return `Draft Validate`;
+        return `Draft Validate in ${this.workspaceFolder.name}`;
     }
 
     getInitialState(): InitialState {
