@@ -15,5 +15,3 @@ export type ToWebViewMsgDef = {
 };
 
 export type DraftValidateDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
-
-//TODO FINISH REPLACING UNUSED CODE
