@@ -123,6 +123,7 @@ export function getClusterPropertiesScenarios() {
                 handleAbortAgentPoolOperation(agentPoolName, withErrors && sometimes()),
             abortClusterOperation: () => handleAbortClusterOperation(withErrors && sometimes()),
             reconcileClusterRequest: () => handleReconcileClusterRequest(withErrors && sometimes()),
+            refreshRequest: () => handleGetPropertiesRequest(),
         };
 
         async function handleGetPropertiesRequest() {
