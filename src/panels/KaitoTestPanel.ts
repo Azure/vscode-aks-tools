@@ -101,6 +101,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 const clusterIP = await getClusterIP(this.kubeConfigFilePath, this.modelName, this.kubectl);
                 if (clusterIP === "") {
                     this.isQueryInProgress = false;
+                    vscode.window.showErrorMessage(`Failed to retrieve cluster IP`);
                     return;
                 }
                 // this command creates a curl pod and executes the query

@@ -8,10 +8,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
-import { getConditions, convertAgeToMinutes } from "./utilities/KaitoHelpers";
-import { join } from "path";
-import { writeFileSync } from "fs";
-import { tmpdir } from "os";
+import { getConditions, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
 
 export class KaitoManagePanel extends BasePanel<"kaitoManage"> {
     constructor(extensionUri: vscode.Uri) {
@@ -127,12 +124,11 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
 
             // Redeploy the workspace
             await longRunning(`Re-deploying 'workspace-${modelName}'`, async () => {
-                const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
-                writeFileSync(tempFilePath, modelYaml, "utf8");
-                const command = `apply -f ${tempFilePath}`;
-                const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-                if (failed(kubectlresult)) {
-                    vscode.window.showErrorMessage(`Error deploying 'workspace-${modelName}': ${kubectlresult.error}`);
+                const deploymentResult = await deployModel(modelYaml, this.kubectl, this.kubeConfigFilePath);
+                if (failed(deploymentResult)) {
+                    vscode.window.showErrorMessage(
+                        `Error deploying 'workspace-${modelName}': ${deploymentResult.error}`,
+                    );
                     return;
                 }
             });
@@ -215,9 +211,11 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 return;
             }
             const logs = kubectlresult.result.stdout;
-            const tempFilePath = join(tmpdir(), "kaito-workspace-logs.txt");
-            writeFileSync(tempFilePath, logs, "utf8");
-            const doc = await vscode.workspace.openTextDocument(tempFilePath);
+
+            const doc = await vscode.workspace.openTextDocument({
+                content: logs,
+                language: "plaintext",
+            });
             vscode.window.showTextDocument(doc);
         });
     }

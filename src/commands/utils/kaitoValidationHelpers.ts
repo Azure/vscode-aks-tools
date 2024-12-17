@@ -94,5 +94,6 @@ export async function getKaitoInstallationStatus(
         kubectl,
         kubeConfigFile.filePath,
     );
+    kubeConfigFile.dispose();
     return { kaitoInstalled: true, kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }
