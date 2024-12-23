@@ -17,10 +17,10 @@ export function getKaitoModelScenarios() {
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             generateCRDRequest: ({ model }) => {
-                console.log("monitorUpdateRequest", model);
+                console.log("generateCRDRequest", model);
             },
             deployKaitoRequest: ({ model, yaml, gpu }) => {
-                console.log("monitorUpdateRequest", model, yaml, gpu);
+                console.log("deployKaitoRequest", model, yaml, gpu);
                 webview.postDeploymentProgressUpdate({
                     clusterName: initialState.clusterName,
                     modelName: model,
@@ -31,21 +31,15 @@ export function getKaitoModelScenarios() {
                     age: 0,
                 });
             },
-            workspaceExistsRequest: ({ model }) => {
-                console.log("monitorUpdateRequest", model);
-            },
-            updateStateRequest: ({ model }) => {
-                console.log("monitorUpdateRequest", model);
-            },
             resetStateRequest: () => {
-                console.log("monitorUpdateRequest");
+                console.log("resetStateRequest");
             },
             cancelRequest: ({ model }) => {
-                console.log("monitorUpdateRequest", model);
+                console.log("cancelRequest", model);
                 webview.postDeploymentProgressUpdate(initialState);
             },
             kaitoManageRedirectRequest: () => {
-                console.log("monitorUpdateRequest");
+                console.log("kaitoManageRedirectRequest");
             },
         };
     }

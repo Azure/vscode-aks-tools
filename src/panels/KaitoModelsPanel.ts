@@ -1,6 +1,3 @@
-import { writeFileSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { ReadyAzureSessionProvider } from "../auth/types";
@@ -14,7 +11,8 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
 import { Usage } from "@azure/arm-compute";
-import { kaitoPodStatus, getKaitoPods, convertAgeToMinutes } from "./utilities/KaitoHelpers";
+import { kaitoPodStatus, getKaitoPods, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
+import { existsSync } from "fs";
 
 enum GpuFamilies {
     NCSv3Family = "s_v3",
@@ -55,8 +53,9 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     cancel(model: string) {
         this.cancelTokens.set(model, true);
     }
-    // This is set to true while quota information is being fetched
-    private checkingGPU: boolean = false;
+
+    // This is set to true while pre-deployment checks are being performed
+    private checksInProgress: boolean = false;
 
     getTitle(): string {
         return `Create KAITO Workspace`;
@@ -72,15 +71,10 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             age: 0,
         } as InitialState;
     }
-    // cancel() {
-    //     this.cancelToken = true;
-    // }
     getTelemetryDefinition(): TelemetryDefinition<"kaitoModels"> {
         return {
             generateCRDRequest: true,
             deployKaitoRequest: true,
-            workspaceExistsRequest: false,
-            updateStateRequest: false,
             resetStateRequest: false,
             cancelRequest: false,
             kaitoManageRedirectRequest: true,
@@ -93,12 +87,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             },
             deployKaitoRequest: (params) => {
                 this.handleDeployKaitoRequest(params.model, params.yaml, params.gpu, webview);
-            },
-            workspaceExistsRequest: (params) => {
-                this.handleWorkspaceExistsRequest(params.model);
-            },
-            updateStateRequest: (params) => {
-                this.handleUpdateStateRequest(params.model, webview);
             },
             resetStateRequest: () => {
                 this.handleResetStateRequest(webview);
@@ -202,6 +190,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         return quota.currentValue + requiredCPUs <= quota.limit;
     }
 
+    private handleDeploymentCancellation(model: string) {
+        vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
+        this.checksInProgress = false;
+    }
+
     // This function checks quota & existence of workspace, then deploys model
     private async handleDeployKaitoRequest(
         model: string,
@@ -211,12 +204,12 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     ) {
         this.cancelTokens.set(model, false);
         this.handleResetStateRequest(webview);
-        // This prevents the user from redeploying while quota is being checked
-        if (this.checkingGPU) {
+        // This prevents the user from redeploying while pre-deployment checks are being performed
+        if (this.checksInProgress) {
             return;
         }
         try {
-            this.checkingGPU = true;
+            this.checksInProgress = true;
             let quotaAvailable = false;
             let getResult = null;
             let readyStatus = { kaitoWorkspaceReady: false, kaitoGPUProvisionerReady: false };
@@ -229,19 +222,15 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                     this.resourceGroupName,
                     this.clusterName,
                 );
-                readyStatus = await kaitoPodStatus(kaitoPods, this.kubectl, this.kubeConfigFilePath);
-                if (!readyStatus.kaitoWorkspaceReady) {
-                    vscode.window.showWarningMessage(
-                        `The 'kaito-workspace' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-                    );
-                } else if (!readyStatus.kaitoGPUProvisionerReady) {
-                    vscode.window.showWarningMessage(
-                        `The 'kaito-gpu-provisoner' pod in cluster ${this.clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-                    );
-                }
+                readyStatus = await kaitoPodStatus(this.clusterName, kaitoPods, this.kubectl, this.kubeConfigFilePath);
             });
             if (!readyStatus.kaitoWorkspaceReady || !readyStatus.kaitoGPUProvisionerReady) {
-                this.checkingGPU = false;
+                this.checksInProgress = false;
+                return;
+            }
+            // Catches if the user cancelled deployment at this point
+            if (this.cancelTokens.get(model)) {
+                this.handleDeploymentCancellation(model);
                 return;
             }
             await longRunning(`Checking if workspace exists...`, async () => {
@@ -249,6 +238,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);
             });
             if (getResult === null || failed(getResult)) {
+                // Deployment cancellation check
+                if (this.cancelTokens.get(model)) {
+                    this.handleDeploymentCancellation(model);
+                    return;
+                }
                 await longRunning(`Verifying available subscription quota for deployment...`, async () => {
                     const [gpuFamily, requiredCPUs] = this.parseGPU(gpu);
                     void requiredCPUs;
@@ -270,46 +264,57 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             } else {
                 quotaAvailable = true;
             }
-
-            this.checkingGPU = false;
             if (!quotaAvailable) {
+                this.checksInProgress = false;
                 return;
             }
-            const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
-            writeFileSync(tempFilePath, yaml, "utf8");
-            const command = `apply -f ${tempFilePath}`;
-            const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-            if (failed(kubectlresult)) {
-                vscode.window.showErrorMessage(`Error during deployment: ${kubectlresult.error}`);
+
+            // Deployment cancellation check
+            if (this.cancelTokens.get(model)) {
+                this.handleDeploymentCancellation(model);
                 return;
             }
+            // Deploying model
+            const deploymentResult = await deployModel(yaml, this.kubectl, this.kubeConfigFilePath);
+            if (failed(deploymentResult)) {
+                vscode.window.showErrorMessage(`Error deploying 'workspace-${model}': ${deploymentResult.error}`);
+                this.checksInProgress = false;
+                return;
+            }
+            // Final checksInProgress set to false to allow for future deployments
+            this.checksInProgress = false;
         } catch (error) {
-            this.checkingGPU = false;
+            this.checksInProgress = false;
             vscode.window.showErrorMessage(`Error during deployment: ${error}`);
         }
-        this.cancelTokens.set(model, false);
-        this.handleUpdateStateRequest(model, webview);
-        let progress = await this.getProgress(model);
-        while (!this.nullIsFalse(progress.workspaceReady) && !this.cancelTokens.get(model)) {
-            await this.handleUpdateStateRequest(model, webview);
-            progress = await this.getProgress(model);
+        // end state updates if user cancelled out of view
+        if (this.cancelTokens.get(model)) {
+            vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
+            return;
         }
+        // if cancel token is set for any other model, just return maybe?
+        this.updateProgress(model, webview);
+        let progress = await this.getProgress(model);
+
+        // Continuously polls deployment progress until completion, cancellation, or panel disposal.
+        while (
+            !this.nullIsFalse(progress.workspaceReady) &&
+            !this.cancelTokens.get(model) &&
+            existsSync(this.kubeConfigFilePath)
+        ) {
+            // Error handling is done via updateProgress
+            progress = await this.updateProgress(model, webview);
+            // 5 second delay between each check
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+        }
+
         if (this.cancelTokens.get(model)) {
             await this.handleResetStateRequest(webview);
         } else {
-            await this.handleUpdateStateRequest(model, webview);
+            await this.updateProgress(model, webview);
         }
     }
 
-    private async handleWorkspaceExistsRequest(model: string) {
-        const command = `get workspace ${model} -w`;
-        const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-        if (failed(kubectlresult)) {
-            return false;
-        } else {
-            return true;
-        }
-    }
     private async handleResetStateRequest(webview: MessageSink<ToWebViewMsgDef>) {
         webview.postDeploymentProgressUpdate(this.getInitialState());
     }
@@ -320,13 +325,21 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         }
         return false;
     }
+
+    // Returns current state of workspace associated with given model
     private async getProgress(model: string): Promise<InitialState> {
         const command = `get workspace workspace-${model} -o json`;
         let kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         if (failed(kubectlresult)) {
             kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
-                vscode.window.showErrorMessage(kubectlresult.error);
+                // Error message only produced if kubeconfig file is still present (it's removed upon panel closing)
+                // This is to prevent error messages from appearing when the user closes the panel
+                if (existsSync(this.kubeConfigFilePath)) {
+                    vscode.window.showErrorMessage(
+                        `There was an error connecting to the workspace. ${kubectlresult.error}`,
+                    );
+                }
                 return this.getInitialState();
             }
         }
@@ -344,34 +357,14 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         } as InitialState;
     }
 
-    // Returns current state of workspace associated with given model
-    private async handleUpdateStateRequest(model: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `get workspace workspace-${model} -o json`;
-        let kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-        if (failed(kubectlresult)) {
-            kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-            if (failed(kubectlresult)) {
-                vscode.window.showErrorMessage(
-                    `There was an error connecting to the workspace. ${kubectlresult.error}`,
-                );
-                webview.postDeploymentProgressUpdate(this.getInitialState());
-                this.cancelTokens.set(model, true);
-                return;
-            }
+    // Posts current state to webview & returns the value
+    private async updateProgress(model: string, webview: MessageSink<ToWebViewMsgDef>) {
+        const progress = await this.getProgress(model);
+        webview.postDeploymentProgressUpdate(progress);
+        // if modelName is empty, it means getProgress failed
+        if (progress.modelName === "") {
+            this.cancelTokens.set(model, true);
         }
-        const data = JSON.parse(kubectlresult.result.stdout);
-        const conditions: Array<{ type: string; status: string }> = data.status?.conditions || [];
-        const { resourceReady, inferenceReady, workspaceReady } = this.getConditions(conditions);
-
-        webview.postDeploymentProgressUpdate({
-            clusterName: this.clusterName,
-            modelName: model,
-            workspaceExists: true,
-            resourceReady: resourceReady,
-            inferenceReady: inferenceReady,
-            workspaceReady: workspaceReady,
-            age: convertAgeToMinutes(data.metadata?.creationTimestamp),
-        });
-        return;
+        return progress;
     }
 }

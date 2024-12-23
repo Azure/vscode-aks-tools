@@ -78,7 +78,6 @@ export function KaitoModels(initialState: InitialState) {
         return defaultMessage;
     }
     function generateCRD(model: string) {
-        // model[0] is
         const yaml = generateKaitoYAML(model).yaml;
         vscode.postGenerateCRDRequest({ model: yaml });
         return;
@@ -139,7 +138,6 @@ export function KaitoModels(initialState: InitialState) {
                                     <>
                                         <div className={styles.modelDetails}>
                                             {(!state.workspaceExists || !(selectedModel === state.modelName)) && (
-                                                /* {false && ( */
                                                 <>
                                                     <div>
                                                         <button
