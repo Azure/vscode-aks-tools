@@ -61,7 +61,7 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
 
     if (filterKaitoPodNames.result.length === 0) {
         vscode.window.showWarningMessage(
-            `Please install Kaito for cluster ${clusterName}. \n \n KAITO Workspace generation is only enabled when KAITO is installed.`,
+            `Please install KAITO for cluster ${clusterName}. \n \n KAITO Workspace generation is only enabled when KAITO is installed.`,
         );
         return;
     }
@@ -83,5 +83,5 @@ export default async function aksKaitoCreateCRD(_context: IActionContext, target
         sessionProvider.result,
         target,
     );
-    panel.show(dataProvider);
+    panel.show(dataProvider, kubeConfigFile);
 }

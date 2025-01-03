@@ -68,5 +68,5 @@ export default async function aksKaitoTest(
         sessionProvider.result,
         modelName,
     );
-    panel.show(dataProvider);
+    panel.show(dataProvider, kubeConfigFile);
 }
