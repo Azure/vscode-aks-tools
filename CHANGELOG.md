@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.5.5]
+
+* Right Click Draft Validate.
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @hsubramanianaks, @tejhan, @qpetraroia, @Tatsinnit for contributions, testing and reviews.
+
 ## [1.5.4]
 
 * Add node os upgrade channel.
