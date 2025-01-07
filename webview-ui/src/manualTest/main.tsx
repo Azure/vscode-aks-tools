@@ -8,6 +8,7 @@ import { getASOScenarios } from "./asoTests";
 import { getAttachAcrToClusterScenarios } from "./attachAcrToClusterTests";
 import { getClusterPropertiesScenarios } from "./clusterPropertiesTests";
 import { getCreateClusterScenarios } from "./createClusterTests";
+import { getCreateFleetScenarios } from "./createFleetTests";
 import { getDetectorScenarios } from "./detectorTests";
 import { getDraftDeploymentScenarios, getDraftDockerfileScenarios, getDraftWorkflowScenarios } from "./draft";
 import { getInspektorGadgetScenarios } from "./inspektorGadgetTests";
@@ -56,6 +57,7 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoModels: getKaitoModelScenarios(),
     kaitoManage: getKaitoManageScenarios(),
     kaitoTest: getKaitoTestScenarios(),
+    createFleet: getCreateFleetScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

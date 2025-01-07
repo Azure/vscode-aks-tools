@@ -20,6 +20,7 @@ import { Periscope } from "./Periscope/Periscope";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
 import { TcpDump } from "./TCPDump/TcpDump";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
+import { CreateFleet } from "./CreateFleet/CreateFleet";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -68,6 +69,7 @@ function getVsCodeContent(): JSX.Element {
         kaitoModels: () => <KaitoModels {...getInitialState()} />,
         kaitoManage: () => <KaitoManage {...getInitialState()} />,
         kaitoTest: () => <KaitoTest {...getInitialState()} />,
+        createFleet: () => <CreateFleet {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
