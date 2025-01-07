@@ -602,7 +602,7 @@
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.10.2",
+        "@types/node": "^22.10.5",
         "@types/semver": "^7.5.8",
         "@types/sinon": "^17.0.3",
         "@types/tmp": "^0.2.6",
