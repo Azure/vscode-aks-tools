@@ -10,6 +10,7 @@ import {
     FileType,
 } from "vscode";
 import { DraftDockerfileDataProvider, DraftDockerfilePanel } from "../../panels/draft/DraftDockerfilePanel";
+import { DraftValidateDataProvider, DraftValidatePanel } from "../../panels/draft/DraftValidatePanel";
 import { getExtension } from "../utils/host";
 import { Errorable, failed, getErrorMessage, succeeded } from "../utils/errorable";
 import { getDraftBinaryPath } from "../utils/helper/draftBinaryDownload";
@@ -166,6 +167,19 @@ export async function draftWorkflow(_context: IActionContext, target: unknown): 
         existingWorkflowFiles,
         params?.initialSelection || {},
     );
+    panel.show(dataProvider);
+}
+
+export async function draftValidate(_context: IActionContext, target: unknown): Promise<void> {
+    const params = getDraftDockerfileParams(target);
+    const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
+    if (commonDependencies === null) {
+        return;
+    }
+
+    const { workspaceFolder, extension, draftBinaryPath } = commonDependencies;
+    const panel = new DraftValidatePanel(extension.extensionUri);
+    const dataProvider = new DraftValidateDataProvider(workspaceFolder, draftBinaryPath, params?.initialLocation || "");
     panel.show(dataProvider);
 }
 

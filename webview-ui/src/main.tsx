@@ -8,7 +8,7 @@ import { AzureServiceOperator } from "./AzureServiceOperator/AzureServiceOperato
 import { ClusterProperties } from "./ClusterProperties/ClusterProperties";
 import { CreateCluster } from "./CreateCluster/CreateCluster";
 import { Detector } from "./Detector/Detector";
-import { DraftDeployment, DraftDockerfile, DraftWorkflow } from "./Draft";
+import { DraftDeployment, DraftDockerfile, DraftWorkflow, DraftValidate } from "./Draft";
 import { InspektorGadget } from "./InspektorGadget/InspektorGadget";
 import { Kaito } from "./Kaito/Kaito";
 import { KaitoModels } from "./KaitoModels/KaitoModels";
@@ -58,6 +58,7 @@ function getVsCodeContent(): JSX.Element {
         draftDeployment: () => <DraftDeployment {...getInitialState()} />,
         draftDockerfile: () => <DraftDockerfile {...getInitialState()} />,
         draftWorkflow: () => <DraftWorkflow {...getInitialState()} />,
+        draftValidate: () => <DraftValidate {...getInitialState()} />,
         gadget: () => <InspektorGadget {...getInitialState()} />,
         kubectl: () => <Kubectl {...getInitialState()} />,
         aso: () => <AzureServiceOperator {...getInitialState()} />,
