@@ -16,9 +16,7 @@ export function getKaitoModelScenarios() {
     };
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            generateCRDRequest: ({ model }) => {
-                console.log("generateCRDRequest", model);
-            },
+            generateCRDRequest: () => {},
             deployKaitoRequest: ({ model, yaml, gpu }) => {
                 console.log("deployKaitoRequest", model, yaml, gpu);
                 webview.postDeploymentProgressUpdate({
@@ -31,16 +29,12 @@ export function getKaitoModelScenarios() {
                     age: 0,
                 });
             },
-            resetStateRequest: () => {
-                console.log("resetStateRequest");
-            },
+            resetStateRequest: () => {},
             cancelRequest: ({ model }) => {
                 console.log("cancelRequest", model);
                 webview.postDeploymentProgressUpdate(initialState);
             },
-            kaitoManageRedirectRequest: () => {
-                console.log("kaitoManageRedirectRequest");
-            },
+            kaitoManageRedirectRequest: () => {},
         };
     }
 

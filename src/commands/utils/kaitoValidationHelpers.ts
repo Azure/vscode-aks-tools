@@ -48,15 +48,18 @@ export async function kaitoPodStatus(
             }
         }
     });
-    if (!kaitoWorkspaceReady) {
-        vscode.window.showWarningMessage(
-            `The 'kaito-workspace' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-        );
-    } else if (!kaitoGPUProvisionerReady) {
-        vscode.window.showWarningMessage(
-            `The 'kaito-gpu-provisoner' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-        );
-    }
+    const podStatuses = [
+        { ready: kaitoWorkspaceReady, name: "kaito-workspace" },
+        { ready: kaitoGPUProvisionerReady, name: "kaito-gpu-provisioner" },
+    ];
+
+    podStatuses.forEach((pod) => {
+        if (!pod.ready) {
+            vscode.window.showWarningMessage(
+                `The '${pod.name}' pod in cluster ${clusterName} is currently unavailable. Please check the pod logs in your cluster to diagnose the issue.`,
+            );
+        }
+    });
     return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }
 
