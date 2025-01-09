@@ -587,7 +587,9 @@
         "webpack-dev": "webpack --mode development --watch",
         "test-compile": "npm run build:webview && tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test-compile && node ./out/src/tests/runTests.js"
+        "test": "npm run test-compile && node ./out/src/tests/runTests.js",
+        "lint": "npx eslint .",
+        "eslint-inspector": "npx @eslint/config-inspector@latest"
     },
     "extensionDependencies": [
         "vscode.git",
@@ -598,6 +600,8 @@
         "getPluginsCommand": "aks.getAzureKubernetesServicePlugins"
     },
     "devDependencies": {
+        "@eslint/eslintrc": "^3.2.0",
+        "@eslint/js": "^9.17.0",
         "@types/chai": "^5.0.1",
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
@@ -616,6 +620,7 @@
         "eslint": "^9.17.0",
         "eslint-webpack-plugin": "^4.2.0",
         "glob": "^11.0.0",
+        "globals": "^15.14.0",
         "mocha": "^11.0.1",
         "prettier": "^3.4.2",
         "sinon": "^19.0.2",
@@ -642,6 +647,7 @@
         "@azure/identity": "^4.5.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.26.0",
+        "@eslint/compat": "^1.2.4",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^2.5.12",
         "@octokit/rest": "^21.0.2",
