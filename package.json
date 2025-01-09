@@ -457,15 +457,15 @@
             "aks.kaitoInstallSubMenu": [
                 {
                     "command": "aks.aksKaito",
-                    "group": "navigation"
+                    "group": "navigation@1"
                 },
                 {
                     "command": "aks.aksKaitoCreateCRD",
-                    "group": "navigation"
+                    "group": "navigation@2"
                 },
                 {
                     "command": "aks.aksKaitoManage",
-                    "group": "navigation"
+                    "group": "navigation@3"
                 }
             ],
             "aks.detectorsSubMenu": [
