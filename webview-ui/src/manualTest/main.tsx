@@ -56,6 +56,9 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoModels: getKaitoModelScenarios(),
     kaitoManage: getKaitoManageScenarios(),
     kaitoTest: getKaitoTestScenarios(),
+    // Only to ensure the dependencies are resolved for compilation.
+    // TODO: Replace with the actual scenarios when available.
+    createFleet: [], // Fleet scenarios are not yet available.
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

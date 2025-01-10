@@ -68,6 +68,9 @@ function getVsCodeContent(): JSX.Element {
         kaitoModels: () => <KaitoModels {...getInitialState()} />,
         kaitoManage: () => <KaitoManage {...getInitialState()} />,
         kaitoTest: () => <KaitoTest {...getInitialState()} />,
+        createFleet: function (): JSX.Element {
+            throw new Error("Function not implemented.");
+        },
     };
 
     return rendererLookup[vscodeContentId]();
