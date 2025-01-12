@@ -9,6 +9,7 @@ import { Succeeded } from "../utils/errorable";
 import * as tmpfile from "../utils/tempfile";
 import { KubernetesClusterInfo } from "../utils/clusters";
 
+// Returns true if pod is ready, false otherwise
 async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFilePath: string) {
     const command = `get pod ${pod} -n kube-system -o jsonpath="{.status.containerStatuses[*].ready}"`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
@@ -21,6 +22,7 @@ async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     }
 }
 
+// Returns { kaitoWorkspaceReady, kaitoGPUProvisionerReady }, where each value is true if the corresponding pod is ready
 export async function kaitoPodStatus(
     clusterName: string,
     pods: string[],
@@ -46,18 +48,22 @@ export async function kaitoPodStatus(
             }
         }
     });
-    if (!kaitoWorkspaceReady) {
-        vscode.window.showWarningMessage(
-            `The 'kaito-workspace' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-        );
-    } else if (!kaitoGPUProvisionerReady) {
-        vscode.window.showWarningMessage(
-            `The 'kaito-gpu-provisoner' pod in cluster ${clusterName} is not running. Please review the pod logs in your cluster to diagnose the issue.`,
-        );
-    }
+    const podStatuses = [
+        { ready: kaitoWorkspaceReady, name: "kaito-workspace" },
+        { ready: kaitoGPUProvisionerReady, name: "kaito-gpu-provisioner" },
+    ];
+
+    podStatuses.forEach((pod) => {
+        if (!pod.ready) {
+            vscode.window.showWarningMessage(
+                `The '${pod.name}' pod in cluster ${clusterName} is currently unavailable. Please check the pod logs in your cluster to diagnose the issue.`,
+            );
+        }
+    });
     return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }
 
+// Returns boolean { kaitoInstalled, kaitoWorkspaceReady, kaitoGPUProvisionerReady }
 export async function getKaitoInstallationStatus(
     sessionProvider: Succeeded<ReadyAzureSessionProvider>,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
@@ -79,7 +85,7 @@ export async function getKaitoInstallationStatus(
 
     if (filterKaitoPodNames.result.length === 0) {
         vscode.window.showWarningMessage(
-            `Please install Kaito for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
+            `Please install KAITO for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
         );
         return status;
     }
@@ -91,5 +97,6 @@ export async function getKaitoInstallationStatus(
         kubectl,
         kubeConfigFile.filePath,
     );
+    kubeConfigFile.dispose();
     return { kaitoInstalled: true, kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }

@@ -1,10 +1,14 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { failed } from "../../commands/utils/errorable";
+import { failed, Errorable } from "../../commands/utils/errorable";
 import { invokeKubectlCommand } from "../../commands/utils/kubectl";
 import { longRunning } from "../../commands/utils/host";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { filterPodName } from "../../commands/utils/clusters";
+import { join } from "path";
+import { writeFileSync, unlinkSync } from "fs";
+import { tmpdir } from "os";
+import { KubectlV1 } from "vscode-kubernetes-tools-api";
 
 // helper for parsing the conditions object on a workspace
 function statusToBoolean(status: string): boolean {
@@ -56,6 +60,7 @@ export async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.Kube
 }
 
 export async function kaitoPodStatus(
+    clusterName: string,
     pods: string[],
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFilePath: string,
@@ -79,9 +84,24 @@ export async function kaitoPodStatus(
             }
         }
     });
+
+    const podStatuses = [
+        { ready: kaitoWorkspaceReady, name: "kaito-workspace" },
+        { ready: kaitoGPUProvisionerReady, name: "kaito-gpu-provisioner" },
+    ];
+
+    podStatuses.forEach((pod) => {
+        if (!pod.ready) {
+            vscode.window.showWarningMessage(
+                `The '${pod.name}' pod in cluster ${clusterName} is currently unavailable. Please check the pod logs in your cluster to diagnose the issue.`,
+            );
+        }
+    });
+
     return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }
 
+// returns an array with the names of all pods starting with "kaito-"
 export async function getKaitoPods(
     sessionProvider: ReadyAzureSessionProvider,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
@@ -157,6 +177,7 @@ function escapeSpecialChars(input: string) {
         .replace(/\0/g, "\\0"); // Escape null characters
 }
 
+// returns the cluster IP for the model
 export async function getClusterIP(
     kubeConfigFilePath: string,
     modelName: string,
@@ -172,4 +193,22 @@ export async function getClusterIP(
         vscode.window.showErrorMessage(`Failed to connect to cluster: ${ipResult.code}\nError: ${ipResult.stderr}`);
     }
     return "";
+}
+
+// deploys model with given yaml & returns errorable promise
+export async function deployModel(
+    yaml: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFilePath: string,
+): Promise<Errorable<KubectlV1.ShellResult>> {
+    const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
+    writeFileSync(tempFilePath, yaml, "utf8");
+    const command = `apply -f ${tempFilePath}`;
+    const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
+    unlinkSync(tempFilePath);
+    if (failed(kubectlresult)) {
+        return { succeeded: false, error: kubectlresult.error };
+    } else {
+        return { succeeded: true, result: kubectlresult.result };
+    }
 }
