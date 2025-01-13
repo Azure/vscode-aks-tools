@@ -28,14 +28,14 @@ import {
 } from "./types";
 
 // Process
-export type ProcessSnapshotKey = 
-  | typeof k8sKeys[number]
-  | typeof eventKeys[number]
-  | typeof commandKeys[number]
-  | typeof processThreadKeys[number]
-  | typeof userKeys[number]
-  | "ppid"
-  | typeof mountNsKeys[number];
+export type ProcessSnapshotKey =
+    | (typeof k8sKeys)[number]
+    | (typeof eventKeys)[number]
+    | (typeof commandKeys)[number]
+    | (typeof processThreadKeys)[number]
+    | (typeof userKeys)[number]
+    | "ppid"
+    | (typeof mountNsKeys)[number];
 
 const processSnapshotKeyMetadata: ItemMetadata<ProcessSnapshotKey> = {
     ...k8sKeyMetadata,
@@ -72,14 +72,14 @@ export const processSnapshotMetadata: GadgetMetadata<ProcessSnapshotKey> = {
 };
 
 // Socket
-type SocketSnapshotKey = 
-  | typeof k8sKeys[number]
-  | typeof eventKeys[number]
-  | "netnsid"
-  | "protocol"
-  | typeof networkEndpointKeys[number]
-  | "status"
-  | "inodeNumber";
+type SocketSnapshotKey =
+    | (typeof k8sKeys)[number]
+    | (typeof eventKeys)[number]
+    | "netnsid"
+    | "protocol"
+    | (typeof networkEndpointKeys)[number]
+    | "status"
+    | "inodeNumber";
 
 const socketSnapshotKeyMetadata: ItemMetadata<SocketSnapshotKey> = {
     ...k8sKeyMetadata,
@@ -90,7 +90,7 @@ const socketSnapshotKeyMetadata: ItemMetadata<SocketSnapshotKey> = {
     status: { identifier: "status", name: "Status" },
     inodeNumber: { identifier: "inode", name: "Inode" },
 };
-type DerivedSocketSnapshotKey = typeof derivedNetworkEndpointKeys[number];
+type DerivedSocketSnapshotKey = (typeof derivedNetworkEndpointKeys)[number];
 
 const allSocketSnapshotProperties: ItemProperty<SocketSnapshotKey | DerivedSocketSnapshotKey>[] = [
     ...getLiteralProperties(socketSnapshotKeyMetadata),

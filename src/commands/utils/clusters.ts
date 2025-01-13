@@ -582,14 +582,13 @@ export type Cluster = {
     clusterId: string;
     resourceGroup: string;
     subscriptionId: string;
-}
+};
 
-export async function getClusters(sessionProvider: ReadyAzureSessionProvider, subscriptionId: string): Promise<Cluster[]> {
-    const clusters = await getResources(
-        sessionProvider,
-        subscriptionId,
-        "Microsoft.ContainerService/managedClusters",
-    );
+export async function getClusters(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): Promise<Cluster[]> {
+    const clusters = await getResources(sessionProvider, subscriptionId, "Microsoft.ContainerService/managedClusters");
     if (failed(clusters)) {
         window.showErrorMessage(clusters.error);
         return [];

@@ -212,6 +212,6 @@ function getSubscriptionContext(
                     return { token: authSession.result.accessToken, expiresOnTimestamp: 0 };
                 },
             };
-        }
+        },
     };
 }

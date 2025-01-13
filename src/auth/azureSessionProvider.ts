@@ -291,14 +291,18 @@ async function getTenants(session: AuthenticationSession): Promise<Errorable<Ten
     const subscriptionClient = new SubscriptionClient(credential, { endpoint: armEndpoint });
 
     const tenantsResult = await listAll(subscriptionClient.tenants.list());
-    return errmap(tenantsResult, (t) => t.filter(isTenant).map((t) => ({ name: t.displayName, id: t.tenantId, countryCode: t.countryCode })));
+    return errmap(tenantsResult, (t) =>
+        t.filter(isTenant).map((t) => ({ name: t.displayName, id: t.tenantId, countryCode: t.countryCode })),
+    );
 }
 
 function findTenant(tenants: Tenant[], tenantId: string): Tenant | null {
     return tenants.find((t) => t.id === tenantId) || null;
 }
 
-function isTenant(tenant: TenantIdDescription): tenant is { tenantId: string; displayName: string, countryCode: string } {
+function isTenant(
+    tenant: TenantIdDescription,
+): tenant is { tenantId: string; displayName: string; countryCode: string } {
     return tenant.tenantId !== undefined && tenant.displayName !== undefined;
 }
 

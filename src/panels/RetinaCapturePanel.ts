@@ -1,4 +1,4 @@
-import open from 'open';
+import open from "open";
 import * as vscode from "vscode";
 import { Uri, window } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -10,9 +10,8 @@ import { MessageHandler } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { getLocalKubectlCpPath } from './utilities/KubectlNetworkHelper';
-import * as semver from 'semver';
-
+import { getLocalKubectlCpPath } from "./utilities/KubectlNetworkHelper";
+import * as semver from "semver";
 
 export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
     constructor(extensionUri: Uri) {
@@ -32,8 +31,8 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         readonly retinaOutput: string,
         readonly allNodeOutput: string[],
         readonly captureFolderName: string,
-        readonly isNodeExplorerPodExists : boolean
-    ) { }
+        readonly isNodeExplorerPodExists: boolean,
+    ) {}
 
     getTitle(): string {
         return `Retina Distributed Capture on ${this.clusterName}`;
@@ -43,7 +42,7 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         return {
             handleCaptureFileDownload: true,
             deleteRetinaNodeExplorer: true,
-        }
+        };
     }
 
     getInitialState(): InitialState {
@@ -53,14 +52,16 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
             allNodes: this.allNodeOutput,
             selectedNode: "",
             captureFolderName: this.captureFolderName,
-            isNodeExplorerPodExists: this.isNodeExplorerPodExists
+            isNodeExplorerPodExists: this.isNodeExplorerPodExists,
         };
     }
 
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
             handleCaptureFileDownload: (node: string) => this.handleCaptureFileDownload(node),
-            deleteRetinaNodeExplorer: (node: string) => { this. handleDeleteRetinaNodeExplorer(node) }
+            deleteRetinaNodeExplorer: (node: string) => {
+                this.handleDeleteRetinaNodeExplorer(node);
+            },
         };
     }
 
@@ -102,8 +103,7 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         for (const node of nodes) {
             await this.copyRetinaCaptureData(node, localCpPath);
         }
-        
-}
+    }
 
     async copyRetinaCaptureData(node: string, localCpPath: string) {
         const createPodYaml = `
@@ -133,7 +133,7 @@ spec:
     volumeMounts:
     - name: mnt-captures
       mountPath: /mnt/capture
-`  ;
+`;
 
         const applyResult = await longRunning(`Deploying pod to capture ${node} retina data.`, async () => {
             return await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
@@ -156,7 +156,6 @@ spec:
             return;
         }
 
-
         /* kubectl cp functionality is used to copy the data from the pod to the local host.
            `kubectl cp` can fail with an EOF error for large files, and there's currently no good workaround:
            See: https://github.com/kubernetes/kubernetes/issues/60140
@@ -166,10 +165,13 @@ spec:
         const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
         const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
         const captureHostFolderName = `${localCpPath}-${node}`;
-        const nodeExplorerResult = await longRunning(`Copy captured data to local host location ${captureHostFolderName}.`, async () => {
-            const cpcommand = `cp node-explorer-${node}:mnt/capture ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
-            return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, cpcommand);
-        });
+        const nodeExplorerResult = await longRunning(
+            `Copy captured data to local host location ${captureHostFolderName}.`,
+            async () => {
+                const cpcommand = `cp node-explorer-${node}:mnt/capture ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
+                return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, cpcommand);
+            },
+        );
 
         if (failed(nodeExplorerResult)) {
             vscode.window.showErrorMessage(`Failed to apply copy command: ${nodeExplorerResult.error}`);
@@ -177,8 +179,12 @@ spec:
         }
 
         const goToFolder = "Go to Folder";
-        vscode.window.showInformationMessage(`Successfully copied the Retina Capture data to ${captureHostFolderName}`, goToFolder)
-            .then(selection => {
+        vscode.window
+            .showInformationMessage(
+                `Successfully copied the Retina Capture data to ${captureHostFolderName}`,
+                goToFolder,
+            )
+            .then((selection) => {
                 if (selection === goToFolder) {
                     open(captureHostFolderName);
                 }

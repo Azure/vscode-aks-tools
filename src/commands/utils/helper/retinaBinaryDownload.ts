@@ -56,7 +56,6 @@ function getArchiveFilename(releaseTag: string) {
     return `kubectl-retina-${operatingSystem}-${architecture}-${releaseTag}.tar.gz`;
 }
 
-
 function getPathToBinaryInArchive() {
     let architecture = os.arch();
     let operatingSystem = os.platform().toLocaleLowerCase();

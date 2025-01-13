@@ -5,7 +5,6 @@ import { invokeKubectlCommand } from "../../commands/utils/kubectl";
 import { Errorable, map as errmap } from "../../commands/utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
 
-
 export function getLocalKubectlCpPath(fileUri: Uri): string {
     if (platform().toLowerCase() !== "win32") {
         return fileUri.fsPath;
