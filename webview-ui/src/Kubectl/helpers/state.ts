@@ -71,5 +71,5 @@ export const vscode = getWebviewMessageContext<"kubectl">({
     addCustomCommandRequest: null,
     deleteCustomCommandRequest: null,
     runCommandRequest: null,
-    initialCommandRequest: null
+    initialCommandRequest: null,
 });

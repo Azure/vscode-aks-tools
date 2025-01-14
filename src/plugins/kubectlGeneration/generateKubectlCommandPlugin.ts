@@ -3,7 +3,14 @@ import { getReadySessionProvider } from "../../auth/azureAuth";
 import { failed } from "../../commands/utils/errorable";
 import { getAKSDocsRAGClient } from "./aksDocsRag/client";
 import { getKubectlCommandPluginErrorResponse, getKubectlCommandPluginResponse } from "../shared/pluginResponses";
-import { AgentRequest, ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/aiazure/AzureAgent";
+import {
+    AgentRequest,
+    ILocalPluginHandler,
+    LocalPluginArgs,
+    LocalPluginEntry,
+    LocalPluginManifest,
+    ResponseForLanguageModelExtended,
+} from "../../types/aiazure/AzureAgent";
 
 const generateKubectlCommandFunctionName = "generate_kubectl_command";
 
@@ -18,8 +25,8 @@ export const generateKubectlCommandPluginManifest: LocalPluginManifest = {
                 type: "object",
             },
             willHandleUserResponse: false,
-        }
-    ]
+        },
+    ],
 };
 
 async function handleKubectlCommandGeneration(agentRequest: AgentRequest): Promise<ResponseForLanguageModelExtended> {
@@ -35,11 +42,16 @@ async function handleKubectlCommandGeneration(agentRequest: AgentRequest): Promi
     const request = await client.sendRequest({ message: prompt });
 
     if (failed(request)) {
-        const { messageForLanguageModel } = getKubectlCommandPluginErrorResponse(request)
-        return { responseForLanguageModel:  messageForLanguageModel as object };
+        const { messageForLanguageModel } = getKubectlCommandPluginErrorResponse(request);
+        return { responseForLanguageModel: messageForLanguageModel as object };
     }
 
-    const { messageForLanguageModel, buttonLabel, commandID, arguments: returnArgs } = getKubectlCommandPluginResponse(request.result.response);
+    const {
+        messageForLanguageModel,
+        buttonLabel,
+        commandID,
+        arguments: returnArgs,
+    } = getKubectlCommandPluginResponse(request.result.response);
 
     return {
         responseForLanguageModel: messageForLanguageModel as object,
@@ -47,9 +59,9 @@ async function handleKubectlCommandGeneration(agentRequest: AgentRequest): Promi
             new vscode.ChatResponseCommandButtonPart({
                 title: vscode.l10n.t(buttonLabel),
                 command: commandID,
-                arguments: returnArgs
+                arguments: returnArgs,
             }),
-        ]
+        ],
     };
 }
 
@@ -58,14 +70,16 @@ const generateKubectlCommandPluginHandler: ILocalPluginHandler = {
         const pluginRequest = args.localPluginRequest;
 
         if (pluginRequest.functionName === generateKubectlCommandFunctionName) {
-            const { responseForLanguageModel, chatResponseParts } = await handleKubectlCommandGeneration(args.agentRequest);
+            const { responseForLanguageModel, chatResponseParts } = await handleKubectlCommandGeneration(
+                args.agentRequest,
+            );
             return { responseForLanguageModel, chatResponseParts };
         }
 
         return {
             status: "error",
-            message: "Unrecognized command."
-        }
+            message: "Unrecognized command.",
+        };
     },
 };
 

@@ -2,7 +2,12 @@ import { window } from "vscode";
 import { failed } from "../utils/errorable";
 import { getFilteredSubscriptions, setFilteredSubscriptions } from "../utils/config";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
-import { SelectionType, SubscriptionQuickPickItem, getSubscriptions, handleNoSubscriptionsFound } from "../utils/subscriptions";
+import {
+    SelectionType,
+    SubscriptionQuickPickItem,
+    getSubscriptions,
+    handleNoSubscriptionsFound,
+} from "../utils/subscriptions";
 import { getReadySessionProvider, quickPickTenant } from "../../auth/azureAuth";
 
 export async function signInToAzure(): Promise<void> {
@@ -38,7 +43,6 @@ export async function selectTenant(): Promise<void> {
 
     sessionProvider.selectedTenant = selectedTenant;
 }
-
 
 export async function selectSubscriptions(): Promise<void> {
     const sessionProvider = await getReadySessionProvider();
@@ -82,13 +86,13 @@ export async function selectSubscriptions(): Promise<void> {
             },
         };
     });
-    
+
     // show picked items at the top
     quickPickItems.sort((itemA, itemB) => (itemA.picked === itemB.picked ? 0 : itemA.picked ? -1 : 1));
 
     const selectedItems = await window.showQuickPick(quickPickItems, {
         canPickMany: true,
-        placeHolder: "Select Subscriptions"
+        placeHolder: "Select Subscriptions",
     });
 
     if (!selectedItems) {

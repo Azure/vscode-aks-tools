@@ -15,7 +15,7 @@ export async function selectExistingClusterOption(
     await selectSubscriptions();
 
     const subscriptions = getFilteredSubscriptions();
-    if(subscriptions.length === 0) { 
+    if (subscriptions.length === 0) {
         handleNoSubscriptionsFound();
         return { succeeded: false, error: "No subscriptions found." };
     }
@@ -24,7 +24,7 @@ export async function selectExistingClusterOption(
         await Promise.all(subscriptions.map((sub) => getClusters(sessionProvider, sub.subscriptionId)))
     ).flat();
 
-    if(clusters.length === 0) {
+    if (clusters.length === 0) {
         handleNoClusterFound();
         return { succeeded: false, error: "No clusters found." };
     }
@@ -83,10 +83,10 @@ async function selectCluster(clusters: Cluster[]): Promise<ClusterQuickPickItem 
 }
 
 export function handleNoClusterFound(): void {
-    const noClustersFound = "No clusters were found."
+    const noClustersFound = "No clusters were found.";
     const createCluster = "Create an AKS cluster";
     vscode.window.showInformationMessage(noClustersFound, createCluster).then((res) => {
-        if(res === createCluster) {
+        if (res === createCluster) {
             vscode.commands.executeCommand("aks.aksCreateClusterFromCopilot");
         }
     });

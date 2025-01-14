@@ -5,10 +5,6 @@ import { generateKubectlCommandPlugin } from "./kubectlGeneration/generateKubect
 
 export async function getPlugins(): Promise<GetPluginsCommandResult> {
     return {
-        plugins: [
-            createAKSClusterPlugin,
-            deployManifestPluginToAKSPlugin,
-            generateKubectlCommandPlugin
-        ]
+        plugins: [createAKSClusterPlugin, deployManifestPluginToAKSPlugin, generateKubectlCommandPlugin],
     };
 }

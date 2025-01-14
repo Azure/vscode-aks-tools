@@ -8,7 +8,6 @@ import { DeleteNodeExplorerDialog } from "./DeleteNodeExplorerDialog";
 import styles from "./RetinaCapture.module.css";
 import { stateUpdater, vscode } from "./state";
 
-
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export function RetinaCapture(initialState: InitialState) {
@@ -17,7 +16,7 @@ export function RetinaCapture(initialState: InitialState) {
     const [showDeleteNodeExplorerDialog, setShowDeleteNodeExplorerDialog] = useState(false);
 
     function handleCaptureFileDownload() {
-        const result = selectedNode.join(',');
+        const result = selectedNode.join(",");
         vscode.postHandleCaptureFileDownload(result);
     }
 
@@ -25,7 +24,7 @@ export function RetinaCapture(initialState: InitialState) {
         if ((e.target as HTMLInputElement).checked) {
             setSelectedNode([...selectedNode, node]);
         } else {
-            setSelectedNode(selectedNode.filter(n => n !== node));
+            setSelectedNode(selectedNode.filter((n) => n !== node));
         }
     }
 
@@ -46,31 +45,33 @@ export function RetinaCapture(initialState: InitialState) {
 
             <VSCodeDivider style={{ marginBottom: "1rem" }} />
             <div>
-                <FontAwesomeIcon icon={faInfoCircle} /> Retina capture command allows the user to capture network traffic and metadata for the capture target, and then send the capture file to the location by Output Configuration. More info: <a href="https://retina.sh/docs/captures/cli/#output-configurationrequired">Retina Capture Command</a>
+                <FontAwesomeIcon icon={faInfoCircle} /> Retina capture command allows the user to capture network
+                traffic and metadata for the capture target, and then send the capture file to the location by Output
+                Configuration. More info:{" "}
+                <a href="https://retina.sh/docs/captures/cli/#output-configurationrequired">Retina Capture Command</a>
             </div>
             <VSCodeDivider style={{ marginBottom: "1rem" }} />
             <h3>Retina Output</h3>
-            <div>
-                {state.retinaOutput}
-            </div>
+            <div>{state.retinaOutput}</div>
 
             <VSCodeDivider style={{ marginTop: "1rem" }} />
             <h3>Retina Distributed Capture is Successfully Completed for this Cluster</h3>
 
-
             <div className={styles.content}>
-                <div style={{ flexDirection: 'row', width: '31.25rem' }}>
+                <div style={{ flexDirection: "row", width: "31.25rem" }}>
                     {state.allNodes.map((node) => (
                         <div key={node}>
-                            <VSCodeCheckbox
-                                onChange={(e) => onSelectNode(e, node)}
-                                checked={isNodeSelected(node)}>
+                            <VSCodeCheckbox onChange={(e) => onSelectNode(e, node)} checked={isNodeSelected(node)}>
                                 {node}
                             </VSCodeCheckbox>
                         </div>
                     ))}
-                    <div style={{ display: 'flex' }}>
-                        <VSCodeButton type="submit" style={{ marginRight: '0.625rem' }} onClick={() => handleCaptureFileDownload()}>
+                    <div style={{ display: "flex" }}>
+                        <VSCodeButton
+                            type="submit"
+                            style={{ marginRight: "0.625rem" }}
+                            onClick={() => handleCaptureFileDownload()}
+                        >
                             Download Retina Logs to Host Machine.
                         </VSCodeButton>
                         {state.isNodeExplorerPodExists && (
@@ -81,9 +82,7 @@ export function RetinaCapture(initialState: InitialState) {
                                 Delete Node Explorer Pod
                             </VSCodeButton>
                         )}
-
                     </div>
-
                 </div>
             </div>
 

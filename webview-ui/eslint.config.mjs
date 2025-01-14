@@ -12,80 +12,92 @@ const __dirname = path.dirname(__filename);
 const compat = new FlatCompat({
     baseDirectory: __dirname,
     recommendedConfig: js.configs.recommended,
-    allConfig: js.configs.all
+    allConfig: js.configs.all,
 });
 
-export default [{
-    ignores: ["**/node_modules/", "**/dist/", "**/*.js", "**/*.cjs"],
-}, ...fixupConfigRules(compat.extends(
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:react/recommended",
-    "plugin:react/jsx-runtime",
-    "plugin:react-hooks/recommended",
-)), {
-    plugins: {
-        "@typescript-eslint": fixupPluginRules(typescriptEslint),
+export default [
+    {
+        ignores: ["**/node_modules/", "**/dist/", "**/*.js", "**/*.cjs"],
     },
-
-    languageOptions: {
-        globals: {
-            ...globals.browser,
+    ...fixupConfigRules(
+        compat.extends(
+            "eslint:recommended",
+            "plugin:@typescript-eslint/recommended",
+            "plugin:react/recommended",
+            "plugin:react/jsx-runtime",
+            "plugin:react-hooks/recommended",
+        ),
+    ),
+    {
+        plugins: {
+            "@typescript-eslint": fixupPluginRules(typescriptEslint),
         },
 
-        parser: tsParser,
-        ecmaVersion: 2020,
-        sourceType: "module",
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+            },
 
-        parserOptions: {
-            project: ["./tsconfig.json", "./tsconfig.node.json"],
+            parser: tsParser,
+            ecmaVersion: 2020,
+            sourceType: "module",
 
-            ecmaFeatures: {
-                jsx: true,
+            parserOptions: {
+                project: ["./tsconfig.json", "./tsconfig.node.json"],
+
+                ecmaFeatures: {
+                    jsx: true,
+                },
             },
         },
-    },
 
-    settings: {
-        react: {
-            version: "detect",
+        settings: {
+            react: {
+                version: "detect",
+            },
+        },
+
+        rules: {
+            "@typescript-eslint/naming-convention": [
+                "error",
+                {
+                    selector: "variable",
+                    format: ["camelCase", "UPPER_CASE"],
+                    leadingUnderscore: "forbid",
+                    trailingUnderscore: "forbid",
+                },
+            ],
+
+            "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
+
+            "@typescript-eslint/no-unused-vars": [
+                "error",
+                {
+                    ignoreRestSiblings: true,
+                },
+            ],
+
+            "@typescript-eslint/prefer-for-of": "error",
+            curly: ["error", "multi-line"],
+            eqeqeq: ["error", "always"],
+
+            "id-denylist": [
+                "error",
+                "any",
+                "Number",
+                "number",
+                "String",
+                "string",
+                "Boolean",
+                "boolean",
+                "Undefined",
+                "undefined",
+            ],
+
+            "no-underscore-dangle": "error",
+            "no-var": "error",
+            "prefer-const": "error",
+            "prefer-template": "error",
         },
     },
-
-    rules: {
-        "@typescript-eslint/naming-convention": ["error", {
-            selector: "variable",
-            format: ["camelCase", "UPPER_CASE"],
-            leadingUnderscore: "forbid",
-            trailingUnderscore: "forbid",
-        }],
-
-        "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
-
-        "@typescript-eslint/no-unused-vars": ["error", {
-            ignoreRestSiblings: true,
-        }],
-
-        "@typescript-eslint/prefer-for-of": "error",
-        curly: ["error", "multi-line"],
-        eqeqeq: ["error", "always"],
-
-        "id-denylist": [
-            "error",
-            "any",
-            "Number",
-            "number",
-            "String",
-            "string",
-            "Boolean",
-            "boolean",
-            "Undefined",
-            "undefined",
-        ],
-
-        "no-underscore-dangle": "error",
-        "no-var": "error",
-        "prefer-const": "error",
-        "prefer-template": "error",
-    },
-}];
+];

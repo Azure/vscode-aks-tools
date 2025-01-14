@@ -30,7 +30,7 @@ export function getKubectlScenarios() {
             runCommandRequest: (args) => handleRunCommandRequest(args.command, succeeding, webview),
             addCustomCommandRequest: () => undefined,
             deleteCustomCommandRequest: () => undefined,
-            initialCommandRequest: () => undefined
+            initialCommandRequest: () => undefined,
         };
     }
 
