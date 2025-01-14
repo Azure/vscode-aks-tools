@@ -15,11 +15,9 @@ import { getAksFleetClient, getResourceManagementClient } from "../commands/util
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { failed } from "../commands/utils/errorable";
 
-const contentId = "createFleet";
-
-export class CreateFleetPanel extends BasePanel<typeof contentId> {
+export class CreateFleetPanel extends BasePanel<"createFleet"> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, contentId, {
+        super(extensionUri, "createFleet", {
             getLocationsResponse: null,
             getResourceGroupsResponse: null,
             progressUpdate: null,
@@ -27,7 +25,7 @@ export class CreateFleetPanel extends BasePanel<typeof contentId> {
     }
 }
 
-export class CreateFleetDataProvider implements PanelDataProvider<typeof contentId> {
+export class CreateFleetDataProvider implements PanelDataProvider<"createFleet"> {
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly fleetClient: ContainerServiceFleetClient;
 
@@ -51,7 +49,7 @@ export class CreateFleetDataProvider implements PanelDataProvider<typeof content
         };
     }
 
-    getTelemetryDefinition(): TelemetryDefinition<typeof contentId> {
+    getTelemetryDefinition(): TelemetryDefinition<"createFleet"> {
         return {
             getResourceGroupsRequest: false,
             getLocationsRequest: false,
