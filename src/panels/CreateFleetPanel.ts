@@ -7,18 +7,19 @@ import {
     ProgressEventType,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
-    ResourceGroup as WebViewResourceGroup,
 } from "../webview-contract/webviewDefinitions/createFleet";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
-import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { ResourceManagementClient } from "@azure/arm-resources";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksFleetClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { failed } from "../commands/utils/errorable";
 
-export class CreateFleetPanel extends BasePanel<"createFleet"> {
+const contentId = "createFleet";
+
+export class CreateFleetPanel extends BasePanel<typeof contentId> {
     constructor(extensionUri: Uri) {
-        super(extensionUri, "createFleet", {
+        super(extensionUri, contentId, {
             getLocationsResponse: null,
             getResourceGroupsResponse: null,
             progressUpdate: null,
@@ -26,7 +27,7 @@ export class CreateFleetPanel extends BasePanel<"createFleet"> {
     }
 }
 
-export class CreateFleetDataProvider implements PanelDataProvider<"createFleet"> {
+export class CreateFleetDataProvider implements PanelDataProvider<typeof contentId> {
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly fleetClient: ContainerServiceFleetClient;
 
@@ -50,7 +51,7 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         };
     }
 
-    getTelemetryDefinition(): TelemetryDefinition<"createFleet"> {
+    getTelemetryDefinition(): TelemetryDefinition<typeof contentId> {
         return {
             getResourceGroupsRequest: false,
             getLocationsRequest: false,
@@ -91,7 +92,7 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         if (failed(groups)) {
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
-                operationDescription: "Retriving resource groups for fleet creation",
+                operationDescription: "Retrieving resource groups for fleet creation",
                 errorMessage: groups.error,
                 deploymentPortalUrl: null,
                 createdFleet: null,
@@ -99,11 +100,13 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
             return;
         }
 
-        const usableGroups = groups.result.filter(isValidResourceGroup).map((group) => ({
-            label: `${group.name} (${group.location})`,
-            name: group.name,
-            location: group.location,
-        }));
+        const usableGroups = groups.result
+            .map((group) => ({
+                label: `${group.name} (${group.location})`,
+                name: group.name,
+                location: group.location,
+            }))
+            .sort((a, b) => (a.name > b.name ? 1 : -1));
 
         webview.postGetResourceGroupsResponse({ groups: usableGroups });
     }
@@ -113,19 +116,8 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
             location: location,
         };
 
-        try {
-            await createFleet(this.fleetClient, resourceGroupName, name, resource);
-        } catch (error) {
-            console.log(error);
-        }
+        await createFleet(this.fleetClient, resourceGroupName, name, resource);
     }
-}
-
-function isValidResourceGroup(group: ARMResourceGroup): group is WebViewResourceGroup {
-    if (!group.name || !group.id) return false;
-    if (group.name?.startsWith("MC_")) return false;
-
-    return true;
 }
 
 export async function createFleet(
