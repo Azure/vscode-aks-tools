@@ -12,18 +12,23 @@ on:
 jobs:
   prettier-check:
     runs-on: ubuntu-latest
-
+    permissions:
+        actions: read
+        contents: read
+        deployments: read
+        packages: none
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+            npm install
 
       - name: Run Prettier check
         run: npx prettier --check "**/*.{ts,tsx,json,css,md}"
