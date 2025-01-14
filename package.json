@@ -619,7 +619,7 @@
         "chai": "^5.1.2",
         "eslint": "^9.17.0",
         "eslint-webpack-plugin": "^4.2.0",
-        "glob": "^11.0.0",
+        "glob": "^11.0.1",
         "globals": "^15.14.0",
         "mocha": "^11.0.1",
         "prettier": "^3.4.2",
