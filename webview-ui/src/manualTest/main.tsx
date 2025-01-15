@@ -56,6 +56,11 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoModels: getKaitoModelScenarios(),
     kaitoManage: getKaitoManageScenarios(),
     kaitoTest: getKaitoTestScenarios(),
+    // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
+    // TODO: Replace with the actual scenarios when available.
+    createFleet: [], // createFleet scenarios are not yet available.
+    // Testcases for createFleet will be added in the next PR, together with the webpage for user input.
+    // User experience will not be affected, as the right-click entry point for createFleet is not yet visible.
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);
