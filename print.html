@@ -220,6 +220,56 @@
 <li><code>test-compile</code>: compiles the extension typescript (after building the <code>webview-ui</code> project) without webpacking it. This is a prerequisite to running automated tests. It <em>could</em> be moved into <code>test</code>, but keeping it separate would allow it to be used in the future as a prelaunch task for debugging the extension without webpacking it.</li>
 <li><code>watch</code>: not currently used as part of any workflow I’m aware of, but could potentially be useful for editing while debugging.</li>
 </ul>
+<h3 id="local-vsix-sharing-and-how-to-share-via-a-github-comment"><a class="header" href="#local-vsix-sharing-and-how-to-share-via-a-github-comment"><strong>Local VSIX Sharing and How to Share via a GitHub Comment</strong></a></h3>
+<p>Follow these steps to modify the <code>package.json</code> version, generate a VSIX file, and prepare it for sharing as a renamed file in a GitHub comment:</p>
+<h3 id="step-1-update-the-packagejson-version"><a class="header" href="#step-1-update-the-packagejson-version"><strong>Step 1: Update the <code>package.json</code> Version</strong></a></h3>
+<ol>
+<li>Open the <strong><code>package.json</code></strong> file in your project directory.</li>
+<li>Find the <code>&quot;version&quot;</code> field.</li>
+<li>Update it to a unique test version (e.g., <code>1.0.0-test.1</code> or include a timestamp for uniqueness).<br />
+Example:
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;my-extension&quot;,
+  &quot;version&quot;: &quot;1.0.0-test.1&quot;,
+  &quot;main&quot;: &quot;extension.js&quot;
+}
+</code></pre>
+</li>
+<li>Save your changes.</li>
+</ol>
+<h3 id="step-2-generate-the-vsix-file"><a class="header" href="#step-2-generate-the-vsix-file"><strong>Step 2: Generate the VSIX File</strong></a></h3>
+<ol>
+<li>Open a terminal in your project directory.</li>
+<li>Run the following command to package the extension: (<a href="https://www.npmjs.com/package/@vscode/vsce">How to install <code>vsce</code></a>)
+<pre><code class="language-bash">vsce package
+</code></pre>
+</li>
+<li>A file like <code>my-extension-1.0.0-test.1.vsix</code> will be created in your project directory.</li>
+</ol>
+<h3 id="step-3-rename-the-file-for-sharing"><a class="header" href="#step-3-rename-the-file-for-sharing"><strong>Step 3: Rename the File for Sharing</strong></a></h3>
+<ol>
+<li>
+<p><strong>Rename the VSIX File:</strong>
+GitHub does not allow direct upload of files with the <code>.vsix</code> extension. To work around this:</p>
+<ul>
+<li>Rename the file by appending <code>.zip</code> to the original name.<br />
+Example:<br />
+Rename <code>filename.vsix</code> to <code>filename.vsix.zip</code>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Upload to GitHub:</strong></p>
+<ul>
+<li>Drag and drop the renamed file (<code>filename.vsix.zip</code>) into your GitHub comment or PR description. </li>
+</ul>
+</li>
+</ol>
+<h3 id="final-notes"><a class="header" href="#final-notes"><strong>Final Notes</strong></a></h3>
+<ul>
+<li>This renaming approach avoids additional steps like zipping or compressing the file.</li>
+<li>The development team is typically familiar with this process, making it a quick and effective way to share test versions.</li>
+</ul>
+<p>Happy coding! 🚀</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="webview-development"><a class="header" href="#webview-development">Webview Development</a></h1>
 <p>For commands that require a webview (see <a href="https://code.visualstudio.com/api/extension-guides/webview#should-i-use-a-webview">guidance</a> on where this is appropriate), the <a href="development/../webview-ui/"><code>webview-ui</code></a> project provides the necessary tooling to develop the front end.</p>
 <h2 id="initial-setup"><a class="header" href="#initial-setup">Initial Setup</a></h2>
