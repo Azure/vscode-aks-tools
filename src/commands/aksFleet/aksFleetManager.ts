@@ -45,8 +45,6 @@ export default async function aksCreateFleet(_context: IActionContext, target: u
     }
 
     const panel = new CreateFleetPanel(extension.result.extensionUri);
-
     const dataProvider = new CreateFleetDataProvider(sessionProvider.result, subscriptionId, subscriptionName);
-
     panel.show(dataProvider);
 }
