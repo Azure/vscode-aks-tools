@@ -14,6 +14,8 @@ import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksFleetClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { failed } from "../commands/utils/errorable";
+import { getEnvironment } from "../auth/azureAuth";
+import { getDeploymentPortalUrl, getPortalResourceUrl } from "../commands/utils/env";
 
 export class CreateFleetPanel extends BasePanel<"createFleet"> {
     constructor(extensionUri: Uri) {
@@ -62,7 +64,7 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
             getLocationsRequest: () => this.handleGetLocationsRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
             createFleetRequest: (args) =>
-                this.handleCreateFleetRequest(args.resourceGroupName, args.location, args.name),
+                this.handleCreateFleetRequest(args.resourceGroupName, args.location, args.name, webview),
         };
     }
 
@@ -109,25 +111,59 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         webview.postGetResourceGroupsResponse({ groups: usableGroups });
     }
 
-    private async handleCreateFleetRequest(resourceGroupName: string, location: string, name: string) {
+    private async handleCreateFleetRequest(
+        resourceGroupName: string,
+        location: string,
+        name: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
         const resource = {
             location: location,
         };
 
-        await createFleet(this.fleetClient, resourceGroupName, name, resource);
+        await createFleet(this.fleetClient, resourceGroupName, name, resource, webview);
     }
 }
 
-export async function createFleet(
+async function createFleet(
     client: ContainerServiceFleetClient,
     resourceGroupName: string,
     name: string,
     resource: Fleet,
+    webview: MessageSink<ToWebViewMsgDef>,
 ) {
+    const operationDescription = `Creating fleet ${name}`;
+    webview.postProgressUpdate({
+        event: ProgressEventType.InProgress,
+        operationDescription,
+        errorMessage: null,
+        deploymentPortalUrl: null,
+        createdFleet: null,
+    });
+
+    const environment = getEnvironment();
     try {
         const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
-        return { succeeded: true, result: result.name! };
+        if (!result.id) {
+            throw new Error("Fleet creation did not return an ID");
+        }
+        const deploymentPortalUrl = getDeploymentPortalUrl(environment, result.id);
+        webview.postProgressUpdate({
+            event: ProgressEventType.Success,
+            operationDescription,
+            errorMessage: null,
+            deploymentPortalUrl,
+            createdFleet: {
+                portalUrl: getPortalResourceUrl(environment, result.id),
+            },
+        });
     } catch (error) {
-        return { succeeded: false, error: (error as Error).message };
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription,
+            errorMessage: (error as Error).message,
+            deploymentPortalUrl: null,
+            createdFleet: null,
+        });
     }
 }

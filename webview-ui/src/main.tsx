@@ -20,6 +20,7 @@ import { Periscope } from "./Periscope/Periscope";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
 import { TcpDump } from "./TCPDump/TcpDump";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
+import { CreateFleet } from "./CreateFleet/CreateFleet";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -68,13 +69,7 @@ function getVsCodeContent(): JSX.Element {
         kaitoModels: () => <KaitoModels {...getInitialState()} />,
         kaitoManage: () => <KaitoManage {...getInitialState()} />,
         kaitoTest: () => <KaitoTest {...getInitialState()} />,
-        createFleet: function (): JSX.Element {
-            // Hardcoded: Only to ensure the dependencies are resolved for compilation.
-            // TODO: Replace with the actual scenarios when available.
-            return <div>createFleet testcases not implemented.</div>; // createFleet scenarios are not yet available.
-            // Testcases for createFleet will be added in the next PR, together with the webpage for user input.
-            // User experience will not be affected, as the right-click entry point for createFleet is not yet visible.
-        },
+        createFleet: () => <CreateFleet {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
