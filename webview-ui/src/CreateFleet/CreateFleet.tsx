@@ -43,13 +43,6 @@ export function CreateFleet(initialState: InitialState) {
                         <h3>
                             Creating Fleet {state.createParams!.name} in {state.createParams!.location}
                         </h3>
-                        {state.deploymentPortalUrl && (
-                            <p>
-                                Click <VSCodeLink href={state.deploymentPortalUrl}>here</VSCodeLink> to view the
-                                deployment in the Azure Portal.
-                            </p>
-                        )}
-
                         <VSCodeProgressRing />
                     </>
                 );
@@ -65,8 +58,8 @@ export function CreateFleet(initialState: InitialState) {
                     <>
                         <h3>Fleet {state.createParams!.name} was created successfully</h3>
                         <p>
-                            Click <VSCodeLink href={state.deploymentPortalUrl!}>here</VSCodeLink> to view your fleet in
-                            the Azure Portal.
+                            Click <VSCodeLink href={state.createdFleet?.portalUrl}>here</VSCodeLink> to view your fleet
+                            in the Azure Portal.
                         </p>
                     </>
                 );

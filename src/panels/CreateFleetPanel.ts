@@ -14,6 +14,8 @@ import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksFleetClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { failed } from "../commands/utils/errorable";
+import { getEnvironment } from "../auth/azureAuth";
+import { getDeploymentPortalUrl, getPortalResourceUrl } from "../commands/utils/env";
 
 export class CreateFleetPanel extends BasePanel<"createFleet"> {
     constructor(extensionUri: Uri) {
@@ -139,16 +141,20 @@ async function createFleet(
         createdFleet: null,
     });
 
+    const environment = getEnvironment();
     try {
         const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
-        const deploymentPortalUrl = `https://portal.azure.com/#resource${result.id}`;
+        if (!result.id) {
+            throw new Error("Fleet creation did not return an ID");
+        }
+        const deploymentPortalUrl = getDeploymentPortalUrl(environment, result.id);
         webview.postProgressUpdate({
             event: ProgressEventType.Success,
             operationDescription,
             errorMessage: null,
             deploymentPortalUrl,
             createdFleet: {
-                portalUrl: deploymentPortalUrl,
+                portalUrl: getPortalResourceUrl(environment, result.id),
             },
         });
     } catch (error) {

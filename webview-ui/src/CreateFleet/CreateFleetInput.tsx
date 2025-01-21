@@ -12,9 +12,9 @@ import { EventHandlers } from "../utilities/state";
 import { isNothing, just, Maybe, nothing } from "../utilities/maybe";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-// To ensure consistent formats and styles accross features, it uses the same CSS file as CreateCluster.tsx
-import styles from "../CreateCluster/CreateCluster.module.css"; // Using the same CSS file as CreateCluster.tsx
+// To ensure consistent formats and styles across features, it uses the same CSS file as CreateCluster.tsx
 // TODO: considering restructuring the CSS file to be more modular and reusable
+import styles from "../CreateCluster/CreateCluster.module.css";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -28,7 +28,7 @@ interface CreateFleetInputProps {
 export function CreateFleetInput(props: CreateFleetInputProps) {
     const [existingResourceGroup, setExistingResourceGroup] = useState<Validatable<ResourceGroup | null>>(unset());
     const [fleetName, setFleetName] = useState<Validatable<string>>(unset());
-    const [selectedIndex, setSelectedIndex] = useState<number>(0); // User's selection for the "resource group" field
+    const [selectedResourceGroupIndex, setselectedResourceGroupIndex] = useState<number>(0);
     const [location, setLocation] = useState<Validatable<string>>(unset());
 
     const allResourcesGroups = props.resourceGroups; // All available resource groups fetched from the portal
@@ -36,7 +36,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
     function handleValidationAndIndex(e: ChangeEvent) {
         handleExistingResourceGroupChange(e);
         const ele = e.currentTarget as HTMLSelectElement;
-        setSelectedIndex(ele.selectedIndex);
+        setselectedResourceGroupIndex(ele.selectedIndex);
     }
 
     function handleExistingResourceGroupChange(e: ChangeEvent) {
@@ -53,13 +53,14 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
     }
 
     function getValidatedName(name: string): Validatable<string> {
-        // Using the same criteria as in the Azure portal
+        // Fleet name validation rules from the Azure REST API specs
+        // https://github.com/Azure/azure-rest-api-specs/blob/24d856b33d49b5ac6227a51c610b7d8b0f289458/specification/containerservice/resource-manager/Microsoft.ContainerService/fleet/stable/2024-04-01/fleets.json#L193C10-L202C12
         if (!name) return invalid(name, "Fleet name must be at least 1 character long.");
         if (name.length > 63) return invalid(name, "Fleet name must be at most 63 characters long.");
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$/.test(name)) {
+        if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(name)) {
             return invalid(
                 name,
-                "The only allowed characters are alphanumeric characters and '-'. The first and last character must be an alphanumeric character.",
+                "The only allowed characters are lowercase alphanumeric characters and '-'. The first and last character must be an alphanumeric character.",
             );
         }
 
@@ -126,7 +127,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
                 className={styles.longControl}
                 onBlur={handleValidationAndIndex}
                 onChange={handleValidationAndIndex}
-                selectedIndex={selectedIndex}
+                selectedIndex={selectedResourceGroupIndex}
                 aria-label="Select a resource group"
             >
                 <VSCodeOption selected value="">
