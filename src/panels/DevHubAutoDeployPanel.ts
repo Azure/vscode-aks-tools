@@ -154,7 +154,7 @@ async function getRepositoryNames(octokit: Octokit): Promise<string[]> {
 
         return repoNames;
     } catch (error) {
-        console.error("Error fetching repositories:", error);
+        console.error(`Error fetching repositories: ${error.message}`, error);
         throw error; // Re-throw the error for upstream handling
     }
 }
