@@ -24,17 +24,17 @@ import {
 } from "./types";
 
 // Blocking IO
-type BlockIOTopKey = 
-  | typeof k8sKeys[number]
-  | typeof mountNsKeys[number]
-  | "pid"
-  | typeof commandKeys[number]
-  | "write"
-  | "major"
-  | "minor"
-  | "bytes"
-  | "us"
-  | "ops";
+type BlockIOTopKey =
+    | (typeof k8sKeys)[number]
+    | (typeof mountNsKeys)[number]
+    | "pid"
+    | (typeof commandKeys)[number]
+    | "write"
+    | "major"
+    | "minor"
+    | "bytes"
+    | "us"
+    | "ops";
 
 const blockIOTopKeyMetadata: ItemMetadata<BlockIOTopKey> = {
     ...k8sKeyMetadata,
@@ -77,23 +77,23 @@ export const blockIOTopMetadata: GadgetMetadata<BlockIOTopKey> = {
 };
 
 // eBPF
-type EbpfTopKey = 
-  | typeof k8sKeys[number]
-  | "progid"
-  | "type"
-  | "name"
-  | "processes.pid"
-  | "processes.comm"
-  | "currentRuntime"
-  | "currentRunCount"
-  | "cumulRuntime"
-  | "cumulRunCount"
-  | "totalRuntime"
-  | "totalRunCount"
-  | "mapMemory"
-  | "mapCount"
-  | "totalCpuUsage"
-  | "perCpuUsage";
+type EbpfTopKey =
+    | (typeof k8sKeys)[number]
+    | "progid"
+    | "type"
+    | "name"
+    | "processes.pid"
+    | "processes.comm"
+    | "currentRuntime"
+    | "currentRunCount"
+    | "cumulRuntime"
+    | "cumulRunCount"
+    | "totalRuntime"
+    | "totalRunCount"
+    | "mapMemory"
+    | "mapCount"
+    | "totalCpuUsage"
+    | "perCpuUsage";
 
 const ebpfTopKeyMetadata: ItemMetadata<EbpfTopKey> = {
     ...k8sKeyMetadata,
@@ -142,17 +142,17 @@ export const ebpfTopMetadata: GadgetMetadata<EbpfTopKey> = {
 };
 
 // File
-type FileTopKey = 
-  | typeof k8sKeys[number]
-  | typeof mountNsKeys[number]
-  | "pid"
-  | typeof commandKeys[number]
-  | "reads"
-  | "rbytes"
-  | "fileType"
-  | "filename"
-  | "wbytes"
-  | "writes";
+type FileTopKey =
+    | (typeof k8sKeys)[number]
+    | (typeof mountNsKeys)[number]
+    | "pid"
+    | (typeof commandKeys)[number]
+    | "reads"
+    | "rbytes"
+    | "fileType"
+    | "filename"
+    | "wbytes"
+    | "writes";
 
 const fileTopKeyMetadata: ItemMetadata<FileTopKey> = {
     ...k8sKeyMetadata,
@@ -196,15 +196,15 @@ export const fileTopMetadata: GadgetMetadata<FileTopKey> = {
 };
 
 // TCP
-type TcpTopKey = 
-  | typeof k8sKeys[number]
-  | typeof mountNsKeys[number]
-  | "pid"
-  | typeof commandKeys[number]
-  | "family"
-  | typeof networkEndpointKeys[number]
-  | "sent"
-  | "received";
+type TcpTopKey =
+    | (typeof k8sKeys)[number]
+    | (typeof mountNsKeys)[number]
+    | "pid"
+    | (typeof commandKeys)[number]
+    | "family"
+    | (typeof networkEndpointKeys)[number]
+    | "sent"
+    | "received";
 
 const tcpTopKeyMetadata: ItemMetadata<TcpTopKey> = {
     ...k8sKeyMetadata,
@@ -216,9 +216,7 @@ const tcpTopKeyMetadata: ItemMetadata<TcpTopKey> = {
     sent: { identifier: "sent", name: "Sent", valueType: ValueType.Bytes },
     received: { identifier: "recv", name: "Recv", valueType: ValueType.Bytes },
 };
-type DerivedTcpTopKey = 
-  | "ip"
-  | typeof derivedNetworkEndpointKeys[number];
+type DerivedTcpTopKey = "ip" | (typeof derivedNetworkEndpointKeys)[number];
 
 const allTcpTopProperties: ItemProperty<TcpTopKey | DerivedTcpTopKey>[] = [
     ...getLiteralProperties(tcpTopKeyMetadata),

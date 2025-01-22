@@ -19,6 +19,7 @@ import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
 import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
 import { AutomatedDeploymentsDefinition } from "./webviewDefinitions/automatedDeployments";
+import { CreateFleetDefinition } from "./webviewDefinitions/createFleet";
 
 /**
  * Groups all the related types for a single webview.
@@ -58,6 +59,7 @@ type AllWebviewDefinitions = {
     kaitoManage: KaitoManageDefinition;
     kaitoTest: KaitoTestDefinition;
     automatedDeployments: AutomatedDeploymentsDefinition;
+    createFleet: CreateFleetDefinition;
 };
 
 type ContentIdLookup = {

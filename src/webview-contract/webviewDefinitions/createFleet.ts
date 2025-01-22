@@ -17,27 +17,20 @@ export enum ProgressEventType {
     Success,
 }
 
-export type CreatedCluster = {
+export type CreatedFleet = {
     portalUrl: string;
 };
 
-export interface CreateClusterParams {
-    isNewResourceGroup: boolean;
+export interface CreateFleetParams {
     resourceGroupName: string;
     location: string;
     name: string;
-    preset: PresetType;
-}
-
-export enum PresetType {
-    Dev,
-    Automatic,
 }
 
 export type ToVsCodeMsgDef = {
     getLocationsRequest: void;
     getResourceGroupsRequest: void;
-    createClusterRequest: CreateClusterParams;
+    createFleetRequest: CreateFleetParams;
 };
 
 export type ToWebViewMsgDef = {
@@ -52,8 +45,8 @@ export type ToWebViewMsgDef = {
         event: ProgressEventType;
         errorMessage: string | null;
         deploymentPortalUrl: string | null;
-        createdCluster: CreatedCluster | null;
+        createdFleet: CreatedFleet | null;
     };
 };
 
-export type CreateClusterDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
+export type CreateFleetDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

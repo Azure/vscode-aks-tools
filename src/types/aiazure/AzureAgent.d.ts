@@ -184,7 +184,9 @@ export type LanguageModelInteractionOptions = {
     suppressError?: boolean;
 };
 
-export type LanguageModelInteractionResult = { languageModelResponded: true, languageModelResponse: string } | { languageModelResponded: false, languageModelResponse: undefined };
+export type LanguageModelInteractionResult =
+    | { languageModelResponded: true; languageModelResponse: string }
+    | { languageModelResponded: false; languageModelResponse: undefined };
 
 /**
  * Helps with using the VS Code language model API.
@@ -198,12 +200,20 @@ export interface ILanguageModelHelper {
     /**
      * Starts an interaction with the VS Code language model API, where the output from the language model is outputted verbatim to the user.
      */
-    verbatimLanguageModelInteraction(primaryPrompt: string, request: AgentRequest, options?: LanguageModelInteractionOptions): Promise<LanguageModelInteractionResult>;
+    verbatimLanguageModelInteraction(
+        primaryPrompt: string,
+        request: AgentRequest,
+        options?: LanguageModelInteractionOptions,
+    ): Promise<LanguageModelInteractionResult>;
 
     /**
      * Starts an interaction with the VS Code language model API, where the output from the language model is returned as a `string`.
      */
-    getResponseAsStringLanguageModelInteraction(primaryPrompt: string, request: AgentRequest, options?: LanguageModelInteractionOptions): Promise<string | undefined>;
+    getResponseAsStringLanguageModelInteraction(
+        primaryPrompt: string,
+        request: AgentRequest,
+        options?: LanguageModelInteractionOptions,
+    ): Promise<string | undefined>;
 }
 
 export type QueryAzureResourceGraphResult = {
@@ -234,7 +244,7 @@ export type TypeChatTranslationOptions = {
      * - `"all"`: All history will be included
      */
     includeHistory?: "none" | "all";
-}
+};
 
 /**
  * Helps with using TypeChat.
@@ -243,7 +253,12 @@ export interface ITypeChatHelper {
     /**
      * Translates the {@param request}'s user prompt into an object whose type matches the given {@param zodSchema}.
      */
-    getTypeChatTranslation<TZodSchema extends Record<string, z.ZodType>, TTypeName extends keyof TZodSchema & string>(zodSchema: TZodSchema, typeName: TTypeName, request: AgentRequest, options?: TypeChatTranslationOptions): Promise<z.TypeOf<TZodSchema[TTypeName]> | undefined>;
+    getTypeChatTranslation<TZodSchema extends Record<string, z.ZodType>, TTypeName extends keyof TZodSchema & string>(
+        zodSchema: TZodSchema,
+        typeName: TTypeName,
+        request: AgentRequest,
+        options?: TypeChatTranslationOptions,
+    ): Promise<z.TypeOf<TZodSchema[TTypeName]> | undefined>;
 }
 
 export type AzureResourceConnection<TypeT = string, KindT = string | undefined> = {
@@ -264,8 +279,8 @@ export interface IConversationHelper {
     getConversationAsString(request: AgentRequest): Promise<string>;
 
     /**
-    * Gets the conversation's current resource context, if one has been established.
-    */
+     * Gets the conversation's current resource context, if one has been established.
+     */
     getResourceContext(request: AgentRequest): AzureResourceConnection | undefined;
 }
 
@@ -363,4 +378,3 @@ export type AzureAgentChatResultMetadata = {
 };
 
 export { LocalPluginManifest };
-

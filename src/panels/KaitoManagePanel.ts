@@ -8,10 +8,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
-import { getConditions, convertAgeToMinutes } from "./utilities/KaitoHelpers";
-import { join } from "path";
-import { writeFileSync } from "fs";
-import { tmpdir } from "os";
+import { getConditions, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
 
 export class KaitoManagePanel extends BasePanel<"kaitoManage"> {
     constructor(extensionUri: vscode.Uri) {
@@ -121,17 +118,17 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             return;
         }
         try {
+            // Delete the workspace first (wait for deletion to finish)
             await this.handleDeleteWorkspaceRequest(modelName, webview);
             this.operatingState[modelName] = true;
 
             // Redeploy the workspace
             await longRunning(`Re-deploying 'workspace-${modelName}'`, async () => {
-                const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
-                writeFileSync(tempFilePath, modelYaml, "utf8");
-                const command = `apply -f ${tempFilePath}`;
-                const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-                if (failed(kubectlresult)) {
-                    vscode.window.showErrorMessage(`Error deploying 'workspace-${modelName}': ${kubectlresult.error}`);
+                const deploymentResult = await deployModel(modelYaml, this.kubectl, this.kubeConfigFilePath);
+                if (failed(deploymentResult)) {
+                    vscode.window.showErrorMessage(
+                        `Error deploying 'workspace-${modelName}': ${deploymentResult.error}`,
+                    );
                     return;
                 }
             });
@@ -190,31 +187,35 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 return;
             }
             const data = JSON.parse(kubectlresult.result.stdout);
-            const items = data.items;
-            let pod = null;
-            for (const item of items) {
-                const name = item.metadata.name;
+            const pods = data.items;
+            let workspacePod = null;
+            // Find the most recent kaito-workspace pod in case of multiple pods
+            for (const pod of pods) {
+                const name = pod.metadata.name;
                 if (name.startsWith("kaito-workspace")) {
-                    const date = new Date(item.metadata.creationTimestamp);
-                    if (!pod || date > pod.date) {
-                        pod = { name: name, date: date };
+                    const date = new Date(pod.metadata.creationTimestamp);
+                    if (!workspacePod || date > workspacePod.date) {
+                        workspacePod = { name: name, date: date };
                     }
                 }
             }
-            if (!pod) {
+            if (!workspacePod) {
                 vscode.window.showErrorMessage(`Error finding workspace pod.`);
                 return;
             }
-            command = `logs ${pod.name} -n kube-system --tail=500`;
+            // retrieves up to 500 lines of logs
+            command = `logs ${workspacePod.name} -n kube-system --tail=500`;
             kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
                 vscode.window.showErrorMessage(`Error fetching logs: ${kubectlresult.error}`);
                 return;
             }
             const logs = kubectlresult.result.stdout;
-            const tempFilePath = join(tmpdir(), "kaito-workspace-logs.txt");
-            writeFileSync(tempFilePath, logs, "utf8");
-            const doc = await vscode.workspace.openTextDocument(tempFilePath);
+
+            const doc = await vscode.workspace.openTextDocument({
+                content: logs,
+                language: "plaintext",
+            });
             vscode.window.showTextDocument(doc);
         });
     }

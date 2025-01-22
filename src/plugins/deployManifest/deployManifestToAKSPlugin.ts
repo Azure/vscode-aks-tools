@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { ILocalPluginHandler, LocalPluginArgs, LocalPluginEntry, LocalPluginManifest, ResponseForLanguageModelExtended } from "../../types/aiazure/AzureAgent";
+import {
+    ILocalPluginHandler,
+    LocalPluginArgs,
+    LocalPluginEntry,
+    LocalPluginManifest,
+    ResponseForLanguageModelExtended,
+} from "../../types/aiazure/AzureAgent";
 import { getDeployManifestToAKSPluginResponse } from "../shared/pluginResponses";
 
 const deployManifestToAKSClusterFunctionName = "deploy_manifest_aks_cluster";
@@ -11,10 +17,10 @@ export const deployManifestToAKSPluginManifest: LocalPluginManifest = {
             name: deployManifestToAKSClusterFunctionName,
             parameters: [],
             returnParameter: {
-                type: "object"
+                type: "object",
             },
-            willHandleUserResponse: false
-        }
+            willHandleUserResponse: false,
+        },
     ],
 };
 
@@ -23,13 +29,13 @@ async function handleDeployManifestToAKS(): Promise<ResponseForLanguageModelExte
 
     return {
         responseForLanguageModel: { messageForLanguageModel },
-        chatResponseParts : [
+        chatResponseParts: [
             new vscode.ChatResponseCommandButtonPart({
                 title: vscode.l10n.t(buttonLabel),
                 command: commandID,
-                arguments: []
+                arguments: [],
             }),
-        ]
+        ],
     };
 }
 
@@ -44,9 +50,9 @@ const deployManifestToAKSPluginHandler: ILocalPluginHandler = {
 
         return {
             status: "error",
-            message: "Unrecognized command."
-        }
-    }
+            message: "Unrecognized command.",
+        };
+    },
 };
 
 export const deployManifestPluginToAKSPlugin: LocalPluginEntry = {

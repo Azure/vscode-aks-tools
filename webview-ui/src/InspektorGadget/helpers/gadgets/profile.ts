@@ -11,14 +11,13 @@ import {
 } from "./types";
 
 // CPU
-type CpuProfileKey = (
-    | typeof k8sKeys[number]
-    | typeof commandKeys[number]
+type CpuProfileKey =
+    | (typeof k8sKeys)[number]
+    | (typeof commandKeys)[number]
     | "pid"
     | "userStack"
     | "kernelStack"
-    | "count"
-  );
+    | "count";
 const cpuProfileKeyMetadata: ItemMetadata<CpuProfileKey> = {
     ...k8sKeyMetadata,
     ...commandKeyMetadata,

@@ -16,8 +16,6 @@ export type DeploymentState = {
 export const vscode = getWebviewMessageContext<"kaitoModels">({
     generateCRDRequest: null,
     deployKaitoRequest: null,
-    workspaceExistsRequest: null,
-    updateStateRequest: null,
     resetStateRequest: null,
     cancelRequest: null,
     kaitoManageRedirectRequest: null,

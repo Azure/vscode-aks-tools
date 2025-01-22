@@ -8,7 +8,7 @@ export type RetinaState = InitialState;
 
 export const stateUpdater: WebviewStateUpdater<"retinaCapture", EventDef, RetinaState> = {
     createState: (initialState) => ({
-        ...initialState
+        ...initialState,
     }),
     vscodeMessageHandler: {},
     eventHandler: {},

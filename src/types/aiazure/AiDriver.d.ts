@@ -31,7 +31,7 @@ export type LocalPluginManifest = {
 
     /**
      * The functions that the plugin contains.
-    */
+     */
     functions: LocalPluginFunction[];
 };
 
@@ -49,14 +49,14 @@ export type LocalPluginFunction = {
      *
      * Only valid for plugin manifests stored on the server! Exists here only for reference.
      */
-    description?: (never & string);
+    description?: never & string;
 
     /**
      * The topic scopes that are applicable to the current message in the conversation.
      *
      * Only valid for plugin manifests stored on the server! Exists here only for reference.
      */
-    applicableTopicScopes?: (never & TopicScope[]);
+    applicableTopicScopes?: never & TopicScope[];
 };
 
 /**
@@ -72,7 +72,7 @@ export type LocalPluginFunctionParameter = {
      *
      * Only valid for plugin manifests stored on the server! Exists here only for reference.
      */
-    description?: (never & string);
+    description?: never & string;
 };
 
 /**
@@ -86,7 +86,7 @@ export type LocalPluginFunctionReturnParameter = {
      *
      * Only valid for plugin manifests stored on the server! Exists here only for reference.
      */
-    description?: (never & string);
+    description?: never & string;
 };
 
 /**
@@ -95,8 +95,8 @@ export type LocalPluginFunctionReturnParameter = {
 export type LocalPluginFuntionArguments = {
     pluginName: string;
     functionName: string;
-    parameters?: { [key: string]: unknown }
-}
+    parameters?: { [key: string]: unknown };
+};
 
 // #endregion
 
@@ -239,7 +239,10 @@ export type TextReferenceChatResponsePart = {
     };
 };
 
-export type DisplayableChatResponsePart = SimpleChatResponsePart | ButtonChatResponsePart | TextReferenceChatResponsePart;
+export type DisplayableChatResponsePart =
+    | SimpleChatResponsePart
+    | ButtonChatResponsePart
+    | TextReferenceChatResponsePart;
 
 export type PluginInvocationMetadata = { pluginName: string; functionName: string; parameterNames: string[] };
 
@@ -281,7 +284,7 @@ export type MetadataChatResponsePart = {
          * The number of times the AI Driver had to retry getting a response from CAPI.
          */
         retryCount: number;
-    }
+    };
 };
 
 export type ChatResponsePart = DisplayableChatResponsePart | LogChatResponsePart | MetadataChatResponsePart;
