@@ -654,7 +654,6 @@
         "@octokit/rest": "^21.1.0",
         "@vscode/extension-telemetry": "^0.9.8",
         "decompress": "^4.2.1",
-        "dependencies": "^0.0.1",
         "js-yaml": "^4.1.0",
         "move-file": "^3.1.0",
         "node-fetch": "^3.3.2",
