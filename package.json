@@ -329,10 +329,6 @@
                 "title": "Run Draft Validate for YAML"
             },
             {
-                "command": "aks.aksAutomatedDeployments",
-                "title": "Deploy an app with DevHub"
-            },
-            {
                 "command": "aks.aksKaitoTest",
                 "title": "Test KAITO models"
             }
@@ -371,10 +367,6 @@
                 },
                 {
                     "command": "aks.aksDraftValidate",
-                    "when": "explorerResourceIsFolder"
-                },
-                {
-                    "command": "aks.aksAutomatedDeployments",
                     "when": "explorerResourceIsFolder"
                 }
             ],
@@ -518,11 +510,6 @@
                 },
                 {
                     "command": "aks.draftWorkflow",
-                    "group": "navigation",
-                    "when": "workspaceFolderCount >= 1"
-                },
-                {
-                    "command": "aks.aksAutomatedDeployments",
                     "group": "navigation",
                     "when": "workspaceFolderCount >= 1"
                 }
