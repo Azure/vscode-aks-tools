@@ -329,6 +329,10 @@
                 "title": "Run Draft Validate for YAML"
             },
             {
+                "command": "aks.aksAutomatedDeployments",
+                "title": "Deploy an app with DevHub"
+            },
+            {
                 "command": "aks.aksKaitoTest",
                 "title": "Test KAITO models"
             }
@@ -367,6 +371,10 @@
                 },
                 {
                     "command": "aks.aksDraftValidate",
+                    "when": "explorerResourceIsFolder"
+                },
+                {
+                    "command": "aks.aksAutomatedDeployments",
                     "when": "explorerResourceIsFolder"
                 }
             ],
@@ -512,6 +520,11 @@
                     "command": "aks.draftWorkflow",
                     "group": "navigation",
                     "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.aksAutomatedDeployments",
+                    "group": "navigation",
+                    "when": "workspaceFolderCount >= 1"
                 }
             ],
             "aks.networkTroubleshootingSubMenu": [
@@ -629,6 +642,7 @@
         "@azure/arm-compute": "^22.2.0",
         "@azure/arm-containerregistry": "^10.1.0",
         "@azure/arm-containerservice": "21.2.0-beta.1",
+        "@azure/arm-devhub": "^1.0.0-beta.3",
         "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-msi": "^2.1.0",
