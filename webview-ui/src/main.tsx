@@ -20,6 +20,7 @@ import { Periscope } from "./Periscope/Periscope";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
 import { TcpDump } from "./TCPDump/TcpDump";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
+import { AutomatedDeployments } from "./AutomatedDeployments/AutomatedDeployments";
 import { CreateFleet } from "./CreateFleet/CreateFleet";
 
 // There are two modes of launching this application:
@@ -69,6 +70,7 @@ function getVsCodeContent(): JSX.Element {
         kaitoModels: () => <KaitoModels {...getInitialState()} />,
         kaitoManage: () => <KaitoManage {...getInitialState()} />,
         kaitoTest: () => <KaitoTest {...getInitialState()} />,
+        automatedDeployments: () => <AutomatedDeployments {...getInitialState()} />,
         createFleet: () => <CreateFleet {...getInitialState()} />,
     };
 

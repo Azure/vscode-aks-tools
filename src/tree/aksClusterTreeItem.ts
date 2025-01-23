@@ -14,6 +14,7 @@ export interface AksClusterTreeNode {
     readonly subscriptionTreeNode: SubscriptionTreeNode;
     readonly subscriptionId: string;
     readonly resourceGroupName: string;
+    readonly clusterResource: DefinedResourceWithGroup;
 }
 
 export function createClusterTreeNode(
