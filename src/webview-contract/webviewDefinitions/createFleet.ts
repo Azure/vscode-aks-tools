@@ -25,6 +25,13 @@ export interface CreateFleetParams {
     resourceGroupName: string;
     location: string;
     name: string;
+    hubMode: HubMode;
+    dnsPrefix: string | undefined; // required, if hubMode is "With"
+}
+
+export enum HubMode {
+    Without,
+    With,
 }
 
 export type ToVsCodeMsgDef = {

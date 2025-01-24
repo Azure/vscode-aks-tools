@@ -21,6 +21,7 @@ import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
 import { getTCPDumpScenarios } from "./tcpDumpTests";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
+import { getCreateFleetScenarios } from "./createFleetTests";
 import "./vars.css";
 
 // There are two modes of launching this application:
@@ -56,11 +57,7 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoModels: getKaitoModelScenarios(),
     kaitoManage: getKaitoManageScenarios(),
     kaitoTest: getKaitoTestScenarios(),
-    // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
-    // TODO: Replace with the actual scenarios when available.
-    createFleet: [], // createFleet scenarios are not yet available.
-    // Testcases for createFleet will be added in the next PR, together with the webpage for user input.
-    // User experience will not be affected, as the right-click entry point for createFleet is not yet visible.
+    createFleet: getCreateFleetScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

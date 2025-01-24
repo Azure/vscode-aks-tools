@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import {
     CreateFleetParams,
+    HubMode,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createFleet";
@@ -15,6 +16,7 @@ import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 // To ensure consistent formats and styles across features, it uses the same CSS file as CreateCluster.tsx
 // TODO: considering restructuring the CSS file to be more modular and reusable
 import styles from "../CreateCluster/CreateCluster.module.css";
+import { CreateFleetModeInput } from "./CreateFleetModeInput";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -23,6 +25,7 @@ interface CreateFleetInputProps {
     resourceGroups: ResourceGroup[];
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
+    subscriptionId: string;
 }
 
 export function CreateFleetInput(props: CreateFleetInputProps) {
@@ -30,6 +33,8 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
     const [fleetName, setFleetName] = useState<Validatable<string>>(unset());
     const [selectedResourceGroupIndex, setselectedResourceGroupIndex] = useState<number>(0);
     const [location, setLocation] = useState<Validatable<string>>(unset());
+    const [hubModeSelected, setHubModeSelected] = useState<HubMode>(HubMode.Without);
+    const [dnsPrefix, setDnsPrefix] = useState<Validatable<string>>(unset());
 
     const allResourcesGroups = props.resourceGroups; // All available resource groups fetched from the portal
 
@@ -83,14 +88,26 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
             return nothing();
         }
         if (!isValid(fleetName)) return nothing();
+        // dnsPrefix validation is only required when hubMode is set to "With"
+        if (hubModeSelected === HubMode.With && (!isValid(dnsPrefix) || dnsPrefix.value === "")) return nothing();
 
         const parameters: CreateFleetParams = {
             resourceGroupName,
             location: location.value,
             name: fleetName.value,
+            hubMode: hubModeSelected,
+            dnsPrefix: hubModeSelected === HubMode.With && isValid(dnsPrefix) ? dnsPrefix.value : undefined,
         };
 
         return just(parameters);
+    }
+
+    function handleHubModeChange(hubModeSelected: HubMode) {
+        setHubModeSelected(hubModeSelected);
+    }
+
+    function handleDnsPrefixChange(dnsPrefix: string) {
+        setDnsPrefix(valid(dnsPrefix));
     }
 
     function handleSubmit(event: FormEvent) {
@@ -174,6 +191,11 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
                 </span>
             )}
             <br />
+
+            <CreateFleetModeInput
+                onModeSelected={handleHubModeChange}
+                onDnsPrefixChange={handleDnsPrefixChange}
+            ></CreateFleetModeInput>
 
             <div className={styles.buttonContainer}>
                 <VSCodeButton type="submit">Create</VSCodeButton>
