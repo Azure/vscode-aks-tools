@@ -14,7 +14,7 @@ import { Octokit } from "@octokit/rest";
 import { ToWebViewMsgDef, ResourceGroup } from "../webview-contract/webviewDefinitions/automatedDeployments";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import * as roleAssignmentsUtil from "../../src/commands/utils/roleAssignments";
-import { failed } from "../commands/utils/errorable";
+import { failed, getErrorMessage } from "../commands/utils/errorable";
 //import * as acrUtils from "../commands/utils/acrs";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
@@ -24,6 +24,7 @@ export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments">
         // Call the BasePanel constructor with the required contentId and command keys
         super(extensionUri, "automatedDeployments", {
             getGitHubReposResponse: null,
+            getGitHubBranchesResponse: null,
             getSubscriptionsResponse: null,
             getWorkflowCreationResponse: null,
             getResourceGroupsResponse: null,
@@ -53,6 +54,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     getTelemetryDefinition(): TelemetryDefinition<"automatedDeployments"> {
         return {
             getGitHubReposRequest: false,
+            getGitHubBranchesRequest: false,
             getSubscriptionsRequest: false,
             createWorkflowRequest: false,
             getResourceGroupsRequest: false,
@@ -64,6 +66,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     ): MessageHandler<ToVsCodeMsgDef<"automatedDeployments">> {
         return {
             getGitHubReposRequest: () => this.handleGetGitHubReposRequest(webview),
+            getGitHubBranchesRequest: (args) => this.handleGetGitHubBranchesRequest(webview, args.repoOwner, args.repo),
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
             createWorkflowRequest: () => this.handleCreateWorkflowRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
@@ -71,10 +74,40 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     }
 
     private async handleGetGitHubReposRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const repoNames = await getRepositoryNames(this.octokitClient);
+        let octoResp: Awaited<ReturnType<typeof this.octokitClient.repos.listForAuthenticatedUser>>;
+        try {
+            octoResp = await this.octokitClient.repos.listForAuthenticatedUser({});
+        } catch (error) {
+            console.error("Error fetching repositories:", getErrorMessage(error));
+            vscode.window.showErrorMessage("Error fetching repositories");
+            return;
+        }
 
-        // Send the list of repositories to the webview
+        const repoNames = octoResp.data.map((repo) => repo.name);
+
         webview.postGetGitHubReposResponse({ repos: repoNames });
+    }
+
+    private async handleGetGitHubBranchesRequest(
+        webview: MessageSink<ToWebViewMsgDef>,
+        repoOwner: string,
+        repo: string,
+    ) {
+        let octoResp: Awaited<ReturnType<typeof this.octokitClient.repos.listBranches>>;
+        try {
+            octoResp = await this.octokitClient.repos.listBranches({
+                owner: repoOwner,
+                repo: repo,
+            });
+        } catch (error) {
+            console.error("Error fetching branches:", getErrorMessage(error));
+            vscode.window.showErrorMessage("Error fetching branches");
+            return;
+        }
+
+        const branches = octoResp.data.map((branch) => branch.name);
+
+        webview.postGetGitHubBranchesResponse({ branches });
     }
 
     private async handleGetSubscriptionsRequest(webview: MessageSink<ToWebViewMsgDef>) {
@@ -141,21 +174,6 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         if (prUrl !== undefined) {
             webview.postGetWorkflowCreationResponse(prUrl); //Will always return success boolean alongside prUrl
         }
-    }
-}
-
-async function getRepositoryNames(octokit: Octokit): Promise<string[]> {
-    try {
-        // Fetch the list of repositories for the authenticated user
-        const response = await octokit.repos.listForAuthenticatedUser({});
-
-        // Extract repository names
-        const repoNames = response.data.map((repo) => repo.name);
-
-        return repoNames;
-    } catch (error) {
-        console.error("Error fetching repositories:", error);
-        throw error; // Re-throw the error for upstream handling
     }
 }
 
