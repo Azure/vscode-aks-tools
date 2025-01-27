@@ -18,7 +18,7 @@ import { failed } from "../commands/utils/errorable";
 //import * as acrUtils from "../commands/utils/acrs";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
-import { getClusterNamespaces } from "../commands/utils/clusters";
+import { getClusterNamespaces, createClusterNamespace } from "../commands/utils/clusters";
 import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
 
 export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments"> {
@@ -146,7 +146,29 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         //Check if new resource group must be created
 
         //Check for isNewNamespace, to see if new namespace must be created.
+        const isNewNamespace = true; //Actual Value Provided Later PR //PlaceHolder
+        if (isNewNamespace) {
+            //Create New Namespace
+            const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a"; // These values will be provided to the fuction call from the webview
+            const resourceGroup = "rei-rg"; //PlaceHolder
+            const clusterName = "reiCluster"; //PlaceHolder
+            const namespace = "not-default"; //PlaceHolder
+            const namespaceCreationResp = await createClusterNamespace(
+                this.sessionProvider,
+                this.kubectl,
+                subscriptionId,
+                resourceGroup,
+                clusterName,
+                namespace,
+            );
 
+            if (failed(namespaceCreationResp)) {
+                console.log("Failed to create namespace: ", namespace, "Error: ", namespaceCreationResp.error);
+                vscode.window.showErrorMessage(`Failed to create namespace: ${namespace}`);
+                return;
+            }
+            vscode.window.showInformationMessage(namespaceCreationResp.result);
+        }
         //Create ACR if required
 
         //Verify selected ACR has correct role assignments
