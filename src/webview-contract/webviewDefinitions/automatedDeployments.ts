@@ -16,9 +16,15 @@ export interface ResourceGroup {
     location: string;
 }
 
+export interface BranchParams {
+    repoOwner: string;
+    repo: string;
+}
+
 // Define messages sent from the webview to the VS Code extension
 export type ToVsCodeMsgDef = {
     getGitHubReposRequest: void;
+    getGitHubBranchesRequest: BranchParams;
     getSubscriptionsRequest: void;
     createWorkflowRequest: void;
     getResourceGroupsRequest: void;
@@ -27,6 +33,7 @@ export type ToVsCodeMsgDef = {
 // Define messages sent from the VS Code extension to the webview
 export type ToWebViewMsgDef = {
     getGitHubReposResponse: { repos: string[] };
+    getGitHubBranchesResponse: { branches: string[] };
     getSubscriptionsResponse: Subscription[];
     //getAcrsResponse: string[];
     getResourceGroupsResponse: DefinedResourceGroup[];
