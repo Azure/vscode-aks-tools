@@ -38,10 +38,20 @@ export interface SubscriptionFilter {
     subscriptionId: string;
 }
 
+export interface ClusterFilter {
+    subscriptionId: string;
+    clusterName: string;
+}
+
 const onFilteredSubscriptionsChangeEmitter = new vscode.EventEmitter<void>();
+const onFilteredClustersChangeEmitter = new vscode.EventEmitter<void>();
 
 export function getFilteredSubscriptionsChangeEvent() {
     return onFilteredSubscriptionsChangeEmitter.event;
+}
+
+export function getFilteredClustersChangeEvent() {
+    return onFilteredClustersChangeEmitter.event;
 }
 
 export function getFilteredSubscriptions(): SubscriptionFilter[] {
@@ -57,10 +67,32 @@ export function getFilteredSubscriptions(): SubscriptionFilter[] {
     }
 }
 
+export function getFilteredClusters(): ClusterFilter[] {
+    try {
+        let values = vscode.workspace.getConfiguration("aks").get<string[]>("selectedClusters", []);
+        if (values.length === 0) {
+            // Get filters from the Azure Account extension if the AKS extension has none.
+            values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceClusterFilter", []);
+        }
+        return values.map(asClusterFilter).filter((v) => v !== null) as ClusterFilter[];
+    } catch {
+        return [];
+    }
+}
+
 function asSubscriptionFilter(value: string): SubscriptionFilter | null {
     try {
         const parts = value.split("/");
         return { tenantId: parts[0], subscriptionId: parts[1] };
+    } catch {
+        return null;
+    }
+}
+
+function asClusterFilter(value: string): ClusterFilter | null {
+    try {
+        const parts = value.split("/");
+        return { subscriptionId: parts[0], clusterName: parts[1] };
     } catch {
         return null;
     }
@@ -79,6 +111,22 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
             .getConfiguration("aks")
             .update("selectedSubscriptions", values, vscode.ConfigurationTarget.Global, true);
         onFilteredSubscriptionsChangeEmitter.fire();
+    }
+}
+
+export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
+    const existingFilters = getFilteredClusters();
+    const filtersChanged =
+        existingFilters.length !== filters.length ||
+        !filters.every((f) => existingFilters.some((ef) => ef.clusterName === f.clusterName));
+
+    const values = filters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
+
+    if (filtersChanged) {
+        await vscode.workspace
+            .getConfiguration("aks")
+            .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
+            onFilteredClustersChangeEmitter.fire();
     }
 }
 
