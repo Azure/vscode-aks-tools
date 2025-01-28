@@ -11,6 +11,7 @@ import { DeveloperHubServiceClient, Workflow } from "@azure/arm-devhub";
 import { ResourceGroup as ARMResourceGroup } from "@azure/arm-resources";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { Octokit } from "@octokit/rest";
+import { getGitHubRepos, getGitHubBranchesForRepo } from "../commands/utils/octokitHelper";
 import { ToWebViewMsgDef, ResourceGroup } from "../webview-contract/webviewDefinitions/automatedDeployments";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import * as roleAssignmentsUtil from "../../src/commands/utils/roleAssignments";
@@ -74,18 +75,13 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     }
 
     private async handleGetGitHubReposRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        let octoResp: Awaited<ReturnType<typeof this.octokitClient.repos.listForAuthenticatedUser>>;
-        try {
-            octoResp = await this.octokitClient.repos.listForAuthenticatedUser({});
-        } catch (error) {
-            console.error("Error fetching repositories:", getErrorMessage(error));
-            vscode.window.showErrorMessage("Error fetching repositories");
+        const reposResp = await getGitHubRepos(this.octokitClient);
+        if (failed(reposResp)) {
+            vscode.window.showErrorMessage(reposResp.error);
             return;
         }
 
-        const repoNames = octoResp.data.map((repo) => repo.name);
-
-        webview.postGetGitHubReposResponse({ repos: repoNames });
+        webview.postGetGitHubReposResponse({ repos: reposResp.result });
     }
 
     private async handleGetGitHubBranchesRequest(
@@ -93,21 +89,13 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         repoOwner: string,
         repo: string,
     ) {
-        let octoResp: Awaited<ReturnType<typeof this.octokitClient.repos.listBranches>>;
-        try {
-            octoResp = await this.octokitClient.repos.listBranches({
-                owner: repoOwner,
-                repo: repo,
-            });
-        } catch (error) {
-            console.error("Error fetching branches:", getErrorMessage(error));
-            vscode.window.showErrorMessage("Error fetching branches");
+        const branchesResp = await getGitHubBranchesForRepo(this.octokitClient, repoOwner, repo);
+        if (failed(branchesResp)) {
+            vscode.window.showErrorMessage(branchesResp.error);
             return;
         }
 
-        const branches = octoResp.data.map((branch) => branch.name);
-
-        webview.postGetGitHubBranchesResponse({ branches });
+        webview.postGetGitHubBranchesResponse({ branches: branchesResp.result });
     }
 
     private async handleGetSubscriptionsRequest(webview: MessageSink<ToWebViewMsgDef>) {
