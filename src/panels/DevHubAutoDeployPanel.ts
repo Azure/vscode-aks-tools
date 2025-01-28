@@ -15,7 +15,7 @@ import { getGitHubRepos, getGitHubBranchesForRepo } from "../commands/utils/octo
 import { ToWebViewMsgDef, ResourceGroup } from "../webview-contract/webviewDefinitions/automatedDeployments";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import * as roleAssignmentsUtil from "../../src/commands/utils/roleAssignments";
-import { failed, getErrorMessage } from "../commands/utils/errorable";
+import { failed } from "../commands/utils/errorable";
 //import * as acrUtils from "../commands/utils/acrs";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
