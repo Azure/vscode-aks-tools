@@ -474,6 +474,45 @@ export async function getClusterNamespaces(
     });
 }
 
+export async function createClusterNamespace(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    namespace: string,
+): Promise<Errorable<string>> {
+    if (!validateNamespaceName(namespace)) {
+        return { succeeded: false, error: `Invalid namespace name: ${namespace}` };
+    }
+
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `create namespace ${namespace}`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+
+        if (output.succeeded) {
+            return { succeeded: true, result: `Namespace ${namespace} created` };
+        }
+
+        //Check For Namespace Already Exists
+        if (output.error.includes("AlreadyExists")) {
+            return { succeeded: true, result: "Namespace already exists" };
+        }
+
+        return output;
+    });
+}
+
 export async function deleteCluster(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
@@ -566,6 +605,12 @@ export async function filterPodName(
     }
 
     return { succeeded: true, result: filterPodName };
+}
+
+//Must meet RFC 1123: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+function validateNamespaceName(namespace: string): boolean {
+    const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+    return namespaceRegex.test(namespace);
 }
 
 function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is DefinedManagedCluster {

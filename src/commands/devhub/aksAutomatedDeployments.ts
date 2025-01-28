@@ -20,6 +20,12 @@ export default async function aksAutomatedDeployments(_context: IActionContext, 
         return;
     }
 
+    const kubectl = await k8s.extension.kubectl.v1;
+    if (!kubectl.available) {
+        vscode.window.showErrorMessage(`Kubectl is unavailable.`);
+        return;
+    }
+
     if (!cloudExplorer.available) {
         vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
         return;
@@ -98,6 +104,7 @@ export default async function aksAutomatedDeployments(_context: IActionContext, 
         devHubClient,
         octokitClient,
         graphClient,
+        kubectl,
     );
 
     const panel = new AutomatedDeploymentsPanel(extension.result.extensionUri);

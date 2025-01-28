@@ -1,6 +1,6 @@
 import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
-import { Validatable, unset, valid } from "../utilities/validation";
+import { Validatable, unset, valid, missing } from "../utilities/validation";
 import { NewOrExisting, Subscription } from "../../../src/webview-contract/webviewDefinitions/draft/types";
 import { DefinedResourceGroup } from "../../../src/commands/utils/resourceGroups";
 
@@ -30,6 +30,7 @@ export type AutomatedDeploymentsState = {
     //azureReferenceData: AzureReferenceData;
     resourceGroups: Validatable<DefinedResourceGroup[]>;
     subscriptions: Validatable<Subscription[]>;
+    namespaces: Validatable<string[]>;
 
     // Properties waiting to be automatically selected when data is available
     //pendingSelection: InitialSelection;
@@ -61,6 +62,7 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
 
         resourceGroups: unset(),
         subscriptions: unset(),
+        namespaces: unset(),
 
         //Selected Items
         selectedWorkflowName: unset(),
@@ -90,6 +92,12 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         getResourceGroupsResponse: (state, groups) => ({
             ...state,
             resourceGroups: valid(groups),
+        }),
+        getNamespacesResponse: (state, namespaces) => ({
+            ...state,
+            namespaces: Array.isArray(namespaces)
+                ? valid(namespaces)
+                : missing("Namespaces not in correct type or missing"),
         }),
         getWorkflowCreationResponse: (state, prUrl) => ({
             ...state,
@@ -134,4 +142,5 @@ export const vscode = getWebviewMessageContext<"automatedDeployments">({
     getSubscriptionsRequest: null,
     createWorkflowRequest: null,
     getResourceGroupsRequest: null,
+    getNamespacesRequest: null,
 });

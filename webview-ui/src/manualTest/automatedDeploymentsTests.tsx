@@ -23,6 +23,10 @@ export function getAutomatedDeploymentScenarios() {
             getSubscriptionsRequest: () => {
                 // implementation here
             },
+            getNamespacesRequest: () => {
+                console.log("Returning namespaces from getNamespacesRequest");
+                webview.postGetNamespacesResponse(["namespace1", "namespace2", "bestnamespaceever-11"]);
+            },
             createWorkflowRequest: () => {
                 // implementation here
             },
