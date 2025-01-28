@@ -1,34 +1,31 @@
-import { FormEvent, useState } from "react";
+import { FormEvent } from "react";
 import { HubMode } from "../../../src/webview-contract/webviewDefinitions/createFleet";
-import { hasMessage, invalid, isValueSet, unset, valid, Validatable } from "../utilities/validation";
+import { hasMessage, invalid, isValueSet, valid, Validatable } from "../utilities/validation";
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
-// To ensure consistent formats and styles across features, it uses the same CSS file as CreateCluster.tsx
-// TODO: considering restructuring the CSS file to be more modular and reusable
-import styles from "../CreateCluster/CreateCluster.module.css";
+import styles from "./createFleet.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+import { AutomaticIcon } from "../icons/AutomaticIcon";
+import { DevTestIcon } from "../icons/DevTestIcon";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface CreateFleetInputProps {
+    hubMode: HubMode;
+    dnsPrefix: Validatable<string>;
     onModeSelected: (modeSelected: HubMode) => void;
-    onDnsPrefixChange: (dnsPrefix: string) => void;
+    onDnsPrefixChange: (dnsPrefix: Validatable<string>) => void;
 }
 
 export function CreateFleetModeInput(props: CreateFleetInputProps) {
-    const [selectedMode, setSelectedMode] = useState<HubMode>(HubMode.Without);
-    const [dnsPrefix, setDnsPrefix] = useState<Validatable<string>>(unset());
-
     function handleModeClick(modeSelected: HubMode) {
         props.onModeSelected(modeSelected);
-        setSelectedMode(modeSelected);
     }
 
     function handlednsPrefixChange(e: ChangeEvent) {
         const dnsPrefix = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedDnsPrefix(dnsPrefix);
-        props.onDnsPrefixChange(isValueSet(validated) ? validated.value : "");
-        setDnsPrefix(validated);
+        props.onDnsPrefixChange(validated);
     }
 
     function getValidatedDnsPrefix(dns: string): Validatable<string> {
@@ -48,38 +45,53 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
     return (
         <>
             <div>
-                <h3>Hub Cluster Mode Configuration: ${selectedMode}</h3>
-                <button
-                    type="button"
-                    onClick={() => handleModeClick(HubMode.Without)}
-                    style={{ backgroundColor: selectedMode === HubMode.Without ? "blue" : "grey" }}
-                >
-                    Without Hub Cluster
-                </button>
-                <button
-                    type="button"
-                    onClick={() => handleModeClick(HubMode.With)}
-                    style={{ backgroundColor: selectedMode === HubMode.With ? "blue" : "grey" }}
-                >
-                    With Hub Cluster
-                </button>
-                {selectedMode === HubMode.With && (
-                    <div>
+                <h3>Hub Cluster Mode Configuration:</h3>
+                <div style={{ display: "flex" }}>
+                    <div
+                        className={`${styles.hubModeContainer} ${props.hubMode === HubMode.Without ? styles.hubModeContainerHighlighted : ""}`}
+                        onClick={() => handleModeClick(HubMode.Without)}
+                    >
+                        <div className={styles.flexContainer}>
+                            <AutomaticIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
+                            <div className={styles.hubModeTitle}>Without Hub Cluster</div>
+                        </div>
+                        <div className={styles.hubModeDescription}>
+                            A standard tier AKS cluster managed by Microsoft and hosted on your subscription. Can be
+                            used for multi-cluster updates, Kubernetes resource object propagation, and multi-cluster
+                            load balancing.
+                        </div>
+                    </div>
+
+                    <div
+                        className={`${styles.hubModeContainer} ${props.hubMode === HubMode.With ? styles.hubModeContainerHighlighted : ""}`}
+                        onClick={() => handleModeClick(HubMode.With)}
+                    >
+                        <div className={styles.flexContainer}>
+                            <DevTestIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
+                            <div className={styles.hubModeTitle}>With Hub Cluster</div>
+                        </div>
+                        <div className={styles.hubModeDescription}>
+                            Use fleet as an abstract grouping resource to perform multi-cluster update orchestration.
+                        </div>
+                    </div>
+                </div>
+
+                {props.hubMode === HubMode.With && (
+                    <div className={styles.inputContainer}>
                         <label className={styles.label}>DNS name prefix*</label>
                         <VSCodeTextField
                             id="dns-input"
-                            value={isValueSet(dnsPrefix) ? dnsPrefix.value : ""}
+                            value={isValueSet(props.dnsPrefix) ? props.dnsPrefix.value : ""}
                             className={`${styles.longControl} ${styles.validatable}`}
                             onBlur={handlednsPrefixChange}
                             onChange={handlednsPrefixChange}
                         />
-                        {hasMessage(dnsPrefix) && (
+                        {hasMessage(props.dnsPrefix) && (
                             <span className={styles.validationMessage}>
                                 <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                                {dnsPrefix.message}
+                                {props.dnsPrefix.message}
                             </span>
                         )}
-                        <br />
                     </div>
                 )}
             </div>
