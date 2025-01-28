@@ -17,7 +17,7 @@ export async function getGitHubRepos(octokitClient: Octokit): Promise<Errorable<
 }
 
 //Returns a list of branches for a given repository
-export async function getGitHubBranches(
+export async function getGitHubBranchesForRepo(
     octokitClient: Octokit,
     owner: string,
     repo: string,
