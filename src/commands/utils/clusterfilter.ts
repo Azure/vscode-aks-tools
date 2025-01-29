@@ -11,12 +11,6 @@ import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getFilteredClusters, setFilteredClusters } from "./config";
 import { parseResource, parseSubId } from "../../azure-api-utils";
 
-
-/**
- * A multi-step input using window.createQuickPick() and window.createInputBox().
- *
- * This first part uses the helper class `MultiStepInput` that wraps the API for the multi-step case.
- */
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
 
@@ -53,10 +47,6 @@ export default async function aksClusterFilter(_context: IActionContext, target:
 
     const filteredClusters = await getUniqueClusters();
 
-    // const clustersInCurrentSub = filteredClusters.filter(
-    //     (sub) => sub.subscriptionId === allSubscriptions.result.find((s) => s.subscriptionId === sub.subscriptionId)?.subscriptionId,
-    // );
-
     const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster) => {
             return {
                 label: cluster.name || "",
@@ -82,12 +72,11 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     }
 
     // Set Cluster Instance
+    const newFilteredClusters = [
+        ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
+    ];
     
-        const newFilteredClusters = [
-            ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
-        ];
-    
-        await setFilteredClusters(newFilteredClusters);
+    await setFilteredClusters(newFilteredClusters);
 }
 
 async function getUniqueClusters() {

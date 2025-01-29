@@ -114,22 +114,6 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
     }
 }
 
-// export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
-//     const existingFilters = getFilteredClusters();
-//     const filtersChanged =
-//         existingFilters.length !== filters.length ||
-//         !filters.every((f) => existingFilters.some((ef) => ef.clusterName === f.clusterName));
-
-//     const values = filters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
-
-//     if (filtersChanged) {
-//         await vscode.workspace
-//             .getConfiguration("aks")
-//             .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
-//             onFilteredClustersChangeEmitter.fire();
-//     }
-// }
-
 export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
     const existingFilters = getFilteredClusters();
     
