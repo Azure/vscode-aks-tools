@@ -18,6 +18,8 @@ import { failed } from "../commands/utils/errorable";
 //import * as acrUtils from "../commands/utils/acrs";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
+import { getClusterNamespaces, createClusterNamespace } from "../commands/utils/clusters";
+import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
 
 export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments"> {
     constructor(extensionUri: vscode.Uri) {
@@ -27,6 +29,7 @@ export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments">
             getSubscriptionsResponse: null,
             getWorkflowCreationResponse: null,
             getResourceGroupsResponse: null,
+            getNamespacesResponse: null,
         });
     }
 }
@@ -38,6 +41,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         readonly devHubClient: DeveloperHubServiceClient,
         readonly octokitClient: Octokit,
         readonly graphClient: GraphClient,
+        readonly kubectl: APIAvailable<KubectlV1>,
     ) {}
 
     getTitle(): string {
@@ -56,6 +60,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             getSubscriptionsRequest: false,
             createWorkflowRequest: false,
             getResourceGroupsRequest: false,
+            getNamespacesRequest: false,
         };
     }
 
@@ -67,6 +72,8 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
             createWorkflowRequest: () => this.handleCreateWorkflowRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
+            getNamespacesRequest: (key) =>
+                this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
         };
     }
 
@@ -112,13 +119,56 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         webview.postGetResourceGroupsResponse(usableGroups);
     }
 
+    private async handleGetNamespacesRequest(
+        subscriptionId: string,
+        resourceGroup: string,
+        clusterName: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        const namespacesResult = await getClusterNamespaces(
+            this.sessionProvider,
+            this.kubectl,
+            subscriptionId,
+            resourceGroup,
+            clusterName,
+        );
+        if (failed(namespacesResult)) {
+            vscode.window.showErrorMessage("Error fetching namespaces: ", namespacesResult.error);
+            return;
+        }
+
+        webview.postGetNamespacesResponse(namespacesResult.result);
+    }
+
     private async handleCreateWorkflowRequest(webview: MessageSink<ToWebViewMsgDef>) {
         //---Run Neccesary Checks prior to making the call to DevHub to create a workflow ----
 
         //Check if new resource group must be created
 
         //Check for isNewNamespace, to see if new namespace must be created.
+        const isNewNamespace = true; //Actual Value Provided Later PR //PlaceHolder
+        if (isNewNamespace) {
+            //Create New Namespace
+            const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a"; // These values will be provided to the fuction call from the webview
+            const resourceGroup = "rei-rg"; //PlaceHolder
+            const clusterName = "reiCluster"; //PlaceHolder
+            const namespace = "not-default"; //PlaceHolder
+            const namespaceCreationResp = await createClusterNamespace(
+                this.sessionProvider,
+                this.kubectl,
+                subscriptionId,
+                resourceGroup,
+                clusterName,
+                namespace,
+            );
 
+            if (failed(namespaceCreationResp)) {
+                console.log("Failed to create namespace: ", namespace, "Error: ", namespaceCreationResp.error);
+                vscode.window.showErrorMessage(`Failed to create namespace: ${namespace}`);
+                return;
+            }
+            vscode.window.showInformationMessage(namespaceCreationResp.result);
+        }
         //Create ACR if required
 
         //Verify selected ACR has correct role assignments
