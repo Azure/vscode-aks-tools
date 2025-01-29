@@ -51,44 +51,6 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         }
     });
 
-    // // Pick a cluster from group to compare with
-    // const clusterGroupCompareWithStep = createQuickPickStep<State, ClusterNameItem>({
-    //     placeholder: "Pick a cluster from group to compare with",
-    //     shouldResume: () => Promise.resolve(false),
-    //     items: clusterList.map(({ name, id }) => ({ label: name!, name: name!, armid: id! })),
-    //     getActiveItem: (state) => state.clusterGroupCompareWith,
-    //     storeItem: (state, item) => ({ ...state, clusterGroupCompareWith: item }),
-    // });
-
-    // // Pick a cluster from group to compare from
-    // const clusterGroupCompareFromStep = createQuickPickStep<State, ClusterNameItem>({
-    //     placeholder: "Pick second cluster from group to compare from",
-    //     shouldResume: () => Promise.resolve(false),
-    //     items: clusterList.map(({ name, id }) => ({ label: name!, name: name!, armid: id! })),
-    //     getActiveItem: (state) => state.clusterGroupCompareFrom,
-    //     storeItem: (state, item) => ({ ...state, clusterGroupCompareFrom: item }),
-    // });
-
-    // const initialState: Partial<State> = {
-    //     subid: subscriptionNode.result.subscriptionId,
-    // };
-
-    // const state = await runMultiStepInput(
-    //     "Compare AKS Cluster",
-    //     initialState,
-    //     clusterGroupCompareWithStep,
-    //     clusterGroupCompareFromStep,
-    // );
-    // if (!state) {
-    //     // Cancelled
-    //     return;
-    // }
-
-    // const allSubscriptions = await getSubscriptions(sessionProvider.result, SelectionType.Filtered);
-    // if (failed(allSubscriptions)) {
-    //     vscode.window.showErrorMessage(allSubscriptions.error);
-    //     return;
-    // }
     const filteredClusters = await getUniqueClusters();
 
     // const clustersInCurrentSub = filteredClusters.filter(

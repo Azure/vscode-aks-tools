@@ -114,21 +114,50 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
     }
 }
 
+// export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
+//     const existingFilters = getFilteredClusters();
+//     const filtersChanged =
+//         existingFilters.length !== filters.length ||
+//         !filters.every((f) => existingFilters.some((ef) => ef.clusterName === f.clusterName));
+
+//     const values = filters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
+
+//     if (filtersChanged) {
+//         await vscode.workspace
+//             .getConfiguration("aks")
+//             .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
+//             onFilteredClustersChangeEmitter.fire();
+//     }
+// }
+
 export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
     const existingFilters = getFilteredClusters();
-    const filtersChanged =
-        existingFilters.length !== filters.length ||
-        !filters.every((f) => existingFilters.some((ef) => ef.clusterName === f.clusterName));
+    
+    // Merge existing clusters and new filters
+    const allFilters = [...existingFilters, ...filters];
+    
+    // Remove duplicates based on clusterName
+    const uniqueFilters = allFilters.filter(
+        (f, index, self) => index === self.findIndex((t) => t.clusterName === f.clusterName)
+    );
 
-    const values = filters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
+    // Determine if filters have changed
+    const filtersChanged =
+        existingFilters.length !== uniqueFilters.length ||
+        !existingFilters.every((ef) => uniqueFilters.some((uf) => uf.clusterName === ef.clusterName));
+
+    // Construct values as "subscriptionId/clusterName"
+    const values = uniqueFilters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
 
     if (filtersChanged) {
         await vscode.workspace
             .getConfiguration("aks")
             .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
-            onFilteredClustersChangeEmitter.fire();
+        
+        onFilteredClustersChangeEmitter.fire();
     }
 }
+
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration("aks.periscope");

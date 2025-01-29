@@ -178,6 +178,15 @@
                 }
             },
             {
+                "command": "aks.clusterFilter",
+                "title": "Select cluster...",
+                "category": "AKS",
+                "icon": {
+                    "dark": "resources/dark/filter.svg",
+                    "light": "resources/light/filter.svg"
+                }
+            },
+            {
                 "command": "aks.refreshSubscription",
                 "title": "Refresh Subscription",
                 "icon": {
@@ -312,10 +321,6 @@
                 "title": "Compare AKS Cluster"
             },
             {
-                "command": "aks.clusterFilter",
-                "title": "Cluster Filter"
-            },
-            {
                 "command": "aks.aksRetinaCapture",
                 "title": "Run Retina Capture"
             },
@@ -384,6 +389,11 @@
             "view/item/context": [
                 {
                     "command": "aks.selectSubscriptions",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /Azure/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "aks.clusterFilter",
                     "when": "viewItem == aks.subscription",
                     "group": "inline"
                 },

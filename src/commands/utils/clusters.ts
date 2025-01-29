@@ -430,16 +430,6 @@ export async function getAllManagedCluster(
     }
 }
 
-// export async function getSubClusters(
-//     sessionProvider: ReadyAzureSessionProvider,
-//     selectionType: SelectionType,
-//     subscriptionId: string,
-// ): Promise<Errorable<DefinedManagedCluster[]>> {
-//     const client = getAksClient(sessionProvider, subscriptionId);
-//     const clusterResult = await listAll(client.managedClusters.list());
-//     return errmap(clusterResult, (subs) => sortAndFilter(subs.filter(isDefinedSubscription), selectionType));
-// }
-
 export async function getKubernetesVersionInfo(
     client: azcs.ContainerServiceClient,
     location: string,
