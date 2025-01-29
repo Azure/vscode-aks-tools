@@ -116,13 +116,13 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
 
 export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
     const existingFilters = getFilteredClusters();
-    
+
     // Merge existing clusters and new filters
     const allFilters = [...existingFilters, ...filters];
-    
+
     // Remove duplicates based on clusterName
     const uniqueFilters = allFilters.filter(
-        (f, index, self) => index === self.findIndex((t) => t.clusterName === f.clusterName)
+        (f, index, self) => index === self.findIndex((t) => t.clusterName === f.clusterName),
     );
 
     // Determine if filters have changed
@@ -137,11 +137,10 @@ export async function setFilteredClusters(filters: ClusterFilter[]): Promise<voi
         await vscode.workspace
             .getConfiguration("aks")
             .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
-        
+
         onFilteredClustersChangeEmitter.fire();
     }
 }
-
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
     const periscopeConfig = vscode.workspace.getConfiguration("aks.periscope");

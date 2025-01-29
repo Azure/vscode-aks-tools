@@ -87,25 +87,29 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         }
 
         const getClusterFilter = getFilteredClusters();
-        return clusterResources.result.map((r) => {
-            // Check if the subscription is in the filter for SeelctedClustersFilter
-            const isSubIdExistInClusterFilter = getClusterFilter.some(filter => filter.subscriptionId === this.subscriptionId);
-        
-            // Ensure getClusterFilter is an array of objects with name and subid properties
-            if (isSubIdExistInClusterFilter) {
-                // Check if there's a match for the cluster name and subid
-                const matchedCluster = getClusterFilter.find(filter => 
-                    filter.clusterName === r.name && filter.subscriptionId === this.subscriptionId
+        return clusterResources.result
+            .map((r) => {
+                // Check if the subscription is in the filter for SeelctedClustersFilter
+                const isSubIdExistInClusterFilter = getClusterFilter.some(
+                    (filter) => filter.subscriptionId === this.subscriptionId,
                 );
-        
-                if (matchedCluster) {
+
+                // Ensure getClusterFilter is an array of objects with name and subid properties
+                if (isSubIdExistInClusterFilter) {
+                    // Check if there's a match for the cluster name and subid
+                    const matchedCluster = getClusterFilter.find(
+                        (filter) => filter.clusterName === r.name && filter.subscriptionId === this.subscriptionId,
+                    );
+
+                    if (matchedCluster) {
+                        return createClusterTreeNode(this, this.subscriptionId, r);
+                    }
+                } else {
                     return createClusterTreeNode(this, this.subscriptionId, r);
                 }
-            } else {
-                return createClusterTreeNode(this, this.subscriptionId, r);
-            }
-            return undefined;
-        }).filter(node => node !== undefined) as AzExtTreeItem[];
+                return undefined;
+            })
+            .filter((node) => node !== undefined) as AzExtTreeItem[];
     }
 
     public async refreshImpl(): Promise<void> {

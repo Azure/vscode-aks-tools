@@ -48,17 +48,17 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     const filteredClusters = await getUniqueClusters();
 
     const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster) => {
-            return {
-                label: cluster.name || "",
-                description: cluster.name,
-                picked: filteredClusters.some((filtered) => filtered.clusterName === parseResource(cluster.id!).name), // filtered.subscriptionId === parseSubId(cluster.id!).subId),
-                Cluster: {
-                    clusterName: cluster.name || "",
-                    subscriptionId: parseSubId(cluster.id!).subId || "",
-                },
-            };
-        });
-    
+        return {
+            label: cluster.name || "",
+            description: cluster.name,
+            picked: filteredClusters.some((filtered) => filtered.clusterName === parseResource(cluster.id!).name), // filtered.subscriptionId === parseSubId(cluster.id!).subId),
+            Cluster: {
+                clusterName: cluster.name || "",
+                subscriptionId: parseSubId(cluster.id!).subId || "",
+            },
+        };
+    });
+
     // show picked items at the top
     quickPickItems.sort((itemA, itemB) => (itemA.picked === itemB.picked ? 0 : itemA.picked ? -1 : 1));
 
@@ -75,7 +75,7 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     const newFilteredClusters = [
         ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
     ];
-    
+
     await setFilteredClusters(newFilteredClusters);
 }
 
@@ -85,9 +85,7 @@ async function getUniqueClusters() {
     if (filteredClusters && Array.isArray(filteredClusters)) {
         // Use a Map to remove duplicates based on subid and ClusterName
         const uniqueClusters = Array.from(
-            new Map(
-                filteredClusters.map(item => [`${item.subscriptionId}-${item.clusterName}`, item])
-            ).values()
+            new Map(filteredClusters.map((item) => [`${item.subscriptionId}-${item.clusterName}`, item])).values(),
         );
 
         return uniqueClusters;
