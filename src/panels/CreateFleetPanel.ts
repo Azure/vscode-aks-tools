@@ -124,11 +124,12 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         location: string,
         name: string,
         hubMode: HubMode,
-        dnsPrefix: string | undefined,
+        dnsPrefix: string | null,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         const hubProfile = {
-            dnsPrefix: dnsPrefix,
+            // If HubClusterMode is "With", use the given dnsPrefix; Otherwise set it to undefine
+            dnsPrefix: dnsPrefix ?? undefined,
         };
         const resource = {
             // Fleet does not support the full name of the location at this moment
@@ -160,14 +161,22 @@ async function createFleet(
     const environment = getEnvironment();
     try {
         const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
-        const deploymentPortalUrl = getDeploymentPortalUrl(environment, result.id!);
+        if (!result || !result.id) {
+            throw new Error(
+                `Fleet creation failed: No ID returned. 
+                Resource Group Name: ${resourceGroupName},
+                Fleet Name: ${name}, 
+                Location: ${resource.location}.`,
+            );
+        }
+        const deploymentPortalUrl = getDeploymentPortalUrl(environment, result.id);
         webview.postProgressUpdate({
             event: ProgressEventType.Success,
             operationDescription,
             errorMessage: null,
             deploymentPortalUrl,
             createdFleet: {
-                portalUrl: getPortalResourceUrl(environment, result.id!),
+                portalUrl: getPortalResourceUrl(environment, result.id),
             },
         });
     } catch (error) {

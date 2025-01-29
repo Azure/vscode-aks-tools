@@ -61,7 +61,7 @@ export function getCreateFleetScenarios() {
         location: string,
         name: string,
         hubMode: HubMode,
-        dnsPrefix: string | undefined,
+        dnsPrefix: string | null,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -82,7 +82,18 @@ export function getCreateFleetScenarios() {
             createdFleet: null,
         });
 
-        const waitMs = location === failLocationMarker ? 500 : location === cancelLocationMarker ? 3000 : 10000;
+        let waitMs;
+        switch (location) {
+            case cancelLocationMarker:
+                waitMs = 3000;
+                break;
+            case failLocationMarker:
+                waitMs = 500;
+                break;
+            default:
+                waitMs = 10000;
+                break;
+        }
 
         const event =
             location === failLocationMarker

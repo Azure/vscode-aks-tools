@@ -26,7 +26,7 @@ export interface CreateFleetParams {
     location: string;
     name: string;
     hubMode: HubMode;
-    dnsPrefix: string | undefined; // required, if hubMode is "With"
+    dnsPrefix: string | null; // required, if hubMode is "With"
 }
 
 export enum HubMode {

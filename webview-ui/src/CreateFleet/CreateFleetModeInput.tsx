@@ -5,6 +5,7 @@ import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./createFleet.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
+// Using the icon templates from createCluster. Consider abstracting the classes to improve code reusability
 import { AutomaticIcon } from "../icons/AutomaticIcon";
 import { DevTestIcon } from "../icons/DevTestIcon";
 
@@ -22,7 +23,7 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
         props.onModeSelected(modeSelected);
     }
 
-    function handlednsPrefixChange(e: ChangeEvent) {
+    function handleDnsPrefixChange(e: ChangeEvent) {
         const dnsPrefix = (e.currentTarget as HTMLInputElement).value;
         const validated = getValidatedDnsPrefix(dnsPrefix);
         props.onDnsPrefixChange(validated);
@@ -48,12 +49,12 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
                 <h3>Hub Cluster Mode Configuration:</h3>
                 <div style={{ display: "flex" }}>
                     <div
-                        className={`${styles.hubModeContainer} ${props.hubMode === HubMode.Without ? styles.hubModeContainerHighlighted : ""}`}
-                        onClick={() => handleModeClick(HubMode.Without)}
+                        className={`${styles.hubModeContainer} ${props.hubMode === HubMode.With ? styles.hubModeContainerHighlighted : ""}`}
+                        onClick={() => handleModeClick(HubMode.With)}
                     >
                         <div className={styles.flexContainer}>
                             <AutomaticIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
-                            <div className={styles.hubModeTitle}>Without Hub Cluster</div>
+                            <div className={styles.hubModeTitle}>With Hub Cluster</div>
                         </div>
                         <div className={styles.hubModeDescription}>
                             A standard tier AKS cluster managed by Microsoft and hosted on your subscription. Can be
@@ -61,14 +62,13 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
                             load balancing.
                         </div>
                     </div>
-
                     <div
-                        className={`${styles.hubModeContainer} ${props.hubMode === HubMode.With ? styles.hubModeContainerHighlighted : ""}`}
-                        onClick={() => handleModeClick(HubMode.With)}
+                        className={`${styles.hubModeContainer} ${props.hubMode === HubMode.Without ? styles.hubModeContainerHighlighted : ""}`}
+                        onClick={() => handleModeClick(HubMode.Without)}
                     >
                         <div className={styles.flexContainer}>
                             <DevTestIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
-                            <div className={styles.hubModeTitle}>With Hub Cluster</div>
+                            <div className={styles.hubModeTitle}>Without Hub Cluster</div>
                         </div>
                         <div className={styles.hubModeDescription}>
                             Use fleet as an abstract grouping resource to perform multi-cluster update orchestration.
@@ -83,8 +83,8 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
                             id="dns-input"
                             value={isValueSet(props.dnsPrefix) ? props.dnsPrefix.value : ""}
                             className={`${styles.longControl} ${styles.validatable}`}
-                            onBlur={handlednsPrefixChange}
-                            onChange={handlednsPrefixChange}
+                            onBlur={handleDnsPrefixChange}
+                            onChange={handleDnsPrefixChange}
                         />
                         {hasMessage(props.dnsPrefix) && (
                             <span className={styles.validationMessage}>
