@@ -23,7 +23,7 @@ import { EventHandlers } from "../utilities/state";
 import { isNothing, just, Maybe, nothing } from "../utilities/maybe";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-import styles from "./createFleet.module.css";
+import styles from "./CreateFleet.module.css";
 import { CreateFleetModeInput } from "./CreateFleetModeInput";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;

@@ -2,7 +2,7 @@ import { FormEvent } from "react";
 import { HubMode } from "../../../src/webview-contract/webviewDefinitions/createFleet";
 import { hasMessage, invalid, isValueSet, valid, Validatable } from "../utilities/validation";
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
-import styles from "./createFleet.module.css";
+import styles from "./CreateFleet.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 // Using the icon templates from createCluster. Consider abstracting the classes to improve code reusability
