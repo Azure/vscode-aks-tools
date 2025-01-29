@@ -136,6 +136,24 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     }
 
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
+        // Get current json
+        const currentJson = await longRunning(`Get current cluster information.`, () => {
+            return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
+        });
+
+        // Prevent KAITO installation on automatic clusters
+        const skuName = currentJson.sku?.name;
+        if (skuName === "Automatic") {
+            webview.postKaitoInstallProgressUpdate({
+                operationDescription: "Automatic Cluster Detected",
+                event: 3,
+                errorMessage:
+                    "KAITO cannot be installed on automatic clusters. Please try installing KAITO on a standard cluster.",
+                models: [],
+            });
+            return;
+        }
+
         // Get the feature registration state
         const getFeatureClientRegisterState = await longRunning(
             `Getting the AIToolchainOperator registration state.`,
@@ -160,11 +178,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 });
             }
         }
-
-        // Get current json
-        const currentJson = await longRunning(`Get current cluster information.`, () => {
-            return this.resourceManagementClient.resources.getById(this.armId, "2023-08-01");
-        });
 
         // Install kaito enablement
         const kaitoInstallationResult = await longRunning(
@@ -191,9 +204,18 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             );
 
             if (failed(installKaitoFederatedCredentialsAndRoleAssignments)) {
+                //installing federated credentionals failed
+                const errorMessage = installKaitoFederatedCredentialsAndRoleAssignments.error;
                 vscode.window.showErrorMessage(
-                    `Error installing KAITO Federated Credentials and role Assignments: ${installKaitoFederatedCredentialsAndRoleAssignments.error}`,
+                    `Error installing KAITO Federated Credentials and role Assignments: ${errorMessage}`,
                 );
+                webview.postKaitoInstallProgressUpdate({
+                    operationDescription: "Installing Federated Credentials Failed",
+                    event: 3,
+                    errorMessage: errorMessage,
+                    models: [],
+                });
+                return;
             }
 
             //kaito installation succeeded
@@ -304,12 +326,17 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             return { succeeded: false, error: clusterInfo.error };
         }
 
-        await this.installKaitoRoleAssignments(
+        const roleAssignmentsResult = await this.installKaitoRoleAssignments(
             clusterInfo.result.nodeResourceGroup!,
             this.subscriptionId,
             this.resourceGroupName,
             this.clusterName,
         );
+
+        //halt installation if role assignments creation failed
+        if (failed(roleAssignmentsResult)) {
+            return { succeeded: false, error: roleAssignmentsResult.error };
+        }
 
         const aksOidcIssuerUrl = clusterInfo.result.oidcIssuerProfile?.issuerURL;
         if (!aksOidcIssuerUrl) {
@@ -321,11 +348,17 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 error: "Error getting aks oidc issuer url, oidc issuer url is undefined/null/empty",
             };
         }
-        await this.installKaitoFederatedCredentials(
+
+        const kaitoFederatedCredentialsResult = await this.installKaitoFederatedCredentials(
             clusterInfo.result.nodeResourceGroup!,
             this.clusterName,
             aksOidcIssuerUrl,
         );
+
+        //halt installation if federated credentials installation failed
+        if (failed(kaitoFederatedCredentialsResult)) {
+            return { succeeded: false, error: kaitoFederatedCredentialsResult.error };
+        }
 
         //kubectl rollout restart deployment kaito-gpu-provisioner -n kube-system
         const command = `rollout restart deployment kaito-gpu-provisioner -n kube-system`;
@@ -404,14 +437,14 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         subscriptionId: string,
         resourceGroupName: string,
         clusterName: string,
-    ) {
+    ): Promise<Errorable<string>> {
         // get principal id of managed service identity
         const identityName = `ai-toolchain-operator-${clusterName}`;
         const identityResult = await getIdentity(this.managedServiceIdentityClient, mcResourceGroup, identityName);
 
         if (failed(identityResult)) {
             vscode.window.showErrorMessage(`Error getting identity: ${identityResult.error}`);
-            return;
+            return { succeeded: false, error: identityResult.error };
         }
 
         const roleAssignment = await createRoleAssignment(
@@ -423,17 +456,22 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         );
 
         if (failed(roleAssignment)) {
-            vscode.window.showWarningMessage(
-                `Error installing KAITO Federated Credentials and role Assignments: ${roleAssignment.error}`,
-            );
+            // Don't cancel installation if role assignments already exist, user could be attempting to reinstall
+            if (roleAssignment.error?.includes("already exists")) {
+                return { succeeded: true, result: "Role assignments already exist" };
+            } else {
+                // cancel installation only if there is an alternate error that conflicts with further steps
+                return { succeeded: false, error: roleAssignment.error };
+            }
         }
+        return { succeeded: true, result: "Role assignments created successfully" };
     }
 
     private async installKaitoFederatedCredentials(
         nodeResourceGroup: string,
         clusterName: string,
         aksOidcIssuerUrl: string,
-    ) {
+    ): Promise<Errorable<string>> {
         const result = await createFederatedCredential(
             this.managedServiceIdentityClient,
             nodeResourceGroup,
@@ -445,8 +483,10 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         );
 
         if (failed(result)) {
-            vscode.window.showErrorMessage(`Error creating federated credentials: ${result.error}`);
-            return;
+            // vscode.window.showErrorMessage(`Error creating federated credentials: ${result.error}`);
+            return { succeeded: false, error: result.error };
+        } else {
+            return { succeeded: true, result: "Federated credentials created successfully" };
         }
     }
 }
