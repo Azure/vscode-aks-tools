@@ -29,6 +29,9 @@ export interface CreateFleetParams {
     dnsPrefix: string | null; // required, if hubMode is "With"
 }
 
+// Fleet resource can be created with or without a hub cluster.
+// A hub cluster is a managed cluster that acts as a hub to store and propagate Kubernetes resources.
+// More Info: https://learn.microsoft.com/en-us/azure/kubernetes-fleet/concepts-choosing-fleet
 export enum HubMode {
     Without,
     With,

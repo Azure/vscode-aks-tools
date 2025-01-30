@@ -128,7 +128,9 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         const hubProfile = {
-            // If HubClusterMode is "With", use the given dnsPrefix; Otherwise set it to undefine
+            // The variable that determines whether the Fleet is created with a hub cluster.
+            // If hubProfile is provided in the API call, the Fleet will be created with a hub cluster.
+            // More Info: https://learn.microsoft.com/en-us/azure/kubernetes-fleet/concepts-choosing-fleet
             dnsPrefix: dnsPrefix ?? undefined,
         };
         const resource = {
@@ -162,6 +164,12 @@ async function createFleet(
     try {
         const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
         if (!result || !result.id) {
+            window.showWarningMessage(
+                `Fleet creation failed: No ID returned. 
+                Resource Group Name: ${resourceGroupName},
+                Fleet Name: ${name}, 
+                Location: ${resource.location}.`,
+            );
             throw new Error(
                 `Fleet creation failed: No ID returned. 
                 Resource Group Name: ${resourceGroupName},
