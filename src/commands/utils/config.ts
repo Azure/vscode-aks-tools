@@ -117,13 +117,8 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
 export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
     const existingFilters = getFilteredClusters();
 
-    // Merge existing clusters and new filters
-    const allFilters = [...existingFilters, ...filters];
-
-    // Remove duplicates based on clusterName
-    const uniqueFilters = allFilters.filter(
-        (f, index, self) => index === self.findIndex((t) => t.clusterName === f.clusterName),
-    );
+    // Get merged list of filters
+    const uniqueFilters = mergeClusterFilterLists(existingFilters, filters);;
 
     // Determine if filters have changed
     const filtersChanged =
@@ -140,6 +135,20 @@ export async function setFilteredClusters(filters: ClusterFilter[]): Promise<voi
 
         onFilteredClustersChangeEmitter.fire();
     }
+}
+
+function mergeClusterFilterLists(
+    existingFilters: { subscriptionId: string; clusterName: string }[], 
+    filters: { subscriptionId: string; clusterName: string }[]
+) {
+    // Create a Set of subscriptionIds from list2
+    const subIdSet = new Set(filters.map(item => item.subscriptionId));
+
+    // Filter list1 to only include items with unique subscriptionIds not in list2
+    const filteredExistingClusters = existingFilters.filter(item => !subIdSet.has(item.subscriptionId));
+
+    // Merge list2 with the filtered list1
+    return [...filters, ...filteredExistingClusters];
 }
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
