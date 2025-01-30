@@ -1,21 +1,30 @@
 import { GenericResourceExpanded } from "@azure/arm-resources";
-import { getResourceManagementClient, listAll } from "./arm";
+import { getResourceManagementClient, listAll, getAksFleetClient } from "./arm";
 import { Errorable, map as errmap } from "./errorable";
 import { parseResource } from "../../azure-api-utils";
 import { ReadyAzureSessionProvider } from "../../auth/types";
+import { FleetMember } from "@azure/arm-containerservicefleet";
+import { parse } from "path";
 
 export const clusterProvider = "Microsoft.ContainerService";
 export const acrProvider = "Microsoft.ContainerRegistry";
 
 export const fleetResourceName = "fleets";
 export const clusterResourceName = "managedClusters";
+export const fleetMembershipsResourceName = "fleetMemberships";
 export const acrResourceName = "registries";
 
 export const clusterResourceType = `${clusterProvider}/${clusterResourceName}`;
+export const fleetMembershipResourceType = `${clusterProvider}/${fleetMembershipsResourceName}`;
 export const acrResourceType = `${acrProvider}/${acrResourceName}`;
 export const fleetResourceType = `${clusterProvider}/${fleetResourceName}`;
 
-export const resourceTypes = [clusterResourceType, acrResourceType, fleetResourceType] as const;
+export const resourceTypes = [
+    clusterResourceType,
+    acrResourceType,
+    fleetResourceType,
+    fleetMembershipResourceType,
+] as const;
 export type ResourceType = (typeof resourceTypes)[number];
 
 /**
@@ -25,6 +34,11 @@ export type DefinedResource = GenericResourceExpanded & Required<Pick<GenericRes
 
 export type DefinedResourceWithGroup = DefinedResource & {
     resourceGroup: string;
+};
+
+export type DefinedFleetMemberWithGroup = DefinedResourceWithGroup & {
+    clusterResourceId: string;
+    parentResourceId: string;
 };
 
 export async function getResources(
@@ -47,4 +61,24 @@ function asResourceWithGroup(resource: DefinedResource): DefinedResourceWithGrou
 
 function getResourceGroup(resource: DefinedResource): string {
     return parseResource(resource.id).resourceGroupName!;
+}
+
+function asFleetMemberWithGroup(member: FleetMember): DefinedFleetMemberWithGroup {
+    return {
+        resourceGroup: parseResource(member.id!).resourceGroupName!,
+        id: member.id!,
+        name: member.name!,
+        clusterResourceId: member.clusterResourceId!,
+        parentResourceId: parseResource(member.id!).parentResourceId!,
+    };
+}
+
+export async function getFleetMembers(
+    sessionProvider: ReadyAzureSessionProvider,
+    fleet: DefinedResourceWithGroup,
+): Promise<Errorable<DefinedFleetMemberWithGroup[]>> {
+    const subId = parseResource(fleet.id).subscriptionId!;
+    const client = getAksFleetClient(sessionProvider, subId);
+    const allFleetMembers = await listAll(client.fleetMembers.listByFleet(fleet.resourceGroup, fleet.name));
+    return errmap(allFleetMembers, (members) => members.map(asFleetMemberWithGroup));
 }

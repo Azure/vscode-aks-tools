@@ -5,11 +5,18 @@ import {
     ISubscriptionContext,
 } from "@microsoft/vscode-azext-utils";
 import { createClusterTreeNode } from "./aksClusterTreeItem";
-import { createFleetTreeNode } from "./fleetTreeItem";
+import { createFleetTreeNode, FleetTreeNode } from "./fleetTreeItem";
 import { assetUri } from "../assets";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { window } from "vscode";
-import { clusterResourceType, fleetResourceType, getResources } from "../commands/utils/azureResources";
+import {
+    clusterResourceType,
+    fleetResourceType,
+    getResources,
+    getFleetMembers,
+    DefinedResourceWithGroup,
+    DefinedFleetMemberWithGroup,
+} from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
 
@@ -97,16 +104,59 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             return [];
         }
 
-        //concatenate fleetResources and clusterResources
-        const allResources = fleetResources.result.concat(clusterResources.result);
-
-        return allResources.map((r) => {
-            if (r.type === "Microsoft.ContainerService/fleets") {
-                return createFleetTreeNode(this, this.subscriptionId, r);
-            } else {
-                return createClusterTreeNode(this, this.subscriptionId, r);
+        // gather all members of each fleet found
+        const fleetToMembersMap = new Map<string, DefinedFleetMemberWithGroup[]>();
+        const memberPromises = fleetResources.result.map(async (f) => {
+            const members = await getFleetMembers(this.sessionProvider, f);
+            if (failed(members)) {
+                window.showErrorMessage(
+                    `Failed to list fleets in subscription ${this.subscription.subscriptionId}: ${members.error}`,
+                );
+                return null;
             }
+            fleetToMembersMap.set(f.id, members.result);
+            return members.result;
         });
+        await Promise.all(memberPromises);
+        const clusterToMemberMap = new Map<string, DefinedFleetMemberWithGroup>();
+        fleetToMembersMap.forEach((members) => {
+            members.forEach((member) => {
+                clusterToMemberMap.set(member.clusterResourceId, member);
+            });
+        });
+
+        const allResources = new Map<string, DefinedResourceWithGroup>();
+        fleetResources.result.concat(clusterResources.result).forEach((r) => {
+            allResources.set(r.id, r);
+        });
+
+        const fleetTreeNodes = new Map<string, FleetTreeNode>();
+
+        const clusterTreeItems = new Map<string, AzExtTreeItem>();
+        allResources.forEach((r) => {
+            if (r.type === "Microsoft.ContainerService/fleets") {
+                const fleetTreeItem = createFleetTreeNode(this, this.subscriptionId, r);
+                fleetTreeNodes.set(r.id, fleetTreeItem);
+                return fleetTreeItem;
+            } else if (r.type === "Microsoft.ContainerService/managedClusters") {
+                const member = clusterToMemberMap.get(r.id);
+                if (member) {
+                    const fleet = fleetTreeNodes.get(member.parentResourceId);
+                    fleet?.addCluster([r]);
+                } else {
+                    const cluster = createClusterTreeNode(this, this.subscriptionId, r);
+                    clusterTreeItems.set(r.id, cluster);
+                    return clusterTreeItems;
+                }
+            } else {
+                window.showErrorMessage(`unexpected type ${r.type} in resources list`);
+            }
+            return [];
+        });
+        // cast via unknown because I know it's ok.
+        // probably me making a mess with types. fix later.
+        const fleetTreeItems = Array.from(fleetTreeNodes.values()).map((f) => f as unknown as AzExtTreeItem);
+        return Promise.resolve([...fleetTreeItems.values(), ...clusterTreeItems.values()]);
     }
 
     public async refreshImpl(): Promise<void> {
