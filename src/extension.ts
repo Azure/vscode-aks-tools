@@ -54,6 +54,7 @@ import { getPlugins } from "./plugins/getPlugins";
 import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCreateClusterFromCopilot";
 import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
 import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
+import aksClusterFilter from "./commands/utils/clusterfilter";
 //import aksAutomatedDeployments from "./commands/devhub/aksAutomatedDeployments";
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -119,6 +120,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
         registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
         registerCommandWithTelemetry("aks.aksDraftValidate", draftValidate);
+        registerCommandWithTelemetry("aks.clusterFilter", aksClusterFilter);
         //registerCommandWithTelemetry("aks.aksAutomatedDeployments", aksAutomatedDeployments);
 
         await registerAzureServiceNodes(context);
