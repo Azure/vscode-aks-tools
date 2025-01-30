@@ -5,10 +5,11 @@ import {
     ISubscriptionContext,
 } from "@microsoft/vscode-azext-utils";
 import { createClusterTreeNode } from "./aksClusterTreeItem";
+import { createFleetTreeNode } from "./fleetTreeItem";
 import { assetUri } from "../assets";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { window } from "vscode";
-import { getResources } from "../commands/utils/azureResources";
+import { clusterResourceType, fleetResourceType, getResources } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
 
@@ -76,7 +77,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         const clusterResources = await getResources(
             this.sessionProvider,
             this.subscription.subscriptionId,
-            "Microsoft.ContainerService/managedClusters",
+            clusterResourceType,
         );
         if (failed(clusterResources)) {
             window.showErrorMessage(
@@ -84,8 +85,28 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             );
             return [];
         }
+        const fleetResources = await getResources(
+            this.sessionProvider,
+            this.subscription.subscriptionId,
+            fleetResourceType,
+        );
+        if (failed(fleetResources)) {
+            window.showErrorMessage(
+                `Failed to list fleets in subscription ${this.subscription.subscriptionId}: ${fleetResources.error}`,
+            );
+            return [];
+        }
 
-        return clusterResources.result.map((r) => createClusterTreeNode(this, this.subscriptionId, r));
+        //concatenate fleetResources and clusterResources
+        const allResources = fleetResources.result.concat(clusterResources.result);
+
+        return allResources.map((r) => {
+            if (r.type === "Microsoft.ContainerService/fleets") {
+                return createFleetTreeNode(this, this.subscriptionId, r);
+            } else {
+                return createClusterTreeNode(this, this.subscriptionId, r);
+            }
+        });
     }
 
     public async refreshImpl(): Promise<void> {
