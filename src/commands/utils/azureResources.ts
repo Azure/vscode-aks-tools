@@ -7,13 +7,15 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 export const clusterProvider = "Microsoft.ContainerService";
 export const acrProvider = "Microsoft.ContainerRegistry";
 
+export const fleetResourceName = "fleets";
 export const clusterResourceName = "managedClusters";
 export const acrResourceName = "registries";
 
 export const clusterResourceType = `${clusterProvider}/${clusterResourceName}`;
 export const acrResourceType = `${acrProvider}/${acrResourceName}`;
+export const fleetResourceType = `${clusterProvider}/${fleetResourceName}`;
 
-export const resourceTypes = [clusterResourceType, acrResourceType] as const;
+export const resourceTypes = [clusterResourceType, acrResourceType, fleetResourceType] as const;
 export type ResourceType = (typeof resourceTypes)[number];
 
 /**
