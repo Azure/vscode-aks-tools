@@ -11,6 +11,7 @@ import { DeveloperHubServiceClient, Workflow } from "@azure/arm-devhub";
 import { ResourceGroup as ARMResourceGroup } from "@azure/arm-resources";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { Octokit } from "@octokit/rest";
+import { getGitHubRepos, getGitHubBranchesForRepo } from "../commands/utils/octokitHelper";
 import { ToWebViewMsgDef, ResourceGroup } from "../webview-contract/webviewDefinitions/automatedDeployments";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import * as roleAssignmentsUtil from "../../src/commands/utils/roleAssignments";
@@ -26,6 +27,7 @@ export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments">
         // Call the BasePanel constructor with the required contentId and command keys
         super(extensionUri, "automatedDeployments", {
             getGitHubReposResponse: null,
+            getGitHubBranchesResponse: null,
             getSubscriptionsResponse: null,
             getWorkflowCreationResponse: null,
             getResourceGroupsResponse: null,
@@ -57,6 +59,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     getTelemetryDefinition(): TelemetryDefinition<"automatedDeployments"> {
         return {
             getGitHubReposRequest: false,
+            getGitHubBranchesRequest: false,
             getSubscriptionsRequest: false,
             createWorkflowRequest: false,
             getResourceGroupsRequest: false,
@@ -69,6 +72,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     ): MessageHandler<ToVsCodeMsgDef<"automatedDeployments">> {
         return {
             getGitHubReposRequest: () => this.handleGetGitHubReposRequest(webview),
+            getGitHubBranchesRequest: (args) => this.handleGetGitHubBranchesRequest(webview, args.repoOwner, args.repo),
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
             createWorkflowRequest: () => this.handleCreateWorkflowRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
@@ -78,10 +82,27 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     }
 
     private async handleGetGitHubReposRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const repoNames = await getRepositoryNames(this.octokitClient);
+        const reposResp = await getGitHubRepos(this.octokitClient);
+        if (failed(reposResp)) {
+            vscode.window.showErrorMessage(reposResp.error);
+            return;
+        }
 
-        // Send the list of repositories to the webview
-        webview.postGetGitHubReposResponse({ repos: repoNames });
+        webview.postGetGitHubReposResponse({ repos: reposResp.result });
+    }
+
+    private async handleGetGitHubBranchesRequest(
+        webview: MessageSink<ToWebViewMsgDef>,
+        repoOwner: string,
+        repo: string,
+    ) {
+        const branchesResp = await getGitHubBranchesForRepo(this.octokitClient, repoOwner, repo);
+        if (failed(branchesResp)) {
+            vscode.window.showErrorMessage(branchesResp.error);
+            return;
+        }
+
+        webview.postGetGitHubBranchesResponse({ branches: branchesResp.result });
     }
 
     private async handleGetSubscriptionsRequest(webview: MessageSink<ToWebViewMsgDef>) {
@@ -191,21 +212,6 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         if (prUrl !== undefined) {
             webview.postGetWorkflowCreationResponse(prUrl); //Will always return success boolean alongside prUrl
         }
-    }
-}
-
-async function getRepositoryNames(octokit: Octokit): Promise<string[]> {
-    try {
-        // Fetch the list of repositories for the authenticated user
-        const response = await octokit.repos.listForAuthenticatedUser({});
-
-        // Extract repository names
-        const repoNames = response.data.map((repo) => repo.name);
-
-        return repoNames;
-    } catch (error) {
-        console.error("Error fetching repositories:", error);
-        throw error; // Re-throw the error for upstream handling
     }
 }
 

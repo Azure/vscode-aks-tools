@@ -175,7 +175,7 @@ export function AutomatedDeployments(initialState: InitialState) {
                     <ResourceSelector<string>
                         id="gh-repo-input"
                         className={styles.control}
-                        resources={state.repos}
+                        resources={state.githubRepos}
                         selectedItem={toNullable(state.selectedGitHubRepo)}
                         valueGetter={(r) => r}
                         labelGetter={(r) => r}
