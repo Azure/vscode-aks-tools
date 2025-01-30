@@ -118,7 +118,7 @@ export async function setFilteredClusters(filters: ClusterFilter[]): Promise<voi
     const existingFilters = getFilteredClusters();
 
     // Get merged list of filters
-    const uniqueFilters = mergeClusterFilterLists(existingFilters, filters);;
+    const uniqueFilters = mergeClusterFilterLists(existingFilters, filters);
 
     // Determine if filters have changed
     const filtersChanged =
@@ -138,14 +138,14 @@ export async function setFilteredClusters(filters: ClusterFilter[]): Promise<voi
 }
 
 function mergeClusterFilterLists(
-    existingFilters: { subscriptionId: string; clusterName: string }[], 
-    filters: { subscriptionId: string; clusterName: string }[]
+    existingFilters: { subscriptionId: string; clusterName: string }[],
+    filters: { subscriptionId: string; clusterName: string }[],
 ) {
     // Create a Set of subscriptionIds from list2
-    const subIdSet = new Set(filters.map(item => item.subscriptionId));
+    const subIdSet = new Set(filters.map((item) => item.subscriptionId));
 
     // Filter list1 to only include items with unique subscriptionIds not in list2
-    const filteredExistingClusters = existingFilters.filter(item => !subIdSet.has(item.subscriptionId));
+    const filteredExistingClusters = existingFilters.filter((item) => !subIdSet.has(item.subscriptionId));
 
     // Merge list2 with the filtered list1
     return [...filters, ...filteredExistingClusters];
