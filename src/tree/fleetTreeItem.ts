@@ -1,8 +1,9 @@
-import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { assetUri } from "../assets";
-import { DefinedResourceWithGroup } from "../commands/utils/azureResources";
+import { DefinedFleetMemberWithGroup, DefinedResourceWithGroup } from "../commands/utils/azureResources";
 import { SubscriptionTreeNode } from "./subscriptionTreeItem";
+import { createClusterTreeNode } from "./aksClusterTreeItem";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -15,17 +16,18 @@ export interface FleetTreeNode {
     readonly subscriptionId: string;
     readonly resourceGroupName: string;
     readonly fleetResource: DefinedResourceWithGroup;
+    addCluster(clusters: DefinedResourceWithGroup[]): void;
 }
 
 export function createFleetTreeNode(
     parent: AzExtParentTreeItem & SubscriptionTreeNode,
     subscriptionId: string,
     fleetResource: DefinedResourceWithGroup,
-): AzExtTreeItem {
+): FleetTreeItem {
     return new FleetTreeItem(parent, subscriptionId, fleetResource);
 }
 
-class FleetTreeItem extends AzExtTreeItem implements FleetTreeNode {
+class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
     public readonly subscriptionTreeNode: SubscriptionTreeNode;
     public readonly armId: string;
     public readonly resourceGroupName: string;
@@ -61,4 +63,23 @@ class FleetTreeItem extends AzExtTreeItem implements FleetTreeNode {
     }
 
     public readonly nodeType = "fleet";
+
+    private readonly clusters: Map<string, DefinedResourceWithGroup> = new Map<string, DefinedFleetMemberWithGroup>();
+
+    public addCluster(clusters: DefinedResourceWithGroup[]): void {
+        clusters.forEach((c) => {
+            this.clusters.set(c.id, c);
+        });
+    }
+    /*eslint no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]*/
+    public loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+        const treeItems: AzExtTreeItem[] = [];
+        this.clusters.forEach((c) => {
+            treeItems.push(createClusterTreeNode(this, this.subscriptionId, c));
+        });
+        return Promise.resolve(treeItems);
+    }
+    public hasMoreChildrenImpl(): boolean {
+        return false; // we pre-load the clusters in the TreeItem. no need to load more.
+    }
 }
