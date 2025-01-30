@@ -80,7 +80,7 @@ export default async function aksClusterFilter(_context: IActionContext, target:
 }
 
 async function getUniqueClusters() {
-    const filteredClusters = await getFilteredClusters();
+    const filteredClusters = getFilteredClusters();
 
     if (filteredClusters && Array.isArray(filteredClusters)) {
         // Use a Map to remove duplicates based on subid and ClusterName
