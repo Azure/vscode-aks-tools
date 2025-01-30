@@ -5,13 +5,13 @@ import {
     ISubscriptionContext,
 } from "@microsoft/vscode-azext-utils";
 import { createClusterTreeNode } from "./aksClusterTreeItem";
+import { createFleetTreeNode } from "./fleetTreeItem";
 import { assetUri } from "../assets";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { window } from "vscode";
-import { getResources } from "../commands/utils/azureResources";
+import { clusterResourceType, fleetResourceType, getResources } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
-import { getFilteredClusters } from "../commands/utils/config";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -77,7 +77,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         const clusterResources = await getResources(
             this.sessionProvider,
             this.subscription.subscriptionId,
-            "Microsoft.ContainerService/managedClusters",
+            clusterResourceType,
         );
         if (failed(clusterResources)) {
             window.showErrorMessage(
@@ -85,31 +85,28 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             );
             return [];
         }
+        const fleetResources = await getResources(
+            this.sessionProvider,
+            this.subscription.subscriptionId,
+            fleetResourceType,
+        );
+        if (failed(fleetResources)) {
+            window.showErrorMessage(
+                `Failed to list fleets in subscription ${this.subscription.subscriptionId}: ${fleetResources.error}`,
+            );
+            return [];
+        }
 
-        const getClusterFilter = getFilteredClusters();
-        return clusterResources.result
-            .map((r) => {
-                // Check if the subscription is in the filter for SeelctedClustersFilter
-                const isSubIdExistInClusterFilter = getClusterFilter.some(
-                    (filter) => filter.subscriptionId === this.subscriptionId,
-                );
+        //concatenate fleetResources and clusterResources
+        const allResources = fleetResources.result.concat(clusterResources.result);
 
-                // Ensure getClusterFilter is an array of objects with name and subid properties
-                if (isSubIdExistInClusterFilter) {
-                    // Check if there's a match for the cluster name and subid
-                    const matchedCluster = getClusterFilter.find(
-                        (filter) => filter.clusterName === r.name && filter.subscriptionId === this.subscriptionId,
-                    );
-
-                    if (matchedCluster) {
-                        return createClusterTreeNode(this, this.subscriptionId, r);
-                    }
-                } else {
-                    return createClusterTreeNode(this, this.subscriptionId, r);
-                }
-                return undefined;
-            })
-            .filter((node) => node !== undefined) as AzExtTreeItem[];
+        return allResources.map((r) => {
+            if (r.type === "Microsoft.ContainerService/fleets") {
+                return createFleetTreeNode(this, this.subscriptionId, r);
+            } else {
+                return createClusterTreeNode(this, this.subscriptionId, r);
+            }
+        });
     }
 
     public async refreshImpl(): Promise<void> {
