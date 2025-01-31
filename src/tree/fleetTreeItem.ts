@@ -1,9 +1,13 @@
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { assetUri } from "../assets";
-import { DefinedFleetMemberWithGroup, DefinedResourceWithGroup } from "../commands/utils/azureResources";
+import { DefinedResourceWithGroup, getFleetMembers } from "../commands/utils/azureResources";
 import { SubscriptionTreeNode } from "./subscriptionTreeItem";
 import { createClusterTreeNode } from "./aksClusterTreeItem";
+import { ReadyAzureSessionProvider } from "../auth/types";
+import { failed } from "../commands/utils/errorable";
+import { window } from "vscode";
+import { parseResource } from "../azure-api-utils";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -15,36 +19,39 @@ export interface FleetTreeNode {
     readonly subscriptionTreeNode: SubscriptionTreeNode;
     readonly subscriptionId: string;
     readonly resourceGroupName: string;
-    readonly fleetResource: DefinedResourceWithGroup;
-    addCluster(clusters: DefinedResourceWithGroup[]): void;
 }
 
 export function createFleetTreeNode(
     parent: AzExtParentTreeItem & SubscriptionTreeNode,
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     fleetResource: DefinedResourceWithGroup,
 ): FleetTreeItem {
-    return new FleetTreeItem(parent, subscriptionId, fleetResource);
+    return new FleetTreeItem(parent, sessionProvider, subscriptionId, fleetResource);
 }
 
 class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
+    private readonly sessionProvider: ReadyAzureSessionProvider;
     public readonly subscriptionTreeNode: SubscriptionTreeNode;
     public readonly armId: string;
     public readonly resourceGroupName: string;
     public readonly name: string;
+    private readonly fleetResource: DefinedResourceWithGroup;
 
     constructor(
         parent: AzExtParentTreeItem & SubscriptionTreeNode,
+        sessionProvider: ReadyAzureSessionProvider,
         readonly subscriptionId: string,
-        readonly fleetResource: DefinedResourceWithGroup,
+        readonly fleet: DefinedResourceWithGroup,
     ) {
         super(parent);
-
+        this.sessionProvider = sessionProvider;
         this.iconPath = assetUri("resources/fleet-tree-icon.png");
         this.subscriptionTreeNode = parent;
-        this.id = `${this.fleetResource.name} ${fleetResource.resourceGroup}`;
+        this.fleetResource = fleet;
+        this.id = `${this.fleetResource.name} ${this.fleetResource.resourceGroup}`;
         this.armId = this.fleetResource.id;
-        this.resourceGroupName = fleetResource.resourceGroup;
+        this.resourceGroupName = this.fleetResource.resourceGroup;
         this.name = this.fleetResource.name;
     }
 
@@ -64,22 +71,28 @@ class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
 
     public readonly nodeType = "fleet";
 
-    private readonly clusters: Map<string, DefinedResourceWithGroup> = new Map<string, DefinedFleetMemberWithGroup>();
-
-    public addCluster(clusters: DefinedResourceWithGroup[]): void {
-        clusters.forEach((c) => {
-            this.clusters.set(c.id, c);
-        });
-    }
     /*eslint no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]*/
-    public loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        const treeItems: AzExtTreeItem[] = [];
-        this.clusters.forEach((c) => {
-            treeItems.push(createClusterTreeNode(this, this.subscriptionId, c));
+    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+        const members = await getFleetMembers(this.sessionProvider, this.fleetResource);
+        if (failed(members)) {
+            window.showErrorMessage(
+                `Failed to list fleets in subscription ${this.subscription.subscriptionId}: ${members.error}`,
+            );
+            return [];
+        }
+        return members.result.map((m) => {
+            const parsedResourceId = parseResource(m.clusterResourceId);
+
+            const drg: DefinedResourceWithGroup = {
+                id: m.clusterResourceId,
+                name: parsedResourceId.name!,
+                resourceGroup: parsedResourceId.resourceGroupName!,
+            };
+            return createClusterTreeNode(this, this.subscriptionId, drg);
         });
-        return Promise.resolve(treeItems);
     }
+
     public hasMoreChildrenImpl(): boolean {
-        return false; // we pre-load the clusters in the TreeItem. no need to load more.
+        return false; // we load all members in a single list call.
     }
 }

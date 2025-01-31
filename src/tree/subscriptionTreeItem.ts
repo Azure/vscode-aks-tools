@@ -5,18 +5,11 @@ import {
     ISubscriptionContext,
 } from "@microsoft/vscode-azext-utils";
 import { createClusterTreeNode } from "./aksClusterTreeItem";
-import { createFleetTreeNode, FleetTreeNode } from "./fleetTreeItem";
+import { createFleetTreeNode } from "./fleetTreeItem";
 import { assetUri } from "../assets";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { window } from "vscode";
-import {
-    clusterResourceType,
-    fleetResourceType,
-    getResources,
-    getFleetMembers,
-    DefinedResourceWithGroup,
-    DefinedFleetMemberWithGroup,
-} from "../commands/utils/azureResources";
+import { clusterResourceType, fleetResourceType, getResources } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
 
@@ -104,59 +97,21 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             return [];
         }
 
-        // gather all members of each fleet found
-        const fleetToMembersMap = new Map<string, DefinedFleetMemberWithGroup[]>();
-        const memberPromises = fleetResources.result.map(async (f) => {
-            const members = await getFleetMembers(this.sessionProvider, f);
-            if (failed(members)) {
-                window.showErrorMessage(
-                    `Failed to list fleets in subscription ${this.subscription.subscriptionId}: ${members.error}`,
-                );
-                return null;
+        const allResources = fleetResources.result.concat(clusterResources.result);
+
+        const allTreeItems = allResources.map((r) => {
+            if (r.type?.toLowerCase() === "microsoft.containerservice/fleets") {
+                const fleetTreeItem = createFleetTreeNode(this, this.sessionProvider, this.subscriptionId, r);
+                return fleetTreeItem as unknown as AzExtTreeItem;
+            } else if (r.type?.toLowerCase() === "microsoft.containerservice/managedclusters") {
+                const cluster = createClusterTreeNode(this, this.subscriptionId, r);
+                return cluster;
             }
-            fleetToMembersMap.set(f.id, members.result);
-            return members.result;
-        });
-        await Promise.all(memberPromises);
-        const clusterToMemberMap = new Map<string, DefinedFleetMemberWithGroup>();
-        fleetToMembersMap.forEach((members) => {
-            members.forEach((member) => {
-                clusterToMemberMap.set(member.clusterResourceId, member);
-            });
+            window.showErrorMessage(`unexpected type ${r.type} in resources list`);
+            throw new Error(`unexpected type ${r.type} in resources list`);
         });
 
-        const allResources = new Map<string, DefinedResourceWithGroup>();
-        fleetResources.result.concat(clusterResources.result).forEach((r) => {
-            allResources.set(r.id, r);
-        });
-
-        const fleetTreeNodes = new Map<string, FleetTreeNode>();
-
-        const clusterTreeItems = new Map<string, AzExtTreeItem>();
-        allResources.forEach((r) => {
-            if (r.type === "Microsoft.ContainerService/fleets") {
-                const fleetTreeItem = createFleetTreeNode(this, this.subscriptionId, r);
-                fleetTreeNodes.set(r.id, fleetTreeItem);
-                return fleetTreeItem;
-            } else if (r.type === "Microsoft.ContainerService/managedClusters") {
-                const member = clusterToMemberMap.get(r.id);
-                if (member) {
-                    const fleet = fleetTreeNodes.get(member.parentResourceId);
-                    fleet?.addCluster([r]);
-                } else {
-                    const cluster = createClusterTreeNode(this, this.subscriptionId, r);
-                    clusterTreeItems.set(r.id, cluster);
-                    return clusterTreeItems;
-                }
-            } else {
-                window.showErrorMessage(`unexpected type ${r.type} in resources list`);
-            }
-            return [];
-        });
-        // cast via unknown because I know it's ok.
-        // probably me making a mess with types. fix later.
-        const fleetTreeItems = Array.from(fleetTreeNodes.values()).map((f) => f as unknown as AzExtTreeItem);
-        return Promise.resolve([...fleetTreeItems.values(), ...clusterTreeItems.values()]);
+        return Promise.resolve(allTreeItems);
     }
 
     public async refreshImpl(): Promise<void> {
