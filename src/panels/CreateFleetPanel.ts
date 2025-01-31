@@ -3,6 +3,7 @@ import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { Uri, window } from "vscode";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
+    HubMode,
     InitialState,
     ProgressEventType,
     ToVsCodeMsgDef,
@@ -64,7 +65,14 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
             getLocationsRequest: () => this.handleGetLocationsRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
             createFleetRequest: (args) =>
-                this.handleCreateFleetRequest(args.resourceGroupName, args.location, args.name, webview),
+                this.handleCreateFleetRequest(
+                    args.resourceGroupName,
+                    args.location,
+                    args.name,
+                    args.hubMode,
+                    args.dnsPrefix,
+                    webview,
+                ),
         };
     }
 
@@ -115,10 +123,21 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         resourceGroupName: string,
         location: string,
         name: string,
+        hubMode: HubMode,
+        dnsPrefix: string | null,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        const hubProfile = {
+            // The variable that determines whether the Fleet is created with a hub cluster.
+            // If hubProfile is provided in the API call, the Fleet will be created with a hub cluster.
+            // More Info: https://learn.microsoft.com/en-us/azure/kubernetes-fleet/concepts-choosing-fleet
+            dnsPrefix: dnsPrefix ?? undefined,
+        };
         const resource = {
-            location: location,
+            // Fleet does not support the full name of the location at this moment
+            // Change "location" to lowercase and remove spaces to match the required format
+            location: location.toLowerCase().replaceAll(" ", ""),
+            hubProfile: hubMode === HubMode.With ? hubProfile : undefined,
         };
 
         await createFleet(this.fleetClient, resourceGroupName, name, resource, webview);
@@ -144,8 +163,19 @@ async function createFleet(
     const environment = getEnvironment();
     try {
         const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
-        if (!result.id) {
-            throw new Error("Fleet creation did not return an ID");
+        if (!result || !result.id) {
+            window.showWarningMessage(
+                `Fleet creation failed: No ID returned. 
+                Resource Group Name: ${resourceGroupName},
+                Fleet Name: ${name}, 
+                Location: ${resource.location}.`,
+            );
+            throw new Error(
+                `Fleet creation failed: No ID returned. 
+                Resource Group Name: ${resourceGroupName},
+                Fleet Name: ${name}, 
+                Location: ${resource.location}.`,
+            );
         }
         const deploymentPortalUrl = getDeploymentPortalUrl(environment, result.id);
         webview.postProgressUpdate({
