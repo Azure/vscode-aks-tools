@@ -96,6 +96,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
             return nothing();
         }
         if (!isValid(fleetName)) return nothing();
+        if (hubModeSelected === HubMode.With && !isValid(dnsPrefix)) return nothing();
 
         const parameters: CreateFleetParams = {
             resourceGroupName,
