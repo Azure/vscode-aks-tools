@@ -1,20 +1,30 @@
 import { FormEvent, useState } from "react";
 import {
     CreateFleetParams,
+    HubMode,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createFleet";
 import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
-import { hasMessage, invalid, isValid, isValueSet, missing, unset, valid, Validatable } from "../utilities/validation";
+import {
+    hasMessage,
+    invalid,
+    isValid,
+    isValueSet,
+    toNullable,
+    missing,
+    unset,
+    valid,
+    Validatable,
+} from "../utilities/validation";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import { EventDef } from "./helpers/state";
 import { EventHandlers } from "../utilities/state";
 import { isNothing, just, Maybe, nothing } from "../utilities/maybe";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-// To ensure consistent formats and styles across features, it uses the same CSS file as CreateCluster.tsx
-// TODO: considering restructuring the CSS file to be more modular and reusable
-import styles from "../CreateCluster/CreateCluster.module.css";
+import styles from "./CreateFleet.module.css";
+import { CreateFleetModeInput } from "./CreateFleetModeInput";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -23,6 +33,7 @@ interface CreateFleetInputProps {
     resourceGroups: ResourceGroup[];
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
+    subscriptionId: string;
 }
 
 export function CreateFleetInput(props: CreateFleetInputProps) {
@@ -30,6 +41,8 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
     const [fleetName, setFleetName] = useState<Validatable<string>>(unset());
     const [selectedResourceGroupIndex, setselectedResourceGroupIndex] = useState<number>(0);
     const [location, setLocation] = useState<Validatable<string>>(unset());
+    const [hubModeSelected, setHubModeSelected] = useState<HubMode>(HubMode.With);
+    const [dnsPrefix, setDnsPrefix] = useState<Validatable<string>>(unset());
 
     const allResourcesGroups = props.resourceGroups; // All available resource groups fetched from the portal
 
@@ -83,14 +96,25 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
             return nothing();
         }
         if (!isValid(fleetName)) return nothing();
+        if (hubModeSelected === HubMode.With && !isValid(dnsPrefix)) return nothing();
 
         const parameters: CreateFleetParams = {
             resourceGroupName,
             location: location.value,
             name: fleetName.value,
+            hubMode: hubModeSelected,
+            dnsPrefix: toNullable(dnsPrefix),
         };
 
         return just(parameters);
+    }
+
+    function handleHubModeChange(hubModeSelected: HubMode) {
+        setHubModeSelected(hubModeSelected);
+    }
+
+    function handleDnsPrefixChange(dnsPrefix: Validatable<string>) {
+        setDnsPrefix(dnsPrefix);
     }
 
     function handleSubmit(event: FormEvent) {
@@ -103,77 +127,87 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
 
     return (
         <form className={styles.createForm} onSubmit={handleSubmit}>
-            <label className={styles.label}>Fleet Name*</label>
-            <VSCodeTextField
-                id="name-input"
-                value={isValueSet(fleetName) ? fleetName.value : ""}
-                className={`${styles.longControl} ${styles.validatable}`}
-                onBlur={handleFleetNameChange}
-                onChange={handleFleetNameChange}
-            />
-            {hasMessage(fleetName) && (
-                <span className={styles.validationMessage}>
-                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                    {fleetName.message}
-                </span>
-            )}
-            <br />
+            <div className={styles.inputContainer}>
+                <label htmlFor="fleet-details" className={`${styles.fleetDetailsLabel}`}>
+                    Fleet details
+                </label>
 
-            <label htmlFor="resourceGroup" className={styles.label}>
-                Resource Group*
-            </label>
-            <VSCodeDropdown
-                id="existing-resource-group-dropdown"
-                className={styles.longControl}
-                onBlur={handleValidationAndIndex}
-                onChange={handleValidationAndIndex}
-                selectedIndex={selectedResourceGroupIndex}
-                aria-label="Select a resource group"
-            >
-                <VSCodeOption selected value="">
-                    Select
-                </VSCodeOption>
-                {allResourcesGroups.length > 0 ? (
-                    allResourcesGroups.map((group) => (
-                        <VSCodeOption key={group.name} value={group.name}>
-                            {""} {group.name}
-                        </VSCodeOption>
-                    ))
-                ) : (
-                    <VSCodeOption disabled>No resource groups available</VSCodeOption>
+                <label className={styles.label}>Fleet Name*</label>
+                <VSCodeTextField
+                    id="name-input"
+                    value={isValueSet(fleetName) ? fleetName.value : ""}
+                    className={`${styles.longControl} ${styles.validatable}`}
+                    onBlur={handleFleetNameChange}
+                    onChange={handleFleetNameChange}
+                />
+                {hasMessage(fleetName) && (
+                    <span className={styles.validationMessage}>
+                        <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                        {fleetName.message}
+                    </span>
                 )}
-            </VSCodeDropdown>
-            {hasMessage(existingResourceGroup) && (
-                <span className={styles.validationMessage}>
-                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                    {existingResourceGroup.message}
-                </span>
-            )}
-            <br />
 
-            <label htmlFor="location-dropdown" className={styles.label}>
-                Region*
-            </label>
-            <VSCodeDropdown
-                id="location-dropdown"
-                className={styles.longControl}
-                onBlur={handleLocationChange}
-                onChange={handleLocationChange}
-            >
-                <VSCodeOption value="">Select</VSCodeOption>
-                {props.locations.map((location) => (
-                    <VSCodeOption key={location} value={location}>
-                        {location}
+                <label htmlFor="resourceGroup" className={styles.label}>
+                    Resource Group*
+                </label>
+                <VSCodeDropdown
+                    id="existing-resource-group-dropdown"
+                    className={styles.longControl}
+                    onBlur={handleValidationAndIndex}
+                    onChange={handleValidationAndIndex}
+                    selectedIndex={selectedResourceGroupIndex}
+                    aria-label="Select a resource group"
+                >
+                    <VSCodeOption selected value="">
+                        Select
                     </VSCodeOption>
-                ))}
-            </VSCodeDropdown>
-            {hasMessage(location) && (
-                <span className={styles.validationMessage}>
-                    <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                    {location.message}
-                </span>
-            )}
-            <br />
+                    {allResourcesGroups.length > 0 ? (
+                        allResourcesGroups.map((group) => (
+                            <VSCodeOption key={group.name} value={group.name}>
+                                {""} {group.name}
+                            </VSCodeOption>
+                        ))
+                    ) : (
+                        <VSCodeOption disabled>No resource groups available</VSCodeOption>
+                    )}
+                </VSCodeDropdown>
+                {hasMessage(existingResourceGroup) && (
+                    <span className={styles.validationMessage}>
+                        <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                        {existingResourceGroup.message}
+                    </span>
+                )}
+
+                <label htmlFor="location-dropdown" className={styles.label}>
+                    Region*
+                </label>
+                <VSCodeDropdown
+                    id="location-dropdown"
+                    className={styles.longControl}
+                    onBlur={handleLocationChange}
+                    onChange={handleLocationChange}
+                >
+                    <VSCodeOption value="">Select</VSCodeOption>
+                    {props.locations.map((location) => (
+                        <VSCodeOption key={location} value={location}>
+                            {location}
+                        </VSCodeOption>
+                    ))}
+                </VSCodeDropdown>
+                {hasMessage(location) && (
+                    <span className={styles.validationMessage}>
+                        <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
+                        {location.message}
+                    </span>
+                )}
+            </div>
+
+            <CreateFleetModeInput
+                hubMode={hubModeSelected}
+                dnsPrefix={dnsPrefix}
+                onModeSelected={handleHubModeChange}
+                onDnsPrefixChange={handleDnsPrefixChange}
+            ></CreateFleetModeInput>
 
             <div className={styles.buttonContainer}>
                 <VSCodeButton type="submit">Create</VSCodeButton>
