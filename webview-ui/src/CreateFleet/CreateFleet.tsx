@@ -14,7 +14,8 @@ export function CreateFleet(initialState: InitialState) {
             vscode.postGetResourceGroupsRequest();
             eventHandlers.onSetInitializing(); // Set stage to Stage.Loading
         }
-    });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (state.stage === Stage.Loading && state.locations !== null && state.resourceGroups !== null) {
@@ -33,6 +34,7 @@ export function CreateFleet(initialState: InitialState) {
                     <CreateFleetInput
                         locations={state.locations!}
                         resourceGroups={state.resourceGroups!}
+                        subscriptionId={state.subscriptionId}
                         eventHandlers={eventHandlers}
                         vscode={vscode}
                     />
