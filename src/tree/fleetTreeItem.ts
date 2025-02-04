@@ -4,6 +4,7 @@ import { assetUri } from "../assets";
 import { DefinedFleetMemberWithGroup, DefinedResourceWithGroup } from "../commands/utils/azureResources";
 import { SubscriptionTreeNode } from "./subscriptionTreeItem";
 import { createClusterTreeNode } from "./aksClusterTreeItem";
+import { parseResource } from "../azure-api-utils";
 
 // The de facto API of tree nodes that represent individual AKS clusters.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -64,9 +65,12 @@ class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
 
     public readonly nodeType = "fleet";
 
-    private readonly clusters: Map<string, DefinedResourceWithGroup> = new Map<string, DefinedFleetMemberWithGroup>();
+    private readonly clusters: Map<string, DefinedFleetMemberWithGroup> = new Map<
+        string,
+        DefinedFleetMemberWithGroup
+    >();
 
-    public addCluster(clusters: DefinedResourceWithGroup[]): void {
+    public addCluster(clusters: DefinedFleetMemberWithGroup[]): void {
         clusters.forEach((c) => {
             this.clusters.set(c.id, c);
         });
@@ -75,8 +79,16 @@ class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
     public loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         const treeItems: AzExtTreeItem[] = [];
         this.clusters.forEach((c) => {
-            treeItems.push(createClusterTreeNode(this, this.subscriptionId, c));
+            const parsedResourceId = parseResource(c.clusterResourceId);
+            const drg: DefinedResourceWithGroup = {
+                // the cluster resource parsed from the member resource
+                id: c.id,
+                name: parsedResourceId.name!,
+                resourceGroup: parsedResourceId.resourceGroupName!,
+            };
+            treeItems.push(createClusterTreeNode(this, this.subscriptionId, drg));
         });
+        console.log(_clearCache, _context); // to delete
         return Promise.resolve(treeItems);
     }
     public hasMoreChildrenImpl(): boolean {
