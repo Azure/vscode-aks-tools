@@ -34,7 +34,7 @@ export function isSubscriptionTreeNode(node: unknown): node is SubscriptionTreeN
     return node instanceof SubscriptionTreeItem;
 }
 
-export function createSubscriptionTreeItem(
+export function createSubscriptionTreeItem( // create subscription node
     parent: AzExtParentTreeItem,
     sessionProvider: ReadyAzureSessionProvider,
     subscription: ISubscriptionContext,
@@ -80,74 +80,86 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         return false;
     }
 
-    public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        const clusterResources = await getResources(
+    async fetchClustersAndFleets() {
+        // load child nodes
+        const clusterResourcesPromise = await getResources(
+            // get all clusters
             this.sessionProvider,
-            this.subscription.subscriptionId,
+            this.subscriptionId,
             clusterResourceType,
         );
-        if (failed(clusterResources)) {
+        if (failed(clusterResourcesPromise)) {
             window.showErrorMessage(
-                `Failed to list clusters in subscription ${this.subscription.subscriptionId}: ${clusterResources.error}`,
+                `Failed to list clusters in subscription ${this.subscriptionId}: ${clusterResourcesPromise.error}`,
             );
-            return [];
+            throw clusterResourcesPromise.error;
         }
-        const fleetResources = await getResources(
+        const clusterResources = clusterResourcesPromise.result;
+
+        const fleetResourcesPromise = await getResources(
+            // get all fleets
             this.sessionProvider,
-            this.subscription.subscriptionId,
+            this.subscriptionId,
             fleetResourceType,
         );
-        if (failed(fleetResources)) {
+        if (failed(fleetResourcesPromise)) {
             window.showErrorMessage(
-                `Failed to list fleets in subscription ${this.subscription.subscriptionId}: ${fleetResources.error}`,
+                `Failed to list fleets in subscription ${this.subscriptionId}: ${fleetResourcesPromise.error}`,
             );
-            return [];
+            throw fleetResourcesPromise.error;
         }
+        const fleetResources = fleetResourcesPromise.result;
 
-        // gather all members of each fleet found
+        return { clusterResources, fleetResources };
+    }
+
+    private async mapFleetAndClusterMembers(fleetResources: DefinedResourceWithGroup[]) {
         const fleetToMembersMap = new Map<string, DefinedFleetMemberWithGroup[]>();
-        const memberPromises = fleetResources.result.map(async (f) => {
+        const clusterToMemberMap = new Map<string, DefinedFleetMemberWithGroup>();
+
+        const memberPromises = fleetResources.map(async (f) => {
             const members = await getFleetMembers(this.sessionProvider, f);
             if (failed(members)) {
                 window.showErrorMessage(
-                    `Failed to list fleets in subscription ${this.subscription.subscriptionId}: ${members.error}`,
+                    `Failed to list fleets in subscription ${this.subscriptionId}: ${members.error}`,
                 );
                 return null;
             }
-            fleetToMembersMap.set(f.id, members.result);
+            fleetToMembersMap.set(f.id, members.result); // key - fleet.id, val: fleet.memberClusters list
             return members.result;
         });
-        await Promise.all(memberPromises);
-        const clusterToMemberMap = new Map<string, DefinedFleetMemberWithGroup>();
+        await Promise.all(memberPromises); // wait for all members to be fetched
+
         fleetToMembersMap.forEach((members) => {
             members.forEach((member) => {
-                clusterToMemberMap.set(member.clusterResourceId, member);
+                clusterToMemberMap.set(member.clusterResourceId.toLowerCase(), member);
             });
         });
 
-        const allResources = new Map<string, DefinedResourceWithGroup>();
-        fleetResources.result.concat(clusterResources.result).forEach((r) => {
-            allResources.set(r.id, r);
-        });
+        return { fleetToMembersMap, clusterToMemberMap };
+    }
+
+    public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
+        let clusterResources: DefinedResourceWithGroup[] = [];
+        let fleetResources: DefinedResourceWithGroup[] = [];
+        ({ clusterResources, fleetResources } = await this.fetchClustersAndFleets());
+        const { fleetToMembersMap, clusterToMemberMap } = await this.mapFleetAndClusterMembers(fleetResources);
+
+        // remove clusters that are members of fleets
+        clusterResources = clusterResources.filter((r) => clusterToMemberMap.has(r.id.toLowerCase()));
 
         const fleetTreeNodes = new Map<string, FleetTreeNode>();
-
         const clusterTreeItems = new Map<string, AzExtTreeItem>();
-        allResources.forEach((r) => {
-            if (r.type === "Microsoft.ContainerService/fleets") {
+        fleetResources.concat(clusterResources).forEach((r) => {
+            if (r.type?.toLocaleLowerCase() === "microsoft.containerservice/fleets") {
                 const fleetTreeItem = createFleetTreeNode(this, this.subscriptionId, r);
+                fleetTreeItem.addCluster(fleetToMembersMap.get(r.id) || []);
                 fleetTreeNodes.set(r.id, fleetTreeItem);
                 return fleetTreeItem;
-            } else if (r.type === "Microsoft.ContainerService/managedClusters") {
-                const member = clusterToMemberMap.get(r.id);
-                if (member) {
-                    const fleet = fleetTreeNodes.get(member.parentResourceId);
-                    fleet?.addCluster([r]);
-                } else {
-                    const cluster = createClusterTreeNode(this, this.subscriptionId, r);
-                    clusterTreeItems.set(r.id, cluster);
-                    return clusterTreeItems;
-                }
+            } else if (r.type?.toLocaleLowerCase() === "microsoft.containerservice/managedclusters") {
+                const cluster = createClusterTreeNode(this, this.subscriptionId, r);
+                clusterTreeItems.set(r.id, cluster);
+                return clusterTreeItems;
             } else {
                 window.showErrorMessage(`unexpected type ${r.type} in resources list`);
             }

@@ -10,6 +10,6 @@ export function parseResource(armId: string): {
     const resourceGroupName = bits[3];
     const subscriptionId = bits[1];
     const name = bits[bits.length - 1];
-    const parentResourceId = "/" + bits.slice(0, bits.length - 2).join("/");
+    const parentResourceId = `/${bits.slice(0, bits.length - 2).join("/")}`;
     return { parentResourceId, subscriptionId, resourceGroupName, name };
 }

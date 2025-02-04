@@ -4,7 +4,6 @@ import { Errorable, map as errmap } from "./errorable";
 import { parseResource } from "../../azure-api-utils";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { FleetMember } from "@azure/arm-containerservicefleet";
-import { parse } from "path";
 
 export const clusterProvider = "Microsoft.ContainerService";
 export const acrProvider = "Microsoft.ContainerRegistry";
