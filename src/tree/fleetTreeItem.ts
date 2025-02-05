@@ -82,7 +82,7 @@ class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
                 name: parsedResourceId.name!,
                 resourceGroup: parsedResourceId.resourceGroupName!,
             };
-            treeItems.push(createClusterTreeNode(this, this.subscriptionId, drg));
+            treeItems.push(createClusterTreeNode(this, parsedResourceId.subscriptionId!, drg));
         });
         return Promise.resolve(treeItems);
     }
