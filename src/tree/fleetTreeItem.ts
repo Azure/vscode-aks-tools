@@ -1,5 +1,4 @@
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
-import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
+import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { assetUri } from "../assets";
 import { DefinedFleetMemberWithGroup, DefinedResourceWithGroup } from "../commands/utils/azureResources";
 import { SubscriptionTreeNode } from "./subscriptionTreeItem";
@@ -49,7 +48,7 @@ class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
         this.name = this.fleetResource.name;
     }
 
-    public readonly contextValue: string = `fleet.hub ${CloudExplorerV1.SHOW_KUBECONFIG_COMMANDS_CONTEXT}`;
+    public readonly contextValue: string = `fleet.hub`;
 
     public get label(): string {
         return this.name;
@@ -65,30 +64,26 @@ class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
 
     public readonly nodeType = "fleet";
 
-    private readonly clusters: Map<string, DefinedFleetMemberWithGroup> = new Map<
-        string,
-        DefinedFleetMemberWithGroup
-    >();
+    private readonly members: Map<string, DefinedFleetMemberWithGroup> = new Map<string, DefinedFleetMemberWithGroup>();
 
-    public addCluster(clusters: DefinedFleetMemberWithGroup[]): void {
-        clusters.forEach((c) => {
-            this.clusters.set(c.id, c);
+    public addCluster(members: DefinedFleetMemberWithGroup[]): void {
+        members.forEach((m) => {
+            this.members.set(m.id, m);
         });
     }
-    /*eslint no-unused-vars: ["error", { "argsIgnorePattern": "^_" }]*/
-    public loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+
+    public loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const treeItems: AzExtTreeItem[] = [];
-        this.clusters.forEach((c) => {
-            const parsedResourceId = parseResource(c.clusterResourceId);
+        this.members.forEach((m) => {
+            const parsedResourceId = parseResource(m.clusterResourceId);
             const drg: DefinedResourceWithGroup = {
                 // the cluster resource parsed from the member resource
-                id: c.id,
+                id: m.id,
                 name: parsedResourceId.name!,
                 resourceGroup: parsedResourceId.resourceGroupName!,
             };
             treeItems.push(createClusterTreeNode(this, this.subscriptionId, drg));
         });
-        console.log(_clearCache, _context); // to delete
         return Promise.resolve(treeItems);
     }
     public hasMoreChildrenImpl(): boolean {
