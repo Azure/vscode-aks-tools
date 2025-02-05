@@ -1,4 +1,4 @@
-import { VSCodeButton, VSCodeProgressRing, VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { InitialState, ProgressEventType } from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { useStateManagement } from "../utilities/state";
 import styles from "./Kaito.module.css";
@@ -27,7 +27,7 @@ export function Kaito(initialState: InitialState) {
         <>
             <div className={styles.container}>
                 <h2>Kubernetes AI Toolchain Operator (KAITO) - {state.clusterName}</h2>
-                <VSCodeDivider />
+                <hr />
                 <div className={styles.subHeader}>
                     Using KAITO, the workflow of onboarding and deploying large AI inference models on your cluster is
                     largely simplified. KAITO manages large model files using container images and hosts them in the
@@ -105,9 +105,9 @@ export function Kaito(initialState: InitialState) {
                             <p className={styles.thin}>You can now create a workspace by clicking the button below.</p>
                             <div>
                                 {" "}
-                                <VSCodeButton className={styles.generateButton} onClick={onClickGenerateWorkspace}>
+                                <button className={styles.generateButton} onClick={onClickGenerateWorkspace}>
                                     Generate Workspace
-                                </VSCodeButton>
+                                </button>
                             </div>
                         </div>
                     )}
