@@ -81,9 +81,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
     }
 
     async fetchClustersAndFleets() {
-        // load child nodes
         const clusterResourcesPromise = await getResources(
-            // get all clusters
             this.sessionProvider,
             this.subscriptionId,
             clusterResourceType,
@@ -94,23 +92,16 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             );
             throw clusterResourcesPromise.error;
         }
-        const clusterResources = clusterResourcesPromise.result;
 
-        const fleetResourcesPromise = await getResources(
-            // get all fleets
-            this.sessionProvider,
-            this.subscriptionId,
-            fleetResourceType,
-        );
+        const fleetResourcesPromise = await getResources(this.sessionProvider, this.subscriptionId, fleetResourceType);
         if (failed(fleetResourcesPromise)) {
             window.showErrorMessage(
                 `Failed to list fleets in subscription ${this.subscriptionId}: ${fleetResourcesPromise.error}`,
             );
             throw fleetResourcesPromise.error;
         }
-        const fleetResources = fleetResourcesPromise.result;
 
-        return { clusterResources, fleetResources };
+        return { clusterResources: clusterResourcesPromise.result, fleetResources: fleetResourcesPromise.result };
     }
 
     private async mapFleetAndClusterMembers(fleetResources: DefinedResourceWithGroup[]) {
@@ -146,7 +137,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         const { fleetToMembersMap, clusterToMemberMap } = await this.mapFleetAndClusterMembers(fleetResources);
 
         // remove clusters that are members of fleets
-        clusterResources = clusterResources.filter((r) => clusterToMemberMap.has(r.id.toLowerCase()));
+        clusterResources = clusterResources.filter((r) => !clusterToMemberMap.has(r.id.toLowerCase()));
 
         const fleetTreeNodes = new Map<string, FleetTreeNode>();
         const clusterTreeItems = new Map<string, AzExtTreeItem>();
