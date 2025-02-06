@@ -64,7 +64,7 @@ export function Kaito(initialState: InitialState) {
                         </p>
                     </ul>
                 </div>
-                <div>
+                <div className={styles.installationDiv}>
                     {state.kaitoInstallStatus === ProgressEventType.NotStarted && (
                         <button className={styles.button} onClick={handleClick} disabled={isDisabled}>
                             Install KAITO
@@ -109,6 +109,12 @@ export function Kaito(initialState: InitialState) {
                                     Generate Workspace
                                 </VSCodeButton>
                             </div>
+                        </div>
+                    )}
+                    {state.kaitoInstallStatus === ProgressEventType.Failed && (
+                        <div className={styles.postInstall}>
+                            <p>Error installing KAITO.</p>
+                            <p className={styles.errorMessage}>{state.errors}</p>
                         </div>
                     )}
                 </div>
