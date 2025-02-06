@@ -8,7 +8,6 @@ import { longRunning } from "../utils/host";
 import { getGraphResourceClient } from "../utils/arm";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { AksCluster, getFilteredClusters, setFilteredClusters } from "./config";
-import { parseResource, parseSubId } from "../../azure-api-utils";
 import { ResourceGraphClient } from "@azure/arm-resourcegraph";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
