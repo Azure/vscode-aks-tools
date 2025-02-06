@@ -5,11 +5,11 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExtension } from "../utils/host";
 import { longRunning } from "../utils/host";
-import { ManagedCluster } from "@azure/arm-containerservice";
-import { getAksClient } from "../utils/arm";
+import { getGraphResourceClient } from "../utils/arm";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { getFilteredClusters, setFilteredClusters } from "./config";
+import { AksCluster, getFilteredClusters, setFilteredClusters } from "./config";
 import { parseResource, parseSubId } from "../../azure-api-utils";
+import { ResourceGraphClient } from "@azure/arm-resourcegraph";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -32,29 +32,24 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         return;
     }
 
-    const containerServiceClient = getAksClient(sessionProvider.result, subscriptionNode.result.subscriptionId);
-    const clusterList: ManagedCluster[] = [];
+    const graphServiceClient = getGraphResourceClient(sessionProvider.result);
+    let clusterList: AksCluster[];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
-        const iterator = containerServiceClient.managedClusters.list();
-        for await (const clusters of iterator.byPage()) {
-            const validClusters = clusters.filter((c) => c.id && c.name);
-            clusterList.push(
-                ...validClusters.map((c) => ({ label: c.name!, name: c.name!, id: c.id!, location: c.location! })),
-            );
-        }
+        const aksClusters = await fetchAksClusters(graphServiceClient, subscriptionNode.result.subscriptionId);
+        clusterList = aksClusters;
     });
 
     const filteredClusters = await getUniqueClusters();
 
-    const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster) => {
+    const quickPickItems: ClusterQuickPickItem[] = clusterList!.map((cluster: AksCluster) => {
         return {
             label: cluster.name || "",
             description: cluster.name,
-            picked: filteredClusters.some((filtered) => filtered.clusterName === parseResource(cluster.id!).name), // filtered.subscriptionId === parseSubId(cluster.id!).subId),
+            picked: filteredClusters.some((filtered) => filtered.clusterName === cluster.name),
             Cluster: {
                 clusterName: cluster.name || "",
-                subscriptionId: parseSubId(cluster.id!).subId || "",
+                subscriptionId: cluster.subscriptionId || "",
             },
         };
     });
@@ -77,6 +72,33 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     ];
 
     await setFilteredClusters(newFilteredClusters);
+}
+
+async function fetchAksClusters(
+    graphServiceClient: ResourceGraphClient,
+    subscriptionId: string,
+): Promise<AksCluster[]> {
+    const query = {
+        query: "Resources | where type =~ 'Microsoft.ContainerService/managedClusters' | project name, location, resourceGroup, subscriptionId",
+        subscriptions: [subscriptionId],
+    };
+
+    try {
+        const response = await graphServiceClient.resources(query);
+
+        const aksClusters: AksCluster[] = response.data.map((resource: AksCluster) => ({
+            id: resource.id,
+            name: resource.name,
+            location: resource.location,
+            resourceGroup: resource.resourceGroup,
+            subscriptionId: resource.subscriptionId,
+        }));
+
+        return aksClusters;
+    } catch (error) {
+        console.error("Error fetching AKS clusters:", error);
+        return [];
+    }
 }
 
 async function getUniqueClusters() {
