@@ -156,9 +156,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             }
             return [];
         });
-        // cast via unknown because I know it's ok.
-        // probably me making a mess with types. fix later.
-        const fleetTreeItems = Array.from(fleetTreeNodes.values()).map((f) => f as unknown as AzExtTreeItem);
+        const fleetTreeItems = Array.from(fleetTreeNodes.values()).map((f) => f as unknown as AzExtTreeItem); // cast via unknown to avoid type error
         return Promise.resolve([...fleetTreeItems.values(), ...clusterTreeItems.values()]);
     }
 

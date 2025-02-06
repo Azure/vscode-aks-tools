@@ -4,12 +4,12 @@ export function parseResource(armId: string): {
     resourceGroupName: string | undefined;
     name: string | undefined;
 } {
-    // {parentResourceId}/members/{name}
-    // /subscriptions/{subid}/resourcegroups/{group}/providers/.../{name}
+    // General armId Format: /subscriptions/{subid}/resourcegroups/{group}/providers/.../{name}
+    // armId format of a member cluster, given parentResource is a Fleet {parentResourceId}/members/{name}
     const bits = armId.split("/").filter((bit) => bit.length > 0);
     const resourceGroupName = bits[3];
     const subscriptionId = bits[1];
     const name = bits[bits.length - 1];
-    const parentResourceId = `/${bits.slice(0, bits.length - 2).join("/")}`;
+    const parentResourceId = `/${bits.slice(0, bits.length - 2).join("/")}`; // take all except for the last two bits
     return { parentResourceId, subscriptionId, resourceGroupName, name };
 }
