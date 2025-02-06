@@ -49,6 +49,7 @@ export interface AksCluster {
     location: string;
     resourceGroup: string;
     subscriptionId: string;
+    type: string;
 }
 
 const onFilteredSubscriptionsChangeEmitter = new vscode.EventEmitter<void>();

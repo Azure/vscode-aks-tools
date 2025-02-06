@@ -78,7 +78,7 @@ async function fetchAksClusters(
     subscriptionId: string,
 ): Promise<AksCluster[]> {
     const query = {
-        query: "Resources | where type =~ 'Microsoft.ContainerService/managedClusters' | project name, location, resourceGroup, subscriptionId",
+        query: "Resources | where type =~ 'Microsoft.ContainerService/managedClusters' | project id, name, location, resourceGroup, subscriptionId, type",
         subscriptions: [subscriptionId],
     };
 
@@ -91,6 +91,7 @@ async function fetchAksClusters(
             location: resource.location,
             resourceGroup: resource.resourceGroup,
             subscriptionId: resource.subscriptionId,
+            type: resource.type,
         }));
 
         return aksClusters;
