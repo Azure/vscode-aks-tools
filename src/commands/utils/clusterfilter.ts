@@ -33,7 +33,10 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     let clusterList: AksClusterAndFleet[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
-        const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(sessionProvider.result, subscriptionNode.result.subscriptionId);
+        const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(
+            sessionProvider.result,
+            subscriptionNode.result.subscriptionId,
+        );
         if (failed(aksClusters)) {
             vscode.window.showErrorMessage(aksClusters.error);
             return;
