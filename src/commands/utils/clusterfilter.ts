@@ -5,10 +5,9 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExtension } from "../utils/host";
 import { longRunning } from "../utils/host";
-import { getGraphResourceClient } from "../utils/arm";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { AksCluster, getFilteredClusters, setFilteredClusters } from "./config";
-import { ResourceGraphClient } from "@azure/arm-resourcegraph";
+import { AksClusterAndFleet, getFilteredClusters, setFilteredClusters } from "./config";
+import { getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -31,17 +30,20 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         return;
     }
 
-    const graphServiceClient = getGraphResourceClient(sessionProvider.result);
-    let clusterList: AksCluster[];
+    let clusterList: AksClusterAndFleet[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
-        const aksClusters = await fetchAksClusters(graphServiceClient, subscriptionNode.result.subscriptionId);
-        clusterList = aksClusters;
+        const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(sessionProvider.result, subscriptionNode.result.subscriptionId);
+        if (failed(aksClusters)) {
+            vscode.window.showErrorMessage(aksClusters.error);
+            return;
+        }
+        clusterList = aksClusters.result;
     });
 
     const filteredClusters = await getUniqueClusters();
 
-    const quickPickItems: ClusterQuickPickItem[] = clusterList!.map((cluster: AksCluster) => {
+    const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster: AksClusterAndFleet) => {
         return {
             label: cluster.name || "",
             description: cluster.name,
@@ -71,34 +73,6 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     ];
 
     await setFilteredClusters(newFilteredClusters);
-}
-
-async function fetchAksClusters(
-    graphServiceClient: ResourceGraphClient,
-    subscriptionId: string,
-): Promise<AksCluster[]> {
-    const query = {
-        query: "Resources | where type =~ 'Microsoft.ContainerService/managedClusters' | project id, name, location, resourceGroup, subscriptionId, type",
-        subscriptions: [subscriptionId],
-    };
-
-    try {
-        const response = await graphServiceClient.resources(query);
-
-        const aksClusters: AksCluster[] = response.data.map((resource: AksCluster) => ({
-            id: resource.id,
-            name: resource.name,
-            location: resource.location,
-            resourceGroup: resource.resourceGroup,
-            subscriptionId: resource.subscriptionId,
-            type: resource.type,
-        }));
-
-        return aksClusters;
-    } catch (error) {
-        console.error("Error fetching AKS clusters:", error);
-        return [];
-    }
 }
 
 async function getUniqueClusters() {

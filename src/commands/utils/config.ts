@@ -43,7 +43,7 @@ export interface ClusterFilter {
     clusterName: string;
 }
 
-export interface AksCluster {
+export interface AksClusterAndFleet {
     id: string;
     name: string;
     location: string;

@@ -1,10 +1,10 @@
 import { GenericResourceExpanded } from "@azure/arm-resources";
 import { getResourceManagementClient, listAll, getAksFleetClient, getGraphResourceClient } from "./arm";
-import { Errorable, map as errmap } from "./errorable";
+import { Errorable, map as errmap, success } from "./errorable";
 import { parseResource } from "../../azure-api-utils";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { FleetMember } from "@azure/arm-containerservicefleet";
-import { AksCluster } from "./config";
+import { AksClusterAndFleet } from "./config";
 
 export const clusterProvider = "Microsoft.ContainerService";
 export const acrProvider = "Microsoft.ContainerRegistry";
@@ -54,7 +54,7 @@ export async function getResources(
 export async function getClusterAndFleetResourcesFromGraphAPI(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
-): Promise<Errorable<AksCluster[]>> {
+): Promise<Errorable<AksClusterAndFleet[]>> {
     const client = getGraphResourceClient(sessionProvider);
     const query = {
         query: `Resources | where type =~ '${clusterResourceType}' or type =~ '${fleetResourceType}' | project id, name, location, resourceGroup, subscriptionId, type`,
@@ -64,17 +64,8 @@ export async function getClusterAndFleetResourcesFromGraphAPI(
     try {
         const response = await client.resources(query);
 
-        const aksClusters: AksCluster[] = response.data.map((resource: AksCluster) => ({
-            id: resource.id,
-            name: resource.name,
-            location: resource.location,
-            resourceGroup: resource.resourceGroup,
-            subscriptionId: resource.subscriptionId,
-            type: resource.type,
-        }));
-        return errmap({ succeeded: true, result: aksClusters }, (resources) => resources);
+        return success(response.data);
     } catch (error) {
-        console.error("Error fetching AKS clusters:", error);
         return { succeeded: false, error: error as string };
     }
 }
