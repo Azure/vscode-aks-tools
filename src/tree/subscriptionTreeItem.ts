@@ -160,9 +160,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
                 );
 
                 if (isSubIdExistInClusterFilter) {
-                    const matchedCluster = filteredClusters.find(
-                        (filter) => filter.clusterName === r.name
-                    );
+                    const matchedCluster = filteredClusters.find((filter) => filter.clusterName === r.name);
                     if (matchedCluster) {
                         const cluster = createClusterTreeNode(this, this.subscriptionId, r);
                         clusterTreeItems.set(r.id, cluster);
