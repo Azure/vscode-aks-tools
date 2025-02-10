@@ -101,9 +101,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             resource.type.includes("fleets"),
         );
 
-        const clusterResources = filterClusters(managedClusters);
-
-        return { clusterResources: clusterResources, fleetResources: fleetsResources };
+        return { clusterResources: managedClusters, fleetResources: fleetsResources };
     }
 
     private async mapFleetAndClusterMembers(fleetResources: DefinedResourceWithGroup[]) {
