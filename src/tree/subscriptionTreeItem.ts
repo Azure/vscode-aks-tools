@@ -14,6 +14,8 @@ import {
     DefinedResourceWithGroup,
     DefinedFleetMemberWithGroup,
     getClusterAndFleetResourcesFromGraphAPI,
+    fleetResourceType,
+    clusterResourceType,
 } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
@@ -95,10 +97,10 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         }
 
         const managedClusters = clusterAndFleetResourcesPromise.result.filter((resource) =>
-            resource.type.includes("managedclusters"),
+            resource.type.includes(clusterResourceType),
         );
         const fleetsResources = clusterAndFleetResourcesPromise.result.filter((resource) =>
-            resource.type.includes("fleets"),
+            resource.type.includes(fleetResourceType),
         );
 
         return { clusterResources: managedClusters, fleetResources: fleetsResources };
