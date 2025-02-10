@@ -11,6 +11,7 @@ import { DeveloperHubServiceClient, Workflow } from "@azure/arm-devhub";
 import { ResourceGroup as ARMResourceGroup } from "@azure/arm-resources";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { Octokit } from "@octokit/rest";
+import { getGitHubRepos, getGitHubBranchesForRepo } from "../commands/utils/octokitHelper";
 import { ToWebViewMsgDef, ResourceGroup } from "../webview-contract/webviewDefinitions/automatedDeployments";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import * as roleAssignmentsUtil from "../../src/commands/utils/roleAssignments";
@@ -18,15 +19,19 @@ import { failed } from "../commands/utils/errorable";
 //import * as acrUtils from "../commands/utils/acrs";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
+import { getClusterNamespaces, createClusterNamespace } from "../commands/utils/clusters";
+import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
 
 export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments"> {
     constructor(extensionUri: vscode.Uri) {
         // Call the BasePanel constructor with the required contentId and command keys
         super(extensionUri, "automatedDeployments", {
             getGitHubReposResponse: null,
+            getGitHubBranchesResponse: null,
             getSubscriptionsResponse: null,
             getWorkflowCreationResponse: null,
             getResourceGroupsResponse: null,
+            getNamespacesResponse: null,
         });
     }
 }
@@ -38,6 +43,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         readonly devHubClient: DeveloperHubServiceClient,
         readonly octokitClient: Octokit,
         readonly graphClient: GraphClient,
+        readonly kubectl: APIAvailable<KubectlV1>,
     ) {}
 
     getTitle(): string {
@@ -53,9 +59,11 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     getTelemetryDefinition(): TelemetryDefinition<"automatedDeployments"> {
         return {
             getGitHubReposRequest: false,
+            getGitHubBranchesRequest: false,
             getSubscriptionsRequest: false,
             createWorkflowRequest: false,
             getResourceGroupsRequest: false,
+            getNamespacesRequest: false,
         };
     }
 
@@ -64,17 +72,37 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     ): MessageHandler<ToVsCodeMsgDef<"automatedDeployments">> {
         return {
             getGitHubReposRequest: () => this.handleGetGitHubReposRequest(webview),
+            getGitHubBranchesRequest: (args) => this.handleGetGitHubBranchesRequest(webview, args.repoOwner, args.repo),
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
             createWorkflowRequest: () => this.handleCreateWorkflowRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
+            getNamespacesRequest: (key) =>
+                this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
         };
     }
 
     private async handleGetGitHubReposRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const repoNames = await getRepositoryNames(this.octokitClient);
+        const reposResp = await getGitHubRepos(this.octokitClient);
+        if (failed(reposResp)) {
+            vscode.window.showErrorMessage(reposResp.error);
+            return;
+        }
 
-        // Send the list of repositories to the webview
-        webview.postGetGitHubReposResponse({ repos: repoNames });
+        webview.postGetGitHubReposResponse({ repos: reposResp.result });
+    }
+
+    private async handleGetGitHubBranchesRequest(
+        webview: MessageSink<ToWebViewMsgDef>,
+        repoOwner: string,
+        repo: string,
+    ) {
+        const branchesResp = await getGitHubBranchesForRepo(this.octokitClient, repoOwner, repo);
+        if (failed(branchesResp)) {
+            vscode.window.showErrorMessage(branchesResp.error);
+            return;
+        }
+
+        webview.postGetGitHubBranchesResponse({ branches: branchesResp.result });
     }
 
     private async handleGetSubscriptionsRequest(webview: MessageSink<ToWebViewMsgDef>) {
@@ -112,13 +140,56 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         webview.postGetResourceGroupsResponse(usableGroups);
     }
 
+    private async handleGetNamespacesRequest(
+        subscriptionId: string,
+        resourceGroup: string,
+        clusterName: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        const namespacesResult = await getClusterNamespaces(
+            this.sessionProvider,
+            this.kubectl,
+            subscriptionId,
+            resourceGroup,
+            clusterName,
+        );
+        if (failed(namespacesResult)) {
+            vscode.window.showErrorMessage("Error fetching namespaces: ", namespacesResult.error);
+            return;
+        }
+
+        webview.postGetNamespacesResponse(namespacesResult.result);
+    }
+
     private async handleCreateWorkflowRequest(webview: MessageSink<ToWebViewMsgDef>) {
         //---Run Neccesary Checks prior to making the call to DevHub to create a workflow ----
 
         //Check if new resource group must be created
 
         //Check for isNewNamespace, to see if new namespace must be created.
+        const isNewNamespace = true; //Actual Value Provided Later PR //PlaceHolder
+        if (isNewNamespace) {
+            //Create New Namespace
+            const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a"; // These values will be provided to the fuction call from the webview
+            const resourceGroup = "rei-rg"; //PlaceHolder
+            const clusterName = "reiCluster"; //PlaceHolder
+            const namespace = "not-default"; //PlaceHolder
+            const namespaceCreationResp = await createClusterNamespace(
+                this.sessionProvider,
+                this.kubectl,
+                subscriptionId,
+                resourceGroup,
+                clusterName,
+                namespace,
+            );
 
+            if (failed(namespaceCreationResp)) {
+                console.log("Failed to create namespace: ", namespace, "Error: ", namespaceCreationResp.error);
+                vscode.window.showErrorMessage(`Failed to create namespace: ${namespace}`);
+                return;
+            }
+            vscode.window.showInformationMessage(namespaceCreationResp.result);
+        }
         //Create ACR if required
 
         //Verify selected ACR has correct role assignments
@@ -141,21 +212,6 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         if (prUrl !== undefined) {
             webview.postGetWorkflowCreationResponse(prUrl); //Will always return success boolean alongside prUrl
         }
-    }
-}
-
-async function getRepositoryNames(octokit: Octokit): Promise<string[]> {
-    try {
-        // Fetch the list of repositories for the authenticated user
-        const response = await octokit.repos.listForAuthenticatedUser({});
-
-        // Extract repository names
-        const repoNames = response.data.map((repo) => repo.name);
-
-        return repoNames;
-    } catch (error) {
-        console.error("Error fetching repositories:", error);
-        throw error; // Re-throw the error for upstream handling
     }
 }
 

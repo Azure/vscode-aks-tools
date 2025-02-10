@@ -17,11 +17,19 @@ export function getAutomatedDeploymentScenarios() {
     function getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
             getGitHubReposRequest: () => {
-                // implementation here
-                webview.postGetGitHubReposResponse({ repos: initialState.repos });
+                console.log("Getting Github repos with getGitHubReposRequest");
+                webview.postGetGitHubReposResponse({ repos: ["repo1", "repo2", "bestRepo"] });
+            },
+            getGitHubBranchesRequest: () => {
+                console.log("Getting Github branches with getGitHubBranchesRequest");
+                webview.postGetGitHubBranchesResponse({ branches: ["branch1", "branch2", "bestBranch"] });
             },
             getSubscriptionsRequest: () => {
                 // implementation here
+            },
+            getNamespacesRequest: () => {
+                console.log("Returning namespaces from getNamespacesRequest");
+                webview.postGetNamespacesResponse(["namespace1", "namespace2", "bestnamespaceever-11"]);
             },
             createWorkflowRequest: () => {
                 // implementation here
