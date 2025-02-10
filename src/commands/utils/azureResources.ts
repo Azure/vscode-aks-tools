@@ -83,6 +83,7 @@ function getResourceGroup(resource: DefinedResource): string {
 }
 
 function asFleetMemberWithGroup(member: FleetMember): DefinedFleetMemberWithGroup {
+    // return an erroroable
     return {
         resourceGroup: parseResource(member.id!).resourceGroupName!,
         id: member.id!,
@@ -99,5 +100,6 @@ export async function getFleetMembers(
     const subId = parseResource(fleet.id).subscriptionId!;
     const client = getAksFleetClient(sessionProvider, subId);
     const allFleetMembers = await listAll(client.fleetMembers.listByFleet(fleet.resourceGroup, fleet.name));
+    // TODO: check the result before returning, reather than putting all in one line
     return errmap(allFleetMembers, (members) => members.map(asFleetMemberWithGroup));
 }

@@ -90,6 +90,13 @@
                         "type": "string"
                     }
                 },
+                "aks.selectedClusters": {
+                    "type": "array",
+                    "description": "Selected Azure Clusters",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "aks.periscope.repoOrg": {
                     "type": "string",
                     "default": "azure",
@@ -164,6 +171,15 @@
             {
                 "command": "aks.selectSubscriptions",
                 "title": "Select subscriptions...",
+                "category": "AKS",
+                "icon": {
+                    "dark": "resources/dark/filter.svg",
+                    "light": "resources/light/filter.svg"
+                }
+            },
+            {
+                "command": "aks.clusterFilter",
+                "title": "Select cluster...",
                 "category": "AKS",
                 "icon": {
                     "dark": "resources/dark/filter.svg",
@@ -377,6 +393,11 @@
             "view/item/context": [
                 {
                     "command": "aks.selectSubscriptions",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /Azure/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "aks.clusterFilter",
                     "when": "viewItem == aks.subscription",
                     "group": "inline"
                 },
@@ -435,6 +456,10 @@
                 },
                 {
                     "command": "aks.compareCluster",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
+                    "command": "aks.clusterFilter",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
                 },
                 {

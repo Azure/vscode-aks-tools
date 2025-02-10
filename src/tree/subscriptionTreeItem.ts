@@ -17,6 +17,7 @@ import {
 } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { getFilteredClusters } from "../commands/utils/config";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -78,6 +79,35 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         return false;
     }
 
+    private filterClusters(managedClusters: DefinedResourceWithGroup[]): DefinedResourceWithGroup[] {
+        const getClusterFilter = getFilteredClusters();
+        const filteredClusters = managedClusters
+            .map((r) => {
+                // Check if the subscription is in the filter for SeelctedClustersFilter
+                const isSubIdExistInClusterFilter = getClusterFilter.some(
+                    (filter) => filter.subscriptionId === this.subscriptionId,
+                );
+
+                // Ensure getClusterFilter is an array of objects with name and subid properties
+                if (isSubIdExistInClusterFilter) {
+                    // Check if there's a match for the cluster name and subid
+                    const matchedCluster = getClusterFilter.find(
+                        (filter) => filter.clusterName === r.name && filter.subscriptionId === this.subscriptionId,
+                    );
+
+                    if (matchedCluster) {
+                        return r;
+                    }
+                } else {
+                    return r;
+                }
+                return undefined;
+            })
+            .filter((node) => node !== undefined);
+
+        return filteredClusters;
+    }
+
     private async fetchClustersAndFleets(): Promise<{
         clusterResources: DefinedResourceWithGroup[];
         fleetResources: DefinedResourceWithGroup[];
@@ -101,7 +131,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             resource.type.includes("fleets"),
         );
 
-        const clusterResources = filterClusters(managedClusters);
+        const clusterResources = this.filterClusters(managedClusters);
 
         return { clusterResources: clusterResources, fleetResources: fleetsResources };
     }

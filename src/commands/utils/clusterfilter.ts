@@ -1,5 +1,5 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { ClusterQuickPickItem, getAksClusterSubscriptionNode } from "../utils/clusters";
+import { getAksClusterSubscriptionNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -8,6 +8,13 @@ import { longRunning } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { AksClusterAndFleet, getFilteredClusters, setFilteredClusters } from "./config";
 import { getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
+
+interface ClusterQuickPickItem extends vscode.QuickPickItem {
+    Cluster: {
+        clusterName: string;
+        subscriptionId: string;
+    };
+}
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -74,6 +81,8 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     const newFilteredClusters = [
         ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
     ];
+
+    // TODO: cluster filter should not include fleets
 
     await setFilteredClusters(newFilteredClusters);
 }
