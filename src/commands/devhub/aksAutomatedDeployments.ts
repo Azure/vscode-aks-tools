@@ -1,6 +1,6 @@
 import { getReadySessionProvider, getCredential } from "../../auth/azureAuth";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { failed } from "../utils/errorable";
+import { failed, getErrorMessage } from "../utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as vscode from "vscode";
 import { getAksClusterTreeNode, getKubernetesClusterInfo } from "../utils/clusters";
@@ -9,6 +9,7 @@ import * as msGraph from "../utils/graph";
 import { AutomatedDeploymentsPanel, AutomatedDeploymentsDataProvider } from "../../panels/DevHubAutoDeployPanel";
 import { GitHubOAuthCallRequest, GitHubOAuthOptionalParams, DeveloperHubServiceClient } from "@azure/arm-devhub";
 import { Octokit } from "@octokit/rest";
+import { onCallbackHandled } from "../../uriHandler";
 
 export default async function aksAutomatedDeployments(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -74,15 +75,7 @@ export default async function aksAutomatedDeployments(_context: IActionContext, 
 
     // GitHub OAuth request via DevHub
     // Currently the GitHub OAuth flow is initiated everytime the command is called but simply returns the token if already authenticated
-    const parameters: GitHubOAuthCallRequest = {};
-    const options: GitHubOAuthOptionalParams = { parameters };
-
-    await devHubClient.gitHubOAuth(location, options); //Call to authenticate with GitHub occurs everytime command is called, will open new browser page if not already authed
-
-    //Current implementation relies on polling technique to check if token is available
-    //TODO: Will switch to utilizing the URI handler to handle the token response from GitHub
-    //Requires changes in the DevHub service to allow vscode callback url
-    const gitHubToken = await checkAndAuthenticateWithGitHub(devHubClient, location, options);
+    const gitHubToken = await checkAndAuthenticateWithGitHub(devHubClient, location);
     if (!gitHubToken) {
         vscode.window.showWarningMessage(`Could Not Authenticate with GitHub`);
         return;
@@ -108,12 +101,15 @@ export default async function aksAutomatedDeployments(_context: IActionContext, 
 async function checkAndAuthenticateWithGitHub(
     client: DeveloperHubServiceClient,
     location: string,
-    options: GitHubOAuthOptionalParams,
-    timeout: number = 300000,
-    interval: number = 5000,
 ): Promise<string | undefined> {
     try {
-        const gitHubOAuthResp = await client.gitHubOAuth(location, options); // Call to authenticate with GitHub
+        const parameters: GitHubOAuthCallRequest = {
+            redirectUrl: "vscode://ms-kubernetes-tools.vscode-aks-tools/callback",
+        };
+        const properOptionsWithCallback: GitHubOAuthOptionalParams = { parameters };
+        client.listGitHubOAuth(location, properOptionsWithCallback);
+
+        const gitHubOAuthResp = await client.gitHubOAuth(location, properOptionsWithCallback); // Call to authenticate with GitHub
 
         if (!gitHubOAuthResp.token) {
             // Auth flow required
@@ -124,46 +120,26 @@ async function checkAndAuthenticateWithGitHub(
                 "GitHub authentication initiated. Please complete the process in your browser.",
             );
 
-            // Poll for token availability
-            const token = await pollForToken(client, location, options, timeout, interval);
+            try {
+                await onCallbackHandled;
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to handle callback: ${getErrorMessage(error)}`);
+                console.error("Failed to handle callback:", getErrorMessage(error));
+            }
+
+            const gitHubOAuthRespCallback = await client.gitHubOAuth(location, properOptionsWithCallback);
 
             console.log("GitHub OAuth succeeded.");
-            return token;
+            return gitHubOAuthRespCallback.token;
         } else {
             // Already authenticated
-            console.log("Already authenticated with GitHub.");
+            console.log("DevHub already authenticated with GitHub.");
+            vscode.window.showInformationMessage("DevHub already authenticated with GitHub.");
             return gitHubOAuthResp.token;
         }
     } catch (error) {
-        console.error("Error occurred during GitHub OAuth:", error);
+        console.error("Error occurred during DevHub GitHub OAuth:", error);
+        vscode.window.showErrorMessage(`Error occurred during DevHub GitHub OAuth: ${getErrorMessage(error)}`);
         return undefined;
     }
-}
-
-// Utility function to poll for a token
-async function pollForToken(
-    client: DeveloperHubServiceClient,
-    location: string,
-    options: GitHubOAuthOptionalParams,
-    timeout: number,
-    interval: number,
-): Promise<string> {
-    const startTime = Date.now();
-
-    while (Date.now() - startTime < timeout) {
-        // Delay for the polling interval
-        await delay(interval);
-
-        // Call gitHubOAuth to check if the token is now available
-        const resp = await client.gitHubOAuth(location, options);
-        if (resp.token) {
-            return resp.token; // Token is available
-        }
-    }
-
-    throw new Error("Authentication timed out.");
-}
-
-function delay(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
 }
