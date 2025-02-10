@@ -76,10 +76,32 @@ export function getFilteredSubscriptions(): SubscriptionFilter[] {
     }
 }
 
+export function getFilteredClusters(): ClusterFilter[] {
+    try {
+        let values = vscode.workspace.getConfiguration("aks").get<string[]>("selectedClusters", []);
+        if (values.length === 0) {
+            // Get filters from the Azure Account extension if the AKS extension has none.
+            values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceClusterFilter", []);
+        }
+        return values.map(asClusterFilter).filter((v) => v !== null) as ClusterFilter[];
+    } catch {
+        return [];
+    }
+}
+
 function asSubscriptionFilter(value: string): SubscriptionFilter | null {
     try {
         const parts = value.split("/");
         return { tenantId: parts[0], subscriptionId: parts[1] };
+    } catch {
+        return null;
+    }
+}
+
+function asClusterFilter(value: string): ClusterFilter | null {
+    try {
+        const parts = value.split("/");
+        return { subscriptionId: parts[0], clusterName: parts[1] };
     } catch {
         return null;
     }
@@ -99,6 +121,43 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
             .update("selectedSubscriptions", values, vscode.ConfigurationTarget.Global, true);
         onFilteredSubscriptionsChangeEmitter.fire();
     }
+}
+
+export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
+    const existingFilters = getFilteredClusters();
+
+    // Get merged list of filters
+    const uniqueFilters = mergeClusterFilterLists(existingFilters, filters);
+
+    // Determine if filters have changed
+    const filtersChanged =
+        existingFilters.length !== uniqueFilters.length ||
+        !existingFilters.every((ef) => uniqueFilters.some((uf) => uf.clusterName === ef.clusterName));
+
+    // Construct values as "subscriptionId/clusterName"
+    const values = uniqueFilters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
+
+    if (filtersChanged) {
+        await vscode.workspace
+            .getConfiguration("aks")
+            .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
+
+        onFilteredClustersChangeEmitter.fire();
+    }
+}
+
+function mergeClusterFilterLists(
+    existingFilters: { subscriptionId: string; clusterName: string }[],
+    filters: { subscriptionId: string; clusterName: string }[],
+) {
+    // Create a Set of subscriptionIds from list2
+    const subIdSet = new Set(filters.map((item) => item.subscriptionId));
+
+    // Filter list1 to only include items with unique subscriptionIds not in list2
+    const filteredExistingClusters = existingFilters.filter((item) => !subIdSet.has(item.subscriptionId));
+
+    // Merge list2 with the filtered list1
+    return [...filters, ...filteredExistingClusters];
 }
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
@@ -185,55 +244,6 @@ export function getDraftConfig(): Errorable<RetinaDownloadConfig> {
     };
 
     return { succeeded: true, result: config };
-}
-
-export function getFilteredClusters(): ClusterFilter[] {
-    try {
-        let values = vscode.workspace.getConfiguration("aks").get<string[]>("selectedClusters", []);
-        if (values.length === 0) {
-            // Get filters from the Azure Account extension if the AKS extension has none.
-            values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceClusterFilter", []);
-        }
-        return values.map(asClusterFilter).filter((v) => v !== null) as ClusterFilter[];
-    } catch {
-        return [];
-    }
-}
-function asClusterFilter(value: string): ClusterFilter | null {
-    try {
-        const parts = value.split("/");
-        return { subscriptionId: parts[0], clusterName: parts[1] };
-    } catch {
-        return null;
-    }
-}
-export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
-    const existingFilters = getFilteredClusters();
-    // Get merged list of filters
-    const uniqueFilters = mergeClusterFilterLists(existingFilters, filters);
-    // Determine if filters have changed
-    const filtersChanged =
-        existingFilters.length !== uniqueFilters.length ||
-        !existingFilters.every((ef) => uniqueFilters.some((uf) => uf.clusterName === ef.clusterName));
-    // Construct values as "subscriptionId/clusterName"
-    const values = uniqueFilters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
-    if (filtersChanged) {
-        await vscode.workspace
-            .getConfiguration("aks")
-            .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
-        onFilteredClustersChangeEmitter.fire();
-    }
-}
-function mergeClusterFilterLists(
-    existingFilters: { subscriptionId: string; clusterName: string }[],
-    filters: { subscriptionId: string; clusterName: string }[],
-) {
-    // Create a Set of subscriptionIds from list2
-    const subIdSet = new Set(filters.map((item) => item.subscriptionId));
-    // Filter list1 to only include items with unique subscriptionIds not in list2
-    const filteredExistingClusters = existingFilters.filter((item) => !subIdSet.has(item.subscriptionId));
-    // Merge list2 with the filtered list1
-    return [...filters, ...filteredExistingClusters];
 }
 
 export function getRetinaConfig(): Errorable<RetinaDownloadConfig> {

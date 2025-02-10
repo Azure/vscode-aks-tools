@@ -1,20 +1,15 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { getAksClusterSubscriptionNode } from "../utils/clusters";
+import { ClusterQuickPickItem, getAksClusterSubscriptionNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExtension } from "../utils/host";
 import { longRunning } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { AksClusterAndFleet, getFilteredClusters, setFilteredClusters } from "./config";
-import { getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
-
-interface ClusterQuickPickItem extends vscode.QuickPickItem {
-    Cluster: {
-        clusterName: string;
-        subscriptionId: string;
-    };
-}
+import { getFilteredClusters, setFilteredClusters } from "./config";
+import { ManagedCluster } from "@azure/arm-containerservice";
+import { getAksClient } from "../utils/arm";
+import { parseResource, parseSubId } from "../../azure-api-utils";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -37,30 +32,29 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         return;
     }
 
-    let clusterList: AksClusterAndFleet[] = [];
+    const containerServiceClient = getAksClient(sessionProvider.result, subscriptionNode.result.subscriptionId);
+    const clusterList: ManagedCluster[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
-        const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(
-            sessionProvider.result,
-            subscriptionNode.result.subscriptionId,
-        );
-        if (failed(aksClusters)) {
-            vscode.window.showErrorMessage(aksClusters.error);
-            return;
+        const iterator = containerServiceClient.managedClusters.list();
+        for await (const clusters of iterator.byPage()) {
+            const validClusters = clusters.filter((c) => c.id && c.name);
+            clusterList.push(
+                ...validClusters.map((c) => ({ label: c.name!, name: c.name!, id: c.id!, location: c.location! })),
+            );
         }
-        clusterList = aksClusters.result;
     });
 
     const filteredClusters = await getUniqueClusters();
 
-    const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster: AksClusterAndFleet) => {
+    const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster) => {
         return {
             label: cluster.name || "",
             description: cluster.name,
-            picked: filteredClusters.some((filtered) => filtered.clusterName === cluster.name),
+            picked: filteredClusters.some((filtered) => filtered.clusterName === parseResource(cluster.id!).name), // filtered.subscriptionId === parseSubId(cluster.id!).subId),
             Cluster: {
                 clusterName: cluster.name || "",
-                subscriptionId: cluster.subscriptionId || "",
+                subscriptionId: parseSubId(cluster.id!).subId || "",
             },
         };
     });

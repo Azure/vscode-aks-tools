@@ -1,7 +1,7 @@
 import { useState } from "react";
 import styles from "./KaitoModels.module.css";
 import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
-import { VSCodeDivider, VSCodeLink, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { stateUpdater, vscode } from "./state";
 import { useStateManagement } from "../utilities/state";
 import { ArrowIcon } from "../icons/ArrowIcon";
@@ -282,18 +282,19 @@ export function KaitoModels(initialState: InitialState) {
                 {selectedModel !== null && <div className={styles.sidePanel}></div>}
                 <div className={styles.mainDiv}>
                     <h2>Create a KAITO Workspace ({state.clusterName})</h2>
-                    <VSCodeDivider />
+                    <hr />
                     <div className={styles.subHeader}>
                         To get your model up and running, you can either create a CRD file with &quot;Generate CRD&quot;
                         which you can then deploy using kubectl apply -f filename.yml, or to deploy a model with default
                         settings, just click &quot;Deploy Workspace&quot;. This will deploy a workspace with default
                         settings. Learn more about deploying KAITO workspaces{" "}
-                        <VSCodeLink
+                        <a
+                            rel="noreferrer"
                             target="_blank"
                             href="https://github.com/Azure/kaito?tab=readme-ov-file#quick-start"
                         >
                             here.
-                        </VSCodeLink>
+                        </a>
                         <br />
                     </div>
 

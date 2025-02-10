@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as path from "path";
 import { dirSync } from "tmp";
-import { AuthenticationSession, authentication, window } from "vscode";
+import { AuthenticationSession, QuickPickItem, authentication, window } from "vscode";
 import {
     API,
     APIAvailable,
@@ -24,6 +24,7 @@ import { longRunning } from "./host";
 import { invokeKubectlCommand } from "./kubectl";
 import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
+import { ClusterFilter } from "./config";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -35,6 +36,8 @@ export interface KubernetesClusterInfo {
  */
 export type DefinedManagedCluster = azcs.ManagedCluster &
     Required<Pick<azcs.ManagedCluster, "id" | "name" | "location">>;
+
+export type ClusterQuickPickItem = QuickPickItem & { Cluster: ClusterFilter };
 
 export async function getKubernetesClusterInfo(
     sessionProvider: ReadyAzureSessionProvider,
@@ -380,6 +383,33 @@ function getClusterUserKubeconfig(credentialResults: azcs.CredentialResults, clu
 }
 
 export async function getManagedCluster(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<DefinedManagedCluster>> {
+    const client = getAksClient(sessionProvider, subscriptionId);
+    try {
+        const managedCluster = await client.managedClusters.get(resourceGroup, clusterName);
+        if (isDefinedManagedCluster(managedCluster)) {
+            return { succeeded: true, result: managedCluster };
+        }
+        return {
+            succeeded: false,
+            error: `Failed to retrieve Cluster ${clusterName}`,
+        };
+    } catch (e) {
+        return { succeeded: false, error: `Failed to retrieve cluster ${clusterName}: ${e}` };
+    }
+}
+
+export enum SelectionType {
+    Filtered,
+    All,
+    AllIfNoFilters,
+}
+
+export async function getAllManagedCluster(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: string,

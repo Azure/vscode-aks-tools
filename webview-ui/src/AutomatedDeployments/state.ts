@@ -24,7 +24,9 @@ export type EventDef = {
 export type AutomatedDeploymentsState = {
     status: Status;
 
-    repos: string[];
+    githubOwner: Validatable<string>;
+    githubRepos: string[];
+    githubBranches: Validatable<string[]>;
 
     //Reference Data
     //azureReferenceData: AzureReferenceData;
@@ -58,7 +60,9 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         //Initalize all the values in AutomatedDeploymentsState
         status: "Editing",
 
-        repos: initialState.repos,
+        githubOwner: unset(),
+        githubRepos: initialState.repos,
+        githubBranches: unset(),
 
         resourceGroups: unset(),
         subscriptions: unset(),
@@ -83,7 +87,11 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         // This handler updates the state when a message from the extension
         getGitHubReposResponse: (state, msg) => ({
             ...state,
-            repos: msg.repos,
+            githubRepos: msg.repos,
+        }),
+        getGitHubBranchesResponse: (state, branches) => ({
+            ...state,
+            githubBranches: Array.isArray(branches) ? valid(branches) : missing("GitHub branches are missing."),
         }),
         getSubscriptionsResponse: (state, subs) => ({
             ...state,
@@ -139,6 +147,7 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
 
 export const vscode = getWebviewMessageContext<"automatedDeployments">({
     getGitHubReposRequest: null,
+    getGitHubBranchesRequest: null,
     getSubscriptionsRequest: null,
     createWorkflowRequest: null,
     getResourceGroupsRequest: null,
