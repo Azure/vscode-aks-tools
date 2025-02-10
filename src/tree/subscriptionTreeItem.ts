@@ -19,6 +19,7 @@ import {
 } from "../commands/utils/azureResources";
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { getFilteredClusters } from "../commands/utils/config";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -97,10 +98,10 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         }
 
         const managedClusters = clusterAndFleetResourcesPromise.result.filter((resource) =>
-            resource.type.includes(clusterResourceType),
+            resource.type.includes(clusterResourceType.toLowerCase()),
         );
         const fleetsResources = clusterAndFleetResourcesPromise.result.filter((resource) =>
-            resource.type.includes(fleetResourceType),
+            resource.type.includes(fleetResourceType.toLowerCase()),
         );
 
         return { clusterResources: managedClusters, fleetResources: fleetsResources };
@@ -141,18 +142,37 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         // remove clusters that are members of fleets
         clusterResources = clusterResources.filter((r) => !clusterToMemberMap.has(r.id.toLowerCase()));
 
+        // create tree nodes for filtered clusters and fleets
+        const filteredClusters = getFilteredClusters();
+
         const fleetTreeNodes = new Map<string, FleetTreeNode>();
         const clusterTreeItems = new Map<string, AzExtTreeItem>();
         fleetResources.concat(clusterResources).forEach((r) => {
-            if (r.type?.toLocaleLowerCase() === "microsoft.containerservice/fleets") {
+            if (r.type?.toLocaleLowerCase() === fleetResourceType.toLowerCase()) {
                 const fleetTreeItem = createFleetTreeNode(this, this.subscriptionId, r);
                 fleetTreeItem.addCluster(fleetToMembersMap.get(r.id) || []);
                 fleetTreeNodes.set(r.id, fleetTreeItem);
                 return fleetTreeItem;
-            } else if (r.type?.toLocaleLowerCase() === "microsoft.containerservice/managedclusters") {
-                const cluster = createClusterTreeNode(this, this.subscriptionId, r);
-                clusterTreeItems.set(r.id, cluster);
-                return clusterTreeItems;
+            } else if (r.type?.toLocaleLowerCase() === clusterResourceType.toLowerCase()) {
+                // Check if the subscription is in the filter for SeelctedClustersFilter
+                const isSubIdExistInClusterFilter = filteredClusters.some(
+                    (filter) => filter.subscriptionId === this.subscriptionId,
+                );
+
+                if (isSubIdExistInClusterFilter) {
+                    const matchedCluster = filteredClusters.find(
+                        (filter) => filter.clusterName === r.name
+                    );
+                    if (matchedCluster) {
+                        const cluster = createClusterTreeNode(this, this.subscriptionId, r);
+                        clusterTreeItems.set(r.id, cluster);
+                        return clusterTreeItems;
+                    }
+                } else {
+                    const cluster = createClusterTreeNode(this, this.subscriptionId, r);
+                    clusterTreeItems.set(r.id, cluster);
+                    return clusterTreeItems;
+                }
             } else {
                 window.showErrorMessage(`unexpected type ${r.type} in resources list`);
             }
