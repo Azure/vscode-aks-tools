@@ -6,7 +6,6 @@ import { GenericResource, ResourceManagementClient } from "@azure/arm-resources"
 import { RestError } from "@azure/storage-blob";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
-import kaitoSupporterModel from "../../resources/kaitollmconfig/kaitollmconfig.json";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import {
     getAksClient,
@@ -22,12 +21,7 @@ import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { createFederatedCredential, getIdentity } from "../commands/utils/managedServiceIdentity";
 import { createRoleAssignment } from "../commands/utils/roleAssignments";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
-import {
-    InitialState,
-    ModelDetails,
-    ToVsCodeMsgDef,
-    ToWebViewMsgDef,
-} from "../webview-contract/webviewDefinitions/kaito";
+import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaito";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { isPodReady, getKaitoPods } from "./utilities/KaitoHelpers";
@@ -39,7 +33,6 @@ export class KaitoPanel extends BasePanel<"kaito"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kaito", {
             kaitoInstallProgressUpdate: null,
-            getLLMModelsResponse: null,
             getWorkspaceResponse: null,
         });
     }
@@ -87,9 +80,7 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
     getTelemetryDefinition(): TelemetryDefinition<"kaito"> {
         return {
             installKaitoRequest: true,
-            getLLMModelsRequest: true,
             generateWorkspaceRequest: true,
-            deployWorkspace: true,
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
@@ -97,42 +88,14 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             installKaitoRequest: () => {
                 this.handleKaitoInstallation(webview);
             },
-            getLLMModelsRequest: () => {
-                this.handleLLMModelsRequest(webview);
-            },
             generateWorkspaceRequest: () => {
                 this.handleGenerateWorkspaceRequest();
             },
-            deployWorkspace: () => {
-                this.handleDeployWorkspaceRequest(webview);
-            },
         };
-    }
-    private async handleDeployWorkspaceRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        // deploy workspace CRD
-        webview.postGetWorkspaceResponse({
-            workspace: {
-                workspace: "workspace CRD yaml",
-            },
-        });
     }
 
     private async handleGenerateWorkspaceRequest() {
         vscode.commands.executeCommand("aks.aksKaitoCreateCRD", this.newtarget);
-    }
-    private async handleLLMModelsRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        // get supported llm models from static config
-        webview.postGetLLMModelsResponse({
-            models: [
-                {
-                    family: "family",
-                    modelName: "modelName",
-                    minimumGpu: 1,
-                    kaitoVersion: "v1.0",
-                    modelSource: "modelSource",
-                },
-            ],
-        });
     }
 
     private async handleKaitoInstallation(webview: MessageSink<ToWebViewMsgDef>) {
@@ -149,7 +112,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 event: 3,
                 errorMessage:
                     "KAITO cannot be installed on automatic clusters. Please try installing KAITO on a standard cluster.",
-                models: [],
             });
             return;
         }
@@ -213,7 +175,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                     operationDescription: "Installing Federated Credentials Failed",
                     event: 3,
                     errorMessage: errorMessage,
-                    models: [],
                 });
                 return;
             }
@@ -223,7 +184,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 operationDescription: "Installing KAITO succeeded",
                 event: 4,
                 errorMessage: undefined,
-                models: listKaitoSupportedModels(),
             });
         } catch (ex) {
             vscode.window.showErrorMessage(
@@ -256,7 +216,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 operationDescription: "Installing KAITO",
                 event: 1,
                 errorMessage: undefined,
-                models: [],
             });
             poller.onProgress((state) => {
                 if (state.status === "succeeded") {
@@ -264,14 +223,12 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                         operationDescription: "KAITO Federated Credentials and role Assignments",
                         event: 1,
                         errorMessage: undefined,
-                        models: [],
                     });
                 } else if (state.status === "failed") {
                     webview.postKaitoInstallProgressUpdate({
                         operationDescription: "Installing KAITO failed",
                         event: 3,
                         errorMessage: state.error?.message,
-                        models: [],
                     });
                 }
             });
@@ -306,7 +263,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 operationDescription: "Installing KAITO failed",
                 event: 3,
                 errorMessage: ex instanceof Error ? ex.message : String(ex),
-                models: [],
             });
 
             return { succeeded: false, error: ex instanceof Error ? ex.message : String(ex) };
@@ -426,7 +382,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
                 operationDescription: "Installing KAITO",
                 event: 3,
                 errorMessage: "Failed to register feature",
-                models: [],
             });
             return;
         }
@@ -483,7 +438,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         );
 
         if (failed(result)) {
-            // vscode.window.showErrorMessage(`Error creating federated credentials: ${result.error}`);
             return { succeeded: false, error: result.error };
         } else {
             return { succeeded: true, result: "Federated credentials created successfully" };
@@ -525,11 +479,4 @@ function isInvalidTemplateDeploymentError(ex: unknown): ex is InvalidTemplateDep
 
 function isRestError(ex: unknown): ex is RestError {
     return typeof ex === "object" && ex !== null && ex.constructor.name === "RestError";
-}
-
-function listKaitoSupportedModels(): ModelDetails[] {
-    return kaitoSupporterModel.modelDetails.map((model) => ({
-        ...model,
-        minimumGpu: Number(model.minimumGpu),
-    }));
 }
