@@ -111,7 +111,7 @@ async function checkAndAuthenticateWithGitHub(
 ): Promise<string | undefined> {
     try {
         const parameters: GitHubOAuthCallRequest = {
-            redirectUrl: "vscode://ms-kubernetes-tools.vscode-aks-tools/callback", //After GitHub redirects to DevHub with token, DevHub will redirect the user back to the extension. Causing the flow to continue. 
+            redirectUrl: "vscode://ms-kubernetes-tools.vscode-aks-tools/callback", //After GitHub redirects to DevHub with token, DevHub will redirect the user back to the extension. Causing the flow to continue.
         };
         const properOptionsWithCallback: GitHubOAuthOptionalParams = { parameters };
         client.listGitHubOAuth(location, properOptionsWithCallback);
