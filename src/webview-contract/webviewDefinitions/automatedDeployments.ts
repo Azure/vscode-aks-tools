@@ -16,20 +16,25 @@ export interface ResourceGroup {
     location: string;
 }
 
+export type AcrKey = {
+    acrName: string;
+};
+
 // Define messages sent from the webview to the VS Code extension
 export type ToVsCodeMsgDef = {
     getGitHubReposRequest: void;
     getSubscriptionsRequest: void;
     createWorkflowRequest: void;
     getResourceGroupsRequest: void;
+    getAcrsRequest: string;
 };
 
 // Define messages sent from the VS Code extension to the webview
 export type ToWebViewMsgDef = {
     getGitHubReposResponse: { repos: string[] };
     getSubscriptionsResponse: Subscription[];
-    //getAcrsResponse: string[];
     getResourceGroupsResponse: DefinedResourceGroup[];
+    getAcrsResponse: { acrs: AcrKey[] };
     getWorkflowCreationResponse: string;
 };
 
