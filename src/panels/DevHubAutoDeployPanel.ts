@@ -358,21 +358,6 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     }
 }
 
-async function getRepositoryNames(octokit: Octokit): Promise<string[]> {
-    try {
-        // Fetch the list of repositories for the authenticated user
-        const response = await octokit.repos.listForAuthenticatedUser({});
-
-        // Extract repository names
-        const repoNames = response.data.map((repo) => repo.name);
-
-        return repoNames;
-    } catch (error) {
-        console.error("Error fetching repositories:", error);
-        throw error; // Re-throw the error for upstream handling
-    }
-}
-
 async function createNewAcr(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
