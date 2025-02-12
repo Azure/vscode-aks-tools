@@ -25,6 +25,7 @@ export function getAutomatedDeploymentScenarios() {
                 webview.postGetGitHubBranchesResponse({ branches: ["branch1", "branch2", "bestBranch"] });
             },
             getAcrsRequest: () => {
+                console.log("Getting acrs with getAcrsRequest");
                 webview.postGetAcrsResponse({ acrs: [{ acrName: "acrName" }, { acrName: "daBestAcr" }] });
             },
             getSubscriptionsRequest: () => {
