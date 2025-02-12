@@ -7,7 +7,7 @@ import { getExtension } from "../utils/host";
 import { longRunning } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { AksClusterAndFleet, getFilteredClusters, setFilteredClusters } from "./config";
-import { getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
+import { clusterResourceType, getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -43,7 +43,7 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         }
         clusterList = aksClusters.result.filter(
             // only keep clusters for the cluster filter (remove fleets from the list)
-            (r) => r.type.toLowerCase() === "microsoft.containerservice/managedclusters",
+            (r) => r.type.toLowerCase() === clusterResourceType.toLowerCase(),
         );
     });
 
@@ -51,12 +51,12 @@ export default async function aksClusterFilter(_context: IActionContext, target:
 
     const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster: AksClusterAndFleet) => {
         return {
-            label: cluster.name || "",
+            label: cluster.name,
             description: cluster.name,
             picked: filteredClusters.some((filtered) => filtered.clusterName === cluster.name),
             Cluster: {
-                clusterName: cluster.name || "",
-                subscriptionId: cluster.subscriptionId || "",
+                clusterName: cluster.name,
+                subscriptionId: cluster.subscriptionId,
             },
         };
     });

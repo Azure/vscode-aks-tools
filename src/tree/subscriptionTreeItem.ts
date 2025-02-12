@@ -36,7 +36,7 @@ export function isSubscriptionTreeNode(node: unknown): node is SubscriptionTreeN
     return node instanceof SubscriptionTreeItem;
 }
 
-export function createSubscriptionTreeItem( // create subscription node
+export function createSubscriptionTreeItem(
     parent: AzExtParentTreeItem,
     sessionProvider: ReadyAzureSessionProvider,
     subscription: ISubscriptionContext,
@@ -167,7 +167,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
                 fleetTreeNodes.set(r.id, fleetTreeItem);
                 return fleetTreeItem;
             } else if (r.type?.toLocaleLowerCase() === clusterResourceType.toLowerCase()) {
-                // Check if the subscription is in the filter for SelctedClustersFilter
+                // Check if the subscription is in the filter for SelectedClustersFilter
                 const isSubIdExistInClusterFilter = filteredClusters.some(
                     (filter) => filter.subscriptionId === this.subscriptionId,
                 );
