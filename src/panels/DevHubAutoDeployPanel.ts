@@ -22,6 +22,10 @@ import { getResourceManagementClient } from "../commands/utils/arm";
 import * as msGraph from "../commands/utils/graph";
 import { getAuthorizationManagementClient } from "../commands/utils/arm";
 import { getManagedCluster } from "../commands/utils/clusters";
+import { AuthorizationManagementClient, RoleAssignment } from "@azure/arm-authorization";
+
+const acrPullRoleDefinitionId = "7f951dda-4ed3-4680-a7ca-43fe172d538d"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/containers
+const azureContributorRole = "b24988ac-6180-42a0-ab88-20f7382dd24c"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 
 export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments"> {
     constructor(extensionUri: vscode.Uri) {
@@ -76,8 +80,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
             createWorkflowRequest: () => this.handleCreateWorkflowRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
-            getAcrsRequest: (subscriptionId, acrResourceGroup) =>
-                this.handleGetAcrsRequest(subscriptionId, acrResourceGroup, webview),
+            getAcrsRequest: (msg) => this.handleGetAcrsRequest(msg.subscriptionId, msg.acrResourceGroup, webview),
         };
     }
 
@@ -157,9 +160,9 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
 
         //---Run Neccesary Checks prior to making the call to DevHub to create a workflow ----
 
-        //Check if new resource group must be created
+        //Check if new resource group must be created //TODO
 
-        //Check for isNewNamespace, to see if new namespace must be created.
+        //Check for isNewNamespace, to see if new namespace must be created. //TODO
 
         //Create ACR if required
         //ACR will be created based off user input for naming and resource group
@@ -183,7 +186,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         //Create a New App Registration representing the workflow
         const newApp = await msGraph.createApplication(this.graphClient, generateRandomWorkflowName());
         if (failed(newApp)) {
-            console.error("Error creating new application:", newApp.error);
+            console.error("Error creating new App Registration for DevHub:", newApp.error);
             return;
         }
         console.log("New App Registration created:", newApp.result);
@@ -191,10 +194,10 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         //Create Service Principal for App Registration (Enterprise Application)
         const newServicePrincipal = await msGraph.createServicePrincipal(this.graphClient, newApp.result.appId);
         if (failed(newServicePrincipal)) {
-            console.error("Error creating new service principal:", newServicePrincipal.error);
+            console.error("Error creating new service principal for DevHub Workflow:", newServicePrincipal.error);
             return;
         }
-        console.log("New Service Principal created:", newServicePrincipal.result);
+        console.log("New Service Principal Created:", newServicePrincipal.result);
 
         //Add Federated Credentials for GitHub repo in App Registration
         const gitFedCredResp = await msGraph.createGitHubActionFederatedIdentityCredential(
@@ -205,15 +208,14 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             branch,
         );
         if (failed(gitFedCredResp)) {
-            console.error("Error creating GitHub federated credential:", gitFedCredResp.error);
+            console.error("Error creating GitHub Federated Credential:", gitFedCredResp.error);
             return;
         }
         console.log("GitHub Federated Credential created:", gitFedCredResp.result);
 
-        //doc for contributor role: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
-        const azureContributorRole = "b24988ac-6180-42a0-ab88-20f7382dd24c";
-
         const authManagmentClient = getAuthorizationManagementClient(this.sessionProvider, subscriptionId);
+
+        //Represent ArmID for ACR and Cluster
         const acrScope = roleAssignmentsUtil.getScopeForAcr(subscriptionId, acrResourceGroup, acrName);
         const clusterScope = roleAssignmentsUtil.getScopeForCluster(subscriptionId, clusterResourceGroup, clusterName);
 
@@ -245,10 +247,9 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             console.error("Error creating role assignment:", clusterRoleCreation.error);
             return;
         }
-        console.log("Role assignment created:", clusterRoleCreation.result);
+        console.log("Collab Role assignment created:", clusterRoleCreation.result);
 
-        /////////////TODO: Case where privleges already provided for ACR & Cluster/////////////
-
+        //Get Cluster Principal ID for Role Assignment Check
         const clusterPrincipalId = await getClusterPrincipalId(
             this.sessionProvider,
             subscriptionId,
@@ -261,30 +262,26 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         }
 
         //Providing Cluster ACR Pull Role
-        //https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/containers
-        const acrPullRoleDefinitionId = "7f951dda-4ed3-4680-a7ca-43fe172d538d";
-
-        const acrPull = await roleAssignmentsUtil.createRoleAssignment(
+        const acrPullResp = await verifyAndAssignAcrPullRole(
             authManagmentClient,
-            subscriptionId,
             clusterPrincipalId.result,
-            acrPullRoleDefinitionId,
+            acrResourceGroup,
+            acrName,
+            subscriptionId,
             acrScope,
         );
-        if (failed(acrPull)) {
-            console.error("Error creating role assignment:", acrPull.error);
+        if (failed(acrPullResp)) {
+            console.error("Error verifying and assigning ACR pull role:", acrPullResp.error);
             return;
         }
 
         //---Run Neccesary Checks prior to making the call to DevHub to create a workflow ----
 
+        ////////////TODO: Pass in neccesary parameters for workflow creation
         const prUrl = await launchDevHubWorkflow(this.devHubClient);
         if (prUrl !== undefined) {
             vscode.window.showInformationMessage(`Workflow created successfully. PR: ${prUrl}`);
-        }
-
-        if (prUrl !== undefined) {
-            webview.postGetWorkflowCreationResponse(prUrl); //Will always return success boolean alongside prUrl
+            webview.postGetWorkflowCreationResponse(prUrl);
         }
     }
 }
@@ -332,11 +329,6 @@ async function createNewAcr(
         vscode.window.showErrorMessage(acrResp.error);
     }
     return acrResp.succeeded;
-}
-
-function verifyAndAddAcrPull(): boolean {
-    //Check if role assignments are correct
-    //If not, assign role
 }
 
 //Current Manual Implementation
@@ -489,4 +481,52 @@ async function getClusterPrincipalId(
         succeeded: false,
         error: "Cluster has no managed identity or service principal",
     };
+}
+
+async function verifyAndAssignAcrPullRole(
+    authManagmentClient: AuthorizationManagementClient,
+    clusterPrincipalId: string,
+    acrResourceGroup: string,
+    acrName: string,
+    subscriptionId: string,
+    acrScope: string,
+): Promise<Errorable<Promise<void>>> {
+    //Check for all role assignments for ACR
+    const acrRoleAssignmentsResult = await roleAssignmentsUtil.getPrincipalRoleAssignmentsForAcr(
+        authManagmentClient,
+        clusterPrincipalId,
+        acrResourceGroup,
+        acrName,
+    );
+    if (failed(acrRoleAssignmentsResult)) {
+        console.error("Error getting ACR role assignments:", acrRoleAssignmentsResult.error);
+        return { succeeded: false, error: acrRoleAssignmentsResult.error };
+    }
+
+    const hasAcrPull = acrRoleAssignmentsResult.result.some(isAcrPull);
+
+    if (!hasAcrPull) {
+        const acrPull = await roleAssignmentsUtil.createRoleAssignment(
+            authManagmentClient,
+            subscriptionId,
+            clusterPrincipalId,
+            acrPullRoleDefinitionId,
+            acrScope,
+        );
+        if (failed(acrPull)) {
+            console.error("Error creating role ACR Pull role assignment:", acrPull.error);
+            return { succeeded: false, error: acrPull.error };
+        }
+    }
+    return { succeeded: true, result: Promise.resolve() };
+}
+
+//From Attach ACR to Cluster Page
+function isAcrPull(roleAssignment: RoleAssignment): boolean {
+    if (!roleAssignment.roleDefinitionId) {
+        return false;
+    }
+
+    const roleDefinitionName = roleAssignment.roleDefinitionId.split("/").pop();
+    return roleDefinitionName === acrPullRoleDefinitionId;
 }

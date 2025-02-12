@@ -26,7 +26,7 @@ export type ToVsCodeMsgDef = {
     getSubscriptionsRequest: void;
     createWorkflowRequest: void;
     getResourceGroupsRequest: void;
-    getAcrsRequest: string;
+    getAcrsRequest: { subscriptionId: string; acrResourceGroup: string };
 };
 
 // Define messages sent from the VS Code extension to the webview

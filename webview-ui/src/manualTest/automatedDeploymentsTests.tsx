@@ -20,6 +20,9 @@ export function getAutomatedDeploymentScenarios() {
                 // implementation here
                 webview.postGetGitHubReposResponse({ repos: initialState.repos });
             },
+            getAcrsRequest: () => {
+                webview.postGetAcrsResponse({ acrs: [{ acrName: "acrName" }, { acrName: "daBestAcr" }] });
+            },
             getSubscriptionsRequest: () => {
                 // implementation here
             },
