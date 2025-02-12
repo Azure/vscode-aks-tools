@@ -17,9 +17,7 @@ export interface WorkspaceCRD {
 
 export type ToVsCodeMsgDef = {
     installKaitoRequest: void; // from webview when install kaito button is clicked
-    getLLMModelsRequest: void; // from webview before llm model page loads
     generateWorkspaceRequest: void; // from webview when generate workspace button is clicked
-    deployWorkspace: void; // from webview after deploy workspace button is clicked
 };
 
 export enum ProgressEventType {
@@ -35,11 +33,7 @@ export type ToWebViewMsgDef = {
         operationDescription: string;
         event: ProgressEventType;
         errorMessage: string | undefined;
-        models: ModelDetails[];
     }; // to webview during kaito installation
-    getLLMModelsResponse: {
-        models: Array<ModelDetails>; // map of family, model details
-    }; // to webview after llm models are fetched
     getWorkspaceResponse: {
         workspace: WorkspaceCRD;
     }; // to webview after workspace CRD is generated

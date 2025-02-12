@@ -11,7 +11,7 @@ import { assetUri } from "../assets";
 import { failed } from "../commands/utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { createSubscriptionTreeItem } from "./subscriptionTreeItem";
-import { getFilteredSubscriptionsChangeEvent } from "../commands/utils/config";
+import { getFilteredClustersChangeEvent, getFilteredSubscriptionsChangeEvent } from "../commands/utils/config";
 import { getCredential, getEnvironment } from "../auth/azureAuth";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import { Subscription } from "@azure/arm-resources-subscriptions";
@@ -33,8 +33,12 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
 
         const onStatusChange = this.sessionProvider.signInStatusChangeEvent;
         const onFilteredSubscriptionsChange = getFilteredSubscriptionsChangeEvent();
+        const onFilteredClustersChange = getFilteredClustersChangeEvent();
         registerEvent("azureAccountTreeItem.onSignInStatusChange", onStatusChange, (context) => this.refresh(context));
         registerEvent("azureAccountTreeItem.onSubscriptionFilterChange", onFilteredSubscriptionsChange, (context) =>
+            this.refresh(context),
+        );
+        registerEvent("azureAccountTreeItem.onClusterFilterChange", onFilteredClustersChange, (context) =>
             this.refresh(context),
         );
     }

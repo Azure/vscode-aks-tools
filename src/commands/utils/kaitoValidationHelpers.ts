@@ -85,7 +85,7 @@ export async function getKaitoInstallationStatus(
 
     if (filterKaitoPodNames.result.length === 0) {
         vscode.window.showWarningMessage(
-            `Please install KAITO for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when kaito is installed. Skipping generation.`,
+            `Please install KAITO for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when KAITO is installed. Skipping generation.`,
         );
         return status;
     }

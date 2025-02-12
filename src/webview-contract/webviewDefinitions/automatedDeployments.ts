@@ -18,21 +18,36 @@ export interface ResourceGroup {
 
 export type AcrKey = {
     acrName: string;
+}
+
+export interface BranchParams {
+    repoOwner: string;
+    repo: string;
+}
+
+export type ClusterKey = {
+    subscriptionId: string;
+    resourceGroup: string;
+    clusterName: string;
 };
 
 // Define messages sent from the webview to the VS Code extension
 export type ToVsCodeMsgDef = {
     getGitHubReposRequest: void;
+    getGitHubBranchesRequest: BranchParams;
     getSubscriptionsRequest: void;
     createWorkflowRequest: void;
     getResourceGroupsRequest: void;
     getAcrsRequest: { subscriptionId: string; acrResourceGroup: string };
+    getNamespacesRequest: ClusterKey;
 };
 
 // Define messages sent from the VS Code extension to the webview
 export type ToWebViewMsgDef = {
     getGitHubReposResponse: { repos: string[] };
+    getGitHubBranchesResponse: { branches: string[] };
     getSubscriptionsResponse: Subscription[];
+    getNamespacesResponse: string[];
     getResourceGroupsResponse: DefinedResourceGroup[];
     getAcrsResponse: { acrs: AcrKey[] };
     getWorkflowCreationResponse: string;

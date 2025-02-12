@@ -123,3 +123,7 @@
 .installBlurb {
     margin: 0.5rem 0rem 0.06rem 0rem;
 }
+.errorMessage {
+    font-weight: 400;
+    width: 90%;
+}

@@ -1,6 +1,6 @@
 import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
-import { Validatable, unset, valid } from "../utilities/validation";
+import { Validatable, unset, valid, missing } from "../utilities/validation";
 import { NewOrExisting, Subscription } from "../../../src/webview-contract/webviewDefinitions/draft/types";
 import { AcrKey } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments";
 import { DefinedResourceGroup } from "../../../src/commands/utils/resourceGroups";
@@ -25,13 +25,16 @@ export type EventDef = {
 export type AutomatedDeploymentsState = {
     status: Status;
 
-    repos: string[];
+    githubOwner: Validatable<string>;
+    githubRepos: string[];
+    githubBranches: Validatable<string[]>;
 
     //Reference Data
     //azureReferenceData: AzureReferenceData;
     resourceGroups: Validatable<DefinedResourceGroup[]>;
     subscriptions: Validatable<Subscription[]>;
     acrs: Validatable<AcrKey[]>;
+    namespaces: Validatable<string[]>;
 
     // Properties waiting to be automatically selected when data is available
     //pendingSelection: InitialSelection;
@@ -63,11 +66,14 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         //Initalize all the values in AutomatedDeploymentsState
         status: "Editing",
 
-        repos: initialState.repos,
+        githubOwner: unset(),
+        githubRepos: initialState.repos,
+        githubBranches: unset(),
 
         resourceGroups: unset(),
         subscriptions: unset(),
         acrs: unset(),
+        namespaces: unset(),
 
         //Selected Items
         selectedWorkflowName: unset(),
@@ -92,7 +98,11 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         // This handler updates the state when a message from the extension
         getGitHubReposResponse: (state, msg) => ({
             ...state,
-            repos: msg.repos,
+            githubRepos: msg.repos,
+        }),
+        getGitHubBranchesResponse: (state, branches) => ({
+            ...state,
+            githubBranches: Array.isArray(branches) ? valid(branches) : missing("GitHub branches are missing."),
         }),
         getSubscriptionsResponse: (state, subs) => ({
             ...state,
@@ -105,6 +115,12 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         getAcrsResponse: (state, msg) => ({
             ...state,
             acrs: valid(msg.acrs),
+        }),
+        getNamespacesResponse: (state, namespaces) => ({
+            ...state,
+            namespaces: Array.isArray(namespaces)
+                ? valid(namespaces)
+                : missing("Namespaces not in correct type or missing"),
         }),
         getWorkflowCreationResponse: (state, prUrl) => ({
             ...state,
@@ -159,8 +175,10 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
 
 export const vscode = getWebviewMessageContext<"automatedDeployments">({
     getGitHubReposRequest: null,
+    getGitHubBranchesRequest: null,
     getSubscriptionsRequest: null,
     createWorkflowRequest: null,
     getResourceGroupsRequest: null,
     getAcrsRequest: null,
+    getNamespacesRequest: null,
 });

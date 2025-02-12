@@ -12,6 +12,7 @@ import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@az
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { Octokit } from "@octokit/rest";
 import { ToWebViewMsgDef, ResourceGroup, AcrKey } from "../webview-contract/webviewDefinitions/automatedDeployments";
+import { getGitHubRepos, getGitHubBranchesForRepo } from "../commands/utils/octokitHelper";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import * as roleAssignmentsUtil from "../../src/commands/utils/roleAssignments";
 import { Errorable, failed } from "../commands/utils/errorable";
@@ -23,6 +24,8 @@ import * as msGraph from "../commands/utils/graph";
 import { getAuthorizationManagementClient } from "../commands/utils/arm";
 import { getManagedCluster } from "../commands/utils/clusters";
 import { AuthorizationManagementClient, RoleAssignment } from "@azure/arm-authorization";
+import { getClusterNamespaces, createClusterNamespace } from "../commands/utils/clusters";
+import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
 
 const acrPullRoleDefinitionId = "7f951dda-4ed3-4680-a7ca-43fe172d538d"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/containers
 const azureContributorRole = "b24988ac-6180-42a0-ab88-20f7382dd24c"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
@@ -32,10 +35,12 @@ export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments">
         // Call the BasePanel constructor with the required contentId and command keys
         super(extensionUri, "automatedDeployments", {
             getGitHubReposResponse: null,
+            getGitHubBranchesResponse: null,
             getSubscriptionsResponse: null,
             getWorkflowCreationResponse: null,
             getResourceGroupsResponse: null,
             getAcrsResponse: null,
+            getNamespacesResponse: null,
         });
     }
 }
@@ -48,6 +53,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         readonly devHubClient: DeveloperHubServiceClient,
         readonly octokitClient: Octokit,
         readonly graphClient: GraphClient,
+        readonly kubectl: APIAvailable<KubectlV1>,
     ) {
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
     }
@@ -65,10 +71,12 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     getTelemetryDefinition(): TelemetryDefinition<"automatedDeployments"> {
         return {
             getGitHubReposRequest: false,
+            getGitHubBranchesRequest: false,
             getSubscriptionsRequest: false,
             createWorkflowRequest: false,
             getResourceGroupsRequest: false,
             getAcrsRequest: false,
+            getNamespacesRequest: false,
         };
     }
 
@@ -77,18 +85,38 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     ): MessageHandler<ToVsCodeMsgDef<"automatedDeployments">> {
         return {
             getGitHubReposRequest: () => this.handleGetGitHubReposRequest(webview),
+            getGitHubBranchesRequest: (args) => this.handleGetGitHubBranchesRequest(webview, args.repoOwner, args.repo),
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
             createWorkflowRequest: () => this.handleCreateWorkflowRequest(webview),
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
             getAcrsRequest: (msg) => this.handleGetAcrsRequest(msg.subscriptionId, msg.acrResourceGroup, webview),
+            getNamespacesRequest: (key) =>
+                this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
         };
     }
 
     private async handleGetGitHubReposRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const repoNames = await getRepositoryNames(this.octokitClient);
+        const reposResp = await getGitHubRepos(this.octokitClient);
+        if (failed(reposResp)) {
+            vscode.window.showErrorMessage(reposResp.error);
+            return;
+        }
 
-        // Send the list of repositories to the webview
-        webview.postGetGitHubReposResponse({ repos: repoNames });
+        webview.postGetGitHubReposResponse({ repos: reposResp.result });
+    }
+
+    private async handleGetGitHubBranchesRequest(
+        webview: MessageSink<ToWebViewMsgDef>,
+        repoOwner: string,
+        repo: string,
+    ) {
+        const branchesResp = await getGitHubBranchesForRepo(this.octokitClient, repoOwner, repo);
+        if (failed(branchesResp)) {
+            vscode.window.showErrorMessage(branchesResp.error);
+            return;
+        }
+
+        webview.postGetGitHubBranchesResponse({ branches: branchesResp.result });
     }
 
     private async handleGetSubscriptionsRequest(webview: MessageSink<ToWebViewMsgDef>) {
@@ -144,6 +172,27 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         webview.postGetAcrsResponse({ acrs });
     }
 
+    private async handleGetNamespacesRequest(
+        subscriptionId: string,
+        resourceGroup: string,
+        clusterName: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        const namespacesResult = await getClusterNamespaces(
+            this.sessionProvider,
+            this.kubectl,
+            subscriptionId,
+            resourceGroup,
+            clusterName,
+        );
+        if (failed(namespacesResult)) {
+            vscode.window.showErrorMessage("Error fetching namespaces: ", namespacesResult.error);
+            return;
+        }
+
+        webview.postGetNamespacesResponse(namespacesResult.result);
+    }
+
     private async handleCreateWorkflowRequest(webview: MessageSink<ToWebViewMsgDef>) {
         //---Hardcoded values for testing purposes, will be replaced with webview input---
         const user = "ReinierCC";
@@ -162,7 +211,30 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
 
         //Check if new resource group must be created //TODO
 
-        //Check for isNewNamespace, to see if new namespace must be created. //TODO
+        //Check for isNewNamespace, to see if new namespace must be created.
+        const isNewNamespace = true; //Actual Value Provided Later PR //PlaceHolder
+        if (isNewNamespace) {
+            //Create New Namespace
+            const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a"; // These values will be provided to the fuction call from the webview
+            const resourceGroup = "rei-rg"; //PlaceHolder
+            const clusterName = "reiCluster"; //PlaceHolder
+            const namespace = "not-default"; //PlaceHolder
+            const namespaceCreationResp = await createClusterNamespace(
+                this.sessionProvider,
+                this.kubectl,
+                subscriptionId,
+                resourceGroup,
+                clusterName,
+                namespace,
+            );
+
+            if (failed(namespaceCreationResp)) {
+                console.log("Failed to create namespace: ", namespace, "Error: ", namespaceCreationResp.error);
+                vscode.window.showErrorMessage(`Failed to create namespace: ${namespace}`);
+                return;
+            }
+            vscode.window.showInformationMessage(namespaceCreationResp.result);
+        }
 
         //Create ACR if required
         //ACR will be created based off user input for naming and resource group
