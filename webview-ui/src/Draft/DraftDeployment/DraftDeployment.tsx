@@ -32,13 +32,7 @@ import { Lazy, map as lazyMap } from "../../utilities/lazy";
 import { ResourceSelector } from "../../components/ResourceSelector";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-import {
-    VSCodeButton,
-    VSCodeLink,
-    VSCodeRadio,
-    VSCodeRadioGroup,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
+import { VSCodeRadio, VSCodeRadioGroup, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { distinct } from "../../utilities/array";
 import { TextWithDropdown } from "../../components/TextWithDropdown";
@@ -443,12 +437,12 @@ export function DraftDeployment(initialState: InitialState) {
                         className={styles.control}
                     />
                     <div className={styles.controlSupplement}>
-                        <VSCodeButton appearance="icon" onClick={handleChooseLocationClick}>
+                        <button className="choose-location-button" onClick={handleChooseLocationClick}>
                             <span className={styles.iconButton}>
                                 <FontAwesomeIcon icon={faFolder} />
                                 &nbsp;Choose location
                             </span>
-                        </VSCodeButton>
+                        </button>
                     </div>
                     {hasMessage(state.selectedLocation) && (
                         <span className={styles.validationMessage}>
@@ -554,9 +548,9 @@ export function DraftDeployment(initialState: InitialState) {
                 </fieldset>
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
+                    <button type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
                         Create
-                    </VSCodeButton>
+                    </button>
                 </div>
 
                 {existingFiles.length > 0 && (
@@ -565,7 +559,7 @@ export function DraftDeployment(initialState: InitialState) {
                         <ul className={styles.existingFileList}>
                             {existingFiles.map((path, i) => (
                                 <li key={i}>
-                                    <VSCodeLink
+                                    <a
                                         href="#"
                                         onClick={(e) => {
                                             e.preventDefault();
@@ -573,7 +567,7 @@ export function DraftDeployment(initialState: InitialState) {
                                         }}
                                     >
                                         {path}
-                                    </VSCodeLink>
+                                    </a>
                                 </li>
                             ))}
                         </ul>
@@ -588,9 +582,9 @@ export function DraftDeployment(initialState: InitialState) {
 
                             <p>
                                 To generate a GitHub Action, you can run{" "}
-                                <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
+                                <a href="#" onClick={handleDraftWorkflowClick}>
                                     Automated Deployments: Create a GitHub workflow
-                                </VSCodeLink>
+                                </a>
                                 .
                             </p>
                         </div>

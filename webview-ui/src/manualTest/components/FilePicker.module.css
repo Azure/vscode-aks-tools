@@ -57,3 +57,7 @@ ul.nodeList > li > .item:hover {
     flex-direction: row;
     column-gap: 0.5rem;
 }
+
+.title {
+    margin: 0rem 0 0.5rem 0;
+}

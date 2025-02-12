@@ -1,4 +1,3 @@
-import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { KustomizeConfig } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
@@ -15,7 +14,7 @@ export function ErrorView(props: ErrorViewProps) {
         <>
             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
             AKS Periscope failed to run on &#39;{props.clusterName}&#39;. Please see the error below for more details.
-            <VSCodeDivider />
+            <hr />
             <h3>Periscope settings (from VS Code Configuration)</h3>
             <dl className={styles.settinglist}>
                 <dt>GitHub organisation (containing aks-periscope repo with Kustomize base)</dt>
@@ -30,7 +29,7 @@ export function ErrorView(props: ErrorViewProps) {
                 <dt>Release tag (for {props.config.repoOrg}/aks-periscope GitHub repo)</dt>
                 <dd>{props.config.releaseTag}</dd>
             </dl>
-            <VSCodeDivider />
+            <hr />
             <pre>{props.message}</pre>
         </>
     );

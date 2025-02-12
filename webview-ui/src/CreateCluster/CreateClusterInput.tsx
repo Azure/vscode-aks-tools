@@ -1,6 +1,6 @@
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
@@ -164,9 +164,9 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         )}
                     </VSCodeDropdown>
 
-                    <VSCodeButton className={styles.sideControl} onClick={() => setIsNewResourceGroupDialogShown(true)}>
+                    <button className={styles.sideControl} onClick={() => setIsNewResourceGroupDialogShown(true)}>
                         Create New
-                    </VSCodeButton>
+                    </button>
                     {hasMessage(existingResourceGroup) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
@@ -216,7 +216,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                 </div>
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit">Create</VSCodeButton>
+                    <button type="submit">Create</button>
                 </div>
             </form>
 

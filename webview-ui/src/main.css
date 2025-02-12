@@ -49,7 +49,7 @@ button:hover {
     cursor: pointer;
 }
 
-button:focus {
+button:focus-visible {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
@@ -74,14 +74,40 @@ button:disabled {
     cursor: pointer;
 }
 
+.secondary-button:disabled {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
 .secondary-button:hover:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    background-color: var(--vscode-button-hoverBackground);
+    background-color: var(--vscode-button-secondaryHoverBackground);
 }
 
 .secondary-button code {
     color: var(--vscode-textPreformat-foreground);
+}
+
+.icon-button,
+.choose-location-button {
+    color: inherit;
+    background: none;
+    padding: 0rem 0.3rem 0rem 0.3rem;
+    border-radius: 5px;
+}
+.icon-button:hover,
+.choose-location-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.choose-location-button {
+    margin-top: 0.1rem;
+    padding: 0.15rem 0.3rem 0.15rem 0.1rem;
+}
+
+.icon-button:disabled,
+.choose-location-button:disabled {
+    background: none;
 }
 
 blockquote {
@@ -95,7 +121,6 @@ hr {
     margin: 4px 0 4px 0;
 }
 
-input,
 input[type="text"] {
     height: calc(var(--input-height) * 1px);
     color: var(--input-foreground);
@@ -107,10 +132,29 @@ input[type="text"] {
     font-family: inherit;
 }
 
-option:hover {
-    color: var(--vscode-list-focusForeground);
+input[type="checkbox"] {
+    width: 18.25px;
+    height: 18.25px;
     cursor: pointer;
-    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+select {
+    height: calc(var(--input-height) * 1px);
+    color: var(--input-foreground);
+    background-color: var(--input-background);
+    border: 1px solid var(--input-border);
+    padding: 0px 0px 0px 4px;
+    box-sizing: border-box;
+    font-family: inherit;
+    border-radius: 2px;
+}
+
+select:hover {
+    cursor: pointer;
+}
+
+option {
+    font-size: var(--vscode-font-size);
 }
 
 option:focus {
