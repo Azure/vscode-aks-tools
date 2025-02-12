@@ -18,7 +18,7 @@ export interface ResourceGroup {
 
 export type AcrKey = {
     acrName: string;
-}
+};
 
 export interface BranchParams {
     repoOwner: string;
