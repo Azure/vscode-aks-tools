@@ -41,7 +41,10 @@ export default async function aksClusterFilter(_context: IActionContext, target:
             vscode.window.showErrorMessage(aksClusters.error);
             return;
         }
-        clusterList = aksClusters.result;
+        clusterList = aksClusters.result.filter(
+            // only keep clusters for the cluster filter (remove fleets from the list)
+            (r) => r.type.toLowerCase() === "microsoft.containerservice/managedclusters",
+        );
     });
 
     const filteredClusters = await getUniqueClusters();

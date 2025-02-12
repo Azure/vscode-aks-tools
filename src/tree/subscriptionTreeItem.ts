@@ -20,6 +20,7 @@ import {
 import { failed } from "../commands/utils/errorable";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getFilteredClusters } from "../commands/utils/config";
+import { parseResource } from "../azure-api-utils";
 
 // The de facto API of tree nodes that represent individual Azure subscriptions.
 // Tree items should implement this interface to maintain backward compatibility with previous versions of the extension.
@@ -119,8 +120,20 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
                 );
                 return null;
             }
-            fleetToMembersMap.set(f.id, members.result); // key - fleet.id, val: fleet.memberClusters list
-            return members.result;
+            // filter out members that do not satisfy the filter (so that they are not shown in the tree)
+            const membersAfterFilt = members.result.filter((m) => {
+                // for each member cluster of the fleet
+                const filteredClusters = getFilteredClusters();
+                return filteredClusters.some(
+                    // check if the member is one of the clusters in the filter
+                    (filter) =>
+                        filter.subscriptionId === this.subscriptionId &&
+                        filter.clusterName === parseResource(m.clusterResourceId).name,
+                );
+            });
+            // key - fleet.id, val: a list of all members of the fleet except the ones that do not satisfy the filter
+            fleetToMembersMap.set(f.id, membersAfterFilt);
+            return membersAfterFilt;
         });
         await Promise.all(memberPromises); // wait for all members to be fetched
 
@@ -154,7 +167,7 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
                 fleetTreeNodes.set(r.id, fleetTreeItem);
                 return fleetTreeItem;
             } else if (r.type?.toLocaleLowerCase() === clusterResourceType.toLowerCase()) {
-                // Check if the subscription is in the filter for SeelctedClustersFilter
+                // Check if the subscription is in the filter for SelctedClustersFilter
                 const isSubIdExistInClusterFilter = filteredClusters.some(
                     (filter) => filter.subscriptionId === this.subscriptionId,
                 );
