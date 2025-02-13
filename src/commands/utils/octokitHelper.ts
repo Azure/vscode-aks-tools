@@ -50,10 +50,8 @@ interface FlatTreeItem {
     type: "blob" | "tree";
 }
 
-export interface TreeNode {
+export interface TreeNode extends FlatTreeItem {
     name: string;
-    path: string;
-    type: "blob" | "tree";
     children: TreeNode[];
 }
 
@@ -70,15 +68,15 @@ export function buildTree(rawTree: RawTreeItem[]): TreeNode {
         const parts = item.path.split("/");
         let current = root;
 
-        parts.forEach((part, index) => {
+        parts.forEach((part) => {
             // Look for an existing child with this name.
             let child = current.children.find((child) => child.name === part);
             if (!child) {
                 // If we are at the last part, use the type from the item; otherwise, it's a folder.
                 child = {
                     name: part,
-                    path: `${current.path ? `${current.path}/` : ""}${part}`,
-                    type: index === parts.length - 1 ? item.type : "tree",
+                    path: [current.path, part].filter(Boolean).join("/"),
+                    type: item.type,
                     children: [],
                 };
                 current.children.push(child);
