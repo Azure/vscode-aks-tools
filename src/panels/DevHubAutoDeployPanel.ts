@@ -182,7 +182,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             return;
         }
 
-        const treeSha = branchData.commit.commit.tree.sha;
+        const treeSha = branchData?.commit?.commit?.tree?.sha;
         if (treeSha === undefined) {
             console.log("Failed to get tree sha in handleGetRepoTreeStructureRequest()");
             return;
@@ -192,7 +192,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             owner: owner,
             repo: repo,
             tree_sha: treeSha,
-            recursive: "1",
+            recursive: "1", // Recursive set to 1 to get all tree data, not just top layer. Reference Doc: https://github.com/octokit/plugin-rest-endpoint-methods.js/blob/main/docs/git/getTree.md
         });
         if (treeData === undefined) {
             console.log("Failed to get tree data in handleGetRepoTreeStructureRequest()");
