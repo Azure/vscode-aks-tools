@@ -1,6 +1,7 @@
 import { DefinedResourceGroup } from "../../commands/utils/resourceGroups";
 import { WebviewDefinition } from "../webviewTypes";
 import { Subscription } from "./draft/types";
+import { TreeNode } from "../../commands/utils/octokitHelper";
 
 // Define the initial state passed to the webview
 export interface InitialState {
@@ -21,6 +22,10 @@ export interface BranchParams {
     repo: string;
 }
 
+export interface RepoKey extends BranchParams {
+    branchName: string;
+}
+
 export type ClusterKey = {
     subscriptionId: string;
     resourceGroup: string;
@@ -35,6 +40,7 @@ export type ToVsCodeMsgDef = {
     createWorkflowRequest: void;
     getResourceGroupsRequest: void;
     getNamespacesRequest: ClusterKey;
+    getRepoTreeStructureRequest: RepoKey;
 };
 
 // Define messages sent from the VS Code extension to the webview
@@ -46,6 +52,7 @@ export type ToWebViewMsgDef = {
     //getAcrsResponse: string[];
     getResourceGroupsResponse: DefinedResourceGroup[];
     getWorkflowCreationResponse: string;
+    getRepoTreeStructureResponse: TreeNode;
 };
 
 // Combine the definitions into a single WebviewDefinition
