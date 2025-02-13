@@ -7,6 +7,7 @@ import {
 import { stateUpdater } from "../AutomatedDeployments/state";
 import { Scenario } from "../utilities/manualTest";
 import { AutomatedDeployments } from "../AutomatedDeployments/AutomatedDeployments";
+import { TreeNode } from "../../../src/commands/utils/octokitHelper";
 
 //Proper testing not yet implemented. Only serves as placeholder and way to load the page.
 export function getAutomatedDeploymentScenarios() {
@@ -36,6 +37,68 @@ export function getAutomatedDeploymentScenarios() {
             },
             getResourceGroupsRequest: () => {
                 // implementation here
+            },
+            getRepoTreeStructureRequest: () => {
+                console.log("Returning repo tree structure from getRepoTreeStructureRequest");
+                const genericTree: TreeNode = {
+                    name: "root",
+                    path: "",
+                    type: "tree",
+                    children: [
+                        {
+                            name: "Folder 1",
+                            path: "folder1",
+                            type: "tree",
+                            children: [
+                                {
+                                    name: "Subfolder A",
+                                    path: "folder1/subfolderA",
+                                    type: "tree",
+                                    children: [
+                                        {
+                                            name: "File 1.txt",
+                                            path: "folder1/subfolderA/file1.txt",
+                                            type: "blob",
+                                            children: [],
+                                        },
+                                        {
+                                            name: "File 2.txt",
+                                            path: "folder1/subfolderA/file2.txt",
+                                            type: "blob",
+                                            children: [],
+                                        },
+                                    ],
+                                },
+                                {
+                                    name: "File 3.txt",
+                                    path: "folder1/file3.txt",
+                                    type: "blob",
+                                    children: [],
+                                },
+                            ],
+                        },
+                        {
+                            name: "Folder 2",
+                            path: "folder2",
+                            type: "tree",
+                            children: [
+                                {
+                                    name: "File 4.txt",
+                                    path: "folder2/file4.txt",
+                                    type: "blob",
+                                    children: [],
+                                },
+                            ],
+                        },
+                        {
+                            name: "File 5.txt",
+                            path: "file5.txt",
+                            type: "blob",
+                            children: [],
+                        },
+                    ],
+                };
+                webview.postGetRepoTreeStructureResponse(genericTree);
             },
         };
     }

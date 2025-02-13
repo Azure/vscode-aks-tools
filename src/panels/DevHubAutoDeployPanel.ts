@@ -21,6 +21,7 @@ import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { Client as GraphClient } from "@microsoft/microsoft-graph-client";
 import { getClusterNamespaces, createClusterNamespace } from "../commands/utils/clusters";
 import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
+import * as octokitHelper from "../commands/utils/octokitHelper";
 
 export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments"> {
     constructor(extensionUri: vscode.Uri) {
@@ -32,6 +33,7 @@ export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments">
             getWorkflowCreationResponse: null,
             getResourceGroupsResponse: null,
             getNamespacesResponse: null,
+            getRepoTreeStructureResponse: null,
         });
     }
 }
@@ -64,6 +66,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             createWorkflowRequest: false,
             getResourceGroupsRequest: false,
             getNamespacesRequest: false,
+            getRepoTreeStructureRequest: false,
         };
     }
 
@@ -78,6 +81,8 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
             getNamespacesRequest: (key) =>
                 this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
+            getRepoTreeStructureRequest: (key) =>
+                this.handleGetRepoTreeStructureRequest(key.repoOwner, key.repo, key.branchName, webview),
         };
     }
 
@@ -159,6 +164,44 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         }
 
         webview.postGetNamespacesResponse(namespacesResult.result);
+    }
+
+    private async handleGetRepoTreeStructureRequest(
+        owner: string,
+        repo: string,
+        branch: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        const { data: branchData } = await this.octokitClient.repos.getBranch({
+            owner: owner,
+            repo: repo,
+            branch: branch,
+        });
+        if (branchData === undefined) {
+            console.log("Failed to get branch data in handleGetRepoTreeStructureRequest()");
+            return;
+        }
+
+        const treeSha = branchData.commit.commit.tree.sha;
+        if (treeSha === undefined) {
+            console.log("Failed to get tree sha in handleGetRepoTreeStructureRequest()");
+            return;
+        }
+
+        const { data: treeData } = await this.octokitClient.git.getTree({
+            owner: "ReinierCC",
+            repo: "contoso-air",
+            tree_sha: treeSha,
+            recursive: "1",
+        });
+        if (treeData === undefined) {
+            console.log("Failed to get tree data in handleGetRepoTreeStructureRequest()");
+            return;
+        }
+
+        const tree = octokitHelper.buildTree(treeData.tree);
+
+        webview.postGetRepoTreeStructureResponse(tree);
     }
 
     private async handleCreateWorkflowRequest(webview: MessageSink<ToWebViewMsgDef>) {
