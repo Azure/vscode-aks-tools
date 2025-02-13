@@ -127,8 +127,8 @@ export async function setFilteredClusters(filters: ClusterFilter[], allClusters:
     const existingFilters = getFilteredClusters();
 
     // Select all clusters if no filters are provided
-    const newFilters = filters.length 
-        ? filters 
+    const newFilters = filters.length
+        ? filters
         : allClusters.map(({ subscriptionId, name }) => ({ subscriptionId, clusterName: name }));
 
     // Merge and deduplicate filters
@@ -142,8 +142,9 @@ export async function setFilteredClusters(filters: ClusterFilter[], allClusters:
     const values = finalFilters.map(({ subscriptionId, clusterName }) => `${subscriptionId}/${clusterName}`).sort();
 
     // Check if filters have changed
-    const filtersChanged = existingFilters.length !== finalFilters.length || 
-        !existingFilters.every(({ clusterName }) => finalFilters.some(f => f.clusterName === clusterName));
+    const filtersChanged =
+        existingFilters.length !== finalFilters.length ||
+        !existingFilters.every(({ clusterName }) => finalFilters.some((f) => f.clusterName === clusterName));
 
     if (filtersChanged) {
         await vscode.workspace

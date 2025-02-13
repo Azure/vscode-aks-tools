@@ -70,9 +70,11 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     });
 
     // Set Cluster Instance
-    const newFilteredClusters = selectedItems ? [
-        ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
-    ] : [];
+    const newFilteredClusters = selectedItems
+        ? [
+              ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
+          ]
+        : [];
 
     await setFilteredClusters(newFilteredClusters, clusterList);
 }
