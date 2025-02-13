@@ -69,16 +69,14 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         placeHolder: "Select Cluster",
     });
 
-    if (!selectedItems) {
-        return;
-    }
-
     // Set Cluster Instance
-    const newFilteredClusters = [
-        ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
-    ];
+    const newFilteredClusters = selectedItems
+        ? [
+              ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
+          ]
+        : [];
 
-    await setFilteredClusters(newFilteredClusters);
+    await setFilteredClusters(newFilteredClusters, clusterList);
 }
 
 async function getUniqueClusters() {

@@ -123,19 +123,28 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
     }
 }
 
-export async function setFilteredClusters(filters: ClusterFilter[]): Promise<void> {
+export async function setFilteredClusters(filters: ClusterFilter[], allClusters: AksClusterAndFleet[]): Promise<void> {
     const existingFilters = getFilteredClusters();
 
-    // Get merged list of filters
-    const uniqueFilters = mergeClusterFilterLists(existingFilters, filters);
+    // Select all clusters if no filters are provided
+    const newFilters = filters.length
+        ? filters
+        : allClusters.map(({ subscriptionId, name }) => ({ subscriptionId, clusterName: name }));
 
-    // Determine if filters have changed
-    const filtersChanged =
-        existingFilters.length !== uniqueFilters.length ||
-        !existingFilters.every((ef) => uniqueFilters.some((uf) => uf.clusterName === ef.clusterName));
+    // Merge and deduplicate filters
+    const uniqueFilters = mergeClusterFilterLists(existingFilters, newFilters);
+
+    // If all clusters are selected, clear filters
+    const shouldClearFilters = uniqueFilters.length === allClusters.length;
+    const finalFilters = shouldClearFilters ? [] : uniqueFilters;
 
     // Construct values as "subscriptionId/clusterName"
-    const values = uniqueFilters.map((f) => `${f.subscriptionId}/${f.clusterName}`).sort();
+    const values = finalFilters.map(({ subscriptionId, clusterName }) => `${subscriptionId}/${clusterName}`).sort();
+
+    // Check if filters have changed
+    const filtersChanged =
+        existingFilters.length !== finalFilters.length ||
+        !existingFilters.every(({ clusterName }) => finalFilters.some((f) => f.clusterName === clusterName));
 
     if (filtersChanged) {
         await vscode.workspace
