@@ -165,11 +165,9 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             return;
         }
 
-        const acrs: AcrKey[] = acrResp.result.map((acr) => ({
-            acrName: acr.name,
-        }));
-
-        webview.postGetAcrsResponse({ acrs });
+        webview.postGetAcrsResponse({
+            acrs: acrResp.result.map(({ name }) => ({ acrName: name })),
+        });
     }
 
     private async handleGetNamespacesRequest(
@@ -251,6 +249,8 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
                 createNewAcrResourceGroupReq,
             );
             if (!acrCreationSucceeded) {
+                console.log("Error creating ACR");
+                vscode.window.showErrorMessage("Error creating ACR");
                 return;
             }
         }
@@ -259,6 +259,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         const newApp = await msGraph.createApplication(this.graphClient, generateRandomWorkflowName());
         if (failed(newApp)) {
             console.error("Error creating new App Registration for DevHub:", newApp.error);
+            vscode.window.showErrorMessage("Error creating new App Registration for DevHub");
             return;
         }
         console.log("New App Registration created:", newApp.result);
@@ -267,6 +268,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         const newServicePrincipal = await msGraph.createServicePrincipal(this.graphClient, newApp.result.appId);
         if (failed(newServicePrincipal)) {
             console.error("Error creating new service principal for DevHub Workflow:", newServicePrincipal.error);
+            vscode.window.showErrorMessage("Error creating new service principal for DevHub Workflow");
             return;
         }
         console.log("New Service Principal Created:", newServicePrincipal.result);
@@ -281,6 +283,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(gitFedCredResp)) {
             console.error("Error creating GitHub Federated Credential:", gitFedCredResp.error);
+            vscode.window.showErrorMessage("Error creating GitHub Federated Credential");
             return;
         }
         console.log("GitHub Federated Credential created:", gitFedCredResp.result);
@@ -302,6 +305,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(acrRoleCreation)) {
             console.error("Error creating role assignment:", acrRoleCreation.error);
+            vscode.window.showErrorMessage("Error creating role assignment for ACR");
             return;
         }
         console.log("Role assignment created:", acrRoleCreation.result);
@@ -317,6 +321,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(clusterRoleCreation)) {
             console.error("Error creating role assignment:", clusterRoleCreation.error);
+            vscode.window.showErrorMessage("Error creating role assignment for AKS cluster");
             return;
         }
         console.log("Collab Role assignment created:", clusterRoleCreation.result);
@@ -330,6 +335,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(clusterPrincipalId)) {
             console.error("Error getting cluster principal ID:", clusterPrincipalId.error);
+            vscode.window.showErrorMessage("Error getting cluster principal ID");
             return;
         }
 
@@ -344,6 +350,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(acrPullResp)) {
             console.error("Error verifying and assigning ACR pull role:", acrPullResp.error);
+            vscode.window.showErrorMessage("Error verifying and assigning ACR pull role");
             return;
         }
 
