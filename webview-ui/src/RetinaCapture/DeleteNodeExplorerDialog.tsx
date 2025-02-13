@@ -1,4 +1,3 @@
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { Dialog } from "../components/Dialog";
 import styles from "./RetinaCapture.module.css";
 
@@ -29,8 +28,8 @@ export function DeleteNodeExplorerDialog(props: DeleteNodeExplorerDialogProps) {
                 </div>
 
                 <div className={styles.buttonContainer} style={{ justifyContent: "flex-end" }}>
-                    <VSCodeButton onClick={handleYes}>Yes</VSCodeButton>
-                    <VSCodeButton onClick={handleNo}>No</VSCodeButton>
+                    <button onClick={handleYes}>Yes</button>
+                    <button onClick={handleNo}>No</button>
                 </div>
             </form>
         </Dialog>

@@ -1,6 +1,5 @@
 import { FormEvent, useState } from "react";
 import { Dialog } from "../components/Dialog";
-import { VSCodeButton, VSCodeDivider, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./Kubectl.module.css";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
@@ -41,13 +40,14 @@ export function SaveCommandDialog(props: SaveCommandDialogProps) {
             <h2>Save Command As</h2>
 
             <form onSubmit={handleSubmit}>
-                <VSCodeDivider />
+                <hr />
 
                 <div className={styles.inputContainer}>
                     <label htmlFor="cmd-name-input" className={styles.label}>
                         Name
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="command-input"
                         className={styles.control}
                         value={name}
@@ -55,13 +55,13 @@ export function SaveCommandDialog(props: SaveCommandDialogProps) {
                     />
                 </div>
 
-                <VSCodeDivider />
+                <hr />
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit" disabled={!canSave()}>
+                    <button type="submit" disabled={!canSave()}>
                         Ok
-                    </VSCodeButton>
-                    <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
+                    </button>
+                    <button onClick={props.onCancel}>Cancel</button>
                 </div>
             </form>
         </Dialog>

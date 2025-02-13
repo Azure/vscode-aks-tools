@@ -47,6 +47,10 @@
     color: var(--vscode-textLink-foreground);
 }
 
+.linkColor {
+    color: var(--vscode-textLink-foreground);
+}
+
 .buttonContainer {
     margin-top: 1rem;
     margin-bottom: 1rem;

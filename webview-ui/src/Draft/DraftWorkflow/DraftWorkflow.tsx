@@ -40,13 +40,7 @@ import { useStateManagement } from "../../utilities/state";
 import styles from "../Draft.module.css";
 import { Maybe, isNothing, just, nothing } from "../../utilities/maybe";
 import { ResourceSelector } from "../../components/ResourceSelector";
-import {
-    VSCodeButton,
-    VSCodeLink,
-    VSCodeRadio,
-    VSCodeRadioGroup,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
+import { VSCodeRadio, VSCodeRadioGroup, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTimesCircle, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
@@ -401,13 +395,13 @@ export function DraftWorkflow(initialState: InitialState) {
                 <p className={styles.fullWidth}>
                     Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make
                     sure you have created a Dockerfile and Deployment. You can do this using the{" "}
-                    <VSCodeLink href="#" onClick={handleDraftDockerfileClick}>
+                    <a href="#" onClick={handleDraftDockerfileClick}>
                         Automated Deployments: Create a Dockerfile
-                    </VSCodeLink>{" "}
+                    </a>{" "}
                     and{" "}
-                    <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
+                    <a href="#" onClick={handleDraftDeploymentClick}>
                         Automated Deployments: Create a Deployment
-                    </VSCodeLink>{" "}
+                    </a>{" "}
                     commands.
                 </p>
 
@@ -504,12 +498,12 @@ export function DraftWorkflow(initialState: InitialState) {
                         className={styles.control}
                     />
                     <div className={styles.controlSupplement}>
-                        <VSCodeButton appearance="icon" onClick={handleChooseDockerfileClick}>
+                        <button className="choose-location-button" onClick={handleChooseDockerfileClick}>
                             <span className={styles.iconButton}>
                                 <FontAwesomeIcon icon={faFolder} />
                                 &nbsp;Choose Dockerfile
                             </span>
-                        </VSCodeButton>
+                        </button>
                     </div>
                     {hasMessage(state.selectedDockerfilePath) && (
                         <span className={styles.validationMessage}>
@@ -528,12 +522,12 @@ export function DraftWorkflow(initialState: InitialState) {
                         className={styles.control}
                     />
                     <div className={styles.controlSupplement}>
-                        <VSCodeButton appearance="icon" onClick={handleChooseBuildContextClick}>
+                        <button className="choose-location-button" onClick={handleChooseBuildContextClick}>
                             <span className={styles.iconButton}>
                                 <FontAwesomeIcon icon={faFolder} />
                                 &nbsp;Choose build context
                             </span>
-                        </VSCodeButton>
+                        </button>
                     </div>
 
                     {isValid(state.selectedSubscription) && (
@@ -702,18 +696,18 @@ export function DraftWorkflow(initialState: InitialState) {
                                 Manifest file paths *
                             </label>
                             <div className={styles.control}>
-                                <VSCodeButton appearance="icon" onClick={handleChooseManifestPathsClick}>
+                                <button className="choose-location-button" onClick={handleChooseManifestPathsClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faFolder} />
                                         &nbsp;Choose manifest file paths
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                             {isValid(state.manifestsParamsState.selectedManifestPaths) && (
                                 <ul className={`${styles.existingFileList} ${styles.control}`} id="manifest-paths">
                                     {state.manifestsParamsState.selectedManifestPaths.value.map((path, i) => (
                                         <li key={i} className={styles.removable}>
-                                            <VSCodeLink
+                                            <a
                                                 href="#"
                                                 onClick={(e) => {
                                                     e.preventDefault();
@@ -721,17 +715,15 @@ export function DraftWorkflow(initialState: InitialState) {
                                                 }}
                                             >
                                                 {path}
-                                            </VSCodeLink>
-                                            <VSCodeButton
-                                                appearance="icon"
+                                            </a>
+                                            <button
+                                                className="icon-button"
                                                 onClick={() => handleDeleteManifestPathClick(path)}
                                                 aria-label="Remove"
                                                 title="Remove"
                                             >
-                                                <span className={styles.iconButton}>
-                                                    <FontAwesomeIcon icon={faTrash} />
-                                                </span>
-                                            </VSCodeButton>
+                                                <FontAwesomeIcon className={styles.linkColor} icon={faTrash} />
+                                            </button>
                                         </li>
                                     ))}
                                 </ul>
@@ -761,12 +753,12 @@ export function DraftWorkflow(initialState: InitialState) {
                                 className={styles.control}
                             />
                             <div className={styles.controlSupplement}>
-                                <VSCodeButton appearance="icon" onClick={handleChooseHelmChartFolderClick}>
+                                <button className="choose-location-button" onClick={handleChooseHelmChartFolderClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faFolder} />
                                         &nbsp;Choose Helm chart folder
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                             {hasMessage(state.helmParamsState.selectedChartPath) && (
                                 <span className={styles.validationMessage}>
@@ -789,12 +781,12 @@ export function DraftWorkflow(initialState: InitialState) {
                                 className={styles.control}
                             />
                             <div className={styles.controlSupplement}>
-                                <VSCodeButton appearance="icon" onClick={handleChooseHelmValuesFileClick}>
+                                <button className="choose-location-button" onClick={handleChooseHelmValuesFileClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faFolder} />
                                         &nbsp;Choose values.yaml file
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                             {hasMessage(state.helmParamsState.selectedValuesYamlPath) && (
                                 <span className={styles.validationMessage}>
@@ -822,16 +814,14 @@ export function DraftWorkflow(initialState: InitialState) {
                                             onInput={(e) => handleOverrideValueChange(e, o)}
                                             value={orDefault(o.value, "")}
                                         />
-                                        <VSCodeButton
-                                            appearance="icon"
+                                        <button
+                                            className="icon-button"
                                             onClick={() => handleDeleteOverrideClick(o)}
                                             aria-label="Remove"
                                             title="Remove"
                                         >
-                                            <span className={styles.iconButton}>
-                                                <FontAwesomeIcon icon={faTrash} />
-                                            </span>
-                                        </VSCodeButton>
+                                            <FontAwesomeIcon className={styles.linkColor} icon={faTrash} />
+                                        </button>
                                     </div>
                                     {hasMessage(o.key) && (
                                         <span className={styles.validationMessage}>
@@ -854,12 +844,12 @@ export function DraftWorkflow(initialState: InitialState) {
                                         : styles.controlSupplement
                                 }
                             >
-                                <VSCodeButton appearance="icon" onClick={handleAddHelmOverrideClick}>
+                                <button className="choose-location-button" onClick={handleAddHelmOverrideClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faPlus} />
                                         &nbsp;Add override
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                         </>
                     )}
@@ -867,15 +857,15 @@ export function DraftWorkflow(initialState: InitialState) {
 
                 <div className={styles.buttonContainer}>
                     {state.status !== "Created" && (
-                        <VSCodeButton type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
+                        <button type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
                             Create
-                        </VSCodeButton>
+                        </button>
                     )}
 
                     {existingFile && (
-                        <VSCodeButton appearance="secondary" onClick={() => vscode.postOpenFileRequest(existingFile)}>
+                        <button className="secondary-button" onClick={() => vscode.postOpenFileRequest(existingFile)}>
                             Open Workflow File
-                        </VSCodeButton>
+                        </button>
                     )}
                 </div>
 
@@ -890,9 +880,9 @@ export function DraftWorkflow(initialState: InitialState) {
                                 <ul>
                                     <li>
                                         The ACR {isValueSet(state.selectedAcr) ? `(${state.selectedAcr.value})` : ""}{" "}
-                                        <VSCodeLink href="#" onClick={handleLaunchAttachAcrToClusterClick}>
+                                        <a href="#" onClick={handleLaunchAttachAcrToClusterClick}>
                                             is attached
-                                        </VSCodeLink>{" "}
+                                        </a>{" "}
                                         to the cluster{" "}
                                         {isValueSet(state.selectedCluster) ? `(${state.selectedCluster.value})` : ""}.
                                         You can follow for guidance.
@@ -902,9 +892,9 @@ export function DraftWorkflow(initialState: InitialState) {
                                         {isValueSet(state.selectedGitHubRepo)
                                             ? `(${state.selectedGitHubRepo.value.gitHubRepoOwner}/${state.selectedGitHubRepo.value.gitHubRepoName})`
                                             : ""}{" "}
-                                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure">
+                                        <a href="https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure">
                                             is configured
-                                        </VSCodeLink>{" "}
+                                        </a>{" "}
                                         to access the ACR and cluster.
                                     </li>
                                 </ul>

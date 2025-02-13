@@ -1,10 +1,4 @@
-import {
-    VSCodeButton,
-    VSCodeDropdown,
-    VSCodeLink,
-    VSCodeOption,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
+import { VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
 import { ASOState, EventDef, InstallStepStatus } from "./helpers/state";
 import { EventHandlers } from "../utilities/state";
@@ -74,9 +68,9 @@ export function Inputs(props: InputsProps) {
                     <FontAwesomeIcon className={styles.infoIndicator} icon={faInfoCircle} />
                     Provide the App ID and password of a Service Principal with Contributor permissions for your
                     subscription. This allows ASO to create resources in your subscription on your behalf.
-                    <VSCodeLink href="https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli">
+                    <a href="https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli">
                         &nbsp; Learn more
-                    </VSCodeLink>
+                    </a>
                 </p>
 
                 <label htmlFor="spappid" className={styles.label}>
@@ -109,9 +103,9 @@ export function Inputs(props: InputsProps) {
                     placeholder="Service principal password"
                 />
 
-                <VSCodeButton disabled={!canCheckSP} onClick={handleCheckSPClick}>
+                <button disabled={!canCheckSP} onClick={handleCheckSPClick}>
                     Check
-                </VSCodeButton>
+                </button>
             </div>
             {canViewSubscriptions && (
                 <div className={styles.inputContainer}>
@@ -121,9 +115,7 @@ export function Inputs(props: InputsProps) {
                         The supplied service principal has some role assignments on the following subscriptions. Please
                         ensure these are adequate for the Azure resources that ASO will be creating in your selected
                         subscription.
-                        <VSCodeLink href="https://azure.github.io/azure-service-operator/#installation">
-                            &nbsp; Learn more
-                        </VSCodeLink>
+                        <a href="https://azure.github.io/azure-service-operator/#installation">&nbsp; Learn more</a>
                     </p>
 
                     <label htmlFor="sub-select" className={styles.label}>
@@ -143,9 +135,9 @@ export function Inputs(props: InputsProps) {
                             </VSCodeOption>
                         ))}
                     </VSCodeDropdown>
-                    <VSCodeButton disabled={!canStartInstalling} type="submit">
+                    <button disabled={!canStartInstalling} type="submit">
                         Install
-                    </VSCodeButton>
+                    </button>
                 </div>
             )}
         </form>
