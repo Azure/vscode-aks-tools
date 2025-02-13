@@ -189,8 +189,8 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         }
 
         const { data: treeData } = await this.octokitClient.git.getTree({
-            owner: "ReinierCC",
-            repo: "contoso-air",
+            owner: owner,
+            repo: repo,
             tree_sha: treeSha,
             recursive: "1",
         });
