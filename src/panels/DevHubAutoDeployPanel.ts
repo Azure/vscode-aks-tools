@@ -166,7 +166,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         }
 
         webview.postGetAcrsResponse({
-            acrs: acrResp.result.map(({ name }) => ({ acrName: name })),
+            acrs: acrResp.result.map(({ name }) => ({ acrName: name }) as AcrKey),
         });
     }
 
