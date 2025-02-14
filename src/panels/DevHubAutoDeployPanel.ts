@@ -26,6 +26,7 @@ import { getManagedCluster } from "../commands/utils/clusters";
 import { AuthorizationManagementClient, RoleAssignment } from "@azure/arm-authorization";
 import { getClusterNamespaces, createClusterNamespace } from "../commands/utils/clusters";
 import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
+import * as octokitHelper from "../commands/utils/octokitHelper";
 
 const acrPullRoleDefinitionId = "7f951dda-4ed3-4680-a7ca-43fe172d538d"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/containers
 const azureContributorRole = "b24988ac-6180-42a0-ab88-20f7382dd24c"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
@@ -41,6 +42,7 @@ export class AutomatedDeploymentsPanel extends BasePanel<"automatedDeployments">
             getResourceGroupsResponse: null,
             getAcrsResponse: null,
             getNamespacesResponse: null,
+            getRepoTreeStructureResponse: null,
         });
     }
 }
@@ -77,6 +79,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             getResourceGroupsRequest: false,
             getAcrsRequest: false,
             getNamespacesRequest: false,
+            getRepoTreeStructureRequest: false,
         };
     }
 
@@ -92,6 +95,8 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             getAcrsRequest: (msg) => this.handleGetAcrsRequest(msg.subscriptionId, msg.acrResourceGroup, webview),
             getNamespacesRequest: (key) =>
                 this.handleGetNamespacesRequest(key.subscriptionId, key.resourceGroup, key.clusterName, webview),
+            getRepoTreeStructureRequest: (key) =>
+                this.handleGetRepoTreeStructureRequest(key.repoOwner, key.repo, key.branchName, webview),
         };
     }
 
@@ -189,6 +194,44 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         }
 
         webview.postGetNamespacesResponse(namespacesResult.result);
+    }
+
+    private async handleGetRepoTreeStructureRequest(
+        owner: string,
+        repo: string,
+        branch: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        const { data: branchData } = await this.octokitClient.repos.getBranch({
+            owner: owner,
+            repo: repo,
+            branch: branch,
+        });
+        if (branchData === undefined) {
+            console.log("Failed to get branch data in handleGetRepoTreeStructureRequest()");
+            return;
+        }
+
+        const treeSha = branchData?.commit?.commit?.tree?.sha;
+        if (treeSha === undefined) {
+            console.log("Failed to get tree sha in handleGetRepoTreeStructureRequest()");
+            return;
+        }
+
+        const { data: treeData } = await this.octokitClient.git.getTree({
+            owner: owner,
+            repo: repo,
+            tree_sha: treeSha,
+            recursive: "1", // Recursive set to 1 to get all tree data, not just top layer. Reference Doc: https://github.com/octokit/plugin-rest-endpoint-methods.js/blob/main/docs/git/getTree.md
+        });
+        if (treeData === undefined) {
+            console.log("Failed to get tree data in handleGetRepoTreeStructureRequest()");
+            return;
+        }
+
+        const tree = octokitHelper.buildTree(treeData.tree);
+
+        webview.postGetRepoTreeStructureResponse(tree);
     }
 
     private async handleCreateWorkflowRequest(webview: MessageSink<ToWebViewMsgDef>) {

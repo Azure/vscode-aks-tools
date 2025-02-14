@@ -34,3 +34,70 @@ export async function getGitHubBranchesForRepo(
 
     return { succeeded: true, result: branchNames };
 }
+
+// The raw item as it might be received from Octokit
+interface RawTreeItem {
+    path?: string;
+    mode?: string;
+    type?: string;
+    sha?: string;
+    size?: number;
+    url?: string;
+}
+
+interface FlatTreeItem {
+    path: string;
+    type: "blob" | "tree";
+}
+
+export interface TreeNode extends FlatTreeItem {
+    name: string;
+    children: TreeNode[];
+}
+
+// Octokit response is a 'raw' flat tree, after values are verifed as not undefined and type is 'tree' or 'blob' then it's considered a flat tree
+// The flat tree is then converted to a nested tree structure that can be used to display the tree in the UI
+// Raw Tree -> Flat Tree -> Nested Tree
+export function buildTree(rawTree: RawTreeItem[]): TreeNode {
+    const flatTree = convertRawToFlat(rawTree);
+
+    // Create a dummy root node.
+    const root: TreeNode = { name: "root", path: "", type: "tree", children: [] };
+
+    flatTree.forEach((item) => {
+        const parts = item.path.split("/");
+        let current = root;
+
+        parts.forEach((part) => {
+            // Look for an existing child with this name.
+            let child = current.children.find((child) => child.name === part);
+            if (!child) {
+                // If we are at the last part, use the type from the item; otherwise, it's a folder.
+                child = {
+                    name: part,
+                    path: [current.path, part].filter(Boolean).join("/"),
+                    type: item.type,
+                    children: [],
+                };
+                current.children.push(child);
+            }
+            current = child;
+        });
+    });
+
+    return root;
+}
+
+//Converts an array of RawTreeItem into FlatTreeItem by filtering out items missing required properties and mapping the type properly.
+function convertRawToFlat(rawItems: RawTreeItem[]): FlatTreeItem[] {
+    return (
+        rawItems
+            // Filter out any items that don't have a defined path or type
+            .filter((item): item is RawTreeItem => item.path !== undefined && item.type !== undefined)
+            .map((item) => ({
+                path: item.path as string,
+                // Ensure that type is only 'tree' or 'blob'
+                type: item.type === "tree" ? "tree" : "blob",
+            }))
+    );
+}
