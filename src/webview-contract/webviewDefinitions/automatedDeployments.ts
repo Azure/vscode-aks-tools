@@ -16,6 +16,10 @@ export interface ResourceGroup {
     location: string;
 }
 
+export type AcrKey = {
+    acrName: string;
+};
+
 export interface BranchParams {
     repoOwner: string;
     repo: string;
@@ -34,6 +38,7 @@ export type ToVsCodeMsgDef = {
     getSubscriptionsRequest: void;
     createWorkflowRequest: void;
     getResourceGroupsRequest: void;
+    getAcrsRequest: { subscriptionId: string; acrResourceGroup: string };
     getNamespacesRequest: ClusterKey;
 };
 
@@ -43,8 +48,8 @@ export type ToWebViewMsgDef = {
     getGitHubBranchesResponse: { branches: string[] };
     getSubscriptionsResponse: Subscription[];
     getNamespacesResponse: string[];
-    //getAcrsResponse: string[];
     getResourceGroupsResponse: DefinedResourceGroup[];
+    getAcrsResponse: { acrs: AcrKey[] };
     getWorkflowCreationResponse: string;
 };
 
