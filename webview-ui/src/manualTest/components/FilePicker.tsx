@@ -264,10 +264,7 @@ function FileSystemNode(props: FileSystemNodeProps) {
                         }}
                     />
                 )}
-                <span
-                    onClick={() => props.handleItemSelectionChange(props.item)}
-                    style={{ position: "relative", top: "-0.1rem" }}
-                >
+                <span onClick={() => props.handleItemSelectionChange(props.item)} className={styles.itemSpan}>
                     {props.item.name}
                 </span>
                 {expanded && isDirectory(props.item) && (
