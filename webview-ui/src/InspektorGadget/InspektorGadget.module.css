@@ -148,3 +148,11 @@ ul.hierarchyList li * {
     position: relative;
     top: -0.05rem;
 }
+
+.radioLabel {
+    margin-left: 0.62rem;
+}
+
+.radioLine {
+    margin-bottom: 0.3rem;
+}

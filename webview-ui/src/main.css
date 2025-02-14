@@ -121,20 +121,44 @@ hr {
     margin: 4px 0 4px 0;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
     height: calc(var(--input-height) * 1px);
     color: var(--input-foreground);
     background-color: var(--input-background);
-    border: 1px solid var(--input-border);
+    border: 1px solid var(--vscode-dropdown-border);
     padding: 0 9px;
     box-sizing: border-box;
     border-radius: 2px;
     font-family: inherit;
 }
 
+input[type="text"]:read-only {
+    cursor: not-allowed;
+}
+
 input[type="checkbox"] {
     width: 18.25px;
     height: 18.25px;
+    cursor: pointer;
+}
+
+input[type="radio"] {
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    border: 2px solid var(--radio-border-color);
+    border-radius: 50%;
+    background-color: none;
+    outline: none;
+    position: relative;
+    top: 0.18rem;
+    color: white;
+}
+
+input[type="radio"] {
     cursor: pointer;
 }
 

@@ -1,4 +1,4 @@
-import { VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
 import { ASOState, EventDef, InstallStepStatus } from "./helpers/state";
 import { EventHandlers } from "../utilities/state";
@@ -76,7 +76,8 @@ export function Inputs(props: InputsProps) {
                 <label htmlFor="spappid" className={styles.label}>
                     Enter App ID of service principal:
                 </label>
-                <VSCodeTextField
+                <input
+                    type="text"
                     value={appId || ""}
                     readOnly={!canEditSP}
                     required
@@ -84,14 +85,13 @@ export function Inputs(props: InputsProps) {
                     onInput={handleAppIdChange}
                     className={styles.control}
                     size={50}
-                    type="text"
                     placeholder="e.g. 041ccd53-e72f-45d1-bbff-382c82f6f9a1"
                 />
 
                 <label htmlFor="spcred" className={styles.label}>
                     Enter Password of Service Principal:
                 </label>
-                <VSCodeTextField
+                <input
                     value={appSecret || ""}
                     readOnly={!canEditSP}
                     required

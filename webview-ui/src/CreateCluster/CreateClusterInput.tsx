@@ -1,6 +1,6 @@
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
@@ -177,7 +177,8 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     <label htmlFor="name-input" className={styles.label}>
                         Cluster Name*
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="name-input"
                         value={isValueSet(name) ? name.value : ""}
                         className={`${styles.longControl} ${styles.validatable}`}

@@ -40,7 +40,6 @@ import { useStateManagement } from "../../utilities/state";
 import styles from "../Draft.module.css";
 import { Maybe, isNothing, just, nothing } from "../../utilities/maybe";
 import { ResourceSelector } from "../../components/ResourceSelector";
-import { VSCodeRadio, VSCodeRadioGroup, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTimesCircle, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
@@ -379,7 +378,6 @@ export function DraftWorkflow(initialState: InitialState) {
         vscode.postCreateWorkflowRequest(createParams.value);
     }
 
-    const [manifests, helm]: DeploymentSpecType[] = ["manifests", "helm"];
     const existingFile = getExistingFile(state, state.selectedWorkflowName);
 
     const gitHubRepoTooltipMessage =
@@ -410,7 +408,8 @@ export function DraftWorkflow(initialState: InitialState) {
                     <label htmlFor="workflow-name-input" className={styles.label}>
                         Workflow name *
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="workflow-name-input"
                         value={orDefault(state.selectedWorkflowName, "")}
                         className={styles.control}
@@ -487,7 +486,8 @@ export function DraftWorkflow(initialState: InitialState) {
                     <label htmlFor="dockerfile-input" className={styles.label}>
                         Dockerfile *
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="dockerfile-input"
                         value={
                             isValueSet(state.selectedDockerfilePath)
@@ -515,7 +515,8 @@ export function DraftWorkflow(initialState: InitialState) {
                     <label htmlFor="build-context-input" className={styles.label}>
                         Build context *
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="build-context-input"
                         value={`.${state.workspaceConfig.pathSeparator}${state.selectedBuildContextPath}`}
                         readOnly
@@ -679,16 +680,30 @@ export function DraftWorkflow(initialState: InitialState) {
                     <label htmlFor="deployment-type-input" className={styles.label}>
                         Type
                     </label>
-                    <VSCodeRadioGroup
-                        id="deployment-type-input"
-                        className={styles.control}
-                        value={state.selectedDeploymentSpecType}
-                        orientation="vertical"
-                        onChange={handleDeploymentSpecTypeChange}
-                    >
-                        <VSCodeRadio value={manifests}>Manifests</VSCodeRadio>
-                        <VSCodeRadio value={helm}>Helm</VSCodeRadio>
-                    </VSCodeRadioGroup>
+
+                    <div id="deployment-type-input" className={styles.control}>
+                        <div className={styles.radioLine}>
+                            <input
+                                type="radio"
+                                name="deployment-type"
+                                value="manifests"
+                                checked={state.selectedDeploymentSpecType === "manifests"}
+                                onChange={handleDeploymentSpecTypeChange}
+                            />
+
+                            <label className={styles.radioLabel}>Manifests</label>
+                        </div>
+                        <div className={styles.radioLine}>
+                            <input
+                                type="radio"
+                                name="deployment-type"
+                                value="helm"
+                                checked={state.selectedDeploymentSpecType === "helm"}
+                                onChange={handleDeploymentSpecTypeChange}
+                            />
+                            <label className={styles.radioLabel}>Helm</label>
+                        </div>
+                    </div>
 
                     {state.selectedDeploymentSpecType === "manifests" && (
                         <>
@@ -742,7 +757,8 @@ export function DraftWorkflow(initialState: InitialState) {
                             <label htmlFor="chart-path-input" className={styles.label}>
                                 Chart path *
                             </label>
-                            <VSCodeTextField
+                            <input
+                                type="text"
                                 id="chart-path-input"
                                 value={
                                     isValid(state.helmParamsState.selectedChartPath)
@@ -770,7 +786,8 @@ export function DraftWorkflow(initialState: InitialState) {
                             <label htmlFor="values-path-input" className={styles.label}>
                                 Values.yaml path *
                             </label>
-                            <VSCodeTextField
+                            <input
+                                type="text"
                                 id="values-path-input"
                                 value={
                                     isValid(state.helmParamsState.selectedValuesYamlPath)
@@ -799,7 +816,8 @@ export function DraftWorkflow(initialState: InitialState) {
                             {state.helmParamsState.selectedOverrides.map((o, i) => (
                                 <>
                                     <div key={i} className={styles.control} style={{ display: "flex" }}>
-                                        <VSCodeTextField
+                                        <input
+                                            type="text"
                                             id={`override-key-input-${i}`}
                                             className={`${styles.longControl} ${styles.validatable}`}
                                             onBlur={(e) => handleOverrideKeyChange(e, o)}
@@ -807,7 +825,8 @@ export function DraftWorkflow(initialState: InitialState) {
                                             value={orDefault(o.key, "")}
                                         />
                                         =
-                                        <VSCodeTextField
+                                        <input
+                                            type="text"
                                             id={`override-value-input-${i}`}
                                             className={`${styles.longControl} ${styles.validatable}`}
                                             onBlur={(e) => handleOverrideValueChange(e, o)}

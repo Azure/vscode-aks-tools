@@ -4,7 +4,6 @@ import { ResourceSelector } from "../../components/ResourceSelector";
 import { useStateManagement } from "../../utilities/state";
 import styles from "../Draft.module.css";
 import { stateUpdater, vscode } from "./state";
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
@@ -146,7 +145,8 @@ export function DraftDockerfile(initialState: InitialState) {
                         <i className={`${styles.inlineIcon} codicon codicon-info`} />
                     </span>
                 </label>
-                <VSCodeTextField
+                <input
+                    type="text"
                     id="location-input"
                     readOnly
                     value={`.${state.workspaceConfig.pathSeparator}${state.selectedLocation.value}`}

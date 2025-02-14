@@ -25,13 +25,6 @@ import {
     valid,
 } from "../utilities/validation";
 import { ResourceSelector } from "../components/ResourceSelector";
-import {
-    //VSCodeRadio,
-    //VSCodeRadioGroup,
-    VSCodeTextField,
-    //VSCodeDropdown,
-    //VSCodeOption,
-} from "@vscode/webview-ui-toolkit/react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -148,7 +141,8 @@ export function AutomatedDeployments(initialState: InitialState) {
                         Workflow name *
                     </label>
 
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="workflow-name-input"
                         value={orDefault(state.selectedWorkflowName, "")}
                         className={styles.control}
