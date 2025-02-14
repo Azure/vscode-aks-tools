@@ -1,10 +1,5 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
-import {
-    InitialState,
-    ModelDetails,
-    ToVsCodeMsgDef,
-    ToWebViewMsgDef,
-} from "../../../src/webview-contract/webviewDefinitions/kaito";
+import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { Kaito } from "../Kaito/Kaito";
 import { stateUpdater } from "../Kaito/state";
 import { Scenario } from "../utilities/manualTest";
@@ -24,7 +19,6 @@ export function getKaitoScenarios() {
                     operationDescription: "Installing Kaito",
                     event: 1,
                     errorMessage: undefined,
-                    models: [],
                 });
 
                 // wait for 5 seconds
@@ -33,7 +27,6 @@ export function getKaitoScenarios() {
                         operationDescription: "Kaito Federated Credentials and role Assignments",
                         event: 1,
                         errorMessage: undefined,
-                        models: [],
                     });
                 }, 5000);
 
@@ -43,18 +36,11 @@ export function getKaitoScenarios() {
                         operationDescription: "Kaito installed successfully",
                         event: 4,
                         errorMessage: undefined,
-                        models: listKaitoSupportedModels(),
                     });
                 }, 10000);
             },
-            getLLMModelsRequest: () => {
-                console.log("getLLMModelsRequest");
-            },
             generateWorkspaceRequest: () => {
                 console.log("generateWorkspaceRequest");
-            },
-            deployWorkspace: () => {
-                console.log("deployWorkspace");
             },
         };
     }
@@ -67,18 +53,5 @@ export function getKaitoScenarios() {
             getMessageHandler,
             stateUpdater.vscodeMessageHandler,
         ),
-    ];
-}
-
-function listKaitoSupportedModels(): ModelDetails[] {
-    // sample model details array
-    return [
-        {
-            family: "Family1",
-            modelName: "Model1",
-            minimumGpu: 1,
-            kaitoVersion: "1.0",
-            modelSource: "source",
-        },
     ];
 }

@@ -10,6 +10,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { setAssetContext } from "./assets";
 import { getReadySessionProvider } from "./auth/azureAuth";
 import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSessionProvider";
+import { registerUriHandler } from "./uriHandler";
 import { selectSubscriptions, selectTenant, signInToAzure } from "./commands/aksAccount/aksAccount";
 import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrToCluster";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
@@ -62,6 +63,8 @@ export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter());
     setAssetContext(context);
+
+    registerUriHandler(context);
 
     // Create and register the Azure session provider before accessing it.
     activateAzureSessionProvider(context);

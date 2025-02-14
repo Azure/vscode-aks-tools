@@ -99,7 +99,7 @@ export function Kaito(initialState: InitialState) {
                                 </p>
                             </div>
                         )}
-                    {state.kaitoInstallStatus === ProgressEventType.Success && state.models.length > 0 && (
+                    {state.kaitoInstallStatus === ProgressEventType.Success && (
                         <div className={styles.postInstall}>
                             <p>KAITO is installed!</p>
                             <p className={styles.thin}>You can now create a workspace by clicking the button below.</p>

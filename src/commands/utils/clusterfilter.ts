@@ -5,11 +5,9 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExtension } from "../utils/host";
 import { longRunning } from "../utils/host";
-import { ManagedCluster } from "@azure/arm-containerservice";
-import { getAksClient } from "../utils/arm";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { getFilteredClusters, setFilteredClusters } from "./config";
-import { parseResource, parseSubId } from "../../azure-api-utils";
+import { AksClusterAndFleet, getFilteredClusters, setFilteredClusters } from "./config";
+import { clusterResourceType, getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -32,29 +30,33 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         return;
     }
 
-    const containerServiceClient = getAksClient(sessionProvider.result, subscriptionNode.result.subscriptionId);
-    const clusterList: ManagedCluster[] = [];
+    let clusterList: AksClusterAndFleet[] = [];
 
     await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
-        const iterator = containerServiceClient.managedClusters.list();
-        for await (const clusters of iterator.byPage()) {
-            const validClusters = clusters.filter((c) => c.id && c.name);
-            clusterList.push(
-                ...validClusters.map((c) => ({ label: c.name!, name: c.name!, id: c.id!, location: c.location! })),
-            );
+        const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(
+            sessionProvider.result,
+            subscriptionNode.result.subscriptionId,
+        );
+        if (failed(aksClusters)) {
+            vscode.window.showErrorMessage(aksClusters.error);
+            return;
         }
+        clusterList = aksClusters.result.filter(
+            // only keep clusters for the cluster filter (remove fleets from the list)
+            (r) => r.type.toLowerCase() === clusterResourceType.toLowerCase(),
+        );
     });
 
     const filteredClusters = await getUniqueClusters();
 
-    const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster) => {
+    const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster: AksClusterAndFleet) => {
         return {
-            label: cluster.name || "",
+            label: cluster.name,
             description: cluster.name,
-            picked: filteredClusters.some((filtered) => filtered.clusterName === parseResource(cluster.id!).name), // filtered.subscriptionId === parseSubId(cluster.id!).subId),
+            picked: filteredClusters.some((filtered) => filtered.clusterName === cluster.name),
             Cluster: {
-                clusterName: cluster.name || "",
-                subscriptionId: parseSubId(cluster.id!).subId || "",
+                clusterName: cluster.name,
+                subscriptionId: cluster.subscriptionId,
             },
         };
     });
@@ -67,16 +69,14 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         placeHolder: "Select Cluster",
     });
 
-    if (!selectedItems) {
-        return;
-    }
-
     // Set Cluster Instance
-    const newFilteredClusters = [
-        ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
-    ];
+    const newFilteredClusters = selectedItems
+        ? [
+              ...selectedItems.map((item) => item.Cluster), // Retain filters in any other tenants.
+          ]
+        : [];
 
-    await setFilteredClusters(newFilteredClusters);
+    await setFilteredClusters(newFilteredClusters, clusterList);
 }
 
 async function getUniqueClusters() {
