@@ -1,7 +1,7 @@
 import { CaptureName, InitialState } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import styles from "./TcpDump.module.css";
 import { useEffect } from "react";
-import { VSCodeButton, VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
 import { CaptureStatus, NodeState, NodeStatus, TcpDumpState, stateUpdater, vscode } from "./state";
 import { NodeSelector } from "../components/NodeSelector";
@@ -93,7 +93,7 @@ export function TcpDump(initialState: InitialState) {
                 <h2>TCP Capture on {state.clusterName}</h2>
             </header>
 
-            <VSCodeDivider style={{ marginBottom: "1rem" }} />
+            <hr style={{ marginBottom: "1rem" }} />
 
             <div className={styles.content}>
                 <label htmlFor="node-dropdown" className={styles.label}>
@@ -115,7 +115,7 @@ export function TcpDump(initialState: InitialState) {
 
                 <label className={styles.label}>Debug Pod</label>
                 {hasStatus(NodeStatus.Clean, NodeStatus.CreatingDebugPod) && (
-                    <VSCodeButton
+                    <button
                         onClick={handleCreateDebugPod}
                         disabled={!hasStatus(NodeStatus.Clean)}
                         className={styles.controlButton}
@@ -131,7 +131,7 @@ export function TcpDump(initialState: InitialState) {
                             </span>
                         )}
                         Create
-                    </VSCodeButton>
+                    </button>
                 )}
                 {hasStatus(
                     NodeStatus.DebugPodRunning,
@@ -140,11 +140,10 @@ export function TcpDump(initialState: InitialState) {
                     NodeStatus.CaptureRunning,
                     NodeStatus.CaptureStopping,
                 ) && (
-                    <VSCodeButton
+                    <button
                         onClick={handleRemoveDebugPod}
                         disabled={!hasStatus(NodeStatus.DebugPodRunning)}
-                        className={styles.controlButton}
-                        appearance="secondary"
+                        className={`${styles.controlButton} secondary-button`}
                     >
                         {hasStatus(NodeStatus.DeletingDebugPod) && (
                             <span slot="start">
@@ -157,7 +156,7 @@ export function TcpDump(initialState: InitialState) {
                             </span>
                         )}
                         Delete
-                    </VSCodeButton>
+                    </button>
                 )}
 
                 {state.selectedNode &&
@@ -176,7 +175,7 @@ export function TcpDump(initialState: InitialState) {
 
                 <label className={styles.label}>Capture</label>
                 {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) && (
-                    <VSCodeButton
+                    <button
                         onClick={handleStartCapture}
                         disabled={!hasStatus(NodeStatus.DebugPodRunning)}
                         className={styles.controlButton}
@@ -192,10 +191,10 @@ export function TcpDump(initialState: InitialState) {
                             </span>
                         )}
                         Start
-                    </VSCodeButton>
+                    </button>
                 )}
                 {hasStatus(NodeStatus.CaptureRunning, NodeStatus.CaptureStopping) && (
-                    <VSCodeButton
+                    <button
                         onClick={handleStopCapture}
                         disabled={!hasStatus(NodeStatus.CaptureRunning)}
                         className={styles.controlButton}
@@ -211,10 +210,10 @@ export function TcpDump(initialState: InitialState) {
                             </span>
                         )}
                         Stop
-                    </VSCodeButton>
+                    </button>
                 )}
             </div>
-            <VSCodeDivider style={{ marginTop: "1rem" }} />
+            <hr style={{ marginTop: "1rem" }} />
             <h3>Completed Captures</h3>
             {hasStatus(
                 NodeStatus.DebugPodRunning,
@@ -239,10 +238,10 @@ export function TcpDump(initialState: InitialState) {
                                     <td>{c.sizeInKB}</td>
                                     <td>
                                         {!c.downloadedFilePath && (
-                                            <VSCodeButton
+                                            <button
                                                 onClick={() => handleStartDownload(c.name)}
                                                 disabled={c.status !== CaptureStatus.Completed}
-                                                appearance="secondary"
+                                                className="secondary-button"
                                             >
                                                 {c.status === CaptureStatus.Downloading && (
                                                     <span slot="start">
@@ -255,27 +254,27 @@ export function TcpDump(initialState: InitialState) {
                                                     </span>
                                                 )}
                                                 Download
-                                            </VSCodeButton>
+                                            </button>
                                         )}
 
                                         {c.downloadedFilePath && (
                                             <div style={{ display: "flex" }}>
                                                 <span>{c.downloadedFilePath}</span>
                                                 &nbsp;
-                                                <VSCodeButton appearance="icon" title="Copy Path">
+                                                <button className="icon-button" title="Copy Path">
                                                     <FontAwesomeIcon
                                                         icon={faCopy}
                                                         onClick={() =>
                                                             handleCopyDownloadPathClick(c.downloadedFilePath!)
                                                         }
                                                     />
-                                                </VSCodeButton>
-                                                <VSCodeButton appearance="icon" title="Open Folder">
+                                                </button>
+                                                <button className="icon-button" title="Open Folder">
                                                     <FontAwesomeIcon
                                                         icon={faFolderOpen}
                                                         onClick={() => handleOpenFolderClick(c.downloadedFilePath!)}
                                                     />
-                                                </VSCodeButton>
+                                                </button>
                                             </div>
                                         )}
                                     </td>
