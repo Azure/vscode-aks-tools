@@ -1,23 +1,22 @@
 # AKS Fleet Manager
 
-The AKS Fleet Manager provides toolkits to create and manage Fleet resources, displayed in a Treeview.
+The extension allows you to create AKS Fleet Manager resources and visualize them in the tree view.
 
-### Create a Fleet
-
-1. Right-click on the subscription where you want to create your Fleet.
-2. Select **Fleet Manager** and then click on **Create Fleet**.
+### Create an AKS Fleet Manager
+- Right-click on the subscription where you want to create a Fleet.
+- Choose **Fleet Manager**, then select **Create Fleet**.
 
 ![Right-click Navigation](../resources/aks-fleet-create-right-click.png)
 
-The UI will display a loading page. Once all resource groups and locations are loaded, an input form will be shown.
+A loading screen will appear while resource groups and locations are being retrieved. Once loaded, an input form will be displayed.
 
-Fill in all required fields marked with an asterisk (*). Invalid inputs will be rejected, and an error message will explain the reason for the failure.
+Complete all required fields marked with an asterisk (*). If any input is invalid, an error message will indicate the issue and guide you on how to fix it.
 
 ![Input Form](../resources/aks-fleet-create-input.png)
 
-After entering valid inputs in all required fields, submit the form to create the Fleet resource. A loading page will appear until the API returns the result.
+Once all required fields are filled with valid inputs, submit the form to create the Fleet resource. A loading screen will appear while the API processes the request.
 
-If the Fleet is created successfully, a success page will be displayed with a link to view the new Fleet in the Azure portal.
+Upon successful creation, a confirmation page will be shown, including a link to view the newly created Fleet in the Azure portal.
 ![On Success](../resources/aks-fleet-create-success.png)
 
 If there is an error during creation, a failure page will be displayed with the error message from the API.
