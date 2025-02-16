@@ -26,6 +26,7 @@ Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS
 * [Run Automated Deployments Commands](./features/draft-integration.md)
 * [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)
 * [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
+* [Create AKS Fleet Manager from VS Code](./features/aks-fleet-manager.md)
 
 ## Development and Release
 
