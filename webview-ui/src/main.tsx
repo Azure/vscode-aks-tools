@@ -72,6 +72,11 @@ function getVsCodeContent(): JSX.Element {
         kaitoTest: () => <KaitoTest {...getInitialState()} />,
         automatedDeployments: () => <AutomatedDeployments {...getInitialState()} />,
         createFleet: () => <CreateFleet {...getInitialState()} />,
+        fleetProperties: function (): JSX.Element {
+            // Hardcoded: Only to ensure the dependencies are resolved for compilation.
+            // TODO: Replace with the actual webpage when available.
+            return <>Fleet Properties</>;
+        },
     };
 
     return rendererLookup[vscodeContentId]();

@@ -86,10 +86,27 @@ export function getAksFleetTreeNode(
     return { succeeded: true, result: cloudTarget.cloudResource };
 }
 
+function isValidFleet(fleet: Fleet): boolean {
+    return (
+        fleet.id !== undefined &&
+        fleet.name !== undefined &&
+        fleet.location !== undefined &&
+        fleet.provisioningState !== undefined
+    );
+}
+
 export async function getFleet(
     client: ContainerServiceFleetClient,
     resourceGroupName: string,
     name: string,
-): Promise<Fleet> {
-    return await client.fleets.get(resourceGroupName, name);
+): Promise<Errorable<Fleet>> {
+    try {
+        const fleet = await client.fleets.get(resourceGroupName, name);
+        if (isValidFleet(fleet)) {
+            return { succeeded: true, result: fleet };
+        }
+        return { succeeded: false, error: `Failed to retrieve Fleet ${name}` };
+    } catch (e) {
+        return { succeeded: false, error: `Failed to retrieve Fleet ${name}: ${e}` };
+    }
 }
