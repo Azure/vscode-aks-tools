@@ -351,6 +351,10 @@
             {
                 "command": "aks.aksCreateFleet",
                 "title": "Create Fleet"
+            },
+            {
+                "command": "aks.aksFleetProperties",
+                "title": "Show Fleet Properties"
             }
         ],
         "menus": {
@@ -475,6 +479,10 @@
                 {
                     "submenu": "aks.fleetMangerSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
+                    "command": "aks.aksFleetProperties",
+                    "when": "viewItem == aks.fleet"
                 }
             ],
             "aks.createClusterSubMenu": [
