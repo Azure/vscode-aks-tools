@@ -13,6 +13,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { getFleet } from "../commands/utils/fleet";
 import { failed } from "../commands/utils/errorable";
+import { HubMode } from "../webview-contract/webviewDefinitions/createFleet";
 
 export class FleetPropertiesPanel extends BasePanel<"fleetProperties"> {
     constructor(extensionUri: Uri) {
@@ -65,12 +66,16 @@ export class FleetPropertiesDataProvider implements PanelDataProvider<"fleetProp
             return;
         }
 
-        webview.postGetPropertiesResponse(asFleetInfo(fleet.result));
+        webview.postGetPropertiesResponse(this.asFleetInfo(fleet.result));
     }
-}
 
-function asFleetInfo(fleet: Fleet): FleetInfo {
-    return {
-        provisioningState: fleet.provisioningState!, // getFleet() ensures this is defined
-    };
+    asFleetInfo(fleet: Fleet): FleetInfo {
+        return {
+            resourceGroup: this.resourceGroup,
+            provisioningState: fleet.provisioningState!, // getFleet() ensures this is defined
+            location: fleet.location!,
+            hubClusterMode: fleet.hubProfile === undefined ? HubMode.Without : HubMode.With,
+            fqdn: fleet.hubProfile === undefined ? undefined : fleet.hubProfile.fqdn,
+        };
+    }
 }

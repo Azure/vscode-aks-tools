@@ -1,11 +1,16 @@
 import { WebviewDefinition } from "../webviewTypes";
+import { HubMode } from "./createFleet";
 
 export interface InitialState {
     fleetName: string;
 }
 
 export type FleetInfo = {
+    resourceGroup: string;
     provisioningState: string;
+    location: string;
+    hubClusterMode: HubMode;
+    fqdn: undefined | string;
 };
 
 export type ToVsCodeMsgDef = {
