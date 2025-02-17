@@ -9,6 +9,7 @@ import styles from "../ClusterProperties/ClusterProperties.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRedoAlt } from "@fortawesome/free-solid-svg-icons";
 import { HubMode } from "../../../src/webview-contract/webviewDefinitions/createFleet";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 
 export function FleetProperties(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -43,7 +44,7 @@ export function FleetProperties(initialState: InitialState) {
                 </h2>
             </div>
 
-            {fleetInfo && (
+            {fleetInfo ? (
                 <dl className={styles.propertyList}>
                     <dt>Resource Group</dt>
                     <dd>{fleetInfo.resourceGroup}</dd>
@@ -56,6 +57,11 @@ export function FleetProperties(initialState: InitialState) {
                     <dt>FQDN</dt>
                     <dd>{fleetInfo.hubClusterMode === HubMode.Without ? "N/A" : fleetInfo.fqdn}</dd>
                 </dl>
+            ) : (
+                <>
+                    <VSCodeProgressRing />
+                    <h3>If loading takes too long, please ensure the Treeview is up-to-date by refreshing it.</h3>
+                </>
             )}
         </>
     );
