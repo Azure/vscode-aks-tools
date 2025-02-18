@@ -4,6 +4,7 @@ import { Validatable, unset, valid, missing } from "../utilities/validation";
 import { NewOrExisting, Subscription } from "../../../src/webview-contract/webviewDefinitions/draft/types";
 import { AcrKey } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments";
 import { DefinedResourceGroup } from "../../../src/commands/utils/resourceGroups";
+import { TreeNode } from "../../../src/commands/utils/octokitHelper";
 
 export type EventDef = {
     //Defines the events that can originate from the webview and be sent to the backend (ToVsCodeMsgDef).
@@ -38,6 +39,9 @@ export type AutomatedDeploymentsState = {
 
     // Properties waiting to be automatically selected when data is available
     //pendingSelection: InitialSelection;
+
+    //Repo Files
+    repoTreeStructure: Validatable<TreeNode>;
 
     //Selected Items
     selectedWorkflowName: Validatable<string>;
@@ -74,6 +78,9 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         subscriptions: unset(),
         acrs: unset(),
         namespaces: unset(),
+
+        //Repo Files
+        repoTreeStructure: unset(),
 
         //Selected Items
         selectedWorkflowName: unset(),
@@ -126,6 +133,11 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
             ...state,
             prUrl: valid(prUrl),
             status: "Created", //Requires check for proper creation
+        }),
+        getRepoTreeStructureResponse: (state, repoTreeStructure) => ({
+            ...state,
+            repoTreeStructure:
+                repoTreeStructure !== null ? valid(repoTreeStructure) : missing("Repo tree structure is missing."),
         }),
     },
     eventHandler: {
@@ -181,4 +193,5 @@ export const vscode = getWebviewMessageContext<"automatedDeployments">({
     getResourceGroupsRequest: null,
     getAcrsRequest: null,
     getNamespacesRequest: null,
+    getRepoTreeStructureRequest: null,
 });
