@@ -1,4 +1,3 @@
-import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import { EventHandlers } from "../utilities/state";
 import styles from "./ClusterProperties.module.css";
@@ -73,25 +72,25 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                     {showAbortButton && (
                         <>
                             &nbsp;
-                            <VSCodeButton
+                            <button
                                 disabled={props.clusterOperationRequested}
                                 onClick={() => handleAbortClick()}
-                                appearance="secondary"
+                                className="secondary-button"
                             >
                                 Abort
-                            </VSCodeButton>
+                            </button>
                         </>
                     )}
                     {showReconcileButton && (
                         <>
                             &nbsp;
-                            <VSCodeButton
+                            <button
                                 disabled={props.clusterOperationRequested}
                                 onClick={() => handleReconcileClick()}
-                                appearance="secondary"
+                                className="secondary-button"
                             >
                                 Reconcile
-                            </VSCodeButton>
+                            </button>
                         </>
                     )}
                 </div>
@@ -111,31 +110,29 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                         It is important that you don&#39;t repeatedly start/stop your cluster. Repeatedly
                         starting/stopping your cluster may result in errors. Once your cluster is stopped, you should
                         wait 15-30 minutes before starting it up again. &nbsp;
-                        <VSCodeLink href="https://docs.microsoft.com/en-au/azure/aks/start-stop-cluster?tabs=azure-cli#start-an-aks-cluster">
+                        <a href="https://docs.microsoft.com/en-au/azure/aks/start-stop-cluster?tabs=azure-cli#start-an-aks-cluster">
                             Learn more
-                        </VSCodeLink>
+                        </a>
                     </span>
                 </span>
                 <div className={styles.buttonDiv}>
                     {startStopState === "Started" && (
-                        <VSCodeButton
+                        <button
                             disabled={props.clusterOperationRequested}
                             onClick={handleStopCluster}
-                            className={styles.controlButton}
-                            appearance="secondary"
+                            className={`${styles.controlButton} secondary-button`}
                         >
                             Stop Cluster
-                        </VSCodeButton>
+                        </button>
                     )}
                     {startStopState === "Stopped" && (
-                        <VSCodeButton
+                        <button
                             disabled={props.clusterOperationRequested}
                             onClick={handleStartCluster}
-                            className={styles.controlButton}
-                            appearance="secondary"
+                            className={`${styles.controlButton} secondary-button`}
                         >
                             Start Cluster
-                        </VSCodeButton>
+                        </button>
                     )}
                     {(startStopState === "Starting" || startStopState === "Stopping") && (
                         <span>{`Cluster is in ${startStopState} state`}</span>

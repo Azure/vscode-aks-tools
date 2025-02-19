@@ -5,7 +5,7 @@ import {
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createFleet";
-import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 import {
     hasMessage,
     invalid,
@@ -133,7 +133,8 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
                 </label>
 
                 <label className={styles.label}>Fleet Name*</label>
-                <VSCodeTextField
+                <input
+                    type="text"
                     id="name-input"
                     value={isValueSet(fleetName) ? fleetName.value : ""}
                     className={`${styles.longControl} ${styles.validatable}`}
@@ -210,7 +211,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
             ></CreateFleetModeInput>
 
             <div className={styles.buttonContainer}>
-                <VSCodeButton type="submit">Create</VSCodeButton>
+                <button type="submit">Create</button>
             </div>
         </form>
     );
