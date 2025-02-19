@@ -1,6 +1,5 @@
 import { faInfoCircle, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeButton, VSCodeCheckbox, VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/retinaCapture";
 import { useStateManagement } from "../utilities/state";
@@ -43,44 +42,52 @@ export function RetinaCapture(initialState: InitialState) {
                 <h2>Retina Distributed Capture for {state.clusterName}</h2>
             </header>
 
-            <VSCodeDivider style={{ marginBottom: "1rem" }} />
+            <hr style={{ marginBottom: "1rem" }} />
             <div>
                 <FontAwesomeIcon icon={faInfoCircle} /> Retina capture command allows the user to capture network
                 traffic and metadata for the capture target, and then send the capture file to the location by Output
                 Configuration. More info:{" "}
                 <a href="https://retina.sh/docs/captures/cli/#output-configurationrequired">Retina Capture Command</a>
             </div>
-            <VSCodeDivider style={{ marginBottom: "1rem" }} />
+            <hr style={{ marginBottom: "1rem" }} />
             <h3>Retina Output</h3>
             <div>{state.retinaOutput}</div>
 
-            <VSCodeDivider style={{ marginTop: "1rem" }} />
+            <hr style={{ marginTop: "1rem" }} />
             <h3>Retina Distributed Capture is Successfully Completed for this Cluster</h3>
 
             <div className={styles.content}>
                 <div style={{ flexDirection: "row", width: "31.25rem" }}>
                     {state.allNodes.map((node) => (
                         <div key={node}>
-                            <VSCodeCheckbox onChange={(e) => onSelectNode(e, node)} checked={isNodeSelected(node)}>
-                                {node}
-                            </VSCodeCheckbox>
+                            <input
+                                onChange={(e) => onSelectNode(e, node)}
+                                checked={isNodeSelected(node)}
+                                type="checkbox"
+                                style={{
+                                    margin: "0rem 0.5rem 0.5rem 0",
+                                    position: "relative",
+                                    top: ".125rem",
+                                }}
+                            />
+                            <span style={{ position: "relative", top: "-.2rem" }}>{node}</span>
                         </div>
                     ))}
-                    <div style={{ display: "flex" }}>
-                        <VSCodeButton
+                    <div style={{ display: "flex", marginTop: ".5rem" }}>
+                        <button
                             type="submit"
                             style={{ marginRight: "0.625rem" }}
                             onClick={() => handleCaptureFileDownload()}
                         >
                             Download Retina Logs to Host Machine.
-                        </VSCodeButton>
+                        </button>
                         {state.isNodeExplorerPodExists && (
-                            <VSCodeButton appearance="secondary" onClick={() => handleDeleteExplorerPod()}>
-                                <span slot="start">
+                            <>
+                                <button className="secondary-button" onClick={() => handleDeleteExplorerPod()}>
                                     <FontAwesomeIcon icon={faTrash} />
-                                </span>
-                                Delete Node Explorer Pod
-                            </VSCodeButton>
+                                    &nbsp;Delete Node Explorer Pod
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>

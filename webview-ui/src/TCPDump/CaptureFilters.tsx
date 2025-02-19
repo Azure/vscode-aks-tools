@@ -8,7 +8,6 @@ import { SpecificPodFilters } from "./filterScenarios/SpecificPodFilters";
 import { TwoPodsFilters } from "./filterScenarios/TwoPodsFilters";
 import { CaptureScenario, EventDef, NodeState, ReferenceData } from "./state";
 import { EventHandlerFunc, loadCaptureInterfaces } from "./state/dataLoading";
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import {
     ApplicationLayerProtocol,
     TransportLayerProtocol,
@@ -178,7 +177,8 @@ export function CaptureFilters(props: CaptureFiltersProps) {
             <label htmlFor="pcap-filter-string-input" className={styles.label}>
                 Pcap Filter
             </label>
-            <VSCodeTextField
+            <input
+                type="text"
                 id="pcap-filter-string-input"
                 className={styles.control}
                 value={props.nodeState.currentCaptureFilters.pcapFilterString || ""}
