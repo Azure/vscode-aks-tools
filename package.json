@@ -482,7 +482,7 @@
                 },
                 {
                     "command": "aks.aksFleetProperties",
-                    "when": "viewItem == aks.fleet"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.fleet/i"
                 }
             ],
             "aks.createClusterSubMenu": [

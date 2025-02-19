@@ -27,19 +27,13 @@ export async function createFleet(
     const environment = getEnvironment();
     try {
         const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
+        const errorMessage = `Fleet creation failed: No ID returned. 
+        Resource Group Name: ${resourceGroupName}, 
+        Fleet Name: ${name}, 
+        Location: ${resource.location}.`;
         if (!result || !result.id) {
-            window.showWarningMessage(
-                `Fleet creation failed: No ID returned. 
-                Resource Group Name: ${resourceGroupName},
-                Fleet Name: ${name}, 
-                Location: ${resource.location}.`,
-            );
-            throw new Error(
-                `Fleet creation failed: No ID returned. 
-                Resource Group Name: ${resourceGroupName},
-                Fleet Name: ${name}, 
-                Location: ${resource.location}.`,
-            );
+            window.showWarningMessage(errorMessage);
+            throw new Error(errorMessage);
         }
         const deploymentPortalUrl = getDeploymentPortalUrl(environment, result.id);
         webview.postProgressUpdate({
@@ -102,11 +96,10 @@ export async function getFleet(
 ): Promise<Errorable<Fleet>> {
     try {
         const fleet = await client.fleets.get(resourceGroupName, name);
-        if (isValidFleet(fleet)) {
-            return { succeeded: true, result: fleet };
-        }
-        return { succeeded: false, error: `Failed to retrieve Fleet ${name}` };
+        return isValidFleet(fleet)
+            ? { succeeded: true, result: fleet }
+            : { succeeded: false, error: `Invalid Fleet data for ${name}` };
     } catch (e) {
-        return { succeeded: false, error: `Failed to retrieve Fleet ${name}: ${e}` };
+        return { succeeded: false, error: `Error retrieving Fleet ${name}: ${e}` };
     }
 }
