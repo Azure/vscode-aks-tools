@@ -1,4 +1,4 @@
-import { VSCodeButton, VSCodeCheckbox, VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./InspektorGadget.module.css";
 import { Dialog } from "../components/Dialog";
 import { FormEvent, useEffect, useState, ChangeEvent as InputChangeEvent } from "react";
@@ -146,7 +146,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
             <h2>New Trace</h2>
 
             <form onSubmit={handleSubmit}>
-                <VSCodeDivider />
+                <hr />
 
                 <div className={styles.inputContainer}>
                     <label htmlFor="gadget-dropdown" className={styles.label}>
@@ -227,12 +227,14 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     )}
 
                     {extraProperties.threadExclusionAllowed && (
-                        <VSCodeCheckbox
-                            checked={traceConfig.excludeThreads === false}
-                            onChange={handleDisplayThreadsChange}
-                        >
-                            Display threads
-                        </VSCodeCheckbox>
+                        <div>
+                            <input
+                                className={styles.displayCheckbox}
+                                type="checkbox"
+                                onChange={handleDisplayThreadsChange}
+                            />
+                            <label className={styles.displayLabel}>Display Threads</label>
+                        </div>
                     )}
 
                     {extraProperties.requiresTimeout && (
@@ -254,13 +256,13 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     )}
                 </div>
 
-                <VSCodeDivider />
+                <hr />
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit" disabled={!canCreate()}>
+                    <button type="submit" disabled={!canCreate()}>
                         Ok
-                    </VSCodeButton>
-                    <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
+                    </button>
+                    <button onClick={props.onCancel}>Cancel</button>
                 </div>
             </form>
         </Dialog>

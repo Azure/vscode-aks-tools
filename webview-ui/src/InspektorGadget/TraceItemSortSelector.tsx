@@ -1,4 +1,3 @@
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent } from "react";
 import { ItemProperty, SortSpecifier, fromSortString, toSortString } from "./helpers/gadgets/types";
 
@@ -24,13 +23,14 @@ export function TraceItemSortSelector(props: TraceItemSortSelectorProps) {
     const allowedIdentifiers = props.allProperties.map((p) => p.identifier).sort();
     const title = `Allowed properties:\n${allowedIdentifiers.join("\n")}`;
     return (
-        <VSCodeTextField
+        <input
+            type="text"
             title={title}
             id={props.id}
             className={props.className}
             required={props.required}
             value={sortString}
             onInput={handleSortStringChange}
-        ></VSCodeTextField>
+        ></input>
     );
 }
