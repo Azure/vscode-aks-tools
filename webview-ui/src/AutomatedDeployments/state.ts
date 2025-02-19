@@ -2,7 +2,9 @@ import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { Validatable, unset, valid, missing } from "../utilities/validation";
 import { NewOrExisting, Subscription } from "../../../src/webview-contract/webviewDefinitions/draft/types";
+import { AcrKey } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments";
 import { DefinedResourceGroup } from "../../../src/commands/utils/resourceGroups";
+import { TreeNode } from "../../../src/commands/utils/octokitHelper";
 
 export type EventDef = {
     //Defines the events that can originate from the webview and be sent to the backend (ToVsCodeMsgDef).
@@ -12,8 +14,8 @@ export type EventDef = {
     setSelectedWorkflowName: Validatable<string>;
     setSelectedGitHubRepo: Validatable<string>; //Might need to specify type more than string
     setSelectedSubscription: Validatable<Subscription>;
-    //setSelectedAcrResourceGroup: Validatable<string>;
-    //setSelectedAcr: Validatable<string>;
+    setSelectedAcrResourceGroup: { resourceGroup: Validatable<string>; createNewAcrResourceGroupReq: boolean };
+    setSelectedAcr: { acr: Validatable<AcrKey>; createNewAcrReq: boolean };
     setSelectedNamespace: Validatable<NewOrExisting<string>>;
 
     //Resource Group Creation
@@ -32,18 +34,26 @@ export type AutomatedDeploymentsState = {
     //azureReferenceData: AzureReferenceData;
     resourceGroups: Validatable<DefinedResourceGroup[]>;
     subscriptions: Validatable<Subscription[]>;
+    acrs: Validatable<AcrKey[]>;
     namespaces: Validatable<string[]>;
 
     // Properties waiting to be automatically selected when data is available
     //pendingSelection: InitialSelection;
+
+    //Repo Files
+    repoTreeStructure: Validatable<TreeNode>;
 
     //Selected Items
     selectedWorkflowName: Validatable<string>;
     selectedGitHubRepo: Validatable<string>; //Before was GitHubRepo, in workflow state
     selectedSubscription: Validatable<Subscription>;
     selectedAcrResourceGroup: Validatable<string>;
-    selectedAcr: Validatable<string>;
+    selectedAcr: Validatable<AcrKey>;
     selectedDeploymentNamespace: Validatable<NewOrExisting<string>>;
+
+    //Creation Flags
+    createNewAcrReq: boolean;
+    createNewAcrResourceGroupReq: boolean;
 
     //Creating new resource group
     isNewResourceGroupDialogShown: boolean;
@@ -66,7 +76,11 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
 
         resourceGroups: unset(),
         subscriptions: unset(),
+        acrs: unset(),
         namespaces: unset(),
+
+        //Repo Files
+        repoTreeStructure: unset(),
 
         //Selected Items
         selectedWorkflowName: unset(),
@@ -75,6 +89,10 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
         selectedAcrResourceGroup: unset(),
         selectedAcr: unset(),
         selectedDeploymentNamespace: unset(),
+
+        //Creation Flags
+        createNewAcrReq: false,
+        createNewAcrResourceGroupReq: false,
 
         //Creating new resource group
         isNewResourceGroupDialogShown: false,
@@ -101,6 +119,10 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
             ...state,
             resourceGroups: valid(groups),
         }),
+        getAcrsResponse: (state, msg) => ({
+            ...state,
+            acrs: valid(msg.acrs),
+        }),
         getNamespacesResponse: (state, namespaces) => ({
             ...state,
             namespaces: Array.isArray(namespaces)
@@ -111,6 +133,11 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
             ...state,
             prUrl: valid(prUrl),
             status: "Created", //Requires check for proper creation
+        }),
+        getRepoTreeStructureResponse: (state, repoTreeStructure) => ({
+            ...state,
+            repoTreeStructure:
+                repoTreeStructure !== null ? valid(repoTreeStructure) : missing("Repo tree structure is missing."),
         }),
     },
     eventHandler: {
@@ -142,6 +169,19 @@ export const stateUpdater: WebviewStateUpdater<"automatedDeployments", EventDef,
             ...state,
             selectedDeploymentNamespace: namespace,
         }),
+        setSelectedAcrResourceGroup: (
+            state,
+            msg: { resourceGroup: Validatable<string>; createNewAcrResourceGroupReq: boolean },
+        ) => ({
+            ...state,
+            selectedAcrResourceGroup: msg.resourceGroup,
+            createNewAcrResourceGroupReq: msg.createNewAcrResourceGroupReq,
+        }),
+        setSelectedAcr: (state, msg: { acr: Validatable<AcrKey>; createNewAcrReq: boolean }) => ({
+            ...state,
+            selectedAcr: msg.acr,
+            createNewAcrReq: msg.createNewAcrReq,
+        }),
     },
 };
 
@@ -151,5 +191,7 @@ export const vscode = getWebviewMessageContext<"automatedDeployments">({
     getSubscriptionsRequest: null,
     createWorkflowRequest: null,
     getResourceGroupsRequest: null,
+    getAcrsRequest: null,
     getNamespacesRequest: null,
+    getRepoTreeStructureRequest: null,
 });
