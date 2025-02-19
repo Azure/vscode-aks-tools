@@ -1,6 +1,5 @@
 import { FormEvent, useState } from "react";
 import { Dialog } from "../../components/Dialog";
-import { VSCodeButton, VSCodeCheckbox, VSCodeDivider, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import styles from "./FilePicker.module.css";
@@ -113,10 +112,10 @@ export function FilePicker(props: FilePickerProps) {
 
     return (
         <Dialog isShown={props.shown} onCancel={() => props.closeRequested(null)}>
-            <h2>{props.options.title}</h2>
+            <h2 className={styles.title}>{props.options.title}</h2>
 
             <form onSubmit={handleSubmit}>
-                <VSCodeDivider />
+                <hr style={{ marginBottom: "0.5rem" }} />
                 <FileSystemNodes
                     items={[props.rootDir]}
                     filters={props.options.filters || {}}
@@ -131,7 +130,8 @@ export function FilePicker(props: FilePickerProps) {
                         {isDirectory ? "Directory:" : "File:"}
                     </label>
                     {(!canSelectMany || selectedItems.length <= 1) && (
-                        <VSCodeTextField
+                        <input
+                            type="text"
                             id="filename-input"
                             className={styles.control}
                             value={selectedItems.length === 1 ? selectedItems[0].name : ""}
@@ -142,12 +142,12 @@ export function FilePicker(props: FilePickerProps) {
                 </div>
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit" disabled={isNothing(validate())}>
+                    <button type="submit" disabled={isNothing(validate())}>
                         {props.options.buttonLabel || "Select"}
-                    </VSCodeButton>
-                    <VSCodeButton appearance="secondary" onClick={() => props.closeRequested(null)}>
+                    </button>
+                    <button className="secondary-button" onClick={() => props.closeRequested(null)}>
                         Cancel
-                    </VSCodeButton>
+                    </button>
                 </div>
             </form>
         </Dialog>
@@ -235,12 +235,10 @@ function FileSystemNode(props: FileSystemNodeProps) {
     }
 
     function ignoreClick(e: Event | FormEvent<HTMLElement>) {
-        e.preventDefault();
         e.stopPropagation();
     }
 
     const isSelected = props.selectedItems.includes(props.item);
-    const itemClassNames = [styles.item, isSelected ? styles.selected : ""].filter((n) => !!n).join(" ");
 
     return (
         <>
@@ -253,14 +251,20 @@ function FileSystemNode(props: FileSystemNodeProps) {
                     />
                 )}
                 {props.canSelectMany && !isDirectory(props.item) && (
-                    <VSCodeCheckbox
+                    <input
+                        type="checkbox"
                         checked={isSelected}
                         onClick={ignoreClick}
                         onChange={() => props.handleItemSelectionChange(props.item)}
-                        style={{ margin: "0", paddingRight: "0.5rem" }}
+                        style={{
+                            margin: "0rem 0.5rem 0rem .5rem",
+                            position: "relative",
+                            top: ".125rem",
+                            display: "inline",
+                        }}
                     />
                 )}
-                <span onClick={() => props.handleItemSelectionChange(props.item)} className={itemClassNames}>
+                <span onClick={() => props.handleItemSelectionChange(props.item)} className={styles.itemSpan}>
                     {props.item.name}
                 </span>
                 {expanded && isDirectory(props.item) && (
