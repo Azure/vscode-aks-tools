@@ -254,7 +254,19 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     ) {
         //---Run Neccesary Checks prior to making the call to DevHub to create a workflow ----
 
-        //Check if new resource group must be created //TODO
+        //Check if new ACR Resource group must be created
+        if (workflowCreationParams.CreationFlags.createNewAcrResourceGroup) {
+            const resourceGroupCreation = await createNewResourceGroup(
+                this.resourceManagementClient,
+                workflowCreationParams.AcrKey.acrResourceGroup,
+                workflowCreationParams.location,
+            );
+            if (!resourceGroupCreation.succeeded) {
+                console.error(resourceGroupCreation.error);
+                vscode.window.showErrorMessage(resourceGroupCreation.error);
+                return;
+            }
+        }
 
         //Check for isNewNamespace, to see if new namespace must be created.
         if (workflowCreationParams.CreationFlags.createNewNamespace) {
