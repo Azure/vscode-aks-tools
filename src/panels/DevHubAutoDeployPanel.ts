@@ -11,7 +11,12 @@ import { DeveloperHubServiceClient, Workflow } from "@azure/arm-devhub";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { Octokit } from "@octokit/rest";
-import { ToWebViewMsgDef, ResourceGroup, AcrKey } from "../webview-contract/webviewDefinitions/automatedDeployments";
+import { ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/automatedDeployments/automatedDeployments";
+import {
+    ResourceGroup,
+    AcrKey,
+    WorkflowCreationParams,
+} from "../webview-contract/webviewDefinitions/automatedDeployments/types";
 import { getGitHubRepos, getGitHubBranchesForRepo } from "../commands/utils/octokitHelper";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import * as roleAssignmentsUtil from "../../src/commands/utils/roleAssignments";
@@ -90,7 +95,9 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             getGitHubReposRequest: () => this.handleGetGitHubReposRequest(webview),
             getGitHubBranchesRequest: (args) => this.handleGetGitHubBranchesRequest(webview, args.repoOwner, args.repo),
             getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
-            createWorkflowRequest: () => this.handleCreateWorkflowRequest(webview),
+            createWorkflowRequest: (workflowCreationParams: WorkflowCreationParams) => {
+                this.handleCreateWorkflowRequest(workflowCreationParams, webview);
+            },
             getResourceGroupsRequest: () => this.handleGetResourceGroupsRequest(webview),
             getAcrsRequest: (msg) => this.handleGetAcrsRequest(msg.subscriptionId, msg.acrResourceGroup, webview),
             getNamespacesRequest: (key) =>
@@ -171,7 +178,14 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         }
 
         webview.postGetAcrsResponse({
-            acrs: acrResp.result.map(({ name }) => ({ acrName: name }) as AcrKey),
+            acrs: acrResp.result.map(
+                ({ name }) =>
+                    ({
+                        acrName: name,
+                        acrResourceGroup: acrResourceGroup,
+                        acrSubscriptionId: subscriptionId,
+                    }) as AcrKey,
+            ),
         });
     }
 
@@ -234,62 +248,49 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         webview.postGetRepoTreeStructureResponse(tree);
     }
 
-    private async handleCreateWorkflowRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        //---Hardcoded values for testing purposes, will be replaced with webview input---
-        const user = "ReinierCC";
-        const repo = "contoso-air";
-        const branch = "main";
-        const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a";
-        const clusterResourceGroup = "rei-rg";
-        const clusterName = "reiCluster";
-
-        const acrName = "reiacr9";
-        const acrResourceGroup = "rei-rg";
-        const acrLocation = "eastus2";
-        //------
-
+    private async handleCreateWorkflowRequest(
+        workflowCreationParams: WorkflowCreationParams,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
         //---Run Neccesary Checks prior to making the call to DevHub to create a workflow ----
 
         //Check if new resource group must be created //TODO
 
         //Check for isNewNamespace, to see if new namespace must be created.
-        const isNewNamespace = true; //Actual Value Provided Later PR //PlaceHolder
-        if (isNewNamespace) {
+        if (workflowCreationParams.CreationFlags.createNewNamespace) {
             //Create New Namespace
-            const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a"; // These values will be provided to the fuction call from the webview
-            const resourceGroup = "rei-rg"; //PlaceHolder
-            const clusterName = "reiCluster"; //PlaceHolder
-            const namespace = "not-default"; //PlaceHolder
             const namespaceCreationResp = await createClusterNamespace(
                 this.sessionProvider,
                 this.kubectl,
-                subscriptionId,
-                resourceGroup,
-                clusterName,
-                namespace,
+                workflowCreationParams.ClusterKey.subscriptionId,
+                workflowCreationParams.ClusterKey.resourceGroup,
+                workflowCreationParams.ClusterKey.clusterName,
+                workflowCreationParams.namespace,
             );
 
             if (failed(namespaceCreationResp)) {
-                console.log("Failed to create namespace: ", namespace, "Error: ", namespaceCreationResp.error);
-                vscode.window.showErrorMessage(`Failed to create namespace: ${namespace}`);
+                console.log(
+                    "Failed to create namespace: ",
+                    workflowCreationParams.namespace,
+                    "Error: ",
+                    namespaceCreationResp.error,
+                );
+                vscode.window.showErrorMessage(`Failed to create namespace: ${workflowCreationParams.namespace}`);
                 return;
             }
             vscode.window.showInformationMessage(namespaceCreationResp.result);
         }
 
         //Create ACR if required
-        //ACR will be created based off user input for naming and resource group
-        const createNewAcrReq = true;
-        const createNewAcrResourceGroupReq = true;
-        if (createNewAcrReq) {
+        if (workflowCreationParams.CreationFlags.createNewAcr) {
             const acrCreationSucceeded = await createNewAcr(
                 this.sessionProvider,
                 this.subscriptionId,
-                acrResourceGroup,
-                acrName,
-                acrLocation,
+                workflowCreationParams.AcrKey.acrResourceGroup,
+                workflowCreationParams.AcrKey.acrName,
+                workflowCreationParams.location, // Currently assuming location is the same as the cluster //Depends on decided UX in frontend
                 this.resourceManagementClient,
-                createNewAcrResourceGroupReq,
+                workflowCreationParams.CreationFlags.createNewAcrResourceGroup,
             );
             if (!acrCreationSucceeded) {
                 console.log("Error creating ACR");
@@ -320,9 +321,9 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         const gitFedCredResp = await msGraph.createGitHubActionFederatedIdentityCredential(
             this.graphClient,
             newApp.result.appId,
-            user,
-            repo,
-            branch,
+            workflowCreationParams.GitRepoKey.repoOwner,
+            workflowCreationParams.GitRepoKey.repo,
+            workflowCreationParams.GitRepoKey.branchName,
         );
         if (failed(gitFedCredResp)) {
             console.error("Error creating GitHub Federated Credential:", gitFedCredResp.error);
@@ -331,16 +332,27 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         }
         console.log("GitHub Federated Credential created:", gitFedCredResp.result);
 
-        const authManagmentClient = getAuthorizationManagementClient(this.sessionProvider, subscriptionId);
+        const authManagmentClient = getAuthorizationManagementClient(
+            this.sessionProvider,
+            workflowCreationParams.ClusterKey.subscriptionId,
+        );
 
         //Represent ArmID for ACR and Cluster
-        const acrScope = roleAssignmentsUtil.getScopeForAcr(subscriptionId, acrResourceGroup, acrName);
-        const clusterScope = roleAssignmentsUtil.getScopeForCluster(subscriptionId, clusterResourceGroup, clusterName);
+        const acrScope = roleAssignmentsUtil.getScopeForAcr(
+            workflowCreationParams.AcrKey.acrSubscriptionId,
+            workflowCreationParams.AcrKey.acrResourceGroup,
+            workflowCreationParams.AcrKey.acrName,
+        );
+        const clusterScope = roleAssignmentsUtil.getScopeForCluster(
+            workflowCreationParams.ClusterKey.subscriptionId,
+            workflowCreationParams.ClusterKey.resourceGroup,
+            workflowCreationParams.ClusterKey.clusterName,
+        );
 
         //Assign Collaborator Role to Service Principal for ACR
         const acrRoleCreation = await roleAssignmentsUtil.createRoleAssignment(
             authManagmentClient,
-            subscriptionId,
+            workflowCreationParams.AcrKey.acrSubscriptionId,
             newServicePrincipal.result.appId,
             azureContributorRole,
             acrScope,
@@ -356,7 +368,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         //Assign Collaborator Role to Service Principal for AKS cluster
         const clusterRoleCreation = await roleAssignmentsUtil.createRoleAssignment(
             authManagmentClient,
-            subscriptionId,
+            workflowCreationParams.ClusterKey.subscriptionId,
             newServicePrincipal.result.appId,
             azureContributorRole,
             clusterScope,
@@ -372,9 +384,9 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         //Get Cluster Principal ID for Role Assignment Check
         const clusterPrincipalId = await getClusterPrincipalId(
             this.sessionProvider,
-            subscriptionId,
-            clusterResourceGroup,
-            clusterName,
+            workflowCreationParams.ClusterKey.subscriptionId,
+            workflowCreationParams.ClusterKey.resourceGroup,
+            workflowCreationParams.ClusterKey.clusterName,
         );
         if (failed(clusterPrincipalId)) {
             console.error("Error getting cluster principal ID:", clusterPrincipalId.error);
@@ -386,9 +398,9 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         const acrPullResp = await verifyAndAssignAcrPullRole(
             authManagmentClient,
             clusterPrincipalId.result,
-            acrResourceGroup,
-            acrName,
-            subscriptionId,
+            workflowCreationParams.AcrKey.acrResourceGroup,
+            workflowCreationParams.AcrKey.acrName,
+            workflowCreationParams.AcrKey.acrSubscriptionId,
             acrScope,
         );
         if (failed(acrPullResp)) {
@@ -397,14 +409,19 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             return;
         }
 
-        //---Run Neccesary Checks prior to making the call to DevHub to create a workflow ----
-
-        ////////////TODO: Pass in neccesary parameters for workflow creation
-        const prUrl = await launchDevHubWorkflow(this.devHubClient);
-        if (prUrl !== undefined) {
-            vscode.window.showInformationMessage(`Workflow created successfully. PR: ${prUrl}`);
-            webview.postGetWorkflowCreationResponse(prUrl);
+        const prUrl = await launchDevHubWorkflow(
+            workflowCreationParams,
+            clusterScope,
+            newServicePrincipal.result.appId, //Verify this is actually the clientID
+            newApp.result.id, //Verify this is actually the tenant ID
+            this.devHubClient,
+        );
+        if (prUrl === undefined || prUrl === "") {
+            vscode.window.showErrorMessage("Failed to create workflow");
+            return;
         }
+        vscode.window.showInformationMessage(`Workflow created successfully. PR: ${prUrl}`);
+        webview.postGetWorkflowCreationResponse(prUrl);
     }
 }
 
@@ -415,7 +432,7 @@ async function createNewAcr(
     acrName: string,
     acrLocation: string,
     resourceManagementClient: ResourceManagementClient,
-    createNewAcrResourceGroupReq: boolean = false,
+    createNewAcrResourceGroupReq: boolean,
 ): Promise<boolean> {
     if (createNewAcrResourceGroupReq) {
         const resourceGroupCreation = await createNewResourceGroup(
@@ -440,56 +457,59 @@ async function createNewAcr(
 
 //Current Manual Implementation
 //This serves only as a reference of the desired goal for the required fields to acomplish workflow creation
-async function launchDevHubWorkflow(devHubClient: DeveloperHubServiceClient): Promise<string | undefined> {
-    const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a";
-    const clusterName = "reiCluster";
-    const resourceGroup = "rei-rg";
-    const clusterScope = roleAssignmentsUtil.getScopeForCluster(subscriptionId, resourceGroup, clusterName);
-
-    const workflowName = "workflow2Rei";
-    const workflowParameters: Workflow = {
+async function launchDevHubWorkflow(
+    workflowCreationParams: WorkflowCreationParams,
+    clusterScope: string,
+    servicePrincipalId: string,
+    tenantId: string,
+    devHubClient: DeveloperHubServiceClient,
+): Promise<string | undefined> {
+    const workflowArgs: Workflow = {
+        appName: workflowCreationParams.DeploymentKey.appName,
+        location: workflowCreationParams.location,
         acr: {
-            acrRegistryName: "reiacr9",
-            acrRepositoryName: "contoso-air", //prob an issue with this repo, WHAT IS ACR REPO
-            acrResourceGroup: "rei-rg",
-            acrSubscriptionId: subscriptionId,
+            acrRegistryName: workflowCreationParams.AcrKey.acrName,
+            acrRepositoryName: "auto-deployments-repo", //Might not be required as image name is being provided.
+            acrResourceGroup: workflowCreationParams.AcrKey.acrResourceGroup,
+            acrSubscriptionId: workflowCreationParams.AcrKey.acrSubscriptionId,
         },
         aksResourceId: clusterScope,
-        appName: "my-app",
-        branchName: "playground",
+
+        dockerBuildContext: workflowCreationParams.DockerfileKey.dockerfileBuildContextPath,
+        dockerfile: workflowCreationParams.DockerfileKey.dockerfilePath,
+        dockerfileOutputDirectory: workflowCreationParams.DockerfileKey.dockerfilePath,
+        dockerfileGenerationMode: workflowCreationParams.CreationFlags.createNewDockerfile ? "enabled" : "disabled",
+        generationLanguage: workflowCreationParams.DockerfileKey.appLanguage,
+        languageVersion: workflowCreationParams.DockerfileKey.languageVersion,
+        port: workflowCreationParams.DockerfileKey.appPort,
+        imageName: workflowCreationParams.DeploymentKey.imageName,
+        imageTag: workflowCreationParams.DeploymentKey.imageTag,
+
+        manifestGenerationMode: workflowCreationParams.CreationFlags.createNewDeploymentFiles ? "enabled" : "disabled",
+        manifestOutputDirectory: workflowCreationParams.DeploymentKey.deploymentFileLocations[0],
+        manifestType: workflowCreationParams.DeploymentKey.deploymentType,
         deploymentProperties: {
-            kubeManifestLocations: ["./manifests"],
-            manifestType: "kube",
-            overrides: { key1: "value1" },
+            kubeManifestLocations: workflowCreationParams.DeploymentKey.deploymentFileLocations,
+            manifestType: workflowCreationParams.DeploymentKey.deploymentType,
         },
-        dockerBuildContext: "./src/web",
-        dockerfile: "./Dockerfile",
-        dockerfileGenerationMode: "enabled",
-        dockerfileOutputDirectory: "./",
-        generationLanguage: "javascript",
-        imageName: "reiacr9.azurecr.io/contoso-air",
-        imageTag: "latest",
-        languageVersion: "19",
-        location: "eastus2",
-        manifestGenerationMode: "enabled",
-        manifestOutputDirectory: "./",
-        manifestType: "kube",
-        namespacePropertiesArtifactGenerationPropertiesNamespace: "default",
-        namespacePropertiesGithubWorkflowProfileNamespace: "default",
+
+        namespacePropertiesArtifactGenerationPropertiesNamespace: workflowCreationParams.namespace,
+        namespacePropertiesGithubWorkflowProfileNamespace: workflowCreationParams.namespace,
+
         oidcCredentials: {
-            azureClientId: "a5279966-006c-4cc1-ab27-1f99be336265", // application ID of Entra App
-            azureTenantId: "72f988bf-86f1-41af-91ab-2d7cd011db47",
+            azureClientId: servicePrincipalId, // application ID of Entra App
+            azureTenantId: tenantId, //Possible point of error //double verify
         },
-        port: "3000",
-        repositoryName: "contoso-air",
-        repositoryOwner: "ReinierCC",
-        tags: { appname: "my-app" },
+        repositoryOwner: workflowCreationParams.GitRepoKey.repoOwner,
+        repositoryName: workflowCreationParams.GitRepoKey.repo,
+        branchName: workflowCreationParams.GitRepoKey.branchName,
+        tags: { appname: workflowCreationParams.DeploymentKey.appName },
     };
     vscode.window.showInformationMessage("Creating workflow...");
     const workflowResult = await devHubClient.workflowOperations.createOrUpdate(
-        "rei-rg",
-        workflowName,
-        workflowParameters,
+        workflowCreationParams.ClusterKey.resourceGroup,
+        workflowCreationParams.workflowName,
+        workflowArgs,
     );
 
     if (workflowResult.prStatus === "failed") {

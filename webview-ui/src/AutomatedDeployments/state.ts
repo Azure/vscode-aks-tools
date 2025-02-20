@@ -2,7 +2,7 @@ import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { Validatable, unset, valid, missing } from "../utilities/validation";
 import { NewOrExisting, Subscription } from "../../../src/webview-contract/webviewDefinitions/draft/types";
-import { AcrKey } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments";
+import { AcrKey } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments/types";
 import { DefinedResourceGroup } from "../../../src/commands/utils/resourceGroups";
 import { TreeNode } from "../../../src/commands/utils/octokitHelper";
 
@@ -189,9 +189,9 @@ export const vscode = getWebviewMessageContext<"automatedDeployments">({
     getGitHubReposRequest: null,
     getGitHubBranchesRequest: null,
     getSubscriptionsRequest: null,
-    createWorkflowRequest: null,
     getResourceGroupsRequest: null,
     getAcrsRequest: null,
     getNamespacesRequest: null,
     getRepoTreeStructureRequest: null,
+    createWorkflowRequest: null,
 });

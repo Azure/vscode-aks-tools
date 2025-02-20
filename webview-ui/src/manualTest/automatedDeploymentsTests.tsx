@@ -1,9 +1,9 @@
 import { MessageHandler, MessageSink } from "../../../src/webview-contract/messaging";
 import {
-    InitialState,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
-} from "../../../src/webview-contract/webviewDefinitions/automatedDeployments";
+} from "../../../src/webview-contract/webviewDefinitions/automatedDeployments/automatedDeployments";
+import { InitialState } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments/types";
 import { stateUpdater } from "../AutomatedDeployments/state";
 import { Scenario } from "../utilities/manualTest";
 import { AutomatedDeployments } from "../AutomatedDeployments/AutomatedDeployments";
@@ -27,7 +27,20 @@ export function getAutomatedDeploymentScenarios() {
             },
             getAcrsRequest: () => {
                 console.log("Getting acrs with getAcrsRequest");
-                webview.postGetAcrsResponse({ acrs: [{ acrName: "acrName" }, { acrName: "daBestAcr" }] });
+                webview.postGetAcrsResponse({
+                    acrs: [
+                        {
+                            acrName: "acrName",
+                            acrResourceGroup: "acr-rg",
+                            acrSubscriptionId: "12345678-3456-7890-5678-012345678901",
+                        },
+                        {
+                            acrName: "daBestAcrName",
+                            acrResourceGroup: "da-best-acr-rg",
+                            acrSubscriptionId: "12345678-3456-7890-5678-012345678901",
+                        },
+                    ],
+                });
             },
             getSubscriptionsRequest: () => {
                 // implementation here

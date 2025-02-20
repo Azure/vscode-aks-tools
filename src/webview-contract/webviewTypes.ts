@@ -18,7 +18,7 @@ import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
 import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
-import { AutomatedDeploymentsDefinition } from "./webviewDefinitions/automatedDeployments";
+import { AutomatedDeploymentsDefinition } from "./webviewDefinitions/automatedDeployments/automatedDeployments";
 import { CreateFleetDefinition } from "./webviewDefinitions/createFleet";
 
 /**
