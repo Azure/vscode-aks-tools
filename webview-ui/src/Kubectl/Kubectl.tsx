@@ -1,4 +1,3 @@
-import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { CommandCategory, InitialState, PresetCommand } from "../../../src/webview-contract/webviewDefinitions/kubectl";
 import styles from "./Kubectl.module.css";
 import { CommandList } from "./CommandList";
@@ -75,7 +74,7 @@ export function Kubectl(initialState: InitialState) {
         <div className={styles.wrapper}>
             <header className={styles.mainHeading}>
                 <h2>Kubectl Command Run for {state.clusterName}</h2>
-                <VSCodeDivider />
+                <hr />
             </header>
             <nav className={styles.commandNav}>
                 <CommandList
@@ -93,7 +92,7 @@ export function Kubectl(initialState: InitialState) {
                     onRunCommand={handleRunCommand}
                     onSaveRequest={handleSaveRequest}
                 />
-                <VSCodeDivider />
+                <hr />
                 <CommandOutput
                     isCommandRunning={state.isCommandRunning}
                     output={state.output}
