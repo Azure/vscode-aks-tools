@@ -123,6 +123,12 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
             // filter out members that do not satisfy the filter (so that they are not shown in the tree)
             const membersAfterFilt = members.result.filter((m) => {
                 // for each member cluster of the fleet
+                if (parseResource(m.clusterResourceId).subscriptionId !== this.subscriptionId) {
+                    // if the member is not in the same subscription as the fleet,
+                    // there is no way it can be in the filter, as cluster-filter only contains clusters from the same subscription
+                    // to avoid being filtered out, add it to the list before applying the filter
+                    return true;
+                }
                 const filteredClusters = getFilteredClusters();
                 return filteredClusters.some(
                     // check if the member is one of the clusters in the filter
