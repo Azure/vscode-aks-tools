@@ -1,4 +1,4 @@
-import { ContainerServiceFleetClient, Fleet } from "@azure/arm-containerservicefleet";
+import { ContainerServiceFleetClient } from "@azure/arm-containerservicefleet";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { Uri, window } from "vscode";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -15,8 +15,7 @@ import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksFleetClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { failed } from "../commands/utils/errorable";
-import { getEnvironment } from "../auth/azureAuth";
-import { getDeploymentPortalUrl, getPortalResourceUrl } from "../commands/utils/env";
+import { createFleet } from "../commands/utils/fleet";
 
 export class CreateFleetPanel extends BasePanel<"createFleet"> {
     constructor(extensionUri: Uri) {
@@ -141,59 +140,5 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         };
 
         await createFleet(this.fleetClient, resourceGroupName, name, resource, webview);
-    }
-}
-
-async function createFleet(
-    client: ContainerServiceFleetClient,
-    resourceGroupName: string,
-    name: string,
-    resource: Fleet,
-    webview: MessageSink<ToWebViewMsgDef>,
-) {
-    const operationDescription = `Creating fleet ${name}`;
-    webview.postProgressUpdate({
-        event: ProgressEventType.InProgress,
-        operationDescription,
-        errorMessage: null,
-        deploymentPortalUrl: null,
-        createdFleet: null,
-    });
-
-    const environment = getEnvironment();
-    try {
-        const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
-        if (!result || !result.id) {
-            window.showWarningMessage(
-                `Fleet creation failed: No ID returned. 
-                Resource Group Name: ${resourceGroupName},
-                Fleet Name: ${name}, 
-                Location: ${resource.location}.`,
-            );
-            throw new Error(
-                `Fleet creation failed: No ID returned. 
-                Resource Group Name: ${resourceGroupName},
-                Fleet Name: ${name}, 
-                Location: ${resource.location}.`,
-            );
-        }
-        const deploymentPortalUrl = getDeploymentPortalUrl(environment, result.id);
-        webview.postProgressUpdate({
-            event: ProgressEventType.Success,
-            operationDescription,
-            errorMessage: null,
-            deploymentPortalUrl,
-            createdFleet: {
-                portalUrl: getPortalResourceUrl(environment, result.id),
-            },
-        });
-    } catch (error) {
-        webview.postProgressUpdate({
-            event: ProgressEventType.Failed,
-            operationDescription,
-            errorMessage: (error as Error).message,
-            deploymentPortalUrl: null,
-            createdFleet: null,
-        });
     }
 }

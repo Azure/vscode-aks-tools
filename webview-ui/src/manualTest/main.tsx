@@ -60,6 +60,9 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoTest: getKaitoTestScenarios(),
     automatedDeployments: getAutomatedDeploymentScenarios(),
     createFleet: getCreateFleetScenarios(),
+    // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
+    // TODO: Replace with the actual scenarios when available.
+    fleetProperties: [],
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

@@ -20,6 +20,7 @@ import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
 import { AutomatedDeploymentsDefinition } from "./webviewDefinitions/automatedDeployments";
 import { CreateFleetDefinition } from "./webviewDefinitions/createFleet";
+import { FleetProperties } from "./webviewDefinitions/fleetProperties";
 
 /**
  * Groups all the related types for a single webview.
@@ -60,6 +61,7 @@ type AllWebviewDefinitions = {
     kaitoTest: KaitoTestDefinition;
     automatedDeployments: AutomatedDeploymentsDefinition;
     createFleet: CreateFleetDefinition;
+    fleetProperties: FleetProperties;
 };
 
 type ContentIdLookup = {
