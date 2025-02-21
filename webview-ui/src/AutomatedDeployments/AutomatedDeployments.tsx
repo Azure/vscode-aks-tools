@@ -1,5 +1,8 @@
 //import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { InitialState } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments";
+import {
+    InitialState,
+    //WorkflowCreationParams,
+} from "../../../src/webview-contract/webviewDefinitions/automatedDeployments/types";
 //import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 //import { faFolder } from "@fortawesome/free-regular-svg-icons";
 
@@ -108,7 +111,51 @@ export function AutomatedDeployments(initialState: InitialState) {
     }
 
     function handleCreateWorkflowClick() {
-        vscode.postCreateWorkflowRequest();
+        //Leaving for easy manual testing while frontend input is not fully implemented
+        // const subscriptionId = "feb5b150-60fe-4441-be73-8c02a524f55a";
+        // const workflow: WorkflowCreationParams = {
+        //     ClusterKey: {
+        //         subscriptionId: subscriptionId,
+        //         resourceGroup: "rei-rg",
+        //         clusterName: "reiCluster",
+        //     },
+        //     GitRepoKey: {
+        //         repo: "contoso-air",
+        //         repoOwner: "ReinierCC",
+        //         branchName: "main",
+        //     },
+        //     AcrKey: {
+        //         acrName: "reiAcr",
+        //         acrResourceGroup: "acr-rei-rg",
+        //         acrSubscriptionId: subscriptionId,
+        //     },
+        //     CreationFlags: {
+        //         createNewAcr: false,
+        //         createNewAcrResourceGroup: false,
+        //         createNewNamespace: false,
+        //         createNewClusterResourceGroup: false,
+        //         createNewDeploymentFiles: true,
+        //         createNewDockerfile: true,
+        //     },
+        //     DeploymentKey: {
+        //         deploymentType: "kube",
+        //         deploymentFileLocations: ["./manifests"],
+        //         appName: "reiApp",
+        //         imageName: "reiImage",
+        //         imageTag: "latest",
+        //     },
+        //     DockerfileKey: {
+        //         appLanguage: "javascript",
+        //         languageVersion: "19",
+        //         appPort: "3000",
+        //         dockerfileBuildContextPath: "./src/web",
+        //         dockerfilePath: "./Dockerfile",
+        //     },
+        //     namespace: "default",
+        //     workflowName: "reiWorkflow",
+        //     location: "eastus2",
+        // };
+        // vscode.postCreateWorkflowRequest(workflow);
     }
 
     function handleCreateResourceGroupDialogCancel() {
