@@ -4,7 +4,6 @@ import { ResourceSelector } from "../../components/ResourceSelector";
 import { useStateManagement } from "../../utilities/state";
 import styles from "../Draft.module.css";
 import { stateUpdater, vscode } from "./state";
-import { VSCodeButton, VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
@@ -146,19 +145,20 @@ export function DraftDockerfile(initialState: InitialState) {
                         <i className={`${styles.inlineIcon} codicon codicon-info`} />
                     </span>
                 </label>
-                <VSCodeTextField
+                <input
+                    type="text"
                     id="location-input"
                     readOnly
                     value={`.${state.workspaceConfig.pathSeparator}${state.selectedLocation.value}`}
                     className={styles.control}
                 />
                 <div className={styles.controlSupplement}>
-                    <VSCodeButton appearance="icon" onClick={handleChooseLocationClick}>
+                    <button className="choose-location-button" onClick={handleChooseLocationClick}>
                         <span className={styles.iconButton}>
                             <FontAwesomeIcon icon={faFolder} />
                             &nbsp;Choose location
                         </span>
-                    </VSCodeButton>
+                    </button>
                 </div>
                 {hasMessage(state.selectedLocation) && (
                     <span className={styles.validationMessage}>
@@ -243,15 +243,15 @@ export function DraftDockerfile(initialState: InitialState) {
 
             <div className={styles.buttonContainer}>
                 {state.status !== "Created" && (
-                    <VSCodeButton type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
+                    <button type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
                         Create
-                    </VSCodeButton>
+                    </button>
                 )}
 
                 {state.existingFiles.map((path, i) => (
-                    <VSCodeButton key={i} appearance="secondary" onClick={() => vscode.postOpenFileRequest(path)}>
+                    <button key={i} className="secondary-button" onClick={() => vscode.postOpenFileRequest(path)}>
                         Open {path}
-                    </VSCodeButton>
+                    </button>
                 ))}
             </div>
 
@@ -263,18 +263,18 @@ export function DraftDockerfile(initialState: InitialState) {
 
                         <p>
                             If you still need to generate the appropriate deployment files, you can run{" "}
-                            <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
+                            <a href="#" onClick={handleDraftDeploymentClick}>
                                 Automated Deployments: Create a deployment
-                            </VSCodeLink>{" "}
+                            </a>{" "}
                             to easily create the appropriate files.
                         </p>
 
                         <p>
                             If you already have all the files you need to deploy and would like to generate a GitHub
                             Action, you can run{" "}
-                            <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
+                            <a href="#" onClick={handleDraftWorkflowClick}>
                                 Automated Deployments: Create a GitHub workflow
-                            </VSCodeLink>
+                            </a>
                             .
                         </p>
                     </div>

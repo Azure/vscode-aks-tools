@@ -1,7 +1,6 @@
 import { IconDefinition, faCheckCircle, faClock } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InlineAction.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 
 export function makeFixAction(
     icon: IconDefinition,
@@ -60,9 +59,9 @@ export function InlineAction(props: InlineActionProps) {
             </div>
             <div className={styles.actionButtons}>
                 {props.actions.map((action, i) => (
-                    <VSCodeButton
+                    <button
                         key={i}
-                        appearance={action.isPrimary ? "primary" : "secondary"}
+                        className={action.isPrimary ? "" : "secondary-button"}
                         onClick={action.action}
                         disabled={!action.canPerformAction}
                     >
@@ -70,7 +69,7 @@ export function InlineAction(props: InlineActionProps) {
                             <FontAwesomeIcon icon={action.icon} />
                         </span>{" "}
                         {action.name}
-                    </VSCodeButton>
+                    </button>
                 ))}
             </div>
         </div>
