@@ -1,4 +1,4 @@
-import { VSCodeLink, VSCodePanelTab, VSCodePanelView, VSCodePanels } from "@vscode/webview-ui-toolkit/react";
+import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from "@vscode/webview-ui-toolkit/react";
 import { Overview } from "./Overview";
 import { Traces, TracesProps } from "./Traces";
 import styles from "./InspektorGadget.module.css";
@@ -53,7 +53,7 @@ export function InspektorGadget(initialState: InitialState) {
             <h2>Inspektor Gadget</h2>
             <p>
                 Inspektor Gadget provides a wide selection of BPF tools to dig deep into your Kubernetes cluster.
-                <VSCodeLink href="https://www.inspektor-gadget.io/">&nbsp;Learn more</VSCodeLink>
+                <a href="https://www.inspektor-gadget.io/">&nbsp;Learn more</a>
             </p>
 
             <VSCodePanels aria-label="Inspektory Gadget functions">
