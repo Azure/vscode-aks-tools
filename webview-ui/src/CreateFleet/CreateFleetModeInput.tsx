@@ -1,7 +1,6 @@
 import { FormEvent } from "react";
 import { HubMode } from "../../../src/webview-contract/webviewDefinitions/createFleet";
 import { hasMessage, invalid, isValueSet, valid, Validatable } from "../utilities/validation";
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./CreateFleet.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
@@ -79,7 +78,8 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
                 {props.hubMode === HubMode.With && (
                     <div className={styles.inputContainer}>
                         <label className={styles.label}>DNS name prefix*</label>
-                        <VSCodeTextField
+                        <input
+                            type="text"
                             id="dns-input"
                             value={isValueSet(props.dnsPrefix) ? props.dnsPrefix.value : ""}
                             className={`${styles.longControl} ${styles.validatable}`}

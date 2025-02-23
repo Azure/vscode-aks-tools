@@ -3,7 +3,7 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/c
 import { CreateFleetInput } from "./CreateFleetInput";
 import { useStateManagement } from "../utilities/state";
 import { Stage, stateUpdater, vscode } from "./helpers/state";
-import { VSCodeLink, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 
 export function CreateFleet(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -60,8 +60,8 @@ export function CreateFleet(initialState: InitialState) {
                     <>
                         <h3>Fleet {state.createParams!.name} was created successfully</h3>
                         <p>
-                            Click <VSCodeLink href={state.createdFleet?.portalUrl}>here</VSCodeLink> to view your fleet
-                            in the Azure Portal.
+                            Click <a href={state.createdFleet?.portalUrl}>here</a> to view your fleet in the Azure
+                            Portal.
                         </p>
                     </>
                 );
