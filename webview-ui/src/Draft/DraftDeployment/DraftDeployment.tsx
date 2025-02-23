@@ -32,13 +32,6 @@ import { Lazy, map as lazyMap } from "../../utilities/lazy";
 import { ResourceSelector } from "../../components/ResourceSelector";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
-import {
-    VSCodeButton,
-    VSCodeLink,
-    VSCodeRadio,
-    VSCodeRadioGroup,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { distinct } from "../../utilities/array";
 import { TextWithDropdown } from "../../components/TextWithDropdown";
@@ -231,7 +224,6 @@ export function DraftDeployment(initialState: InitialState) {
         });
     }
 
-    const [manifests, helm, kustomize]: DeploymentSpecType[] = ["manifests", "helm", "kustomize"];
     const existingFiles = getExistingPaths(state.selectedDeploymentSpecType, state.existingFiles);
 
     const acrImageTooltipMessage =
@@ -372,7 +364,8 @@ export function DraftDeployment(initialState: InitialState) {
                             )}
 
                             {state.selectedAcrRepository.value.isNew && (
-                                <VSCodeTextField
+                                <input
+                                    type="text"
                                     id="acr-image-tag-input"
                                     className={styles.control}
                                     value={
@@ -436,19 +429,20 @@ export function DraftDeployment(initialState: InitialState) {
                     <label htmlFor="location-input" className={styles.label}>
                         Location *
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="location-input"
                         readOnly
                         value={`.${state.workspaceConfig.pathSeparator}${state.selectedLocation.value}`}
                         className={styles.control}
                     />
                     <div className={styles.controlSupplement}>
-                        <VSCodeButton appearance="icon" onClick={handleChooseLocationClick}>
+                        <button className="choose-location-button" onClick={handleChooseLocationClick}>
                             <span className={styles.iconButton}>
                                 <FontAwesomeIcon icon={faFolder} />
                                 &nbsp;Choose location
                             </span>
-                        </VSCodeButton>
+                        </button>
                     </div>
                     {hasMessage(state.selectedLocation) && (
                         <span className={styles.validationMessage}>
@@ -460,22 +454,45 @@ export function DraftDeployment(initialState: InitialState) {
                     <label htmlFor="deployment-type-input" className={styles.label}>
                         Deployment options *
                     </label>
-                    <VSCodeRadioGroup
-                        id="deployment-type-input"
-                        className={styles.control}
-                        value={state.selectedDeploymentSpecType}
-                        orientation="vertical"
-                        onChange={handleDeploymentSpecTypeChange}
-                    >
-                        <VSCodeRadio value={manifests}>Manifests</VSCodeRadio>
-                        <VSCodeRadio value={helm}>Helm</VSCodeRadio>
-                        <VSCodeRadio value={kustomize}>Kustomize</VSCodeRadio>
-                    </VSCodeRadioGroup>
+                    <div id="deployment-type-input" className={styles.control}>
+                        <div className={styles.radioLine}>
+                            <input
+                                type="radio"
+                                name="deployment-type"
+                                value="manifests"
+                                checked={state.selectedDeploymentSpecType === "manifests"}
+                                onChange={handleDeploymentSpecTypeChange}
+                            />
+
+                            <label className={styles.radioLabel}>Manifests</label>
+                        </div>
+                        <div className={styles.radioLine}>
+                            <input
+                                type="radio"
+                                name="deployment-type"
+                                value="helm"
+                                checked={state.selectedDeploymentSpecType === "helm"}
+                                onChange={handleDeploymentSpecTypeChange}
+                            />
+                            <label className={styles.radioLabel}>Helm</label>
+                        </div>
+                        <div className={styles.radioLine}>
+                            <input
+                                type="radio"
+                                name="deployment-type"
+                                value="kustomize"
+                                checked={state.selectedDeploymentSpecType === "kustomize"}
+                                onChange={handleDeploymentSpecTypeChange}
+                            />
+                            <label className={styles.radioLabel}>Kustomize</label>
+                        </div>
+                    </div>
 
                     <label htmlFor="app-name-input" className={styles.label}>
                         Application name *
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="app-name-input"
                         value={orDefault(state.selectedApplicationName, "")}
                         className={styles.control}
@@ -554,9 +571,9 @@ export function DraftDeployment(initialState: InitialState) {
                 </fieldset>
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
+                    <button type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
                         Create
-                    </VSCodeButton>
+                    </button>
                 </div>
 
                 {existingFiles.length > 0 && (
@@ -565,7 +582,7 @@ export function DraftDeployment(initialState: InitialState) {
                         <ul className={styles.existingFileList}>
                             {existingFiles.map((path, i) => (
                                 <li key={i}>
-                                    <VSCodeLink
+                                    <a
                                         href="#"
                                         onClick={(e) => {
                                             e.preventDefault();
@@ -573,7 +590,7 @@ export function DraftDeployment(initialState: InitialState) {
                                         }}
                                     >
                                         {path}
-                                    </VSCodeLink>
+                                    </a>
                                 </li>
                             ))}
                         </ul>
@@ -588,9 +605,9 @@ export function DraftDeployment(initialState: InitialState) {
 
                             <p>
                                 To generate a GitHub Action, you can run{" "}
-                                <VSCodeLink href="#" onClick={handleDraftWorkflowClick}>
+                                <a href="#" onClick={handleDraftWorkflowClick}>
                                     Automated Deployments: Create a GitHub workflow
-                                </VSCodeLink>
+                                </a>
                                 .
                             </p>
                         </div>

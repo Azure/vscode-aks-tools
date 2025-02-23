@@ -47,6 +47,10 @@
     color: var(--vscode-textLink-foreground);
 }
 
+.linkColor {
+    color: var(--vscode-textLink-foreground);
+}
+
 .buttonContainer {
     margin-top: 1rem;
     margin-bottom: 1rem;
@@ -101,4 +105,12 @@ ul.existingFileList > li.removable {
 
 .nextStepsContainer h3 {
     margin-top: 0;
+}
+
+.radioLabel {
+    margin-left: 0.62rem;
+}
+
+.radioLine {
+    margin-bottom: 0.5rem;
 }
