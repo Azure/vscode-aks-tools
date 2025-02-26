@@ -1,4 +1,3 @@
-import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/detector";
 import { SingleDetector } from "./SingleDetector";
 import { useStateManagement } from "../utilities/state";
@@ -11,9 +10,8 @@ export function Detector(initialState: InitialState) {
         <>
             <h2>{state.name}</h2>
             {state.description && state.description !== "test" && <p>{state.description}</p>}
-            To perform more checks on your cluster, visit{" "}
-            <VSCodeLink href={state.portalDetectorUrl}>AKS Diagnostics</VSCodeLink>.
-            <VSCodeDivider style={{ marginTop: "16px" }} />
+            To perform more checks on your cluster, visit <a href={state.portalDetectorUrl}>AKS Diagnostics</a>.
+            <hr style={{ marginTop: "16px" }} />
             {state.detectors.map((detector) => (
                 <SingleDetector key={detector.name} {...detector}></SingleDetector>
             ))}
