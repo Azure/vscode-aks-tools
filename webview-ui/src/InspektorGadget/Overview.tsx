@@ -1,4 +1,3 @@
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEraser, faRocket } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
@@ -35,17 +34,17 @@ export function Overview(props: OverviewProps) {
                         <dd>{props.version.server}</dd>
                     </dl>
                     <br />
-                    <VSCodeButton onClick={handleUndeploy}>
+                    <button onClick={handleUndeploy}>
                         <FontAwesomeIcon icon={faEraser} />
                         &nbsp;Undeploy
-                    </VSCodeButton>
+                    </button>
                 </>
             )}
             {props.version && !props.version.server && (
-                <VSCodeButton onClick={handleDeploy}>
+                <button onClick={handleDeploy}>
                     <FontAwesomeIcon icon={faRocket} />
                     &nbsp;Deploy
-                </VSCodeButton>
+                </button>
             )}
         </>
     );

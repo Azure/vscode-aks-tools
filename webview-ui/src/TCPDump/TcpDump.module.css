@@ -62,4 +62,9 @@ table.capturelist th {
 
 table.capturelist td {
     padding: 5px;
+    text-align: left;
+}
+
+button span {
+    margin-right: 0.5rem;
 }
