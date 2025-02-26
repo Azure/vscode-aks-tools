@@ -38,27 +38,14 @@
     background: var(--vscode-list-activeSelectionBackground);
 }
 
-/* .inputField {
-    position: absolute;
-}
-
-.dropDownButton {
-    position: relative;
-}
-
-.selectedValue {
-    width: 100%;
-    position: relative;
-} */
-
 .inputField {
-    position: relative; /* Container becomes the reference for absolute positioning */
-    width: 100%; /* Adjust as needed */
+    position: relative;
+    width: 100%;
 }
 
 .selectedValue {
     width: 100%;
-    padding-right: 1.8rem !important; /* Space for the icon so text doesn't overlap */
+    padding-right: 1.8rem !important;
     box-sizing: border-box;
 }
 .selectedValue:hover {
@@ -67,10 +54,8 @@
 
 .dropDownButton {
     position: absolute;
-    right: 8px; /* Distance from the right edge (adjust as needed) */
-    top: 50%; /* Vertically center the icon */
+    right: 8px;
+    top: 50%;
     transform: translateY(-50%);
-    pointer-events: none; /* Allows clicks to pass through to the input if needed */
-    /* background-color: var(--input-background); */
-    /* background-color: red; */
+    pointer-events: none;
 }
