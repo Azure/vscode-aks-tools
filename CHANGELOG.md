@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.6.1]
+
+* Show Fleet Properties (#1245)
+* Treeview bug fix: showing members from different subscriptions (#1254)
+* [Webview UI toolkit deprecation] Cluster & fleet create, cluster properties component removal (#1258)
+* Fix: Deploy button not appearing (#1277)
+* Update: Retina Binary to recent release. (#1278)
+* packages: Update Inspektor Gadget to v0.38.0 (#1279)
+* Dependabot updates
+
 ## [1.6.0]
 
 * [Backend] ACR Creation, App Registration Creation & Role Privileges (#1238)
@@ -128,7 +138,7 @@ Welcome new contributors @tejhan & @ReinierCC to the repo. Thanks to  @ivelissec
 ## [1.4.8]
 
 * Add Support Plan and Preview information in cluster Properties Page.
-* Fix Code Scanning Checkout to be pinned to the commit sha. 
+* Fix Code Scanning Checkout to be pinned to the commit sha.
 * Dependabot updates and bumps.
 
 Welcome new contributor @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC for contributions, testing and reviews.
@@ -143,7 +153,7 @@ Welcome new contributor @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetrar
 * Avoid querying graph APIs for ASO.
 * Add direct node-fetch dependency.
 * Remove deprecated starter workflow commands.
-* Remove starter workflow traces as its removed now. 
+* Remove starter workflow traces as its removed now.
 * Dependabot updates and bumps.
 
 Thanks to @peterbom, @ivelisseca, @qpetraroia, @hsubramanianaks for contributions, testing and reviews.
@@ -251,7 +261,7 @@ Collaborations and thanks to @peterbom.
 * Remove deprecated React function call and update webview-ui dependencies.
 * Dependent bot updates.
 
-Thank you so much to @peterbom, @sprab, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Suli, Yi, Tom, Indu, Sri, Prabha, Thank you all for your ideas and collaboration! 
+Thank you so much to @peterbom, @sprab, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Suli, Yi, Tom, Indu, Sri, Prabha, Thank you all for your ideas and collaboration!
 
 ## [1.3.15]
 
@@ -266,7 +276,7 @@ Thank you so much to @peterbom, @sprab, @hsubramanianaks and @qpetraroia. Specia
 * Default branch is now main.
 * Move kubectl commands to webview.
 
-Thank you so much to @peterbom, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Yi, Tom, Indu, Sri, Prabha, Chase, Thank you all for your ideas! 
+Thank you so much to @peterbom, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Yi, Tom, Indu, Sri, Prabha, Chase, Thank you all for your ideas!
 
 ## [1.3.14]
 
