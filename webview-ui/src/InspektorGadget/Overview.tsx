@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEraser, faRocket } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
+import semver from "semver";
 import { GadgetVersion } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { EventHandlers } from "../utilities/state";
 import { EventDef, vscode } from "./helpers/state";
@@ -20,6 +21,12 @@ export function Overview(props: OverviewProps) {
     function handleUndeploy() {
         props.eventHandlers.onUndeploy();
         vscode.postUndeployRequest();
+    }
+
+    function isVersionStringOrNull(ver: string | null): boolean {
+        if (ver === null || !ver.startsWith("v")) return false;
+        const version = ver.substring(1);
+        return semver.valid(version) !== null;
     }
 
     return (
