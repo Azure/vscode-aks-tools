@@ -419,6 +419,14 @@ spec:
         });
 
         if (!localCaptureUri) {
+            //  Reset download state with error message if no file path was selected
+            webview.postDownloadCaptureFileResponse({
+                node,
+                captureName,
+                localCapturePath: "",
+                succeeded: false,
+                errorMessage: `Failed to download capture '${captureName}'. No file path was selected, please try again.`,
+            });
             return;
         }
 
