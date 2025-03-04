@@ -1,6 +1,5 @@
 //import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/automatedDeployments";
-//import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 //import { faFolder } from "@fortawesome/free-regular-svg-icons";
 
 import {
@@ -26,16 +25,6 @@ import {
     valid,
 } from "../utilities/validation";
 import { ResourceSelector } from "../components/ResourceSelector";
-import {
-    VSCodeButton,
-    //VSCodeButton,
-    //VSCodeLink,
-    //VSCodeRadio,
-    //VSCodeRadioGroup,
-    VSCodeTextField,
-    //VSCodeDropdown,
-    //VSCodeOption,
-} from "@vscode/webview-ui-toolkit/react";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -152,7 +141,8 @@ export function AutomatedDeployments(initialState: InitialState) {
                         Workflow name *
                     </label>
 
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="workflow-name-input"
                         value={orDefault(state.selectedWorkflowName, "")}
                         className={styles.control}
@@ -218,12 +208,12 @@ export function AutomatedDeployments(initialState: InitialState) {
                         onSelect={(g) => console.log("Selected Resource Group:", g)}
                     />
 
-                    <VSCodeButton
+                    <button
                         className={styles.sideControl}
                         onClick={() => eventHandlers.onSetIsNewResourceGroupDialogShown(true)}
                     >
                         Create New Resource Group
-                    </VSCodeButton>
+                    </button>
 
                     {state.isNewResourceGroupDialogShown && (
                         <CreateResourceGroupDialog
@@ -253,9 +243,9 @@ export function AutomatedDeployments(initialState: InitialState) {
             </form>
 
             <div className={styles.buttonContainer}>
-                <VSCodeButton type="submit" onClick={handleCreateWorkflowClick}>
+                <button type="submit" onClick={handleCreateWorkflowClick}>
                     Create DevHub Workflow
-                </VSCodeButton>
+                </button>
             </div>
         </>
     );
