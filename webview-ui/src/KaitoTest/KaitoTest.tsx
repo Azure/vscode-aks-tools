@@ -1,7 +1,6 @@
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoTest";
 import { vscode, stateUpdater } from "./state";
 import { useStateManagement } from "../utilities/state";
-import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { useState } from "react";
 import styles from "./KaitoTest.module.css";
 
@@ -51,7 +50,7 @@ export function KaitoTest(initialState: InitialState) {
                 Experiment with AI outputs by fine-tuning parameters. Discover how each adjustment influences the
                 model&apos;s response.
             </p>
-            <VSCodeDivider />
+            <hr />
             <div className={styles.mainGrid}>
                 <div className={styles.formDiv}>
                     <div className={styles.formDivGrid}>
@@ -173,7 +172,7 @@ export function KaitoTest(initialState: InitialState) {
                 {state.output !== "" && (
                     <div className={styles.outputDiv}>
                         <p className={styles.outputHeader}>Output</p>
-                        <VSCodeDivider className={styles.endDivider} />
+                        <hr className={styles.endDivider} />
                         <p className={styles.output}>{state.output}</p>
                     </div>
                 )}

@@ -2,7 +2,7 @@
     "name": "vscode-aks-tools",
     "displayName": "Azure Kubernetes Service",
     "description": "Display Azure Kubernetes Services within VS Code",
-    "version": "1.5.5",
+    "version": "1.6.1",
     "aiKey": "0c6ae279ed8443289764825290e4f9e2-1a736e7c-1324-4338-be46-fc2a58ae4d14-7255",
     "publisher": "ms-kubernetes-tools",
     "icon": "resources/aks-tools.png",
@@ -90,6 +90,13 @@
                         "type": "string"
                     }
                 },
+                "aks.selectedClusters": {
+                    "type": "array",
+                    "description": "Selected Azure Clusters",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "aks.periscope.repoOrg": {
                     "type": "string",
                     "default": "azure",
@@ -122,7 +129,7 @@
                 },
                 "azure.kubectlgadget.releaseTag": {
                     "type": "string",
-                    "default": "v0.34.0",
+                    "default": "v0.38.0",
                     "title": "Kubectl-gadget repository release tag",
                     "description": "Release tag for the stable kubectl-gadget tool."
                 },
@@ -154,7 +161,7 @@
                 },
                 "aks.retinatool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.7",
+                    "default": "v0.0.26",
                     "title": "Retina repository release tag",
                     "description": "Release tag for the stable Retina tool release."
                 }
@@ -164,6 +171,15 @@
             {
                 "command": "aks.selectSubscriptions",
                 "title": "Select subscriptions...",
+                "category": "AKS",
+                "icon": {
+                    "dark": "resources/dark/filter.svg",
+                    "light": "resources/light/filter.svg"
+                }
+            },
+            {
+                "command": "aks.clusterFilter",
+                "title": "Select cluster...",
                 "category": "AKS",
                 "icon": {
                     "dark": "resources/dark/filter.svg",
@@ -331,6 +347,14 @@
             {
                 "command": "aks.aksKaitoTest",
                 "title": "Test KAITO models"
+            },
+            {
+                "command": "aks.aksCreateFleet",
+                "title": "Create Fleet"
+            },
+            {
+                "command": "aks.aksFleetProperties",
+                "title": "Show Fleet Properties"
             }
         ],
         "menus": {
@@ -373,6 +397,11 @@
             "view/item/context": [
                 {
                     "command": "aks.selectSubscriptions",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /Azure/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "aks.clusterFilter",
                     "when": "viewItem == aks.subscription",
                     "group": "inline"
                 },
@@ -434,6 +463,10 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
                 },
                 {
+                    "command": "aks.clusterFilter",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
                     "submenu": "aks.networkTroubleshootingSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
@@ -442,6 +475,14 @@
                     "submenu": "aks.kaitoInstallSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
+                },
+                {
+                    "submenu": "aks.fleetMangerSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
+                    "command": "aks.aksFleetProperties",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.fleet/i"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -541,6 +582,12 @@
                     "command": "aks.aksReconcileCluster",
                     "group": "navigation"
                 }
+            ],
+            "aks.fleetMangerSubMenu": [
+                {
+                    "command": "aks.aksCreateFleet",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
@@ -571,6 +618,10 @@
             {
                 "id": "aks.kaitoInstallSubMenu",
                 "label": "Deploy a LLM with KAITO"
+            },
+            {
+                "id": "aks.fleetMangerSubMenu",
+                "label": "Fleet Manager"
             }
         ]
     },
@@ -601,56 +652,58 @@
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.2.0",
-        "@eslint/js": "^9.17.0",
+        "@eslint/js": "^9.19.0",
         "@types/chai": "^5.0.1",
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.10.5",
+        "@types/node": "^22.13.5",
         "@types/semver": "^7.5.8",
-        "@types/sinon": "^17.0.3",
+        "@types/sinon": "^17.0.4",
         "@types/tmp": "^0.2.6",
         "@types/uuid": "^10.0.0",
         "@types/vscode": "^1.96.0",
-        "@typescript-eslint/eslint-plugin": "^8.19.1",
-        "@typescript-eslint/parser": "^8.19.1",
+        "@typescript-eslint/eslint-plugin": "^8.26.0",
+        "@typescript-eslint/parser": "^8.26.0",
         "@vscode/test-electron": "^2.4.1",
-        "@vscode/vsce": "^3.2.1",
-        "chai": "^5.1.2",
-        "eslint": "^9.17.0",
+        "@vscode/vsce": "^3.2.2",
+        "chai": "^5.2.0",
+        "eslint": "^9.21.0",
         "eslint-webpack-plugin": "^4.2.0",
-        "glob": "^11.0.0",
+        "glob": "^11.0.1",
         "globals": "^15.14.0",
         "mocha": "^11.0.1",
-        "prettier": "^3.4.2",
+        "prettier": "^3.5.0",
         "sinon": "^19.0.2",
-        "ts-loader": "^9.5.1",
-        "typescript": "^5.7.2",
+        "ts-loader": "^9.5.2",
+        "typescript": "^5.8.2",
         "webpack": "^5.97.1",
         "webpack-cli": "^6.0.1"
     },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
-        "@azure/arm-compute": "^22.2.0",
+        "@azure/arm-compute": "^22.3.0",
         "@azure/arm-containerregistry": "^10.1.0",
         "@azure/arm-containerservice": "21.3.0",
         "@azure/arm-containerservicefleet": "^1.1.0",
+        "@azure/arm-devhub": "^1.0.0-beta.3",
         "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-msi": "^2.1.0",
+        "@azure/arm-resourcegraph": "^4.2.1",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-subscriptions": "^2.1.0",
         "@azure/arm-storage": "^18.3.0",
         "@azure/arm-subscriptions": "^5.1.0",
         "@azure/container-registry": "^1.1.0",
         "@azure/core-auth": "^1.8.0",
-        "@azure/identity": "^4.5.0",
+        "@azure/identity": "^4.6.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.26.0",
-        "@eslint/compat": "^1.2.4",
+        "@eslint/compat": "^1.2.7",
         "@microsoft/microsoft-graph-client": "^3.0.7",
-        "@microsoft/vscode-azext-utils": "^2.5.12",
-        "@octokit/rest": "^21.0.2",
+        "@microsoft/vscode-azext-utils": "^2.5.14",
+        "@octokit/rest": "^21.1.0",
         "@vscode/extension-telemetry": "^0.9.8",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.0",

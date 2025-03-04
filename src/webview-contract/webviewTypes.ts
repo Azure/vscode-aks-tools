@@ -18,6 +18,9 @@ import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
 import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
+import { AutomatedDeploymentsDefinition } from "./webviewDefinitions/automatedDeployments";
+import { CreateFleetDefinition } from "./webviewDefinitions/createFleet";
+import { FleetProperties } from "./webviewDefinitions/fleetProperties";
 
 /**
  * Groups all the related types for a single webview.
@@ -56,6 +59,9 @@ type AllWebviewDefinitions = {
     kaitoModels: KaitoModelsDefinition;
     kaitoManage: KaitoManageDefinition;
     kaitoTest: KaitoTestDefinition;
+    automatedDeployments: AutomatedDeploymentsDefinition;
+    createFleet: CreateFleetDefinition;
+    fleetProperties: FleetProperties;
 };
 
 type ContentIdLookup = {

@@ -10,6 +10,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { setAssetContext } from "./assets";
 import { getReadySessionProvider } from "./auth/azureAuth";
 import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSessionProvider";
+import { registerUriHandler } from "./uriHandler";
 import { selectSubscriptions, selectTenant, signInToAzure } from "./commands/aksAccount/aksAccount";
 import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrToCluster";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
@@ -54,11 +55,17 @@ import { getPlugins } from "./plugins/getPlugins";
 import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCreateClusterFromCopilot";
 import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
 import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
+import aksClusterFilter from "./commands/utils/clusterfilter";
+//import aksAutomatedDeployments from "./commands/devhub/aksAutomatedDeployments";
+import aksCreateFleet from "./commands/aksFleet/aksFleetManager";
+import aksFleetProperties from "./commands/aksFleetProperties/askFleetProperties";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter());
     setAssetContext(context);
+
+    registerUriHandler(context);
 
     // Create and register the Azure session provider before accessing it.
     activateAzureSessionProvider(context);
@@ -118,6 +125,10 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
         registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
         registerCommandWithTelemetry("aks.aksDraftValidate", draftValidate);
+        registerCommandWithTelemetry("aks.clusterFilter", aksClusterFilter);
+        //registerCommandWithTelemetry("aks.aksAutomatedDeployments", aksAutomatedDeployments);
+        registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
+        registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
 
         await registerAzureServiceNodes(context);
 

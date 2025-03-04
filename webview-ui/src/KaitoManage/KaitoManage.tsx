@@ -2,7 +2,7 @@ import { useStateManagement } from "../utilities/state";
 import styles from "./KaitoManage.module.css";
 import { stateUpdater, vscode } from "./state";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoManage";
-import { VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { generateKaitoYAML } from "../KaitoModels/KaitoModels";
 import { useEffect } from "react";
 import { convertMinutesToFormattedAge } from "../KaitoModels/KaitoModels";
@@ -39,7 +39,7 @@ export function KaitoManage(initialState: InitialState) {
     return (
         <>
             <h2 className={styles.mainTitle}>Manage KAITO Deployments ({state.clusterName})</h2>
-            <VSCodeDivider />
+            <hr />
             <p>
                 Review the deployment status and perform operations on models in your cluster. If no clusters are shown,
                 you must first deploy a model.

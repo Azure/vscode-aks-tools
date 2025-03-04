@@ -6,6 +6,7 @@ import "../main.css";
 import { Scenario } from "../utilities/manualTest";
 import { getASOScenarios } from "./asoTests";
 import { getAttachAcrToClusterScenarios } from "./attachAcrToClusterTests";
+import { getAutomatedDeploymentScenarios } from "./automatedDeploymentsTests";
 import { getClusterPropertiesScenarios } from "./clusterPropertiesTests";
 import { getCreateClusterScenarios } from "./createClusterTests";
 import { getDetectorScenarios } from "./detectorTests";
@@ -21,6 +22,7 @@ import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
 import { getTCPDumpScenarios } from "./tcpDumpTests";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
+import { getCreateFleetScenarios } from "./createFleetTests";
 import "./vars.css";
 
 // There are two modes of launching this application:
@@ -56,6 +58,11 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoModels: getKaitoModelScenarios(),
     kaitoManage: getKaitoManageScenarios(),
     kaitoTest: getKaitoTestScenarios(),
+    automatedDeployments: getAutomatedDeploymentScenarios(),
+    createFleet: getCreateFleetScenarios(),
+    // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
+    // TODO: Replace with the actual scenarios when available.
+    fleetProperties: [],
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

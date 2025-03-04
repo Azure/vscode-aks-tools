@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as path from "path";
 import { dirSync } from "tmp";
-import { AuthenticationSession, authentication, window } from "vscode";
+import { AuthenticationSession, QuickPickItem, authentication, window } from "vscode";
 import {
     API,
     APIAvailable,
@@ -24,6 +24,7 @@ import { longRunning } from "./host";
 import { invokeKubectlCommand } from "./kubectl";
 import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
+import { ClusterFilter } from "./config";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -35,6 +36,8 @@ export interface KubernetesClusterInfo {
  */
 export type DefinedManagedCluster = azcs.ManagedCluster &
     Required<Pick<azcs.ManagedCluster, "id" | "name" | "location">>;
+
+export type ClusterQuickPickItem = QuickPickItem & { Cluster: ClusterFilter };
 
 export async function getKubernetesClusterInfo(
     sessionProvider: ReadyAzureSessionProvider,
@@ -400,6 +403,33 @@ export async function getManagedCluster(
     }
 }
 
+export enum SelectionType {
+    Filtered,
+    All,
+    AllIfNoFilters,
+}
+
+export async function getAllManagedCluster(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<DefinedManagedCluster>> {
+    const client = getAksClient(sessionProvider, subscriptionId);
+    try {
+        const managedCluster = await client.managedClusters.get(resourceGroup, clusterName);
+        if (isDefinedManagedCluster(managedCluster)) {
+            return { succeeded: true, result: managedCluster };
+        }
+        return {
+            succeeded: false,
+            error: `Failed to retrieve Cluster ${clusterName}`,
+        };
+    } catch (e) {
+        return { succeeded: false, error: `Failed to retrieve cluster ${clusterName}: ${e}` };
+    }
+}
+
 export async function getKubernetesVersionInfo(
     client: azcs.ContainerServiceClient,
     location: string,
@@ -471,6 +501,45 @@ export async function getClusterNamespaces(
         const command = `get namespace --no-headers -o custom-columns=":metadata.name"`;
         const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
         return errmap(output, (sr) => sr.stdout.trim().split("\n"));
+    });
+}
+
+export async function createClusterNamespace(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    namespace: string,
+): Promise<Errorable<string>> {
+    if (!validateNamespaceName(namespace)) {
+        return { succeeded: false, error: `Invalid namespace name: ${namespace}` };
+    }
+
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `create namespace ${namespace}`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+
+        if (output.succeeded) {
+            return { succeeded: true, result: `Namespace ${namespace} created` };
+        }
+
+        //Check For Namespace Already Exists
+        if (output.error.includes("AlreadyExists")) {
+            return { succeeded: true, result: "Namespace already exists" };
+        }
+
+        return output;
     });
 }
 
@@ -568,6 +637,12 @@ export async function filterPodName(
     return { succeeded: true, result: filterPodName };
 }
 
+//Must meet RFC 1123: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+function validateNamespaceName(namespace: string): boolean {
+    const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+    return namespaceRegex.test(namespace);
+}
+
 function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is DefinedManagedCluster {
     return (
         cluster.id !== undefined &&
@@ -582,14 +657,13 @@ export type Cluster = {
     clusterId: string;
     resourceGroup: string;
     subscriptionId: string;
-}
+};
 
-export async function getClusters(sessionProvider: ReadyAzureSessionProvider, subscriptionId: string): Promise<Cluster[]> {
-    const clusters = await getResources(
-        sessionProvider,
-        subscriptionId,
-        "Microsoft.ContainerService/managedClusters",
-    );
+export async function getClusters(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): Promise<Cluster[]> {
+    const clusters = await getResources(sessionProvider, subscriptionId, "Microsoft.ContainerService/managedClusters");
     if (failed(clusters)) {
         window.showErrorMessage(clusters.error);
         return [];

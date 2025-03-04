@@ -10,7 +10,6 @@ export interface DeleteNodeExplorerDialogProps {
 }
 
 export function DeleteNodeExplorerDialog(props: DeleteNodeExplorerDialogProps) {
-
     function handleYes() {
         props.onAccept(props.nodes.join(","));
     }
@@ -25,7 +24,8 @@ export function DeleteNodeExplorerDialog(props: DeleteNodeExplorerDialogProps) {
 
             <form className={styles.createForm}>
                 <div>
-                    Are you sure you want to delete the Node Explorer? Deleting the Node Explorer will introduce delay for kubectl copy next time.
+                    Are you sure you want to delete the Node Explorer? Deleting the Node Explorer will introduce delay
+                    for kubectl copy next time.
                 </div>
 
                 <div className={styles.buttonContainer} style={{ justifyContent: "flex-end" }}>

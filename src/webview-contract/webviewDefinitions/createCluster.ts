@@ -31,7 +31,7 @@ export interface CreateClusterParams {
 
 export enum PresetType {
     Dev,
-    Automatic
+    Automatic,
 }
 
 export type ToVsCodeMsgDef = {

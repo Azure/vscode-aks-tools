@@ -1,12 +1,12 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { getCredential, getReadySessionProvider } from "../../auth/azureAuth";
+import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getAksClusterSubscriptionNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getResourceGroups } from "../utils/resourceGroups";
-import { createFleet } from "../../panels/CreateFleetPanel";
-import { ContainerServiceFleetClient } from "@azure/arm-containerservicefleet";
+import { CreateFleetDataProvider, CreateFleetPanel } from "../../panels/CreateFleetPanel";
+import { getExtension } from "../utils/host";
 
 export default async function aksCreateFleet(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -38,26 +38,13 @@ export default async function aksCreateFleet(_context: IActionContext, target: u
         return;
     }
 
-    // Temporary code for incremental check-in.
-    // TODO: Replace hardcoded values with dynamic parameters or configuration settings.
+    const extension = getExtension();
+    if (failed(extension)) {
+        vscode.window.showErrorMessage(extension.error);
+        return;
+    }
 
-    // Initialize the ContainerServiceFleetClient with session credentials and subscription ID.
-    // Hardcoded 'subscriptionId' should be parameterized in future updates.
-    const client = new ContainerServiceFleetClient(
-        getCredential(sessionProvider.result), // Retrieve credentials from session provider.
-        subscriptionId, // TODO: Ensure subscriptionId is dynamically passed or configured.
-    );
-
-    // Create a fleet using hardcoded parameters.
-    // TODO: Replace hardcoded 'Fleet-Resource-Name', 'Fleet-Name', and 'Australia East' with configurable inputs.
-    createFleet(
-        client,
-        "Fleet-Resource-Name", // Fleet resource group name (hardcoded).
-        "Fleet-Name", // Fleet name (hardcoded).
-        { location: "Australia East" }, // Location (hardcoded).
-    );
-
-    // NOTE: This temporary implementation assumes static context for testing purposes.
-    // Ensure these hardcoded values are replaced with appropriate dynamic configurations
-    // before finalizing this code for production level work which will be user focused.
+    const panel = new CreateFleetPanel(extension.result.extensionUri);
+    const dataProvider = new CreateFleetDataProvider(sessionProvider.result, subscriptionId, subscriptionName);
+    panel.show(dataProvider);
 }

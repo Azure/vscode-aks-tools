@@ -13,6 +13,8 @@ import { getCredential, getEnvironment } from "../../auth/azureAuth";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { Errorable, getErrorMessage } from "./errorable";
 import { ComputeManagementClient } from "@azure/arm-compute";
+import { ContainerServiceFleetClient } from "@azure/arm-containerservicefleet";
+import { ResourceGraphClient } from "@azure/arm-resourcegraph";
 
 export function getSubscriptionClient(sessionProvider: ReadyAzureSessionProvider): SubscriptionClient {
     return new SubscriptionClient(getCredential(sessionProvider), { endpoint: getArmEndpoint() });
@@ -34,6 +36,19 @@ export function getAksClient(
     subscriptionId: string,
 ): ContainerServiceClient {
     return new ContainerServiceClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
+}
+
+export function getGraphResourceClient(sessionProvider: ReadyAzureSessionProvider): ResourceGraphClient {
+    return new ResourceGraphClient(getCredential(sessionProvider));
+}
+
+export function getAksFleetClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ContainerServiceFleetClient {
+    return new ContainerServiceFleetClient(getCredential(sessionProvider), subscriptionId, {
+        endpoint: getArmEndpoint(),
+    });
 }
 
 export function getMonitorClient(sessionProvider: ReadyAzureSessionProvider, subscriptionId: string): MonitorClient {

@@ -28,6 +28,7 @@
   - [AKS plugins for GitHub Copilot for Azure](./features/aks-plugins-github-copilot.md)
   - [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)
   - [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
+  - [Create AKS Fleet Manager from VS Code](./features/aks-fleet-manager.md)
 
 - [Release](./release.md)
   - [Releasing Information](./release/releasing.md)

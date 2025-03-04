@@ -61,7 +61,7 @@ export async function getRepositoryTags(
     return errmap(propsResult, (props) => props.flatMap((p) => p.tags));
 }
 
-export async function createAcr( //TODO: proper name input checking
+export async function createAcr(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: string,

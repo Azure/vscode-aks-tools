@@ -38,10 +38,29 @@ export interface SubscriptionFilter {
     subscriptionId: string;
 }
 
+export interface ClusterFilter {
+    subscriptionId: string;
+    clusterName: string;
+}
+
+export interface AksClusterAndFleet {
+    id: string;
+    name: string;
+    location: string;
+    resourceGroup: string;
+    subscriptionId: string;
+    type: string;
+}
+
 const onFilteredSubscriptionsChangeEmitter = new vscode.EventEmitter<void>();
+const onFilteredClustersChangeEmitter = new vscode.EventEmitter<void>();
 
 export function getFilteredSubscriptionsChangeEvent() {
     return onFilteredSubscriptionsChangeEmitter.event;
+}
+
+export function getFilteredClustersChangeEvent() {
+    return onFilteredClustersChangeEmitter.event;
 }
 
 export function getFilteredSubscriptions(): SubscriptionFilter[] {
@@ -57,10 +76,32 @@ export function getFilteredSubscriptions(): SubscriptionFilter[] {
     }
 }
 
+export function getFilteredClusters(): ClusterFilter[] {
+    try {
+        let values = vscode.workspace.getConfiguration("aks").get<string[]>("selectedClusters", []);
+        if (values.length === 0) {
+            // Get filters from the Azure Account extension if the AKS extension has none.
+            values = vscode.workspace.getConfiguration("azure").get<string[]>("resourceClusterFilter", []);
+        }
+        return values.map(asClusterFilter).filter((v) => v !== null) as ClusterFilter[];
+    } catch {
+        return [];
+    }
+}
+
 function asSubscriptionFilter(value: string): SubscriptionFilter | null {
     try {
         const parts = value.split("/");
         return { tenantId: parts[0], subscriptionId: parts[1] };
+    } catch {
+        return null;
+    }
+}
+
+function asClusterFilter(value: string): ClusterFilter | null {
+    try {
+        const parts = value.split("/");
+        return { subscriptionId: parts[0], clusterName: parts[1] };
     } catch {
         return null;
     }
@@ -80,6 +121,52 @@ export async function setFilteredSubscriptions(filters: SubscriptionFilter[]): P
             .update("selectedSubscriptions", values, vscode.ConfigurationTarget.Global, true);
         onFilteredSubscriptionsChangeEmitter.fire();
     }
+}
+
+export async function setFilteredClusters(filters: ClusterFilter[], allClusters: AksClusterAndFleet[]): Promise<void> {
+    const existingFilters = getFilteredClusters();
+
+    // Select all clusters if no filters are provided
+    const newFilters = filters.length
+        ? filters
+        : allClusters.map(({ subscriptionId, name }) => ({ subscriptionId, clusterName: name }));
+
+    // Merge and deduplicate filters
+    const uniqueFilters = mergeClusterFilterLists(existingFilters, newFilters);
+
+    // If all clusters are selected, clear filters
+    const shouldClearFilters = uniqueFilters.length === allClusters.length;
+    const finalFilters = shouldClearFilters ? [] : uniqueFilters;
+
+    // Construct values as "subscriptionId/clusterName"
+    const values = finalFilters.map(({ subscriptionId, clusterName }) => `${subscriptionId}/${clusterName}`).sort();
+
+    // Check if filters have changed
+    const filtersChanged =
+        existingFilters.length !== finalFilters.length ||
+        !existingFilters.every(({ clusterName }) => finalFilters.some((f) => f.clusterName === clusterName));
+
+    if (filtersChanged) {
+        await vscode.workspace
+            .getConfiguration("aks")
+            .update("selectedClusters", values, vscode.ConfigurationTarget.Global, true);
+
+        onFilteredClustersChangeEmitter.fire();
+    }
+}
+
+function mergeClusterFilterLists(
+    existingFilters: { subscriptionId: string; clusterName: string }[],
+    filters: { subscriptionId: string; clusterName: string }[],
+) {
+    // Create a Set of subscriptionIds from list2
+    const subIdSet = new Set(filters.map((item) => item.subscriptionId));
+
+    // Filter list1 to only include items with unique subscriptionIds not in list2
+    const filteredExistingClusters = existingFilters.filter((item) => !subIdSet.has(item.subscriptionId));
+
+    // Merge list2 with the filtered list1
+    return [...filters, ...filteredExistingClusters];
 }
 
 export function getKustomizeConfig(): Errorable<KustomizeConfig> {
