@@ -74,6 +74,7 @@ export default async function aksCreateCluster(_context: IActionContext, target:
         subscriptionName,
         () => vscode.commands.executeCommand("aks.refreshSubscription", target),
         commandId,
+        target,
     );
 
     panel.show(dataProvider);
