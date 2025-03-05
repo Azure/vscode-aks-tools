@@ -1,5 +1,6 @@
-import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
-import { FormEvent } from "react";
+import { CustomDropdown } from "./CustomDropdown";
+import { CustomDropdownOption } from "./CustomDropdownOption";
+import { useState } from "react";
 
 export interface NodeSelectorProps {
     nodes: string[];
@@ -10,20 +11,19 @@ export interface NodeSelectorProps {
 }
 
 export function NodeSelector(props: NodeSelectorProps) {
-    function handleNodeChange(e: Event | FormEvent<HTMLElement>) {
-        const elem = e.target as HTMLInputElement;
-        const node = elem.value || null;
+    const [selectedNode, setSelectedNode] = useState<string>("");
+
+    function handleNodeChange(node: string) {
+        setSelectedNode(node);
         props.onNodeChanged(node);
     }
 
     return (
-        <VSCodeDropdown id={props.id} className={props.className} required={props.required} onChange={handleNodeChange}>
-            <VSCodeOption value="">Select</VSCodeOption>
+        <CustomDropdown id={props.id} value={selectedNode} className={props.className} onChange={handleNodeChange}>
+            <CustomDropdownOption value="" label="Select" />
             {props.nodes.map((node) => (
-                <VSCodeOption key={node} value={node}>
-                    {node}
-                </VSCodeOption>
+                <CustomDropdownOption key={node} value={node} label={node} />
             ))}
-        </VSCodeDropdown>
+        </CustomDropdown>
     );
 }
