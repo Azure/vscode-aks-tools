@@ -1,4 +1,3 @@
-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
 import { useEffect } from "react";
@@ -64,7 +63,7 @@ export function AzureServiceOperator(initialState: InitialState) {
             <p>
                 The Azure Service Operator helps you provision Azure resources and connect your applications to them
                 from within Kubernetes.
-                <VSCodeLink href="https://aka.ms/aks/aso">&nbsp;Learn more</VSCodeLink>
+                <a href="https://aka.ms/aks/aso">&nbsp;Learn more</a>
             </p>
             <div className={styles.content}>
                 <div className={styles.inputPane}>
