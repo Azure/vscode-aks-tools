@@ -442,6 +442,22 @@ export async function getKubernetesVersionInfo(
     }
 }
 
+export async function getClusterUpgradeProfile(
+    containerClient: azcs.ContainerServiceClient,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<azcs.ManagedClusterUpgradeProfile>> {
+    try {
+        const upgradeProfile = await containerClient.managedClusters.getUpgradeProfile(resourceGroup, clusterName);
+        return { succeeded: true, result: upgradeProfile };
+    } catch (e) {
+        return {
+            succeeded: false,
+            error: `Failed to retrieve upgrade profile for cluster ${clusterName}: ${getErrorMessage(e)}`,
+        };
+    }
+}
+
 export async function getWindowsNodePoolKubernetesVersions(
     containerClient: azcs.ContainerServiceClient,
     resourceGroupName: string,
