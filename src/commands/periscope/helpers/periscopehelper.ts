@@ -17,24 +17,8 @@ import { ContainerServiceClient } from "@azure/arm-containerservice";
 import { getWindowsNodePoolKubernetesVersions } from "../../utils/clusters";
 import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
 import { dirSync } from "tmp";
-import { getMonitorClient, getStorageManagementClient } from "../../utils/arm";
+import { getStorageManagementClient } from "../../utils/arm";
 import { ReadyAzureSessionProvider } from "../../../auth/types";
-
-export async function getClusterDiagnosticSettings(
-    sessionProvider: ReadyAzureSessionProvider,
-    clusterNode: AksClusterTreeNode,
-): Promise<DiagnosticSettingsResourceCollection | undefined> {
-    try {
-        // Get diagnostic setting via diagnostic monitor
-        const client = getMonitorClient(sessionProvider, clusterNode.subscriptionId);
-        const diagnosticSettings = await client.diagnosticSettings.list(clusterNode.armId);
-
-        return diagnosticSettings;
-    } catch (e) {
-        vscode.window.showErrorMessage(`Error fetching cluster diagnostic monitor: ${e}`);
-        return undefined;
-    }
-}
 
 export async function chooseStorageAccount(
     diagnosticSettings: DiagnosticSettingsResourceCollection,

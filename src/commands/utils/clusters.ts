@@ -4,6 +4,7 @@ import * as yaml from "js-yaml";
 import * as path from "path";
 import { dirSync } from "tmp";
 import { AuthenticationSession, QuickPickItem, authentication, window } from "vscode";
+import * as vscode from "vscode";
 import {
     API,
     APIAvailable,
@@ -17,7 +18,7 @@ import { getTokenInfo } from "../../auth/azureAuth";
 import { ReadyAzureSessionProvider, TokenInfo } from "../../auth/types";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import { SubscriptionTreeNode, isSubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
-import { getAksClient } from "./arm";
+import { getAksClient, getMonitorClient } from "./arm";
 import { Errorable, map as errmap, failed, getErrorMessage, succeeded } from "./errorable";
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
@@ -25,6 +26,7 @@ import { invokeKubectlCommand } from "./kubectl";
 import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
 import { ClusterFilter } from "./config";
+import { DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -677,4 +679,20 @@ export async function getClusters(
             subscriptionId: subscriptionId,
         };
     });
+}
+
+export async function getClusterDiagnosticSettings(
+    sessionProvider: ReadyAzureSessionProvider,
+    clusterNode: AksClusterTreeNode,
+): Promise<DiagnosticSettingsResourceCollection | undefined> {
+    try {
+        // Get diagnostic setting via diagnostic monitor
+        const client = getMonitorClient(sessionProvider, clusterNode.subscriptionId);
+        const diagnosticSettings = await client.diagnosticSettings.list(clusterNode.armId);
+
+        return diagnosticSettings;
+    } catch (e) {
+        vscode.window.showErrorMessage(`Error fetching cluster diagnostic monitor: ${e}`);
+        return undefined;
+    }
 }
