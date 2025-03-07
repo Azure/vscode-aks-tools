@@ -6,8 +6,9 @@ import styles from "../TcpDump.module.css";
 import { FilterPod, NodeName } from "../../../../src/webview-contract/webviewDefinitions/tcpDump";
 import { EventHandlerFunc, loadAllNodes, loadFilterPods } from "../state/dataLoading";
 import { getOrThrow } from "../../utilities/array";
-import { FormEvent, useEffect } from "react";
-import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
+import { useEffect } from "react";
+import { CustomDropdown } from "../../components/CustomDropdown";
+import { CustomDropdownOption } from "../../components/CustomDropdownOption";
 
 export interface TwoPodsFiltersProps {
     captureNode: NodeName;
@@ -64,9 +65,9 @@ export function TwoPodsFilters(props: TwoPodsFiltersProps) {
         props.eventHandlers.onRefreshPcapFilterString({ node: props.captureNode });
     }
 
-    function handlePacketDirectionChange(e: Event | FormEvent<HTMLElement>) {
-        const elem = e.target as HTMLInputElement;
-        const packetDirection = elem.value as DualEndpointPacketDirection;
+    function handlePacketDirectionChange(value: string) {
+        // const elem = e.target as HTMLInputElement;
+        const packetDirection = value as DualEndpointPacketDirection;
         props.eventHandlers.onSetCaptureScenarioFilters({
             node: props.captureNode,
             scenario: "TwoPods",
@@ -137,18 +138,20 @@ export function TwoPodsFilters(props: TwoPodsFiltersProps) {
             <label htmlFor="packet-direction-input" className={styles.label}>
                 Packet Direction
             </label>
-            <VSCodeDropdown
+            <CustomDropdown
                 className={styles.controlDropdown}
                 id="packet-direction-input"
                 value={props.filter.packetDirection}
                 onChange={handlePacketDirectionChange}
             >
                 {Object.keys(packetDirectionLabels).map((d) => (
-                    <VSCodeOption key={d} value={d}>
-                        {packetDirectionLabels[d as DualEndpointPacketDirection]}
-                    </VSCodeOption>
+                    <CustomDropdownOption
+                        key={d}
+                        value={d}
+                        label={packetDirectionLabels[d as DualEndpointPacketDirection]}
+                    />
                 ))}
-            </VSCodeDropdown>
+            </CustomDropdown>
         </>
     );
 }
