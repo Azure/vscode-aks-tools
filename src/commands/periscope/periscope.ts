@@ -2,7 +2,12 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as tmpfile from "../utils/tempfile";
-import { getAksClusterTreeNode, getClusterDiagnosticSettings, getKubeconfigYaml, getManagedCluster } from "../utils/clusters";
+import {
+    getAksClusterTreeNode,
+    getClusterDiagnosticSettings,
+    getKubeconfigYaml,
+    getManagedCluster,
+} from "../utils/clusters";
 import { getKustomizeConfig } from "../utils/config";
 import { getExtension, longRunning } from "../utils/host";
 import {
