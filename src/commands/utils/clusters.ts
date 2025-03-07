@@ -692,7 +692,7 @@ export async function getClusterDiagnosticSettings(
 
         return diagnosticSettings;
     } catch (e) {
-        vscode.window.showErrorMessage(`Error fetching cluster diagnostic monitor: ${e}`);
+        vscode.window.showErrorMessage(`Error fetching cluster diagnostic settings: ${e}`);
         return undefined;
     }
 }
