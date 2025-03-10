@@ -19,7 +19,7 @@
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-markdown": "^10.0.1",
+    "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0"
   },
   "devDependencies": {
