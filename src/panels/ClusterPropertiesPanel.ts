@@ -246,12 +246,12 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             poller.onProgress((state) => {
                 if (state.status === "canceled") {
                     webview.postErrorNotification(`Upgrade operation on ${this.clusterName} was cancelled.`);
-                    webview.postUpgradeClusterVersionResponse({ success: false });
+                    webview.postUpgradeClusterVersionResponse(false);
                     return;
                 } else if (state.status === "failed") {
                     const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
                     webview.postErrorNotification(errorMessage);
-                    webview.postUpgradeClusterVersionResponse({ success: false });
+                    webview.postUpgradeClusterVersionResponse(false);
                     return;
                 }
             });
@@ -261,15 +261,15 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             // Wait until operation completes
             await poller.pollUntilDone();
-            webview.postUpgradeClusterVersionResponse({ success: true });
-
-            // Refresh the cluster properties after operation completes
-            await this.readAndPostClusterProperties(webview);
+            webview.postUpgradeClusterVersionResponse(true);
         } catch (ex) {
             const errorMessage = getErrorMessage(ex);
             webview.postErrorNotification(errorMessage);
-            webview.postUpgradeClusterVersionResponse({ success: false });
+            webview.postUpgradeClusterVersionResponse(false);
         }
+
+        // Refresh the cluster properties after operation completes
+        await this.readAndPostClusterProperties(webview);
     }
 
     private async readAndPostClusterProperties(webview: MessageSink<ToWebViewMsgDef>) {
@@ -314,10 +314,18 @@ function asClusterInfo(
         powerStateCode: cluster.powerState!.code!,
         agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
         supportedVersions: (kubernetesVersionList.values || []).map(asKubernetesVersionInfo),
-        availableUpgradeVersions: (upgradeProfile.controlPlaneProfile?.upgrades || [])
-            .map((upgrade) => upgrade.kubernetesVersion!)
-            .filter((version): version is string => version !== undefined),
+        availableUpgradeVersions: processAndSortUpgradeVersions(upgradeProfile.controlPlaneProfile?.upgrades || []),
     };
+}
+
+function processAndSortUpgradeVersions(upgrades: Array<{ kubernetesVersion?: string }>): string[] {
+    return (
+        upgrades
+            .map((upgrade) => upgrade.kubernetesVersion!)
+            .filter((version): version is string => version !== undefined)
+            // Sort versions in descending order (highest to lowest)
+            .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: "base" }))
+    );
 }
 
 function asPoolProfileInfo(pool: ManagedClusterAgentPoolProfile): AgentPoolProfileInfo {

@@ -40,13 +40,13 @@ export type ToVsCodeMsgDef = {
     abortClusterOperation: void;
     reconcileClusterRequest: void;
     refreshRequest: void;
-    getUpgradeClusterVersionRequest: string;
+    upgradeClusterVersionRequest: string;
 };
 
 export type ToWebViewMsgDef = {
     getPropertiesResponse: ClusterInfo;
     errorNotification: string;
-    upgradeClusterVersionResponse: string[];
+    upgradeClusterVersionResponse: boolean;
 };
 
 export type ClusterPropertiesDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
