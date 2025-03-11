@@ -6,11 +6,23 @@ import {
     StorageSharedKeyCredential,
     generateAccountSASQueryParameters,
 } from "@azure/storage-blob";
+import { getStorageManagementClient } from "./arm";
+import { Errorable } from "./errorable";
+import { parseResource } from "../../azure-api-utils";
+import { ReadyAzureSessionProvider } from "../../auth/types";
+import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 
 export enum LinkDuration {
     StartTime,
     DownloadNow,
     Shareable,
+    OneHour
+}
+
+export interface BlobStorageInfo {
+    storageName: string;
+    storageKey: string;
+    blobEndpoint: string;
 }
 
 function sasDuration(duration: LinkDuration): number {
@@ -21,6 +33,8 @@ function sasDuration(duration: LinkDuration): number {
             return 15 * 60 * 1000; // 15 minutes to allow for Windows image pulls and log export
         case LinkDuration.Shareable:
             return 7 * 24 * 60 * 60 * 1000;
+        case LinkDuration.OneHour:
+            return 60 * 60 * 1000;
     }
 }
 
@@ -63,4 +77,54 @@ export function getSASKey(storageAccount: string, storageKey: string, linkDurati
     const sas = `?${accountSharedAccessSignature}`;
 
     return sas;
+}
+
+export async function getBlobStorageInfo(
+    sessionProvider: ReadyAzureSessionProvider,
+    clusterNode: AksClusterTreeNode,
+    diagnosticStorageAccountId: string,
+): Promise<Errorable<BlobStorageInfo>> {
+    try {
+        const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId);
+
+        if (!resourceGroupName || !accountName) {
+            return {
+                succeeded: false,
+                error: `Invalid storage id ${diagnosticStorageAccountId} associated with the cluster`,
+            };
+        }
+
+        // Get keys from storage client.
+        const storageClient = getStorageManagementClient(sessionProvider, clusterNode.subscriptionId);
+        const storageAccKeyList = await storageClient.storageAccounts.listKeys(resourceGroupName, accountName);
+        if (storageAccKeyList.keys === undefined) {
+            return { succeeded: false, error: "No keys found for storage account." };
+        }
+
+        const storageKeyObject = storageAccKeyList.keys.find((it) => it.keyName === "key1");
+        if (storageKeyObject === undefined) {
+            return { succeeded: false, error: "No key with name 'key1' found for storage account." };
+        }
+
+        const storageKey = storageKeyObject.value;
+        if (storageKey === undefined) {
+            return { succeeded: false, error: "Storage key with name 'key1' has no value." };
+        }
+
+        const acctProperties = await storageClient.storageAccounts.getProperties(resourceGroupName, accountName);
+        const blobEndpoint = acctProperties.primaryEndpoints?.blob;
+        if (blobEndpoint === undefined) {
+            return { succeeded: false, error: "Unable to retrieve blob endpoint from storage account." };
+        }
+
+        const clusterStorageInfo = {
+            storageName: accountName,
+            storageKey: storageKey,
+            blobEndpoint,
+        };
+
+        return { succeeded: true, result: clusterStorageInfo };
+    } catch (e) {
+        return { succeeded: false, error: `Storage associated with cluster had following error: ${e}` };
+    }
 }

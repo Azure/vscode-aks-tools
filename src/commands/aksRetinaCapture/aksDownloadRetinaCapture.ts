@@ -13,7 +13,7 @@ import { failed } from "../utils/errorable";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 
-export async function aksRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
+export async function aksDownloadRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
