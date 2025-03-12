@@ -42,23 +42,25 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
             // Then post the request to the extension
             vscode.postUpgradeClusterVersionRequest(selectedVersion);
             setShowConfirmation(false);
+            resetDropdown();
         }
     }
 
     function handleCancelUpgrade() {
         setShowConfirmation(false);
         setSelectedVersion(null);
-        // Reset the dropdown
-        const dropdown = document.querySelector("vscode-dropdown") as HTMLSelectElement;
+        resetDropdown();
+    }
+
+    function resetDropdown() {
+        const dropdown = document.querySelector("vscode-dropdown") as HTMLSelectElement | null;
         if (dropdown) {
             dropdown.value = "";
         }
     }
 
     // Only render if upgrade versions are available
-    if (!props.clusterInfo.availableUpgradeVersions || props.clusterInfo.availableUpgradeVersions.length === 0) {
-        return null;
-    }
+    if (!props.clusterInfo.availableUpgradeVersions?.length) return null;
 
     const warningMessage = (
         <div>

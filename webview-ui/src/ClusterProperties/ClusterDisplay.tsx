@@ -70,7 +70,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
     const supportedPatchVersions = props.clusterInfo.supportedVersions.flatMap((v) => v.patchVersions);
     const isSupported = supportedPatchVersions.includes(props.clusterInfo.kubernetesVersion);
 
-    const isUpgrading = props.clusterInfo.provisioningState === "Upgrading";
+    const isUpgrading = props.clusterInfo.provisioningState.toLowerCase() === "upgrading";
 
     return (
         <dl className={styles.propertyList}>
