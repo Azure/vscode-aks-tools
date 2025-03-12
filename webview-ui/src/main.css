@@ -137,6 +137,11 @@ input[type="text"]:read-only {
     cursor: not-allowed;
 }
 
+input[type="text"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
 input[type="checkbox"] {
     width: 18.25px;
     height: 18.25px;
@@ -144,22 +149,49 @@ input[type="checkbox"] {
 }
 
 input[type="radio"] {
-    box-sizing: border-box;
-    width: 16px;
-    height: 16px;
-    padding: 0;
-    margin: 0;
-    border: 2px solid var(--radio-border-color);
+    -webkit-appearance: none;
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    background-color: var(--vscode-checkbox-background, none);
+    border: 1px solid var(--vscode-checkbox-border, --radio-border-color);
     border-radius: 50%;
-    background-color: none;
+    cursor: pointer;
     outline: none;
+    color: var(--vscode-checkbox-foreground, white);
+    margin: 0px;
+    padding: 0px;
     position: relative;
     top: 0.18rem;
-    color: white;
 }
 
-input[type="radio"] {
-    cursor: pointer;
+input[type="radio"]:checked::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background-color: var(--vscode-checkbox-foreground, white);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+input[type="radio"]:focus-visible {
+    border: 1px solid var(--vscode-focusBorder, #007acc);
+}
+
+input[type="radio"]:active {
+    border: 1px solid var(--vscode-focusBorder, #007acc);
+}
+
+input[type="radio"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+fieldset:disabled label {
+    opacity: 0.4;
 }
 
 select {

@@ -1,6 +1,5 @@
 import styles from "./ClusterProperties.module.css";
 import { AgentPoolProfileInfo, ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { EventDef, vscode } from "./state";
 import { EventHandlers } from "../utilities/state";
 
@@ -32,13 +31,13 @@ export function AgentPoolDisplay(props: AgentPoolDisplayProps) {
                 {showAbortButton && (
                     <>
                         &nbsp;
-                        <VSCodeButton
+                        <button
                             disabled={props.clusterOperationRequested}
                             onClick={() => handleAbortClick(props.profileInfo.name)}
-                            appearance="secondary"
+                            className="secondary-button"
                         >
                             Abort
-                        </VSCodeButton>
+                        </button>
                     </>
                 )}
             </dd>

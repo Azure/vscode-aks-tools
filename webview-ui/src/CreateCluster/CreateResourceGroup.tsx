@@ -1,6 +1,5 @@
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { Dialog } from "../components/Dialog";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, unset, valid } from "../utilities/validation";
@@ -54,7 +53,8 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
                     <label htmlFor="rg-name-input" className={styles.label}>
                         Name*
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="rg-name-input"
                         value={isValueSet(name) ? name.value : ""}
                         className={`${styles.longControl} ${styles.validatable}`}
@@ -70,8 +70,8 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
                 </div>
 
                 <div className={styles.buttonContainer} style={{ justifyContent: "flex-end" }}>
-                    <VSCodeButton type="submit">Create</VSCodeButton>
-                    <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
+                    <button type="submit">Create</button>
+                    <button onClick={props.onCancel}>Cancel</button>
                 </div>
             </form>
         </Dialog>

@@ -1,8 +1,3 @@
-.selectedValue {
-    display: inline; /* Prevents a small gap between text input and listbox options */
-    width: 100%;
-}
-
 .indicator {
     cursor: pointer;
     margin-right: -2px;
@@ -41,4 +36,26 @@
 
 .listboxItem.selected {
     background: var(--vscode-list-activeSelectionBackground);
+}
+
+.inputField {
+    position: relative;
+    width: 100%;
+}
+
+.selectedValue {
+    width: 100%;
+    padding-right: 1.8rem !important;
+    box-sizing: border-box;
+}
+.selectedValue:hover {
+    cursor: pointer;
+}
+
+.dropDownButton {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
 }
