@@ -8,18 +8,36 @@ import { longRunning } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { AksClusterAndFleet, getFilteredClusters, setFilteredClusters } from "./config";
 import { clusterResourceType, getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+
+    const subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
+    if (failed(subscriptionNode)) {
+        vscode.window.showErrorMessage(subscriptionNode.error);
+        return;
+    }
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
     const extension = getExtension();
     if (failed(extension)) {
         vscode.window.showErrorMessage(extension.error);
         return;
     }
 
-    // all other usual pre-checks are in this function
     const filteredClusters = await getUniqueClusters();
 
-    const clusterList = await getClusterList(target);
+    const clusterList = await getClusterList(
+        subscriptionNode.result.name,
+        subscriptionNode.result.subscriptionId,
+        sessionProvider.result,
+    );
     if (failed(clusterList)) {
         vscode.window.showErrorMessage(clusterList.error);
         return;
@@ -55,8 +73,13 @@ export default async function aksClusterFilter(_context: IActionContext, target:
     await setFilteredClusters(newFilteredClusters, clusterList.result);
 }
 
-export async function addItemToClusterFilter(target: unknown, clusterName: string, subscriptionId: string) {
-    const clusterList = await getClusterList(target);
+export async function addItemToClusterFilter(
+    subscriptionName: string,
+    subscriptionId: string,
+    clusterName: string,
+    sessionProvider: ReadyAzureSessionProvider,
+) {
+    const clusterList = await getClusterList(subscriptionName, subscriptionId, sessionProvider);
     if (failed(clusterList)) {
         vscode.window.showErrorMessage(clusterList.error);
         return;
@@ -67,28 +90,17 @@ export async function addItemToClusterFilter(target: unknown, clusterName: strin
     }
 }
 
-async function getClusterList(target: unknown): Promise<Errorable<AksClusterAndFleet[]>> {
-    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-
-    const subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
-    if (failed(subscriptionNode)) {
-        return { succeeded: false, error: subscriptionNode.error };
-    }
-
-    const sessionProvider = await getReadySessionProvider();
-    if (failed(sessionProvider)) {
-        return { succeeded: false, error: sessionProvider.error };
-    }
-
+async function getClusterList(
+    subscriptionName: string,
+    subscriptionId: string,
+    sessionProvider: ReadyAzureSessionProvider,
+): Promise<Errorable<AksClusterAndFleet[]>> {
     // Long running that captures errors that necessitate a return out of the function
     const clusterListResult = await longRunning(
-        `Getting AKS Cluster list for ${subscriptionNode.result.name}`,
+        `Getting AKS Cluster list for ${subscriptionName}`,
         async (): Promise<Errorable<AksClusterAndFleet[]>> => {
             let clusterList: AksClusterAndFleet[] = [];
-            const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(
-                sessionProvider.result,
-                subscriptionNode.result.subscriptionId,
-            );
+            const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(sessionProvider, subscriptionId);
             if (failed(aksClusters)) {
                 return { succeeded: false, error: aksClusters.error };
             }

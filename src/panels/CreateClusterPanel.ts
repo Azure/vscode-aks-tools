@@ -44,20 +44,17 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     private readonly containerServiceClient: ContainerServiceClient;
     private readonly featureClient: FeatureClient;
     private readonly commandId: string;
-    target: unknown;
     public constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly subscriptionId: string,
         readonly subscriptionName: string,
         readonly refreshTree: () => void,
         commandId: string,
-        target: unknown,
     ) {
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
         this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
         this.commandId = commandId;
-        this.target = target;
     }
 
     getTitle(): string {
@@ -177,7 +174,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             this.refreshTree();
         } else {
             // if there is a filter set, add the cluster to the filter
-            await addItemToClusterFilter(this.target, name, this.subscriptionId);
+            await addItemToClusterFilter(this.subscriptionName, this.subscriptionId, name, this.sessionProvider);
         }
     }
 }
