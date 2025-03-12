@@ -16,7 +16,6 @@ import { parseResource } from "../../azure-api-utils";
 import { selectLinuxNodes } from "./utils";
 
 export async function aksUploadRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
-
     const validation = await validatePrerequisites();
     if (failed(validation)) {
         vscode.window.showErrorMessage(validation.error);
@@ -92,7 +91,6 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
         vscode.window.showErrorMessage(selectedNodes.error);
         return;
     }
-
 
     // Retina Run Capture
     const captureName = `retina-capture-${clusterInfo.result.name.toLowerCase()}`;

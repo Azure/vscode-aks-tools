@@ -16,7 +16,7 @@ export enum LinkDuration {
     StartTime,
     DownloadNow,
     Shareable,
-    OneHour
+    OneHour,
 }
 
 export interface BlobStorageInfo {
