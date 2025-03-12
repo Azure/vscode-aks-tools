@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { chooseStorageAccount, getKubernetesClusterInfo } from "../utils/clusters";
 import { getExtension, longRunning } from "../utils/host";
@@ -7,42 +6,25 @@ import * as tmpfile from "../utils/tempfile";
 import path from "path";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
-import { getVersion, invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommand } from "../utils/kubectl";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
 import { failed } from "../utils/errorable";
-import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
-import { getReadySessionProvider } from "../../auth/azureAuth";
-import { getClusterDiagnosticSettings } from "../utils/clusters";
+import { getClusterDiagnosticSettings, validateClusterPrerequisites as validatePrerequisites } from "../utils/clusters";
 import { getAksClusterTreeNode } from "../utils/clusters";
 import { getBlobStorageInfo, getSASKey, LinkDuration } from "../utils/azurestorage";
+import { parseResource } from "../../azure-api-utils";
+import { selectLinuxNodes } from "./utils";
 
 export async function aksUploadRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
-    const kubectl = await k8s.extension.kubectl.v1;
-    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
-    const clusterExplorer = await k8s.extension.clusterExplorer.v1;
 
-    const sessionProvider = await getReadySessionProvider();
-    if (failed(sessionProvider)) {
-        vscode.window.showErrorMessage(sessionProvider.error);
+    const validation = await validatePrerequisites();
+    if (failed(validation)) {
+        vscode.window.showErrorMessage(validation.error);
         return;
     }
+    const { kubectl, cloudExplorer, clusterExplorer, sessionProvider } = validation.result;
 
-    if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl is unavailable.`);
-        return;
-    }
-
-    if (!cloudExplorer.available) {
-        vscode.window.showWarningMessage(`Cloud explorer is unavailable.`);
-        return;
-    }
-
-    if (!clusterExplorer.available) {
-        vscode.window.showWarningMessage(`Cluster explorer is unavailable.`);
-        return;
-    }
-
-    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
+    const clusterInfo = await getKubernetesClusterInfo(sessionProvider, target, cloudExplorer, clusterExplorer);
     if (failed(clusterInfo)) {
         vscode.window.showErrorMessage(clusterInfo.error);
         return;
@@ -57,15 +39,13 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
     const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
 
     // Get diagnostic settings for the cluster
-    const clusterDiagnosticSettings = await getClusterDiagnosticSettings(sessionProvider.result, clusterNode.result);
+    const clusterDiagnosticSettings = await getClusterDiagnosticSettings(sessionProvider, clusterNode.result);
     if (!clusterDiagnosticSettings || !clusterDiagnosticSettings.value?.length) {
         vscode.window.showErrorMessage(
             "No storage account is attached to the diagnostic setting. Please attach a storage account and try again.",
         );
         return;
     }
-
-    // TODO: If diagnostic settings are available but no storage account attached, don't move forward. Render webview with error message.
 
     // Get storage account selected by user to upload artifacts or default if only one storage account is available.
     const clusterStorageAccountId = await chooseStorageAccount(
@@ -74,8 +54,14 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
     );
     if (!clusterStorageAccountId) return;
 
+    const storageAccountName = parseResource(clusterStorageAccountId).name;
+    if (!storageAccountName) {
+        vscode.window.showInformationMessage(`Storage ID is malformed: ${clusterStorageAccountId}`);
+        return;
+    }
+
     // Get storage account details
-    const storageInfo = await getBlobStorageInfo(sessionProvider.result, clusterNode.result, clusterStorageAccountId);
+    const storageInfo = await getBlobStorageInfo(sessionProvider, clusterNode.result, clusterStorageAccountId);
     if (failed(storageInfo)) {
         vscode.window.showErrorMessage(storageInfo.error);
         return;
@@ -101,30 +87,12 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
         return;
     }
 
-    // Get all Linux Nodes For this Cluster
-    const linuxNodesList = await getLinuxNodes(kubectl, kubeConfigFile.filePath);
-    if (failed(linuxNodesList)) {
-        vscode.window.showErrorMessage(linuxNodesList.error);
+    const selectedNodes = await selectLinuxNodes(kubectl, kubeConfigFile.filePath);
+    if (failed(selectedNodes)) {
+        vscode.window.showErrorMessage(selectedNodes.error);
         return;
     }
 
-    // Pick a Node to Capture Traffic From
-    const nodeNamesSelected = await vscode.window.showQuickPick(linuxNodesList.result, {
-        canPickMany: true,
-        placeHolder: "Please select all the Nodes you want Retina to capture traffic from.",
-        title: "Select Nodes to Capture Traffic From",
-    });
-
-    if (!nodeNamesSelected) {
-        vscode.window.showErrorMessage("No nodes were selected to capture traffic.");
-        return;
-    }
-
-    const selectedNodes = nodeNamesSelected.join(",");
-
-    if (!selectedNodes) {
-        return;
-    }
 
     // Retina Run Capture
     const captureName = `retina-capture-${clusterInfo.result.name.toLowerCase()}`;
@@ -134,7 +102,7 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
             return await invokeKubectlCommand(
                 kubectl,
                 kubeConfigFile.filePath,
-                `retina capture create --namespace default --name ${captureName} --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes}" --no-wait=false --blob-upload="${SAS_URI}"`,
+                `retina capture create --namespace default --name ${captureName} --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes.result}" --no-wait=false --blob-upload="${SAS_URI}"`,
             );
         },
     );
@@ -146,45 +114,18 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
 
     if (retinaCaptureResult.result.stdout && retinaCaptureResult.result.code === 0) {
         vscode.window.showInformationMessage(
-            `Retina distributed capture is successfully completed for the cluster ${clusterInfo.result.name}`,
+            `Retina distributed capture is successfully completed and uploaded to Blob Storage ${storageAccountName}`,
         );
     }
 
-    const kubectlVersion = await getVersion(kubectl, kubeConfigFile.filePath);
-    if (failed(kubectlVersion)) {
-        vscode.window.showErrorMessage(kubectlVersion.error);
-        return;
-    }
-
-    const foldername = `${captureName}_${new Date().toJSON().replaceAll(":", "")}`;
-
-    // find if node explorer pod already exists
-    let nodeExplorerPodExists = false;
-    const nodeExplorerPod = await invokeKubectlCommand(
-        kubectl,
-        kubeConfigFile.filePath,
-        `get pods -n default -l app=node-explorer`,
-    );
-
-    if (
-        nodeExplorerPod.succeeded &&
-        nodeExplorerPod.result.stdout &&
-        nodeExplorerPod.result.stdout.includes("node-explorer")
-    ) {
-        nodeExplorerPodExists = true;
-    }
+    const isDownloadRetinaCapture = false;
 
     const dataProvider = new RetinaCaptureProvider(
-        kubectl,
-        kubectlVersion.result,
-        kubeConfigFile.filePath,
-        clusterInfo.result.name,
         retinaCaptureResult.result.stdout,
-        selectedNodes.split(","),
-        `${foldername}`,
-        nodeExplorerPodExists,
+        clusterInfo.result.name,
+        isDownloadRetinaCapture,
     );
 
     const panel = new RetinaCapturePanel(extension.result.extensionUri);
-    panel.show(dataProvider, kubeConfigFile);
+    panel.show(dataProvider);
 }

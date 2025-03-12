@@ -24,14 +24,15 @@ export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
 
 export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture"> {
     constructor(
-        readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
-        readonly kubectlVersion: KubectlVersion,
-        readonly kubeConfigFilePath: string,
-        readonly clusterName: string,
         readonly retinaOutput: string,
-        readonly allNodeOutput: string[],
-        readonly captureFolderName: string,
-        readonly isNodeExplorerPodExists: boolean,
+        readonly clusterName: string,
+        readonly isDownloadRetinaCapture: boolean,
+        readonly kubectl?: k8s.APIAvailable<k8s.KubectlV1>,
+        readonly kubectlVersion?: KubectlVersion,
+        readonly kubeConfigFilePath: string = "",
+        readonly allNodeOutput: string[] = [],
+        readonly captureFolderName: string = "",
+        readonly isNodeExplorerPodExists: boolean = false,
     ) {}
 
     getTitle(): string {
@@ -53,6 +54,7 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
             selectedNode: "",
             captureFolderName: this.captureFolderName,
             isNodeExplorerPodExists: this.isNodeExplorerPodExists,
+            isDownloadRetinaCapture: this.isDownloadRetinaCapture,
         };
     }
 
@@ -75,9 +77,14 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     }
 
     private async deleteNodeExplorerUsingKubectl(node: string) {
+        if (!this.kubectl) {
+            vscode.window.showErrorMessage("Kubectl is not available");
+            return;
+        }
+
         const deleteResult = await longRunning(`Deleting pod node-explorer-${node}.`, async () => {
             const command = `delete pod node-explorer-${node}`;
-            return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+            return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
         });
 
         if (failed(deleteResult)) {
@@ -106,6 +113,11 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     }
 
     async copyRetinaCaptureData(node: string, localCpPath: string) {
+        if (!this.kubectl || !this.kubectlVersion) {
+            vscode.window.showErrorMessage("Kubectl is not available");
+            return;
+        }
+
         const createPodYaml = `
 apiVersion: v1
 kind: Pod
@@ -138,7 +150,7 @@ spec:
         const applyResult = await longRunning(`Deploying pod to capture ${node} retina data.`, async () => {
             return await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
                 const command = `apply -f ${podSpecFile}`;
-                return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
             });
         });
 
@@ -148,7 +160,7 @@ spec:
         }
         const waitResult = await longRunning(`waiting for pod to get ready node-explorer-${node}.`, async () => {
             const command = `wait pod -n default --for=condition=ready --timeout=300s node-explorer-${node}`;
-            return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+            return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
         });
 
         if (failed(waitResult)) {
@@ -161,7 +173,7 @@ spec:
            See: https://github.com/kubernetes/kubernetes/issues/60140
            The best advice I can see is to use the 'retries' option if it is supported, and the
            'request-timeout' option otherwise. */
-        const clientVersion = this.kubectlVersion.clientVersion.gitVersion.replace(/^v/, "");
+        const clientVersion = this.kubectlVersion!.clientVersion.gitVersion.replace(/^v/, "");
         const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
         const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
         const captureHostFolderName = `${localCpPath}-${node}`;
@@ -169,7 +181,7 @@ spec:
             `Copy captured data to local host location ${captureHostFolderName}.`,
             async () => {
                 const cpcommand = `cp node-explorer-${node}:mnt/capture ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
-                return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, cpcommand);
+                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, cpcommand);
             },
         );
 

@@ -133,12 +133,15 @@ export async function aksDownloadRetinaCapture(_context: IActionContext, target:
         nodeExplorerPodExists = true;
     }
 
+    const isDownloadRetinaCapture = true;
+
     const dataProvider = new RetinaCaptureProvider(
+        retinaCaptureResult.result.stdout,
+        clusterInfo.result.name,
+        isDownloadRetinaCapture,
         kubectl,
         kubectlVersion.result,
         kubeConfigFile.filePath,
-        clusterInfo.result.name,
-        retinaCaptureResult.result.stdout,
         selectedNodes.split(","),
         `${foldername}`,
         nodeExplorerPodExists,
