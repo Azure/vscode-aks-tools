@@ -15,8 +15,6 @@ export async function selectLinuxNodes(
         return linuxNodesList;
     }
 
-    console.log("linuxNodesList", linuxNodesList);
-
     const nodeNamesSelected = await vscode.window.showQuickPick(linuxNodesList.result, {
         canPickMany: true,
         placeHolder,
@@ -28,8 +26,6 @@ export async function selectLinuxNodes(
     }
 
     const selectedNodes = nodeNamesSelected.join(",");
-
-    console.log("selectedNodes", selectedNodes);
 
     return { succeeded: true, result: selectedNodes };
 }
