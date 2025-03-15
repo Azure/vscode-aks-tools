@@ -33,6 +33,7 @@ table.tracelist th {
 
 table.tracelist td {
     padding: 5px;
+    text-align: left;
 }
 
 table.tracelist td > * {
@@ -126,4 +127,32 @@ ul.hierarchyList li * {
 
 .panelContent .main {
     grid-column: 2 / 3;
+}
+
+.displayCheckbox {
+    display: inline;
+}
+
+.displayLabel {
+    display: inline;
+    position: relative;
+    top: -0.3rem;
+    margin-left: 0.1rem;
+}
+
+.tableData {
+    text-align: left;
+}
+
+.checkBoxLabel {
+    position: relative;
+    top: -0.05rem;
+}
+
+.radioLabel {
+    margin-left: 0.62rem;
+}
+
+.radioLine {
+    margin-bottom: 0.3rem;
 }

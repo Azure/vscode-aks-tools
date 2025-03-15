@@ -4,7 +4,7 @@ import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons
 import styles from "./InspektorGadget.module.css";
 import { NamespaceResources, PodResources } from "./helpers/clusterResources";
 import { Lazy, isLoaded, isNotLoaded, map as lazyMap, orDefault } from "../utilities/lazy";
-import { VSCodeProgressRing, VSCodeRadio } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { Lookup, asLookup, exclude, intersection } from "../utilities/array";
 import { EventHandlers } from "../utilities/state";
 import { EventDef, vscode } from "./helpers/state";
@@ -109,9 +109,14 @@ export function ResourceSelector(props: ResourceSelectorProps) {
             className={props.className ? `${props.className} ${styles.hierarchyList}` : styles.hierarchyList}
         >
             <li>
-                <VSCodeRadio onChange={handleNoResourceChange} checked={isNoResource(selectedResource)}>
-                    All
-                </VSCodeRadio>
+                <div className={styles.radioLine}>
+                    <input
+                        type="radio"
+                        onChange={handleNoResourceChange}
+                        checked={isNoResource(selectedResource)}
+                    ></input>
+                    <label className={styles.radioLabel}>All</label>
+                </div>
             </li>
             {renderNamespaceItems(props.resources, updatedStatus)}
         </ul>
@@ -125,13 +130,15 @@ export function ResourceSelector(props: ResourceSelectorProps) {
                     onClick={() => toggleNamespaceExpanded(item.name)}
                     icon={status[item.name].isExpanded ? faChevronDown : faChevronRight}
                 />
-                <VSCodeRadio
-                    className={styles.selector}
-                    onChange={(e) => handleNamespaceChange(e, item.name)}
-                    checked={isNamespaceResource(selectedResource) && selectedResource.namespace === item.name}
-                >
-                    {item.name}
-                </VSCodeRadio>
+                <div className={styles.radioLine}>
+                    <input
+                        type="radio"
+                        className={styles.selector}
+                        onChange={(e) => handleNamespaceChange(e, item.name)}
+                        checked={isNamespaceResource(selectedResource) && selectedResource.namespace === item.name}
+                    ></input>
+                    <label className={styles.radioLabel}>{item.name}</label>
+                </div>
                 {status[item.name].isExpanded && (
                     <ul className={styles.hierarchyList}>
                         {isLoaded(item.children) ? (
@@ -153,16 +160,19 @@ export function ResourceSelector(props: ResourceSelectorProps) {
                     onClick={() => togglePodExpanded(namespace, item.name)}
                     icon={status[item.name].isExpanded ? faChevronDown : faChevronRight}
                 />
-                <VSCodeRadio
-                    onChange={(e) => handlePodChange(e, namespace, item.name)}
-                    checked={
-                        isPodResource(selectedResource) &&
-                        selectedResource.namespace === namespace &&
-                        selectedResource.podName === item.name
-                    }
-                >
-                    {item.name}
-                </VSCodeRadio>
+                <div className={styles.radioLine}>
+                    <input
+                        type="radio"
+                        onChange={(e) => handlePodChange(e, namespace, item.name)}
+                        checked={
+                            isPodResource(selectedResource) &&
+                            selectedResource.namespace === namespace &&
+                            selectedResource.podName === item.name
+                        }
+                    ></input>
+
+                    <label className={styles.radioLabel}>{item.name}</label>
+                </div>
                 {status[item.name].isExpanded && (
                     <ul className={styles.hierarchyList}>
                         {isLoaded(item.children) ? (
@@ -179,17 +189,19 @@ export function ResourceSelector(props: ResourceSelectorProps) {
     function renderContainerItems(namespace: string, podName: string, containerNames: string[]) {
         return containerNames.map((c) => (
             <li key={c}>
-                <VSCodeRadio
-                    onChange={(e) => handleContainerChange(e, namespace, podName, c)}
-                    checked={
-                        isContainerResource(selectedResource) &&
-                        selectedResource.namespace === namespace &&
-                        selectedResource.podName === podName &&
-                        selectedResource.container === c
-                    }
-                >
-                    {c}
-                </VSCodeRadio>
+                <div className={styles.radioLine}>
+                    <input
+                        type="radio"
+                        onChange={(e) => handleContainerChange(e, namespace, podName, c)}
+                        checked={
+                            isContainerResource(selectedResource) &&
+                            selectedResource.namespace === namespace &&
+                            selectedResource.podName === podName &&
+                            selectedResource.container === c
+                        }
+                    ></input>
+                    <label className={styles.radioLabel}>{c}</label>
+                </div>
             </li>
         ));
     }
