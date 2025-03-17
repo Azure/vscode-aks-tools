@@ -18,9 +18,6 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
     const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
     const isUpgrading = props.clusterInfo.provisioningState === "Upgrading";
 
-    // Track which version is currently being upgraded
-    const [upgradeVersion, setUpgradeVersion] = useState<string | null>(null);
-
     function handleUpgradeVersionChange(event: Event) {
         const target = event.target as HTMLSelectElement;
         const version = target.value;
@@ -33,9 +30,6 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
 
     function handleConfirmUpgrade() {
         if (selectedVersion) {
-            // Store which version is being upgraded
-            setUpgradeVersion(selectedVersion);
-
             // Set clusterOperationRequested first so UI updates immediately
             props.onUpgrade(selectedVersion);
 
@@ -53,10 +47,7 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
     }
 
     function resetDropdown() {
-        const dropdown = document.querySelector("vscode-dropdown") as HTMLSelectElement | null;
-        if (dropdown) {
-            dropdown.value = "";
-        }
+        setSelectedVersion(null);
     }
 
     // Only render if upgrade versions are available
@@ -82,8 +73,8 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
         </div>
     );
 
-    // Determine which version to display (either the version being upgraded to or none)
-    const displayVersion = isUpgrading || props.clusterOperationRequested ? upgradeVersion : selectedVersion;
+    // Show default (empty) value when upgrading is in progress
+    const displayVersion = isUpgrading || props.clusterOperationRequested ? "" : selectedVersion;
     const readyToUpgrade =
         props.clusterInfo.powerStateCode === "Running" && props.clusterInfo.provisioningState === "Succeeded";
 
