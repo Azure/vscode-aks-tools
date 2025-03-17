@@ -157,7 +157,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
                     <span>
                         {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
-                        {isUpgrading && <span className={styles.upgradeIndicator}>&nbsp;(Upgrading)</span>}
+                        {isUpgrading && <span className={styles.upgradeIndicator}>(Upgrading)</span>}
                     </span>
                     <ClusterDisplayToolTip clusterInfo={props.clusterInfo} />
                     <ClusterUpgrade
