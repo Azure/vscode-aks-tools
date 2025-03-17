@@ -180,7 +180,7 @@ export function CaptureFilters(props: CaptureFiltersProps) {
             <input
                 type="text"
                 id="pcap-filter-string-input"
-                className={styles.control}
+                className={styles.pcapFilterInput}
                 value={props.nodeState.currentCaptureFilters.pcapFilterString || ""}
                 onInput={handlePcapFilterStringChange}
             />

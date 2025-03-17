@@ -68,3 +68,7 @@ table.capturelist td {
 button span {
     margin-right: 0.5rem;
 }
+
+.pcapFilterInput {
+    width: 27rem;
+}
