@@ -1,4 +1,4 @@
-import { VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useEffect } from "react";
 import { NodeUploadStatus, PodLogs } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { NodeActions } from "./NodeActions";
@@ -87,7 +87,7 @@ export function SuccessView(props: SuccessViewProps) {
                 </tbody>
             </table>
 
-            <VSCodeDivider />
+            <hr />
 
             {props.selectedNode && props.nodePodLogs && (
                 <NodeLogs node={props.selectedNode} podLogs={props.nodePodLogs} />
