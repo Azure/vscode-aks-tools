@@ -1,6 +1,6 @@
 import { FormEvent, HTMLAttributes, useEffect, useRef, useState } from "react";
 import styles from "./TextWithDropdown.module.css";
-import { VSCodeProgressRing, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded, orDefault } from "../utilities/lazy";
 
 type AvailableHtmlAttributes = Pick<HTMLAttributes<HTMLElement>, "className" | "id">;
@@ -59,7 +59,9 @@ function TextOnly(props: TextOnlyProps) {
         props.onSelect(newText, true);
     }
 
-    return <VSCodeTextField className={props.className} onInput={handleTextChange} value={props.selectedItem || ""} />;
+    return (
+        <input type="text" className={props.className} onInput={handleTextChange} value={props.selectedItem || ""} />
+    );
 }
 
 type NonLazyTextWithDropdownProps = Omit<TextWithDropdownProps, "items"> & { items: string[] };
@@ -97,13 +99,6 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
 
     function handleTextFieldClick() {
         // For consistency with the VS Code dropdown, we toggle the dropdown when the text field is clicked.
-        setIsExpanded(!isExpanded);
-    }
-
-    function handleDropDownButtonClick(e: React.MouseEvent) {
-        // Don't propagate because the containing element (the text field) has its own click handler
-        // which will itself toggle the expanded state.
-        e.stopPropagation();
         setIsExpanded(!isExpanded);
     }
 
@@ -204,32 +199,29 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
         >
-            <VSCodeTextField
-                className={styles.selectedValue}
-                onInput={handleTextChange}
-                value={inputText}
-                onClick={handleTextFieldClick}
-            >
-                <span slot="end" className={styles.indicator} onClick={handleDropDownButtonClick} tabIndex={-1}>
-                    {/* 
-                    See: 
-                    https://github.com/microsoft/vscode-webview-ui-toolkit/blob/a1f078e963969ad3f6d5932f96874f1a41cda919/src/dropdown/index.ts#L43-L57
-                    */}
-                    <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="currentColor"
-                    >
-                        <path
-                            fillRule="evenodd"
-                            clipRule="evenodd"
-                            d="M7.976 10.072l4.357-4.357.62.618L8.284 11h-.618L3 6.333l.619-.618 4.357 4.357z"
-                        ></path>
-                    </svg>
-                </span>
-            </VSCodeTextField>
+            <div className={styles.inputField}>
+                <input
+                    type="text"
+                    className={styles.selectedValue}
+                    onInput={handleTextChange}
+                    value={inputText}
+                    onClick={handleTextFieldClick}
+                ></input>
+                <svg
+                    className={styles.dropDownButton}
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                >
+                    <path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M7.976 10.072l4.357-4.357.62.618L8.284 11h-.618L3 6.333l.619-.618 4.357 4.357z"
+                    ></path>
+                </svg>
+            </div>
 
             <ol
                 className={`${styles.listbox} ${displayListbox ? "" : styles.hidden}`}
