@@ -447,6 +447,14 @@ export async function getClusterUpgradeProfile(
     resourceGroup: string,
     clusterName: string,
 ): Promise<Errorable<azcs.ManagedClusterUpgradeProfile>> {
+    if (!resourceGroup || resourceGroup.trim() === "") {
+        return { succeeded: false, error: "Resource group name cannot be empty." };
+    }
+
+    if (!clusterName || clusterName.trim() === "") {
+        return { succeeded: false, error: "Cluster name cannot be empty." };
+    }
+
     try {
         const upgradeProfile = await containerClient.managedClusters.getUpgradeProfile(resourceGroup, clusterName);
         return { succeeded: true, result: upgradeProfile };
