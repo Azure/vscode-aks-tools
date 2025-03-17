@@ -3,6 +3,7 @@ import { EventHandlers } from "../utilities/state";
 import styles from "./ClusterProperties.module.css";
 import { EventDef, vscode } from "./state";
 import { ClusterDisplayToolTip } from "./ClusterDisplayToolTip";
+import { ClusterUpgrade } from "./ClusterUpgrade";
 
 export interface ClusterDisplayProps {
     clusterInfo: ClusterInfo;
@@ -55,6 +56,12 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
         props.eventHandlers.onSetClusterOperationRequested();
     }
 
+    function handleUpgradeVersion(version: string) {
+        // Update UI state immediately to show upgrading state
+        props.eventHandlers.onUpgradeVersionSelected(version);
+        props.eventHandlers.onSetClusterOperationRequested();
+    }
+
     const startStopState = determineStartStopState(props.clusterInfo);
     const showAbortButton = !unabortableProvisioningStates.includes(props.clusterInfo.provisioningState);
     const showReconcileButton =
@@ -62,6 +69,8 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
     const supportedPatchVersions = props.clusterInfo.supportedVersions.flatMap((v) => v.patchVersions);
     const isSupported = supportedPatchVersions.includes(props.clusterInfo.kubernetesVersion);
+
+    const isUpgrading = props.clusterInfo.provisioningState.toLowerCase() === "upgrading";
 
     return (
         <dl className={styles.propertyList}>
@@ -142,11 +151,21 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
             <dt>FQDN</dt>
             <dd>{props.clusterInfo.fqdn}</dd>
+
             <dt>Kubernetes Version</dt>
             <dd>
-                {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
-                &nbsp;
-                <ClusterDisplayToolTip clusterInfo={props.clusterInfo}></ClusterDisplayToolTip>
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+                    <span>
+                        {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
+                        {isUpgrading && <span className={styles.upgradeIndicator}>(Upgrading)</span>}
+                    </span>
+                    <ClusterDisplayToolTip clusterInfo={props.clusterInfo} />
+                    <ClusterUpgrade
+                        clusterInfo={props.clusterInfo}
+                        clusterOperationRequested={props.clusterOperationRequested}
+                        onUpgrade={handleUpgradeVersion}
+                    />
+                </div>
             </dd>
         </dl>
     );

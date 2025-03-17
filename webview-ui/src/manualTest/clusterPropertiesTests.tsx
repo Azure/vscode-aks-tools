@@ -51,13 +51,13 @@ const testWindows2022Pool: AgentPoolProfileInfo = {
 const supportedVersions: KubernetesVersionInfo[] = [
     {
         version: "1.24",
-        patchVersions: ["1.24.6"],
+        patchVersions: ["1.24.6", "1.24.7"],
         supportPlan: ["KubernetesOfficial"],
         isPreview: false,
     },
     {
         version: "1.25",
-        patchVersions: ["1.25.3"],
+        patchVersions: ["1.25.3", "1.25.4"],
         supportPlan: ["AKSLongTermSupport", "KubernetesOfficial"],
         isPreview: false,
     },
@@ -94,6 +94,7 @@ const runningClusterInfo: ClusterInfo = {
     powerStateCode: "Running",
     agentPoolProfiles: [testSystemPool, testWindows2019Pool, testWindows2022Pool],
     supportedVersions: supportedVersions,
+    availableUpgradeVersions: ["1.24.7", "1.25.3", "1.25.4"],
 };
 
 const abortedClusterInfo: ClusterInfo = {
@@ -124,6 +125,8 @@ export function getClusterPropertiesScenarios() {
             abortClusterOperation: () => handleAbortClusterOperation(withErrors && sometimes()),
             reconcileClusterRequest: () => handleReconcileClusterRequest(withErrors && sometimes()),
             refreshRequest: () => handleGetPropertiesRequest(),
+            upgradeClusterVersionRequest: (version: string) =>
+                handleUpgradeClusterVersionRequest(version, withErrors && sometimes()),
         };
 
         async function handleGetPropertiesRequest() {
@@ -233,6 +236,27 @@ export function getClusterPropertiesScenarios() {
                 p.provisioningState = "Succeeded";
                 p.powerStateCode = "Running";
             });
+            webview.postGetPropertiesResponse(testClusterInfo);
+        }
+
+        async function handleUpgradeClusterVersionRequest(version: string, hasError: boolean) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            if (hasError) {
+                webview.postErrorNotification("Sorry, I wasn't quite able to upgrade the cluster.");
+                return;
+            }
+
+            // Begin upgrade operation
+            testClusterInfo.provisioningState = "Upgrading";
+            webview.postGetPropertiesResponse(testClusterInfo);
+
+            // Simulate time for upgrade
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+
+            // Finish upgrade
+            testClusterInfo.kubernetesVersion = version;
+            testClusterInfo.provisioningState = "Succeeded";
+            webview.postUpgradeClusterVersionResponse(true);
             webview.postGetPropertiesResponse(testClusterInfo);
         }
     }

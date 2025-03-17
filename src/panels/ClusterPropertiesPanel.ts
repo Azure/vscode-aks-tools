@@ -16,8 +16,9 @@ import {
     KubernetesVersionListResult,
     ManagedCluster,
     ManagedClusterAgentPoolProfile,
+    ManagedClusterUpgradeProfile,
 } from "@azure/arm-containerservice";
-import { getKubernetesVersionInfo, getManagedCluster } from "../commands/utils/clusters";
+import { getKubernetesVersionInfo, getManagedCluster, getClusterUpgradeProfile } from "../commands/utils/clusters";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { getAksClient } from "../commands/utils/arm";
 import { ReadyAzureSessionProvider } from "../auth/types";
@@ -27,6 +28,7 @@ export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
         super(extensionUri, "clusterProperties", {
             getPropertiesResponse: null,
             errorNotification: null,
+            upgradeClusterVersionResponse: null,
         });
     }
 }
@@ -61,6 +63,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             abortClusterOperation: true,
             reconcileClusterRequest: true,
             refreshRequest: true,
+            upgradeClusterVersionRequest: true,
         };
     }
 
@@ -74,6 +77,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             reconcileClusterRequest: () => this.handleReconcileClusterOperation(webview),
             // refreshRequest is just for telemetry, so it will use the same getPropertiesRequest handler.
             refreshRequest: () => this.handleGetPropertiesRequest(webview),
+            upgradeClusterVersionRequest: (version: string) => this.handleUpgradeClusterVersion(webview, version),
         };
     }
 
@@ -213,6 +217,61 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         await this.readAndPostClusterProperties(webview);
     }
 
+    private async handleUpgradeClusterVersion(webview: MessageSink<ToWebViewMsgDef>, version: string) {
+        try {
+            const cluster = await getManagedCluster(
+                this.sessionProvider,
+                this.subscriptionId,
+                this.resourceGroup,
+                this.clusterName,
+            );
+
+            if (failed(cluster)) {
+                webview.postErrorNotification(cluster.error);
+                return;
+            }
+
+            // Create update parameters, preserving all other properties
+            const updateParams: ManagedCluster = {
+                ...cluster.result,
+                kubernetesVersion: version,
+            };
+
+            const poller = await this.client.managedClusters.beginCreateOrUpdate(
+                this.resourceGroup,
+                this.clusterName,
+                updateParams,
+            );
+
+            poller.onProgress((state) => {
+                if (state.status === "canceled") {
+                    webview.postErrorNotification(`Upgrade operation on ${this.clusterName} was cancelled.`);
+                    webview.postUpgradeClusterVersionResponse(false);
+                    return;
+                } else if (state.status === "failed") {
+                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    webview.postErrorNotification(errorMessage);
+                    webview.postUpgradeClusterVersionResponse(false);
+                    return;
+                }
+            });
+
+            // Update the cluster properties now that the operation has started
+            await this.readAndPostClusterProperties(webview);
+
+            // Wait until operation completes
+            await poller.pollUntilDone();
+            webview.postUpgradeClusterVersionResponse(true);
+        } catch (ex) {
+            const errorMessage = getErrorMessage(ex);
+            webview.postErrorNotification(errorMessage);
+            webview.postUpgradeClusterVersionResponse(false);
+        }
+
+        // Refresh the cluster properties after operation completes
+        await this.readAndPostClusterProperties(webview);
+    }
+
     private async readAndPostClusterProperties(webview: MessageSink<ToWebViewMsgDef>) {
         const cluster = await getManagedCluster(
             this.sessionProvider,
@@ -231,11 +290,23 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             return;
         }
 
-        webview.postGetPropertiesResponse(asClusterInfo(cluster.result, kubernetesVersion.result));
+        const upgradeProfile = await getClusterUpgradeProfile(this.client, this.resourceGroup, this.clusterName);
+        if (failed(upgradeProfile)) {
+            webview.postErrorNotification(upgradeProfile.error);
+            return;
+        }
+
+        webview.postGetPropertiesResponse(
+            asClusterInfo(cluster.result, kubernetesVersion.result, upgradeProfile.result),
+        );
     }
 }
 
-function asClusterInfo(cluster: ManagedCluster, kubernetesVersionList: KubernetesVersionListResult): ClusterInfo {
+function asClusterInfo(
+    cluster: ManagedCluster,
+    kubernetesVersionList: KubernetesVersionListResult,
+    upgradeProfile: ManagedClusterUpgradeProfile,
+): ClusterInfo {
     return {
         provisioningState: cluster.provisioningState!,
         fqdn: cluster.fqdn!,
@@ -243,7 +314,18 @@ function asClusterInfo(cluster: ManagedCluster, kubernetesVersionList: Kubernete
         powerStateCode: cluster.powerState!.code!,
         agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
         supportedVersions: (kubernetesVersionList.values || []).map(asKubernetesVersionInfo),
+        availableUpgradeVersions: processAndSortUpgradeVersions(upgradeProfile.controlPlaneProfile?.upgrades || []),
     };
+}
+
+function processAndSortUpgradeVersions(upgrades: Array<{ kubernetesVersion?: string }>): string[] {
+    return (
+        upgrades
+            .map((upgrade) => upgrade.kubernetesVersion!)
+            .filter((version): version is string => version !== undefined)
+            // Sort versions in descending order (highest to lowest)
+            .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: "base" }))
+    );
 }
 
 function asPoolProfileInfo(pool: ManagedClusterAgentPoolProfile): AgentPoolProfileInfo {
