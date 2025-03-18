@@ -9,7 +9,7 @@ import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
 import { failed } from "../utils/errorable";
-import { getClusterDiagnosticSettings, validatePrerequisites as validatePrerequisites } from "../utils/clusters";
+import { getClusterDiagnosticSettings, validatePrerequisites } from "../utils/clusters";
 import { getAksClusterTreeNode } from "../utils/clusters";
 import {
     chooseContainerInStorageAccount as chooseContainerFromStorageAccount,
