@@ -6,6 +6,7 @@ import { useStateManagement } from "../utilities/state";
 import { DeleteNodeExplorerDialog } from "./DeleteNodeExplorerDialog";
 import styles from "./RetinaCapture.module.css";
 import { stateUpdater, vscode } from "./state";
+import { VSCodeButton, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
