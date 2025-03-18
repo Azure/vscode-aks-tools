@@ -487,11 +487,6 @@
                 {
                     "command": "aks.aksFleetProperties",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.fleet/i"
-                },
-                {
-                    "submenu": "aks.aksRetinaCaptureSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
-                    "group": "9@4"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -571,6 +566,10 @@
                 },
                 {
                     "command": "aks.aksInspektorGadgetShow",
+                    "group": "navigation"
+                },
+                {
+                    "submenu": "aks.aksRetinaCaptureSubMenu",
                     "group": "navigation"
                 }
             ],
