@@ -2,15 +2,19 @@ import {
     AccountSASPermissions,
     AccountSASResourceTypes,
     AccountSASServices,
+    BlobServiceClient,
     SASProtocol,
     StorageSharedKeyCredential,
     generateAccountSASQueryParameters,
 } from "@azure/storage-blob";
 import { getStorageManagementClient } from "./arm";
-import { Errorable } from "./errorable";
+import { Errorable, getErrorMessage } from "./errorable";
 import { parseResource } from "../../azure-api-utils";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
+import * as vscode from "vscode";
+import { longRunning } from "./host";
+import { DefaultAzureCredential } from "@azure/identity";
 
 export enum LinkDuration {
     StartTime,
@@ -19,7 +23,7 @@ export enum LinkDuration {
     OneHour,
 }
 
-export interface BlobStorageInfo {
+export interface StorageAcctInfo {
     storageName: string;
     storageKey: string;
     blobEndpoint: string;
@@ -79,11 +83,11 @@ export function getSASKey(storageAccount: string, storageKey: string, linkDurati
     return sas;
 }
 
-export async function getBlobStorageInfo(
+export async function getStorageAcctInfo(
     sessionProvider: ReadyAzureSessionProvider,
     clusterNode: AksClusterTreeNode,
     diagnosticStorageAccountId: string,
-): Promise<Errorable<BlobStorageInfo>> {
+): Promise<Errorable<StorageAcctInfo>> {
     try {
         const { resourceGroupName, name: accountName } = parseResource(diagnosticStorageAccountId);
 
@@ -127,4 +131,69 @@ export async function getBlobStorageInfo(
     } catch (e) {
         return { succeeded: false, error: `Storage associated with cluster had following error: ${e}` };
     }
+}
+
+export async function chooseContainerInStorageAccount(
+    storageAccountId: string,
+    blobEndpoint: string,
+): Promise<string | undefined> {
+    if (!storageAccountId) {
+        return undefined;
+    }
+
+    const { subscriptionId, resourceGroupName, name: accountName } = parseResource(storageAccountId);
+    if (!subscriptionId || !resourceGroupName || !accountName) {
+        vscode.window.showErrorMessage(`Invalid storage account ID format: ${storageAccountId}`);
+        return undefined;
+    }
+
+    try {
+        // List containers in the selected storage account
+        const containers = await longRunning(
+            `Getting containers in ${accountName}...`,
+            async () => await listStorageContainers(blobEndpoint),
+        );
+
+        if (containers.length === 0) {
+            vscode.window.showErrorMessage(`No containers found in storage account ${accountName}`);
+            return undefined;
+        }
+
+        // If only one container, use it automatically
+        if (containers.length === 1) {
+            vscode.window.showInformationMessage(`Using the only available container: ${containers[0]}`);
+            return containers[0];
+        }
+
+        // Otherwise let the user choose from multiple containers
+        const selectedContainer = await vscode.window.showQuickPick(
+            containers.map((container) => ({
+                label: container,
+            })),
+            {
+                placeHolder: "Select a container for storing data",
+                ignoreFocusOut: true,
+            },
+        );
+
+        return selectedContainer?.label;
+    } catch (error) {
+        vscode.window.showErrorMessage(`Error listing containers: ${getErrorMessage(error)}`);
+        return undefined;
+    }
+}
+
+async function listStorageContainers(blobEndpoint: string): Promise<string[]> {
+    const credential = new DefaultAzureCredential();
+    const blobServiceClient = new BlobServiceClient(blobEndpoint, credential);
+
+    // List all containers
+    const containers: string[] = [];
+    const containerIterator = blobServiceClient.listContainers();
+
+    for await (const container of containerIterator) {
+        containers.push(container.name);
+    }
+
+    return containers;
 }

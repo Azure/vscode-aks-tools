@@ -11,7 +11,12 @@ import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCa
 import { failed } from "../utils/errorable";
 import { getClusterDiagnosticSettings, validatePrerequisites as validatePrerequisites } from "../utils/clusters";
 import { getAksClusterTreeNode } from "../utils/clusters";
-import { getBlobStorageInfo, getSASKey, LinkDuration } from "../utils/azurestorage";
+import {
+    chooseContainerInStorageAccount as chooseContainerFromStorageAccount,
+    getStorageAcctInfo,
+    getSASKey,
+    LinkDuration,
+} from "../utils/azurestorage";
 import { parseResource } from "../../azure-api-utils";
 import { selectLinuxNodes } from "./utils";
 
@@ -60,17 +65,23 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
     }
 
     // Get storage account details
-    const storageInfo = await getBlobStorageInfo(sessionProvider, clusterNode.result, clusterStorageAccountId);
+    const storageInfo = await getStorageAcctInfo(sessionProvider, clusterNode.result, clusterStorageAccountId);
     if (failed(storageInfo)) {
         vscode.window.showErrorMessage(storageInfo.error);
         return;
     }
 
+    const containerName = await chooseContainerFromStorageAccount(
+        clusterStorageAccountId,
+        storageInfo.result.blobEndpoint,
+    );
+    if (!containerName) return;
+
     // Get SAS key
-    const sasKey = getSASKey(clusterStorageAccountId, storageInfo.result.storageKey, LinkDuration.OneHour);
+    const sasKey = getSASKey(storageAccountName, storageInfo.result.storageKey, LinkDuration.DownloadNow); // using duration DownloadNow for create permissions
 
     // Construct SAS URI
-    const SAS_URI = `${storageInfo.result.blobEndpoint}${sasKey}`;
+    const sasUri = new URL(`${containerName}${sasKey}`, storageInfo.result.blobEndpoint).href;
 
     const kubectlRetinaPath = await getRetinaBinaryPath();
     if (failed(kubectlRetinaPath)) {
@@ -100,7 +111,7 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
             return await invokeKubectlCommand(
                 kubectl,
                 kubeConfigFile.filePath,
-                `retina capture create --namespace default --name ${captureName} --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes.result}" --no-wait=false --blob-upload="${SAS_URI}"`,
+                `retina capture create --namespace default --name ${captureName} --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes.result}" --no-wait=false --blob-upload="${sasUri}"`,
             );
         },
     );
