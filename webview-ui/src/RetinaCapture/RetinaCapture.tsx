@@ -1,6 +1,5 @@
 import { faInfoCircle, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeButton, VSCodeCheckbox, VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/retinaCapture";
 import { useStateManagement } from "../utilities/state";
@@ -43,18 +42,18 @@ export function RetinaCapture(initialState: InitialState) {
                 <h2>Retina Distributed Capture for {state.clusterName}</h2>
             </header>
 
-            <VSCodeDivider style={{ marginBottom: "1rem" }} />
+            <hr style={{ marginBottom: "1rem" }} />
             <div>
                 <FontAwesomeIcon icon={faInfoCircle} /> Retina capture command allows the user to capture network
                 traffic and metadata for the capture target, and then send the capture file to the location by Output
                 Configuration. More info:{" "}
                 <a href="https://retina.sh/docs/captures/cli/#output-configurationrequired">Retina Capture Command</a>
             </div>
-            <VSCodeDivider style={{ marginBottom: "1rem" }} />
+            <hr style={{ marginBottom: "1rem" }} />
             <h3>Retina Output</h3>
             <div>{state.retinaOutput}</div>
 
-            <VSCodeDivider style={{ marginTop: "1rem" }} />
+            <hr style={{ marginTop: "1rem" }} />
             <h3>Retina Distributed Capture is Successfully Completed for this Cluster</h3>
 
             <div className={styles.content}>

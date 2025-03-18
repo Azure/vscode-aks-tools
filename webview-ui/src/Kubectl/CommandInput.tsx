@@ -1,4 +1,3 @@
-import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import styles from "./Kubectl.module.css";
 import { FormEvent } from "react";
 
@@ -32,7 +31,8 @@ export function CommandInput(props: CommandInputProps) {
             <label htmlFor="command-input" className={styles.label}>
                 Command
             </label>
-            <VSCodeTextField
+            <input
+                type="text"
                 id="command-input"
                 className={styles.control}
                 value={props.command}
@@ -40,10 +40,10 @@ export function CommandInput(props: CommandInputProps) {
                 onKeyUp={onKeyPress}
             />
             <div className={styles.commands}>
-                <VSCodeButton disabled={!canRun} onClick={() => props.onRunCommand(props.command)}>
+                <button disabled={!canRun} onClick={() => props.onRunCommand(props.command)}>
                     Run
-                </VSCodeButton>
-                {!props.matchesExisting && <VSCodeButton onClick={props.onSaveRequest}>Save</VSCodeButton>}
+                </button>
+                {!props.matchesExisting && <button onClick={props.onSaveRequest}>Save</button>}
             </div>
         </div>
     );

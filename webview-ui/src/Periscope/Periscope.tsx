@@ -1,4 +1,3 @@
-import { VSCodeDivider, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { useEffect } from "react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { ErrorView } from "./ErrorView";
@@ -30,11 +29,9 @@ export function Periscope(initialState: InitialState) {
                 AKS Periscope collects and exports node and pod logs into an Azure Blob storage account to help you
                 analyse and identify potential problems or easily share the information during the troubleshooting
                 process.
-                <VSCodeLink href="https://azure.github.io/vscode-aks-tools/features/aks-periscope.html">
-                    &nbsp;Learn more
-                </VSCodeLink>
+                <a href="https://azure.github.io/vscode-aks-tools/features/aks-periscope.html">&nbsp;Learn more</a>
             </p>
-            <VSCodeDivider />
+            <hr />
             {
                 {
                     error: (
