@@ -168,8 +168,12 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
         const clusterTreeItems = new Map<string, AzExtTreeItem>();
         fleetResources.concat(clusterResources).forEach((r) => {
             if (r.type?.toLocaleLowerCase() === fleetResourceType.toLowerCase()) {
+                const children = fleetToMembersMap.get(r.id) || [];
+                // If fleet has no children, it will still show in tree
+                // This means that fleets show even with clusters filters that do not match any of their children
+                // This can be changed in the future if needed, potentially adding fleets as a quickpick option for the filters
                 const fleetTreeItem = createFleetTreeNode(this, this.subscriptionId, r);
-                fleetTreeItem.addCluster(fleetToMembersMap.get(r.id) || []);
+                fleetTreeItem.addCluster(children);
                 fleetTreeNodes.set(r.id, fleetTreeItem);
                 return fleetTreeItem;
             } else if (r.type?.toLocaleLowerCase() === clusterResourceType.toLowerCase()) {
@@ -179,7 +183,9 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
                 );
 
                 if (isSubIdExistInClusterFilter) {
-                    const matchedCluster = filteredClusters.find((filter) => filter.clusterName === r.name);
+                    const matchedCluster = filteredClusters.find(
+                        (filter) => filter.clusterName === r.name && filter.subscriptionId === this.subscriptionId,
+                    );
                     if (matchedCluster) {
                         const cluster = createClusterTreeNode(this, this.subscriptionId, r);
                         clusterTreeItems.set(r.id, cluster);

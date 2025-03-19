@@ -66,6 +66,11 @@ class FleetTreeItem extends AzExtParentTreeItem implements FleetTreeNode {
 
     private readonly members: Map<string, DefinedFleetMemberWithGroup> = new Map<string, DefinedFleetMemberWithGroup>();
 
+    // utility func for future use
+    public hasChildren() {
+        return this.members.size > 0;
+    }
+
     public addCluster(members: DefinedFleetMemberWithGroup[]): void {
         members.forEach((m) => {
             this.members.set(m.id, m);
