@@ -321,8 +321,12 @@
                 "title": "Compare AKS Cluster"
             },
             {
-                "command": "aks.aksRetinaCapture",
-                "title": "Run Retina Capture"
+                "command": "aks.aksDownloadRetinaCapture",
+                "title": "Download Artifacts Locally"
+            },
+            {
+                "command": "aks.aksUploadRetinaCapture",
+                "title": "Upload Artifacts to Blob Storage"
             },
             {
                 "command": "aks.aksKaitoGenerateYaml",
@@ -565,7 +569,7 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksRetinaCapture",
+                    "submenu": "aks.aksRetinaCaptureSubMenu",
                     "group": "navigation"
                 }
             ],
@@ -586,6 +590,16 @@
             "aks.fleetMangerSubMenu": [
                 {
                     "command": "aks.aksCreateFleet",
+                    "group": "navigation"
+                }
+            ],
+            "aks.aksRetinaCaptureSubMenu": [
+                {
+                    "command": "aks.aksDownloadRetinaCapture",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksUploadRetinaCapture",
                     "group": "navigation"
                 }
             ]
@@ -622,6 +636,10 @@
             {
                 "id": "aks.fleetMangerSubMenu",
                 "label": "Fleet Manager"
+            },
+            {
+                "id": "aks.aksRetinaCaptureSubMenu",
+                "label": "Run Retina Capture"
             }
         ]
     },
