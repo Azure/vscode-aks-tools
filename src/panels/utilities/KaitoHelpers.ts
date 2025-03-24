@@ -4,7 +4,7 @@ import { failed, Errorable } from "../../commands/utils/errorable";
 import { invokeKubectlCommand } from "../../commands/utils/kubectl";
 import { longRunning } from "../../commands/utils/host";
 import { ReadyAzureSessionProvider } from "../../auth/types";
-import { filterPodName } from "../../commands/utils/clusters";
+import { filterPodImage } from "../../commands/utils/clusters";
 import { join } from "path";
 import { writeFileSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
@@ -47,8 +47,13 @@ export function convertAgeToMinutes(creationTimestamp: string): number {
     return differenceInMinutes;
 }
 
-export async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFilePath: string) {
-    const command = `get pod ${pod} -n kube-system -o jsonpath="{.status.containerStatuses[*].ready}"`;
+export async function isPodReady(
+    nameSpace: string,
+    podName: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFilePath: string,
+) {
+    const command = `get pod ${podName} -n ${nameSpace} -o jsonpath="{.status.containerStatuses[*].ready}"`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
     if (failed(kubectlresult)) {
         vscode.window.showErrorMessage(kubectlresult.error);
@@ -61,7 +66,7 @@ export async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.Kube
 
 export async function kaitoPodStatus(
     clusterName: string,
-    pods: string[],
+    pods: { nameSpace: string; podName: string; imageName: string }[],
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFilePath: string,
 ) {
@@ -73,12 +78,18 @@ export async function kaitoPodStatus(
     await longRunning(`Checking if KAITO pods are running.`, async () => {
         for (const pod of pods) {
             // Checking if pods are running
-            if (pod.startsWith("kaito-workspace")) {
-                if (!kaitoWorkspaceReady && (await isPodReady(pod, kubectl, kubeConfigFilePath))) {
+            if (pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/workspace")) {
+                if (
+                    !kaitoWorkspaceReady &&
+                    (await isPodReady(pod.nameSpace, pod.podName, kubectl, kubeConfigFilePath))
+                ) {
                     kaitoWorkspaceReady = true;
                 }
-            } else if (pod.startsWith("kaito-gpu-provisioner")) {
-                if (!kaitoGPUProvisionerReady && (await isPodReady(pod, kubectl, kubeConfigFilePath))) {
+            } else if (pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/gpu-provisioner")) {
+                if (
+                    !kaitoGPUProvisionerReady &&
+                    (await isPodReady(pod.nameSpace, pod.podName, kubectl, kubeConfigFilePath))
+                ) {
                     kaitoGPUProvisionerReady = true;
                 }
             }
@@ -109,23 +120,25 @@ export async function getKaitoPods(
     resourceGroupName: string,
     clusterName: string,
 ) {
-    const kaitoPodsPromise = await filterPodName(
+    const kaitoPods = await filterPodImage(
         sessionProvider,
         kubectl,
         subscriptionId,
         resourceGroupName,
         clusterName,
-        "kaito-",
+        "mcr.microsoft.com/aks/kaito",
     );
-    if (failed(kaitoPodsPromise)) {
+
+    if (failed(kaitoPods)) {
         return [];
     }
-    return kaitoPodsPromise.result;
+    return kaitoPods.result;
 }
 
 export async function createCurlPodCommand(
     kubeConfigFilePath: string,
     podName: string,
+    modelName: string,
     clusterIP: string,
     prompt: string,
     temperature: number,
@@ -134,21 +147,41 @@ export async function createCurlPodCommand(
     repetitionPenalty: number,
     maxLength: number,
 ) {
+    modelName = modelName.startsWith("workspace-") ? modelName.replace("workspace-", "") : modelName;
+    if (modelName.startsWith("phi-3-5")) {
+        modelName = modelName.replace("phi-3-5", "phi-3.5");
+    } else if (modelName.startsWith("qwen-2-5")) {
+        modelName = modelName.replace("qwen-2-5", "qwen2.5");
+    }
     // Command for windows platforms (Needs custom character escaping)
     if (process.platform === "win32") {
+        // v3 command
+        // const windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+        // --image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
+        // "Content-Type: application/json" -d "{\\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
+        // \\"generate_kwargs\\":{\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
+        // \\"repetition_penalty\\":${repetitionPenalty}, \\"max_length\\":${maxLength}}}"`;
+        // v4 command
         const windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
---image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d "{\\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
-\\"generate_kwargs\\":{\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
-\\"repetition_penalty\\":${repetitionPenalty}, \\"max_length\\":${maxLength}}}"`;
+--image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
+"Content-Type: application/json" -d "{\\"model\\":\\"${modelName}\\", \\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
+\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
+\\"repetition_penalty\\":${repetitionPenalty}, \\"max_tokens\\":${maxLength}}"`;
         return windowsCreateCommand;
     } else {
         // Command for UNIX platforms (Should work for all other process.platform return values besides win32)
+        // v3 command
+        //  const unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+        // --image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
+        // "Content-Type: application/json" -d '{"prompt":"${escapeSpecialChars(prompt)}", \
+        // "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
+        // "repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
+        // v4 command
         const unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
---image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d '{"prompt":"${escapeSpecialChars(prompt)}", \
-"generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
-"repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
+--image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
+"Content-Type: application/json" -d '{"model":"${modelName}", "prompt":"${escapeSpecialChars(prompt)}", \
+"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "repetition_penalty":${repetitionPenalty}, \
+ "max_tokens":${maxLength}}'`;
         return unixCreateCommand;
     }
 }
@@ -183,7 +216,7 @@ export async function getClusterIP(
     modelName: string,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
 ) {
-    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc workspace-${modelName} -o jsonpath="{.spec.clusterIP}"`;
+    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc ${modelName} -o jsonpath="{.spec.clusterIP}"`;
     const ipResult = await kubectl.api.invokeCommand(ipCommand);
     if (ipResult && ipResult.code === 0) {
         return ipResult.stdout;

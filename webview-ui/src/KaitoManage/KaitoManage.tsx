@@ -26,7 +26,7 @@ export function KaitoManage(initialState: InitialState) {
     });
 
     async function deleteWorkspace(model: string) {
-        vscode.postDeleteWorkspaceRequest({ model: model });
+        vscode.postDeleteWorkspaceRequest({ model: model.replace(".", "-") });
     }
     async function redeployWorkspace(modelName: string, modelYaml: string) {
         vscode.postRedeployWorkspaceRequest({ modelName: modelName, modelYaml: modelYaml });
@@ -151,10 +151,7 @@ export function KaitoManage(initialState: InitialState) {
                         <div className={styles.statusTable}>
                             <div className={styles.statusRow}>
                                 <span className={styles.statusLabel}>Name</span>
-                                <span className={styles.gray}>
-                                    workspace-
-                                    {model.name}
-                                </span>
+                                <span className={styles.gray}>{model.name}</span>
                             </div>
                             <div className={styles.statusRow}>
                                 <span className={styles.statusLabel}>Instance</span>

@@ -663,6 +663,49 @@ export async function filterPodName(
     return { succeeded: true, result: filterPodName };
 }
 
+// Returns pods that start with given image name
+export async function filterPodImage(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    imageNameStartsWith: string,
+): Promise<Errorable<{ nameSpace: string; podName: string; imageName: string }[]>> {
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `get pods -A -o jsonpath="{range .items[*]}{.metadata.namespace};{.metadata.name};{.spec.containers[*].image};{end}"`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        if (failed(output)) {
+            vscode.window.showErrorMessage(output.error);
+            return [];
+        }
+
+        const strOutput = output.result.stdout;
+        const pods = strOutput
+            .trim()
+            .split(";")
+            .reduce<{ nameSpace: string; podName: string; imageName: string }[]>((acc, val, index, arr) => {
+                if (index % 3 === 0 && arr[index + 1] && arr[index + 2]) {
+                    acc.push({ nameSpace: val, podName: arr[index + 1], imageName: arr[index + 2] });
+                }
+                return acc;
+            }, []);
+
+        return pods;
+    });
+    return { succeeded: true, result: result.filter((pod) => pod.imageName.startsWith(imageNameStartsWith)) };
+}
+
 //Must meet RFC 1123: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 function validateNamespaceName(namespace: string): boolean {
     const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;

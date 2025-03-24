@@ -334,20 +334,36 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
             this.resourceGroupName,
             this.clusterName,
         );
-        const gpuProvisionerPod = kaitoPods.find((pod) => pod.startsWith("kaito-gpu-provisioner"));
+        const gpuProvisionerPod = kaitoPods.find((pod) =>
+            pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/gpu-provisioner"),
+        );
         if (gpuProvisionerPod === undefined) {
             vscode.window.showErrorMessage(`GPU Provisioner not found`);
             return { succeeded: false, error: "GPU Provisioner not found" };
         }
 
         // If the pod is already ready, we can skip the loop
-        if (await isPodReady(gpuProvisionerPod, this.kubectl, this.kubeConfigFilePath)) {
+        if (
+            await isPodReady(
+                gpuProvisionerPod.nameSpace,
+                gpuProvisionerPod.podName,
+                this.kubectl,
+                this.kubeConfigFilePath,
+            )
+        ) {
             gpuProvisionerReady = true;
         } else {
             // If the pod is not ready, we will poll readiness for the next 2 minutes
             const endTime = Date.now() + 120000;
             while (Date.now() < endTime) {
-                if (await isPodReady(gpuProvisionerPod, this.kubectl, this.kubeConfigFilePath)) {
+                if (
+                    await isPodReady(
+                        gpuProvisionerPod.nameSpace,
+                        gpuProvisionerPod.podName,
+                        this.kubectl,
+                        this.kubeConfigFilePath,
+                    )
+                ) {
                     gpuProvisionerReady = true;
                     break;
                 }
