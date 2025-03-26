@@ -27,7 +27,7 @@
 }
 
 .tooltip {
-    position: absolute;
+    position: relative;
     display: inline-block;
 }
 
@@ -109,4 +109,92 @@ th {
     top: 0.06rem;
     left: 0.03rem;
     font-weight: bold;
+}
+
+.kubernetesVersionContainer {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.versionLabel {
+    margin-right: 16px;
+    font-weight: 500;
+}
+
+.upgradeVersionDropdown {
+    display: flex;
+    align-items: center;
+}
+
+.upgradeVersionDropdown span {
+    margin-right: 8px;
+}
+
+.upgradeIndicator {
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.95em;
+    margin-left: 6px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.dialogOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dialogContainer {
+    background-color: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-editorWidget-border);
+    padding: 16px;
+    border-radius: 4px;
+    min-width: 320px;
+    max-width: 480px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dialogTitle {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: var(--vscode-editor-foreground);
+}
+
+.dialogContent {
+    margin-bottom: 24px;
+    color: var(--vscode-editor-foreground);
+    line-height: 1.5;
+}
+
+.dialogActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.warningIcon {
+    color: var(--vscode-editorWarning-foreground, #fc0);
+    margin-right: 8px;
 }

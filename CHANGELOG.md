@@ -1,5 +1,19 @@
 # Change Log
 
+
+## [1.6.2]
+
+* Feat: Removing components from ASO, Detectors, Kubectl, & Periscope commands (#1261)
+* Feat: Upgrade Cluster Kubernetes Version (#1296)
+* WebviewUI toolkit: deprecation for inspektor, retina, tcpdump (#1259)
+* Quick Refactor: Moving DiagnosticSetting function to a common location Cluster.ts. (#1295)
+* [Webview UI toolkit deprecation] AttachAcrToCluster, DraftDeployment/Dockerfile/Workflow Panel component removal (#1260)
+* tcp download fix (#1291)
+* Fix npm warning for build. (#1292)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha @tejhan, @qpetraroia, @gambtho for contributions, testing and reviews.
+
 ## [1.6.1]
 
 * Show Fleet Properties (#1245)
