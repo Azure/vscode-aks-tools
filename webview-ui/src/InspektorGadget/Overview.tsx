@@ -47,7 +47,6 @@ export function Overview(props: OverviewProps) {
                     </button>
                 </>
             )}
-            <br />
             {props.version &&
                 (isVersionStringOrNull(props.version.client) || isVersionStringOrNull(props.version.server)) && (
                     <button onClick={handleDeploy}>

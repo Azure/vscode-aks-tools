@@ -38,10 +38,11 @@ export function CreateCluster(initialState: InitialState) {
                     />
                 );
             case Stage.Creating:
+                console.log("Creating cluster");
                 return (
                     <>
                         <h3>
-                            Creating Cluster {state.createParams!.name} in {state.createParams!.location}
+                            Creating Cluster {state.createParams?.name} in {state.createParams?.location}
                         </h3>
                         {state.deploymentPortalUrl && (
                             <p>
@@ -62,7 +63,10 @@ export function CreateCluster(initialState: InitialState) {
                 );
             case Stage.Succeeded:
                 return (
-                    <Success portalClusterUrl={state.createdCluster?.portalUrl || ""} name={state.createParams!.name} />
+                    <Success
+                        portalClusterUrl={state.createdCluster?.portalUrl || ""}
+                        name={state.createParams?.name || ""}
+                    />
                 );
             default:
                 throw new Error(`Unexpected stage ${state.stage}`);

@@ -1,4 +1,3 @@
-import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
 import { ASOState, EventDef, InstallStepStatus } from "./helpers/state";
 import { EventHandlers } from "../utilities/state";
@@ -8,6 +7,8 @@ import { MessageSink } from "../../../src/webview-contract/messaging";
 import { getRequiredInputs } from "./helpers/inputs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { CustomDropdown } from "../components/CustomDropdown";
+import { CustomDropdownOption } from "../components/CustomDropdownOption";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -39,10 +40,8 @@ export function Inputs(props: InputsProps) {
         props.handlers.onSetCheckingSP();
     }
 
-    function handleSubscriptionChanged(e: Event | FormEvent<HTMLElement>) {
-        const elem = e.target as HTMLInputElement;
-        const subscriptionId = elem.value || null;
-        props.handlers.onSetSelectedSubscriptionId(subscriptionId);
+    function handleSubscriptionChanged(value: string) {
+        props.handlers.onSetSelectedSubscriptionId(value);
     }
 
     function handleSubmit(e: FormEvent) {
@@ -121,20 +120,19 @@ export function Inputs(props: InputsProps) {
                     <label htmlFor="sub-select" className={styles.label}>
                         Subscription for ASO resources:
                     </label>
-                    <VSCodeDropdown
+
+                    <CustomDropdown
                         id="sub-select"
                         value={selectedSubscription?.id || ""}
-                        className={styles.control}
                         disabled={!canSelectSubscription}
                         onChange={handleSubscriptionChanged}
+                        className={styles.control}
                     >
-                        {subscriptions.length !== 1 && <VSCodeOption value="">Select</VSCodeOption>}
+                        {subscriptions.length !== 1 && <CustomDropdownOption value="" label="Select" />}
                         {subscriptions.map((s) => (
-                            <VSCodeOption value={s.id} key={s.id}>
-                                {s.name}
-                            </VSCodeOption>
+                            <CustomDropdownOption value={s.id} key={s.id} label={s.name} />
                         ))}
-                    </VSCodeDropdown>
+                    </CustomDropdown>
                     <button disabled={!canStartInstalling} type="submit">
                         Install
                     </button>
