@@ -3,15 +3,20 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../utils/errorable";
 import { longRunning } from "../utils/host";
 import { invokeKubectlCommand } from "../utils/kubectl";
-import { filterPodName } from "./clusters";
+import { filterPodImage } from "./clusters";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { Succeeded } from "../utils/errorable";
 import * as tmpfile from "../utils/tempfile";
 import { KubernetesClusterInfo } from "../utils/clusters";
 
 // Returns true if pod is ready, false otherwise
-async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>, kubeConfigFilePath: string) {
-    const command = `get pod ${pod} -n kube-system -o jsonpath="{.status.containerStatuses[*].ready}"`;
+async function isPodReady(
+    nameSpace: string,
+    podName: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFilePath: string,
+) {
+    const command = `get pod ${podName} -n ${nameSpace} -o jsonpath="{.status.containerStatuses[*].ready}"`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
     if (failed(kubectlresult)) {
         vscode.window.showErrorMessage(kubectlresult.error);
@@ -25,7 +30,7 @@ async function isPodReady(pod: string, kubectl: k8s.APIAvailable<k8s.KubectlV1>,
 // Returns { kaitoWorkspaceReady, kaitoGPUProvisionerReady }, where each value is true if the corresponding pod is ready
 export async function kaitoPodStatus(
     clusterName: string,
-    pods: string[],
+    pods: { nameSpace: string; podName: string; imageName: string }[],
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFilePath: string,
 ) {
@@ -37,12 +42,18 @@ export async function kaitoPodStatus(
     await longRunning(`Checking if KAITO pods are running.`, async () => {
         for (const pod of pods) {
             // Checking if pods are running
-            if (pod.startsWith("kaito-workspace")) {
-                if (!kaitoWorkspaceReady && (await isPodReady(pod, kubectl, kubeConfigFilePath))) {
+            if (pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/workspace")) {
+                if (
+                    !kaitoWorkspaceReady &&
+                    (await isPodReady(pod.nameSpace, pod.podName, kubectl, kubeConfigFilePath))
+                ) {
                     kaitoWorkspaceReady = true;
                 }
-            } else if (pod.startsWith("kaito-gpu-provisioner")) {
-                if (!kaitoGPUProvisionerReady && (await isPodReady(pod, kubectl, kubeConfigFilePath))) {
+            } else if (pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/gpu-provisioner")) {
+                if (
+                    !kaitoGPUProvisionerReady &&
+                    (await isPodReady(pod.nameSpace, pod.podName, kubectl, kubeConfigFilePath))
+                ) {
                     kaitoGPUProvisionerReady = true;
                 }
             }
@@ -74,10 +85,15 @@ export async function getKaitoInstallationStatus(
 ) {
     const status = { kaitoInstalled: false, kaitoWorkspaceReady: false, kaitoGPUProvisionerReady: false };
     const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
-        // "kaito-" assumes kaito pods are named kaito-workspace & kaito-gpu-provisioner
-        return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
+        return filterPodImage(
+            sessionProvider.result,
+            kubectl,
+            subscriptionId,
+            resourceGroupName,
+            clusterName,
+            "mcr.microsoft.com/aks/kaito",
+        );
     });
-
     if (failed(filterKaitoPodNames)) {
         vscode.window.showErrorMessage(filterKaitoPodNames.error);
         return status;

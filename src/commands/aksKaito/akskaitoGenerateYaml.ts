@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { filterPodName, getAksClusterTreeNode } from "../utils/clusters";
+import { filterPodImage, getAksClusterTreeNode } from "../utils/clusters";
 import { getWorkflowYaml, substituteClusterInWorkflowYaml } from "../utils/configureWorkflowHelper";
 import { failed } from "../utils/errorable";
 import { getExtension, longRunning } from "../utils/host";
@@ -39,9 +39,15 @@ export default async function aksKaitoGenerateYaml(_context: IActionContext, tar
     const subscriptionId = clusterNode.result.subscriptionId;
     const resourceGroupName = clusterNode.result.resourceGroupName;
 
-    // "kaito-" is assuming kaito pods are still named kaito-workspace & kaito-gpu-provisioner
     const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
-        return filterPodName(sessionProvider.result, kubectl, subscriptionId, resourceGroupName, clusterName, "kaito-");
+        return filterPodImage(
+            sessionProvider.result,
+            kubectl,
+            subscriptionId,
+            resourceGroupName,
+            clusterName,
+            "mcr.microsoft.com/aks/kaito",
+        );
     });
 
     if (failed(filterKaitoPodNames)) {
