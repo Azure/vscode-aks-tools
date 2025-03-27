@@ -26,6 +26,8 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
 import { reporter } from "../commands/utils/reporter";
+import { getFilteredClusters } from "../commands/utils/config";
+import { addItemToClusterFilter } from "../commands/utils/clusterfilter";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -42,7 +44,6 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     private readonly containerServiceClient: ContainerServiceClient;
     private readonly featureClient: FeatureClient;
     private readonly commandId: string;
-
     public constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly subscriptionId: string,
@@ -165,7 +166,16 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             this.commandId,
         );
 
-        this.refreshTree();
+        // Get the selected clusters from the configuration
+        const filteredClusters = getFilteredClusters();
+
+        if (filteredClusters.length === 0) {
+            // if there is no filter set, simply refresh the tree
+            this.refreshTree();
+        } else {
+            // if there is a filter set, add the cluster to the filter
+            await addItemToClusterFilter(this.subscriptionName, this.subscriptionId, name, this.sessionProvider);
+        }
     }
 }
 
