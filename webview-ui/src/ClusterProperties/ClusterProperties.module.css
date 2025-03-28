@@ -198,3 +198,9 @@ th {
     color: var(--vscode-editorWarning-foreground, #fc0);
     margin-right: 8px;
 }
+
+.inie {
+    display: inline-block;
+    top: 0.2rem;
+    position: relative;
+}

@@ -1,4 +1,3 @@
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./InspektorGadget.module.css";
 import { Dialog } from "../components/Dialog";
 import { FormEvent, useEffect, useState, ChangeEvent as InputChangeEvent } from "react";
@@ -13,6 +12,7 @@ import { GadgetCategory, GadgetExtraProperties, SortSpecifier, toExtraPropertyOb
 import { NamespaceSelection } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { EventHandlers } from "../utilities/state";
 import { EventDef, vscode } from "./helpers/state";
+import { ProgressRing } from "../components/ProgressRing";
 
 const defaultTimeoutInSeconds = 30;
 const defaultMaxItemCount = 20;
@@ -171,7 +171,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                             className={styles.control}
                         />
                     ) : (
-                        <VSCodeProgressRing />
+                        <ProgressRing />
                     )}
 
                     {!extraProperties.noK8sResourceFiltering && (
@@ -187,7 +187,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                                     userMessageHandlers={props.eventHandlers}
                                 />
                             ) : (
-                                <VSCodeProgressRing />
+                                <ProgressRing />
                             )}
                         </>
                     )}

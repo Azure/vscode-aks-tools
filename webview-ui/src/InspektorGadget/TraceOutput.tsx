@@ -1,8 +1,8 @@
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./InspektorGadget.module.css";
 import { TraceGadget } from "./helpers/gadgets";
 import { ProcessSnapshotKey } from "./helpers/gadgets/snapshot";
 import { ItemProperty, ValueType } from "./helpers/gadgets/types";
+import { ProgressRing } from "../components/ProgressRing";
 
 export interface TraceOutputProps {
     trace: TraceGadget;
@@ -19,7 +19,7 @@ export function TraceOutput(props: TraceOutputProps) {
     if (props.trace.output === null) {
         return (
             <>
-                <VSCodeProgressRing></VSCodeProgressRing>
+                <ProgressRing />
                 Running Gadget...
             </>
         );

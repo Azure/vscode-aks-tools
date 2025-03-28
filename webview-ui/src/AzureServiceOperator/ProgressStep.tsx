@@ -1,9 +1,9 @@
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./AzureServiceOperator.module.css";
 import { InstallStepStatus } from "./helpers/state";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheckCircle, faClock, faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { InstallStepResult } from "../../../src/webview-contract/webviewDefinitions/azureServiceOperator";
+import { ProgressRing } from "../components/ProgressRing";
 
 export interface ProgressStepProps {
     description: string;
@@ -15,9 +15,7 @@ export function ProgressStep(props: ProgressStepProps) {
     return (
         <div className={styles.progressStep}>
             {props.status === InstallStepStatus.NotStarted && <FontAwesomeIcon icon={faClock} />}
-            {props.status === InstallStepStatus.InProgress && (
-                <VSCodeProgressRing className={styles.progressIndicator} />
-            )}
+            {props.status === InstallStepStatus.InProgress && <ProgressRing className={styles.progressIndicator} />}
             {props.status === InstallStepStatus.Succeeded && (
                 <FontAwesomeIcon className={styles.successIndicator} icon={faCheckCircle} />
             )}

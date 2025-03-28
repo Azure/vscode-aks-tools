@@ -1,7 +1,7 @@
 import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded } from "../utilities/lazy";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { CustomDropdown } from "./CustomDropdown";
 import { CustomDropdownOption } from "./CustomDropdownOption";
+import { ProgressRing } from "./ProgressRing";
 
 export interface ResourceSelectorProps<TResource> {
     resources: Lazy<TResource[]> | TResource[];
@@ -26,7 +26,7 @@ export function ResourceSelector<TResource>(props: ResourceSelectorProps<TResour
 
     return (
         <>
-            {isLoading(resources) && <VSCodeProgressRing style={{ height: "1rem" }} />}
+            {isLoading(resources) && <ProgressRing />}
             {isNotLoaded(resources) && (
                 <CustomDropdown
                     className={props.className}

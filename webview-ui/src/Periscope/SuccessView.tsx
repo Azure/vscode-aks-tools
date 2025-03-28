@@ -1,4 +1,3 @@
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useEffect } from "react";
 import { NodeUploadStatus, PodLogs } from "../../../src/webview-contract/webviewDefinitions/periscope";
 import { NodeActions } from "./NodeActions";
@@ -6,6 +5,7 @@ import { NodeLogs } from "./NodeLogs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import styles from "./Periscope.module.css";
+import { ProgressRing } from "../components/ProgressRing";
 
 export interface SuccessViewProps {
     runId: string;
@@ -69,7 +69,7 @@ export function SuccessView(props: SuccessViewProps) {
                                         Uploaded
                                     </>
                                 ) : (
-                                    <VSCodeProgressRing />
+                                    <ProgressRing />
                                 )}
                             </td>
                             <td>{status.nodeName}</td>

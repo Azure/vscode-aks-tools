@@ -1,4 +1,3 @@
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { InitialState, ProgressEventType } from "../../../src/webview-contract/webviewDefinitions/kaito";
 import { useStateManagement } from "../utilities/state";
 import styles from "./Kaito.module.css";
@@ -6,6 +5,7 @@ import kaitoimage from "./kaito-image.png";
 import { useState } from "react";
 
 import { stateUpdater, vscode } from "./state";
+import { ProgressRing } from "../components/ProgressRing";
 export function Kaito(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
     const [isDisabled, setIsDisabled] = useState(false);
@@ -78,7 +78,7 @@ export function Kaito(initialState: InitialState) {
                                     display: "flex",
                                 }}
                             >
-                                <VSCodeProgressRing />
+                                <ProgressRing />
                                 <p className={styles.installingMessage}>
                                     Installing KAITO, this may take a few minutes...
                                 </p>
@@ -92,7 +92,7 @@ export function Kaito(initialState: InitialState) {
                                     display: "flex",
                                 }}
                             >
-                                <VSCodeProgressRing />
+                                <ProgressRing />
                                 <p className={styles.installingMessage}>
                                     Enabling Role assignments and Federated Credentails for KAITO, this may take a few
                                     minutes...

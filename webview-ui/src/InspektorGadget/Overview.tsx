@@ -35,16 +35,16 @@ export function Overview(props: OverviewProps) {
             {props.version && props.version.server && (
                 <>
                     <dl className={styles.propertyList}>
-                        <dt>Client Version</dt>
+                        <dt>Client Version:&nbsp;</dt>
                         <dd>{props.version.client}</dd>
-                        <dt>Server Version</dt>
+                        <dt>Server Version:&nbsp;</dt>
                         <dd>{props.version.server}</dd>
                     </dl>
-                    <br />
-                    <button onClick={handleUndeploy}>
+                    <button className="secondary-button" onClick={handleUndeploy}>
                         <FontAwesomeIcon icon={faEraser} />
                         &nbsp;Undeploy
                     </button>
+                    &nbsp;&nbsp;&nbsp;
                 </>
             )}
             {props.version &&

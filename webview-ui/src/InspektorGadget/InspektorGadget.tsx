@@ -1,8 +1,7 @@
-import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from "@vscode/webview-ui-toolkit/react";
 import { Overview } from "./Overview";
 import { Traces, TracesProps } from "./Traces";
 import styles from "./InspektorGadget.module.css";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GadgetCategory } from "./helpers/gadgets/types";
 import { isNotLoaded } from "../utilities/lazy";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
@@ -48,6 +47,9 @@ export function InspektorGadget(initialState: InitialState) {
 
     const isDeployed = state.version && state.version.server !== null;
 
+    // used to track active tab
+    const [activeTab, setActiveTab] = useState("overview");
+
     return (
         <>
             <h2>Inspektor Gadget</h2>
@@ -56,37 +58,61 @@ export function InspektorGadget(initialState: InitialState) {
                 <a href="https://www.inspektor-gadget.io/">&nbsp;Learn more</a>
             </p>
 
-            <VSCodePanels aria-label="Inspektory Gadget functions">
-                <VSCodePanelTab>OVERVIEW</VSCodePanelTab>
-                {isDeployed && <VSCodePanelTab>TRACES</VSCodePanelTab>}
-                {isDeployed && <VSCodePanelTab>TOP</VSCodePanelTab>}
-                {isDeployed && <VSCodePanelTab>SNAPSHOTS</VSCodePanelTab>}
-                {isDeployed && <VSCodePanelTab>PROFILE</VSCodePanelTab>}
+            {/* implementation of tabs */}
+            <div className={styles.tabContainer}>
+                <div className={styles.tabHeader}>
+                    <div
+                        className={`${styles.tabItem} ${activeTab === "overview" ? styles.active : ""}`}
+                        onClick={() => setActiveTab("overview")}
+                    >
+                        OVERVIEW
+                    </div>
+                    {isDeployed && (
+                        <>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "trace" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("trace")}
+                            >
+                                TRACES
+                            </div>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "top" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("top")}
+                            >
+                                TOP
+                            </div>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "snapshot" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("snapshot")}
+                            >
+                                SNAPSHOTS
+                            </div>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "profile" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("profile")}
+                            >
+                                PROFILE
+                            </div>
+                        </>
+                    )}
+                </div>
 
-                <VSCodePanelView className={styles.tab}>
-                    <Overview status={state.overviewStatus} version={state.version} eventHandlers={eventHandlers} />
-                </VSCodePanelView>
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("trace")} />
-                    </VSCodePanelView>
-                )}
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("top")} />
-                    </VSCodePanelView>
-                )}
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("snapshot")} />
-                    </VSCodePanelView>
-                )}
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("profile")} />
-                    </VSCodePanelView>
-                )}
-            </VSCodePanels>
+                <div>
+                    {activeTab === "overview" && (
+                        <>
+                            <Overview
+                                status={state.overviewStatus}
+                                version={state.version}
+                                eventHandlers={eventHandlers}
+                            />
+                        </>
+                    )}
+                    {isDeployed && activeTab === "trace" && <Traces {...getTracesProps("trace")} />}
+                    {isDeployed && activeTab === "top" && <Traces {...getTracesProps("top")} />}
+                    {isDeployed && activeTab === "snapshot" && <Traces {...getTracesProps("snapshot")} />}
+                    {isDeployed && activeTab === "profile" && <Traces {...getTracesProps("profile")} />}
+                </div>
+            </div>
         </>
     );
 }

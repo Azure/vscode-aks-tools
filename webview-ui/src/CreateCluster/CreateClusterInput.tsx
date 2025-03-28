@@ -1,6 +1,5 @@
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-// import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {

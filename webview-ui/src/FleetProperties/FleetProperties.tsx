@@ -9,7 +9,7 @@ import styles from "../ClusterProperties/ClusterProperties.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRedoAlt } from "@fortawesome/free-solid-svg-icons";
 import { HubMode } from "../../../src/webview-contract/webviewDefinitions/createFleet";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { ProgressRing } from "../components/ProgressRing";
 
 export function FleetProperties(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -59,7 +59,7 @@ export function FleetProperties(initialState: InitialState) {
                 </dl>
             ) : (
                 <>
-                    <VSCodeProgressRing />
+                    <ProgressRing />
                     <h3>If loading takes too long, please ensure the Treeview is up-to-date by refreshing it.</h3>
                 </>
             )}

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import styles from "./KaitoModels.module.css";
 import kaitoSupporterModel from "../../../resources/kaitollmconfig/kaitollmconfig.json";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { stateUpdater, vscode } from "./state";
 import { useStateManagement } from "../utilities/state";
 import { ArrowIcon } from "../icons/ArrowIcon";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoModels";
+import { ProgressRing } from "../components/ProgressRing";
 
 export function KaitoModels(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -191,7 +191,7 @@ export function KaitoModels(initialState: InitialState) {
                                                     return (
                                                         <>
                                                             <div className={styles.progressDiv}>
-                                                                <VSCodeProgressRing className={styles.progress} />
+                                                                <ProgressRing className={styles.progress} />
                                                                 <span className={styles.bold}>
                                                                     Deployment in progress
                                                                 </span>

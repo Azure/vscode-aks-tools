@@ -1,7 +1,7 @@
 import { FormEvent, HTMLAttributes, useEffect, useRef, useState } from "react";
 import styles from "./TextWithDropdown.module.css";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded, orDefault } from "../utilities/lazy";
+import { ProgressRing } from "./ProgressRing";
 
 type AvailableHtmlAttributes = Pick<HTMLAttributes<HTMLElement>, "className" | "id">;
 type ChangeEvent = Event | FormEvent<HTMLElement>;
@@ -43,7 +43,7 @@ export function TextWithDropdown(props: TextWithDropdownProps) {
     return (
         <>
             {displayMode === DisplayMode.TextField && <TextOnly {...props} />}
-            {displayMode === DisplayMode.Loader && <VSCodeProgressRing style={{ height: "1rem" }} />}
+            {displayMode === DisplayMode.Loader && <ProgressRing />}
             {displayMode === DisplayMode.Dropdown && (
                 <NonLazyTextWithDropdown {...{ ...props, items: orDefault(lazyItems, []) }} />
             )}
