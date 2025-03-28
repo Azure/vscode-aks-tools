@@ -1,7 +1,7 @@
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./Kubectl.module.css";
 import { EventHandlers } from "../utilities/state";
 import { EventDef } from "./helpers/state";
+import { ProgressRing } from "../components/ProgressRing";
 
 export interface CommandOutputProps {
     isCommandRunning: boolean;
@@ -16,7 +16,7 @@ export function CommandOutput(props: CommandOutputProps) {
 
     return (
         <>
-            {props.isCommandRunning && <VSCodeProgressRing />}
+            {props.isCommandRunning && <ProgressRing />}
             {hasOutput && <pre>{props.output}</pre>}
             {hasError && <pre className={styles.error}>{props.errorMessage}</pre>}
         </>

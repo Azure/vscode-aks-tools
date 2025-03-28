@@ -3,7 +3,7 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/c
 import { CreateFleetInput } from "./CreateFleetInput";
 import { useStateManagement } from "../utilities/state";
 import { Stage, stateUpdater, vscode } from "./helpers/state";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
+import { ProgressRing } from "../components/ProgressRing";
 
 export function CreateFleet(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -45,7 +45,7 @@ export function CreateFleet(initialState: InitialState) {
                         <h3>
                             Creating Fleet {state.createParams!.name} in {state.createParams!.location}
                         </h3>
-                        <VSCodeProgressRing />
+                        <ProgressRing />
                     </>
                 );
             case Stage.Failed:

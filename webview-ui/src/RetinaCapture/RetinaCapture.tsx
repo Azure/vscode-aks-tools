@@ -6,8 +6,6 @@ import { useStateManagement } from "../utilities/state";
 import { DeleteNodeExplorerDialog } from "./DeleteNodeExplorerDialog";
 import styles from "./RetinaCapture.module.css";
 import { stateUpdater, vscode } from "./state";
-import { VSCodeButton, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react";
-
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export function RetinaCapture(initialState: InitialState) {
@@ -42,7 +40,6 @@ export function RetinaCapture(initialState: InitialState) {
             <header>
                 <h2>Retina Distributed Capture for {state.clusterName}</h2>
             </header>
-
             <hr style={{ marginBottom: "1rem" }} />
             <div>
                 <FontAwesomeIcon icon={faInfoCircle} /> Retina capture command allows the user to capture network
@@ -62,26 +59,32 @@ export function RetinaCapture(initialState: InitialState) {
                     <div style={{ flexDirection: "row", width: "31.25rem" }}>
                         {state.allNodes.map((node) => (
                             <div key={node}>
-                                <VSCodeCheckbox onChange={(e) => onSelectNode(e, node)} checked={isNodeSelected(node)}>
+                                <input
+                                    id={`checkbox-${node}`}
+                                    onChange={(e) => onSelectNode(e, node)}
+                                    checked={isNodeSelected(node)}
+                                    type="checkbox"
+                                ></input>
+                                <label className={styles.checkboxLabel} htmlFor={`checkbox-${node}`}>
                                     {node}
-                                </VSCodeCheckbox>
+                                </label>
                             </div>
                         ))}
-                        <div style={{ display: "flex" }}>
-                            <VSCodeButton
+                        <div className={styles.buttonDiv}>
+                            <button
                                 type="submit"
                                 style={{ marginRight: "0.625rem" }}
                                 onClick={() => handleCaptureFileDownload()}
                             >
                                 Download Retina Logs to Host Machine.
-                            </VSCodeButton>
+                            </button>
                             {state.isNodeExplorerPodExists && (
-                                <VSCodeButton appearance="secondary" onClick={() => handleDeleteExplorerPod()}>
+                                <button className="secondary-button" onClick={() => handleDeleteExplorerPod()}>
                                     <span slot="start">
                                         <FontAwesomeIcon icon={faTrash} />
                                     </span>
                                     Delete Node Explorer Pod
-                                </VSCodeButton>
+                                </button>
                             )}
                         </div>
                     </div>

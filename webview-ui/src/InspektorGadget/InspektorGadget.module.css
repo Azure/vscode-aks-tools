@@ -12,7 +12,6 @@
     clear: left;
     padding: 2px 4px;
     font-weight: bold;
-    width: 10rem;
 }
 
 .propertyList dd {
@@ -155,4 +154,38 @@ ul.hierarchyList li * {
 
 .radioLine {
     margin-bottom: 0.3rem;
+}
+
+.tabContainer {
+    display: flex;
+    flex-direction: column;
+    margin-top: 1rem;
+}
+.tabHeader {
+    display: flex;
+    margin-bottom: 0.5rem;
+}
+.tabItem {
+    padding: 0.3rem 0.3rem;
+    cursor: pointer;
+    position: relative;
+    margin: 0 1.5rem 0 0;
+    color: var(--vscode-editor-foreground, #fff);
+    opacity: 0.7;
+}
+.tabItem:hover {
+    opacity: 1;
+}
+.tabItem.active {
+    opacity: 1;
+}
+.tabItem.active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 2px;
+    width: 100%;
+    background-color: var(--vscode-editor-foreground, #007acc);
+    border-radius: 1px;
 }

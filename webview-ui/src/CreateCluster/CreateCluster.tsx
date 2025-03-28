@@ -3,8 +3,8 @@ import { CreateClusterInput } from "./CreateClusterInput";
 import { Success } from "./Success";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { Stage, stateUpdater, vscode } from "./helpers/state";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
+import { ProgressRing } from "../components/ProgressRing";
 
 export function CreateCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -51,7 +51,7 @@ export function CreateCluster(initialState: InitialState) {
                             </p>
                         )}
 
-                        <VSCodeProgressRing />
+                        <ProgressRing />
                     </>
                 );
             case Stage.Failed:

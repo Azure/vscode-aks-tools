@@ -1,7 +1,6 @@
 import { CaptureName, InitialState } from "../../../src/webview-contract/webviewDefinitions/tcpDump";
 import styles from "./TcpDump.module.css";
 import { useEffect } from "react";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
 import { CaptureStatus, NodeState, NodeStatus, TcpDumpState, stateUpdater, vscode } from "./state";
 import { NodeSelector } from "../components/NodeSelector";
@@ -18,6 +17,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { CaptureFilters } from "./CaptureFilters";
 import { EventHandlerFunc } from "./state/dataLoading";
+import { ProgressRing } from "../components/ProgressRing";
 
 export function TcpDump(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -108,7 +108,7 @@ export function TcpDump(initialState: InitialState) {
 
                 {hasStatus(NodeStatus.Checking) && (
                     <div className={styles.control} style={{ display: "flex" }}>
-                        <VSCodeProgressRing style={{ height: "1rem" }} />
+                        <ProgressRing />
                         Checking Node
                     </div>
                 )}
