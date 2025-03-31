@@ -26,6 +26,11 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
         }
     }
 
+    function handleCRUDDetectorCall() {
+        // Then post the request to the extension
+        vscode.postDetectorCRUDRequest();
+    }
+
     function handleConfirmUpgrade() {
         if (selectedVersion) {
             // Set clusterOperationRequested first so UI updates immediately
@@ -90,6 +95,19 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
                         <CustomDropdownOption key={version} value={version} label={version} />
                     ))}
                 </CustomDropdown>
+            </div>
+            <div className={styles.upgradeVersionLink}>
+                <a
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleCRUDDetectorCall}
+                    style={{ minWidth: "120px", maxWidth: "150px" }}
+                >
+                    <FontAwesomeIcon icon={faExclamationTriangle} className={styles.warningIcon} />
+                    <strong>Run CRUD Detector For any potential issues </strong>
+                    <br />
+                </a>
             </div>
             <ConfirmationDialog
                 title="Confirm Kubernetes Version Upgrade"

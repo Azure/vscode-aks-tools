@@ -41,6 +41,7 @@ export type ToVsCodeMsgDef = {
     reconcileClusterRequest: void;
     refreshRequest: void;
     upgradeClusterVersionRequest: string;
+    detectorCRUDRequest: void;
 };
 
 export type ToWebViewMsgDef = {

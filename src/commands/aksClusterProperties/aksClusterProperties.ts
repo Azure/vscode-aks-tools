@@ -32,6 +32,7 @@ export default async function aksClusterProperties(_context: IActionContext, tar
         clusterNode.result.subscriptionId,
         clusterNode.result.resourceGroupName,
         clusterNode.result.name,
+        target
     );
     const panel = new ClusterPropertiesPanel(extension.result.extensionUri);
 

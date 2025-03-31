@@ -22,6 +22,8 @@ import { getKubernetesVersionInfo, getManagedCluster, getClusterUpgradeProfile }
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { getAksClient } from "../commands/utils/arm";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { aksCRUDDiagnostics } from "../commands/detectors/detectors";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 
 export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
     constructor(extensionUri: Uri) {
@@ -40,6 +42,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         readonly subscriptionId: string,
         readonly resourceGroup: string,
         readonly clusterName: string,
+        readonly target: unknown
     ) {
         this.client = getAksClient(sessionProvider, subscriptionId);
     }
@@ -64,6 +67,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             reconcileClusterRequest: true,
             refreshRequest: true,
             upgradeClusterVersionRequest: true,
+            detectorCRUDRequest: true,
         };
     }
 
@@ -78,6 +82,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             // refreshRequest is just for telemetry, so it will use the same getPropertiesRequest handler.
             refreshRequest: () => this.handleGetPropertiesRequest(webview),
             upgradeClusterVersionRequest: (version: string) => this.handleUpgradeClusterVersion(webview, version),
+            detectorCRUDRequest: () => this.handleDetectorCRUDRequest(this.target),
         };
     }
 
@@ -270,6 +275,13 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
         // Refresh the cluster properties after operation completes
         await this.readAndPostClusterProperties(webview);
+    }
+
+    private handleDetectorCRUDRequest(commandTarget: unknown) { 
+        // This is a placeholder for the CRUD operation
+        // Implement the CRUD logic here
+        return aksCRUDDiagnostics({} as IActionContext, commandTarget);
+       
     }
 
     private async readAndPostClusterProperties(webview: MessageSink<ToWebViewMsgDef>) {
