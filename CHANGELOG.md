@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.6.3]
+
+* Add upload logs feature for Retina Capture (#1306)
+* Full replacement of VSCodeDropdown & VSCodeOption with custom react elements [Webview-UI-toolkit deprecation] (#1276)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha @tejhan for contributions, testing and reviews.
+
 
 ## [1.6.2]
 
