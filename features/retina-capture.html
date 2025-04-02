@@ -146,11 +146,32 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="run-retina-distributed-capture-from-aks-cluster-linux-nodes"><a class="header" href="#run-retina-distributed-capture-from-aks-cluster-linux-nodes">Run Retina Distributed Capture from AKS Cluster Linux Nodes</a></h1>
-<h3 id="run-retina-capture"><a class="header" href="#run-retina-capture">Run Retina Capture</a></h3>
-<p>Right click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> and then click on <strong>Run Retina Capture</strong> to capture logs like iptables-rules, <a href="https://retina.sh/docs/captures/cli#file-and-directory-structure-inside-the-tarball">ip-resrouces.txt and other key distributed captures form this azure networking tool</a> for any Linux node and download them to your local machine with ease.</p>
-<p><img src="../resources/right-click-retina-capture.png" alt="Step 1: Menu" /></p>
+<h2 id="run-retina-capture"><a class="header" href="#run-retina-capture">Run Retina Capture</a></h2>
+<p>Right click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> and then click on <strong>Run Retina Capture</strong> to capture logs like iptables-rules, <a href="https://retina.sh/docs/captures/cli#file-and-directory-structure-inside-the-tarball">ip-resrouces.txt and other key distributed captures form this azure networking tool</a> for any Linux nodes in yout AKS cluster.</p>
+<p>There are two options to run the capture:</p>
+<h3 id="download-the-capture-locally"><a class="header" href="#download-the-capture-locally">Download the capture locally</a></h3>
+<p><img src="../resources/right-click-download-retina-capture.png" alt="Step 1: Menu" /></p>
 <p><img src="../resources/retina-select-nodes.png" alt="Step 2: Select Nodes to Run Retina" /></p>
 <p><img src="../resources/retina-success-run-download.png" alt="Step 3: Retina Ran Successfully" /></p>
+<h3 id="upload-the-capture-to-azure-storage"><a class="header" href="#upload-the-capture-to-azure-storage">Upload the capture to Azure Storage</a></h3>
+<p>Before uploading the capture to Azure Storage, ensure the following prerequisites are met:</p>
+<ol>
+<li>
+<p>A storage account exists in the same region as your AKS cluster.</p>
+</li>
+<li>
+<p>The storage account is configured in the Diagnostic settings of your AKS cluster.</p>
+</li>
+<li>
+<p>A container is created within the storage account to store the capture.</p>
+</li>
+</ol>
+<p><img src="../resources/right-click-upload-retina-capture.png" alt="Step 1: Menu" />
+<img src="../resources/retina-select-storage-account.png" alt="Step 2: Select Storage Account" />
+<img src="../resources/retina-select-container.png" alt="Step 3: Select Container" />
+<img src="../resources/retina-select-nodes.png" alt="Step 4: Select Nodes to Run Retina" />
+<img src="../resources/retina-success-run-upload.png" alt="Step 5: Retina Ran Successfully" />
+<img src="../resources/retina-success-check-storage-account.png" alt="Step 6: Check Storage Account" /></p>
 
                     </main>
 
