@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.6.4]
+
+* Reverting @azure/identity update to fix windows issue (#1345) Fix for [this bug](https://github.com/Azure/vscode-aks-tools/issues/1344)
+* Update retina doc (#1334)
+
+Thank you so much to @tejhan for identitify culprit package and @bosesuneha for retina docs, also to   kejatura-dev for contributions, testing and reviews.
+
 ## [1.6.3]
 
 * Add upload logs feature for Retina Capture (#1306)
