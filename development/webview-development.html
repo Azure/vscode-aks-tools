@@ -169,6 +169,14 @@
 <h3 id="developing-the-vs-code-commands-that-launch-the-ui"><a class="header" href="#developing-the-vs-code-commands-that-launch-the-ui">Developing the VS Code commands that launch the UI</a></h3>
 <p>To debug the extension itself, hit <code>F5</code> to launch the <code>Extension</code> debug profile in a new VS Code Window. This will automatically build, bundle and minify both the <code>webview-ui</code> project and the extension.</p>
 <p>The extension will not automatically update itself in response to code changes as you are debugging, so the best workflow here is to stop debugging, make changes, and launch the debugger again.</p>
+<h3 id="custom-ui-elements"><a class="header" href="#custom-ui-elements">Custom UI Elements</a></h3>
+<p>Most input components have been intentionally designed to be theme-aware by default, inheriting VS Code’s global design tokens to stay in sync with the user’s selected theme. This includes buttons (which can be styled using our <code>secondary-button</code> and <code>icon-button</code> classes), anchor tags, <code>&lt;option&gt;</code> elements, and common input types like <code>radio</code>, <code>checkbox</code>, and <code>text</code>.</p>
+<p>To keep things consistent while avoiding unnecessary dependencies, we also include a small set of custom components:</p>
+<ul>
+<li><code>&lt;CustomDropdown&gt;</code> and <code>&lt;CustomDropdownOption&gt;</code> provide a theme-integrated dropdown experience.</li>
+<li><code>&lt;ProgressRing&gt;</code> is a simple, consistent loading indicator that fits right in with VS Code’s UI.</li>
+</ul>
+<p>These components help us maintain a clean, unified look without relying on external UI libraries — and give us more control over the details when we need it.</p>
 <h2 id="building-for-release"><a class="header" href="#building-for-release">Building for release</a></h2>
 <p>The process for this is unaffected by the webview setup. The <code>npm run webpack</code> and <code>vsce package</code> commands will ensure the <code>webpack-ui</code> project is built and bundled.</p>
 
