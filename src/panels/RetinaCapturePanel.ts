@@ -12,6 +12,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { getLocalKubectlCpPath } from "./utilities/KubectlNetworkHelper";
 import * as semver from "semver";
+import { commands, env } from "vscode";
 
 export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
     constructor(extensionUri: Uri) {
@@ -198,7 +199,12 @@ spec:
             )
             .then((selection) => {
                 if (selection === goToFolder) {
-                    open(captureHostFolderName);
+                    if (env.remoteName === "wsl") {
+                        commands.executeCommand("remote-wsl.revealInExplorer", Uri.file(captureHostFolderName));
+                    } else {
+                        // opening relative file path doesn't work in WSL
+                        open(captureHostFolderName);
+                    }
                 }
             });
     }
