@@ -102,9 +102,9 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={handleCRUDDetectorCall}
-                    style={{ minWidth: "120px", maxWidth: "150px" }}
+                    style={{ minWidth: "120px", maxWidth: "250px" }}
                 >
-                    <FontAwesomeIcon icon={faExclamationTriangle} className={styles.warningIcon} />
+                    <FontAwesomeIcon icon={faExclamationTriangle} className={styles.InformationIcon} />
                     <strong>Run CRUD Validations</strong>
                     <br />
                 </a>
