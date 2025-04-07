@@ -101,7 +101,10 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
                     href="#"
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={handleCRUDDetectorCall}
+                    onClick={(event) => {
+                        event.preventDefault();
+                        handleCRUDDetectorCall();
+                    }}
                     style={{ minWidth: "120px", maxWidth: "250px" }}
                 >
                     <FontAwesomeIcon icon={faExclamationTriangle} className={styles.InformationIcon} />
