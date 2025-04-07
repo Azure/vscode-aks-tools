@@ -144,7 +144,9 @@ export async function setFilteredClusters(filters: ClusterFilter[], allClusters:
     // Check if filters have changed
     const filtersChanged =
         existingFilters.length !== finalFilters.length ||
-        !existingFilters.every(({ clusterName }) => finalFilters.some((f) => f.clusterName === clusterName));
+        !existingFilters.every(({ clusterName, subscriptionId }) =>
+            finalFilters.some((f) => f.clusterName === clusterName && f.subscriptionId === subscriptionId),
+        );
 
     if (filtersChanged) {
         await vscode.workspace
