@@ -1,6 +1,6 @@
 import { platform } from "os";
 import { relative } from "path";
-import { Uri, commands, window, workspace } from "vscode";
+import { Uri, commands, window, workspace, env } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as semver from "semver";
 import { failed, map as errmap, Errorable } from "../commands/utils/errorable";
@@ -464,7 +464,13 @@ spec:
     }
 
     private handleOpenFolder(path: string) {
-        commands.executeCommand("revealFileInOS", Uri.file(path));
+        // Open the folder in the respective file explorer
+        if (env.remoteName === "wsl") {
+            commands.executeCommand("remote-wsl.revealInExplorer", Uri.file(path));
+        } else {
+            // revealFileInOS doesn't work in WSL
+            commands.executeCommand("revealFileInOS", Uri.file(path));
+        }
     }
 
     private async handleGetInterfaces(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
