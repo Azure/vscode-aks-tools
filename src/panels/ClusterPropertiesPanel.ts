@@ -42,7 +42,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         readonly subscriptionId: string,
         readonly resourceGroup: string,
         readonly clusterName: string,
-        readonly target: unknown
+        readonly target: unknown,
     ) {
         this.client = getAksClient(sessionProvider, subscriptionId);
     }
@@ -277,11 +277,10 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
         await this.readAndPostClusterProperties(webview);
     }
 
-    private handleDetectorCRUDRequest(commandTarget: unknown) { 
+    private handleDetectorCRUDRequest(commandTarget: unknown) {
         // This is a placeholder for the CRUD operation
         // Implement the CRUD logic here
         return aksCRUDDiagnostics({} as IActionContext, commandTarget);
-       
     }
 
     private async readAndPostClusterProperties(webview: MessageSink<ToWebViewMsgDef>) {
