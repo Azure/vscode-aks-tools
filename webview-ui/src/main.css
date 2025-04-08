@@ -123,9 +123,9 @@ hr {
 
 input[type="text"],
 input[type="password"] {
-    height: calc(var(--input-height) * 1px);
-    color: var(--input-foreground);
-    background-color: var(--input-background);
+    height: 1.5rem;
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-input-background);
     border: 1px solid var(--vscode-dropdown-border);
     padding: 0 9px;
     box-sizing: border-box;
@@ -195,10 +195,10 @@ fieldset:disabled label {
 }
 
 select {
-    height: calc(var(--input-height) * 1px);
-    color: var(--input-foreground);
-    background-color: var(--input-background);
-    border: 1px solid var(--input-border);
+    height: 1.5rem;
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
     padding: 0px 0px 0px 4px;
     box-sizing: border-box;
     font-family: inherit;
@@ -281,9 +281,9 @@ fieldset {
 }
 
 input[type="number"] {
-    height: calc(var(--input-height) * 1px);
-    color: var(--input-foreground);
-    background-color: var(--input-background);
+    height: 1.5rem;
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-input-background);
     border: 0;
     padding: 0 calc(var(--design-unit) * 2px + 1px);
     box-sizing: border-box;
