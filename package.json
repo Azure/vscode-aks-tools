@@ -692,7 +692,7 @@
         "globals": "^15.14.0",
         "mocha": "^11.1.0",
         "prettier": "^3.5.0",
-        "sinon": "^19.0.2",
+        "sinon": "^20.0.0",
         "ts-loader": "^9.5.2",
         "typescript": "^5.8.3",
         "webpack": "^5.97.1",
@@ -729,7 +729,7 @@
         "node-fetch": "^3.3.2",
         "rxjs": "^7.8.2",
         "semver": "^7.7.1",
-        "sinon": "^19.0.2",
+        "sinon": "^20.0.0",
         "tmp": "^0.2.3",
         "uuid": "^11.1.0",
         "vscode-kubernetes-tools-api": "^1.0.0"
