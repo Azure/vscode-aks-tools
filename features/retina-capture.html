@@ -150,8 +150,11 @@
 <p>Right click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> and then click on <strong>Run Retina Capture</strong> to capture logs like iptables-rules, <a href="https://retina.sh/docs/captures/cli#file-and-directory-structure-inside-the-tarball">ip-resrouces.txt and other key distributed captures form this azure networking tool</a> for any Linux nodes in yout AKS cluster.</p>
 <p>There are two options to run the capture:</p>
 <h3 id="download-the-capture-locally"><a class="header" href="#download-the-capture-locally">Download the capture locally</a></h3>
+<h4 id="step-1-right-click-on-your-aks-cluster-and-select-troubleshoot-network-health--run-retina-capture--download-artifacts-locally"><a class="header" href="#step-1-right-click-on-your-aks-cluster-and-select-troubleshoot-network-health--run-retina-capture--download-artifacts-locally">Step 1: Right-click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> &gt; <strong>Run Retina Capture</strong> &gt; <strong>Download Artifacts Locally</strong></a></h4>
 <p><img src="../resources/right-click-download-retina-capture.png" alt="Step 1: Menu" /></p>
+<h4 id="step-2-select-the-nodes-on-which-you-want-to-run-the-capture"><a class="header" href="#step-2-select-the-nodes-on-which-you-want-to-run-the-capture">Step 2: Select the nodes on which you want to run the capture</a></h4>
 <p><img src="../resources/retina-select-nodes.png" alt="Step 2: Select Nodes to Run Retina" /></p>
+<h4 id="step-3-download-the-capture-locally-after-the-capture-is-completed"><a class="header" href="#step-3-download-the-capture-locally-after-the-capture-is-completed">Step 3: Download the capture locally after the capture is completed</a></h4>
 <p><img src="../resources/retina-success-run-download.png" alt="Step 3: Retina Ran Successfully" /></p>
 <h3 id="upload-the-capture-to-azure-storage"><a class="header" href="#upload-the-capture-to-azure-storage">Upload the capture to Azure Storage</a></h3>
 <p>Before uploading the capture to Azure Storage, ensure the following prerequisites are met:</p>
@@ -166,12 +169,18 @@
 <p>A container is created within the storage account to store the capture.</p>
 </li>
 </ol>
-<p><img src="../resources/right-click-upload-retina-capture.png" alt="Step 1: Menu" />
-<img src="../resources/retina-select-storage-account.png" alt="Step 2: Select Storage Account" />
-<img src="../resources/retina-select-container.png" alt="Step 3: Select Container" />
-<img src="../resources/retina-select-nodes.png" alt="Step 4: Select Nodes to Run Retina" />
-<img src="../resources/retina-success-run-upload.png" alt="Step 5: Retina Ran Successfully" />
-<img src="../resources/retina-success-check-storage-account.png" alt="Step 6: Check Storage Account" /></p>
+<h4 id="step-1-right-click-on-your-aks-cluster-and-select-troubleshoot-network-health--run-retina-capture--upload-artifacts-to-blob-storage"><a class="header" href="#step-1-right-click-on-your-aks-cluster-and-select-troubleshoot-network-health--run-retina-capture--upload-artifacts-to-blob-storage">Step 1: Right-click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> &gt; <strong>Run Retina Capture</strong> &gt; <strong>Upload Artifacts to Blob Storage</strong></a></h4>
+<p><img src="../resources/right-click-upload-retina-capture.png" alt="Step 1: Menu" /></p>
+<h4 id="step-2-select-the-storage-account-where-you-want-to-upload-the-capture"><a class="header" href="#step-2-select-the-storage-account-where-you-want-to-upload-the-capture">Step 2: Select the storage account where you want to upload the capture</a></h4>
+<p><img src="../resources/retina-select-storage-account.png" alt="Step 2: Select Storage Account" /></p>
+<h4 id="step-3-select-the-container-within-the-storage-account-where-you-want-to-upload-the-capture"><a class="header" href="#step-3-select-the-container-within-the-storage-account-where-you-want-to-upload-the-capture">Step 3: Select the container within the storage account where you want to upload the capture</a></h4>
+<p><img src="../resources/retina-select-container.png" alt="Step 3: Select Container" /></p>
+<h4 id="step-4-select-the-nodes-on-which-you-want-to-run-the-capture"><a class="header" href="#step-4-select-the-nodes-on-which-you-want-to-run-the-capture">Step 4: Select the nodes on which you want to run the capture</a></h4>
+<p><img src="../resources/retina-select-nodes.png" alt="Step 4: Select Nodes to Run Retina" /></p>
+<h4 id="step-5-success-message-will-be-displayed-once-the-capture-is-completed-and-uploaded-to-the-selected-storage-account"><a class="header" href="#step-5-success-message-will-be-displayed-once-the-capture-is-completed-and-uploaded-to-the-selected-storage-account">Step 5: Success message will be displayed once the capture is completed and uploaded to the selected storage account</a></h4>
+<p><img src="../resources/retina-success-run-upload.png" alt="Step 5: Retina Ran Successfully" /></p>
+<h4 id="step-6-check-the-storage-account-to-access-the-uploaded-capture-files-the-files-will-be-stored-in-the-selected-container-with-a-timestamp"><a class="header" href="#step-6-check-the-storage-account-to-access-the-uploaded-capture-files-the-files-will-be-stored-in-the-selected-container-with-a-timestamp">Step 6: Check the storage account to access the uploaded capture files. The files will be stored in the selected container with a timestamp</a></h4>
+<p><img src="../resources/retina-success-check-storage-account.png" alt="Step 6: Check Storage Account" /></p>
 
                     </main>
 
