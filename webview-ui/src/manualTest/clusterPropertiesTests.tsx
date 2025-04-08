@@ -127,6 +127,9 @@ export function getClusterPropertiesScenarios() {
             refreshRequest: () => handleGetPropertiesRequest(),
             upgradeClusterVersionRequest: (version: string) =>
                 handleUpgradeClusterVersionRequest(version, withErrors && sometimes()),
+            detectorCRUDRequest: () => {
+                webview.postErrorNotification("Sorry, I wasn't quite able to perform the CRUD operation.");
+            },
         };
 
         async function handleGetPropertiesRequest() {

@@ -52,4 +52,5 @@ export const vscode = getWebviewMessageContext<"clusterProperties">({
     reconcileClusterRequest: null,
     refreshRequest: null,
     upgradeClusterVersionRequest: null,
+    detectorCRUDRequest: null,
 });
