@@ -4,7 +4,7 @@ import styles from "./ClusterProperties.module.css";
 import { vscode } from "./state";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faCircleInfo, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { CustomDropdown } from "../components/CustomDropdown";
 import { CustomDropdownOption } from "../components/CustomDropdownOption";
 
@@ -107,7 +107,9 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
                     }}
                     style={{ minWidth: "120px", maxWidth: "250px" }}
                 >
-                    <FontAwesomeIcon icon={faExclamationTriangle} className={styles.InformationIcon} />
+                    &nbsp;
+                    <FontAwesomeIcon icon={faCircleInfo} className={styles.InformationIcon} />
+                    &nbsp;
                     <strong>Run CRUD Validations</strong>
                     <br />
                 </a>
