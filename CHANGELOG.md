@@ -1,5 +1,17 @@
 # Change Log
 
+## [1.6.5]
+
+* Update/detector upgrade scenario (#1348)
+* Update retina doc (#1364)
+* Fixing folder open for wsl (#1349)
+* Custom elements docs (#1331)
+* All webview-ui-toolkit content removed (#1330)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha, @tejhan for contributions, testing and reviews.
+
+
 ## [1.6.4]
 
 * Reverting @azure/identity update to fix windows issue (#1345) Fix for [this bug](https://github.com/Azure/vscode-aks-tools/issues/1344)
