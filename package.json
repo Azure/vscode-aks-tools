@@ -720,7 +720,7 @@
         "@azure/storage-blob": "^12.27.0",
         "@eslint/compat": "^1.2.8",
         "@microsoft/microsoft-graph-client": "^3.0.7",
-        "@microsoft/vscode-azext-utils": "^2.5.14",
+        "@microsoft/vscode-azext-utils": "^3.0.0",
         "@octokit/rest": "^21.1.1",
         "@vscode/extension-telemetry": "^0.9.8",
         "decompress": "^4.2.1",
