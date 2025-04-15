@@ -687,7 +687,7 @@
         "@vscode/vsce": "^3.2.2",
         "chai": "^5.2.0",
         "eslint": "^9.24.0",
-        "eslint-webpack-plugin": "^4.2.0",
+        "eslint-webpack-plugin": "^5.0.0",
         "glob": "^11.0.1",
         "globals": "^15.14.0",
         "mocha": "^11.1.0",
