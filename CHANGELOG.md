@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.6.6]
+
+* Automatically add newly created clusters to user's selected clusters (#1293)
+* Delete gpu node pool fix (#1319)
+* Updating vscode styling variables (#1350)
+* KAITO v4.4 support (#1318)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan for various KAITO updates! + @ReinierCC, @bosesuneha, @hungry1526 for opening bug or review contributions, testing and reviews.
+
 ## [1.6.5]
 
 * Update/detector upgrade scenario (#1348)
