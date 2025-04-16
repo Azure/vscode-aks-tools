@@ -1,6 +1,6 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ClusterQuickPickItem, getAksClusterSubscriptionNode } from "../utils/clusters";
-import { failed } from "../utils/errorable";
+import { failed, Errorable } from "../utils/errorable";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExtension } from "../utils/host";
@@ -8,6 +8,7 @@ import { longRunning } from "../utils/host";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { AksClusterAndFleet, getFilteredClusters, setFilteredClusters } from "./config";
 import { clusterResourceType, getClusterAndFleetResourcesFromGraphAPI } from "./azureResources";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export default async function aksClusterFilter(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -18,38 +19,31 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         return;
     }
 
-    const extension = getExtension();
-    if (failed(extension)) {
-        vscode.window.showErrorMessage(extension.error);
-        return;
-    }
-
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
         vscode.window.showErrorMessage(sessionProvider.error);
         return;
     }
 
-    let clusterList: AksClusterAndFleet[] = [];
-
-    await longRunning(`Getting AKS Cluster list for ${subscriptionNode.result.name}`, async () => {
-        const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(
-            sessionProvider.result,
-            subscriptionNode.result.subscriptionId,
-        );
-        if (failed(aksClusters)) {
-            vscode.window.showErrorMessage(aksClusters.error);
-            return;
-        }
-        clusterList = aksClusters.result.filter(
-            // only keep clusters for the cluster filter (remove fleets from the list)
-            (r) => r.type.toLowerCase() === clusterResourceType.toLowerCase(),
-        );
-    });
+    const extension = getExtension();
+    if (failed(extension)) {
+        vscode.window.showErrorMessage(extension.error);
+        return;
+    }
 
     const filteredClusters = await getUniqueClusters();
 
-    const quickPickItems: ClusterQuickPickItem[] = clusterList.map((cluster: AksClusterAndFleet) => {
+    const clusterList = await getClusterList(
+        subscriptionNode.result.name,
+        subscriptionNode.result.subscriptionId,
+        sessionProvider.result,
+    );
+    if (failed(clusterList)) {
+        vscode.window.showErrorMessage(clusterList.error);
+        return;
+    }
+
+    const quickPickItems: ClusterQuickPickItem[] = clusterList.result.map((cluster: AksClusterAndFleet) => {
         return {
             label: cluster.name,
             description: cluster.name,
@@ -79,7 +73,52 @@ export default async function aksClusterFilter(_context: IActionContext, target:
           ]
         : [];
 
-    await setFilteredClusters(newFilteredClusters, clusterList);
+    await setFilteredClusters(newFilteredClusters, clusterList.result);
+}
+
+export async function addItemToClusterFilter(
+    subscriptionName: string,
+    subscriptionId: string,
+    clusterName: string,
+    sessionProvider: ReadyAzureSessionProvider,
+) {
+    const clusterList = await getClusterList(subscriptionName, subscriptionId, sessionProvider);
+    if (failed(clusterList)) {
+        vscode.window.showErrorMessage(clusterList.error);
+        return;
+    } else {
+        const filteredClusters = await getUniqueClusters();
+        filteredClusters.push({ clusterName, subscriptionId });
+        await setFilteredClusters(filteredClusters, clusterList.result);
+    }
+}
+
+async function getClusterList(
+    subscriptionName: string,
+    subscriptionId: string,
+    sessionProvider: ReadyAzureSessionProvider,
+): Promise<Errorable<AksClusterAndFleet[]>> {
+    // Long running that captures errors that necessitate a return out of the function
+    const clusterListResult = await longRunning(
+        `Getting AKS Cluster list for ${subscriptionName}`,
+        async (): Promise<Errorable<AksClusterAndFleet[]>> => {
+            let clusterList: AksClusterAndFleet[] = [];
+            const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(sessionProvider, subscriptionId);
+            if (failed(aksClusters)) {
+                return { succeeded: false, error: aksClusters.error };
+            }
+            clusterList = aksClusters.result.filter(
+                // only keep clusters for the cluster filter (remove fleets from the list)
+                (r) => r.type.toLowerCase() === clusterResourceType.toLowerCase(),
+            );
+            return { succeeded: true, result: clusterList };
+        },
+    );
+
+    if (failed(clusterListResult)) {
+        return { succeeded: false, error: clusterListResult.error };
+    }
+    return { succeeded: true, result: clusterListResult.result };
 }
 
 async function getUniqueClusters() {
