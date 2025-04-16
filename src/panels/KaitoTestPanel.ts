@@ -39,6 +39,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         this.kubectl = kubectl;
         this.kubeConfigFilePath = kubeConfigFilePath;
         this.sessionProvider = sessionProvider;
+        // corrects for some version naming
         this.modelName = modelName;
     }
     getTitle(): string {
@@ -108,6 +109,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 const createCommand = await createCurlPodCommand(
                     this.kubeConfigFilePath,
                     podName,
+                    this.modelName,
                     clusterIP,
                     prompt,
                     temperature,
@@ -116,8 +118,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     repetitionPenalty,
                     maxLength,
                 );
-                let curlResult = null;
-
+                console.log(createCommand);
                 // used to delete the curl pod after query is complete
                 const deleteCommand = deleteCurlPodCommand(this.kubeConfigFilePath, podName);
 
@@ -130,11 +131,16 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 // retrieve the logs from the curl pod
                 const logsResult = await this.kubectl.api.invokeCommand(logsCommand);
                 if (logsResult && logsResult.code === 0) {
-                    curlResult = logsResult.stdout;
+                    console.log(logsResult.stdout);
+                    const parsedOutput = JSON.parse(logsResult.stdout);
+                    // v3 parsing
+                    // const responseText = JSON.parse(curlResult).Result;
+                    //v4 parsing
+                    const responseText = (parsedOutput.choices?.[0]?.text || "").trim();
                     webview.postTestUpdate({
                         clusterName: this.clusterName,
                         modelName: this.modelName,
-                        output: JSON.parse(curlResult).Result,
+                        output: responseText,
                     });
                 } else if (logsResult) {
                     vscode.window.showErrorMessage(

@@ -366,6 +366,7 @@ export function KaitoModels(initialState: InitialState) {
 
 // exported function to be shared in other kaito-related webviews
 export function generateKaitoYAML(model: string): { yaml: string; gpu: string | undefined } {
+    model = model.startsWith("workspace-") ? model.replace("workspace-", "") : model;
     const allModelDetails = kaitoSupporterModel.modelDetails;
     // Helper function to fetch model details by name
     const getModelDetails = (modelName: string) => {
@@ -378,10 +379,22 @@ export function generateKaitoYAML(model: string): { yaml: string; gpu: string | 
     const gpu = getStringOrEmpty(modelDetails?.minimumGpu);
 
     // Default application, metadata, and inference names
-    // Phi-3 Models follow a different naming pattern, this corrects for that
-    const appName = name.startsWith("phi-3") ? "phi-3" : name;
+    let appName = name;
     const metadataName = name;
-    const inferenceName = name;
+    let inferenceName = name;
+
+    // Phi-3 Models follow a different naming pattern, this corrects for that
+    if (name.startsWith("phi-3")) {
+        if (name.startsWith("phi-3-5")) {
+            appName = "phi-3-5";
+            inferenceName = inferenceName.replace("phi-3-5", "phi-3.5");
+        } else {
+            appName = "phi-3";
+        }
+    } else if (name.startsWith("qwen-2-5")) {
+        inferenceName = inferenceName.replace("qwen-2-5", "qwen2.5");
+    }
+
     // Adds private configuration template for llama-2 models
     const privateConfig = name.startsWith("llama-2")
         ? `

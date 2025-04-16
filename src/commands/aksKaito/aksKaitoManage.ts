@@ -89,7 +89,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
         // The data below is used to indicate the current progress of the active model deployments
         models.push({
-            name: item.inference?.preset?.name,
+            name: item.metadata?.name,
             instance: item.resource?.instanceType,
             resourceReady: resourceReady,
             inferenceReady: inferenceReady,
