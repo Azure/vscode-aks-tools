@@ -11,6 +11,7 @@ import { longRunning } from "../commands/utils/host";
 import { getConditions, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
 import { filterPodImage } from "../commands/utils/clusters";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { getAksClient } from "../commands/utils/arm";
 
 export class KaitoManagePanel extends BasePanel<"kaitoManage"> {
     constructor(extensionUri: vscode.Uri) {
