@@ -2,10 +2,10 @@ import { useStateManagement } from "../utilities/state";
 import styles from "./KaitoManage.module.css";
 import { stateUpdater, vscode } from "./state";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoManage";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { generateKaitoYAML } from "../KaitoModels/KaitoModels";
 import { useEffect } from "react";
 import { convertMinutesToFormattedAge } from "../KaitoModels/KaitoModels";
+import { ProgressRing } from "../components/ProgressRing";
 
 export function KaitoManage(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -73,7 +73,7 @@ export function KaitoManage(initialState: InitialState) {
                                                         Get Logs
                                                     </button>
                                                 </div>
-                                                <VSCodeProgressRing className={styles.progress} />
+                                                <ProgressRing className={styles.progress} />
                                                 <span className={styles.bold}>Deployment in progress</span>
                                             </>
                                         );

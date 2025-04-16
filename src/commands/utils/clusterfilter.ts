@@ -53,7 +53,10 @@ export default async function aksClusterFilter(_context: IActionContext, target:
         return {
             label: cluster.name,
             description: cluster.name,
-            picked: filteredClusters.some((filtered) => filtered.clusterName === cluster.name),
+            picked: filteredClusters.some(
+                (filtered) =>
+                    filtered.clusterName === cluster.name && filtered.subscriptionId === cluster.subscriptionId,
+            ),
             Cluster: {
                 clusterName: cluster.name,
                 subscriptionId: cluster.subscriptionId,

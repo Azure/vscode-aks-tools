@@ -102,6 +102,18 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             });
             vscode.window.showInformationMessage(`'${model}' was deleted successfully`);
             await this.updateModels(webview);
+
+            // Delete the node pool associated with the workspace if it exists
+            const client = getAksClient(this.sessionProvider, this.subscriptionId);
+            for await (const pool of client.agentPools.list(this.resourceGroupName, this.clusterName)) {
+                const labels = pool.nodeLabels ?? {};
+                const name = pool.name;
+                // kaito.sh/workspace:workspaceName is the tag format utilized by Kaito
+                if (labels["kaito.sh/workspace"] === model && name) {
+                    client.agentPools.beginDeleteAndWait(this.resourceGroupName, this.clusterName, name);
+                    break;
+                }
+            }
         } finally {
             this.operatingState[model] = false;
         }

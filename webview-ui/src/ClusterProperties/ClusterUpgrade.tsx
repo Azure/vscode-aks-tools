@@ -2,10 +2,11 @@ import { useState } from "react";
 import { ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import styles from "./ClusterProperties.module.css";
 import { vscode } from "./state";
-import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faCircleInfo, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { CustomDropdown } from "../components/CustomDropdown";
+import { CustomDropdownOption } from "../components/CustomDropdownOption";
 
 export interface ClusterUpgradeProps {
     clusterInfo: ClusterInfo;
@@ -18,14 +19,16 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
     const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
     const isUpgrading = props.clusterInfo.provisioningState === "Upgrading";
 
-    function handleUpgradeVersionChange(event: Event) {
-        const target = event.target as HTMLSelectElement;
-        const version = target.value;
-
+    function handleUpgradeVersionChange(version: string) {
         if (version && version !== "Select version") {
             setSelectedVersion(version);
             setShowConfirmation(true);
         }
+    }
+
+    function handleCRUDDetectorCall() {
+        // Then post the request to the extension
+        vscode.postDetectorCRUDRequest();
     }
 
     function handleConfirmUpgrade() {
@@ -82,21 +85,34 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
         <>
             <div className={styles.upgradeVersionDropdown} style={{ marginLeft: "10px" }}>
                 <span>Upgrade:</span>
-                <VSCodeDropdown
-                    onchange={handleUpgradeVersionChange}
+                <CustomDropdown
+                    onChange={handleUpgradeVersionChange}
                     disabled={props.clusterOperationRequested || !readyToUpgrade}
-                    style={{ minWidth: "120px", maxWidth: "150px" }}
                     value={displayVersion || ""}
                 >
-                    <VSCodeOption selected={!displayVersion} value="">
-                        Select version
-                    </VSCodeOption>
+                    <CustomDropdownOption value="" label="Select version" />
                     {props.clusterInfo.availableUpgradeVersions.map((version: string) => (
-                        <VSCodeOption key={version} value={version} selected={version === displayVersion}>
-                            {version}
-                        </VSCodeOption>
+                        <CustomDropdownOption key={version} value={version} label={version} />
                     ))}
-                </VSCodeDropdown>
+                </CustomDropdown>
+            </div>
+            <div className={styles.upgradeVersionLink}>
+                <a
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(event) => {
+                        event.preventDefault();
+                        handleCRUDDetectorCall();
+                    }}
+                    style={{ minWidth: "120px", maxWidth: "250px" }}
+                >
+                    &nbsp;
+                    <FontAwesomeIcon icon={faCircleInfo} className={styles.InformationIcon} />
+                    &nbsp;
+                    <strong>Run CRUD Validations</strong>
+                    <br />
+                </a>
             </div>
             <ConfirmationDialog
                 title="Confirm Kubernetes Version Upgrade"

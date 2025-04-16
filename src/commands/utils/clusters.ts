@@ -14,7 +14,7 @@ import {
     KubectlV1,
     extension,
 } from "vscode-kubernetes-tools-api";
-import { getTokenInfo } from "../../auth/azureAuth";
+import { getReadySessionProvider, getTokenInfo } from "../../auth/azureAuth";
 import { ReadyAzureSessionProvider, TokenInfo } from "../../auth/types";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import { SubscriptionTreeNode, isSubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
@@ -27,6 +27,8 @@ import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
 import { ClusterFilter } from "./config";
 import { DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
+import { parseResource } from "../../azure-api-utils";
+import * as k8s from "vscode-kubernetes-tools-api";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -762,4 +764,98 @@ export async function getClusterDiagnosticSettings(
         vscode.window.showErrorMessage(`Error fetching cluster diagnostic settings: ${e}`);
         return undefined;
     }
+}
+
+export async function chooseStorageAccount(
+    diagnosticSettings: DiagnosticSettingsResourceCollection,
+    placeholderText: string,
+): Promise<string | void> {
+    /*
+        Check the diagnostic setting is 1 or more than 1:
+          1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
+          2. For the scenario for more than 1 then show VsCode quickPick to select and get SAS of selected.
+    */
+    if (!diagnosticSettings || !diagnosticSettings.value) return undefined;
+
+    if (diagnosticSettings.value.length === 1) {
+        // In case of only one storage account associated, use the one (1) as default storage account
+        const selectedStorageAccount = diagnosticSettings.value![0].storageAccountId!;
+        if (!selectedStorageAccount) {
+            vscode.window.showInformationMessage("Diagnostic setting does not have storage account associated.");
+            return;
+        }
+        const storageAccountName = parseResource(selectedStorageAccount).name;
+        if (!storageAccountName) {
+            vscode.window.showInformationMessage(`Storage ID is malformed: ${selectedStorageAccount}`);
+            return;
+        }
+        vscode.window.showInformationMessage(`Using the only available storage account: ${storageAccountName}`);
+        return selectedStorageAccount;
+    }
+
+    const storageAccountNameToStorageIdArray: { id: string; label: string }[] = [];
+
+    diagnosticSettings.value?.forEach((item) => {
+        if (item.storageAccountId) {
+            const { name } = parseResource(item.storageAccountId!);
+            if (!name) {
+                vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
+                return;
+            }
+            storageAccountNameToStorageIdArray.push({ id: item.storageAccountId, label: name });
+        }
+    });
+
+    // accounts is now an array of {id, name}
+    const accountQuickPicks = storageAccountNameToStorageIdArray;
+
+    // Create quick pick for more than 1 storage account scenario.
+    const selectedQuickPick = await vscode.window.showQuickPick(accountQuickPicks, {
+        placeHolder: placeholderText,
+        ignoreFocusOut: true,
+    });
+
+    if (selectedQuickPick) {
+        return selectedQuickPick.id;
+    }
+}
+
+export interface ClusterValidationResult {
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>;
+    cloudExplorer: k8s.APIAvailable<k8s.CloudExplorerV1>;
+    clusterExplorer: k8s.APIAvailable<k8s.ClusterExplorerV1>;
+    sessionProvider: ReadyAzureSessionProvider;
+}
+
+export async function validatePrerequisites(): Promise<Errorable<ClusterValidationResult>> {
+    const kubectl = await k8s.extension.kubectl.v1;
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const clusterExplorer = await k8s.extension.clusterExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        return { succeeded: false, error: sessionProvider.error };
+    }
+
+    if (!kubectl.available) {
+        return { succeeded: false, error: `Kubectl is unavailable.` };
+    }
+
+    if (!cloudExplorer.available) {
+        return { succeeded: false, error: `Cloud explorer is unavailable.` };
+    }
+
+    if (!clusterExplorer.available) {
+        return { succeeded: false, error: `Cluster explorer is unavailable.` };
+    }
+
+    return {
+        succeeded: true,
+        result: {
+            kubectl,
+            cloudExplorer,
+            clusterExplorer,
+            sessionProvider: sessionProvider.result,
+        },
+    };
 }

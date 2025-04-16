@@ -1,5 +1,45 @@
 # Change Log
 
+## [1.6.5]
+
+* Update/detector upgrade scenario (#1348)
+* Update retina doc (#1364)
+* Fixing folder open for wsl (#1349)
+* Custom elements docs (#1331)
+* All webview-ui-toolkit content removed (#1330)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha, @tejhan for contributions, testing and reviews.
+
+
+## [1.6.4]
+
+* Reverting @azure/identity update to fix windows issue (#1345) Fix for [this bug](https://github.com/Azure/vscode-aks-tools/issues/1344)
+* Update retina doc (#1334)
+
+Thank you so much to @tejhan for identitify culprit package and @bosesuneha for retina docs, also to   kejatura-dev for contributions, testing and reviews.
+
+## [1.6.3]
+
+* Add upload logs feature for Retina Capture (#1306)
+* Full replacement of VSCodeDropdown & VSCodeOption with custom react elements [Webview-UI-toolkit deprecation] (#1276)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha, @tejhan for contributions, testing and reviews.
+
+## [1.6.2]
+
+* Feat: Removing components from ASO, Detectors, Kubectl, & Periscope commands (#1261)
+* Feat: Upgrade Cluster Kubernetes Version (#1296)
+* WebviewUI toolkit: deprecation for inspektor, retina, tcpdump (#1259)
+* Quick Refactor: Moving DiagnosticSetting function to a common location Cluster.ts. (#1295)
+* [Webview UI toolkit deprecation] AttachAcrToCluster, DraftDeployment/Dockerfile/Workflow Panel component removal (#1260)
+* tcp download fix (#1291)
+* Fix npm warning for build. (#1292)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha @tejhan, @qpetraroia, @gambtho for contributions, testing and reviews.
+
 ## [1.6.1]
 
 * Show Fleet Properties (#1245)

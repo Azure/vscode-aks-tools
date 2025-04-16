@@ -17,6 +17,7 @@ export function getRetinaCaptureScenarios() {
         ],
         captureFolderName: "test-capture",
         isNodeExplorerPodExists: true,
+        isDownloadRetinaCapture: true,
     };
 
     function getMessageHandler() {

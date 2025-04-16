@@ -4,10 +4,10 @@ import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons
 import styles from "./InspektorGadget.module.css";
 import { NamespaceResources, PodResources } from "./helpers/clusterResources";
 import { Lazy, isLoaded, isNotLoaded, map as lazyMap, orDefault } from "../utilities/lazy";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { Lookup, asLookup, exclude, intersection } from "../utilities/array";
 import { EventHandlers } from "../utilities/state";
 import { EventDef, vscode } from "./helpers/state";
+import { ProgressRing } from "../components/ProgressRing";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -144,7 +144,7 @@ export function ResourceSelector(props: ResourceSelectorProps) {
                         {isLoaded(item.children) ? (
                             renderPodItems(item.name, item.children.value, status[item.name].podStatuses)
                         ) : (
-                            <VSCodeProgressRing />
+                            <ProgressRing />
                         )}
                     </ul>
                 )}
@@ -178,7 +178,7 @@ export function ResourceSelector(props: ResourceSelectorProps) {
                         {isLoaded(item.children) ? (
                             renderContainerItems(namespace, item.name, item.children.value)
                         ) : (
-                            <VSCodeProgressRing />
+                            <ProgressRing />
                         )}
                     </ul>
                 )}

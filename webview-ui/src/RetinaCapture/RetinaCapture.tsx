@@ -6,7 +6,6 @@ import { useStateManagement } from "../utilities/state";
 import { DeleteNodeExplorerDialog } from "./DeleteNodeExplorerDialog";
 import styles from "./RetinaCapture.module.css";
 import { stateUpdater, vscode } from "./state";
-
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export function RetinaCapture(initialState: InitialState) {
@@ -41,7 +40,6 @@ export function RetinaCapture(initialState: InitialState) {
             <header>
                 <h2>Retina Distributed Capture for {state.clusterName}</h2>
             </header>
-
             <hr style={{ marginBottom: "1rem" }} />
             <div>
                 <FontAwesomeIcon icon={faInfoCircle} /> Retina capture command allows the user to capture network
@@ -57,40 +55,40 @@ export function RetinaCapture(initialState: InitialState) {
             <h3>Retina Distributed Capture is Successfully Completed for this Cluster</h3>
 
             <div className={styles.content}>
-                <div style={{ flexDirection: "row", width: "31.25rem" }}>
-                    {state.allNodes.map((node) => (
-                        <div key={node}>
-                            <input
-                                onChange={(e) => onSelectNode(e, node)}
-                                checked={isNodeSelected(node)}
-                                type="checkbox"
-                                style={{
-                                    margin: "0rem 0.5rem 0.5rem 0",
-                                    position: "relative",
-                                    top: ".125rem",
-                                }}
-                            />
-                            <span style={{ position: "relative", top: "-.2rem" }}>{node}</span>
-                        </div>
-                    ))}
-                    <div style={{ display: "flex", marginTop: ".5rem" }}>
-                        <button
-                            type="submit"
-                            style={{ marginRight: "0.625rem" }}
-                            onClick={() => handleCaptureFileDownload()}
-                        >
-                            Download Retina Logs to Host Machine.
-                        </button>
-                        {state.isNodeExplorerPodExists && (
-                            <>
+                {state.isDownloadRetinaCapture && (
+                    <div style={{ flexDirection: "row", width: "31.25rem" }}>
+                        {state.allNodes.map((node) => (
+                            <div key={node}>
+                                <input
+                                    id={`checkbox-${node}`}
+                                    onChange={(e) => onSelectNode(e, node)}
+                                    checked={isNodeSelected(node)}
+                                    type="checkbox"
+                                ></input>
+                                <label className={styles.checkboxLabel} htmlFor={`checkbox-${node}`}>
+                                    {node}
+                                </label>
+                            </div>
+                        ))}
+                        <div className={styles.buttonDiv}>
+                            <button
+                                type="submit"
+                                style={{ marginRight: "0.625rem" }}
+                                onClick={() => handleCaptureFileDownload()}
+                            >
+                                Download Retina Logs to Host Machine.
+                            </button>
+                            {state.isNodeExplorerPodExists && (
                                 <button className="secondary-button" onClick={() => handleDeleteExplorerPod()}>
-                                    <FontAwesomeIcon icon={faTrash} />
-                                    &nbsp;Delete Node Explorer Pod
+                                    <span slot="start">
+                                        <FontAwesomeIcon icon={faTrash} />
+                                    </span>
+                                    Delete Node Explorer Pod
                                 </button>
-                            </>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {showDeleteNodeExplorerDialog && (

@@ -7,11 +7,11 @@ import {
     getClusterDiagnosticSettings,
     getKubeconfigYaml,
     getManagedCluster,
+    chooseStorageAccount,
 } from "../utils/clusters";
 import { getKustomizeConfig } from "../utils/config";
 import { getExtension, longRunning } from "../utils/host";
 import {
-    chooseStorageAccount,
     getStorageInfo,
     prepareAKSPeriscopeKustomizeOverlay,
     getNodeNames,
@@ -116,7 +116,10 @@ async function runAKSPeriscope(
 
     // TODO: It's possible to have diagnostics configured, but with no storage account. If that's the case,
     // we'll fail silently at this point. Need to improve the UX here.
-    const clusterStorageAccountId = await chooseStorageAccount(clusterDiagnosticSettings);
+    const clusterStorageAccountId = await chooseStorageAccount(
+        clusterDiagnosticSettings,
+        "Select storage account for Periscope deployment:",
+    );
     if (!clusterStorageAccountId) return;
 
     // Generate storage sas keys, manage aks persicope run.

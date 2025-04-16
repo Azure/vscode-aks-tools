@@ -30,6 +30,19 @@ To debug the extension itself, hit `F5` to launch the `Extension` debug profile 
 
 The extension will not automatically update itself in response to code changes as you are debugging, so the best workflow here is to stop debugging, make changes, and launch the debugger again.
 
+### Custom UI Elements
+
+Most input components have been intentionally designed to be theme-aware by default, inheriting VS Code's global design tokens to stay in sync with the user's selected theme. This includes buttons (which can be styled using our `secondary-button` and `icon-button` classes), anchor tags, `<option>` elements, and common input types like `radio`, `checkbox`, and `text`.
+
+To keep things consistent while avoiding unnecessary dependencies, we also include a small set of custom components:
+
+- `<CustomDropdown>` and `<CustomDropdownOption>` provide a theme-integrated dropdown experience.
+- `<ProgressRing>` is a simple, consistent loading indicator that fits right in with VS Code’s UI.
+
+These components help us maintain a clean, unified look without relying on external UI libraries — and give us more control over the details when we need it.
+
+
+
 ## Building for release
 
 The process for this is unaffected by the webview setup. The `npm run webpack` and `vsce package` commands will ensure the `webpack-ui` project is built and bundled.

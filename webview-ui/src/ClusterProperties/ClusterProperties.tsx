@@ -4,11 +4,11 @@ import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./state";
 import { ClusterDisplay } from "./ClusterDisplay";
 import { isLoaded, isNotLoaded } from "../utilities/lazy";
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { AgentPoolDisplay } from "./AgentPoolDisplay";
 import styles from "./ClusterProperties.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRedoAlt } from "@fortawesome/free-solid-svg-icons";
+import { ProgressRing } from "../components/ProgressRing";
 
 export function ClusterProperties(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -48,7 +48,9 @@ export function ClusterProperties(initialState: InitialState) {
                     eventHandlers={eventHandlers}
                 />
             ) : (
-                <VSCodeProgressRing />
+                <>
+                    <ProgressRing />
+                </>
             )}
 
             {clusterInfo &&

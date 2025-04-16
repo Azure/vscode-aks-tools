@@ -1,0 +1,95 @@
+.control {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.dropdownButton {
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+    height: calc(var(--input-height) * 1px);
+    color: var(--input-foreground);
+    background-color: var(--input-background);
+    padding: 0px 2.2rem 0px 9px;
+    box-sizing: border-box;
+    border-radius: 2px;
+    font-family: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid var(--vscode-dropdown-border);
+}
+
+.dropdownButton:hover {
+    background-color: var(--input-background);
+    border: 1px solid var(--vscode-dropdown-border);
+}
+
+.dropdownButton:disabled {
+    cursor: not-allowed;
+    background-color: var(--input-background);
+}
+
+.dropdownButton:focus {
+    border: 1px solid var(--vscode-focusBorder);
+}
+
+.dropdownMenu {
+    position: absolute;
+    width: 100%;
+    background-color: var(--input-background);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    max-height: 10rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--vscode-focusBorder);
+    border-radius: 2px;
+}
+
+.dropUp {
+    bottom: 100%;
+    top: auto;
+    box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.2);
+    border-radius: 2px 2px 2px 2px;
+}
+
+.dropdownOption {
+    cursor: pointer;
+    background-color: var(--input-background);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 9px;
+    padding: 2px 5px 2px 5px;
+}
+
+.dropdownOption:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.dropdownOption:active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+.highlightedOption {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.arrowIcon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}

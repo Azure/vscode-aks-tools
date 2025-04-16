@@ -1,9 +1,7 @@
-import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getSASKey, LinkDuration } from "../../utils/azurestorage";
 import { parseResource } from "../../../azure-api-utils";
 import { PeriscopeStorage, PodLogs, UploadStatus } from "../models/storage";
-import { DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
 import * as path from "path";
 import * as fs from "fs";
 import * as semver from "semver";
@@ -19,49 +17,6 @@ import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-bl
 import { dirSync } from "tmp";
 import { getStorageManagementClient } from "../../utils/arm";
 import { ReadyAzureSessionProvider } from "../../../auth/types";
-
-export async function chooseStorageAccount(
-    diagnosticSettings: DiagnosticSettingsResourceCollection,
-): Promise<string | void> {
-    /*
-        Check the diagnostic setting is 1 or more than 1:
-          1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
-          2. For the scenario for more than 1 then show VsCode quickPick to select and get SAS of selected.
-    */
-    if (!diagnosticSettings || !diagnosticSettings.value) return undefined;
-
-    if (diagnosticSettings.value.length === 1) {
-        // In case of only one storage account associated, use the one (1) as default storage account and no UI will be displayed.
-        const selectedStorageAccount = diagnosticSettings.value![0].storageAccountId!;
-        return selectedStorageAccount;
-    }
-
-    const storageAccountNameToStorageIdArray: { id: string; label: string }[] = [];
-
-    diagnosticSettings.value?.forEach((item) => {
-        if (item.storageAccountId) {
-            const { name } = parseResource(item.storageAccountId!);
-            if (!name) {
-                vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
-                return;
-            }
-            storageAccountNameToStorageIdArray.push({ id: item.storageAccountId, label: name });
-        }
-    });
-
-    // accounts is now an array of {id, name}
-    const accountQuickPicks = storageAccountNameToStorageIdArray;
-
-    // Create quick pick for more than 1 storage account scenario.
-    const selectedQuickPick = await vscode.window.showQuickPick(accountQuickPicks, {
-        placeHolder: "Select storage account for Periscope deployment:",
-        ignoreFocusOut: true,
-    });
-
-    if (selectedQuickPick) {
-        return selectedQuickPick.id;
-    }
-}
 
 export async function getStorageInfo(
     sessionProvider: ReadyAzureSessionProvider,

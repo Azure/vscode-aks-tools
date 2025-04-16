@@ -415,4 +415,5 @@
 
 .closeButton:hover {
     color: #ff6b6b;
+    background: none;
 }
