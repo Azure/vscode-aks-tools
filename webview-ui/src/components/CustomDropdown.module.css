@@ -14,9 +14,9 @@
     width: 100%;
     cursor: pointer;
     text-align: left;
-    height: calc(var(--input-height) * 1px);
-    color: var(--input-foreground);
-    background-color: var(--input-background);
+    height: 1.5rem;
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
     padding: 0px 2.2rem 0px 9px;
     box-sizing: border-box;
     border-radius: 2px;
@@ -28,13 +28,13 @@
 }
 
 .dropdownButton:hover {
-    background-color: var(--input-background);
+    background-color: var(--vscode-input-background);
     border: 1px solid var(--vscode-dropdown-border);
 }
 
 .dropdownButton:disabled {
     cursor: not-allowed;
-    background-color: var(--input-background);
+    background-color: var(--vscode-input-background);
 }
 
 .dropdownButton:focus {
@@ -44,7 +44,7 @@
 .dropdownMenu {
     position: absolute;
     width: 100%;
-    background-color: var(--input-background);
+    background-color: var(--vscode-input-background);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     z-index: 1;
     max-height: 10rem;
@@ -66,7 +66,7 @@
 
 .dropdownOption {
     cursor: pointer;
-    background-color: var(--input-background);
+    background-color: var(--vscode-input-background);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
