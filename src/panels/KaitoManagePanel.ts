@@ -9,6 +9,8 @@ import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
 import { getConditions, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
+import { ReadyAzureSessionProvider } from "../auth/types";
+import { getAksClient } from "../commands/utils/arm";
 
 export class KaitoManagePanel extends BasePanel<"kaitoManage"> {
     constructor(extensionUri: vscode.Uri) {
@@ -28,6 +30,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         readonly kubeConfigFilePath: string,
         readonly models: ModelState[],
         readonly newtarget: unknown,
+        readonly sessionProvider: ReadyAzureSessionProvider,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -37,6 +40,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         this.kubeConfigFilePath = kubeConfigFilePath;
         this.models = models;
         this.newtarget = newtarget;
+        this.sessionProvider = sessionProvider;
     }
 
     getTitle(): string {
@@ -100,6 +104,18 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             });
             vscode.window.showInformationMessage(`'workspace-${model}' was deleted successfully`);
             await this.updateModels(webview);
+
+            // Delete the node pool associated with the workspace if it exists
+            const client = getAksClient(this.sessionProvider, this.subscriptionId);
+            for await (const pool of client.agentPools.list(this.resourceGroupName, this.clusterName)) {
+                const labels = pool.nodeLabels ?? {};
+                const name = pool.name;
+                // kaito.sh/workspace:workspaceName is the tag format utilized by Kaito
+                if (labels["kaito.sh/workspace"] === model && name) {
+                    client.agentPools.beginDeleteAndWait(this.resourceGroupName, this.clusterName, name);
+                    break;
+                }
+            }
         } finally {
             this.operatingState[model] = false;
         }
