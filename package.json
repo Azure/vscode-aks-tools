@@ -364,6 +364,10 @@
             {
                 "command": "aks.aksFleetProperties",
                 "title": "Show Fleet Properties"
+            },
+            {
+                "command": "aks.observabilityTools",
+                "title": "Deploy Headlamp"
             }
         ],
         "menus": {
@@ -492,6 +496,16 @@
                 {
                     "command": "aks.aksFleetProperties",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.fleet/i"
+                },
+                {
+                    "submenu": "aks.observabilityToolsSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                }
+            ],
+            "aks.observabilityToolsSubMenu": [
+                {
+                    "command": "aks.observabilityTools",
+                    "group": "navigation"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -645,6 +659,10 @@
             {
                 "id": "aks.aksRetinaCaptureSubMenu",
                 "label": "Run Retina Capture"
+            },
+            {
+                "id": "aks.observabilityToolsSubMenu",
+                "label": "Observability Tools"
             }
         ]
     },

@@ -131,6 +131,7 @@ export async function activate(context: vscode.ExtensionContext) {
         //registerCommandWithTelemetry("aks.aksAutomatedDeployments", aksAutomatedDeployments);
         registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
+        registerCommandWithTelemetry("aks.observabilityTools", aksFleetProperties);
 
         await registerAzureServiceNodes(context);
 
