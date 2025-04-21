@@ -691,7 +691,7 @@
         "glob": "^11.0.1",
         "globals": "^15.14.0",
         "mocha": "^11.1.0",
-        "prettier": "^3.5.0",
+        "prettier": "^3.5.3",
         "sinon": "^20.0.0",
         "ts-loader": "^9.5.2",
         "typescript": "^5.8.3",
