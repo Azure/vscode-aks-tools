@@ -715,7 +715,7 @@
         "@azure/arm-subscriptions": "^5.1.0",
         "@azure/container-registry": "^1.1.0",
         "@azure/core-auth": "^1.8.0",
-        "@azure/identity": "4.6",
+        "@azure/identity": "4.9",
         "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.27.0",
         "@eslint/compat": "^1.2.8",
