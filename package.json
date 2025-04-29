@@ -684,7 +684,7 @@
         "@typescript-eslint/eslint-plugin": "^8.31.1",
         "@typescript-eslint/parser": "^8.31.1",
         "@vscode/test-electron": "^2.5.2",
-        "@vscode/vsce": "^3.2.2",
+        "@vscode/vsce": "^3.3.2",
         "chai": "^5.2.0",
         "eslint": "^9.24.0",
         "eslint-webpack-plugin": "^5.0.0",
