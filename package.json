@@ -366,7 +366,7 @@
                 "title": "Show Fleet Properties"
             },
             {
-                "command": "aks.observabilityTools",
+                "command": "aks.deployHeadlamp",
                 "title": "Deploy Headlamp"
             }
         ],
@@ -504,7 +504,7 @@
             ],
             "aks.observabilityToolsSubMenu": [
                 {
-                    "command": "aks.observabilityTools",
+                    "command": "aks.deployHeadlamp",
                     "group": "navigation"
                 }
             ],

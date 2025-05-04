@@ -21,6 +21,7 @@ import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer"
 import { AutomatedDeploymentsDefinition } from "./webviewDefinitions/automatedDeployments";
 import { CreateFleetDefinition } from "./webviewDefinitions/createFleet";
 import { FleetProperties } from "./webviewDefinitions/fleetProperties";
+import { HeadlampDefinition } from "./webviewDefinitions/headlamp";
 
 /**
  * Groups all the related types for a single webview.
@@ -62,6 +63,7 @@ type AllWebviewDefinitions = {
     automatedDeployments: AutomatedDeploymentsDefinition;
     createFleet: CreateFleetDefinition;
     fleetProperties: FleetProperties;
+    headlamp: HeadlampDefinition;
 };
 
 type ContentIdLookup = {

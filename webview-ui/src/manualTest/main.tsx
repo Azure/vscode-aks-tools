@@ -23,6 +23,7 @@ import { getTCPDumpScenarios } from "./tcpDumpTests";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
 import { getTestStyleViewerScenarios } from "./testStyleViewerTests";
 import { getCreateFleetScenarios } from "./createFleetTests";
+import { getHeadlampScenarios } from "./headlampTests";
 import "./vars.css";
 
 // There are two modes of launching this application:
@@ -63,6 +64,7 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
     // TODO: Replace with the actual scenarios when available.
     fleetProperties: [],
+    headlamp: getHeadlampScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

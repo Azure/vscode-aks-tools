@@ -2,18 +2,16 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as tmpfile from "../../utils/tempfile";
-import {
-    getAksClusterTreeNode,
-    getKubeconfigYaml,
-    getManagedCluster,
-} from "../../utils/clusters";
+import { getAksClusterTreeNode, getKubeconfigYaml, getManagedCluster } from "../../utils/clusters";
 import { getExtension, longRunning } from "../../utils/host";
 import { AksClusterTreeNode } from "../../../tree/aksClusterTreeItem";
 import { Errorable, failed } from "../../utils/errorable";
 import { invokeKubectlCommand } from "../../utils/kubectl";
 import { getEnvironment, getReadySessionProvider } from "../../../auth/azureAuth";
+import { HeadlampPanel } from "../../../panels/HeadlampPanel";
+import { HeadlampPanelDataProvider } from "../../../panels/HeadlampPanel";
 
-export default async function deployheadlamp(_context: IActionContext, target: unknown): Promise<void> {
+export default async function deployHeadlamp(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     if (!kubectl.available) {
         return;
@@ -22,6 +20,12 @@ export default async function deployheadlamp(_context: IActionContext, target: u
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
         vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
+    const extension = getExtension();
+    if (failed(extension)) {
+        vscode.window.showErrorMessage(extension.error);
         return;
     }
 
@@ -62,16 +66,25 @@ export default async function deployheadlamp(_context: IActionContext, target: u
             properties.result,
         ),
     );
+
     if (failed(kubeconfig)) {
         vscode.window.showErrorMessage(kubeconfig.error);
         return undefined;
     }
 
-    await longRunning(`Retrieving kubeconfig for cluster ${clusterNode.result.name}.`, () =>
-        deployHeadlampInCluster(kubectl, clusterNode.result, kubeconfig.result)
-    );
+    const kubeConfigFile = await tmpfile.createTempFile(kubeconfig.result, "yaml");
+
+    const panel = new HeadlampPanel(extension.result.extensionUri);
+    const dataProvider = new HeadlampPanelDataProvider(clusterNode.result.name, kubectl, kubeConfigFile.filePath);
+    panel.show(dataProvider);
+
+    // await longRunning(`Retrieving kubeconfig for cluster ${clusterNode.result.name}.`, () =>
+    //     deployHeadlampInCluster(kubectl, clusterNode.result, kubeconfig.result)
+    // );
 }
 
+// below function isn't being used anymore - can maybe be removed unless refactor
+void deployHeadlampInCluster;
 async function deployHeadlampInCluster(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     clusterNode: AksClusterTreeNode,
@@ -105,14 +118,21 @@ async function deployHeadlampInCluster(
             // if (failed(deleteResult)) return deleteResult;
 
             // Deploy headlamp.
-            const applyResult = await invokeKubectlCommand(kubectl, kubeConfigFile, `apply -k https://raw.githubusercontent.com/kinvolk/headlamp/main/kubernetes-headlamp-ingress-sample.yaml`);
+            const applyResult = await invokeKubectlCommand(
+                kubectl,
+                kubeConfigFile,
+                `apply -k https://raw.githubusercontent.com/kinvolk/headlamp/main/kubernetes-headlamp-ingress-sample.yaml`,
+            );
             if (failed(applyResult)) return applyResult;
 
             // kubectl port-forward -n kube-system service/headlamp 8080:80
-            return invokeKubectlCommand(kubectl, kubeConfigFile, " port-forward -n kube-system service/headlamp 8080:80");
+            return invokeKubectlCommand(
+                kubectl,
+                kubeConfigFile,
+                " port-forward -n kube-system service/headlamp 8080:80",
+            );
         },
     );
-    
 }
 
 // async function deployKustomizeOverlay(
