@@ -337,7 +337,7 @@ async function atAllConfigScopes<T>(fn: ConfigUpdater<T>, configKey: string, val
 }
 
 export function getAIRecommendationsInfoState(): boolean | undefined {
-    return vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY)["vs-kubernetes.enable-gh-copilot"];
+    return vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY).get<boolean>("vs-kubernetes.enable-gh-copilot");
 }
 
 export function setAIRecommendationsInfoState(selectedoption: boolean): void {
