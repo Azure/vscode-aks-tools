@@ -20,7 +20,9 @@ export async function aksCreateClusterFromCopilot(): Promise<void> {
     const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
 
     if (!ghcopilotUserSettingsFlag) {
-        vscode.window.showWarningMessage("The AKS extension Copilot flag is currently set to false. Please set this flag to true in order to enable this functionality.");
+        vscode.window.showWarningMessage(
+            "The AKS extension Copilot flag is currently set to false. Please set this flag to true in order to enable this functionality.",
+        );
         return;
     }
 
