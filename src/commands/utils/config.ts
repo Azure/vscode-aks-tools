@@ -7,6 +7,8 @@ import { RetinaDownloadConfig } from "../periscope/models/RetinaDownloadConfig";
 import { isObject } from "./runtimeTypes";
 import { Environment, EnvironmentParameters } from "@azure/ms-rest-azure-env";
 
+const EXTENSION_CONFIG_KEY = "vs-kubernetes";
+
 export function getConfiguredAzureEnv(): Environment {
     // See:
     // https://github.com/microsoft/vscode/blob/eac16e9b63a11885b538db3e0b533a02a2fb8143/extensions/microsoft-authentication/package.json#L40-L99
@@ -317,4 +319,54 @@ export async function deleteKubectlCustomCommand(name: string) {
     await vscode.workspace
         .getConfiguration()
         .update("azure.customkubectl.commands", commands, vscode.ConfigurationTarget.Global, true);
+}
+
+type ConfigUpdater<T> = (
+    configKey: string,
+    value: T,
+    scope: vscode.ConfigurationTarget,
+    valueAtScope: unknown,
+    createIfNotExist: boolean,
+) => Promise<void>;
+
+async function atAllConfigScopes<T>(fn: ConfigUpdater<T>, configKey: string, value: T): Promise<void> {
+    const config = vscode.workspace.getConfiguration().inspect(EXTENSION_CONFIG_KEY)!;
+    await fn(configKey, value, vscode.ConfigurationTarget.Global, config.globalValue, true);
+    await fn(configKey, value, vscode.ConfigurationTarget.Workspace, config.workspaceValue, false);
+    await fn(configKey, value, vscode.ConfigurationTarget.WorkspaceFolder, config.workspaceFolderValue, false);
+}
+
+export function getAIRecommendationsInfoState(): boolean | undefined {
+    return vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY)["vs-kubernetes.enable-gh-copilot"];
+}
+
+export function setAIRecommendationsInfoState(selectedoption: boolean): void {
+    setConfigValue("vs-kubernetes.enable-gh-copilot", selectedoption);
+}
+
+export async function setConfigValue(configKey: string, value: unknown): Promise<void> {
+    await atAllConfigScopes(addValueToConfigAtScope, configKey, value);
+}
+
+async function addValueToConfigAtScope(
+    configKey: string,
+    value: unknown,
+    scope: vscode.ConfigurationTarget,
+    valueAtScope: unknown,
+    createIfNotExist: boolean,
+): Promise<void> {
+    if (!createIfNotExist) {
+        if (!valueAtScope || (typeof valueAtScope === 'object' && valueAtScope !== null && !(configKey in valueAtScope))) {
+            // If the value is not at this scope and we are not creating it, return
+            // This means that the value is not set at this scope and we are not allowed to create it
+            return;
+        }
+    }
+
+    let newValue: unknown = {};
+    if (valueAtScope) {
+        newValue = Object.assign({}, valueAtScope);
+    }
+    (newValue as Record<string, unknown>)[configKey] = value;
+    await vscode.workspace.getConfiguration().update(EXTENSION_CONFIG_KEY, newValue, scope);
 }
