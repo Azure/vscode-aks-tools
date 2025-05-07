@@ -356,7 +356,10 @@ async function addValueToConfigAtScope(
     createIfNotExist: boolean,
 ): Promise<void> {
     if (!createIfNotExist) {
-        if (!valueAtScope || (typeof valueAtScope === 'object' && valueAtScope !== null && !(configKey in valueAtScope))) {
+        if (
+            !valueAtScope ||
+            (typeof valueAtScope === "object" && valueAtScope !== null && !(configKey in valueAtScope))
+        ) {
             // If the value is not at this scope and we are not creating it, return
             // This means that the value is not set at this scope and we are not allowed to create it
             return;
