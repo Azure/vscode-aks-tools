@@ -337,11 +337,11 @@ async function atAllConfigScopes<T>(fn: ConfigUpdater<T>, configKey: string, val
 }
 
 export function getAIRecommendationsInfoState(): boolean | undefined {
-    return vscode.workspace.getConfiguration(EXTENSION_CONFIG_KEY).get<boolean>("vs-kubernetes.enable-gh-copilot");
+    return vscode.workspace.getConfiguration()["vs-kubernetes.copilotEnabled"];
 }
 
 export function setAIRecommendationsInfoState(selectedoption: boolean): void {
-    setConfigValue("vs-kubernetes.enable-gh-copilot", selectedoption);
+    setConfigValue("vs-kubernetes.copilotEnabled", selectedoption);
 }
 
 export async function setConfigValue(configKey: string, value: unknown): Promise<void> {
