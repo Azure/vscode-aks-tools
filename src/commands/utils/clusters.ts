@@ -863,6 +863,6 @@ export async function validatePrerequisites(): Promise<Errorable<ClusterValidati
 export function getCopilotFlagMarkdownMessage(flagValue: boolean): vscode.MarkdownString {
     const message = `The AKS extension Copilot flag is currently set to ${flagValue}. Please set this flag to true in order to enable this functionality.`;
     return new vscode.MarkdownString(
-        `${message} [Learn more](https://azure.github.io/vscode-aks-tools/features/aks-plugins-github-copilot.html#features).`
+        `${message} [Learn more](https://azure.github.io/vscode-aks-tools/features/aks-plugins-github-copilot.html#features).`,
     );
 }
