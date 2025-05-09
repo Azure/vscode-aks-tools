@@ -25,10 +25,12 @@ export async function aksDeployManifest() {
 
     const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
 
+    const message = `The AKS extension Copilot flag is currently set to ${ghcopilotUserSettingsFlag}. Please set this flag to true in order to enable this functionality.`;
+    const markDownMessage = new vscode.MarkdownString(
+        `${message} [Learn more](https://azure.github.io/vscode-aks-tools/features/aks-plugins-github-copilot.html#features).`,
+    );
     if (!ghcopilotUserSettingsFlag) {
-        vscode.window.showWarningMessage(
-            "The AKS extension Copilot flag is currently set to false. Please set this flag to true in order to enable this functionality.",
-        );
+        vscode.window.showWarningMessage(markDownMessage.value);
         return;
     }
 
