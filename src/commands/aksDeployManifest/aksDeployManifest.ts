@@ -12,6 +12,7 @@ import { invokeKubectlCommand } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
 import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
 import { getAIRecommendationsInfoState } from "../utils/config";
+import { getCopilotFlagMarkdownMessage } from "../utils/clusters";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 const YAML_GLOB_PATTERN = "**/*.yaml";
@@ -25,12 +26,9 @@ export async function aksDeployManifest() {
 
     const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
 
-    const message = `The AKS extension Copilot flag is currently set to ${ghcopilotUserSettingsFlag}. Please set this flag to true in order to enable this functionality.`;
-    const markDownMessage = new vscode.MarkdownString(
-        `${message} [Learn more](https://azure.github.io/vscode-aks-tools/features/aks-plugins-github-copilot.html#features).`,
-    );
+    const message = getCopilotFlagMarkdownMessage(ghcopilotUserSettingsFlag ?? true);
     if (!ghcopilotUserSettingsFlag) {
-        vscode.window.showWarningMessage(markDownMessage.value);
+        vscode.window.showWarningMessage(message.value);
         return;
     }
 
