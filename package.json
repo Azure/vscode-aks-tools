@@ -165,7 +165,7 @@
                     "title": "Retina repository release tag",
                     "description": "Release tag for the stable Retina tool release."
                 },
-                "vs-kubernetes.enable-gh-copilot": {
+                "aks.copilotEnabled": {
                     "type": "boolean",
                     "default": true,
                     "description": "Set to true to enable GH Copilot hook."
