@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.6.7]
+
+* Add the enable copilot flag for gh copilot feature scenario. (#1408)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @kejatura-dev, @qpetraroia for review contributions, testing and reviews.
+
 ## [1.6.6]
 
 * Automatically add newly created clusters to user's selected clusters (#1293)
