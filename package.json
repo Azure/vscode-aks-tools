@@ -164,6 +164,11 @@
                     "default": "v0.0.26",
                     "title": "Retina repository release tag",
                     "description": "Release tag for the stable Retina tool release."
+                },
+                "aks.copilotEnabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Set to true to enable GH Copilot hook."
                 }
             }
         },

@@ -318,3 +318,7 @@ export async function deleteKubectlCustomCommand(name: string) {
         .getConfiguration()
         .update("azure.customkubectl.commands", commands, vscode.ConfigurationTarget.Global, true);
 }
+
+export function getAIRecommendationsInfoState(): boolean | undefined {
+    return vscode.workspace.getConfiguration("aks")["copilotEnabled"];
+}
