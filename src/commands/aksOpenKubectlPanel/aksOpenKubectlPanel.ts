@@ -12,6 +12,7 @@ import { selectClusterOptions, SelectClusterOptions } from "../../plugins/shared
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { ClusterPreference } from "../../plugins/shared/types";
 import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
+import { getCopilotFlagMarkdownMessage } from "../utils/clusters";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
@@ -25,10 +26,9 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
 
     const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
 
+    const message = getCopilotFlagMarkdownMessage(ghcopilotUserSettingsFlag ?? true);
     if (!ghcopilotUserSettingsFlag) {
-        vscode.window.showWarningMessage(
-            "The AKS extension Copilot flag is currently set to false. Please set this flag to true in order to enable this functionality.",
-        );
+        vscode.window.showWarningMessage(message.value);
         return;
     }
 

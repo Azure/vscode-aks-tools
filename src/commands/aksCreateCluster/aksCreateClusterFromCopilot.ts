@@ -11,6 +11,7 @@ import { window } from "vscode";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
 import { getAIRecommendationsInfoState } from "../utils/config";
+import { getCopilotFlagMarkdownMessage } from "../utils/clusters";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
@@ -19,10 +20,9 @@ export async function aksCreateClusterFromCopilot(): Promise<void> {
 
     const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
 
+    const message = getCopilotFlagMarkdownMessage(ghcopilotUserSettingsFlag ?? true);
     if (!ghcopilotUserSettingsFlag) {
-        vscode.window.showWarningMessage(
-            "The AKS extension Copilot flag is currently set to false. Please set this flag to true in order to enable this functionality.",
-        );
+        vscode.window.showWarningMessage(message.value);
         return;
     }
 
