@@ -23,6 +23,11 @@ import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { AutomatedDeployments } from "./AutomatedDeployments/AutomatedDeployments";
 import { CreateFleet } from "./CreateFleet/CreateFleet";
 import { FleetProperties } from "./FleetProperties/FleetProperties";
+import * as l10n from "@vscode/l10n";
+
+import en from "../../l10n/bundle.l10n.json";
+import qps from "../../l10n/bundle.l10n.qps-ploc.json";
+// TODO - add more language bundles here when translations are available
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -35,13 +40,26 @@ import { FleetProperties } from "./FleetProperties/FleetProperties";
 // - Message passing: the extension will handle outgoing messages from React components (sent using `vscode.postMessage`)
 //   and will respond using `Webview.postMessage`.
 
-const rootElem = document.getElementById("root");
-const root = createRoot(rootElem!);
+const bundles = { en, "qps-ploc": qps };
+//  TODO - add more language bundles here when translations are available
 
-function getVsCodeContent(): JSX.Element {
-    if (!rootElem) {
-        return <>Error: Element with ID &#39;root&#39; is not found.</>;
+// receive language from the extension
+window.addEventListener("message", (event) => {
+    if (event.data?.type === "init-language") {
+        console.log("Language: ", event.data.language);
+        const language = event.data.language;
+        const bundle = bundles[language as keyof typeof bundles] ?? bundles["en"];
+        l10n.config({ contents: bundle });
+        // ensure language config before rendering
+        const rootElem = document.getElementById("root");
+        if (rootElem) {
+            const root = createRoot(rootElem);
+            root.render(<StrictMode>{getVsCodeContent(rootElem)}</StrictMode>);
+        }
     }
+});
+
+function getVsCodeContent(rootElem: HTMLElement): JSX.Element {
     const vscodeContentId = rootElem?.dataset.contentid as ContentId;
     if (!vscodeContentId) {
         return <>Error: &#39;content-id&#39; attribute is not set on root element.</>;
@@ -78,5 +96,3 @@ function getVsCodeContent(): JSX.Element {
 
     return rendererLookup[vscodeContentId]();
 }
-
-root.render(<StrictMode>{getVsCodeContent()}</StrictMode>);

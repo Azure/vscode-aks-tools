@@ -22,6 +22,7 @@ import {
     VsCodeMessageContext,
 } from "../webview-contract/webviewTypes";
 import { getNonce, getUri } from "./utilities/webview";
+import * as vscode from "vscode";
 
 const viewType = "aksVsCodeTools";
 
@@ -59,7 +60,11 @@ export abstract class BasePanel<TContent extends ContentId> {
         const title = dataProvider.getTitle();
 
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
-
+        // passing the language to the webview for localization
+        panel.webview.postMessage({
+            type: "init-language",
+            language: vscode.env.language,
+        });
         // Set up messaging between VSCode and the webview.
         const telemetryDefinition = dataProvider.getTelemetryDefinition();
         const messageContext = getMessageContext(

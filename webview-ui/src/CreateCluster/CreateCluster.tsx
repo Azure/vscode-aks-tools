@@ -5,6 +5,7 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/c
 import { Stage, stateUpdater, vscode } from "./helpers/state";
 import { useStateManagement } from "../utilities/state";
 import { ProgressRing } from "../components/ProgressRing";
+import * as l10n from "@vscode/l10n";
 
 export function CreateCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -27,7 +28,7 @@ export function CreateCluster(initialState: InitialState) {
         switch (state.stage) {
             case Stage.Uninitialized:
             case Stage.Loading:
-                return <p>Loading...</p>;
+                return <p>{l10n.t("Loading...")}</p>;
             case Stage.CollectingInput:
                 return (
                     <CreateClusterInput
@@ -42,12 +43,13 @@ export function CreateCluster(initialState: InitialState) {
                 return (
                     <>
                         <h3>
-                            Creating Cluster {state.createParams?.name} in {state.createParams?.location}
+                            {l10n.t("Creating Cluster")} {state.createParams?.name} {l10n.t("in")}{" "}
+                            {state.createParams?.location}
                         </h3>
                         {state.deploymentPortalUrl && (
                             <p>
-                                Click <a href={state.deploymentPortalUrl}>here</a> to view the deployment in the Azure
-                                Portal.
+                                {l10n.t("Click")} <a href={state.deploymentPortalUrl}>{l10n.t("here")}</a>{" "}
+                                {l10n.t("to view the deployment in the AzurePortal.")}
                             </p>
                         )}
 
@@ -57,7 +59,7 @@ export function CreateCluster(initialState: InitialState) {
             case Stage.Failed:
                 return (
                     <>
-                        <h3>Error Creating Cluster</h3>
+                        <h3>{l10n.t("Error Creating Cluster")}</h3>
                         <p>{state.message}</p>
                     </>
                 );
@@ -75,8 +77,10 @@ export function CreateCluster(initialState: InitialState) {
 
     return (
         <>
-            <h1>Create AKS Cluster</h1>
-            <label>Subscription: {state.subscriptionName}</label>
+            <h1>{l10n.t("Create AKS Cluster")}</h1>
+            <label>
+                {l10n.t("Subscription:")} {state.subscriptionName}
+            </label>
             {getBody()}
         </>
     );
