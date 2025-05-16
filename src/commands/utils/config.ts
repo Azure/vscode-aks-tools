@@ -320,5 +320,5 @@ export async function deleteKubectlCustomCommand(name: string) {
 }
 
 export function getAIRecommendationsInfoState(): boolean | undefined {
-    return vscode.workspace.getConfiguration("aks")["copilotEnabled"];
+    return vscode.workspace.getConfiguration("aks")["copilotEnabledPreview"];
 }

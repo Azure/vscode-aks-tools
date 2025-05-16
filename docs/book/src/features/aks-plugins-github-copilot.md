@@ -10,7 +10,7 @@ The AKS plugins (or skills) for GitHub Copilot for Azure (@azure) extension enab
 > To disable the GitHub Copilot AKS hook in VS Code, add the following line to your user `settings.json` file:
 >
 > ```json
-> "aks.copilotEnabled": false
+> "aks.copilotEnabledPreview": false
 > ```
 >
 > You can open this file by pressing `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS), selecting **Preferences: Open Settings (JSON)**, and adding the setting within the top-level JSON object.
