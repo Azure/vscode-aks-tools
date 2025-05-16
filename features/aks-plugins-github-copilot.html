@@ -149,6 +149,13 @@
 <h2 id="overview"><a class="header" href="#overview"><strong>Overview</strong></a></h2>
 <p>The AKS plugins (or skills) for GitHub Copilot for Azure (@azure) extension enable users to perform various tasks related to Azure Kubernetes Service (AKS) directly from the GitHub Copilot Chat view. These skills include creating an AKS cluster, deploying a manifest to an AKS cluster, and generating Kubectl commands.</p>
 <h2 id="features"><a class="header" href="#features"><strong>Features</strong></a></h2>
+<blockquote>
+<p><strong>💡 Important Note:</strong>
+To disable the GitHub Copilot AKS hook in VS Code, add the following line to your user <code>settings.json</code> file:</p>
+<pre><code class="language-json">&quot;aks.copilotEnabledPreview&quot;: false
+</code></pre>
+<p>You can open this file by pressing <code>Ctrl+Shift+P</code> (or <code>Cmd+Shift+P</code> on macOS), selecting <strong>Preferences: Open Settings (JSON)</strong>, and adding the setting within the top-level JSON object.</p>
+</blockquote>
 <h3 id="create-an-aks-cluster"><a class="header" href="#create-an-aks-cluster"><strong>Create an AKS Cluster</strong></a></h3>
 <blockquote>
 <p>Users can quickly set up an AKS cluster using simple, natural language prompts. This reduces the complexity and time required to manually configure and deploy a Kubernetes cluster.</p>
