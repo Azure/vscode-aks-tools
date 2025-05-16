@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.6.8]
+
+* Fix the preview text. (#1425)
+* Fix messaging to add link to the doc. (#1411)
+* Fix the runner break as the version is deprecated. (#1427)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @kejatura-dev, @qpetraroia, @bosesuneha for review contributions, testing and reviews.
+
 ## [1.6.7]
 
 * Add the enable copilot flag for gh copilot feature scenario. (#1408)
