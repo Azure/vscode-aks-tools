@@ -60,11 +60,6 @@ export abstract class BasePanel<TContent extends ContentId> {
         const title = dataProvider.getTitle();
 
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
-        // passing the language to the webview for localization
-        panel.webview.postMessage({
-            type: "init-language",
-            language: vscode.env.language,
-        });
         // Set up messaging between VSCode and the webview.
         const telemetryDefinition = dataProvider.getTelemetryDefinition();
         const messageContext = getMessageContext(
@@ -141,6 +136,14 @@ function getMessageContext<TContent extends ContentId>(
         subscribeToMessages: (handler) => {
             webview.onDidReceiveMessage(
                 (message: object) => {
+                    // if language request is received, send the language back to the webview
+                    if ((message as Message<ToVsCodeMsgDef<TContent>>).command === "request-language") {
+                        webview.postMessage({
+                            type: "init-language",
+                            language: vscode.env.language,
+                        });
+                        return;
+                    }
                     if (!isValidMessage<ToVsCodeMsgDef<TContent>>(message)) {
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }

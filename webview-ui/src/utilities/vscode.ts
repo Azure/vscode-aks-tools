@@ -20,6 +20,8 @@ import { isObject } from "./runtimeTypes";
 const vsCodeApi: WebviewApi<unknown> | undefined =
     typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : undefined;
 
+export const vscode = vsCodeApi!;
+
 interface NamedEventTarget {
     target: EventTarget;
     name: string;
@@ -91,7 +93,7 @@ export function getTestVscodeMessageContext<T extends ContentId>(
     return { ...sink, ...source };
 }
 
-function subscribeToMessages<TMsgDef extends MessageDefinition>(
+export function subscribeToMessages<TMsgDef extends MessageDefinition>(
     eventTarget: NamedEventTarget,
     currentEventListener: EventListenerWithCommands | null,
     handler: MessageHandler<TMsgDef>,

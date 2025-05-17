@@ -3,6 +3,7 @@ import { vscode, stateUpdater } from "./state";
 import { useStateManagement } from "../utilities/state";
 import { useState } from "react";
 import styles from "./KaitoTest.module.css";
+import * as l10n from "@vscode/l10n";
 
 export function KaitoTest(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -44,17 +45,18 @@ export function KaitoTest(initialState: InitialState) {
     return (
         <div className={styles.main}>
             <h2>
-                Test: {state.modelName} ({state.clusterName})
+                {l10n.t("Test:")} {state.modelName} ({state.clusterName})
             </h2>
             <p className={styles.blurb}>
-                Experiment with AI outputs by fine-tuning parameters. Discover how each adjustment influences the
-                model&apos;s response.
+                {l10n.t(
+                    "Experiment with AI outputs by fine-tuning parameters. Discover how each adjustment influences the model&apos;s response.",
+                )}
             </p>
             <hr />
             <div className={styles.mainGrid}>
                 <div className={styles.formDiv}>
                     <div className={styles.formDivGrid}>
-                        <label>Prompt</label>
+                        <label>{l10n.t("Prompt")}</label>
                         <textarea
                             name="prompt"
                             value={formData.prompt}
@@ -171,7 +173,7 @@ export function KaitoTest(initialState: InitialState) {
                 </div>
                 {state.output !== "" && (
                     <div className={styles.outputDiv}>
-                        <p className={styles.outputHeader}>Output</p>
+                        <p className={styles.outputHeader}>{l10n.t("Output")}</p>
                         <hr className={styles.endDivider} />
                         <p className={styles.output}>{state.output}</p>
                     </div>

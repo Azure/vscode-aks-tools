@@ -6,6 +6,7 @@ import { useStateManagement } from "../utilities/state";
 import { ArrowIcon } from "../icons/ArrowIcon";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kaitoModels";
 import { ProgressRing } from "../components/ProgressRing";
+import * as l10n from "@vscode/l10n";
 
 export function KaitoModels(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -58,19 +59,20 @@ export function KaitoModels(initialState: InitialState) {
         return model.substring(0, 7) === "llama-2";
     }
 
-    const defaultMessage = <>Please note deployment time can vary from 10 minutes to 1hr+.</>;
+    const defaultMessage = <>{l10n.t("Please note deployment time can vary from 10 minutes to 1hr+.")}</>;
     function tooltipMessage(model: string) {
         if (model.substring(0, 7) === "llama-2") {
             return (
                 <>
-                    Llama2 models require privately referenced images for deployment. You must create a CRD and specify
-                    the location of your privately hosted image. Learn more{" "}
+                    {l10n.t(
+                        "Llama2 models require privately referenced images for deployment. You must create a CRD and specify the location of your privately hosted image. Learn more",
+                    )}{" "}
                     <a
                         target="_blank"
                         rel="noreferrer"
                         href="https://github.com/Azure/kaito/tree/main/presets/models/llama2"
                     >
-                        here.
+                        {l10n.t("here.")}
                     </a>
                 </>
             );
@@ -110,12 +112,16 @@ export function KaitoModels(initialState: InitialState) {
                                 </span>
                             </div>
                             <div className={styles.content}>
-                                <h2>Next steps</h2>
-                                <p>If this is your preferred model for deployment in your application, proceed to:</p>
+                                <h2>{l10n.t("Next steps")}</h2>
+                                <p>
+                                    {l10n.t(
+                                        "If this is your preferred model for deployment in your application, proceed to:",
+                                    )}
+                                </p>
                                 <ul>
-                                    <li>Generate the model workspace custom resource definition (CRD)</li>
-                                    <li>Optionally Customize workspace CRD.</li>
-                                    <li>Deploy to cluster</li>
+                                    <li>{l10n.t("Generate the model workspace custom resource definition (CRD)")}</li>
+                                    <li>{l10n.t("Optionally Customize workspace CRD.")}</li>
+                                    <li>{l10n.t("Deploy to cluster")}</li>
                                 </ul>
                             </div>
                         </div>
@@ -145,7 +151,7 @@ export function KaitoModels(initialState: InitialState) {
                                                             disabled={undeployable(selectedModel)}
                                                             onClick={() => onClickDeployKaito(selectedModel)}
                                                         >
-                                                            Deploy default workspace CRD
+                                                            {l10n.t("Deploy default workspace CRD")}
                                                         </button>
 
                                                         <span className={styles.tooltip}>
@@ -168,7 +174,7 @@ export function KaitoModels(initialState: InitialState) {
                                                     onClick={() => generateCRD(selectedModel)}
                                                     className={styles.button}
                                                 >
-                                                    Customize workspace CRD
+                                                    {l10n.t("Customize workspace CRD")}
                                                 </button>
                                             </div>
 
@@ -181,8 +187,9 @@ export function KaitoModels(initialState: InitialState) {
                                                             <>
                                                                 <div className={styles.failure}>
                                                                     <span className={styles.bold}>
-                                                                        Deployment unsucessful. Please delete this
-                                                                        workspace from your cluster and try again.
+                                                                        {l10n.t(
+                                                                            "Deployment unsucessful. Please delete this workspace from your cluster and try again.",
+                                                                        )}
                                                                     </span>
                                                                 </div>
                                                             </>
@@ -193,12 +200,14 @@ export function KaitoModels(initialState: InitialState) {
                                                             <div className={styles.progressDiv}>
                                                                 <ProgressRing className={styles.progress} />
                                                                 <span className={styles.bold}>
-                                                                    Deployment in progress
+                                                                    {l10n.t("Deployment in progress")}
                                                                 </span>
                                                             </div>
                                                             <div className={styles.statusTable}>
                                                                 <div className={styles.statusRow}>
-                                                                    <span className={styles.statusLabel}>Name:</span>
+                                                                    <span className={styles.statusLabel}>
+                                                                        {l10n.t("Name:")}
+                                                                    </span>
                                                                     <span className={styles.gray}>
                                                                         workspace-
                                                                         {selectedModel}
@@ -206,7 +215,7 @@ export function KaitoModels(initialState: InitialState) {
                                                                 </div>
                                                                 <div className={styles.statusRow}>
                                                                     <span className={styles.statusLabel}>
-                                                                        Instance:
+                                                                        {l10n.t("Instance:")}
                                                                     </span>
                                                                     <span className={styles.gray}>
                                                                         {details && details.minimumGpu}
@@ -214,7 +223,7 @@ export function KaitoModels(initialState: InitialState) {
                                                                 </div>
                                                                 <div className={styles.statusRow}>
                                                                     <span className={styles.statusLabel}>
-                                                                        Resource Ready:
+                                                                        {l10n.t("Resource Ready:")}
                                                                     </span>
                                                                     <span className={styles.gray}>
                                                                         {state.resourceReady === null
@@ -226,7 +235,7 @@ export function KaitoModels(initialState: InitialState) {
                                                                 </div>
                                                                 <div className={styles.statusRow}>
                                                                     <span className={styles.statusLabel}>
-                                                                        Inference Ready:
+                                                                        {l10n.t("Inference Ready:")}
                                                                     </span>
                                                                     <span className={styles.gray}>
                                                                         {state.inferenceReady === null
@@ -238,7 +247,7 @@ export function KaitoModels(initialState: InitialState) {
                                                                 </div>
                                                                 <div className={styles.statusRow}>
                                                                     <span className={styles.statusLabel}>
-                                                                        Workspace Ready:
+                                                                        {l10n.t("Workspace Ready:")}
                                                                     </span>
                                                                     <span className={styles.gray}>
                                                                         {state.workspaceReady === null
@@ -249,7 +258,9 @@ export function KaitoModels(initialState: InitialState) {
                                                                     </span>
                                                                 </div>
                                                                 <div className={styles.statusRow}>
-                                                                    <span className={styles.statusLabel}>Age:</span>
+                                                                    <span className={styles.statusLabel}>
+                                                                        {l10n.t("Age:")}
+                                                                    </span>
                                                                     <span className={styles.gray}>
                                                                         {convertMinutesToFormattedAge(state.age)}
                                                                     </span>
@@ -265,11 +276,11 @@ export function KaitoModels(initialState: InitialState) {
                                                     <>
                                                         <div className={styles.success}>
                                                             <span className={styles.successSpan}>
-                                                                Model successfully deployed!
+                                                                {l10n.t("Model successfully deployed!")}
                                                             </span>
                                                         </div>
                                                         <button onClick={redirectKaitoManage} className={styles.button}>
-                                                            View deployed models
+                                                            {l10n.t("View deployed models")}
                                                         </button>
                                                     </>
                                                 )}
@@ -281,19 +292,20 @@ export function KaitoModels(initialState: InitialState) {
                 )}
                 {selectedModel !== null && <div className={styles.sidePanel}></div>}
                 <div className={styles.mainDiv}>
-                    <h2>Create a KAITO Workspace ({state.clusterName})</h2>
+                    <h2>
+                        {l10n.t("Create a KAITO Workspace")} ({state.clusterName})
+                    </h2>
                     <hr />
                     <div className={styles.subHeader}>
-                        To get your model up and running, you can either create a CRD file with &quot;Generate CRD&quot;
-                        which you can then deploy using kubectl apply -f filename.yml, or to deploy a model with default
-                        settings, just click &quot;Deploy Workspace&quot;. This will deploy a workspace with default
-                        settings. Learn more about deploying KAITO workspaces{" "}
+                        {l10n.t(
+                            "To get your model up and running, you can either create a CRD file with 'Generate CRD' which you can then deploy using kubectl apply -f filename.yml, or to deploy a model with default settings, just click 'Deploy Workspace'. This will deploy a workspace with default settings. Learn more about deploying KAITO workspaces",
+                        )}{" "}
                         <a
                             rel="noreferrer"
                             target="_blank"
                             href="https://github.com/Azure/kaito?tab=readme-ov-file#quick-start"
                         >
-                            here.
+                            {l10n.t("here.")}
                         </a>
                         <br />
                     </div>
@@ -326,19 +338,19 @@ export function KaitoModels(initialState: InitialState) {
                                                     {details && (
                                                         <div className={styles.modelDetails}>
                                                             <div>
-                                                                Minimum GPU size:{" "}
+                                                                {l10n.t("Minimum GPU size:")}{" "}
                                                                 <span className={styles.gray}>
                                                                     {details.minimumGpu}
                                                                 </span>
                                                             </div>
                                                             <div>
-                                                                Compatible Kaito Versions:{" "}
+                                                                {l10n.t("Compatible Kaito Versions:")}{" "}
                                                                 <span className={styles.gray}>
                                                                     {details.kaitoVersion}
                                                                 </span>
                                                             </div>
                                                             <div>
-                                                                Model source:{" "}
+                                                                {l10n.t("Model source:")}{" "}
                                                                 <a
                                                                     className={styles.link}
                                                                     href={details.modelSource}

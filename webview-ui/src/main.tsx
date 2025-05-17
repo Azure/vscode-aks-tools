@@ -24,9 +24,13 @@ import { AutomatedDeployments } from "./AutomatedDeployments/AutomatedDeployment
 import { CreateFleet } from "./CreateFleet/CreateFleet";
 import { FleetProperties } from "./FleetProperties/FleetProperties";
 import * as l10n from "@vscode/l10n";
+import { vscode } from "./utilities/vscode";
 
 import en from "../../l10n/bundle.l10n.json";
 import qps from "../../l10n/bundle.l10n.qps-ploc.json";
+import es from "../../l10n/bundle.l10n.es.json";
+import fr from "../../l10n/bundle.l10n.fr.json";
+import zhcn from "../../l10n/bundle.l10n.zh-cn.json";
 // TODO - add more language bundles here when translations are available
 
 // There are two modes of launching this application:
@@ -40,7 +44,7 @@ import qps from "../../l10n/bundle.l10n.qps-ploc.json";
 // - Message passing: the extension will handle outgoing messages from React components (sent using `vscode.postMessage`)
 //   and will respond using `Webview.postMessage`.
 
-const bundles = { en, "qps-ploc": qps };
+const bundles = { en, es, fr, "qps-ploc": qps, "zh-cn": zhcn };
 //  TODO - add more language bundles here when translations are available
 
 // receive language from the extension
@@ -58,6 +62,9 @@ window.addEventListener("message", (event) => {
         }
     }
 });
+
+// send language request to the extension
+vscode.postMessage({ command: "request-language" });
 
 function getVsCodeContent(rootElem: HTMLElement): JSX.Element {
     const vscodeContentId = rootElem?.dataset.contentid as ContentId;
