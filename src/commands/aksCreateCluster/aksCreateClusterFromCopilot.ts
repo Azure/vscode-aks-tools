@@ -10,11 +10,21 @@ import {
 import { window } from "vscode";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
+import { getAIRecommendationsInfoState } from "../utils/config";
+import { getCopilotFlagMarkdownMessage } from "../utils/clusters";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
 export async function aksCreateClusterFromCopilot(): Promise<void> {
     const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+
+    const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
+
+    const message = getCopilotFlagMarkdownMessage(ghcopilotUserSettingsFlag ?? true);
+    if (!ghcopilotUserSettingsFlag) {
+        vscode.window.showWarningMessage(message.value);
+        return;
+    }
 
     if (!checkGitHubCopilotExtension) {
         handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);

@@ -4,7 +4,7 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { KubectlDataProvider, KubectlPanel } from "../../panels/KubectlPanel";
 import { CommandResponse } from "../../plugins/shared/pluginResponses";
 import { getExtension } from "../utils/host";
-import { getKubectlCustomCommands } from "../utils/config";
+import { getAIRecommendationsInfoState, getKubectlCustomCommands } from "../utils/config";
 import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import { getReadySessionProvider } from "../../auth/azureAuth";
@@ -12,6 +12,7 @@ import { selectClusterOptions, SelectClusterOptions } from "../../plugins/shared
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { ClusterPreference } from "../../plugins/shared/types";
 import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
+import { getCopilotFlagMarkdownMessage } from "../utils/clusters";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 
@@ -20,6 +21,14 @@ export async function aksOpenKubectlPanel(_context: IActionContext, target: unkn
 
     if (!checkGitHubCopilotExtension) {
         handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+        return;
+    }
+
+    const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
+
+    const message = getCopilotFlagMarkdownMessage(ghcopilotUserSettingsFlag ?? true);
+    if (!ghcopilotUserSettingsFlag) {
+        vscode.window.showWarningMessage(message.value);
         return;
     }
 
