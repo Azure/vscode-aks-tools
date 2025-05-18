@@ -23,6 +23,7 @@ import {
 } from "../webview-contract/webviewTypes";
 import { getNonce, getUri } from "./utilities/webview";
 import * as vscode from "vscode";
+import { readFile } from "fs/promises";
 
 const viewType = "aksVsCodeTools";
 
@@ -136,12 +137,21 @@ function getMessageContext<TContent extends ContentId>(
         subscribeToMessages: (handler) => {
             webview.onDidReceiveMessage(
                 (message: object) => {
-                    // if language request is received, send the language back to the webview
-                    if ((message as Message<ToVsCodeMsgDef<TContent>>).command === "request-language") {
-                        webview.postMessage({
-                            type: "init-language",
-                            language: vscode.env.language,
-                        });
+                    // if bundle request is received, send the language back to the webview
+                    if ((message as Message<ToVsCodeMsgDef<TContent>>).command === "request-bundle") {
+                        if (vscode.l10n.uri?.fsPath) {
+                            readFile(vscode.l10n.uri?.fsPath, "utf-8").then((fileContent) => {
+                                webview.postMessage({
+                                    type: "bundle",
+                                    payload: fileContent,
+                                });
+                            });
+                        } else {
+                            webview.postMessage({
+                                type: "bundle",
+                                payload: undefined,
+                            });
+                        }
                         return;
                     }
                     if (!isValidMessage<ToVsCodeMsgDef<TContent>>(message)) {
