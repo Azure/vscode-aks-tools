@@ -154,7 +154,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         disabled={false}
                         aria-label="Select a resource group"
                     >
-                        <CustomDropdownOption value="" label="Select" />
+                        <CustomDropdownOption value="" label={l10n.t("Select")} />
                         {allResourceGroups.length > 0 ? (
                             allResourceGroups.map((group) => (
                                 <CustomDropdownOption
@@ -164,7 +164,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                                 />
                             ))
                         ) : (
-                            <CustomDropdownOption value="" label="No resource groups available" />
+                            <CustomDropdownOption value="" label={l10n.t("No resource groups available")} />
                         )}
                     </CustomDropdown>
 
@@ -205,7 +205,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         onChange={handleLocationChange}
                         disabled={false}
                     >
-                        <CustomDropdownOption value="" label="Select" />
+                        <CustomDropdownOption value="" label={l10n.t("Select")} />
                         {props.locations.map((location) => (
                             <CustomDropdownOption key={location} value={location} label={location} />
                         ))}

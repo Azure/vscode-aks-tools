@@ -11,6 +11,8 @@ import { longRunning } from "../utils/host";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
 import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
+import { getAIRecommendationsInfoState } from "../utils/config";
+import { getCopilotFlagMarkdownMessage } from "../utils/clusters";
 
 const GITHUBCOPILOT_FOR_AZURE_VSCODE_ID = "ms-azuretools.vscode-azure-github-copilot";
 const YAML_GLOB_PATTERN = "**/*.yaml";
@@ -21,6 +23,14 @@ const BASE_WORKLOADS_PATH = "/workloads";
 export async function aksDeployManifest() {
     // Check if GitHub Copilot for Azure extension is installed
     const checkGitHubCopilotExtension = checkExtension(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
+
+    const ghcopilotUserSettingsFlag = getAIRecommendationsInfoState();
+
+    const message = getCopilotFlagMarkdownMessage(ghcopilotUserSettingsFlag ?? true);
+    if (!ghcopilotUserSettingsFlag) {
+        vscode.window.showWarningMessage(message.value);
+        return;
+    }
 
     if (!checkGitHubCopilotExtension) {
         handleExtensionDoesNotExist(GITHUBCOPILOT_FOR_AZURE_VSCODE_ID);
