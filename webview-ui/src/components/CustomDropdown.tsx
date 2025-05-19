@@ -8,6 +8,7 @@ import React, {
     MouseEvent as ReactMouseEvent,
 } from "react";
 import styles from "./CustomDropdown.module.css";
+import { CustomDropdownOptionProps } from "./CustomDropdownOption";
 
 interface CustomDropdownProps {
     id?: string;
@@ -18,13 +19,7 @@ interface CustomDropdownProps {
     className?: string;
 }
 
-function isReactElement(child: ReactNode): child is ReactElement<{
-    value: string;
-    label: string;
-    onClick?: (value: string) => void;
-    id?: string;
-    className?: string;
-}> {
+function isReactElement(child: ReactNode): child is ReactElement<CustomDropdownOptionProps> {
     return React.isValidElement(child);
 }
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -154,9 +149,24 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 event.preventDefault();
                 break;
             }
+            case " ":
+                handleOptionClick(childrenArray[highlightedIndex].props.value);
+                event.preventDefault();
+                break;
             case "Escape":
                 setIsOpen(false);
                 event.preventDefault();
+                break;
+            case "Home":
+                setHighlightedIndex(0);
+                event.preventDefault();
+                break;
+            case "End":
+                setHighlightedIndex(childrenArray.length - 1);
+                event.preventDefault();
+                break;
+            case "Tab":
+                setIsOpen(false);
                 break;
         }
     };
@@ -201,6 +211,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 aria-haspopup="listbox"
+                aria-controls={`${id}-list`}
                 aria-expanded={isOpen}
             >
                 {buttonLabel}
@@ -221,6 +232,8 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
             </button>
             {isOpen && (
                 <ul
+                    tabIndex={0}
+                    id={`${id}-list`}
                     className={`${styles.dropdownMenu} ${dropUp ? styles.dropUp : ""}`}
                     ref={menuRef}
                     role="listbox"
@@ -229,6 +242,8 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                     {React.Children.map(children, (child, index) =>
                         isReactElement(child)
                             ? React.cloneElement(child, {
+                                  role: "option",
+                                  "aria-selected": index === highlightedIndex,
                                   onClick: () => handleOptionClick(child.props.value),
                                   id: `${id}-option-${index}`,
                                   className: index === highlightedIndex ? styles.highlightedOption : "",

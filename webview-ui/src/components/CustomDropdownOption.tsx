@@ -1,7 +1,7 @@
 import React from "react";
 import styles from "./CustomDropdown.module.css";
 
-interface CustomDropdownOptionProps {
+export interface CustomDropdownOptionProps extends Omit<React.LiHTMLAttributes<HTMLLIElement>, "onClick"> {
     id?: string;
     value: string;
     label: string;
