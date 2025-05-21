@@ -647,53 +647,6 @@
                 "id": "aks.aksRetinaCaptureSubMenu",
                 "label": "%Run Retina Capture%"
             }
-        ],
-        "localizations": [
-            {
-                "languageId": "en",
-                "translations": [
-                    {
-                        "id": "ms-kubernetes-tools.vscode-aks-tools",
-                        "path": "./l10n/bundle.l10n.json"
-                    }
-                ]
-            },
-            {
-                "languageId": "qps-ploc",
-                "translations": [
-                    {
-                        "id": "ms-kubernetes-tools.vscode-aks-tools",
-                        "path": "./l10n/bundle.l10n.qps-ploc.json"
-                    }
-                ]
-            },
-            {
-                "languageId": "es",
-                "translations": [
-                    {
-                        "id": "ms-kubernetes-tools.vscode-aks-tools",
-                        "path": "./l10n/bundle.l10n.es.json"
-                    }
-                ]
-            },
-            {
-                "languageId": "fr",
-                "translations": [
-                    {
-                        "id": "ms-kubernetes-tools.vscode-aks-tools",
-                        "path": "./l10n/bundle.l10n.fr.json"
-                    }
-                ]
-            },
-            {
-                "languageId": "zh-cn",
-                "translations": [
-                    {
-                        "id": "ms-kubernetes-tools.vscode-aks-tools",
-                        "path": "./l10n/bundle.l10n.zh-cn.json"
-                    }
-                ]
-            }
         ]
     },
     "scripts": {

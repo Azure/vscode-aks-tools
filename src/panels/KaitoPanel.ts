@@ -25,7 +25,6 @@ import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contra
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { isPodReady, getKaitoPods } from "./utilities/KaitoHelpers";
-
 const MAX_RETRY = 3;
 let RETRY_COUNT = 0;
 

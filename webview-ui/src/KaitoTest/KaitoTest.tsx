@@ -70,13 +70,13 @@ export function KaitoTest(initialState: InitialState) {
                         <span></span>
                         <span className={styles.submitSpan}>
                             <button className={styles.resetButton} onClick={resetParams}>
-                                Reset Params
+                                {l10n.t("Reset Parameters")}
                             </button>
                             <button className={styles.mainButton} onClick={handleSubmit}>
-                                Submit Prompt
+                                {l10n.t("Submit Prompt")}
                             </button>
                         </span>
-                        <label>Temperature</label>
+                        <label>{l10n.t("Temperature")}</label>
                         <div className={styles.sliderContainer}>
                             <span className={styles.min}>0.01</span>
                             <input
@@ -132,7 +132,7 @@ export function KaitoTest(initialState: InitialState) {
                             <span className={styles.max}>100</span>
                         </div>
 
-                        <label>Repetition Penalty</label>
+                        <label>{l10n.t("Repetition Penalty")}</label>
                         <div className={styles.sliderContainer}>
                             <span className={styles.min}>1.00</span>
 
@@ -151,7 +151,7 @@ export function KaitoTest(initialState: InitialState) {
                             <span className={styles.max}>2.00</span>
                         </div>
 
-                        <label>Max Length</label>
+                        <label>{l10n.t("Max Length")}</label>
                         <div className={styles.sliderContainer}>
                             <span className={styles.min}>0</span>
 

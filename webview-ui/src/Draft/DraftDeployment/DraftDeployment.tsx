@@ -35,7 +35,7 @@ import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { distinct } from "../../utilities/array";
 import { TextWithDropdown } from "../../components/TextWithDropdown";
-
+import * as l10n from "@vscode/l10n";
 export function DraftDeployment(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -56,18 +56,18 @@ export function DraftDeployment(initialState: InitialState) {
 
     function handleSubscriptionSelect(subscription: Subscription | null) {
         const validated =
-            subscription === null ? missing<Subscription>("Subscription is required.") : valid(subscription);
+            subscription === null ? missing<Subscription>(l10n.t("Subscription is required.")) : valid(subscription);
         eventHandlers.onSetSelectedSubscription(validated);
     }
 
     function handleAcrResourceGroupSelect(resourceGroup: string | null) {
         const validated =
-            resourceGroup === null ? missing<string>("ACR resource group is required.") : valid(resourceGroup);
+            resourceGroup === null ? missing<string>(l10n.t("ACR resource group is required.")) : valid(resourceGroup);
         eventHandlers.onSetSelectedAcrResourceGroup(validated);
     }
 
     function handleAcrSelect(acr: string | null) {
-        const validated = acr === null ? missing<string>("ACR is required.") : valid(acr);
+        const validated = acr === null ? missing<string>(l10n.t("ACR is required.")) : valid(acr);
         eventHandlers.onSetSelectedAcr(validated);
     }
 
@@ -76,7 +76,7 @@ export function DraftDeployment(initialState: InitialState) {
         eventHandlers.onSetSelectedAcrRepository(validated);
 
         function getValidatedRepository(): Validatable<NewOrExisting<string>> {
-            if (!repository) return missing("Azure Container Registry image is required.");
+            if (!repository) return missing(l10n.t("Azure Container Registry image is required."));
             return valid({ isNew, value: repository });
         }
     }
@@ -86,7 +86,7 @@ export function DraftDeployment(initialState: InitialState) {
         eventHandlers.onSetSelectedAcrRepoTag(validated);
 
         function getValidatedImageTag(): Validatable<NewOrExisting<string>> {
-            if (!imageTag) return missing("Image tag is required.");
+            if (!imageTag) return missing(l10n.t("Image tag is required."));
             return valid({ isNew, value: imageTag });
         }
     }
@@ -125,7 +125,7 @@ export function DraftDeployment(initialState: InitialState) {
         eventHandlers.onSetSelectedApplicationName(validated);
 
         function getValidatedApplicationName(name: string): Validatable<string> {
-            if (!name) return missing("Application name is required.");
+            if (!name) return missing(l10n.t("Application name is required."));
 
             // TODO: further validation
             return valid(name);
@@ -148,10 +148,10 @@ export function DraftDeployment(initialState: InitialState) {
 
     function getValidatedPort(port: number): Validatable<number> {
         if (Number.isNaN(port)) {
-            return invalid(port, "Port must be a number.");
+            return invalid(port, l10n.t("Port must be a number."));
         }
         if (port < 1 || port > 65535) {
-            return invalid(port, "Port number must be between 1 and 65535.");
+            return invalid(port, l10n.t("Port number must be between 1 and 65535."));
         }
 
         return valid(port);
@@ -162,7 +162,7 @@ export function DraftDeployment(initialState: InitialState) {
         eventHandlers.onSetSelectedClusterNamespace(validated);
 
         function getValidatedNamespace(): Validatable<NewOrExisting<string>> {
-            if (!namespace) return missing("Namespace is required.");
+            if (!namespace) return missing(l10n.t("Namespace is required."));
             return valid({ isNew, value: namespace });
         }
     }
@@ -226,38 +226,43 @@ export function DraftDeployment(initialState: InitialState) {
 
     const existingFiles = getExistingPaths(state.selectedDeploymentSpecType, state.existingFiles);
 
-    const acrImageTooltipMessage =
-        "If you choose to use Draft's GitHub Action workflow for your deployment, it will automatically create and deploy the new resources through the workflow. The workflow can build new images and deploy to new namespaces.";
+    const acrImageTooltipMessage = l10n.t(
+        "If you choose to use Draft's GitHub Action workflow for your deployment, it will automatically create and deploy the new resources through the workflow. The workflow can build new images and deploy to new namespaces.",
+    );
 
-    const clusterResourceGroupTooltipMessage =
-        "You can select a resource group and cluster here if you wish to select an existing Kubernetes namespace to deploy to.\n\nLeave this field blank to specify a namespace that does not exist yet.";
+    const clusterResourceGroupTooltipMessage = l10n.t(
+        "You can select a resource group and cluster here if you wish to select an existing Kubernetes namespace to deploy to.\n\nLeave this field blank to specify a namespace that does not exist yet.",
+    );
 
-    const clusterNamespaceTooltipMessage =
-        "If you choose to use Draft's GitHub Action workflow for your deployment, it will create this namespace when it runs.";
+    const clusterNamespaceTooltipMessage = l10n.t(
+        "If you choose to use Draft's GitHub Action workflow for your deployment, it will create this namespace when it runs.",
+    );
 
-    const targetPortTooltipMessage =
-        "The port on which your application listens in the deployment.\n\nThis will typically match the port exposed in the Dockerfile.";
+    const targetPortTooltipMessage = l10n.t(
+        "The port on which your application listens in the deployment.\n\nThis will typically match the port exposed in the Dockerfile.",
+    );
 
-    const servicePortTooltipMessage = "The port on which the service will listen for incoming traffic.";
+    const servicePortTooltipMessage = l10n.t("The port on which the service will listen for incoming traffic.");
 
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-                <h2>Automated Deployments: Draft a deployment</h2>
+                <h2>{l10n.t("Automated Deployments: Draft a deployment")}</h2>
                 <p>
-                    Enter the appropriate values in the fields below to enable Draft to automatically create Kubernetes
-                    manifests, Helm charts, or Kustomize files for your application. Once created, you will be able to
-                    deploy your application to your AKS (Azure Kubernetes Service) cluster.
+                    {l10n.t(
+                        "Enter the appropriate values in the fields below to enable Draft to automatically create Kubernetes manifests, Helm charts, or Kustomize files for your application. Once created, you will be able to deploy your application to your AKS (Azure Kubernetes Service) cluster.",
+                    )}
                 </p>
 
                 <fieldset className={styles.inputContainer} disabled={state.status !== "Editing"}>
-                    <h3 className={styles.fullWidth}>Azure resource details</h3>
+                    <h3 className={styles.fullWidth}>{l10n.t("Azure resource details")}</h3>
                     <p className={styles.fullWidth}>
-                        Select the Azure Container Registry (ACR) which will contain the image to use for your
-                        deployment. You may also select an AKS cluster to choose a Kubernetes namespace to deploy to.
+                        {l10n.t(
+                            "Select the Azure Container Registry (ACR) which will contain the image to use for your deployment. You may also select an AKS cluster to choose a Kubernetes namespace to deploy to.",
+                        )}
                     </p>
                     <label htmlFor="subscription-input" className={styles.label}>
-                        Subscription *
+                        {l10n.t("Subscription *")}
                     </label>
                     <ResourceSelector<Subscription>
                         id="subscription-input"
@@ -278,7 +283,7 @@ export function DraftDeployment(initialState: InitialState) {
                     {isValid(state.selectedSubscription) && (
                         <>
                             <label htmlFor="acr-rg-input" className={styles.label}>
-                                ACR Resource Group *
+                                {l10n.t("ACR Resource Group *")}
                             </label>
                             <ResourceSelector<string>
                                 id="acr-rg-input"
@@ -301,7 +306,7 @@ export function DraftDeployment(initialState: InitialState) {
                     {isValid(state.selectedAcrResourceGroup) && (
                         <>
                             <label htmlFor="acr-input" className={styles.label}>
-                                Container Registry *
+                                {l10n.t("Container Registry *")}
                             </label>
                             <ResourceSelector<string>
                                 id="acr-input"
@@ -324,7 +329,7 @@ export function DraftDeployment(initialState: InitialState) {
                     {isValid(state.selectedAcr) && (
                         <>
                             <label htmlFor="acr-repo-input" className={styles.label}>
-                                Azure Container Registry image *
+                                {l10n.t("Azure Container Registry image *")}
                                 <span className={"tooltip-holder"} data-tooltip-text={acrImageTooltipMessage}>
                                     <i className={`${styles.inlineIcon} codicon codicon-info`} />
                                 </span>
@@ -350,7 +355,7 @@ export function DraftDeployment(initialState: InitialState) {
                     {isValid(state.selectedAcrRepository) && (
                         <>
                             <label htmlFor="acr-image-tag-input" className={styles.label}>
-                                Image tag *
+                                {l10n.t("Image tag *")}
                             </label>
                             {!state.selectedAcrRepository.value.isNew && (
                                 <TextWithDropdown
@@ -388,7 +393,7 @@ export function DraftDeployment(initialState: InitialState) {
                     {isValid(state.selectedSubscription) && (
                         <>
                             <label htmlFor="cluster-rg-input" className={styles.label}>
-                                Cluster Resource Group
+                                {l10n.t("Cluster Resource Group")}
                                 <span
                                     className={"tooltip-holder"}
                                     data-tooltip-text={clusterResourceGroupTooltipMessage}
@@ -411,7 +416,7 @@ export function DraftDeployment(initialState: InitialState) {
                     {state.selectedClusterResourceGroup && (
                         <>
                             <label htmlFor="cluster-input" className={styles.label}>
-                                Cluster
+                                {l10n.t("Cluster")}
                             </label>
                             <ResourceSelector<string>
                                 id="cluster-input"
@@ -425,9 +430,9 @@ export function DraftDeployment(initialState: InitialState) {
                         </>
                     )}
 
-                    <h3 className={styles.fullWidth}>Deployment details</h3>
+                    <h3 className={styles.fullWidth}>{l10n.t("Deployment details")}</h3>
                     <label htmlFor="location-input" className={styles.label}>
-                        Location *
+                        {l10n.t("Location *")}
                     </label>
                     <input
                         type="text"
@@ -440,7 +445,7 @@ export function DraftDeployment(initialState: InitialState) {
                         <button className="choose-location-button" onClick={handleChooseLocationClick}>
                             <span className={styles.iconButton}>
                                 <FontAwesomeIcon icon={faFolder} />
-                                &nbsp;Choose location
+                                &nbsp;{l10n.t("Choose location")}
                             </span>
                         </button>
                     </div>
@@ -452,7 +457,7 @@ export function DraftDeployment(initialState: InitialState) {
                     )}
 
                     <label htmlFor="deployment-type-input" className={styles.label}>
-                        Deployment options *
+                        {l10n.t("Deployment options *")}
                     </label>
                     <div id="deployment-type-input" className={styles.control}>
                         <div className={styles.radioLine}>
@@ -464,7 +469,7 @@ export function DraftDeployment(initialState: InitialState) {
                                 onChange={handleDeploymentSpecTypeChange}
                             />
 
-                            <label className={styles.radioLabel}>Manifests</label>
+                            <label className={styles.radioLabel}>{l10n.t("Manifests")}</label>
                         </div>
                         <div className={styles.radioLine}>
                             <input
@@ -489,7 +494,7 @@ export function DraftDeployment(initialState: InitialState) {
                     </div>
 
                     <label htmlFor="app-name-input" className={styles.label}>
-                        Application name *
+                        {l10n.t("Application name *")}
                     </label>
                     <input
                         type="text"
@@ -507,7 +512,7 @@ export function DraftDeployment(initialState: InitialState) {
                     )}
 
                     <label htmlFor="target-port-input" className={styles.label}>
-                        Target port *
+                        {l10n.t("Target port *")}
                         <span className={"tooltip-holder"} data-tooltip-text={targetPortTooltipMessage}>
                             <i className={`${styles.inlineIcon} codicon codicon-info`} />
                         </span>
@@ -527,7 +532,7 @@ export function DraftDeployment(initialState: InitialState) {
                     )}
 
                     <label htmlFor="service-port-input" className={styles.label}>
-                        Service port *
+                        {l10n.t("Service port *")}
                         <span className={"tooltip-holder"} data-tooltip-text={servicePortTooltipMessage}>
                             <i className={`${styles.inlineIcon} codicon codicon-info`} />
                         </span>
@@ -547,7 +552,7 @@ export function DraftDeployment(initialState: InitialState) {
                     )}
 
                     <label htmlFor="namespace-input" className={styles.label}>
-                        Namespace *
+                        {l10n.t("Namespace *")}
                         <span className={"tooltip-holder"} data-tooltip-text={clusterNamespaceTooltipMessage}>
                             <i className={`${styles.inlineIcon} codicon codicon-info`} />
                         </span>
@@ -572,13 +577,13 @@ export function DraftDeployment(initialState: InitialState) {
 
                 <div className={styles.buttonContainer}>
                     <button type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
-                        Create
+                        {l10n.t("Create")}
                     </button>
                 </div>
 
                 {existingFiles.length > 0 && (
                     <>
-                        <h3>Files</h3>
+                        <h3>{l10n.t("Files")}</h3>
                         <ul className={styles.existingFileList}>
                             {existingFiles.map((path, i) => (
                                 <li key={i}>
@@ -601,12 +606,12 @@ export function DraftDeployment(initialState: InitialState) {
                     <div className={styles.nextStepsContainer}>
                         <i className={`codicon codicon-sparkle ${styles.icon}`}></i>
                         <div className={styles.content}>
-                            <h3>Next steps</h3>
+                            <h3>{l10n.t("Next steps")}</h3>
 
                             <p>
-                                To generate a GitHub Action, you can run{" "}
+                                {l10n.t("To generate a GitHub Action, you can run")}{" "}
                                 <a href="#" onClick={handleDraftWorkflowClick}>
-                                    Automated Deployments: Create a GitHub workflow
+                                    {l10n.t("Automated Deployments: Create a GitHub workflow")}
                                 </a>
                                 .
                             </p>
