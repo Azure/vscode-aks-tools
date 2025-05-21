@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   prettier-check:
     runs-on: ubuntu-latest
@@ -28,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-            npm install
+            npm run install:all
 
       - name: Run Prettier check
         run: npx prettier --check "**/*.{ts,tsx,json,css,md}"
