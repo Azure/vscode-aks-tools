@@ -6,6 +6,7 @@ import { generateKaitoYAML } from "../KaitoModels/KaitoModels";
 import { useEffect } from "react";
 import { convertMinutesToFormattedAge } from "../KaitoModels/KaitoModels";
 import { ProgressRing } from "../components/ProgressRing";
+import * as l10n from "@vscode/l10n";
 
 export function KaitoManage(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -38,11 +39,14 @@ export function KaitoManage(initialState: InitialState) {
 
     return (
         <>
-            <h2 className={styles.mainTitle}>Manage KAITO Deployments ({state.clusterName})</h2>
+            <h2 className={styles.mainTitle}>
+                {l10n.t("Manage KAITO Deployments")} ({state.clusterName})
+            </h2>
             <hr />
             <p>
-                Review the deployment status and perform operations on models in your cluster. If no clusters are shown,
-                you must first deploy a model.
+                {l10n.t(
+                    "Review the deployment status and perform operations on models in your cluster. If no clusters are shown, you must first deploy a model.",
+                )}
             </p>
 
             <div className={styles.gridContainer}>
@@ -50,8 +54,9 @@ export function KaitoManage(initialState: InitialState) {
                     <div key={index} className={styles.gridItem}>
                         <p className={styles.modelName}>{model.name}</p>
                         <p className={styles.blurb}>
-                            Review the status of each model deployment and access available actions as needed.
-                            Deployment times vary greatly depending on model size.
+                            {l10n.t(
+                                "Review the status of each model deployment and access available actions as needed. Deployment times vary greatly depending on model size.",
+                            )}
                         </p>
                         <div className={styles.progressDiv}>
                             {!(model.workspaceReady ?? false) &&
@@ -64,17 +69,17 @@ export function KaitoManage(initialState: InitialState) {
                                                         onClick={() => deleteWorkspace(model.name)}
                                                         className={styles.button}
                                                     >
-                                                        Cancel
+                                                        {l10n.t("Cancel")}
                                                     </button>
                                                     <button
                                                         onClick={() => getLogs()}
                                                         className={`${styles.button} ${styles.logButton}`}
                                                     >
-                                                        Get Logs
+                                                        {l10n.t("Get Logs")}
                                                     </button>
                                                 </div>
                                                 <ProgressRing className={styles.progress} />
-                                                <span className={styles.bold}>Deployment in progress</span>
+                                                <span className={styles.bold}>{l10n.t("Deployment in progress")}</span>
                                             </>
                                         );
                                     }
@@ -90,26 +95,28 @@ export function KaitoManage(initialState: InitialState) {
                                                     }
                                                     className={`${styles.button} ${styles.redeployButton}`}
                                                 >
-                                                    Re-deploy default CRD
+                                                    {l10n.t("Re-deploy default CRD")}
                                                 </button>
                                                 <button
                                                     onClick={() => deleteWorkspace(model.name)}
                                                     className={styles.button}
                                                 >
-                                                    Delete Workspace
+                                                    {l10n.t("Delete Workspace")}
                                                 </button>
                                                 <button
                                                     onClick={() => getLogs()}
                                                     className={`${styles.button} ${styles.logButton}`}
                                                 >
-                                                    Get Logs
+                                                    {l10n.t("Get Logs")}
                                                 </button>
                                             </div>
                                             <div className={styles.sucessContainer}>
                                                 <div className={styles.successIconContainer}>
                                                     <i className={`codicon codicon-error ${styles.errorIcon}`}></i>
                                                 </div>
-                                                <span className={styles.successMessage}>Failed Deployment</span>
+                                                <span className={styles.successMessage}>
+                                                    {l10n.t("Failed Deployment")}
+                                                </span>
                                             </div>
                                         </>
                                     );
@@ -124,25 +131,27 @@ export function KaitoManage(initialState: InitialState) {
                                                         className={styles.button}
                                                         onClick={() => deleteWorkspace(model.name)}
                                                     >
-                                                        Delete Workspace
+                                                        {l10n.t("Delete Workspace")}
                                                     </button>
                                                     <button
                                                         onClick={() => getLogs()}
                                                         className={`${styles.button} ${styles.logButton}`}
                                                     >
-                                                        Get Logs
+                                                        {l10n.t("Get Logs")}
                                                     </button>
                                                     <button
                                                         className={`${styles.button} ${styles.testButton}`}
                                                         onClick={() => testWorkspace(model.name)}
                                                     >
-                                                        Test
+                                                        {l10n.t("Test")}
                                                     </button>
                                                 </div>
                                                 <div className={styles.successIconContainer}>
                                                     <i className={`codicon codicon-pass ${styles.successIcon}`}></i>
                                                 </div>
-                                                <span className={styles.successMessage}>Deployment successful</span>
+                                                <span className={styles.successMessage}>
+                                                    {l10n.t("Deployment successful")}
+                                                </span>
                                             </div>
                                         </>
                                     );
@@ -150,15 +159,15 @@ export function KaitoManage(initialState: InitialState) {
                         </div>
                         <div className={styles.statusTable}>
                             <div className={styles.statusRow}>
-                                <span className={styles.statusLabel}>Name</span>
+                                <span className={styles.statusLabel}>{l10n.t("Name")}</span>
                                 <span className={styles.gray}>{model.name}</span>
                             </div>
                             <div className={styles.statusRow}>
-                                <span className={styles.statusLabel}>Instance</span>
+                                <span className={styles.statusLabel}>{l10n.t("Instance")}</span>
                                 <span className={styles.gray}>{model.instance}</span>
                             </div>
                             <div className={styles.statusRow}>
-                                <span className={styles.statusLabel}>Resource Ready</span>
+                                <span className={styles.statusLabel}>{l10n.t("Resource Ready")}</span>
                                 <span className={styles.gray}>
                                     {model.resourceReady === null
                                         ? "In-progress"
@@ -168,7 +177,7 @@ export function KaitoManage(initialState: InitialState) {
                                 </span>
                             </div>
                             <div className={styles.statusRow}>
-                                <span className={styles.statusLabel}>Inference Ready</span>
+                                <span className={styles.statusLabel}>{l10n.t("Inference Ready")}</span>
                                 <span className={styles.gray}>
                                     {model.inferenceReady === null
                                         ? "In-progress"
@@ -178,7 +187,7 @@ export function KaitoManage(initialState: InitialState) {
                                 </span>
                             </div>
                             <div className={styles.statusRow}>
-                                <span className={styles.statusLabel}>Workspace Ready</span>
+                                <span className={styles.statusLabel}>{l10n.t("Workspace Ready")}</span>
                                 <span className={styles.gray}>
                                     {model.workspaceReady === null
                                         ? "In-progress"
@@ -188,7 +197,7 @@ export function KaitoManage(initialState: InitialState) {
                                 </span>
                             </div>
                             <div className={styles.statusRow}>
-                                <span className={styles.statusLabel}>Age</span>
+                                <span className={styles.statusLabel}>{l10n.t("Age")}</span>
                                 <span className={styles.gray}>{convertMinutesToFormattedAge(model.age)}</span>
                             </div>
                         </div>

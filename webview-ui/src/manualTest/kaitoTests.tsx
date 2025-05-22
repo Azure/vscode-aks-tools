@@ -3,6 +3,7 @@ import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../../../src/webv
 import { Kaito } from "../Kaito/Kaito";
 import { stateUpdater } from "../Kaito/state";
 import { Scenario } from "../utilities/manualTest";
+import { vscode } from "../utilities/vscode";
 
 export function getKaitoScenarios() {
     const initialState: InitialState = {

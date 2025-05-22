@@ -3,6 +3,7 @@ import { CommandCategory, PresetCommand } from "../../../src/webview-contract/we
 import styles from "./Kubectl.module.css";
 import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { MouseEvent as ReactMouseEvent } from "react";
+import * as l10n from "@vscode/l10n";
 
 export interface CommandListProps {
     id?: string;
@@ -60,9 +61,9 @@ export function CommandList(props: CommandListProps) {
                 props.className ? `${props.className} ${styles.commandCategoryList}` : styles.commandCategoryList
             }
         >
-            {renderCommands(resourceCommands, "Resources")}
-            {renderCommands(healthCommands, "Health")}
-            {customCommands.length > 0 && renderCommands(customCommands, "Custom")}
+            {renderCommands(resourceCommands, l10n.t("Resources"))}
+            {renderCommands(healthCommands, l10n.t("Health"))}
+            {customCommands.length > 0 && renderCommands(customCommands, l10n.t("Custom"))}
         </ul>
     );
 }

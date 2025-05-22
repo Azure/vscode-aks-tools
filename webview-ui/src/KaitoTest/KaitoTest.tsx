@@ -3,6 +3,7 @@ import { vscode, stateUpdater } from "./state";
 import { useStateManagement } from "../utilities/state";
 import { useState } from "react";
 import styles from "./KaitoTest.module.css";
+import * as l10n from "@vscode/l10n";
 
 export function KaitoTest(initialState: InitialState) {
     const { state } = useStateManagement(stateUpdater, initialState, vscode);
@@ -44,17 +45,18 @@ export function KaitoTest(initialState: InitialState) {
     return (
         <div className={styles.main}>
             <h2>
-                Test: {state.modelName} ({state.clusterName})
+                {l10n.t("Test:")} {state.modelName} ({state.clusterName})
             </h2>
             <p className={styles.blurb}>
-                Experiment with AI outputs by fine-tuning parameters. Discover how each adjustment influences the
-                model&apos;s response.
+                {l10n.t(
+                    "Experiment with AI outputs by fine-tuning parameters. Discover how each adjustment influences the model&apos;s response.",
+                )}
             </p>
             <hr />
             <div className={styles.mainGrid}>
                 <div className={styles.formDiv}>
                     <div className={styles.formDivGrid}>
-                        <label>Prompt</label>
+                        <label>{l10n.t("Prompt")}</label>
                         <textarea
                             name="prompt"
                             value={formData.prompt}
@@ -68,13 +70,13 @@ export function KaitoTest(initialState: InitialState) {
                         <span></span>
                         <span className={styles.submitSpan}>
                             <button className={styles.resetButton} onClick={resetParams}>
-                                Reset Params
+                                {l10n.t("Reset Parameters")}
                             </button>
                             <button className={styles.mainButton} onClick={handleSubmit}>
-                                Submit Prompt
+                                {l10n.t("Submit Prompt")}
                             </button>
                         </span>
-                        <label>Temperature</label>
+                        <label>{l10n.t("Temperature")}</label>
                         <div className={styles.sliderContainer}>
                             <span className={styles.min}>0.01</span>
                             <input
@@ -130,7 +132,7 @@ export function KaitoTest(initialState: InitialState) {
                             <span className={styles.max}>100</span>
                         </div>
 
-                        <label>Repetition Penalty</label>
+                        <label>{l10n.t("Repetition Penalty")}</label>
                         <div className={styles.sliderContainer}>
                             <span className={styles.min}>1.00</span>
 
@@ -149,7 +151,7 @@ export function KaitoTest(initialState: InitialState) {
                             <span className={styles.max}>2.00</span>
                         </div>
 
-                        <label>Max Length</label>
+                        <label>{l10n.t("Max Length")}</label>
                         <div className={styles.sliderContainer}>
                             <span className={styles.min}>0</span>
 
@@ -171,7 +173,7 @@ export function KaitoTest(initialState: InitialState) {
                 </div>
                 {state.output !== "" && (
                     <div className={styles.outputDiv}>
-                        <p className={styles.outputHeader}>Output</p>
+                        <p className={styles.outputHeader}>{l10n.t("Output")}</p>
                         <hr className={styles.endDivider} />
                         <p className={styles.output}>{state.output}</p>
                     </div>

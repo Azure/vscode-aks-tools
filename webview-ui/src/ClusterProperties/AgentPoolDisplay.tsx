@@ -2,7 +2,7 @@ import styles from "./ClusterProperties.module.css";
 import { AgentPoolProfileInfo, ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import { EventDef, vscode } from "./state";
 import { EventHandlers } from "../utilities/state";
-
+import * as l10n from "@vscode/l10n";
 export interface AgentPoolDisplayProps {
     clusterInfo: ClusterInfo;
     profileInfo: AgentPoolProfileInfo;
@@ -25,7 +25,7 @@ export function AgentPoolDisplay(props: AgentPoolDisplayProps) {
 
     return (
         <dl className={styles.propertyList}>
-            <dt>Provisioning State</dt>
+            <dt>{l10n.t("Provisioning State")}</dt>
             <dd>
                 {props.profileInfo.provisioningState}
                 {showAbortButton && (
@@ -36,28 +36,28 @@ export function AgentPoolDisplay(props: AgentPoolDisplayProps) {
                             onClick={() => handleAbortClick(props.profileInfo.name)}
                             className="secondary-button"
                         >
-                            Abort
+                            {l10n.t("Abort")}
                         </button>
                     </>
                 )}
             </dd>
 
-            <dt>Power State</dt>
+            <dt>{l10n.t("Power State")}</dt>
             <dd>{props.profileInfo.powerStateCode}</dd>
 
-            <dt>Node Version</dt>
-            <dd>{props.profileInfo.nodeImageVersion}</dd>
+            <dt>{l10n.t("Node Version")}</dt>
+            <dd>{l10n.t(props.profileInfo.nodeImageVersion)}</dd>
 
-            <dt>O/S Disk Size</dt>
+            <dt>{l10n.t("O/S Disk Size")}</dt>
             <dd>{props.profileInfo.osDiskSizeGB}</dd>
 
-            <dt>VM Size</dt>
+            <dt>{l10n.t("VM Size")}</dt>
             <dd>{props.profileInfo.vmSize}</dd>
 
-            <dt>Node Count</dt>
+            <dt>{l10n.t("Node Count")}</dt>
             <dd>{props.profileInfo.count}</dd>
 
-            <dt>O/S Type</dt>
+            <dt>{l10n.t("O/S Type")}</dt>
             <dd>{props.profileInfo.osType}</dd>
         </dl>
     );

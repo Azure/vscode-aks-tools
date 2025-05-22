@@ -2,7 +2,7 @@ import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded } from "../utilities/laz
 import { CustomDropdown } from "./CustomDropdown";
 import { CustomDropdownOption } from "./CustomDropdownOption";
 import { ProgressRing } from "./ProgressRing";
-
+import * as l10n from "@vscode/l10n";
 export interface ResourceSelectorProps<TResource> {
     resources: Lazy<TResource[]> | TResource[];
     selectedItem: TResource | null;
@@ -37,7 +37,7 @@ export function ResourceSelector<TResource>(props: ResourceSelectorProps<TResour
             )}
             {isLoaded(resources) && (
                 <CustomDropdown className={props.className} id={props.id} value={selectedValue} onChange={handleChange}>
-                    <CustomDropdownOption value="" label="Select" />
+                    <CustomDropdownOption value="" label={l10n.t("Select")} />
                     {resources.value.map((r) => (
                         <CustomDropdownOption
                             key={props.valueGetter(r)}

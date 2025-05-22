@@ -6,6 +6,7 @@ import { useStateManagement } from "../utilities/state";
 import { DeleteNodeExplorerDialog } from "./DeleteNodeExplorerDialog";
 import styles from "./RetinaCapture.module.css";
 import { stateUpdater, vscode } from "./state";
+import * as l10n from "@vscode/l10n";
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export function RetinaCapture(initialState: InitialState) {
@@ -38,21 +39,26 @@ export function RetinaCapture(initialState: InitialState) {
     return (
         <>
             <header>
-                <h2>Retina Distributed Capture for {state.clusterName}</h2>
+                <h2>
+                    Retina {l10n.t("Distributed Capture for")} {state.clusterName}
+                </h2>
             </header>
             <hr style={{ marginBottom: "1rem" }} />
             <div>
-                <FontAwesomeIcon icon={faInfoCircle} /> Retina capture command allows the user to capture network
-                traffic and metadata for the capture target, and then send the capture file to the location by Output
-                Configuration. More info:{" "}
-                <a href="https://retina.sh/docs/captures/cli/#output-configurationrequired">Retina Capture Command</a>
+                <FontAwesomeIcon icon={faInfoCircle} />{" "}
+                {l10n.t(
+                    "Retina capture command allows the user to capture network traffic and metadata for the capture target, and then send the capture file to the location by Output Configuration. More info:",
+                )}{" "}
+                <a href="https://retina.sh/docs/captures/cli/#output-configurationrequired">
+                    Retina {l10n.t("Capture Command")}
+                </a>
             </div>
             <hr style={{ marginBottom: "1rem" }} />
-            <h3>Retina Output</h3>
+            <h3>Retina {l10n.t("Output")}</h3>
             <div>{state.retinaOutput}</div>
 
             <hr style={{ marginTop: "1rem" }} />
-            <h3>Retina Distributed Capture is Successfully Completed for this Cluster</h3>
+            <h3>Retina {l10n.t("Distributed Capture is Successfully Completed for this Cluster")}</h3>
 
             <div className={styles.content}>
                 {state.isDownloadRetinaCapture && (
@@ -76,14 +82,14 @@ export function RetinaCapture(initialState: InitialState) {
                                 style={{ marginRight: "0.625rem" }}
                                 onClick={() => handleCaptureFileDownload()}
                             >
-                                Download Retina Logs to Host Machine.
+                                {l10n.t("Download Retina Logs to Host Machine.")}
                             </button>
                             {state.isNodeExplorerPodExists && (
                                 <button className="secondary-button" onClick={() => handleDeleteExplorerPod()}>
                                     <span slot="start">
                                         <FontAwesomeIcon icon={faTrash} />
                                     </span>
-                                    Delete Node Explorer Pod
+                                    {l10n.t("Delete Node Explorer Pod")}
                                 </button>
                             )}
                         </div>

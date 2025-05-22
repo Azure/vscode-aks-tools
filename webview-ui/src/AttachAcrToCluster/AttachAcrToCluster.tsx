@@ -21,7 +21,7 @@ import { ResourceSelector } from "../components/ResourceSelector";
 import { faLink, faLinkSlash } from "@fortawesome/free-solid-svg-icons";
 import { AcrRoleState } from "./state/stateTypes";
 import { InlineAction, InlineActionProps, makeFixAction, makeInlineActionProps } from "../components/InlineAction";
-
+import * as l10n from "@vscode/l10n";
 export function AttachAcrToCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -39,22 +39,22 @@ export function AttachAcrToCluster(initialState: InitialState) {
     });
 
     function getAcrAuthorizationActionItemProps(): InlineActionProps {
-        const createAction = makeFixAction(faLink, "Attach", null /* No action available yet */, true);
-        const deleteAction = makeFixAction(faLinkSlash, "Detach", null /* No action available yet */, false);
-        const actionItemProps = makeInlineActionProps("ACR Pull", createAction, deleteAction);
+        const createAction = makeFixAction(faLink, l10n.t("Attach"), null /* No action available yet */, true);
+        const deleteAction = makeFixAction(faLinkSlash, l10n.t("Detach"), null /* No action available yet */, false);
+        const actionItemProps = makeInlineActionProps(l10n.t("ACR Pull"), createAction, deleteAction);
 
         if (state.selectedAcr === null) {
-            actionItemProps.extraInfo = "Please select an ACR.";
+            actionItemProps.extraInfo = l10n.t("Please select an ACR.");
             return actionItemProps;
         }
 
         if (state.selectedCluster === null) {
-            actionItemProps.extraInfo = "Please select a cluster.";
+            actionItemProps.extraInfo = l10n.t("Please select a cluster.");
             return actionItemProps;
         }
 
         if (!isLoaded(lazyAcrRoleState)) {
-            actionItemProps.extraInfo = "Loading ACR role assignments...";
+            actionItemProps.extraInfo = l10n.t("Loading ACR role assignments...");
             return actionItemProps;
         }
 
@@ -90,26 +90,27 @@ export function AttachAcrToCluster(initialState: InitialState) {
 
     return (
         <>
-            <h2>Attach Azure Container Registry to Cluster</h2>
+            <h2>{l10n.t("Attach Azure Container Registry to Cluster")}</h2>
             <fieldset className={styles.inputContainer}>
                 <p className={styles.fullWidth}>
-                    Select a cluster and Azure Container Registry (ACR) to attach. For more information on attaching an
-                    ACR to a cluster, see{" "}
+                    {l10n.t(
+                        "Select a cluster and Azure Container Registry (ACR) to attach. For more information on attaching an ACR to a cluster, see",
+                    )}{" "}
                     <a href="https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-an-existing-aks-cluster">
-                        Configure ACR integration for an existing AKS cluster
+                        {l10n.t("Configure ACR integration for an existing AKS cluster")}
                     </a>
                     .
                 </p>
                 <p className={styles.fullWidth}>
-                    This operation assigns the{" "}
+                    {l10n.t("This operation assigns the")}{" "}
                     <a href="https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#acrpull">
                         AcrPull
                     </a>{" "}
-                    role to the Microsoft Entra ID managed identity associated with your AKS cluster.
+                    {l10n.t("role to the Microsoft Entra ID managed identity associated with your AKS cluster.")}
                 </p>
 
                 <label htmlFor="subscription-input" className={styles.label}>
-                    Subscription
+                    {l10n.t("Subscription")}
                 </label>
                 <ResourceSelector<Subscription>
                     id="subscription-input"
@@ -122,7 +123,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
                 />
 
                 <label htmlFor="acr-rg-input" className={styles.label}>
-                    ACR Resource Group
+                    {l10n.t("ACR Resource Group")}
                 </label>
                 <ResourceSelector<string>
                     id="acr-rg-input"
@@ -135,7 +136,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
                 />
 
                 <label htmlFor="acr-input" className={styles.label}>
-                    Container Registry
+                    {l10n.t("Container Registry")}
                 </label>
                 <ResourceSelector<Acr>
                     id="acr-input"
@@ -148,7 +149,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
                 />
 
                 <label htmlFor="cluster-rg-input" className={styles.label}>
-                    Cluster Resource Group
+                    {l10n.t("Cluster Resource Group")}
                 </label>
                 <ResourceSelector<string>
                     id="cluster-rg-input"
@@ -161,7 +162,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
                 />
 
                 <label htmlFor="cluster-input" className={styles.label}>
-                    Cluster
+                    {l10n.t("Cluster")}
                 </label>
                 <ResourceSelector<Cluster>
                     id="cluster-input"
@@ -173,7 +174,7 @@ export function AttachAcrToCluster(initialState: InitialState) {
                     onSelect={eventHandlers.onSetSelectedCluster}
                 />
 
-                <label className={styles.label}>Role Assignment</label>
+                <label className={styles.label}>{l10n.t("Role Assignment")}</label>
                 <div className={`${styles.control} ${styles.actionItemList}`}>
                     <InlineAction {...getAcrAuthorizationActionItemProps()} />
                 </div>

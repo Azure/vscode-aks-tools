@@ -13,7 +13,7 @@ import { NamespaceSelection } from "../../../src/webview-contract/webviewDefinit
 import { EventHandlers } from "../utilities/state";
 import { EventDef, vscode } from "./helpers/state";
 import { ProgressRing } from "../components/ProgressRing";
-
+import * as l10n from "@vscode/l10n";
 const defaultTimeoutInSeconds = 30;
 const defaultMaxItemCount = 20;
 
@@ -143,7 +143,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
 
     return (
         <Dialog isShown={props.isShown} onCancel={() => props.onCancel()}>
-            <h2>New Trace</h2>
+            <h2>{l10n.t("New Trace")}</h2>
 
             <form onSubmit={handleSubmit}>
                 <hr />
@@ -161,7 +161,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     />
 
                     <label htmlFor="node-dropdown" className={styles.label}>
-                        Node
+                        {l10n.t("Node")}
                     </label>
                     {isLoaded(props.nodes) ? (
                         <NodeSelector
@@ -177,7 +177,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     {!extraProperties.noK8sResourceFiltering && (
                         <>
                             <label htmlFor="resource-selector" className={styles.label}>
-                                Resource
+                                {l10n.t("Resource")}
                             </label>
                             {isLoaded(props.resources) ? (
                                 <ResourceSelector
@@ -195,7 +195,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     {extraProperties.sortingAllowed && (
                         <>
                             <label htmlFor="sort-selector" className={styles.label}>
-                                Sort by
+                                {l10n.t("Sort by")}
                             </label>
                             <TraceItemSortSelector
                                 id="sort-selector"
@@ -211,7 +211,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     {extraProperties.requiresMaxItemCount && (
                         <>
                             <label htmlFor="max-rows-input" className={styles.label}>
-                                Max rows
+                                {l10n.t("Max rows")}
                             </label>
                             <input
                                 id="max-rows-input"
@@ -233,14 +233,14 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                                 type="checkbox"
                                 onChange={handleDisplayThreadsChange}
                             />
-                            <label className={styles.displayLabel}>Display Threads</label>
+                            <label className={styles.displayLabel}>{l10n.t("Display Threads")}</label>
                         </div>
                     )}
 
                     {extraProperties.requiresTimeout && (
                         <>
                             <label htmlFor="timeout-input" className={styles.label}>
-                                Timeout (s)
+                                {l10n.t("Timeout")} (s)
                             </label>
                             <input
                                 id="timeout-input"
@@ -260,7 +260,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
 
                 <div className={styles.buttonContainer}>
                     <button type="submit" disabled={!canCreate()}>
-                        Ok
+                        {l10n.t("Ok")}
                     </button>
                     <button onClick={props.onCancel}>Cancel</button>
                 </div>

@@ -7,6 +7,7 @@ import { SaveCommandDialog } from "./SaveCommandDialog";
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
 import { useEffect } from "react";
+import * as l10n from "@vscode/l10n";
 
 export function Kubectl(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -73,7 +74,9 @@ export function Kubectl(initialState: InitialState) {
     return (
         <div className={styles.wrapper}>
             <header className={styles.mainHeading}>
-                <h2>Kubectl Command Run for {state.clusterName}</h2>
+                <h2>
+                    Kubectl {l10n.t("Command Run for")} {state.clusterName}
+                </h2>
                 <hr />
             </header>
             <nav className={styles.commandNav}>

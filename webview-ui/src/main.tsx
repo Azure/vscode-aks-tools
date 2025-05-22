@@ -23,6 +23,8 @@ import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { AutomatedDeployments } from "./AutomatedDeployments/AutomatedDeployments";
 import { CreateFleet } from "./CreateFleet/CreateFleet";
 import { FleetProperties } from "./FleetProperties/FleetProperties";
+import * as l10n from "@vscode/l10n";
+import { vscode } from "./utilities/vscode";
 
 // There are two modes of launching this application:
 // 1. Via the VS Code extension inside a Webview.
@@ -35,13 +37,25 @@ import { FleetProperties } from "./FleetProperties/FleetProperties";
 // - Message passing: the extension will handle outgoing messages from React components (sent using `vscode.postMessage`)
 //   and will respond using `Webview.postMessage`.
 
-const rootElem = document.getElementById("root");
-const root = createRoot(rootElem!);
-
-function getVsCodeContent(): JSX.Element {
-    if (!rootElem) {
-        return <>Error: Element with ID &#39;root&#39; is not found.</>;
+// receive language from the extension
+window.addEventListener("message", (event) => {
+    if (event.data?.type === "bundle") {
+        if (event.data.payload) {
+            l10n.config({ contents: event.data.payload });
+        }
+        // ensure language config before rendering
+        const rootElem = document.getElementById("root");
+        if (rootElem) {
+            const root = createRoot(rootElem);
+            root.render(<StrictMode>{getVsCodeContent(rootElem)}</StrictMode>);
+        }
     }
+});
+
+// send language request to the extension
+vscode.postMessage({ command: "request-bundle" });
+
+function getVsCodeContent(rootElem: HTMLElement): JSX.Element {
     const vscodeContentId = rootElem?.dataset.contentid as ContentId;
     if (!vscodeContentId) {
         return <>Error: &#39;content-id&#39; attribute is not set on root element.</>;
@@ -78,5 +92,3 @@ function getVsCodeContent(): JSX.Element {
 
     return rendererLookup[vscodeContentId]();
 }
-
-root.render(<StrictMode>{getVsCodeContent()}</StrictMode>);

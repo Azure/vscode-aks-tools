@@ -7,7 +7,7 @@ import { isNotLoaded } from "../utilities/lazy";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
-
+import * as l10n from "@vscode/l10n";
 export function InspektorGadget(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -52,10 +52,12 @@ export function InspektorGadget(initialState: InitialState) {
 
     return (
         <>
-            <h2>Inspektor Gadget</h2>
+            <h2>{l10n.t("Inspektor Gadget")}</h2>
             <p>
-                Inspektor Gadget provides a wide selection of BPF tools to dig deep into your Kubernetes cluster.
-                <a href="https://www.inspektor-gadget.io/">&nbsp;Learn more</a>
+                {l10n.t(
+                    "Inspektor Gadget provides a wide selection of BPF tools to dig deep into your Kubernetes cluster.",
+                )}
+                <a href="https://www.inspektor-gadget.io/">&nbsp;{l10n.t("Learn more")}</a>
             </p>
 
             {/* implementation of tabs */}
@@ -65,7 +67,7 @@ export function InspektorGadget(initialState: InitialState) {
                         className={`${styles.tabItem} ${activeTab === "overview" ? styles.active : ""}`}
                         onClick={() => setActiveTab("overview")}
                     >
-                        OVERVIEW
+                        {l10n.t("OVERVIEW")}
                     </div>
                     {isDeployed && (
                         <>
@@ -73,25 +75,25 @@ export function InspektorGadget(initialState: InitialState) {
                                 className={`${styles.tabItem} ${activeTab === "trace" ? styles.active : ""}`}
                                 onClick={() => setActiveTab("trace")}
                             >
-                                TRACES
+                                {l10n.t("TRACES")}
                             </div>
                             <div
                                 className={`${styles.tabItem} ${activeTab === "top" ? styles.active : ""}`}
                                 onClick={() => setActiveTab("top")}
                             >
-                                TOP
+                                {l10n.t("TOP")}
                             </div>
                             <div
                                 className={`${styles.tabItem} ${activeTab === "snapshot" ? styles.active : ""}`}
                                 onClick={() => setActiveTab("snapshot")}
                             >
-                                SNAPSHOTS
+                                {l10n.t("SNAPSHOTS")}
                             </div>
                             <div
                                 className={`${styles.tabItem} ${activeTab === "profile" ? styles.active : ""}`}
                                 onClick={() => setActiveTab("profile")}
                             >
-                                PROFILE
+                                {l10n.t("PROFILE")}
                             </div>
                         </>
                     )}

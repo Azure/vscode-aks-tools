@@ -52,6 +52,10 @@
     margin-right: 3rem;
 }
 
+.hubModeContainer:hover {
+    cursor: pointer;
+}
+
 .hubModeContainerHighlighted {
     border: 0.1875rem solid var(--Accent-Blue-05, #0097fb);
     background: var(--vscode-editor-background);

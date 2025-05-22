@@ -60,8 +60,20 @@ import aksClusterFilter from "./commands/utils/clusterfilter";
 //import aksAutomatedDeployments from "./commands/devhub/aksAutomatedDeployments";
 import aksCreateFleet from "./commands/aksFleet/aksFleetManager";
 import aksFleetProperties from "./commands/aksFleetProperties/askFleetProperties";
+import * as l10n from "@vscode/l10n";
+import * as path from "path";
+import * as fs from "fs";
 
 export async function activate(context: vscode.ExtensionContext) {
+    const language = vscode.env.language;
+
+    // let bundle = "bundle.l10n.json";
+    const bundle = language === "en" ? "bundle.l10n.json" : `bundle.l10n.${language}.json`;
+    const newpath = path.join(__dirname, "..", "l10n", bundle);
+    if (fs.existsSync(newpath)) {
+        l10n.config({ fsPath: newpath });
+    }
+
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter());
     setAssetContext(context);
