@@ -12,6 +12,7 @@ import {
     getClusterIP,
     getCurlPodLogsCommand,
 } from "./utilities/KaitoHelpers";
+import { l10n } from "vscode";
 
 export class KaitoTestPanel extends BasePanel<"kaitoTest"> {
     constructor(extensionUri: vscode.Uri) {
@@ -43,7 +44,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         this.modelName = modelName;
     }
     getTitle(): string {
-        return `Test KAITO Model`;
+        return l10n.t(`Test KAITO Model`);
     }
 
     getInitialState(): InitialState {
@@ -90,7 +91,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (this.isQueryInProgress) {
-            vscode.window.showErrorMessage(`A query is currently being sent. Please wait.`);
+            vscode.window.showErrorMessage(l10n.t(`A query is currently being sent. Please wait.`));
             return;
         }
         await longRunning(`Sending query...`, async () => {
@@ -102,7 +103,9 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 const clusterIP = await getClusterIP(this.kubeConfigFilePath, this.modelName, this.kubectl);
                 if (clusterIP === "") {
                     this.isQueryInProgress = false;
-                    vscode.window.showErrorMessage(`Error connecting to cluster. Please check pod logs and try again`);
+                    vscode.window.showErrorMessage(
+                        l10n.t(`Error connecting to cluster. Please check pod logs and try again`),
+                    );
                     return;
                 }
                 // this command creates a curl pod and executes the query
@@ -147,7 +150,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                         `Failed to retrieve logs: ${logsResult.code}\nError: ${logsResult.stderr}`,
                     );
                 } else {
-                    vscode.window.showErrorMessage(`Failed to connect to cluster`);
+                    vscode.window.showErrorMessage(l10n.t(`Failed to connect to cluster`));
                 }
                 await this.kubectl.api.invokeCommand(deleteCommand);
                 this.isQueryInProgress = false;

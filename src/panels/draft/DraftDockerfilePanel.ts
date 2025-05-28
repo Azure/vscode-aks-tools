@@ -1,4 +1,4 @@
-import { Uri, WorkspaceFolder, window } from "vscode";
+import { l10n, Uri, WorkspaceFolder, window } from "vscode";
 import path from "path";
 import * as fs from "fs";
 import { BasePanel, PanelDataProvider } from "../BasePanel";
@@ -37,7 +37,7 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
     }
 
     getTitle(): string {
-        return `Draft Dockerfile in ${this.workspaceFolder.name}`;
+        return l10n.t(`Draft Dockerfile in {0}`, this.workspaceFolder.name);
     }
 
     getInitialState(): InitialState {

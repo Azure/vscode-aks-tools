@@ -12,7 +12,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { getLocalKubectlCpPath } from "./utilities/KubectlNetworkHelper";
 import * as semver from "semver";
-import { commands, env } from "vscode";
+import { l10n, commands, env } from "vscode";
 
 export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
     constructor(extensionUri: Uri) {
@@ -37,7 +37,7 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     ) {}
 
     getTitle(): string {
-        return `Retina Distributed Capture on ${this.clusterName}`;
+        return l10n.t(`Retina Distributed Capture on {0}`, this.clusterName);
     }
 
     getTelemetryDefinition(): TelemetryDefinition<"retinaCapture"> {
@@ -79,17 +79,17 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
 
     private async deleteNodeExplorerUsingKubectl(node: string) {
         if (!this.kubectl) {
-            vscode.window.showErrorMessage("Kubectl is not available");
+            vscode.window.showErrorMessage(l10n.t("Kubectl is not available"));
             return;
         }
 
-        const deleteResult = await longRunning(`Deleting pod node-explorer-${node}.`, async () => {
+        const deleteResult = await longRunning(`${l10n.t("Deleting pod")} node-explorer-${node}.`, async () => {
             const command = `delete pod node-explorer-${node}`;
             return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
         });
 
         if (failed(deleteResult)) {
-            vscode.window.showErrorMessage(`Failed to delete Pod: ${deleteResult.error}`);
+            vscode.window.showErrorMessage(l10n.t(`Failed to delete Pod: {0}`, deleteResult.error));
             return;
         }
     }
@@ -97,8 +97,8 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     private async handleCaptureFileDownload(node: string) {
         const localCaptureUri = await window.showSaveDialog({
             defaultUri: Uri.file(this.captureFolderName),
-            saveLabel: "Download",
-            title: "Download Retina File",
+            saveLabel: l10n.t("Download"),
+            title: l10n.t("Download Retina File"),
         });
 
         if (!localCaptureUri) {
@@ -115,7 +115,7 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
 
     async copyRetinaCaptureData(node: string, localCpPath: string) {
         if (!this.kubectl || !this.kubectlVersion) {
-            vscode.window.showErrorMessage("Kubectl is not available");
+            vscode.window.showErrorMessage(l10n.t("Kubectl is not available"));
             return;
         }
 
@@ -148,7 +148,7 @@ spec:
       mountPath: /mnt/capture
 `;
 
-        const applyResult = await longRunning(`Deploying pod to capture ${node} retina data.`, async () => {
+        const applyResult = await longRunning(l10n.t(`Deploying pod to capture {0} retina data.`, node), async () => {
             return await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
                 const command = `apply -f ${podSpecFile}`;
                 return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
@@ -159,13 +159,16 @@ spec:
             vscode.window.showErrorMessage(`Failed to apply Pod: ${applyResult.error}`);
             return;
         }
-        const waitResult = await longRunning(`waiting for pod to get ready node-explorer-${node}.`, async () => {
-            const command = `wait pod -n default --for=condition=ready --timeout=300s node-explorer-${node}`;
-            return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
-        });
+        const waitResult = await longRunning(
+            `${l10n.t("waiting for pod to get ready")} node-explorer-${node}.`,
+            async () => {
+                const command = `wait pod -n default --for=condition=ready --timeout=300s node-explorer-${node}`;
+                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
+            },
+        );
 
         if (failed(waitResult)) {
-            vscode.window.showErrorMessage(`Failed to wait for Pod to be ready: ${waitResult.error}`);
+            vscode.window.showErrorMessage(l10n.t(`Failed to wait for Pod to be ready: {0}`, waitResult.error));
             return;
         }
 
@@ -179,7 +182,7 @@ spec:
         const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
         const captureHostFolderName = `${localCpPath}-${node}`;
         const nodeExplorerResult = await longRunning(
-            `Copy captured data to local host location ${captureHostFolderName}.`,
+            l10n.t(`Copy captured data to local host location {0}.`, captureHostFolderName),
             async () => {
                 const cpcommand = `cp node-explorer-${node}:mnt/capture ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
                 return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, cpcommand);
@@ -187,14 +190,14 @@ spec:
         );
 
         if (failed(nodeExplorerResult)) {
-            vscode.window.showErrorMessage(`Failed to apply copy command: ${nodeExplorerResult.error}`);
+            vscode.window.showErrorMessage(l10n.t(`Failed to apply copy command: {0}`, nodeExplorerResult.error));
             return;
         }
 
         const goToFolder = "Go to Folder";
         vscode.window
             .showInformationMessage(
-                `Successfully copied the Retina Capture data to ${captureHostFolderName}`,
+                l10n.t(`Successfully copied the Retina Capture data to {0}).`, captureHostFolderName),
                 goToFolder,
             )
             .then((selection) => {

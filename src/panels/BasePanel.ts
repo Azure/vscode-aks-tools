@@ -24,7 +24,7 @@ import {
 import { getNonce, getUri } from "./utilities/webview";
 import * as vscode from "vscode";
 import { readFile } from "fs/promises";
-
+import { l10n } from "vscode";
 const viewType = "aksVsCodeTools";
 
 /**
@@ -166,7 +166,7 @@ function getMessageContext<TContent extends ContentId>(
                     if (action) {
                         action(message.parameters, message.command);
                     } else {
-                        window.showErrorMessage(`No handler found for command ${message.command}`);
+                        window.showErrorMessage(l10n.t(`No handler found for command {0}`, message.command));
                     }
                 },
                 undefined,

@@ -13,7 +13,7 @@ import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
 import { Usage } from "@azure/arm-compute";
 import { kaitoPodStatus, getKaitoPods, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
 import { existsSync } from "fs";
-
+import { l10n } from "vscode";
 enum GpuFamilies {
     NCSv3Family = "s_v3",
     NCADSA100v4Family = "ads_A100_v4",
@@ -58,7 +58,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     private checksInProgress: boolean = false;
 
     getTitle(): string {
-        return `Create KAITO Workspace`;
+        return l10n.t(`Create KAITO Workspace`);
     }
     getInitialState(): InitialState {
         return {
@@ -119,7 +119,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     parseGPU(gpuRequirement: string): [string, number] {
         const regex = /^Standard_NC(\d+)(ads_A100_v4|s_v3)$/;
         const match = gpuRequirement.match(regex);
-        const gpuError = new Error("Unknown gpu format");
+        const gpuError = new Error(l10n.t("Unknown gpu format"));
         if (match) {
             const cpus = parseInt(match[1], 10);
             let family: string;
@@ -163,8 +163,10 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
 
     async promptForQuotaIncrease() {
         const selection = await vscode.window.showErrorMessage(
-            `Your current Azure subscription doesn't have enough quota to deploy this model. Proceed to request a quota increase.`,
-            "Learn More",
+            l10n.t(
+                `Your current Azure subscription doesn't have enough quota to deploy this model. Proceed to request a quota increase.`,
+            ),
+            l10n.t("Learn More"),
         );
 
         if (selection === "Learn More") {
@@ -191,7 +193,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     }
 
     private handleDeploymentCancellation(model: string) {
-        vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
+        vscode.window.showErrorMessage(l10n.t(`Deployment cancelled for {0}`, model));
         this.checksInProgress = false;
     }
 
@@ -213,7 +215,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             let quotaAvailable = false;
             let getResult = null;
             let readyStatus = { kaitoWorkspaceReady: false, kaitoGPUProvisionerReady: false };
-            await longRunning(`Validating KAITO workspace status`, async () => {
+            await longRunning(l10n.t(`Validating KAITO workspace status`), async () => {
                 // Returns an object with the status of the kaito pods
                 const kaitoPods = await getKaitoPods(
                     this.sessionProvider,
@@ -233,7 +235,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 this.handleDeploymentCancellation(model);
                 return;
             }
-            await longRunning(`Checking if workspace exists...`, async () => {
+            await longRunning(l10n.t(`Checking if workspace exists...`), async () => {
                 const getCommand = `get workspace workspace-${model}`;
                 getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);
             });
@@ -243,7 +245,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                     this.handleDeploymentCancellation(model);
                     return;
                 }
-                await longRunning(`Verifying available subscription quota for deployment...`, async () => {
+                await longRunning(l10n.t(`Verifying available subscription quota for deployment...`), async () => {
                     const [gpuFamily, requiredCPUs] = this.parseGPU(gpu);
                     void requiredCPUs;
                     const computeClient = getComputeManagementClient(this.sessionProvider, this.subscriptionId);
@@ -277,7 +279,9 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             // Deploying model
             const deploymentResult = await deployModel(yaml, this.kubectl, this.kubeConfigFilePath);
             if (failed(deploymentResult)) {
-                vscode.window.showErrorMessage(`Error deploying 'workspace-${model}': ${deploymentResult.error}`);
+                vscode.window.showErrorMessage(
+                    l10n.t(`Error deploying 'workspace-{0}': {1}`, model, deploymentResult.error),
+                );
                 this.checksInProgress = false;
                 return;
             }
@@ -289,7 +293,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         }
         // end state updates if user cancelled out of view
         if (this.cancelTokens.get(model)) {
-            vscode.window.showErrorMessage(`Deployment cancelled for ${model}`);
+            vscode.window.showErrorMessage(l10n.t(`Deployment cancelled for {0}`, model));
             return;
         }
         // if cancel token is set for any other model, just return maybe?
@@ -337,7 +341,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 // This is to prevent error messages from appearing when the user closes the panel
                 if (existsSync(this.kubeConfigFilePath)) {
                     vscode.window.showErrorMessage(
-                        `There was an error connecting to the workspace. ${kubectlresult.error}`,
+                        l10n.t(`There was an error connecting to the workspace. {0}`, kubectlresult.error),
                     );
                 }
                 return this.getInitialState();

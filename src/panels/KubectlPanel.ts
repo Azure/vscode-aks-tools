@@ -1,4 +1,4 @@
-import { Uri } from "vscode";
+import { l10n, Uri } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -31,7 +31,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
     ) {}
 
     getTitle(): string {
-        return `Run Kubectl on ${this.clusterName}`;
+        return l10n.t(`Run Kubectl on {0}`, this.clusterName);
     }
 
     getInitialState(): InitialState {

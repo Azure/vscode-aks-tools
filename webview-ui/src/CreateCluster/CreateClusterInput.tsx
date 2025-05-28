@@ -77,12 +77,14 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     };
 
     function getValidatedName(name: string): Validatable<string> {
-        if (!name) return invalid(name, "Cluster name must be at least 1 character long.");
-        if (name.length > 63) return invalid(name, "Cluster name must be at most 63 characters long.");
+        if (!name) return invalid(name, l10n.t("Cluster name must be at least 1 character long."));
+        if (name.length > 63) return invalid(name, l10n.t("Cluster name must be at most 63 characters long."));
         if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$/.test(name)) {
             return invalid(
                 name,
-                "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number.",
+                l10n.t(
+                    "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number.",
+                ),
             );
         }
 

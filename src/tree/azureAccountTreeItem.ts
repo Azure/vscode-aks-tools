@@ -6,7 +6,7 @@ import {
     TreeItemIconPath,
     registerEvent,
 } from "@microsoft/vscode-azext-utils";
-import { AuthenticationSession, ThemeIcon } from "vscode";
+import { AuthenticationSession, l10n, ThemeIcon } from "vscode";
 import { assetUri } from "../assets";
 import { failed } from "../commands/utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -81,7 +81,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             case "Initializing":
                 return [
                     new GenericTreeItem(this, {
-                        label: "Loading...",
+                        label: l10n.t("Loading..."),
                         contextValue: "azureCommand",
                         id: "aksAccountLoading",
                         iconPath: new ThemeIcon("loading~spin"),
@@ -90,7 +90,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             case "SignedOut":
                 return [
                     new GenericTreeItem(this, {
-                        label: "Sign in to Azure...",
+                        label: l10n.t("Sign in to Azure..."),
                         commandId: "aks.signInToAzure",
                         contextValue: "azureCommand",
                         id: "aksAccountSignIn",
@@ -101,7 +101,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             case "SigningIn":
                 return [
                     new GenericTreeItem(this, {
-                        label: "Waiting for Azure sign-in...",
+                        label: l10n.t("Waiting for Azure sign-in..."),
                         contextValue: "azureCommand",
                         id: "aksAccountSigningIn",
                         iconPath: new ThemeIcon("loading~spin"),
@@ -113,7 +113,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             // Signed in, but no tenant selected, AND there is more than one tenant to choose from.
             return [
                 new GenericTreeItem(this, {
-                    label: "Select tenant...",
+                    label: l10n.t("Select tenant..."),
                     commandId: "aks.selectTenant",
                     contextValue: "azureCommand",
                     id: "aksAccountSelectTenant",
@@ -130,7 +130,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         if (failed(session) || !isReady(this.sessionProvider)) {
             return [
                 new GenericTreeItem(this, {
-                    label: "Error authenticating",
+                    label: l10n.t("Error authenticating"),
                     contextValue: "azureCommand",
                     id: "aksAccountError",
                     iconPath: new ThemeIcon("error"),
@@ -142,7 +142,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         if (failed(subscriptions)) {
             return [
                 new GenericTreeItem(this, {
-                    label: "Error loading subscriptions",
+                    label: l10n.t("Error loading subscriptions"),
                     contextValue: "azureCommand",
                     id: "aksAccountError",
                     iconPath: new ThemeIcon("error"),
@@ -154,7 +154,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         if (subscriptions.result.length === 0) {
             return [
                 new GenericTreeItem(this, {
-                    label: "No subscriptions found",
+                    label: l10n.t("No subscriptions found"),
                     contextValue: "azureCommand",
                     id: "aksAccountNoSubs",
                     iconPath: new ThemeIcon("info"),
@@ -208,7 +208,7 @@ function getSubscriptionContext(
         createCredentialsForScopes: async (scopes: string[]): Promise<TokenCredential> => {
             const authSession = await sessionProvider.getAuthSession({ scopes });
             if (failed(authSession)) {
-                throw new Error(`No Microsoft authentication session found: ${authSession.error}`);
+                throw new Error(l10n.t(`No Microsoft authentication session found: {0}`, authSession.error));
             }
 
             return {

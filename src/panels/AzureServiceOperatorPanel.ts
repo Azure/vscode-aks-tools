@@ -22,6 +22,7 @@ import { ReadyAzureSessionProvider } from "../auth/types";
 import { NonZeroExitCodeBehaviour } from "../commands/utils/shell";
 import { getEnvironment } from "../auth/azureAuth";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
+import { l10n } from "vscode";
 
 export class AzureServiceOperatorPanel extends BasePanel<"aso"> {
     constructor(extensionUri: vscode.Uri) {
@@ -46,7 +47,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     ) {}
 
     getTitle(): string {
-        return `ASO on ${this.clusterName}`;
+        return l10n.t(`ASO on {0}`, this.clusterName);
     }
 
     getInitialState(): InitialState {
@@ -150,7 +151,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         }
 
         const succeeded = shellOutput.result.code === 0;
-        const errorMessage = succeeded ? null : "Installing cert-manager failed, see error output.";
+        const errorMessage = succeeded ? null : l10n.t("Installing cert-manager failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
         webview.postInstallCertManagerResponse({
@@ -189,7 +190,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
 
         // There was no error running the commands, but there may have been a non-zero exit code.
         const succeeded = !shellResults.result.some((r) => r.code !== 0);
-        const errorMessage = succeeded ? null : "Waiting for cert-manager failed, see error output.";
+        const errorMessage = succeeded ? null : l10n.t("Waiting for cert-manager failed, see error output.");
         webview.postWaitForCertManagerResponse({
             succeeded,
             errorMessage,
@@ -228,7 +229,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         }
 
         const succeeded = shellOutput.result.code === 0;
-        const errorMessage = succeeded ? null : "Installing operator resource failed, see error output.";
+        const errorMessage = succeeded ? null : l10n.t("Installing operator resource failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
         webview.postInstallOperatorResponse({
@@ -257,7 +258,11 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         } catch (e) {
             webview.postInstallOperatorSettingsResponse({
                 succeeded: false,
-                errorMessage: `Failed to read settings template from ${yamlPathOnDisk.fsPath}: ${getErrorMessage(e)}`,
+                errorMessage: l10n.t(
+                    `Failed to read settings template from {0}: {1}`,
+                    yamlPathOnDisk.fsPath,
+                    getErrorMessage(e),
+                ),
                 commandResults: [],
             });
             return;
@@ -290,7 +295,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         }
 
         const succeeded = shellOutput.result.code === 0;
-        const errorMessage = succeeded ? null : "Installing operator settings failed, see error output.";
+        const errorMessage = succeeded ? null : l10n.t("Installing operator settings failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
         webview.postInstallOperatorSettingsResponse({
@@ -319,7 +324,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         }
 
         const succeeded = shellOutput.result.code === 0;
-        const errorMessage = succeeded ? null : "Waiting for ASO Controller Manager failed, see error output.";
+        const errorMessage = succeeded ? null : l10n.t("Waiting for ASO Controller Manager failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
         const command = `kubectl ${kubectlArgs}`;
         webview.postWaitForControllerManagerResponse({

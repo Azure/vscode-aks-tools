@@ -166,13 +166,13 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
     if (!clusterExplorer.available) {
-        vscode.window.showWarningMessage(`Cluster explorer not available: ${clusterExplorer.reason}`);
+        vscode.window.showWarningMessage(l10n.t(`Cluster explorer not available: {0}`, clusterExplorer.reason));
         return;
     }
 
     const kubectl = await k8s.extension.kubectl.v1;
     if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl not available: ${kubectl.reason}`);
+        vscode.window.showWarningMessage(l10n.t(`Kubectl not available: {0}`, kubectl.reason));
         return;
     }
 
@@ -187,7 +187,7 @@ async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<strin
         return;
     }
 
-    const properties = await longRunning(`Getting properties for cluster ${treeNode.name}.`, () =>
+    const properties = await longRunning(l10n.t(`Getting properties for cluster {0}.`, treeNode.name), () =>
         getManagedCluster(sessionProvider.result, treeNode.subscriptionId, treeNode.resourceGroupName, treeNode.name),
     );
     if (failed(properties)) {
@@ -195,7 +195,7 @@ async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<strin
         return undefined;
     }
 
-    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${treeNode.name}.`, () =>
+    const kubeconfig = await longRunning(l10n.t(`Retrieving kubeconfig for cluster {0}.`, treeNode.name), () =>
         getKubeconfigYaml(
             sessionProvider.result,
             treeNode.subscriptionId,

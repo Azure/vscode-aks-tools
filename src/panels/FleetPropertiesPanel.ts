@@ -1,4 +1,4 @@
-import { Uri } from "vscode";
+import { l10n, Uri } from "vscode";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ContainerServiceFleetClient, Fleet } from "@azure/arm-containerservicefleet";
 import { ReadyAzureSessionProvider } from "../auth/types";
@@ -36,7 +36,7 @@ export class FleetPropertiesDataProvider implements PanelDataProvider<"fleetProp
     }
 
     getTitle(): string {
-        return `Fleet Properties for ${this.fleetName}`;
+        return l10n.t(`Fleet Properties for {0}`, this.fleetName);
     }
 
     getInitialState(): InitialState {

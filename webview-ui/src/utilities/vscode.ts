@@ -93,7 +93,7 @@ export function getTestVscodeMessageContext<T extends ContentId>(
     return { ...sink, ...source };
 }
 
-export function subscribeToMessages<TMsgDef extends MessageDefinition>(
+function subscribeToMessages<TMsgDef extends MessageDefinition>(
     eventTarget: NamedEventTarget,
     currentEventListener: EventListenerWithCommands | null,
     handler: MessageHandler<TMsgDef>,
