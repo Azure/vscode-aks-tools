@@ -146,7 +146,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 // retrieve the logs from the curl pod
                 const logsResult = await this.kubectl.api.invokeCommand(logsCommand);
                 if (logsResult && logsResult.code === 0) {
-                    console.log(logsResult.stdout);
                     const parsedOutput = JSON.parse(logsResult.stdout);
                     let responseText;
                     if (runtime === "transformers") {

@@ -158,14 +158,12 @@ export async function createCurlPodCommand(
     if (process.platform === "win32") {
         let windowsCreateCommand;
         if (runtime === "transformers") {
-            console.log("runtime is transformers");
             windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
 --image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
 "Content-Type: application/json" -d "{\\"model\\":\\"${modelName}\\", \\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
 \\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
 \\"repetition_penalty\\":${repetitionPenalty}, \\"max_tokens\\":${maxLength}}"`;
         } else {
-            console.log("runtime is not transformers");
             windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
 --image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
 "Content-Type: application/json" -d "{\\"model\\":\\"${modelName}\\", \\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
@@ -226,7 +224,6 @@ export async function getClusterIP(
 ) {
     void namespace;
     const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc -n ${namespace} ${modelName} -o jsonpath="{.spec.clusterIP}" `;
-    console.log(ipCommand);
     const ipResult = await kubectl.api.invokeCommand(ipCommand);
     if (ipResult && ipResult.code === 0) {
         return ipResult.stdout;
@@ -245,7 +242,6 @@ export async function getWorkspaceRuntime(
     namespace: string,
 ): Promise<string> {
     const command = `--kubeconfig="${kubeConfigFilePath}" get workspace -n ${namespace} ${modelName} -o json`;
-    console.log(command);
     const kubectlresult = await kubectl.api.invokeCommand(command);
     if (kubectlresult && kubectlresult.code === 0) {
         const json = JSON.parse(kubectlresult.stdout);
