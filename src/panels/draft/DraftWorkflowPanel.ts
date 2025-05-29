@@ -1,4 +1,4 @@
-import { AuthenticationSession, DocumentSymbol, Uri, WorkspaceFolder, window } from "vscode";
+import { l10n, AuthenticationSession, DocumentSymbol, Uri, WorkspaceFolder, window } from "vscode";
 import path from "path";
 import { BasePanel, PanelDataProvider } from "../BasePanel";
 import {
@@ -72,7 +72,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
     }
 
     getTitle(): string {
-        return `Draft GitHub Workflow in ${this.workspaceFolder.name}`;
+        return l10n.t(`Draft GitHub Workflow in {0}`, this.workspaceFolder.name);
     }
 
     getInitialState(): InitialState {
@@ -160,7 +160,7 @@ export class DraftWorkflowDataProvider implements PanelDataProvider<"draftWorkfl
 
         if (!repo) {
             window.showErrorMessage(
-                `GitHub repository ${repoKey.gitHubRepoOwner}/${repoKey.gitHubRepoName} not found.`,
+                l10n.t(`GitHub repository {0}/{1} not found.`, repoKey.gitHubRepoOwner, repoKey.gitHubRepoName),
             );
             return;
         }

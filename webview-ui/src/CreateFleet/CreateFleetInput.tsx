@@ -26,7 +26,7 @@ import styles from "./CreateFleet.module.css";
 import { CreateFleetModeInput } from "./CreateFleetModeInput";
 import { CustomDropdown } from "../components/CustomDropdown";
 import { CustomDropdownOption } from "../components/CustomDropdownOption";
-
+import * as l10n from "@vscode/l10n";
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 interface CreateFleetInputProps {
@@ -55,7 +55,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
 
     function handleExistingResourceGroupChange(value: string) {
         const resourceGroup = value ? allResourcesGroups.find((group) => group.name === value) : null;
-        const validatable = resourceGroup ? valid(resourceGroup) : invalid(null, "Resource Group is required.");
+        const validatable = resourceGroup ? valid(resourceGroup) : invalid(null, l10n.t("Resource Group is required."));
         setExistingResourceGroup(validatable);
     }
 
@@ -68,12 +68,14 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
     function getValidatedName(name: string): Validatable<string> {
         // Fleet name validation rules from the Azure REST API specs
         // https://github.com/Azure/azure-rest-api-specs/blob/24d856b33d49b5ac6227a51c610b7d8b0f289458/specification/containerservice/resource-manager/Microsoft.ContainerService/fleet/stable/2024-04-01/fleets.json#L193C10-L202C12
-        if (!name) return invalid(name, "Fleet name must be at least 1 character long.");
-        if (name.length > 63) return invalid(name, "Fleet name must be at most 63 characters long.");
+        if (!name) return invalid(name, l10n.t("Fleet name must be at least 1 character long."));
+        if (name.length > 63) return invalid(name, l10n.t("Fleet name must be at most 63 characters long."));
         if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(name)) {
             return invalid(
                 name,
-                "The only allowed characters are lowercase alphanumeric characters and '-'. The first and last character must be an alphanumeric character.",
+                l10n.t(
+                    "The only allowed characters are lowercase alphanumeric characters and '-'. The first and last character must be an alphanumeric character.",
+                ),
             );
         }
 
@@ -82,7 +84,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
 
     function handleLocationChange(value: string) {
         const location = value ? props.locations.find((loc) => loc === value) : null;
-        const validated = location ? valid(location) : missing<string>("Location is required.");
+        const validated = location ? valid(location) : missing<string>(l10n.t("Location is required."));
         setLocation(validated);
     }
 
@@ -128,10 +130,10 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
         <form className={styles.createForm} onSubmit={handleSubmit}>
             <div className={styles.inputContainer}>
                 <label htmlFor="fleet-details" className={`${styles.fleetDetailsLabel}`}>
-                    Fleet details
+                    {l10n.t("Fleet details")}
                 </label>
 
-                <label className={styles.label}>Fleet Name*</label>
+                <label className={styles.label}>{l10n.t("Fleet Name*")}</label>
                 <input
                     type="text"
                     id="name-input"
@@ -148,7 +150,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
                 )}
 
                 <label htmlFor="resourceGroup" className={styles.label}>
-                    Resource Group*
+                    {l10n.t("Resource Group*")}
                 </label>
                 <CustomDropdown
                     id="existing-resource-group-dropdown"
@@ -157,13 +159,13 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
                     aria-label="Select a resource group"
                     value={selectedResourceGroup}
                 >
-                    <CustomDropdownOption value="" label="Select" />
+                    <CustomDropdownOption value="" label={l10n.t("Select")} />
                     {allResourcesGroups.length > 0 ? (
                         allResourcesGroups.map((group) => (
                             <CustomDropdownOption key={group.name} value={group.name} label={group.name} />
                         ))
                     ) : (
-                        <CustomDropdownOption value="" label="No resource groups available" />
+                        <CustomDropdownOption value="" label={l10n.t("No resource groups available")} />
                     )}
                 </CustomDropdown>
                 {hasMessage(existingResourceGroup) && (
@@ -174,7 +176,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
                 )}
 
                 <label htmlFor="location-dropdown" className={styles.label}>
-                    Region*
+                    {l10n.t("Region*")}
                 </label>
                 <CustomDropdown
                     id="location-dropdown"
@@ -182,7 +184,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
                     onChange={handleLocationChange}
                     value={isValueSet(location) ? location.value : ""}
                 >
-                    <CustomDropdownOption value="" label="Select" />
+                    <CustomDropdownOption value="" label={l10n.t("Select")} />
                     {props.locations.map((location) => (
                         <CustomDropdownOption key={location} value={location} label={location} />
                     ))}
@@ -203,7 +205,7 @@ export function CreateFleetInput(props: CreateFleetInputProps) {
             ></CreateFleetModeInput>
 
             <div className={styles.buttonContainer}>
-                <button type="submit">Create</button>
+                <button type="submit">{l10n.t("Create")}</button>
             </div>
         </form>
     );

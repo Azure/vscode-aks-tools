@@ -1,5 +1,5 @@
 import { RoleAssignment } from "@azure/arm-authorization";
-import { Uri, window } from "vscode";
+import { l10n, Uri, window } from "vscode";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAuthorizationManagementClient } from "../commands/utils/arm";
 import { acrResourceType, clusterResourceType, getResources } from "../commands/utils/azureResources";
@@ -50,7 +50,7 @@ export class AttachAcrToClusterDataProvider implements PanelDataProvider<"attach
     ) {}
 
     getTitle(): string {
-        return "Attach ACR to Cluster";
+        return l10n.t("Attach ACR to Cluster");
     }
 
     getInitialState(): InitialState {
@@ -287,7 +287,7 @@ async function getClusterPrincipalId(
 
         return {
             succeeded: false,
-            error: "Cluster has managed identity but no kubelet identity",
+            error: l10n.t("Cluster has managed identity but no kubelet identity"),
         };
     }
 
@@ -304,7 +304,7 @@ async function getClusterPrincipalId(
 
     return {
         succeeded: false,
-        error: "Cluster has no managed identity or service principal",
+        error: l10n.t("Cluster has no managed identity or service principal"),
     };
 }
 

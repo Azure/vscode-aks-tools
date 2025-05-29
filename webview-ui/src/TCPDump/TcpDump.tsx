@@ -18,7 +18,7 @@ import {
 import { CaptureFilters } from "./CaptureFilters";
 import { EventHandlerFunc } from "./state/dataLoading";
 import { ProgressRing } from "../components/ProgressRing";
-
+import * as l10n from "@vscode/l10n";
 export function TcpDump(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -90,14 +90,16 @@ export function TcpDump(initialState: InitialState) {
     return (
         <>
             <header>
-                <h2>TCP Capture on {state.clusterName}</h2>
+                <h2>
+                    TCP {l10n.t("Capture on")} {state.clusterName}
+                </h2>
             </header>
 
             <hr style={{ marginBottom: "1rem" }} />
 
             <div className={styles.content}>
                 <label htmlFor="node-dropdown" className={styles.label}>
-                    Node:
+                    {l10n.t("Node:")}
                 </label>
                 <NodeSelector
                     nodes={state.allNodes}
@@ -109,11 +111,11 @@ export function TcpDump(initialState: InitialState) {
                 {hasStatus(NodeStatus.Checking) && (
                     <div className={styles.control} style={{ display: "flex" }}>
                         <ProgressRing />
-                        Checking Node
+                        {l10n.t("Checking Node")}
                     </div>
                 )}
 
-                <label className={styles.label}>Debug Pod</label>
+                <label className={styles.label}>{l10n.t("Debug Pod")}</label>
                 {hasStatus(NodeStatus.Clean, NodeStatus.CreatingDebugPod) && (
                     <button
                         onClick={handleCreateDebugPod}
@@ -130,7 +132,7 @@ export function TcpDump(initialState: InitialState) {
                                 <FontAwesomeIcon icon={faPlus} />
                             </span>
                         )}
-                        Create
+                        {l10n.t("Create")}
                     </button>
                 )}
                 {hasStatus(
@@ -155,7 +157,7 @@ export function TcpDump(initialState: InitialState) {
                                 <FontAwesomeIcon icon={faTrash} />
                             </span>
                         )}
-                        Delete
+                        {l10n.t("Delete")}
                     </button>
                 )}
 
@@ -163,7 +165,7 @@ export function TcpDump(initialState: InitialState) {
                     nodeState &&
                     hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) && (
                         <details className={styles.fullWidth}>
-                            <summary>Filters</summary>
+                            <summary>{l10n.t("Filters")}</summary>
                             <CaptureFilters
                                 captureNode={state.selectedNode}
                                 nodeState={nodeState}
@@ -173,7 +175,7 @@ export function TcpDump(initialState: InitialState) {
                         </details>
                     )}
 
-                <label className={styles.label}>Capture</label>
+                <label className={styles.label}>{l10n.t("Capture")}</label>
                 {hasStatus(NodeStatus.DebugPodRunning, NodeStatus.CaptureStarting) && (
                     <button
                         onClick={handleStartCapture}
@@ -190,7 +192,7 @@ export function TcpDump(initialState: InitialState) {
                                 <FontAwesomeIcon icon={faPlay} />
                             </span>
                         )}
-                        Start
+                        {l10n.t("Start")}
                     </button>
                 )}
                 {hasStatus(NodeStatus.CaptureRunning, NodeStatus.CaptureStopping) && (
@@ -209,12 +211,12 @@ export function TcpDump(initialState: InitialState) {
                                 <FontAwesomeIcon icon={faStop} />
                             </span>
                         )}
-                        Stop
+                        {l10n.t("Stop")}
                     </button>
                 )}
             </div>
             <hr style={{ marginTop: "1rem" }} />
-            <h3>Completed Captures</h3>
+            <h3>{l10n.t("Completed Captures")}</h3>
             {hasStatus(
                 NodeStatus.DebugPodRunning,
                 NodeStatus.CaptureStarting,
@@ -253,7 +255,7 @@ export function TcpDump(initialState: InitialState) {
                                                         <FontAwesomeIcon icon={faDownload} />
                                                     </span>
                                                 )}
-                                                Download
+                                                {l10n.t("Download")}
                                             </button>
                                         )}
 
@@ -269,7 +271,7 @@ export function TcpDump(initialState: InitialState) {
                                                         }
                                                     />
                                                 </button>
-                                                <button className="icon-button" title="Open Folder">
+                                                <button className="icon-button" title={l10n.t("Open Folder")}>
                                                     <FontAwesomeIcon
                                                         icon={faFolderOpen}
                                                         onClick={() => handleOpenFolderClick(c.downloadedFilePath!)}

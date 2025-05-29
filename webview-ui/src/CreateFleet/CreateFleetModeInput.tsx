@@ -7,7 +7,7 @@ import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 // Using the icon templates from createCluster. Consider abstracting the classes to improve code reusability
 import { AutomaticIcon } from "../icons/AutomaticIcon";
 import { DevTestIcon } from "../icons/DevTestIcon";
-
+import * as l10n from "@vscode/l10n";
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
 export interface CreateFleetInputProps {
@@ -31,12 +31,14 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
     function getValidatedDnsPrefix(dns: string): Validatable<string> {
         // dnsPrefix validation rules from the Azure REST API specs
         // https://github.com/Azure/azure-rest-api-specs/blob/24d856b33d49b5ac6227a51c610b7d8b0f289458/specification/containerservice/resource-manager/Microsoft.ContainerService/fleet/stable/2024-04-01/fleets.json#L1866-L1871
-        if (!dns) return invalid(dns, "The DNS name prefix cannot be empty.");
-        if (dns.length > 63) return invalid(dns, "The DNS name prefix must be at most 63 characters long.");
+        if (!dns) return invalid(dns, l10n.t("The DNS name prefix cannot be empty."));
+        if (dns.length > 63) return invalid(dns, l10n.t("The DNS name prefix must be at most 63 characters long."));
         if (!/^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-]{0,52}[a-zA-Z0-9]$/.test(dns)) {
             return invalid(
                 dns,
-                "The DNS name can contain only letters, numbers, and hyphens. The name must start and end with a letter or a number.",
+                l10n.t(
+                    "The DNS name can contain only letters, numbers, and hyphens. The name must start and end with a letter or a number.",
+                ),
             );
         }
         return valid(dns);
@@ -53,12 +55,12 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
                     >
                         <div className={styles.flexContainer}>
                             <AutomaticIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
-                            <div className={styles.hubModeTitle}>With Hub Cluster</div>
+                            <div className={styles.hubModeTitle}>{l10n.t("With Hub Cluster")}</div>
                         </div>
                         <div className={styles.hubModeDescription}>
-                            A standard tier AKS cluster managed by Microsoft and hosted on your subscription. Can be
-                            used for multi-cluster updates, Kubernetes resource object propagation, and multi-cluster
-                            load balancing.
+                            {l10n.t(
+                                "A standard tier AKS cluster managed by Microsoft and hosted on your subscription. Can be used for multi-cluster updates, Kubernetes resource object propagation, and multi-cluster load balancing.",
+                            )}
                         </div>
                     </div>
                     <div
@@ -67,17 +69,19 @@ export function CreateFleetModeInput(props: CreateFleetInputProps) {
                     >
                         <div className={styles.flexContainer}>
                             <DevTestIcon className={styles.svgContainer} style={{ width: "1rem", height: "1rem" }} />
-                            <div className={styles.hubModeTitle}>Without Hub Cluster</div>
+                            <div className={styles.hubModeTitle}>{l10n.t("Without Hub Cluster")}</div>
                         </div>
                         <div className={styles.hubModeDescription}>
-                            Use fleet as an abstract grouping resource to perform multi-cluster update orchestration.
+                            {l10n.t(
+                                "Use fleet as an abstract grouping resource to perform multi-cluster update orchestration.",
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {props.hubMode === HubMode.With && (
                     <div className={styles.inputContainer}>
-                        <label className={styles.label}>DNS name prefix*</label>
+                        <label className={styles.label}>{l10n.t("DNS name prefix*")}</label>
                         <input
                             type="text"
                             id="dns-input"

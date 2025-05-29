@@ -12,7 +12,7 @@ import { getConditions, convertAgeToMinutes, deployModel } from "./utilities/Kai
 import { filterPodImage } from "../commands/utils/clusters";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient } from "../commands/utils/arm";
-
+import { l10n } from "vscode";
 export class KaitoManagePanel extends BasePanel<"kaitoManage"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kaitoManage", {
@@ -45,7 +45,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     }
 
     getTitle(): string {
-        return `Manage Kaito Models`;
+        return l10n.t(`Manage Kaito Models`);
     }
     getInitialState(): InitialState {
         return {
@@ -88,7 +88,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         // Prevent multiple operations on the same model
         // Expected to be false unless this function has already been called and is currently in progress
         if (this.operatingState[model]) {
-            vscode.window.showErrorMessage(`Operation in progress for '${model}'. Please wait.`);
+            vscode.window.showErrorMessage(l10n.t(`Operation in progress for '{0}'. Please wait.`, model));
             return;
         }
         this.operatingState[model] = true;
@@ -97,11 +97,13 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 const command = `delete workspace ${model}`;
                 const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
                 if (failed(kubectlresult)) {
-                    vscode.window.showErrorMessage(`There was an error deleting '${model}'. ${kubectlresult.error}`);
+                    vscode.window.showErrorMessage(
+                        l10n.t(`There was an error deleting '{0}'. {1}`, model, kubectlresult.error),
+                    );
                     return;
                 }
             });
-            vscode.window.showInformationMessage(`'${model}' was deleted successfully`);
+            vscode.window.showInformationMessage(l10n.t(`'{0}' was deleted successfully`, model));
             await this.updateModels(webview);
 
             // Delete the node pool associated with the workspace if it exists
@@ -129,7 +131,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         // Prevent multiple operations on the same model
         // Expected to be false unless this function has already been called and is currently in progress
         if (this.operatingState[modelName]) {
-            vscode.window.showErrorMessage(`Operation in progress for '${modelName}'. Please wait.`);
+            vscode.window.showErrorMessage(l10n.t(`Operation in progress for '{0}'. Please wait.`, modelName));
             return;
         }
         try {
@@ -141,11 +143,13 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             await longRunning(`Re-deploying '${modelName}'`, async () => {
                 const deploymentResult = await deployModel(modelYaml, this.kubectl, this.kubeConfigFilePath);
                 if (failed(deploymentResult)) {
-                    vscode.window.showErrorMessage(`Error deploying '${modelName}': ${deploymentResult.error}`);
+                    vscode.window.showErrorMessage(
+                        l10n.t(`Error deploying '{0}': {1}`, modelName, deploymentResult.error),
+                    );
                     return;
                 }
             });
-            vscode.window.showInformationMessage(`'${modelName}' has been redeployed.`);
+            vscode.window.showInformationMessage(l10n.t(`'{0}' has been redeployed.`, modelName));
             await this.updateModels(webview);
         } finally {
             this.operatingState[modelName] = false;
@@ -207,7 +211,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             }
 
             if (workspacePods.result.length === 0) {
-                vscode.window.showWarningMessage(`No kaito workspace pods found.`);
+                vscode.window.showWarningMessage(l10n.t(`No kaito workspace pods found.`));
                 return;
             }
             const pod = workspacePods.result[0];
@@ -215,7 +219,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             const command = `logs ${pod.podName} -n ${pod.nameSpace} --tail=500`;
             const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
             if (failed(kubectlresult)) {
-                vscode.window.showErrorMessage(`Error fetching logs: ${kubectlresult.error}`);
+                vscode.window.showErrorMessage(l10n.t(`Error fetching logs: {0}`, kubectlresult.error));
                 return;
             }
             const logs = kubectlresult.result.stdout;

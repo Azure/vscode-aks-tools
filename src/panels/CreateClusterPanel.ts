@@ -28,6 +28,7 @@ import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCr
 import { reporter } from "../commands/utils/reporter";
 import { getFilteredClusters } from "../commands/utils/config";
 import { addItemToClusterFilter } from "../commands/utils/clusterfilter";
+import * as l10n from "@vscode/l10n";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -58,7 +59,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     }
 
     getTitle(): string {
-        return `Create Cluster in ${this.subscriptionName}`;
+        return l10n.t(`Create Cluster in {0}`, this.subscriptionName);
     }
 
     getInitialState(): InitialState {
@@ -97,14 +98,17 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         const resourceTypes = provider.resourceTypes?.filter((t) => t.resourceType === "managedClusters");
         if (!resourceTypes || resourceTypes.length > 1) {
             window.showErrorMessage(
-                `Unexpected number of managedClusters resource types for provider (${resourceTypes?.length || 0}).`,
+                l10n.t(
+                    "Unexpected number of managedClusters resource types for provider ({0}).",
+                    resourceTypes?.length || 0,
+                ),
             );
             return;
         }
 
         const resourceType = resourceTypes[0];
         if (!resourceType.locations || resourceType.locations.length === 0) {
-            window.showErrorMessage("No locations for managedClusters resource type.");
+            window.showErrorMessage(l10n.t("No locations for managedClusters resource type."));
             return;
         }
 
@@ -116,7 +120,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         if (failed(groups)) {
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
-                operationDescription: "Retrieving resource groups",
+                operationDescription: l10n.t("Retrieving resource groups"),
                 errorMessage: groups.error,
                 deploymentPortalUrl: null,
                 createdCluster: null,
@@ -191,7 +195,7 @@ async function createResourceGroup(
     webview: MessageSink<ToWebViewMsgDef>,
     resourceManagementClient: ResourceManagementClient,
 ) {
-    const operationDescription = `Creating resource group ${group.name}`;
+    const operationDescription = l10n.t(`Creating resource group {0}`, group.name);
     webview.postProgressUpdate({
         event: ProgressEventType.InProgress,
         operationDescription,
@@ -226,7 +230,7 @@ async function createCluster(
     featureClient: FeatureClient,
     commandId: string,
 ) {
-    const operationDescription = `Creating cluster ${name}`;
+    const operationDescription = l10n.t(`Creating cluster {0}`, name);
     webview.postProgressUpdate({
         event: ProgressEventType.InProgress,
         operationDescription,
@@ -241,11 +245,11 @@ async function createCluster(
     const hasDefaultVersion = kubernetesVersions.some(isDefaultK8sVersion);
     const [kubernetesVersion] = hasDefaultVersion ? kubernetesVersions.filter(isDefaultK8sVersion) : kubernetesVersions;
     if (!kubernetesVersion?.version) {
-        window.showErrorMessage(`No Kubernetes versions available for location ${location}`);
+        window.showErrorMessage(l10n.t(`No Kubernetes versions available for location {0}`, location));
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
-            errorMessage: "No Kubernetes versions available for location",
+            errorMessage: l10n.t("No Kubernetes versions available for location"),
             deploymentPortalUrl: null,
             createdCluster: null,
         });
@@ -254,7 +258,7 @@ async function createCluster(
 
     const session = await sessionProvider.getAuthSession();
     if (failed(session)) {
-        window.showErrorMessage(`Error getting authentication session: ${session.error}`);
+        window.showErrorMessage(l10n.t(`Error getting authentication session: {0}`, session.error));
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
@@ -270,11 +274,11 @@ async function createCluster(
     if (preset === PresetType.Automatic) {
         servicePrincipalId = getServicePrincipalId(session.result);
         if (!servicePrincipalId) {
-            window.showErrorMessage("No service principal id available for logged in user.");
+            window.showErrorMessage(l10n.t("No service principal id available for logged in user."));
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
                 operationDescription,
-                errorMessage: "No service principal id available for logged in user.",
+                errorMessage: l10n.t("No service principal id available for logged in user."),
                 deploymentPortalUrl: null,
                 createdCluster: null,
             });
@@ -305,10 +309,12 @@ async function createCluster(
     try {
         await doFeatureRegistration(preset, featureClient);
     } catch (error) {
-        window.showErrorMessage(`Error Registering preview features for AKS cluster ${name}: ${error}`);
+        window.showErrorMessage(
+            l10n.t("Error Registering preview features for AKS cluster {0}: {1}", name, getErrorMessage(error)),
+        );
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
-            operationDescription: "Error Registering preview features for AKS cluster",
+            operationDescription: l10n.t("Error Registering preview features for AKS cluster"),
             errorMessage: getErrorMessage(error),
             deploymentPortalUrl: null,
             createdCluster: null,
@@ -347,7 +353,7 @@ async function createCluster(
             } else if (state.status === "failed") {
                 reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "false" });
                 const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
-                window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
+                window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
                 webview.postProgressUpdate({
                     event: ProgressEventType.Failed,
                     operationDescription,
@@ -357,7 +363,7 @@ async function createCluster(
                 });
             } else if (state.status === "succeeded") {
                 reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "true" });
-                window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
+                window.showInformationMessage(l10n.t(`Successfully created AKS cluster {0}.`, name));
                 const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
                 webview.postProgressUpdate({
                     event: ProgressEventType.Success,
@@ -375,7 +381,7 @@ async function createCluster(
         const errorMessage = isInvalidTemplateDeploymentError(ex)
             ? getInvalidTemplateErrorMessage(ex)
             : getErrorMessage(ex);
-        window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
+        window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,

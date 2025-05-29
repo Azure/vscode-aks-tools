@@ -12,7 +12,7 @@ import {
     TraceOutputItem,
 } from "../webview-contract/webviewDefinitions/inspektorGadget";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
-
+import { l10n } from "vscode";
 export class InspektorGadgetPanel extends BasePanel<"gadget"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "gadget", {
@@ -34,7 +34,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
     ) {}
 
     getTitle(): string {
-        return `Inspektor Gadget on ${this.clusterName}`;
+        return l10n.t(`Inspektor Gadget on {0}`, this.clusterName);
     }
 
     getInitialState(): InitialState {

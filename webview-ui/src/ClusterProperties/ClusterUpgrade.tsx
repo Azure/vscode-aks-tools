@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { CustomDropdown } from "../components/CustomDropdown";
 import { CustomDropdownOption } from "../components/CustomDropdownOption";
+import * as l10n from "@vscode/l10n";
 
 export interface ClusterUpgradeProps {
     clusterInfo: ClusterInfo;
@@ -59,20 +60,22 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
     const warningMessage = (
         <div>
             <p>
-                You are about to upgrade your AKS cluster from version{" "}
-                <strong>{props.clusterInfo.kubernetesVersion}</strong> to <strong>{selectedVersion}</strong>.
+                {l10n.t("You are about to upgrade your AKS cluster from version")}{" "}
+                <strong>{props.clusterInfo.kubernetesVersion}</strong> {l10n.t("to")} <strong>{selectedVersion}</strong>
+                .
             </p>
             <FontAwesomeIcon icon={faExclamationTriangle} className={styles.warningIcon} />
-            An AKS cluster upgrade triggers a cordon and drain of your nodes. If you have a low compute quota available,
-            the upgrade might fail. For more information, see{" "}
+            {l10n.t(
+                "An AKS cluster upgrade triggers a cordon and drain of your nodes. If you have a low compute quota available, the upgrade might fail. For more information, see",
+            )}{" "}
             <a
                 href="https://learn.microsoft.com/en-us/azure/quotas/regional-quota-requests"
                 target="_blank"
                 rel="noopener noreferrer"
             >
-                increase quotas
+                {l10n.t("increase quotas")}
             </a>
-            .<p>Are you sure you want to proceed with the upgrade?</p>
+            .<p>{l10n.t("Are you sure you want to proceed with the upgrade?")}</p>
         </div>
     );
 
@@ -84,13 +87,13 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
     return (
         <>
             <div className={styles.upgradeVersionDropdown} style={{ marginLeft: "10px" }}>
-                <span>Upgrade:</span>
+                <span>{l10n.t("Upgrade:")}</span>
                 <CustomDropdown
                     onChange={handleUpgradeVersionChange}
                     disabled={props.clusterOperationRequested || !readyToUpgrade}
                     value={displayVersion || ""}
                 >
-                    <CustomDropdownOption value="" label="Select version" />
+                    <CustomDropdownOption value="" label={l10n.t("Select version")} />
                     {props.clusterInfo.availableUpgradeVersions.map((version: string) => (
                         <CustomDropdownOption key={version} value={version} label={version} />
                     ))}
@@ -110,15 +113,15 @@ export function ClusterUpgrade(props: ClusterUpgradeProps) {
                     &nbsp;
                     <FontAwesomeIcon icon={faCircleInfo} className={styles.InformationIcon} />
                     &nbsp;
-                    <strong>Run CRUD Validations</strong>
+                    <strong>{l10n.t("Run CRUD Validations")}</strong>
                     <br />
                 </a>
             </div>
             <ConfirmationDialog
-                title="Confirm Kubernetes Version Upgrade"
+                title={l10n.t("Confirm Kubernetes Version Upgrade")}
                 message={warningMessage}
-                confirmLabel="Upgrade"
-                cancelLabel="Cancel"
+                confirmLabel={l10n.t("Upgrade")}
+                cancelLabel={l10n.t("Cancel")}
                 isOpen={showConfirmation}
                 onConfirm={handleConfirmUpgrade}
                 onCancel={handleCancelUpgrade}

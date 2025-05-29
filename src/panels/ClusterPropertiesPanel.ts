@@ -1,4 +1,4 @@
-import { Uri } from "vscode";
+import { l10n, Uri } from "vscode";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
@@ -48,7 +48,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
     }
 
     getTitle(): string {
-        return `Cluster Properties for ${this.clusterName}`;
+        return l10n.t(`Cluster Properties for {0}`, this.clusterName);
     }
 
     getInitialState(): InitialState {
@@ -123,7 +123,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             poller.onProgress((state) => {
                 // Note: not handling 'canceled' here because this is a cancel operation.
                 if (state.status === "failed") {
-                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    const errorMessage = state.error ? getErrorMessage(state.error) : l10n.t("Unknown error");
                     webview.postErrorNotification(errorMessage);
                 }
             });
@@ -148,9 +148,11 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             poller.onProgress((state) => {
                 if (state.status === "canceled") {
-                    webview.postErrorNotification(`Reconcile Cluster operation on ${this.clusterName} was cancelled.`);
+                    webview.postErrorNotification(
+                        l10n.t(`Reconcile Cluster operation on {0} was cancelled.`, this.clusterName),
+                    );
                 } else if (state.status === "failed") {
-                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    const errorMessage = state.error ? getErrorMessage(state.error) : l10n.t("Unknown error");
                     webview.postErrorNotification(errorMessage);
                 }
             });
@@ -176,9 +178,11 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             poller.onProgress((state) => {
                 if (state.status === "canceled") {
-                    webview.postErrorNotification(`Stop Cluster operation on ${this.clusterName} was cancelled.`);
+                    webview.postErrorNotification(
+                        l10n.t(`Stop Cluster operation on {0} was cancelled.`, this.clusterName),
+                    );
                 } else if (state.status === "failed") {
-                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    const errorMessage = state.error ? getErrorMessage(state.error) : l10n.t("Unknown error");
                     webview.postErrorNotification(errorMessage);
                 }
             });
@@ -202,9 +206,11 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             poller.onProgress((state) => {
                 if (state.status === "canceled") {
-                    webview.postErrorNotification(`Start Cluster operation on ${this.clusterName} was cancelled.`);
+                    webview.postErrorNotification(
+                        l10n.t(`Start Cluster operation on {0} was cancelled.`, this.clusterName),
+                    );
                 } else if (state.status === "failed") {
-                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    const errorMessage = state.error ? getErrorMessage(state.error) : l10n.t("Unknown error");
                     webview.postErrorNotification(errorMessage);
                 }
             });
@@ -250,11 +256,11 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             poller.onProgress((state) => {
                 if (state.status === "canceled") {
-                    webview.postErrorNotification(`Upgrade operation on ${this.clusterName} was cancelled.`);
+                    webview.postErrorNotification(l10n.t(`Upgrade operation on {0} was cancelled.`, this.clusterName));
                     webview.postUpgradeClusterVersionResponse(false);
                     return;
                 } else if (state.status === "failed") {
-                    const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
+                    const errorMessage = state.error ? getErrorMessage(state.error) : l10n.t("Unknown error");
                     webview.postErrorNotification(errorMessage);
                     webview.postUpgradeClusterVersionResponse(false);
                     return;

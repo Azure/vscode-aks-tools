@@ -1,4 +1,4 @@
-import { Uri, WorkspaceFolder, window } from "vscode";
+import { l10n, Uri, WorkspaceFolder, window } from "vscode";
 import path from "path";
 import { BasePanel, PanelDataProvider } from "../BasePanel";
 import {
@@ -30,7 +30,7 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
     }
 
     getTitle(): string {
-        return `Draft Validate in ${this.workspaceFolder.name}`;
+        return l10n.t(`Draft Validate in {0}`, this.workspaceFolder.name);
     }
 
     getInitialState(): InitialState {

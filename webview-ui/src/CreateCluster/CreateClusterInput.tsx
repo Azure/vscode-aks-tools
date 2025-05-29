@@ -18,6 +18,8 @@ import { EventDef } from "./helpers/state";
 import { CustomDropdown } from "../components/CustomDropdown";
 import { CustomDropdownOption } from "../components/CustomDropdownOption";
 import { MouseEvent } from "react";
+import * as l10n from "@vscode/l10n";
+
 interface CreateClusterInputProps {
     locations: string[];
     resourceGroups: ResourceGroup[];
@@ -75,12 +77,14 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     };
 
     function getValidatedName(name: string): Validatable<string> {
-        if (!name) return invalid(name, "Cluster name must be at least 1 character long.");
-        if (name.length > 63) return invalid(name, "Cluster name must be at most 63 characters long.");
+        if (!name) return invalid(name, l10n.t("Cluster name must be at least 1 character long."));
+        if (name.length > 63) return invalid(name, l10n.t("Cluster name must be at most 63 characters long."));
         if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$/.test(name)) {
             return invalid(
                 name,
-                "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number.",
+                l10n.t(
+                    "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number.",
+                ),
             );
         }
 
@@ -139,11 +143,11 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                 <div className={styles.inputContainer}>
                     <CreateClusterPresetInput onPresetSelected={handlePresetSelection}></CreateClusterPresetInput>
                     <label htmlFor="cluster-details" className={styles.clusterDetailsLabel}>
-                        Cluster details
+                        {l10n.t("Cluster details")}
                     </label>
 
                     <label htmlFor="existing-resource-group-dropdown" className={styles.label}>
-                        Resource Group*
+                        {l10n.t("Resource Group*")}
                     </label>
                     <CustomDropdown
                         id="existing-resource-group-dropdown"
@@ -152,7 +156,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         disabled={false}
                         aria-label="Select a resource group"
                     >
-                        <CustomDropdownOption value="" label="Select" />
+                        <CustomDropdownOption value="" label={l10n.t("Select")} />
                         {allResourceGroups.length > 0 ? (
                             allResourceGroups.map((group) => (
                                 <CustomDropdownOption
@@ -162,12 +166,12 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                                 />
                             ))
                         ) : (
-                            <CustomDropdownOption value="" label="No resource groups available" />
+                            <CustomDropdownOption value="" label={l10n.t("No resource groups available")} />
                         )}
                     </CustomDropdown>
 
                     <button className={styles.sideControl} onClick={handleCreateNewRG}>
-                        Create New
+                        {l10n.t("Create New")}
                     </button>
                     {hasMessage(existingResourceGroup) && (
                         <span className={styles.validationMessage}>
@@ -177,7 +181,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="name-input" className={styles.label}>
-                        Cluster Name*
+                        {l10n.t("Cluster Name*")}
                     </label>
                     <input
                         type="text"
@@ -195,7 +199,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="location-dropdown" className={styles.label}>
-                        Region*
+                        {l10n.t("Region*")}
                     </label>
                     <CustomDropdown
                         id="location-dropdown"
@@ -203,7 +207,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                         onChange={handleLocationChange}
                         disabled={false}
                     >
-                        <CustomDropdownOption value="" label="Select" />
+                        <CustomDropdownOption value="" label={l10n.t("Select")} />
                         {props.locations.map((location) => (
                             <CustomDropdownOption key={location} value={location} label={location} />
                         ))}
@@ -217,7 +221,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                 </div>
 
                 <div className={styles.buttonContainer}>
-                    <button type="submit">Create</button>
+                    <button type="submit">{l10n.t("Create")}</button>
                 </div>
             </form>
 

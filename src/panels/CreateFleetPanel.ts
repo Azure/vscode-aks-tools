@@ -1,6 +1,6 @@
 import { ContainerServiceFleetClient } from "@azure/arm-containerservicefleet";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { Uri, window } from "vscode";
+import { l10n, Uri, window } from "vscode";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     HubMode,
@@ -41,7 +41,7 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
     }
 
     getTitle(): string {
-        return `Create Fleet in ${this.subscriptionName}`;
+        return l10n.t(`Create Fleet in {0}`, this.subscriptionName);
     }
 
     getInitialState(): InitialState {
@@ -80,14 +80,14 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         const resourceTypes = provider.resourceTypes?.filter((type) => type.resourceType === "fleets");
         if (!resourceTypes || resourceTypes.length > 1) {
             window.showErrorMessage(
-                `Unexpected number of fleets resource types for provider (${resourceTypes?.length || 0}).`,
+                l10n.t(`Unexpected number of fleets resource types for provider ({0}).`, resourceTypes?.length || 0),
             );
             return;
         }
 
         const resourceType = resourceTypes[0];
         if (!resourceType.locations || resourceType.locations.length === 0) {
-            window.showErrorMessage("No locations found for fleets resource type.");
+            window.showErrorMessage(l10n.t("No locations found for fleets resource type."));
             return;
         }
 
@@ -99,7 +99,7 @@ export class CreateFleetDataProvider implements PanelDataProvider<"createFleet">
         if (failed(groups)) {
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
-                operationDescription: "Retrieving resource groups for fleet creation",
+                operationDescription: l10n.t("Retrieving resource groups for fleet creation"),
                 errorMessage: groups.error,
                 deploymentPortalUrl: null,
                 createdFleet: null,

@@ -4,7 +4,7 @@ import styles from "./ClusterProperties.module.css";
 import { EventDef, vscode } from "./state";
 import { ClusterDisplayToolTip } from "./ClusterDisplayToolTip";
 import { ClusterUpgrade } from "./ClusterUpgrade";
-
+import * as l10n from "@vscode/l10n";
 export interface ClusterDisplayProps {
     clusterInfo: ClusterInfo;
     clusterOperationRequested: boolean;
@@ -74,7 +74,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
     return (
         <dl className={styles.propertyList}>
-            <dt>Provisioning State</dt>
+            <dt>{l10n.t("Provisioning State")}</dt>
             <dd>
                 {props.clusterInfo.provisioningState}
                 <div className={styles.buttonDiv}>
@@ -86,7 +86,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                                 onClick={() => handleAbortClick()}
                                 className="secondary-button"
                             >
-                                Abort
+                                {l10n.t("Abort")}
                             </button>
                         </>
                     )}
@@ -98,7 +98,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                                 onClick={() => handleReconcileClick()}
                                 className="secondary-button"
                             >
-                                Reconcile
+                                {l10n.t("Reconcile")}
                             </button>
                         </>
                     )}
@@ -116,11 +116,11 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                         </div>
                     </span>
                     <span className={styles.tooltiptext}>
-                        It is important that you don&#39;t repeatedly start/stop your cluster. Repeatedly
-                        starting/stopping your cluster may result in errors. Once your cluster is stopped, you should
-                        wait 15-30 minutes before starting it up again. &nbsp;
+                        {l10n.t(
+                            "It is important that you don't repeatedly start/stop your cluster. Repeatedly starting/stopping your cluster may result in errors. Once your cluster is stopped, you should wait 15-30 minutes before starting it up again.",
+                        )}{" "}
                         <a href="https://docs.microsoft.com/en-au/azure/aks/start-stop-cluster?tabs=azure-cli#start-an-aks-cluster">
-                            Learn more
+                            {l10n.t("Learn more")}
                         </a>
                     </span>
                 </span>
@@ -131,7 +131,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                             onClick={handleStopCluster}
                             className={`${styles.controlButton} secondary-button`}
                         >
-                            Stop Cluster
+                            {l10n.t("Stop Cluster")}
                         </button>
                     )}
                     {startStopState === "Stopped" && (
@@ -140,7 +140,7 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                             onClick={handleStartCluster}
                             className={`${styles.controlButton} secondary-button`}
                         >
-                            Start Cluster
+                            {l10n.t("Start Cluster")}
                         </button>
                     )}
                     {(startStopState === "Starting" || startStopState === "Stopping") && (
@@ -152,11 +152,11 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
             <dt>FQDN</dt>
             <dd>{props.clusterInfo.fqdn}</dd>
 
-            <dt>Kubernetes Version</dt>
+            <dt>Kubernetes {l10n.t("Version")}</dt>
             <dd>
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
                     <span>
-                        {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
+                        {props.clusterInfo.kubernetesVersion} {isSupported ? "" : l10n.t("(Out of support)")}
                         {isUpgrading && <span className={styles.upgradeIndicator}>(Upgrading)</span>}
                     </span>
                     <ClusterDisplayToolTip clusterInfo={props.clusterInfo} />

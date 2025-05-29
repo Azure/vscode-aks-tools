@@ -27,7 +27,7 @@ import { AuthorizationManagementClient, RoleAssignment } from "@azure/arm-author
 import { getClusterNamespaces, createClusterNamespace } from "../commands/utils/clusters";
 import { APIAvailable, KubectlV1 } from "vscode-kubernetes-tools-api";
 import * as octokitHelper from "../commands/utils/octokitHelper";
-
+import { l10n } from "vscode";
 const acrPullRoleDefinitionId = "7f951dda-4ed3-4680-a7ca-43fe172d538d"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/containers
 const azureContributorRole = "b24988ac-6180-42a0-ab88-20f7382dd24c"; // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 
@@ -61,7 +61,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
     }
 
     getTitle(): string {
-        return `Automated Deployments with DevHub`; //Title open to change
+        return l10n.t(`Automated Deployments with DevHub`); //Title open to change
     }
 
     getInitialState(): InitialState<"automatedDeployments"> {
@@ -189,7 +189,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             clusterName,
         );
         if (failed(namespacesResult)) {
-            vscode.window.showErrorMessage("Error fetching namespaces: ", namespacesResult.error);
+            vscode.window.showErrorMessage(l10n.t("Error fetching namespaces: "), namespacesResult.error);
             return;
         }
 
@@ -293,7 +293,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             );
             if (!acrCreationSucceeded) {
                 console.log("Error creating ACR");
-                vscode.window.showErrorMessage("Error creating ACR");
+                vscode.window.showErrorMessage(l10n.t("Error creating ACR"));
                 return;
             }
         }
@@ -302,7 +302,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         const newApp = await msGraph.createApplication(this.graphClient, generateRandomWorkflowName());
         if (failed(newApp)) {
             console.error("Error creating new App Registration for DevHub:", newApp.error);
-            vscode.window.showErrorMessage("Error creating new App Registration for DevHub");
+            vscode.window.showErrorMessage(l10n.t("Error creating new App Registration for DevHub"));
             return;
         }
         console.log("New App Registration created:", newApp.result);
@@ -311,7 +311,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         const newServicePrincipal = await msGraph.createServicePrincipal(this.graphClient, newApp.result.appId);
         if (failed(newServicePrincipal)) {
             console.error("Error creating new service principal for DevHub Workflow:", newServicePrincipal.error);
-            vscode.window.showErrorMessage("Error creating new service principal for DevHub Workflow");
+            vscode.window.showErrorMessage(l10n.t("Error creating new service principal for DevHub Workflow"));
             return;
         }
         console.log("New Service Principal Created:", newServicePrincipal.result);
@@ -326,7 +326,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(gitFedCredResp)) {
             console.error("Error creating GitHub Federated Credential:", gitFedCredResp.error);
-            vscode.window.showErrorMessage("Error creating GitHub Federated Credential");
+            vscode.window.showErrorMessage(l10n.t("Error creating GitHub Federated Credential"));
             return;
         }
         console.log("GitHub Federated Credential created:", gitFedCredResp.result);
@@ -348,7 +348,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(acrRoleCreation)) {
             console.error("Error creating role assignment:", acrRoleCreation.error);
-            vscode.window.showErrorMessage("Error creating role assignment for ACR");
+            vscode.window.showErrorMessage(l10n.t("Error creating role assignment for ACR"));
             return;
         }
         console.log("Role assignment created:", acrRoleCreation.result);
@@ -364,7 +364,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(clusterRoleCreation)) {
             console.error("Error creating role assignment:", clusterRoleCreation.error);
-            vscode.window.showErrorMessage("Error creating role assignment for AKS cluster");
+            vscode.window.showErrorMessage(l10n.t("Error creating role assignment for AKS cluster"));
             return;
         }
         console.log("Collab Role assignment created:", clusterRoleCreation.result);
@@ -378,7 +378,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(clusterPrincipalId)) {
             console.error("Error getting cluster principal ID:", clusterPrincipalId.error);
-            vscode.window.showErrorMessage("Error getting cluster principal ID");
+            vscode.window.showErrorMessage(l10n.t("Error getting cluster principal ID"));
             return;
         }
 
@@ -393,7 +393,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         );
         if (failed(acrPullResp)) {
             console.error("Error verifying and assigning ACR pull role:", acrPullResp.error);
-            vscode.window.showErrorMessage("Error verifying and assigning ACR pull role");
+            vscode.window.showErrorMessage(l10n.t("Error verifying and assigning ACR pull role"));
             return;
         }
 
@@ -402,7 +402,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
         ////////////TODO: Pass in neccesary parameters for workflow creation
         const prUrl = await launchDevHubWorkflow(this.devHubClient);
         if (prUrl !== undefined) {
-            vscode.window.showInformationMessage(`Workflow created successfully. PR: ${prUrl}`);
+            vscode.window.showInformationMessage(l10n.t(`Workflow created successfully. PR: {0}`, prUrl));
             webview.postGetWorkflowCreationResponse(prUrl);
         }
     }
@@ -493,7 +493,7 @@ async function launchDevHubWorkflow(devHubClient: DeveloperHubServiceClient): Pr
     );
 
     if (workflowResult.prStatus === "failed") {
-        vscode.window.showErrorMessage("Failed to create workflow");
+        vscode.window.showErrorMessage(l10n.t("Failed to create workflow"));
         return;
     }
 
@@ -569,7 +569,7 @@ async function getClusterPrincipalId(
 
         return {
             succeeded: false,
-            error: "Cluster has managed identity but no kubelet identity",
+            error: l10n.t("Cluster has managed identity but no kubelet identity"),
         };
     }
 
@@ -586,7 +586,7 @@ async function getClusterPrincipalId(
 
     return {
         succeeded: false,
-        error: "Cluster has no managed identity or service principal",
+        error: l10n.t("Cluster has no managed identity or service principal"),
     };
 }
 

@@ -10,7 +10,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRedoAlt } from "@fortawesome/free-solid-svg-icons";
 import { HubMode } from "../../../src/webview-contract/webviewDefinitions/createFleet";
 import { ProgressRing } from "../components/ProgressRing";
-
+import * as l10n from "@vscode/l10n";
 export function FleetProperties(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -32,7 +32,9 @@ export function FleetProperties(initialState: InitialState) {
         <>
             <div className={styles.header}>
                 <h2>
-                    <span className={styles.headerTitle}>AKS Fleet Properties of {state.fleetName}</span>
+                    <span className={styles.headerTitle}>
+                        {l10n.t("AKS Fleet Properties of")} {state.fleetName}
+                    </span>
                     <button
                         onClick={handleRefreshRequest}
                         className={styles.refreshButton}
@@ -46,21 +48,25 @@ export function FleetProperties(initialState: InitialState) {
 
             {fleetInfo ? (
                 <dl className={styles.propertyList}>
-                    <dt>Resource Group</dt>
+                    <dt>{l10n.t("Resource Group")}</dt>
                     <dd>{fleetInfo.resourceGroup}</dd>
-                    <dt>Location</dt>
+                    <dt>{l10n.t("Location")}</dt>
                     <dd>{fleetInfo.location}</dd>
-                    <dt>Provisioning State</dt>
+                    <dt>{l10n.t("Provisioning State")}</dt>
                     <dd>{fleetInfo.provisioningState}</dd>
-                    <dt>Hub Cluster Mode</dt>
+                    <dt>{l10n.t("Hub Cluster Mode")}</dt>
                     <dd>{fleetInfo.hubClusterMode === HubMode.Without ? "Without hub cluster" : "With hub cluster"}</dd>
-                    <dt>FQDN</dt>
+                    <dt>{l10n.t("FQDN")}</dt>
                     <dd>{fleetInfo.hubClusterMode === HubMode.Without ? "N/A" : fleetInfo.fqdn}</dd>
                 </dl>
             ) : (
                 <>
                     <ProgressRing />
-                    <h3>If loading takes too long, please ensure the Treeview is up-to-date by refreshing it.</h3>
+                    <h3>
+                        {l10n.t(
+                            "If loading takes too long, please ensure the Treeview is up-to-date by refreshing it.",
+                        )}
+                    </h3>
                 </>
             )}
         </>

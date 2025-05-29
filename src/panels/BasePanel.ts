@@ -22,7 +22,9 @@ import {
     VsCodeMessageContext,
 } from "../webview-contract/webviewTypes";
 import { getNonce, getUri } from "./utilities/webview";
-
+import * as vscode from "vscode";
+import { readFile } from "fs/promises";
+import { l10n } from "vscode";
 const viewType = "aksVsCodeTools";
 
 /**
@@ -59,7 +61,6 @@ export abstract class BasePanel<TContent extends ContentId> {
         const title = dataProvider.getTitle();
 
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
-
         // Set up messaging between VSCode and the webview.
         const telemetryDefinition = dataProvider.getTelemetryDefinition();
         const messageContext = getMessageContext(
@@ -136,6 +137,23 @@ function getMessageContext<TContent extends ContentId>(
         subscribeToMessages: (handler) => {
             webview.onDidReceiveMessage(
                 (message: object) => {
+                    // if bundle request is received, send the language back to the webview
+                    if ((message as Message<ToVsCodeMsgDef<TContent>>).command === "request-bundle") {
+                        if (vscode.l10n.uri?.fsPath) {
+                            readFile(vscode.l10n.uri?.fsPath, "utf-8").then((fileContent) => {
+                                webview.postMessage({
+                                    type: "bundle",
+                                    payload: fileContent,
+                                });
+                            });
+                        } else {
+                            webview.postMessage({
+                                type: "bundle",
+                                payload: undefined,
+                            });
+                        }
+                        return;
+                    }
                     if (!isValidMessage<ToVsCodeMsgDef<TContent>>(message)) {
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }
@@ -148,7 +166,7 @@ function getMessageContext<TContent extends ContentId>(
                     if (action) {
                         action(message.parameters, message.command);
                     } else {
-                        window.showErrorMessage(`No handler found for command ${message.command}`);
+                        window.showErrorMessage(l10n.t(`No handler found for command {0}`, message.command));
                     }
                 },
                 undefined,

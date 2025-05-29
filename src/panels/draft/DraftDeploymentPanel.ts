@@ -1,4 +1,4 @@
-import { Uri, window, WorkspaceFolder } from "vscode";
+import { l10n, Uri, window, WorkspaceFolder } from "vscode";
 import path from "path";
 import * as fs from "fs";
 import { BasePanel, PanelDataProvider } from "../BasePanel";
@@ -53,7 +53,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
     ) {}
 
     getTitle(): string {
-        return `Draft Deployment in ${this.workspaceFolder.name}`;
+        return l10n.t(`Draft Deployment in {0}`, this.workspaceFolder.name);
     }
 
     getInitialState(): InitialState {

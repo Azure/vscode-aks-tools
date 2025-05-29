@@ -1,4 +1,4 @@
-import { Uri } from "vscode";
+import { l10n, Uri } from "vscode";
 import { MessageHandler } from "../webview-contract/messaging";
 import {
     CategoryDetectorARMResponse,
@@ -34,7 +34,7 @@ export class DetectorDataProvider implements PanelDataProvider<"detector"> {
     readonly detectorPortalUrl: string;
 
     getTitle(): string {
-        return `${this.detectorName} diagnostics for ${this.clusterName}`;
+        return l10n.t(`{0} diagnostics for {1}`, this.detectorName, this.clusterName);
     }
 
     getInitialState(): InitialState {
