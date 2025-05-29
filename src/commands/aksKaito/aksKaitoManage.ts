@@ -95,6 +95,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
             inferenceReady: inferenceReady,
             workspaceReady: workspaceReady,
             age: convertAgeToMinutes(item.metadata?.creationTimestamp),
+            namespace: item.metadata?.namespace,
         });
     }
 

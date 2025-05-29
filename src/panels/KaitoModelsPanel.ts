@@ -69,6 +69,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             inferenceReady: null,
             workspaceReady: null,
             age: 0,
+            namespace: "",
         } as InitialState;
     }
     getTelemetryDefinition(): TelemetryDefinition<"kaitoModels"> {
@@ -103,7 +104,11 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     private async handleKaitoManageRedirectRequest() {
         vscode.commands.executeCommand("aks.aksKaitoManage", this.newtarget);
     }
-    private async handleGenerateCRDRequest(yaml: string) {
+    private async handleGenerateCRDRequest(yaml: string | undefined) {
+        if (!yaml) {
+            vscode.window.showErrorMessage("Error loading yaml for model");
+            return;
+        }
         const doc = await vscode.workspace.openTextDocument({
             content: yaml,
             language: "yaml",
@@ -198,10 +203,14 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     // This function checks quota & existence of workspace, then deploys model
     private async handleDeployKaitoRequest(
         model: string,
-        yaml: string,
+        yaml: string | undefined,
         gpu: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        if (!yaml) {
+            vscode.window.showErrorMessage(`Error loading yaml for model: ${model}`);
+            return;
+        }
         this.cancelTokens.set(model, false);
         this.handleResetStateRequest(webview);
         // This prevents the user from redeploying while pre-deployment checks are being performed

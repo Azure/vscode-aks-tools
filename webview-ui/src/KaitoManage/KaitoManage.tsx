@@ -25,15 +25,15 @@ export function KaitoManage(initialState: InitialState) {
         return () => clearInterval(intervalId);
     });
 
-    async function deleteWorkspace(model: string) {
-        vscode.postDeleteWorkspaceRequest({ model: model.replace(".", "-") });
+    async function deleteWorkspace(model: string, namespace: string) {
+        vscode.postDeleteWorkspaceRequest({ model: model.replace(".", "-"), namespace: namespace });
     }
-    async function redeployWorkspace(modelName: string, modelYaml: string) {
-        vscode.postRedeployWorkspaceRequest({ modelName: modelName, modelYaml: modelYaml });
+    async function redeployWorkspace(modelName: string, modelYaml: string | undefined, namespace: string) {
+        vscode.postRedeployWorkspaceRequest({ modelName: modelName, modelYaml: modelYaml, namespace: namespace });
     }
 
-    function testWorkspace(modelName: string) {
-        vscode.postTestWorkspaceRequest({ modelName: modelName });
+    function testWorkspace(modelName: string, namespace: string) {
+        vscode.postTestWorkspaceRequest({ modelName: modelName, namespace: namespace });
     }
 
     return (
@@ -61,7 +61,7 @@ export function KaitoManage(initialState: InitialState) {
                                             <>
                                                 <div className={styles.buttonDiv}>
                                                     <button
-                                                        onClick={() => deleteWorkspace(model.name)}
+                                                        onClick={() => deleteWorkspace(model.name, model.namespace)}
                                                         className={styles.button}
                                                     >
                                                         Cancel
@@ -86,6 +86,7 @@ export function KaitoManage(initialState: InitialState) {
                                                         redeployWorkspace(
                                                             model.name,
                                                             generateKaitoYAML(model.name).yaml,
+                                                            model.namespace,
                                                         )
                                                     }
                                                     className={`${styles.button} ${styles.redeployButton}`}
@@ -93,7 +94,7 @@ export function KaitoManage(initialState: InitialState) {
                                                     Re-deploy default CRD
                                                 </button>
                                                 <button
-                                                    onClick={() => deleteWorkspace(model.name)}
+                                                    onClick={() => deleteWorkspace(model.name, model.namespace)}
                                                     className={styles.button}
                                                 >
                                                     Delete Workspace
@@ -122,7 +123,7 @@ export function KaitoManage(initialState: InitialState) {
                                                 <div className={styles.buttonDiv}>
                                                     <button
                                                         className={styles.button}
-                                                        onClick={() => deleteWorkspace(model.name)}
+                                                        onClick={() => deleteWorkspace(model.name, model.namespace)}
                                                     >
                                                         Delete Workspace
                                                     </button>
@@ -134,7 +135,7 @@ export function KaitoManage(initialState: InitialState) {
                                                     </button>
                                                     <button
                                                         className={`${styles.button} ${styles.testButton}`}
-                                                        onClick={() => testWorkspace(model.name)}
+                                                        onClick={() => testWorkspace(model.name, model.namespace)}
                                                     >
                                                         Test
                                                     </button>

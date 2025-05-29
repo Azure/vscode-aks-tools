@@ -68,23 +68,27 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 this.handleMonitorUpdateRequest(webview);
             },
             deleteWorkspaceRequest: (params) => {
-                this.handleDeleteWorkspaceRequest(params.model, webview);
+                this.handleDeleteWorkspaceRequest(params.model, params.namespace, webview);
             },
             redeployWorkspaceRequest: (params) => {
-                this.handleRedeployWorkspaceRequest(params.modelName, params.modelYaml, webview);
+                this.handleRedeployWorkspaceRequest(params.modelName, params.modelYaml, params.namespace, webview);
             },
             getLogsRequest: () => {
                 this.handleGetLogsRequest();
             },
             testWorkspaceRequest: (params) => {
-                this.handleTestWorkspaceRequest(params.modelName);
+                this.handleTestWorkspaceRequest(params.modelName, params.namespace);
             },
         };
     }
 
     // State tracker for ongoing operations
     private operatingState: Record<string, boolean> = {};
-    private async handleDeleteWorkspaceRequest(model: string, webview: MessageSink<ToWebViewMsgDef>) {
+    private async handleDeleteWorkspaceRequest(
+        model: string,
+        namespace: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
         // Prevent multiple operations on the same model
         // Expected to be false unless this function has already been called and is currently in progress
         if (this.operatingState[model]) {
@@ -94,7 +98,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         this.operatingState[model] = true;
         try {
             await longRunning(`Deleting '${model}'`, async () => {
-                const command = `delete workspace ${model}`;
+                const command = `delete workspace ${model} -n ${namespace}`;
                 const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
                 if (failed(kubectlresult)) {
                     vscode.window.showErrorMessage(`There was an error deleting '${model}'. ${kubectlresult.error}`);
@@ -123,9 +127,16 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     // Deletes the workspace and redeploys it
     private async handleRedeployWorkspaceRequest(
         modelName: string,
-        modelYaml: string,
+        modelYaml: string | undefined,
+        namespace: string,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
+        if (!modelYaml) {
+            vscode.window.showErrorMessage(
+                `Model YAML does not match our supported standard CRD definitions. Try redeploying the model via kubectl commands and your CRD.`,
+            );
+            return;
+        }
         // Prevent multiple operations on the same model
         // Expected to be false unless this function has already been called and is currently in progress
         if (this.operatingState[modelName]) {
@@ -134,7 +145,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         }
         try {
             // Delete the workspace first (wait for deletion to finish)
-            await this.handleDeleteWorkspaceRequest(modelName, webview);
+            await this.handleDeleteWorkspaceRequest(modelName, namespace, webview);
             this.operatingState[modelName] = true;
 
             // Redeploy the workspace
@@ -177,6 +188,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 inferenceReady: inferenceReady,
                 workspaceReady: workspaceReady,
                 age: convertAgeToMinutes(item.metadata?.creationTimestamp),
+                namespace: item.metadata?.namespace,
             });
         }
 
@@ -228,8 +240,8 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         });
     }
 
-    private async handleTestWorkspaceRequest(modelName: string) {
-        const args = { target: this.newtarget, modelName: modelName };
+    private async handleTestWorkspaceRequest(modelName: string, namespace: string) {
+        const args = { target: this.newtarget, modelName: modelName, namespace: namespace };
         vscode.commands.executeCommand("aks.aksKaitoTest", args);
     }
 }

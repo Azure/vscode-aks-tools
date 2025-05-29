@@ -215,8 +215,11 @@ export async function getClusterIP(
     kubeConfigFilePath: string,
     modelName: string,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    namespace: string,
 ) {
-    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc ${modelName} -o jsonpath="{.spec.clusterIP}"`;
+    void namespace;
+    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc -n ${namespace} ${modelName} -o jsonpath="{.spec.clusterIP}" `;
+    console.log(ipCommand);
     const ipResult = await kubectl.api.invokeCommand(ipCommand);
     if (ipResult && ipResult.code === 0) {
         return ipResult.stdout;

@@ -365,7 +365,7 @@ export function KaitoModels(initialState: InitialState) {
 }
 
 // exported function to be shared in other kaito-related webviews
-export function generateKaitoYAML(model: string): { yaml: string; gpu: string | undefined } {
+export function generateKaitoYAML(model: string): { yaml: string | undefined; gpu: string | undefined } {
     model = model.startsWith("workspace-") ? model.replace("workspace-", "") : model;
     const allModelDetails = kaitoSupporterModel.modelDetails;
     // Helper function to fetch model details by name
@@ -375,6 +375,9 @@ export function generateKaitoYAML(model: string): { yaml: string; gpu: string | 
     const getStringOrEmpty = (value?: string): string => value ?? "";
 
     const modelDetails = getModelDetails(model);
+    if (!modelDetails) {
+        return { yaml: undefined, gpu: undefined };
+    }
     const name = getStringOrEmpty(modelDetails?.modelName);
     const gpu = getStringOrEmpty(modelDetails?.minimumGpu);
 

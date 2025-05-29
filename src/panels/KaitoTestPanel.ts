@@ -31,6 +31,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         readonly kubeConfigFilePath: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly modelName: string,
+        readonly namespace: string,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -41,6 +42,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         this.sessionProvider = sessionProvider;
         // corrects for some version naming
         this.modelName = modelName;
+        this.namespace = namespace;
     }
     getTitle(): string {
         return `Test KAITO Model`;
@@ -99,7 +101,12 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
             const podName = `curl-${Date.now()}`;
             try {
                 // retrieving the cluster IP
-                const clusterIP = await getClusterIP(this.kubeConfigFilePath, this.modelName, this.kubectl);
+                const clusterIP = await getClusterIP(
+                    this.kubeConfigFilePath,
+                    this.modelName,
+                    this.kubectl,
+                    this.namespace,
+                );
                 if (clusterIP === "") {
                     this.isQueryInProgress = false;
                     vscode.window.showErrorMessage(`Error connecting to cluster. Please check pod logs and try again`);

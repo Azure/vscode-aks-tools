@@ -11,7 +11,7 @@ import { KaitoTestPanel, KaitoTestPanelDataProvider } from "../../panels/KaitoTe
 
 export default async function aksKaitoTest(
     _context: IActionContext,
-    { target, modelName }: { target: unknown; modelName: string },
+    { target, modelName, namespace }: { target: unknown; modelName: string; namespace: string },
 ): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     if (!cloudExplorer.available) {
@@ -67,6 +67,7 @@ export default async function aksKaitoTest(
         kubeConfigFile.filePath,
         sessionProvider.result,
         modelName,
+        namespace,
     );
     panel.show(dataProvider, kubeConfigFile);
 }
