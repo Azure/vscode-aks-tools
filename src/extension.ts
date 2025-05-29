@@ -67,7 +67,6 @@ import * as fs from "fs";
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
 
-    // let bundle = "bundle.l10n.json";
     const bundle = language === "en" ? "bundle.l10n.json" : `bundle.l10n.${language}.json`;
     const newpath = path.join(__dirname, "..", "l10n", bundle);
     if (fs.existsSync(newpath)) {
