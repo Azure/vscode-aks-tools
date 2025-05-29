@@ -76,7 +76,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     }
 
     // The logic below is to acquire the initial deployment data.
-    const command = `get workspace -o json`;
+    const command = `get workspace -A -o json`;
     const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
     if (failed(kubectlresult)) {
         vscode.window.showErrorMessage(`Error retrieving workspaces: ${kubectlresult.error}`);

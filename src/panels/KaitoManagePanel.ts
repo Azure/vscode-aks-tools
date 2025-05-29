@@ -154,7 +154,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
 
     // Updates the current state of models on the cluster
     private async updateModels(webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `get workspace -o json`;
+        const command = `get workspace -A -o json`;
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
         if (failed(kubectlresult)) {
             webview.postMonitorUpdate({
