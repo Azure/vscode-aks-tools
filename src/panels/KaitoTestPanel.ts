@@ -11,6 +11,7 @@ import {
     deleteCurlPodCommand,
     getClusterIP,
     getCurlPodLogsCommand,
+    getWorkspaceRuntime,
 } from "./utilities/KaitoHelpers";
 
 export class KaitoTestPanel extends BasePanel<"kaitoTest"> {
@@ -112,6 +113,12 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     vscode.window.showErrorMessage(`Error connecting to cluster. Please check pod logs and try again`);
                     return;
                 }
+                const runtime = await getWorkspaceRuntime(
+                    this.kubeConfigFilePath,
+                    this.modelName,
+                    this.kubectl,
+                    this.namespace,
+                );
                 // this command creates a curl pod and executes the query
                 const createCommand = await createCurlPodCommand(
                     this.kubeConfigFilePath,
@@ -124,6 +131,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     topK,
                     repetitionPenalty,
                     maxLength,
+                    runtime,
                 );
                 console.log(createCommand);
                 // used to delete the curl pod after query is complete
@@ -140,10 +148,12 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 if (logsResult && logsResult.code === 0) {
                     console.log(logsResult.stdout);
                     const parsedOutput = JSON.parse(logsResult.stdout);
-                    // v3 parsing
-                    // const responseText = JSON.parse(curlResult).Result;
-                    //v4 parsing
-                    const responseText = (parsedOutput.choices?.[0]?.text || "").trim();
+                    let responseText;
+                    if (runtime === "transformers") {
+                        responseText = parsedOutput.Result;
+                    } else {
+                        responseText = (parsedOutput.choices?.[0]?.text || "").trim();
+                    }
                     webview.postTestUpdate({
                         clusterName: this.clusterName,
                         modelName: this.modelName,
