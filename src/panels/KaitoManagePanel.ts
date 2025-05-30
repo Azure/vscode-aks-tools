@@ -188,7 +188,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 inferenceReady: inferenceReady,
                 workspaceReady: workspaceReady,
                 age: convertAgeToMinutes(item.metadata?.creationTimestamp),
-                namespace: item.metadata?.namespace,
+                namespace: item.metadata?.namespace ?? "default",
             });
         }
 
