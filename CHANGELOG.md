@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.6.9]
+
+* Adding namespace awareness & different runtime support for KAITO models (#1444)
+* Setting up localization (#1429)
+* Adding ARIA roles & accessible keyboard navigation to customdropdown (#1430)
+* Fix for catering security alerts and permissions. (#1438)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @lyantovski , @kejatura-dev, @qpetraroia, @bosesuneha, @ReinierCC or @davidgamero for review contributions, testing and reviews. Welcome new contributor @lyantovski for his testing work around KAITO integration.
+
 ## [1.6.8]
 
 * Fix the preview text. (#1425)
