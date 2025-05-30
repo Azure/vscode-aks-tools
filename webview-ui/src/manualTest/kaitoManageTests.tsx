@@ -16,6 +16,7 @@ export function getKaitoManageScenarios() {
                 inferenceReady: null,
                 workspaceReady: null,
                 age: 4,
+                namespace: "default",
             },
             {
                 name: "phi-2",
@@ -24,6 +25,7 @@ export function getKaitoManageScenarios() {
                 inferenceReady: true,
                 workspaceReady: true,
                 age: 43,
+                namespace: "default",
             },
             {
                 name: "phi-3-medium-128k-instruct",
@@ -32,6 +34,7 @@ export function getKaitoManageScenarios() {
                 inferenceReady: false,
                 workspaceReady: false,
                 age: 381,
+                namespace: "default",
             },
         ],
     };
@@ -50,8 +53,8 @@ export function getKaitoManageScenarios() {
             getLogsRequest: () => {
                 console.log("getLogsRequest");
             },
-            testWorkspaceRequest: ({ modelName }) => {
-                console.log("testWorkspaceRequest", modelName);
+            testWorkspaceRequest: ({ modelName, namespace }) => {
+                console.log("testWorkspaceRequest", modelName, namespace);
             },
         };
     }

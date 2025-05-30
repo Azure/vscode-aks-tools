@@ -11,6 +11,7 @@ import {
     deleteCurlPodCommand,
     getClusterIP,
     getCurlPodLogsCommand,
+    getWorkspaceRuntime,
 } from "./utilities/KaitoHelpers";
 import { l10n } from "vscode";
 
@@ -32,6 +33,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         readonly kubeConfigFilePath: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly modelName: string,
+        readonly namespace: string,
     ) {
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
@@ -42,6 +44,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         this.sessionProvider = sessionProvider;
         // corrects for some version naming
         this.modelName = modelName;
+        this.namespace = namespace;
     }
     getTitle(): string {
         return l10n.t(`Test KAITO Model`);
@@ -100,7 +103,12 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
             const podName = `curl-${Date.now()}`;
             try {
                 // retrieving the cluster IP
-                const clusterIP = await getClusterIP(this.kubeConfigFilePath, this.modelName, this.kubectl);
+                const clusterIP = await getClusterIP(
+                    this.kubeConfigFilePath,
+                    this.modelName,
+                    this.kubectl,
+                    this.namespace,
+                );
                 if (clusterIP === "") {
                     this.isQueryInProgress = false;
                     vscode.window.showErrorMessage(
@@ -108,6 +116,12 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     );
                     return;
                 }
+                const runtime = await getWorkspaceRuntime(
+                    this.kubeConfigFilePath,
+                    this.modelName,
+                    this.kubectl,
+                    this.namespace,
+                );
                 // this command creates a curl pod and executes the query
                 const createCommand = await createCurlPodCommand(
                     this.kubeConfigFilePath,
@@ -120,6 +134,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     topK,
                     repetitionPenalty,
                     maxLength,
+                    runtime,
                 );
                 console.log(createCommand);
                 // used to delete the curl pod after query is complete
@@ -134,12 +149,13 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 // retrieve the logs from the curl pod
                 const logsResult = await this.kubectl.api.invokeCommand(logsCommand);
                 if (logsResult && logsResult.code === 0) {
-                    console.log(logsResult.stdout);
                     const parsedOutput = JSON.parse(logsResult.stdout);
-                    // v3 parsing
-                    // const responseText = JSON.parse(curlResult).Result;
-                    //v4 parsing
-                    const responseText = (parsedOutput.choices?.[0]?.text || "").trim();
+                    let responseText;
+                    if (runtime === "transformers") {
+                        responseText = parsedOutput.Result;
+                    } else {
+                        responseText = (parsedOutput.choices?.[0]?.text || "").trim();
+                    }
                     webview.postTestUpdate({
                         clusterName: this.clusterName,
                         modelName: this.modelName,

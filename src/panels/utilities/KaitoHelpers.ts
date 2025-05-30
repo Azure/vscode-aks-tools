@@ -146,6 +146,7 @@ export async function createCurlPodCommand(
     topK: number,
     repetitionPenalty: number,
     maxLength: number,
+    runtime: string = "vllm",
 ) {
     modelName = modelName.startsWith("workspace-") ? modelName.replace("workspace-", "") : modelName;
     if (modelName.startsWith("phi-3-5")) {
@@ -155,33 +156,37 @@ export async function createCurlPodCommand(
     }
     // Command for windows platforms (Needs custom character escaping)
     if (process.platform === "win32") {
-        // v3 command
-        // const windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
-        // --image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
-        // "Content-Type: application/json" -d "{\\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
-        // \\"generate_kwargs\\":{\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
-        // \\"repetition_penalty\\":${repetitionPenalty}, \\"max_length\\":${maxLength}}}"`;
-        // v4 command
-        const windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+        let windowsCreateCommand;
+        if (runtime === "transformers") {
+            windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+--image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
+"Content-Type: application/json" -d "{\\"model\\":\\"${modelName}\\", \\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
+\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
+\\"repetition_penalty\\":${repetitionPenalty}, \\"max_tokens\\":${maxLength}}"`;
+        } else {
+            windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
 --image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
 "Content-Type: application/json" -d "{\\"model\\":\\"${modelName}\\", \\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
 \\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
 \\"repetition_penalty\\":${repetitionPenalty}, \\"max_tokens\\":${maxLength}}"`;
+        }
         return windowsCreateCommand;
     } else {
         // Command for UNIX platforms (Should work for all other process.platform return values besides win32)
-        // v3 command
-        //  const unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
-        // --image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
-        // "Content-Type: application/json" -d '{"prompt":"${escapeSpecialChars(prompt)}", \
-        // "generate_kwargs":{"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, \
-        // "repetition_penalty":${repetitionPenalty}, "max_length":${maxLength}}}'`;
-        // v4 command
-        const unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+        let unixCreateCommand;
+        if (runtime === "transformers") {
+            unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
+--image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
+"Content-Type: application/json" -d '{"model":"${modelName}", "prompt":"${escapeSpecialChars(prompt)}", \
+"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "repetition_penalty":${repetitionPenalty}, \
+ "max_tokens":${maxLength}}'`;
+        } else {
+            unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
 --image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
 "Content-Type: application/json" -d '{"model":"${modelName}", "prompt":"${escapeSpecialChars(prompt)}", \
 "temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "repetition_penalty":${repetitionPenalty}, \
  "max_tokens":${maxLength}}'`;
+        }
         return unixCreateCommand;
     }
 }
@@ -215,8 +220,10 @@ export async function getClusterIP(
     kubeConfigFilePath: string,
     modelName: string,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    namespace: string,
 ) {
-    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc ${modelName} -o jsonpath="{.spec.clusterIP}"`;
+    void namespace;
+    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc -n ${namespace} ${modelName} -o jsonpath="{.spec.clusterIP}" `;
     const ipResult = await kubectl.api.invokeCommand(ipCommand);
     if (ipResult && ipResult.code === 0) {
         return ipResult.stdout;
@@ -226,6 +233,32 @@ export async function getClusterIP(
         vscode.window.showErrorMessage(`Failed to connect to cluster: ${ipResult.code}\nError: ${ipResult.stderr}`);
     }
     return "";
+}
+
+export async function getWorkspaceRuntime(
+    kubeConfigFilePath: string,
+    modelName: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    namespace: string,
+): Promise<string> {
+    const command = `--kubeconfig="${kubeConfigFilePath}" get workspace -n ${namespace} ${modelName} -o json`;
+    const kubectlresult = await kubectl.api.invokeCommand(command);
+    if (kubectlresult && kubectlresult.code === 0) {
+        const json = JSON.parse(kubectlresult.stdout);
+        const runtime = json.metadata?.annotations?.["kaito.sh/runtime"];
+        if (runtime === "transformers") {
+            return "transformers";
+        } else {
+            return "vllm";
+        }
+    } else if (kubectlresult === undefined) {
+        vscode.window.showErrorMessage(`Failed to get runtime for model ${modelName}`);
+    } else if (kubectlresult.code !== 0) {
+        vscode.window.showErrorMessage(
+            `Failed to connect to cluster: ${kubectlresult.code}\nError: ${kubectlresult.stderr}`,
+        );
+    }
+    return "vllm"; // Default to vllm if runtime is not found
 }
 
 // deploys model with given yaml & returns errorable promise
