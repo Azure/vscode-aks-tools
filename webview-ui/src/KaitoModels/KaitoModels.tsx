@@ -54,29 +54,8 @@ export function KaitoModels(initialState: InitialState) {
         setSelectedModel(model);
     };
 
-    // Returns true if model cannot be deployed with one click
-    function undeployable(model: string) {
-        return model.substring(0, 7) === "llama-2";
-    }
-
     const defaultMessage = <>{l10n.t("Please note deployment time can vary from 10 minutes to 1hr+.")}</>;
-    function tooltipMessage(model: string) {
-        if (model.substring(0, 7) === "llama-2") {
-            return (
-                <>
-                    {l10n.t(
-                        "Llama2 models require privately referenced images for deployment. You must create a CRD and specify the location of your privately hosted image. Learn more",
-                    )}{" "}
-                    <a
-                        target="_blank"
-                        rel="noreferrer"
-                        href="https://github.com/Azure/kaito/tree/main/presets/models/llama2"
-                    >
-                        {l10n.t("here.")}
-                    </a>
-                </>
-            );
-        }
+    function tooltipMessage() {
         return defaultMessage;
     }
     function generateCRD(model: string) {
@@ -148,7 +127,6 @@ export function KaitoModels(initialState: InitialState) {
                                                     <div>
                                                         <button
                                                             className={styles.button}
-                                                            disabled={undeployable(selectedModel)}
                                                             onClick={() => onClickDeployKaito(selectedModel)}
                                                         >
                                                             {l10n.t("Deploy default workspace CRD")}
@@ -163,7 +141,7 @@ export function KaitoModels(initialState: InitialState) {
                                                                 </div>
                                                             </span>
                                                             <span className={styles.tooltiptext}>
-                                                                {tooltipMessage(selectedModel)}
+                                                                {tooltipMessage()}
                                                             </span>
                                                         </span>
                                                     </div>
@@ -408,17 +386,11 @@ export function generateKaitoYAML(model: string): { yaml: string | undefined; gp
         }
     } else if (name.startsWith("qwen-2-5")) {
         inferenceName = inferenceName.replace("qwen-2-5", "qwen2.5");
+    } else if (name.startsWith("llama-3")) {
+        inferenceName = inferenceName.replace("llama-3-1", "llama3.1");
     }
 
-    // Adds private configuration template for llama-2 models
-    const privateConfig = name.startsWith("llama-2")
-        ? `
-accessMode: private
-presetOptions:
-  image: <YOUR IMAGE URL>`
-        : "";
-
-    const yaml = `apiVersion: kaito.sh/v1alpha1
+    const yaml = `apiVersion: kaito.sh/v1beta1
 kind: Workspace
 metadata:
   name: workspace-${metadataName}
@@ -429,7 +401,7 @@ resource:
       apps: ${appName}
 inference:
   preset:
-    name: ${inferenceName}${privateConfig}`;
+    name: ${inferenceName}`;
     // Passing along gpu specification for subsequent usage
     return { yaml, gpu };
 }
