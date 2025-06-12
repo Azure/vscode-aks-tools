@@ -102,8 +102,6 @@ export default async function aksKaitoGenerateYaml(_context: IActionContext, tar
 function listKaitoSUpportedModel() {
     const modelList = [
         kaitoSupporterModel.modelsupported.falcon,
-        kaitoSupporterModel.modelsupported.llama2,
-        kaitoSupporterModel.modelsupported.llama2chat,
         kaitoSupporterModel.modelsupported.mistral,
         kaitoSupporterModel.modelsupported["phi-2"],
         kaitoSupporterModel.modelsupported["phi-3"],

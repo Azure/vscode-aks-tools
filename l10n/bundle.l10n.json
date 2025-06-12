@@ -33,7 +33,6 @@
   "Repetition Penalty": "Repetition Penalty",
   "Max Length": "Max Length",
   "Please note deployment time can vary from 10 minutes to 1hr+.": "Please note deployment time can vary from 10 minutes to 1hr+.",
-  "Llama2 models require privately referenced images for deployment. You must create a CRD and specify the location of your privately hosted image. Learn more": "Llama2 models require privately referenced images for deployment. You must create a CRD and specify the location of your privately hosted image. Learn more",
   "here.": "here.",
   "Next steps": "Next steps",
   "If this is your preferred model for deployment in your application, proceed to:": "If this is your preferred model for deployment in your application, proceed to:",
