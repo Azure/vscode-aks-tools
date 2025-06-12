@@ -90,7 +90,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
         if (props.isShown && props.initialGadgetResource && !traceConfig.resource) {
             onResourceChanged(props.initialGadgetResource);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.isShown, props.initialGadgetResource, traceConfig.resource]);
 
     function handleNodeChanged(node: string | null) {
