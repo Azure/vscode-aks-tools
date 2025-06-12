@@ -303,6 +303,14 @@
                 "title": "%Show Inspektor Gadget%"
             },
             {
+                "command": "aks.aksDnsDebug",
+                "title": "%Debug DNS%"
+            },
+            {
+                "command": "aks.aksTcpTrace",
+                "title": "%Trace TCP%"
+            },
+            {
                 "command": "aks.aksRunKubectlCommands",
                 "title": "%Run Kubectl Commands%"
             },
@@ -568,6 +576,14 @@
             "aks.networkTroubleshootingSubMenu": [
                 {
                     "command": "aks.aksTCPDump",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksDnsDebug",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksTcpTrace",
                     "group": "navigation"
                 },
                 {

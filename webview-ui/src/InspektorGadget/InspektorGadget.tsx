@@ -35,6 +35,10 @@ export function InspektorGadget(initialState: InitialState) {
 
     function getTracesProps(category: GadgetCategory): TracesProps {
         const traces = state.allTraces.filter((t) => t.category === category);
+        // Only pass initialGadgetResource if the category matches
+        const initialGadgetResource =
+            category === initialState.initialGadgetCategory ? initialState.initialGadgetResource : undefined;
+
         return {
             category,
             traces,
@@ -42,13 +46,14 @@ export function InspektorGadget(initialState: InitialState) {
             resources: state.resources,
             onRequestTraceId: handleRequestTraceId,
             eventHandlers: eventHandlers,
+            initialGadgetResource,
         };
     }
 
     const isDeployed = state.version && state.version.server !== null;
 
-    // used to track active tab
-    const [activeTab, setActiveTab] = useState("overview");
+    // used to track active tab, initialized from props if provided
+    const [activeTab, setActiveTab] = useState(initialState.initialActiveTab || "overview");
 
     return (
         <>
