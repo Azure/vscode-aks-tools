@@ -20,6 +20,8 @@ import aksCreateClusterNavToAzurePortal from "./commands/aksCreateClusterNavToAz
 import aksDeleteCluster from "./commands/aksDeleteCluster/aksDeleteCluster";
 import aksEraserTool from "./commands/aksEraserTool/erasertool";
 import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
+import { aksDnsDebug } from "./commands/aksInspektorGadget/aksDnsTrace";
+import { aksTcpTrace } from "./commands/aksInspektorGadget/aksTcpTrace";
 import aksKaito from "./commands/aksKaito/aksKaito";
 import aksKaitoGenerateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
 import aksKaitoCreateCRD from "./commands/aksKaito/aksKaitoCreateCRD";
@@ -121,6 +123,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksRotateClusterCert", aksRotateClusterCert);
         registerCommandWithTelemetry("aks.aksReconcileCluster", aksReconcileCluster);
         registerCommandWithTelemetry("aks.aksInspektorGadgetShow", aksInspektorGadgetShow);
+        registerCommandWithTelemetry("aks.aksDnsDebug", aksDnsDebug);
+        registerCommandWithTelemetry("aks.aksTcpTrace", aksTcpTrace);
         registerCommandWithTelemetry("aks.createCluster", aksCreateCluster);
         registerCommandWithTelemetry("aks.aksTCPDump", aksTCPDump);
         registerCommandWithTelemetry("aks.compareCluster", aksCompareCluster);

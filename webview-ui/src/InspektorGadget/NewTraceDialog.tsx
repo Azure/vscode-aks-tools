@@ -25,6 +25,7 @@ export interface NewTraceDialogProps {
     eventHandlers: EventHandlers<EventDef>;
     onCancel: () => void;
     onAccept: (trace: GadgetConfiguration) => void;
+    initialGadgetResource?: string;
 }
 
 export function NewTraceDialog(props: NewTraceDialogProps) {
@@ -41,7 +42,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
 
     const [traceConfig, setTraceConfig] = useState<GadgetConfiguration>({
         category: props.gadgetCategory,
-        resource: "",
+        resource: props.initialGadgetResource || "",
         filters: {
             namespace: NamespaceSelection.All,
         },
@@ -83,6 +84,14 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
             timeout,
         });
     }
+
+    // Initialize with the initial resource if provided
+    useEffect(() => {
+        if (props.isShown && props.initialGadgetResource && !traceConfig.resource) {
+            onResourceChanged(props.initialGadgetResource);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.isShown, props.initialGadgetResource, traceConfig.resource]);
 
     function handleNodeChanged(node: string | null) {
         const filters = { ...traceConfig.filters, nodeName: node || undefined };
@@ -157,6 +166,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                         className={styles.control}
                         required
                         category={props.gadgetCategory}
+                        initialValue={props.initialGadgetResource}
                         onResourceChanged={onResourceChanged}
                     />
 

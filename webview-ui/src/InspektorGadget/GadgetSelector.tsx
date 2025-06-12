@@ -2,12 +2,13 @@ import { GadgetCategory } from "./helpers/gadgets/types";
 import { configuredGadgetResources } from "./helpers/gadgets";
 import { CustomDropdown } from "../components/CustomDropdown";
 import { CustomDropdownOption } from "../components/CustomDropdownOption";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 export interface GadgetSelectorProps {
     category: GadgetCategory;
     id: string;
     className?: string;
     required?: boolean;
+    initialValue?: string;
     onResourceChanged: (resource: string | null) => void;
 }
 
@@ -19,7 +20,16 @@ export function GadgetSelector(props: GadgetSelectorProps) {
     }
 
     const configuredResources = configuredGadgetResources[props.category];
-    const [selectedNode, setSelectedNode] = useState<string>("");
+    const [selectedNode, setSelectedNode] = useState<string>(props.initialValue || "");
+
+    // Call onResourceChanged when component mounts with initial value
+    // to ensure parent components know about the pre-selected value
+    useEffect(() => {
+        if (props.initialValue) {
+            props.onResourceChanged(props.initialValue);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.initialValue]);
 
     return (
         <CustomDropdown id={props.id} className={props.className} value={selectedNode} onChange={handleResourceChange}>

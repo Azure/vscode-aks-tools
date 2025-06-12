@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrashCan, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { NewTraceDialog } from "./NewTraceDialog";
 import { ClusterResources, Nodes } from "./helpers/clusterResources";
 import { GadgetConfiguration, TraceGadget, getGadgetMetadata, toGadgetArguments } from "./helpers/gadgets";
@@ -18,6 +18,7 @@ export interface TracesProps {
     resources: ClusterResources;
     onRequestTraceId: () => number;
     eventHandlers: EventHandlers<EventDef>;
+    initialGadgetResource?: string;
 }
 
 const streamingCategories: GadgetCategory[] = ["top", "trace"];
@@ -28,6 +29,14 @@ export function Traces(props: TracesProps) {
     const [selectedTraceId, setSelectedTraceId] = useState<number | null>(null);
     const [isWatching, setIsWatching] = useState<boolean>(false);
     const isStreamingTrace = streamingCategories.includes(props.category);
+
+    // Auto-open new trace dialog when a specific resource command is selected from the menu
+    // (e.g., DNS Debug or TCP Trace)
+    useEffect(() => {
+        if (props.initialGadgetResource) {
+            setIsTraceDialogShown(true);
+        }
+    }, [props.category, props.initialGadgetResource]);
 
     function handleAdd() {
         setIsTraceDialogShown(true);
@@ -197,6 +206,7 @@ export function Traces(props: TracesProps) {
                 eventHandlers={props.eventHandlers}
                 onCancel={handleNewTraceDialogCancel}
                 onAccept={handleNewTraceDialogAccept}
+                initialGadgetResource={props.initialGadgetResource}
             />
         </>
     );
