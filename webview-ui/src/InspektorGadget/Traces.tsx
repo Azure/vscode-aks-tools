@@ -19,6 +19,7 @@ export interface TracesProps {
     onRequestTraceId: () => number;
     eventHandlers: EventHandlers<EventDef>;
     initialGadgetResource?: string;
+    onResourceUsed: () => void;
 }
 
 const streamingCategories: GadgetCategory[] = ["top", "trace"];
@@ -29,14 +30,15 @@ export function Traces(props: TracesProps) {
     const [selectedTraceId, setSelectedTraceId] = useState<number | null>(null);
     const [isWatching, setIsWatching] = useState<boolean>(false);
     const isStreamingTrace = streamingCategories.includes(props.category);
+    const { initialGadgetResource, onResourceUsed } = props;
 
     // Auto-open new trace dialog when a specific resource command is selected from the menu
-    // (e.g., DNS Debug or TCP Trace)
     useEffect(() => {
-        if (props.initialGadgetResource) {
+        if (initialGadgetResource) {
             setIsTraceDialogShown(true);
+            onResourceUsed();
         }
-    }, [props.category, props.initialGadgetResource]);
+    }, [initialGadgetResource, onResourceUsed]);
 
     function handleAdd() {
         setIsTraceDialogShown(true);

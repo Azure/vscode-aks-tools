@@ -84,14 +84,12 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
             timeout,
         });
     }
-
-    // Initialize with the initial resource if provided
     useEffect(() => {
-        if (props.isShown && props.initialGadgetResource && !traceConfig.resource) {
+        if (props.isShown && props.initialGadgetResource) {
             onResourceChanged(props.initialGadgetResource);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.isShown, props.initialGadgetResource, traceConfig.resource]);
+    }, [props.isShown, props.initialGadgetResource]);
 
     function handleNodeChanged(node: string | null) {
         const filters = { ...traceConfig.filters, nodeName: node || undefined };
