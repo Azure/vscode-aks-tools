@@ -38,6 +38,7 @@ export type EventDef = {
     deleteTraces: {
         traceIds: number[];
     };
+    resetInitialGadgetResource: void;
     setNodesLoading: void;
     setNamespacesLoading: void;
     setPodsLoading: {
@@ -88,6 +89,7 @@ export const stateUpdater: WebviewStateUpdater<"gadget", EventDef, InspektorGadg
             ...state,
             allTraces: state.allTraces.filter((t) => !args.traceIds.includes(t.traceId)),
         }),
+        resetInitialGadgetResource: (state) => ({ ...state, initialGadgetResource: undefined }),
         setNodesLoading: (state) => ({ ...state, nodes: newLoading() }),
         setNamespacesLoading: (state) => ({ ...state, resources: newLoading() }),
         setPodsLoading: (state, args) => ({ ...state, resources: setPodsLoading(state.resources, args.namespace) }),
