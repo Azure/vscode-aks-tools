@@ -21,15 +21,6 @@ export function getKaitoScenarios() {
                     errorMessage: undefined,
                 });
 
-                // wait for 5 seconds
-                setTimeout(() => {
-                    webview.postKaitoInstallProgressUpdate({
-                        operationDescription: "Kaito Federated Credentials and role Assignments",
-                        event: 1,
-                        errorMessage: undefined,
-                    });
-                }, 5000);
-
                 // wait for 10 seconds
                 setTimeout(() => {
                     webview.postKaitoInstallProgressUpdate({

@@ -93,22 +93,6 @@ export function Kaito(initialState: InitialState) {
                                 </p>
                             </div>
                         )}
-                    {state.kaitoInstallStatus === ProgressEventType.InProgress &&
-                        state.operationDescription.includes("KAITO Federated Credentials and role Assignments") && (
-                            <div
-                                style={{
-                                    flexDirection: "row",
-                                    display: "flex",
-                                }}
-                            >
-                                <ProgressRing />
-                                <p className={styles.installingMessage}>
-                                    {l10n.t(
-                                        "Enabling Role assignments and Federated Credentails for KAITO, this may take a few minutes...",
-                                    )}
-                                </p>
-                            </div>
-                        )}
                     {state.kaitoInstallStatus === ProgressEventType.Success && (
                         <div className={styles.postInstall}>
                             <p>{l10n.t("KAITO is installed!")}</p>

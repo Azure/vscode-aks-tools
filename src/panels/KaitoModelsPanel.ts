@@ -11,7 +11,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { PagedAsyncIterableIterator, PageSettings } from "@azure/core-paging";
 import { Usage } from "@azure/arm-compute";
-import { kaitoPodStatus, getKaitoPods, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
+import { getKaitoPods, convertAgeToMinutes, deployModel, isKaitoWorkspaceReady } from "./utilities/KaitoHelpers";
 import { existsSync } from "fs";
 import { l10n } from "vscode";
 enum GpuFamilies {
@@ -223,7 +223,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             this.checksInProgress = true;
             let quotaAvailable = false;
             let getResult = null;
-            let readyStatus = { kaitoWorkspaceReady: false, kaitoGPUProvisionerReady: false };
+            let ready = false;
             await longRunning(l10n.t(`Validating KAITO workspace status`), async () => {
                 // Returns an object with the status of the kaito pods
                 const kaitoPods = await getKaitoPods(
@@ -233,9 +233,9 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                     this.resourceGroupName,
                     this.clusterName,
                 );
-                readyStatus = await kaitoPodStatus(this.clusterName, kaitoPods, this.kubectl, this.kubeConfigFilePath);
+                ready = await isKaitoWorkspaceReady(this.clusterName, kaitoPods, this.kubectl, this.kubeConfigFilePath);
             });
-            if (!readyStatus.kaitoWorkspaceReady || !readyStatus.kaitoGPUProvisionerReady) {
+            if (!ready) {
                 this.checksInProgress = false;
                 return;
             }
