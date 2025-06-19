@@ -9,6 +9,9 @@ import { join } from "path";
 import { writeFileSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import { KubectlV1 } from "vscode-kubernetes-tools-api";
+import { Succeeded } from "../../commands/utils/errorable";
+import * as tmpfile from "../../commands/utils/tempfile";
+import { KubernetesClusterInfo } from "../../commands/utils/clusters";
 
 // helper for parsing the conditions object on a workspace
 function statusToBoolean(status: string): boolean {
@@ -62,54 +65,6 @@ export async function isPodReady(
         const result = kubectlresult.result.stdout;
         return result.toLowerCase() === "true";
     }
-}
-
-export async function kaitoPodStatus(
-    clusterName: string,
-    pods: { nameSpace: string; podName: string; imageName: string }[],
-    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
-    kubeConfigFilePath: string,
-) {
-    let { kaitoWorkspaceReady, kaitoGPUProvisionerReady } = {
-        kaitoWorkspaceReady: false,
-        kaitoGPUProvisionerReady: false,
-    };
-
-    await longRunning(`Checking if KAITO pods are running.`, async () => {
-        for (const pod of pods) {
-            // Checking if pods are running
-            if (pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/workspace")) {
-                if (
-                    !kaitoWorkspaceReady &&
-                    (await isPodReady(pod.nameSpace, pod.podName, kubectl, kubeConfigFilePath))
-                ) {
-                    kaitoWorkspaceReady = true;
-                }
-            } else if (pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/gpu-provisioner")) {
-                if (
-                    !kaitoGPUProvisionerReady &&
-                    (await isPodReady(pod.nameSpace, pod.podName, kubectl, kubeConfigFilePath))
-                ) {
-                    kaitoGPUProvisionerReady = true;
-                }
-            }
-        }
-    });
-
-    const podStatuses = [
-        { ready: kaitoWorkspaceReady, name: "kaito-workspace" },
-        { ready: kaitoGPUProvisionerReady, name: "kaito-gpu-provisioner" },
-    ];
-
-    podStatuses.forEach((pod) => {
-        if (!pod.ready) {
-            vscode.window.showWarningMessage(
-                `The '${pod.name}' pod in cluster ${clusterName} is currently unavailable. Please check the pod logs in your cluster to diagnose the issue.`,
-            );
-        }
-    });
-
-    return { kaitoWorkspaceReady, kaitoGPUProvisionerReady };
 }
 
 // returns an array with the names of all pods starting with "kaito-"
@@ -277,4 +232,77 @@ export async function deployModel(
     } else {
         return { succeeded: true, result: kubectlresult.result };
     }
+}
+
+// Returns true if kaito workspace is ready, false otherwise.
+export async function isKaitoWorkspaceReady(
+    clusterName: string,
+    pods: { nameSpace: string; podName: string; imageName: string }[],
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFilePath: string,
+) {
+    let kaitoWorkspaceReady = false;
+    await longRunning(`Checking if KAITO workspace is running.`, async () => {
+        for (const pod of pods) {
+            // Checking if pods are running
+            if (pod.imageName.startsWith("mcr.microsoft.com/aks/kaito/workspace")) {
+                if (
+                    !kaitoWorkspaceReady &&
+                    (await isPodReady(pod.nameSpace, pod.podName, kubectl, kubeConfigFilePath))
+                ) {
+                    kaitoWorkspaceReady = true;
+                }
+            }
+        }
+    });
+
+    if (!kaitoWorkspaceReady) {
+        vscode.window.showWarningMessage(
+            `The 'kaito-workspace' pod in cluster ${clusterName} is currently unavailable. Please check the pod logs in your cluster to diagnose the issue.`,
+        );
+    }
+    return kaitoWorkspaceReady;
+}
+
+// Returns boolean { kaitoInstalled, kaitoWorkspaceReady }
+export async function getKaitoInstallationStatus(
+    sessionProvider: Succeeded<ReadyAzureSessionProvider>,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    subscriptionId: string,
+    resourceGroupName: string,
+    clusterName: string,
+    clusterInfo: Succeeded<KubernetesClusterInfo>,
+) {
+    const status = { kaitoInstalled: false, kaitoWorkspaceReady: false };
+    const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
+        return filterPodImage(
+            sessionProvider.result,
+            kubectl,
+            subscriptionId,
+            resourceGroupName,
+            clusterName,
+            "mcr.microsoft.com/aks/kaito",
+        );
+    });
+    if (failed(filterKaitoPodNames)) {
+        vscode.window.showErrorMessage(filterKaitoPodNames.error);
+        return status;
+    }
+
+    if (filterKaitoPodNames.result.length === 0) {
+        vscode.window.showWarningMessage(
+            `Please install KAITO for cluster ${clusterName}. \n \n Kaito Workspace generation is only enabled when KAITO is installed. Skipping generation.`,
+        );
+        return status;
+    }
+
+    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
+    const kaitoWorkspaceReady = await isKaitoWorkspaceReady(
+        clusterName,
+        filterKaitoPodNames.result,
+        kubectl,
+        kubeConfigFile.filePath,
+    );
+    kubeConfigFile.dispose();
+    return { kaitoInstalled: true, kaitoWorkspaceReady };
 }

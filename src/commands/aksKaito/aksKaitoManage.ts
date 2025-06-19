@@ -11,7 +11,7 @@ import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 import { getConditions, convertAgeToMinutes } from "../../panels/utilities/KaitoHelpers";
 import { invokeKubectlCommand } from "../utils/kubectl";
-import { getKaitoInstallationStatus } from "../utils/kaitoValidationHelpers";
+import { getKaitoInstallationStatus } from "../../panels/utilities/KaitoHelpers";
 
 export default async function aksKaitoManage(_context: IActionContext, target: unknown): Promise<void> {
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -70,8 +70,8 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         clusterInfo,
     );
 
-    // Only proceed if kaito is installed and both the workspace & gpu-provisioner pods are running
-    if (!kaitoStatus.kaitoInstalled || !kaitoStatus.kaitoWorkspaceReady || !kaitoStatus.kaitoGPUProvisionerReady) {
+    // Only proceed if kaito is installed and the workspace is ready
+    if (!kaitoStatus.kaitoInstalled || !kaitoStatus.kaitoWorkspaceReady) {
         return;
     }
 
