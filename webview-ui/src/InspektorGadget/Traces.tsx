@@ -19,6 +19,7 @@ export interface TracesProps {
     onRequestTraceId: () => number;
     eventHandlers: EventHandlers<EventDef>;
     initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
     onResourceUsed: () => void;
 }
 
@@ -36,9 +37,8 @@ export function Traces(props: TracesProps) {
     useEffect(() => {
         if (initialGadgetResource) {
             setIsTraceDialogShown(true);
-            onResourceUsed();
         }
-    }, [initialGadgetResource, onResourceUsed]);
+    }, [initialGadgetResource]);
 
     function handleAdd() {
         setIsTraceDialogShown(true);
@@ -85,6 +85,8 @@ export function Traces(props: TracesProps) {
 
     function handleNewTraceDialogCancel() {
         setIsTraceDialogShown(false);
+        // Mark the initial resource as used when canceling to reset the state
+        onResourceUsed();
     }
 
     function handleNewTraceDialogAccept(traceConfig: GadgetConfiguration) {
@@ -104,6 +106,9 @@ export function Traces(props: TracesProps) {
         if (isStreamingTrace) {
             setIsWatching(true);
         }
+
+        // Mark the initial resource as used after the trace is created
+        onResourceUsed();
     }
 
     function getTraceRowClassNames(traceId?: number): string {
@@ -209,6 +214,7 @@ export function Traces(props: TracesProps) {
                 onCancel={handleNewTraceDialogCancel}
                 onAccept={handleNewTraceDialogAccept}
                 initialGadgetResource={props.initialGadgetResource}
+                isGadgetResourceStatic={props.isGadgetResourceStatic}
             />
         </>
     );

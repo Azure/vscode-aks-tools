@@ -19,6 +19,7 @@ export interface InspektorGadgetConfig {
     initialGadget?: {
         category: string;
         resource: string;
+        isStatic?: boolean;
     };
 }
 
@@ -53,6 +54,7 @@ export class InspektorGadgetPanel extends BasePanel<"gadget"> {
                   initialActiveTab: config.initialTab,
                   initialGadgetCategory: config.initialGadget?.category,
                   initialGadgetResource: config.initialGadget?.resource,
+                  isGadgetResourceStatic: config.initialGadget?.isStatic,
               }
             : initialState;
 

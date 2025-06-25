@@ -49,6 +49,11 @@ export function InspektorGadget(initialState: InitialState) {
                 ? initialState.initialGadgetResource
                 : undefined;
 
+        const isGadgetResourceStatic =
+            hasInitialResource && category === initialState.initialGadgetCategory
+                ? initialState.isGadgetResourceStatic
+                : undefined;
+
         return {
             category,
             traces,
@@ -57,6 +62,7 @@ export function InspektorGadget(initialState: InitialState) {
             onRequestTraceId: handleRequestTraceId,
             eventHandlers: eventHandlers,
             initialGadgetResource,
+            isGadgetResourceStatic,
             onResourceUsed: handleResourceUsed,
         };
     }

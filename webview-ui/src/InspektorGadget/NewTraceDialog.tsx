@@ -26,6 +26,7 @@ export interface NewTraceDialogProps {
     onCancel: () => void;
     onAccept: (trace: GadgetConfiguration) => void;
     initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
 }
 
 export function NewTraceDialog(props: NewTraceDialogProps) {
@@ -165,6 +166,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                         required
                         category={props.gadgetCategory}
                         initialValue={props.initialGadgetResource}
+                        disabled={!!props.isGadgetResourceStatic}
                         onResourceChanged={onResourceChanged}
                     />
 

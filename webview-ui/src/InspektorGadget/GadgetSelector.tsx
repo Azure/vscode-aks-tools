@@ -9,6 +9,7 @@ export interface GadgetSelectorProps {
     className?: string;
     required?: boolean;
     initialValue?: string;
+    disabled?: boolean;
     onResourceChanged: (resource: string | null) => void;
 }
 
@@ -26,13 +27,20 @@ export function GadgetSelector(props: GadgetSelectorProps) {
     // to ensure parent components know about the pre-selected value
     useEffect(() => {
         if (props.initialValue) {
+            setSelectedNode(props.initialValue);
             props.onResourceChanged(props.initialValue);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.initialValue]);
 
     return (
-        <CustomDropdown id={props.id} className={props.className} value={selectedNode} onChange={handleResourceChange}>
+        <CustomDropdown
+            id={props.id}
+            className={props.className}
+            value={selectedNode}
+            onChange={handleResourceChange}
+            disabled={props.disabled}
+        >
             <CustomDropdownOption value="" label="Select" />
             {Object.keys(configuredResources).map((resource) => (
                 <CustomDropdownOption key={resource} value={resource} label={configuredResources[resource]!.name} />

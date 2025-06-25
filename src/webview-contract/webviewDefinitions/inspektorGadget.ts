@@ -5,6 +5,7 @@ export interface InitialState {
     initialActiveTab?: string;
     initialGadgetCategory?: string;
     initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
 }
 
 export interface GadgetVersion {

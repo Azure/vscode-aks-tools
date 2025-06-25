@@ -159,6 +159,7 @@ export async function openInspektorGadgetTrace(
                     initialGadget: {
                         category: "trace",
                         resource: config.resource,
+                        isStatic: true, // Make gadget selection read-only when directly invoked from menu
                     },
                 });
 
