@@ -23,7 +23,7 @@ export function Overview(props: OverviewProps) {
         vscode.postUndeployRequest();
     }
 
-    function isVersionStringOrNull(ver: string | null): boolean {
+    function isValidVersionString(ver: string | null): boolean {
         if (ver === null || !ver.startsWith("v")) return false;
         const version = ver.substring(1);
         return semver.valid(version) !== null;
@@ -48,7 +48,7 @@ export function Overview(props: OverviewProps) {
                 </>
             )}
             {props.version &&
-                (isVersionStringOrNull(props.version.client) || isVersionStringOrNull(props.version.server)) && (
+                !(isValidVersionString(props.version.server)) && (
                     <button onClick={handleDeploy}>
                         <FontAwesomeIcon icon={faRocket} />
                         &nbsp;Deploy
