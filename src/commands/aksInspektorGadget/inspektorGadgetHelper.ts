@@ -88,28 +88,38 @@ export async function openInspektorGadgetTrace(
     }
 
     if (!isRunning.result) {
-        // Ask user if they want to deploy Inspektor Gadget
-        const deployButton = "Deploy Inspektor Gadget";
-        const response = await vscode.window.showWarningMessage(
-            "Inspektor Gadget is not running on this cluster. Deploy it now to use the trace feature?",
-            deployButton,
-            "Cancel",
-        );
+        const items = [
+            {
+                label: "$(rocket) Deploy Inspektor Gadget",
+                description: "Install debugging tools on this cluster",
+                detail: `Required for ${config.title}`,
+                action: "deploy",
+            },
+            {
+                label: "$(x) Cancel",
+                description: "Skip this operation",
+                action: "cancel",
+            },
+        ];
 
-        if (response !== deployButton) {
-            // User cancelled deployment
+        const selection = await vscode.window.showQuickPick(items, {
+            title: "Inspektor Gadget Setup",
+            placeHolder: "Inspektor Gadget is not installed on this cluster",
+            canPickMany: false,
+            ignoreFocusOut: true,
+        });
+
+        if (selection?.action !== "deploy") {
             return;
         }
 
-        // Continue with deployment if user confirmed
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
                 title: "Deploying Inspektor Gadget",
                 cancellable: false,
             },
-            async (progress) => {
-                progress.report({ message: "Installing Inspektor Gadget..." });
+            async () => {
                 const deployResult = await clusterOperations.deploy();
                 if (failed(deployResult)) {
                     vscode.window.showErrorMessage(`Failed to deploy Inspektor Gadget: ${deployResult.error}`);
@@ -124,50 +134,27 @@ export async function openInspektorGadgetTrace(
                 }
             },
         );
+    }
 
-        // Verify again after deployment process to ensure it's running before proceeding
-        const finalCheck = await clusterOperations.isInspektorGadgetRunning();
-        if (failed(finalCheck) || !finalCheck.result) {
-            // If still not running after deployment, don't proceed
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: config.title,
+            cancellable: false,
+        },
+        async () => {
+            const panel = new InspektorGadgetPanel(extension.result.extensionUri);
+
+            panel.showWithConfig(dataProvider, kubeConfigFile, traceWatcher, {
+                initialTab: "trace",
+                initialGadget: {
+                    category: "trace",
+                    resource: config.resource,
+                    isStatic: true, // Make gadget selection read-only when directly invoked from menu
+                },
+            });
+
             return;
-        }
-    }
-
-    // Double check that Inspektor Gadget is running before proceeding
-    const finalRunningCheck = await clusterOperations.isInspektorGadgetRunning();
-    if (failed(finalRunningCheck)) {
-        vscode.window.showErrorMessage(`Failed to verify Inspektor Gadget status: ${finalRunningCheck.error}`);
-        return;
-    }
-
-    // Only proceed if Inspektor Gadget is confirmed to be running
-    if (finalRunningCheck.result) {
-        // Show progress notification and open panel
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: config.title,
-                cancellable: false,
-            },
-            async (progress) => {
-                // Create panel and pass data provider with initial configuration
-                const panel = new InspektorGadgetPanel(extension.result.extensionUri);
-
-                // Set up the panel to show the specified trace by default
-                panel.showWithConfig(dataProvider, kubeConfigFile, traceWatcher, {
-                    initialTab: "trace",
-                    initialGadget: {
-                        category: "trace",
-                        resource: config.resource,
-                        isStatic: true, // Make gadget selection read-only when directly invoked from menu
-                    },
-                });
-
-                progress.report({ message: "Ready - Select nodes and start trace" });
-                return;
-            },
-        );
-    } else {
-        vscode.window.showErrorMessage("Cannot execute trace: Inspektor Gadget is not running on the cluster.");
-    }
+        },
+    );
 }

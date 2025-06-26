@@ -11,16 +11,16 @@ export interface NodeSelectorProps {
 }
 
 export function NodeSelector(props: NodeSelectorProps) {
-    const [selectedNode, setSelectedNode] = useState<string>("");
+    const [selectedNode, setSelectedNode] = useState<string>("All");
 
     function handleNodeChange(node: string) {
         setSelectedNode(node);
-        props.onNodeChanged(node);
+        props.onNodeChanged(node === "All" ? null : node);
     }
 
     return (
         <CustomDropdown id={props.id} value={selectedNode} className={props.className} onChange={handleNodeChange}>
-            <CustomDropdownOption value="" label="Select" />
+            <CustomDropdownOption value="All" label="All" />
             {props.nodes.map((node) => (
                 <CustomDropdownOption key={node} value={node} label={node} />
             ))}

@@ -39,7 +39,7 @@
   "Reconcile Cluster": "Reconcile Cluster",
   "Show Inspektor Gadget": "Show Inspektor Gadget",
   "Investigate DNS": "Investigate DNS",
-  "Real-time Trace TCP": "Trace TCP",
+  "Real-time TCP Monitoring": "Real-time TCP Monitoring",
   "Run Kubectl Commands": "Run Kubectl Commands",
   "Command to create an AKS cluster": "Command to create an AKS cluster",
   "Deploy application manifest from Github Copilot Chat": "Deploy application manifest from Github Copilot Chat",

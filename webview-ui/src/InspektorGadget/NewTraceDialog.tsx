@@ -272,7 +272,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     <button type="submit" disabled={!canCreate()}>
                         {l10n.t("Ok")}
                     </button>
-                    <button onClick={props.onCancel}>Cancel</button>
+                    <button type="button" onClick={props.onCancel}>Cancel</button>
                 </div>
             </form>
         </Dialog>

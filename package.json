@@ -303,11 +303,11 @@
                 "title": "%Show Inspektor Gadget%"
             },
             {
-                "command": "aks.aksDnsDebug",
+                "command": "aks.aksInvestigateDns",
                 "title": "%Investigate DNS%"
             },
             {
-                "command": "aks.aksTcpTrace",
+                "command": "aks.aksRealTimeTcpMonitoring",
                 "title": "%Real-time TCP Monitoring%"
             },
             {
@@ -583,11 +583,11 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksDnsDebug",
+                    "command": "aks.aksInvestigateDns",
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksTcpTrace",
+                    "command": "aks.aksRealTimeTcpMonitoring",
                     "group": "navigation"
                 },
                 {

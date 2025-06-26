@@ -3,7 +3,7 @@ import { openInspektorGadgetTrace } from "./inspektorGadgetHelper";
 
 export async function aksInvestigateDns(context: IActionContext, target: unknown): Promise<void> {
     await openInspektorGadgetTrace(context, target, {
-        title: "Launching Inspektor Gadget Tool for DNS Investigation",
+        title: "launching Inspektor Gadget tool for DNS Investigation",
         resource: "dns",
     });
 }
