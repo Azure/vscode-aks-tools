@@ -8,9 +8,13 @@ import { InitialState } from "../../../src/webview-contract/webviewDefinitions/i
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
 import * as l10n from "@vscode/l10n";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEraser } from "@fortawesome/free-solid-svg-icons";
 export function InspektorGadget(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
     const [hasInitialResource, setHasInitialResource] = useState<boolean>(!!initialState.initialGadgetResource);
+    // used to track active tab, initialized from props if provided
+    const [activeTab, setActiveTab] = useState(initialState.initialActiveTab || "overview");
 
     useEffect(() => {
         if (!state.initializationStarted) {
@@ -29,6 +33,12 @@ export function InspektorGadget(initialState: InitialState) {
         }
     });
 
+    useEffect(() => {
+        if (state.version && state.version.server === null && !state.overviewStatus && activeTab !== "overview") {
+            setActiveTab("overview");
+        }
+    }, [state.version, state.overviewStatus, activeTab, setActiveTab]);
+
     function handleRequestTraceId(): number {
         eventHandlers.onIncrementTraceId();
         return state.nextTraceId;
@@ -39,6 +49,12 @@ export function InspektorGadget(initialState: InitialState) {
             setHasInitialResource(false);
             eventHandlers.onResetInitialGadgetResource();
         }
+    }
+
+    function handleUndeploy(): void {
+        eventHandlers.onUndeploy();
+        vscode.postUndeployRequest();
+        setActiveTab("overview");
     }
 
     function getTracesProps(category: GadgetCategory): TracesProps {
@@ -69,9 +85,6 @@ export function InspektorGadget(initialState: InitialState) {
 
     const isDeployed = state.version && state.version.server !== null;
 
-    // used to track active tab, initialized from props if provided
-    const [activeTab, setActiveTab] = useState(initialState.initialActiveTab || "overview");
-
     return (
         <>
             <h2>{l10n.t("Inspektor Gadget")}</h2>
@@ -81,6 +94,15 @@ export function InspektorGadget(initialState: InitialState) {
                 )}
                 <a href="https://www.inspektor-gadget.io/">&nbsp;{l10n.t("Learn more")}</a>
             </p>
+
+            {isDeployed && activeTab !== "overview" && (
+                <div style={{ marginBottom: "16px", textAlign: "right" }}>
+                    <button className="secondary-button" onClick={handleUndeploy}>
+                        <FontAwesomeIcon icon={faEraser} />
+                        &nbsp;Undeploy
+                    </button>
+                </div>
+            )}
 
             {/* implementation of tabs */}
             <div className={styles.tabContainer}>
