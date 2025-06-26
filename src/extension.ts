@@ -21,7 +21,7 @@ import aksDeleteCluster from "./commands/aksDeleteCluster/aksDeleteCluster";
 import aksEraserTool from "./commands/aksEraserTool/erasertool";
 import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
 import { aksInvestigateDns } from "./commands/aksInspektorGadget/aksDnsTrace";
-import { aksRealTimeTcpMonitoring } from "./commands/aksInspektorGadget/aksRealTimeTcpMonitoring";
+import { aksRealTimeTcpMonitoring } from "./commands/aksInspektorGadget/aksTcpTrace";
 import aksKaito from "./commands/aksKaito/aksKaito";
 import aksKaitoGenerateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
 import aksKaitoCreateCRD from "./commands/aksKaito/aksKaitoCreateCRD";
