@@ -2,6 +2,10 @@ import { WebviewDefinition } from "../webviewTypes";
 
 export interface InitialState {
     clusterName: string;
+    initialActiveTab?: string;
+    initialGadgetCategory?: string;
+    initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
 }
 
 export interface GadgetVersion {

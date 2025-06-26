@@ -25,6 +25,8 @@ export interface NewTraceDialogProps {
     eventHandlers: EventHandlers<EventDef>;
     onCancel: () => void;
     onAccept: (trace: GadgetConfiguration) => void;
+    initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
 }
 
 export function NewTraceDialog(props: NewTraceDialogProps) {
@@ -41,7 +43,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
 
     const [traceConfig, setTraceConfig] = useState<GadgetConfiguration>({
         category: props.gadgetCategory,
-        resource: "",
+        resource: props.initialGadgetResource || "",
         filters: {
             namespace: NamespaceSelection.All,
         },
@@ -83,6 +85,12 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
             timeout,
         });
     }
+    useEffect(() => {
+        if (props.isShown && props.initialGadgetResource) {
+            onResourceChanged(props.initialGadgetResource);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.isShown, props.initialGadgetResource]);
 
     function handleNodeChanged(node: string | null) {
         const filters = { ...traceConfig.filters, nodeName: node || undefined };
@@ -157,6 +165,8 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                         className={styles.control}
                         required
                         category={props.gadgetCategory}
+                        initialValue={props.initialGadgetResource}
+                        disabled={!!props.isGadgetResourceStatic}
                         onResourceChanged={onResourceChanged}
                     />
 
@@ -262,7 +272,9 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     <button type="submit" disabled={!canCreate()}>
                         {l10n.t("Ok")}
                     </button>
-                    <button onClick={props.onCancel}>Cancel</button>
+                    <button type="button" onClick={props.onCancel}>
+                        Cancel
+                    </button>
                 </div>
             </form>
         </Dialog>
