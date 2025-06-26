@@ -1,5 +1,5 @@
-import open from "open";
 import * as vscode from "vscode";
+import * as path from "path";
 import { Uri, window } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
@@ -202,11 +202,12 @@ spec:
             )
             .then((selection) => {
                 if (selection === goToFolder) {
+                    // acquiring absolute path for the file system
+                    const abs = path.resolve(captureHostFolderName);
                     if (env.remoteName === "wsl") {
-                        commands.executeCommand("remote-wsl.revealInExplorer", Uri.file(captureHostFolderName));
+                        commands.executeCommand("remote-wsl.revealInExplorer", Uri.file(abs));
                     } else {
-                        // opening relative file path doesn't work in WSL
-                        open(captureHostFolderName);
+                        commands.executeCommand("revealFileInOS", Uri.file(abs));
                     }
                 }
             });
