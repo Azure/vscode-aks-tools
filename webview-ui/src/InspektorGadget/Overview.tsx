@@ -47,13 +47,12 @@ export function Overview(props: OverviewProps) {
                     &nbsp;&nbsp;&nbsp;
                 </>
             )}
-            {props.version &&
-                !(isValidVersionString(props.version.server)) && (
-                    <button onClick={handleDeploy}>
-                        <FontAwesomeIcon icon={faRocket} />
-                        &nbsp;Deploy
-                    </button>
-                )}
+            {props.version && !isValidVersionString(props.version.server) && (
+                <button onClick={handleDeploy}>
+                    <FontAwesomeIcon icon={faRocket} />
+                    &nbsp;Deploy
+                </button>
+            )}
         </>
     );
 }
