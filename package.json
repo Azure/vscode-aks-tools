@@ -501,6 +501,10 @@
                 {
                     "command": "aks.aksFleetProperties",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.fleet/i"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetShow",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -584,10 +588,6 @@
                 },
                 {
                     "command": "aks.aksTcpTrace",
-                    "group": "navigation"
-                },
-                {
-                    "command": "aks.aksInspektorGadgetShow",
                     "group": "navigation"
                 },
                 {
