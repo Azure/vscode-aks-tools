@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.6.10]
+
+* kaito GA changes (#1475)
+* Resolving file path var for azure/identity upgrade fix (#1482)
+* Removing deprecated & adding newly supported models (#1465)
+* Add retro release for enabling. (#1447)
+* Fix for workflow. (#1446)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @lyantovski , @bosesuneha, or @davidgamero for review contributions, testing and reviews. Thank you @lyantovski for his testing work around KAITO update work.
+
 ## [1.6.9]
 
 * Adding namespace awareness & different runtime support for KAITO models (#1444)
