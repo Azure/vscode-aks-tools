@@ -2,7 +2,7 @@
 
 ## [1.6.10]
 
-* kaito GA changes (#1475)
+* Kaito GA changes (#1475)
 * Resolving file path var for azure/identity upgrade fix (#1482)
 * Removing deprecated & adding newly supported models (#1465)
 * Add retro release for enabling. (#1447)
