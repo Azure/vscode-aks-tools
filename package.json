@@ -303,6 +303,14 @@
                 "title": "%Show Inspektor Gadget%"
             },
             {
+                "command": "aks.aksInvestigateDns",
+                "title": "%Investigate DNS%"
+            },
+            {
+                "command": "aks.aksRealTimeTcpMonitoring",
+                "title": "%Real-time TCP Monitoring%"
+            },
+            {
                 "command": "aks.aksRunKubectlCommands",
                 "title": "%Run Kubectl Commands%"
             },
@@ -493,6 +501,10 @@
                 {
                     "command": "aks.aksFleetProperties",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.fleet/i"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetShow",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -571,7 +583,11 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksInspektorGadgetShow",
+                    "command": "aks.aksInvestigateDns",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksRealTimeTcpMonitoring",
                     "group": "navigation"
                 },
                 {

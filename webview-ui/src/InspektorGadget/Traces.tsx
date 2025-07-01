@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrashCan, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { NewTraceDialog } from "./NewTraceDialog";
 import { ClusterResources, Nodes } from "./helpers/clusterResources";
 import { GadgetConfiguration, TraceGadget, getGadgetMetadata, toGadgetArguments } from "./helpers/gadgets";
@@ -18,6 +18,9 @@ export interface TracesProps {
     resources: ClusterResources;
     onRequestTraceId: () => number;
     eventHandlers: EventHandlers<EventDef>;
+    initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
+    onResourceUsed: () => void;
 }
 
 const streamingCategories: GadgetCategory[] = ["top", "trace"];
@@ -28,6 +31,14 @@ export function Traces(props: TracesProps) {
     const [selectedTraceId, setSelectedTraceId] = useState<number | null>(null);
     const [isWatching, setIsWatching] = useState<boolean>(false);
     const isStreamingTrace = streamingCategories.includes(props.category);
+    const { initialGadgetResource, onResourceUsed } = props;
+
+    // Auto-open new trace dialog when a specific resource command is selected from the menu
+    useEffect(() => {
+        if (initialGadgetResource) {
+            setIsTraceDialogShown(true);
+        }
+    }, [initialGadgetResource]);
 
     function handleAdd() {
         setIsTraceDialogShown(true);
@@ -74,6 +85,8 @@ export function Traces(props: TracesProps) {
 
     function handleNewTraceDialogCancel() {
         setIsTraceDialogShown(false);
+        // Mark the initial resource as used when canceling to reset the state
+        onResourceUsed();
     }
 
     function handleNewTraceDialogAccept(traceConfig: GadgetConfiguration) {
@@ -93,6 +106,9 @@ export function Traces(props: TracesProps) {
         if (isStreamingTrace) {
             setIsWatching(true);
         }
+
+        // Mark the initial resource as used after the trace is created
+        onResourceUsed();
     }
 
     function getTraceRowClassNames(traceId?: number): string {
@@ -197,6 +213,8 @@ export function Traces(props: TracesProps) {
                 eventHandlers={props.eventHandlers}
                 onCancel={handleNewTraceDialogCancel}
                 onAccept={handleNewTraceDialogAccept}
+                initialGadgetResource={props.initialGadgetResource}
+                isGadgetResourceStatic={props.isGadgetResourceStatic}
             />
         </>
     );

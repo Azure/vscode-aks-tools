@@ -1,5 +1,5 @@
 import * as k8s from "vscode-kubernetes-tools-api";
-import { Errorable, map as errmap, bindAsync, bindAll } from "../utils/errorable";
+import { Errorable, map as errmap, bindAsync, bindAll, failed } from "../utils/errorable";
 import { invokeKubectlCommand, streamKubectlOutput } from "../utils/kubectl";
 import { KubernetesClusterInfo } from "../utils/clusters";
 import { OutputStream } from "../utils/commands";
@@ -13,6 +13,7 @@ import {
 
 export interface ClusterOperations {
     getGadgetVersion(): Promise<Errorable<GadgetVersion>>;
+    isInspektorGadgetRunning(): Promise<Errorable<boolean>>;
     deploy(): Promise<Errorable<GadgetVersion>>;
     undeploy(): Promise<Errorable<GadgetVersion>>;
     runTrace(gadgetArgs: GadgetArguments): Promise<Errorable<TraceOutputItem[]>>;
@@ -34,7 +35,7 @@ export class KubectlClusterOperations implements ClusterOperations {
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget version");
 
         function setNullIfNotInstalled(version: string) {
-            return version === "not installed" ? null : version;
+            return version === "not available" ? null : version;
         }
 
         return errmap(commandResult, (sr) => {
@@ -44,6 +45,16 @@ export class KubectlClusterOperations implements ClusterOperations {
                 server: setNullIfNotInstalled(lines[1].replace(/^Server\sversion:\s*/, "")),
             };
         });
+    }
+
+    async isInspektorGadgetRunning(): Promise<Errorable<boolean>> {
+        const version = await this.getGadgetVersion();
+        if (failed(version)) {
+            return { succeeded: false, error: version.error };
+        }
+
+        // If server version is non-null, Inspektor Gadget is running
+        return { succeeded: true, result: !!version.result.server };
     }
 
     async deploy(): Promise<Errorable<GadgetVersion>> {
