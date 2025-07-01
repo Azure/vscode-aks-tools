@@ -728,7 +728,7 @@
         "@eslint/compat": "^1.2.9",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^3.0.0",
-        "@octokit/rest": "^21.1.1",
+        "@octokit/rest": "^22.0.0",
         "@vscode/extension-telemetry": "^0.9.8",
         "@vscode/l10n": "^0.0.18",
         "decompress": "^4.2.1",
