@@ -9,7 +9,7 @@ import { KaitoManagePanel } from "../../panels/KaitoManagePanel";
 import { getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
-import { getConditions, convertAgeToMinutes } from "../../panels/utilities/KaitoHelpers";
+import { getConditions, convertAgeToMinutes, isClusterInfo, ClusterInfo } from "../../panels/utilities/KaitoHelpers";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { getKaitoInstallationStatus } from "../../panels/utilities/KaitoHelpers";
 
@@ -21,12 +21,6 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
         vscode.window.showErrorMessage(sessionProvider.error);
-        return;
-    }
-
-    const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
-    if (failed(clusterNode)) {
-        vscode.window.showErrorMessage(clusterNode.error);
         return;
     }
 
@@ -51,14 +45,44 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         return;
     }
 
-    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
-    if (failed(clusterInfo)) {
-        vscode.window.showErrorMessage(clusterInfo.error);
-        return;
+    let kconfigyaml: string;
+    // Target can be different depending on how the command is invoked.
+    // This logic accounts for the different cases of invocation.
+    if (isClusterInfo(target)) {
+        kconfigyaml = (target as ClusterInfo).yaml;
+    } else {
+        const clusterInfo = await getKubernetesClusterInfo(
+            sessionProvider.result,
+            target,
+            cloudExplorer,
+            clusterExplorer,
+        );
+        if (failed(clusterInfo)) {
+            vscode.window.showErrorMessage(clusterInfo.error);
+            return;
+        }
+        kconfigyaml = clusterInfo.result.kubeconfigYaml;
     }
 
-    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
-    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
+    const kubeConfigFile = await tmpfile.createTempFile(kconfigyaml, "yaml");
+    let src: {
+        name: string;
+        subscriptionId: string;
+        resourceGroupName: string;
+    };
+
+    if (isClusterInfo(target)) {
+        src = target;
+    } else {
+        const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
+        if (failed(clusterNode)) {
+            vscode.window.showErrorMessage(clusterNode.error);
+            return;
+        }
+        src = clusterNode.result;
+    }
+
+    const { name: clusterName, subscriptionId, resourceGroupName } = src;
 
     // Returns an object with the status of the kaito pods
     const kaitoStatus = await getKaitoInstallationStatus(
@@ -67,7 +91,7 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         subscriptionId,
         resourceGroupName,
         clusterName,
-        clusterInfo,
+        kconfigyaml,
     );
 
     // Only proceed if kaito is installed and the workspace is ready
@@ -104,7 +128,6 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
         clusterName,
         subscriptionId,
         resourceGroupName,
-        armId,
         kubectl,
         kubeConfigFile.filePath,
         models,

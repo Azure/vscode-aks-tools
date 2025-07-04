@@ -28,7 +28,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         readonly clusterName: string,
         readonly subscriptionId: string,
         readonly resourceGroupName: string,
-        readonly armId: string,
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
         readonly sessionProvider: ReadyAzureSessionProvider,
@@ -38,7 +37,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
         this.resourceGroupName = resourceGroupName;
-        this.armId = armId;
         this.kubectl = kubectl;
         this.kubeConfigFilePath = kubeConfigFilePath;
         this.sessionProvider = sessionProvider;
