@@ -87,8 +87,6 @@ export async function aksKaitoDeployCRD() {
         return;
     }
 
-    ///////////////////////////////////////////
-    // await window.showInformationMessage(`CRD deployed to ${cluster.label}.`, "View KAITO Deployments");
     const getKubeconfig = await getKubeconfigYaml(
         sessionProvider.result,
         pickedSub.description!,
@@ -100,31 +98,6 @@ export async function aksKaitoDeployCRD() {
         window.showErrorMessage(getKubeconfig.error);
         return;
     }
-    ///////////////////////////////////////////
-
-    // console.log("water");
-    // console.log(water.result);
-
-    // console.log(cluster.payload);
-    // // Get the kubeconfig for the selected cluster
-    // const creds = await new ContainerServiceClient(
-    //     getCredential(sessionProvider.result),
-    //     pickedSub.description!,
-    // ).managedClusters.listClusterAdminCredentials(cluster.description!, cluster.label);
-
-    // // converting raw to string
-    // const raw = creds.kubeconfigs![0].value!;
-    // const rawString = Buffer.from(raw).toString("utf8");
-    // console.log(rawString);
-
-    // const pick = await window.showInformationMessage(
-    //     `test CRD Deployed to ${cluster.label}.`,
-    //     "View KAITO Deployments",
-    // );
-    // if (pick === "View KAITO Deployments") {
-    //     window.showInformationMessage("Opening Kaito management panel...");
-    //     vscode.commands.executeCommand("aks.aksKaitoManage", { target: "ha", clusterInfo: "ha", yaml: "ha" });
-    // }
 
     const kubePath = join(tmpdir(), `aks-${cluster.label}-${Date.now()}.config`);
     writeFileSync(kubePath, getKubeconfig.result, "utf8");
