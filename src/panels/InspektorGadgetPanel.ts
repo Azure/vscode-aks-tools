@@ -4,6 +4,7 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
 import { ClusterOperations } from "../commands/aksInspektorGadget/clusterOperations";
 import { TraceWatcher } from "../commands/aksInspektorGadget/traceWatcher";
+import * as tmpfile from "../commands/utils/tempfile";
 import {
     GadgetArguments,
     InitialState,
@@ -13,6 +14,15 @@ import {
 } from "../webview-contract/webviewDefinitions/inspektorGadget";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { l10n } from "vscode";
+export interface InspektorGadgetConfig {
+    initialTab?: string;
+    initialGadget?: {
+        category: string;
+        resource: string;
+        isStatic?: boolean;
+    };
+}
+
 export class InspektorGadgetPanel extends BasePanel<"gadget"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "gadget", {
@@ -23,6 +33,41 @@ export class InspektorGadgetPanel extends BasePanel<"gadget"> {
             runTraceResponse: null,
             updateVersion: null,
         });
+    }
+
+    public show(dataProvider: PanelDataProvider<"gadget">, ...disposables: vscode.Disposable[]): void {
+        super.show(dataProvider, ...disposables);
+    }
+
+    public showWithConfig(
+        dataProvider: InspektorGadgetDataProvider,
+        kubeConfigFile: tmpfile.TempFile,
+        traceWatcher: TraceWatcher,
+        config?: InspektorGadgetConfig,
+    ): void {
+        const initialState = dataProvider.getInitialState();
+
+        // Add the initial configuration to the state if provided
+        const enhancedState = config
+            ? {
+                  ...initialState,
+                  initialActiveTab: config.initialTab,
+                  initialGadgetCategory: config.initialGadget?.category,
+                  initialGadgetResource: config.initialGadget?.resource,
+                  isGadgetResourceStatic: config.initialGadget?.isStatic,
+              }
+            : initialState;
+
+        // Override the getInitialState method to return our enhanced state
+        const enhancedDataProvider: PanelDataProvider<"gadget"> = {
+            ...dataProvider,
+            getInitialState: () => enhancedState,
+            getTitle: () => dataProvider.getTitle(),
+            getTelemetryDefinition: () => dataProvider.getTelemetryDefinition(),
+            getMessageHandler: (webview) => dataProvider.getMessageHandler(webview),
+        };
+
+        super.show(enhancedDataProvider, kubeConfigFile, traceWatcher);
     }
 }
 
