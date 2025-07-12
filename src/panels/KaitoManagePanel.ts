@@ -26,7 +26,6 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         readonly clusterName: string,
         readonly subscriptionId: string,
         readonly resourceGroupName: string,
-        readonly armId: string,
         readonly kubectl: k8s.APIAvailable<k8s.KubectlV1>,
         readonly kubeConfigFilePath: string,
         readonly models: ModelState[],
@@ -36,7 +35,6 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         this.clusterName = clusterName;
         this.subscriptionId = subscriptionId;
         this.resourceGroupName = resourceGroupName;
-        this.armId = armId;
         this.kubectl = kubectl;
         this.kubeConfigFilePath = kubeConfigFilePath;
         this.models = models;

@@ -11,7 +11,6 @@ import { tmpdir } from "os";
 import { KubectlV1 } from "vscode-kubernetes-tools-api";
 import { Succeeded } from "../../commands/utils/errorable";
 import * as tmpfile from "../../commands/utils/tempfile";
-import { KubernetesClusterInfo } from "../../commands/utils/clusters";
 
 // helper for parsing the conditions object on a workspace
 function statusToBoolean(status: string): boolean {
@@ -271,7 +270,7 @@ export async function getKaitoInstallationStatus(
     subscriptionId: string,
     resourceGroupName: string,
     clusterName: string,
-    clusterInfo: Succeeded<KubernetesClusterInfo>,
+    clusterYaml: string,
 ) {
     const status = { kaitoInstalled: false, kaitoWorkspaceReady: false };
     const filterKaitoPodNames = await longRunning(`Checking if KAITO is installed.`, () => {
@@ -296,7 +295,7 @@ export async function getKaitoInstallationStatus(
         return status;
     }
 
-    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
+    const kubeConfigFile = await tmpfile.createTempFile(clusterYaml, "yaml");
     const kaitoWorkspaceReady = await isKaitoWorkspaceReady(
         clusterName,
         filterKaitoPodNames.result,
@@ -305,4 +304,24 @@ export async function getKaitoInstallationStatus(
     );
     kubeConfigFile.dispose();
     return { kaitoInstalled: true, kaitoWorkspaceReady };
+}
+
+export type ClusterInfo = {
+    name: string;
+    subscriptionId: string;
+    resourceGroupName: string;
+    yaml: string;
+};
+
+export function isClusterInfo(o: unknown): o is ClusterInfo {
+    if (typeof o !== "object" || o === null) {
+        return false;
+    }
+    const obj = o as Record<string, unknown>;
+    return (
+        typeof obj.name === "string" &&
+        typeof obj.subscriptionId === "string" &&
+        typeof obj.resourceGroupName === "string" &&
+        typeof obj.yaml === "string"
+    );
 }
