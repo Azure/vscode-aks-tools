@@ -8,7 +8,7 @@
     "l10n": "./l10n",
     "icon": "resources/aks-tools.png",
     "engines": {
-        "vscode": "^1.99.1"
+        "vscode": "^1.101.0"
     },
     "capabilities": {
         "untrustedWorkspaces": {
@@ -702,7 +702,7 @@
         "@types/sinon": "^17.0.4",
         "@types/tmp": "^0.2.6",
         "@types/uuid": "^10.0.0",
-        "@types/vscode": "^1.99.1",
+        "@types/vscode": "^1.101.0",
         "@typescript-eslint/eslint-plugin": "^8.36.0",
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
