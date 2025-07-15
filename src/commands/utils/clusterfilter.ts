@@ -93,7 +93,7 @@ export async function addItemToClusterFilter(
     }
 }
 
-async function getClusterList(
+export async function getClusterList(
     subscriptionName: string,
     subscriptionId: string,
     sessionProvider: ReadyAzureSessionProvider,
