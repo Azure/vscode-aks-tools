@@ -13,22 +13,23 @@ import { TraceWatcher } from "./traceWatcher";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 
-export interface TraceConfig {
+export interface GadgetConfig {
     title: string; // Progress notification title
-    resource: string; // Gadget resource type (e.g., "dns", "tcp")
+    category: string; // Gadget category (e.g., "trace", "top", "profile", "snapshot")
+    resource: string; // Gadget resource type (e.g., "dns", "tcp", "cpu", "file")
 }
 
 /**
- * Common helper function to open the Inspektor Gadget panel with a specific trace type pre-selected
+ * Helper function to open the Inspektor Gadget panel with a specific gadget pre-selected
  *
  * @param context The action context
  * @param target The Kubernetes cluster target
- * @param config Configuration for the trace (title and resource type)
+ * @param config Configuration for the gadget (title, category, and resource type)
  */
-export async function openInspektorGadgetTrace(
+export async function openInspektorGadget(
     _context: IActionContext,
     target: unknown,
-    config: TraceConfig,
+    config: GadgetConfig,
 ): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
@@ -146,9 +147,9 @@ export async function openInspektorGadgetTrace(
             const panel = new InspektorGadgetPanel(extension.result.extensionUri);
 
             panel.showWithConfig(dataProvider, kubeConfigFile, traceWatcher, {
-                initialTab: "trace",
+                initialTab: config.category,
                 initialGadget: {
-                    category: "trace",
+                    category: config.category,
                     resource: config.resource,
                     isStatic: true, // Make gadget selection read-only when directly invoked from menu
                 },
