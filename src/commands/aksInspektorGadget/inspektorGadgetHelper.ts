@@ -13,6 +13,22 @@ import { TraceWatcher } from "./traceWatcher";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 
+export enum GadgetCategory {
+    Trace = "trace",
+    Top = "top",
+    Profile = "profile",
+    Snapshot = "snapshot",
+}
+
+export enum GadgetResource {
+    Dns = "dns",
+    Tcp = "tcp",
+    Exec = "exec",
+    File = "file",
+    BlockIO = "block-io",
+    Cpu = "cpu",
+}
+
 export interface GadgetConfig {
     title: string; // Progress notification title
     category: string; // Gadget category (e.g., "trace", "top", "profile", "snapshot")
