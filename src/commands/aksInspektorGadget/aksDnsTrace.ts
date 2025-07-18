@@ -1,9 +1,10 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { openInspektorGadgetTrace } from "./inspektorGadgetHelper";
+import { GadgetCategory, GadgetResource, openInspektorGadget } from "./inspektorGadgetHelper";
 
 export async function aksInvestigateDns(context: IActionContext, target: unknown): Promise<void> {
-    await openInspektorGadgetTrace(context, target, {
+    await openInspektorGadget(context, target, {
         title: "launching Inspektor Gadget tool for DNS Investigation",
-        resource: "dns",
+        category: GadgetCategory.Trace,
+        resource: GadgetResource.Dns,
     });
 }

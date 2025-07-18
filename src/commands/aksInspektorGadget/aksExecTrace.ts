@@ -1,10 +1,10 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { GadgetCategory, GadgetResource, openInspektorGadget } from "./inspektorGadgetHelper";
 
-export async function aksRealTimeTcpMonitoring(context: IActionContext, target: unknown): Promise<void> {
+export async function aksTraceExec(context: IActionContext, target: unknown): Promise<void> {
     await openInspektorGadget(context, target, {
-        title: "launching Inspektor Gadget tool for Real-Time TCP Monitoring",
+        title: "launching Inspektor Gadget tool for viewing processes executing in kernel",
         category: GadgetCategory.Trace,
-        resource: GadgetResource.Tcp,
+        resource: GadgetResource.Exec,
     });
 }

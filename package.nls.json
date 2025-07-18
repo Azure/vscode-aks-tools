@@ -40,6 +40,10 @@
   "Show Inspektor Gadget": "Show Inspektor Gadget",
   "Investigate DNS": "Investigate DNS",
   "Real-time TCP Monitoring": "Real-time TCP Monitoring",
+  "View processes executed in the kernel": "View processes executed in the kernel",
+  "Identify Block I/O intensive processes": "Identify Block I/O intensive processes",
+  "Identify files being read and written to": "Identify files being read and written to",
+  "Profile CPU": "Profile CPU",
   "Run Kubectl Commands": "Run Kubectl Commands",
   "Command to create an AKS cluster": "Command to create an AKS cluster",
   "Deploy application manifest from Github Copilot Chat": "Deploy application manifest from Github Copilot Chat",
@@ -63,5 +67,8 @@
   "Troubleshoot Network Health": "Troubleshoot Network Health",
   "Deploy a LLM with KAITO": "Deploy a LLM with KAITO",
   "Fleet Manager": "Fleet Manager",
-  "Run Retina Capture": "Run Retina Capture"
+  "Run Retina Capture": "Run Retina Capture",
+  "Troubleshoot Resource Utilization": "Troubleshoot Resource Utilization",
+  "Investigate Block I/O": "Investigate Block I/O",
+  "Improve security of my cluster": "Improve security of my cluster"
 }

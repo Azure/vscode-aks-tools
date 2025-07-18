@@ -311,6 +311,22 @@
                 "title": "%Real-time TCP Monitoring%"
             },
             {
+                "command": "aks.aksTraceExec",
+                "title": "%View processes executed in the kernel%"
+            },
+            {
+                "command": "aks.aksTopBlockIO",
+                "title": "%Identify Block I/O intensive processes%"
+            },
+            {
+                "command": "aks.aksTopFile",
+                "title": "%Identify files being read and written to%"
+            },
+            {
+                "command": "aks.aksProfileCpu",
+                "title": "%Profile CPU%"
+            },
+            {
                 "command": "aks.aksRunKubectlCommands",
                 "title": "%Run Kubectl Commands%"
             },
@@ -490,6 +506,16 @@
                     "group": "9@3"
                 },
                 {
+                    "submenu": "aks.troubleshootResourceUtilizationSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@4"
+                },
+                {
+                    "submenu": "aks.improveSecuritySubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@5"
+                },
+                {
                     "submenu": "aks.kaitoInstallSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
@@ -595,6 +621,32 @@
                     "group": "navigation"
                 }
             ],
+            "aks.troubleshootResourceUtilizationSubMenu": [
+                {
+                    "submenu": "aks.investigateBlockIOSubMenu",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksTopFile",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksProfileCpu",
+                    "group": "navigation"
+                }
+            ],
+            "aks.investigateBlockIOSubMenu": [
+                {
+                    "command": "aks.aksTopBlockIO",
+                    "group": "navigation"
+                }
+            ],
+            "aks.improveSecuritySubMenu": [
+                {
+                    "command": "aks.aksTraceExec",
+                    "group": "navigation"
+                }
+            ],
             "aks.managedClusterOperationSubMenu": [
                 {
                     "command": "aks.aksDeleteCluster",
@@ -662,6 +714,18 @@
             {
                 "id": "aks.aksRetinaCaptureSubMenu",
                 "label": "%Run Retina Capture%"
+            },
+            {
+                "id": "aks.troubleshootResourceUtilizationSubMenu",
+                "label": "%Troubleshoot Resource Utilization%"
+            },
+            {
+                "id": "aks.investigateBlockIOSubMenu",
+                "label": "%Investigate Block I/O%"
+            },
+            {
+                "id": "aks.improveSecuritySubMenu",
+                "label": "%Improve security of my cluster%"
             }
         ]
     },
