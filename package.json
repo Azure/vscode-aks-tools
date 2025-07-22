@@ -367,6 +367,10 @@
                 "title": "%Create KAITO Workspace%"
             },
             {
+                "command": "aks.aksKaitoDeployCRD",
+                "title": "Deploy KAITO Workspace"
+            },
+            {
                 "command": "aks.aksKaitoManage",
                 "title": "%Manage KAITO Models%"
             },
