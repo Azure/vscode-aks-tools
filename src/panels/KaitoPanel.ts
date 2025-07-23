@@ -150,7 +150,6 @@ export class KaitoPanelDataProvider implements PanelDataProvider<"kaito"> {
         // Install kaito enablement
         const managedClusterSpec: ManagedCluster = {
             location: currentJson.location!,
-            aiToolchainOperatorProfile: { enabled: true },
             oidcIssuerProfile: { enabled: true },
         };
 
