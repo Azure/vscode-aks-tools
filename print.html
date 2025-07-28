@@ -311,7 +311,7 @@ Rename <code>filename.vsix</code> to <code>filename.vsix.zip</code>.</li>
 <p><img src="features/../resources/right-click-menu-workflow.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/right-click-menu-kubectl.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/right-click-menu-managedoperations.png" alt="Cloud explorer extension menu" /></p>
-<p><img src="features/../resources/right-click-inspektor-gadget.png" alt="Cloud explorer extension menu" /></p>
+<p><img src="features/../resources/inspector-gadget-main-menu.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/right-click-subscription.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/kubectl-command-panel.png" alt="Cloud explorer health check panel" /></p>
 <p><img src="features/../resources/inspector-gadget-1.png" alt="Cloud explorer new inspektor gadget panel" /></p>
@@ -515,20 +515,68 @@ Rename <code>filename.vsix</code> to <code>filename.vsix.zip</code>.</li>
 <p><img src="features/../resources/kubectl-command-panel.png" alt="Kubectl health command panel" /></p>
 <div style="break-before: page; page-break-before: always;"></div><h3 id="inspektor-gadget"><a class="header" href="#inspektor-gadget">Inspektor Gadget</a></h3>
 <h3 id="deploy-and-undeploy-inspektorgadget"><a class="header" href="#deploy-and-undeploy-inspektorgadget">Deploy and Undeploy InspektorGadget</a></h3>
-<p>Right click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> and then click on <strong>Show Inspektor Gadget</strong> to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.</p>
+<p>Right click on your AKS cluster and select <strong>Show Inspektor Gadget</strong> to easily deploy gadget into your cluster. The Show Inspektor Gadget command has been moved to the main context menu for easier access. Users can easily one-click deploy and undeploy gadget from this feature.</p>
+<p><img src="features/../resources/inspector-gadget-main-menu.png" alt="Inspektor Gadget main menu access" /></p>
 <h3 id="profile-top-trace-and-snapshot-inspektor-gadget-commands"><a class="header" href="#profile-top-trace-and-snapshot-inspektor-gadget-commands">Profile, Top, Trace and Snapshot Inspektor Gadget Commands</a></h3>
 <p>Right-click on your AKS cluster and select <strong>Show Inspektor Gadget</strong> and choose <strong>Gadget Commands</strong> to easily use non-interactive Top, Trace, Profile or Snapshot commands for your cluster.</p>
 <p><img src="features/../resources/inspector-gadget-1.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/inspector-gadget-2.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/inspector-gadget-3.png" alt="Cloud explorer extension menu" /></p>
+<h3 id="new-troubleshooting-menu-items"><a class="header" href="#new-troubleshooting-menu-items">New Troubleshooting Menu Items</a></h3>
+<p>The Inspektor Gadget integration now includes specialized menu items for common troubleshooting scenarios. If Inspektor Gadget is not deployed, the extension will prompt you to deploy it as below.</p>
+<p><img src="features/../resources/ig-deploy-prompt.png" alt="Inspektor Gadget deployment prompt" /></p>
+<p>Depending on the context, the appropriate gadget will be selected automatically and the gadget dialog will open with the relevant options.</p>
+<p><img src="features/../resources/ig-gadget-dialog.png" alt="Inspektor Gadget dialog" /></p>
+<h3 id="investigate-dns"><a class="header" href="#investigate-dns">Investigate DNS</a></h3>
+<p>Right-click on your AKS cluster and select <strong>Investigate DNS</strong> to troubleshoot DNS-related issues in your cluster. This provides specialized tools for monitoring DNS queries and identifying connectivity problems.</p>
+<p><img src="features/../resources/inspector-gadget-dns.png" alt="DNS investigation menu" /></p>
+<h3 id="real-time-tcp-monitoring"><a class="header" href="#real-time-tcp-monitoring">Real-time TCP Monitoring</a></h3>
+<p>Select <strong>Real-time TCP Monitoring</strong> to monitor TCP connections and network traffic in real-time. This helps identify network bottlenecks and connection issues.</p>
+<p><img src="features/../resources/inspector-gadget-tcp.png" alt="Real-time TCP monitoring" /></p>
+<h3 id="troubleshoot-resource-utilization"><a class="header" href="#troubleshoot-resource-utilization">Troubleshoot Resource Utilization</a></h3>
+<p>Use <strong>Troubleshoot Resource Utilization</strong> to analyze CPU, memory, and other resource usage patterns across your cluster. This helps identify resource constraints and optimization opportunities.</p>
+<p><img src="features/../resources/ig-resource-utilization-troubleshooting.png" alt="Resource utilization troubleshooting" /></p>
+<p>The Troubleshoot Resource Utilization menu includes the following sub-options:</p>
+<ul>
+<li><strong>Identify files being read and written to</strong>: Monitor file system operations to understand which processes are accessing specific files.</li>
+<li><strong>Investigate Block I/O intensive processes</strong>: Detect processes with high disk usage to identify potential performance bottlenecks.</li>
+<li><strong>Profile CPU</strong>: Take samples of stack traces to analyze performance issues and identify resource-intensive processes.</li>
+</ul>
+<h3 id="improve-security-of-my-cluster"><a class="header" href="#improve-security-of-my-cluster">Improve Security of My Cluster</a></h3>
+<p>Select <strong>Improve Security of My Cluster</strong> to access the <code>trace_exec</code> gadget under the hood to monitor when new processes are executed.</p>
+<p><img src="features/../resources/ig-improve-security.png" alt="Security improvement tools" /></p>
 <div style="break-before: page; page-break-before: always;"></div><h3 id="inspektor-gadget-1"><a class="header" href="#inspektor-gadget-1">Inspektor Gadget</a></h3>
 <h3 id="deploy-and-undeploy-inspektorgadget-1"><a class="header" href="#deploy-and-undeploy-inspektorgadget-1">Deploy and Undeploy InspektorGadget</a></h3>
-<p>Right click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> and then click on <strong>Show Inspektor Gadget</strong> to easily deploy gadget into your cluster. User can easily one-click deploy and undeploy gadget from this feature.</p>
+<p>Right click on your AKS cluster and select <strong>Show Inspektor Gadget</strong> to easily deploy gadget into your cluster. The Show Inspektor Gadget command has been moved to the main context menu for easier access. Users can easily one-click deploy and undeploy gadget from this feature.</p>
+<p><img src="features/../resources/inspector-gadget-main-menu.png" alt="Inspektor Gadget main menu access" /></p>
 <h3 id="profile-top-trace-and-snapshot-inspektor-gadget-commands-1"><a class="header" href="#profile-top-trace-and-snapshot-inspektor-gadget-commands-1">Profile, Top, Trace and Snapshot Inspektor Gadget Commands</a></h3>
 <p>Right-click on your AKS cluster and select <strong>Show Inspektor Gadget</strong> and choose <strong>Gadget Commands</strong> to easily use non-interactive Top, Trace, Profile or Snapshot commands for your cluster.</p>
 <p><img src="features/../resources/inspector-gadget-1.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/inspector-gadget-2.png" alt="Cloud explorer extension menu" /></p>
 <p><img src="features/../resources/inspector-gadget-3.png" alt="Cloud explorer extension menu" /></p>
+<h3 id="new-troubleshooting-menu-items-1"><a class="header" href="#new-troubleshooting-menu-items-1">New Troubleshooting Menu Items</a></h3>
+<p>The Inspektor Gadget integration now includes specialized menu items for common troubleshooting scenarios. If Inspektor Gadget is not deployed, the extension will prompt you to deploy it as below.</p>
+<p><img src="features/../resources/ig-deploy-prompt.png" alt="Inspektor Gadget deployment prompt" /></p>
+<p>Depending on the context, the appropriate gadget will be selected automatically and the gadget dialog will open with the relevant options.</p>
+<p><img src="features/../resources/ig-gadget-dialog.png" alt="Inspektor Gadget dialog" /></p>
+<h3 id="investigate-dns-1"><a class="header" href="#investigate-dns-1">Investigate DNS</a></h3>
+<p>Right-click on your AKS cluster and select <strong>Investigate DNS</strong> to troubleshoot DNS-related issues in your cluster. This provides specialized tools for monitoring DNS queries and identifying connectivity problems.</p>
+<p><img src="features/../resources/inspector-gadget-dns.png" alt="DNS investigation menu" /></p>
+<h3 id="real-time-tcp-monitoring-1"><a class="header" href="#real-time-tcp-monitoring-1">Real-time TCP Monitoring</a></h3>
+<p>Select <strong>Real-time TCP Monitoring</strong> to monitor TCP connections and network traffic in real-time. This helps identify network bottlenecks and connection issues.</p>
+<p><img src="features/../resources/inspector-gadget-tcp.png" alt="Real-time TCP monitoring" /></p>
+<h3 id="troubleshoot-resource-utilization-1"><a class="header" href="#troubleshoot-resource-utilization-1">Troubleshoot Resource Utilization</a></h3>
+<p>Use <strong>Troubleshoot Resource Utilization</strong> to analyze CPU, memory, and other resource usage patterns across your cluster. This helps identify resource constraints and optimization opportunities.</p>
+<p><img src="features/../resources/ig-resource-utilization-troubleshooting.png" alt="Resource utilization troubleshooting" /></p>
+<p>The Troubleshoot Resource Utilization menu includes the following sub-options:</p>
+<ul>
+<li><strong>Identify files being read and written to</strong>: Monitor file system operations to understand which processes are accessing specific files.</li>
+<li><strong>Investigate Block I/O intensive processes</strong>: Detect processes with high disk usage to identify potential performance bottlenecks.</li>
+<li><strong>Profile CPU</strong>: Take samples of stack traces to analyze performance issues and identify resource-intensive processes.</li>
+</ul>
+<h3 id="improve-security-of-my-cluster-1"><a class="header" href="#improve-security-of-my-cluster-1">Improve Security of My Cluster</a></h3>
+<p>Select <strong>Improve Security of My Cluster</strong> to access the <code>trace_exec</code> gadget under the hood to monitor when new processes are executed.</p>
+<p><img src="features/../resources/ig-improve-security.png" alt="Security improvement tools" /></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="collect-tcp-dumps-from-aks-cluster-linux-nodes"><a class="header" href="#collect-tcp-dumps-from-aks-cluster-linux-nodes">Collect TCP Dumps from AKS Cluster Linux Nodes</a></h1>
 <h3 id="collect-tcp-dumps"><a class="header" href="#collect-tcp-dumps">Collect TCP Dumps</a></h3>
 <p>Right click on your AKS cluster and select <strong>Troubleshoot Network Health</strong> and then select <strong>Collect TCP Dumps</strong> to capture TCP dumps for any Linux node and download them to your local machine with ease.</p>
