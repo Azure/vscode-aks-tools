@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.6.11]
+
+* Add new monitoring and profiling commands for Inspektor Gadget (#1512)
+* Fix vsc update. (#1502)
+* Fix telemetery update failure. (#1501)
+* IG menu restructure: Investigate DNS and Real-time TCP Monitoring (#1466)
+* Dependabot updates and bumps.
+
+Thank you so much to @bosesuneha, @ReinierCC, @tejhan for review contributions, testing and reviews.
+
 ## [1.6.10]
 
 * Kaito GA changes (#1475)
