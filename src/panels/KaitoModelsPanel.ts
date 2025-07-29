@@ -115,7 +115,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         });
         vscode.window.showTextDocument(doc);
         vscode.window.showInformationMessage(
-            `Once you have made your edits, run "Deploy KAITO Model" via the Command Palette to apply.`,
+            `Once you have made your edits, run "Deploy KAITO Workspace" via the Command Palette to apply.`,
         );
     }
 

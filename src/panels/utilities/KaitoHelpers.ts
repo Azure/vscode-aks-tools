@@ -313,6 +313,7 @@ export type ClusterInfo = {
     yaml: string;
 };
 
+// Type guard to check if an object is of type ClusterInfo
 export function isClusterInfo(o: unknown): o is ClusterInfo {
     if (typeof o !== "object" || o === null) {
         return false;
