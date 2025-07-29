@@ -1,14 +1,11 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import * as tmpfile from "../utils/tempfile";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 import { KaitoTestPanel, KaitoTestPanelDataProvider } from "../../panels/KaitoTestPanel";
-import { ClusterInfo, isClusterInfo } from "../../panels/utilities/KaitoHelpers";
+import { getClusterDetails } from "../../panels/utilities/KaitoHelpers";
 
 export default async function aksKaitoTest(
     _context: IActionContext,
@@ -44,43 +41,11 @@ export default async function aksKaitoTest(
         return;
     }
 
-    let kconfigyaml: string;
-    if (isClusterInfo(target)) {
-        kconfigyaml = (target as ClusterInfo).yaml;
-    } else {
-        const clusterInfo = await getKubernetesClusterInfo(
-            sessionProvider.result,
-            target,
-            cloudExplorer,
-            clusterExplorer,
-        );
-        if (failed(clusterInfo)) {
-            vscode.window.showErrorMessage(clusterInfo.error);
-            return;
-        }
-        kconfigyaml = clusterInfo.result.kubeconfigYaml;
-    }
-
-    const kubeConfigFile = await tmpfile.createTempFile(kconfigyaml, "yaml");
-
-    let src: {
-        name: string;
-        subscriptionId: string;
-        resourceGroupName: string;
-    };
-
-    if (isClusterInfo(target)) {
-        src = target;
-    } else {
-        const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
-        if (failed(clusterNode)) {
-            vscode.window.showErrorMessage(clusterNode.error);
-            return;
-        }
-        src = clusterNode.result;
-    }
-
-    const { name: clusterName, subscriptionId, resourceGroupName } = src;
+    // Target can be different depending on how the command is invoked.
+    // This logic accounts for the different cases of invocation.
+    const result = await getClusterDetails(target, sessionProvider.result, cloudExplorer, clusterExplorer);
+    if (!result) return;
+    const { clusterName, subscriptionId, resourceGroupName, kubeConfigFile } = result;
 
     const panel = new KaitoTestPanel(extension.result.extensionUri);
     const dataProvider = new KaitoTestPanelDataProvider(

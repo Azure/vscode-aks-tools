@@ -4,7 +4,7 @@ import { failed, Errorable } from "../../commands/utils/errorable";
 import { invokeKubectlCommand } from "../../commands/utils/kubectl";
 import { longRunning } from "../../commands/utils/host";
 import { ReadyAzureSessionProvider } from "../../auth/types";
-import { filterPodImage } from "../../commands/utils/clusters";
+import { filterPodImage, getKubernetesClusterInfo, getAksClusterTreeNode } from "../../commands/utils/clusters";
 import { join } from "path";
 import { writeFileSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
@@ -324,4 +324,46 @@ export function isClusterInfo(o: unknown): o is ClusterInfo {
         typeof obj.resourceGroupName === "string" &&
         typeof obj.yaml === "string"
     );
+}
+
+// Return cluster details accordingly based on the target type
+export async function getClusterDetails(
+    target: unknown,
+    sessionProvider: ReadyAzureSessionProvider,
+    cloudExplorer: k8s.APIAvailable<k8s.CloudExplorerV1>,
+    clusterExplorer: k8s.APIAvailable<k8s.ClusterExplorerV1>,
+) {
+    let kconfigyaml: string;
+    let details: {
+        name: string;
+        subscriptionId: string;
+        resourceGroupName: string;
+    };
+
+    if (isClusterInfo(target)) {
+        kconfigyaml = (target as ClusterInfo).yaml;
+        details = target;
+    } else {
+        const clusterInfo = await getKubernetesClusterInfo(sessionProvider, target, cloudExplorer, clusterExplorer);
+        if (failed(clusterInfo)) {
+            vscode.window.showErrorMessage(clusterInfo.error);
+            return;
+        }
+        kconfigyaml = clusterInfo.result.kubeconfigYaml;
+
+        const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
+        if (failed(clusterNode)) {
+            vscode.window.showErrorMessage(clusterNode.error);
+            return;
+        }
+        details = clusterNode.result;
+    }
+    const kubeConfigFile = await tmpfile.createTempFile(kconfigyaml, "yaml");
+    return {
+        clusterName: details.name,
+        subscriptionId: details.subscriptionId,
+        resourceGroupName: details.resourceGroupName,
+        kubeConfigFile,
+        kconfigyaml,
+    };
 }
