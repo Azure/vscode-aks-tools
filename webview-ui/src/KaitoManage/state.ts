@@ -15,6 +15,7 @@ export const vscode = getWebviewMessageContext<"kaitoManage">({
     redeployWorkspaceRequest: null,
     getLogsRequest: null,
     testWorkspaceRequest: null,
+    portForwardRequest: null,
 });
 
 export const stateUpdater: WebviewStateUpdater<"kaitoManage", EventDef, MonitorState> = {

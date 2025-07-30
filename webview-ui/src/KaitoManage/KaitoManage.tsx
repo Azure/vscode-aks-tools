@@ -37,6 +37,10 @@ export function KaitoManage(initialState: InitialState) {
         vscode.postTestWorkspaceRequest({ modelName: modelName, namespace: namespace });
     }
 
+    function portForward(modelName: string, namespace: string) {
+        vscode.postPortForwardRequest({ modelName: modelName, namespace: namespace });
+    }
+
     return (
         <>
             <h2 className={styles.mainTitle}>
@@ -145,6 +149,12 @@ export function KaitoManage(initialState: InitialState) {
                                                         onClick={() => testWorkspace(model.name, model.namespace)}
                                                     >
                                                         {l10n.t("Test")}
+                                                    </button>
+                                                    <button
+                                                        className={`${styles.button} ${styles.testButton}`}
+                                                        onClick={() => portForward(model.name, model.namespace)}
+                                                    >
+                                                        {l10n.t("Port-Forward")}
                                                     </button>
                                                 </div>
                                                 <div className={styles.successIconContainer}>

@@ -56,6 +56,9 @@ export function getKaitoManageScenarios() {
             testWorkspaceRequest: ({ modelName, namespace }) => {
                 console.log("testWorkspaceRequest", modelName, namespace);
             },
+            portForwardRequest: ({ modelName, namespace }) => {
+                console.log("portForwardRequest", modelName, namespace);
+            },
         };
     }
 
