@@ -1,13 +1,12 @@
-import * as vscode from 'vscode';
-import { failed } from '../utils/errorable';
-import { getAKSMCPServerBinaryPath } from '../utils/helper/mcpServerDownloadHelper';
+import * as vscode from "vscode";
+import { failed } from "../utils/errorable";
+import { getAKSMCPServerBinaryPath } from "../utils/helper/mcpServerDownloadHelper";
 
 export async function addMcpServerToUserSettings(): Promise<void> {
     const config = vscode.workspace.getConfiguration();
 
-
     // Read current "mcp.servers" or initialize it
-    const current = config.get<{ [key: string]: unknown }>('mcp.servers') || {};
+    const current = config.get<{ [key: string]: unknown }>("mcp.servers") || {};
 
     // This extension controls the version of mcp-server used, so that:
     // 1. We don't need to rely on the user having previously downloaded it, and
@@ -21,18 +20,18 @@ export async function addMcpServerToUserSettings(): Promise<void> {
     // Add or overwrite the server entry
     const newServerConfig = {
         command: mcpServerPath.result,
-        args: ["--transport", "stdio"]
+        args: ["--transport", "stdio"],
     };
 
     current["AKS MCP"] = newServerConfig;
 
     // Save it back to user settings.json
     await config.update(
-        'mcp.servers',
+        "mcp.servers",
         current,
-        vscode.ConfigurationTarget.Global // Use Global to persist in user settings.json
+        vscode.ConfigurationTarget.Global, // Use Global to persist in user settings.json
     );
 
     // Notify the user that the server has been configured
-    vscode.window.showInformationMessage('AKS MCP server has been configured successfully.');
+    vscode.window.showInformationMessage("AKS MCP server has been configured successfully.");
 }
