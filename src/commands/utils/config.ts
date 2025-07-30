@@ -6,6 +6,7 @@ import { CommandCategory, PresetCommand } from "../../webview-contract/webviewDe
 import { RetinaDownloadConfig } from "../periscope/models/RetinaDownloadConfig";
 import { isObject } from "./runtimeTypes";
 import { Environment, EnvironmentParameters } from "@azure/ms-rest-azure-env";
+import { AKSMCPServerConfig } from "../periscope/models/aksMCPServerConfig";
 
 export function getConfiguredAzureEnv(): Environment {
     // See:
@@ -265,6 +266,24 @@ export function getRetinaConfig(): Errorable<RetinaDownloadConfig> {
         return {
             succeeded: false,
             error: `Failed to read aks.retina configuration: ${props.error}`,
+        };
+    }
+
+    const config = {
+        releaseTag: props.result,
+    };
+
+    return { succeeded: true, result: config };
+}
+
+export function getMCPServerConfig(): Errorable<AKSMCPServerConfig> {
+    const mcpServerConfig = vscode.workspace.getConfiguration("aks.aksmcpserver");
+    const props = getConfigValue(mcpServerConfig, "releaseTag");
+
+    if (failed(props)) {
+        return {
+            succeeded: false,
+            error: `Failed to read aks.aksmcpserver configuration: ${props.error}`,
         };
     }
 

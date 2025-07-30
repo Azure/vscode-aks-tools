@@ -170,6 +170,12 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Set to true to enable GH Copilot hook. (Preview feature)"
+                },
+                "aks.aksmcpserver.releaseTag": {
+                    "type": "string",
+                    "default": "v0.0.2",
+                    "title": "AKS MCP Server repository release tag",
+                    "description": "Release tag for the stable AKS MCP Server tool release."
                 }
             }
         },
@@ -393,6 +399,10 @@
             {
                 "command": "aks.aksFleetProperties",
                 "title": "%Show Fleet Properties%"
+            },
+            {
+                "command": "aks.aksSetupMCPServerCommands",
+                "title": "AKS: Setup MCP Server"
             }
         ],
         "menus": {
