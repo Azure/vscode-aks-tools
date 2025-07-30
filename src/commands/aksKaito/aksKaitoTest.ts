@@ -1,13 +1,11 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import * as tmpfile from "../utils/tempfile";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { getAksClusterTreeNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 import { KaitoTestPanel, KaitoTestPanelDataProvider } from "../../panels/KaitoTestPanel";
+import { getClusterDetails } from "../../panels/utilities/KaitoHelpers";
 
 export default async function aksKaitoTest(
     _context: IActionContext,
@@ -37,32 +35,23 @@ export default async function aksKaitoTest(
         return;
     }
 
-    const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
-    if (failed(clusterNode)) {
-        vscode.window.showErrorMessage(clusterNode.error);
-        return;
-    }
-
     const extension = getExtension();
     if (failed(extension)) {
         vscode.window.showErrorMessage(extension.error);
         return;
     }
 
-    const { name: clusterName, armId, subscriptionId, resourceGroupName } = clusterNode.result;
-    const clusterInfo = await getKubernetesClusterInfo(sessionProvider.result, target, cloudExplorer, clusterExplorer);
-    if (failed(clusterInfo)) {
-        vscode.window.showErrorMessage(clusterInfo.error);
-        return;
-    }
-    const kubeConfigFile = await tmpfile.createTempFile(clusterInfo.result.kubeconfigYaml, "yaml");
+    // Target can be different depending on how the command is invoked.
+    // This logic accounts for the different cases of invocation.
+    const result = await getClusterDetails(target, sessionProvider.result, cloudExplorer, clusterExplorer);
+    if (!result) return;
+    const { clusterName, subscriptionId, resourceGroupName, kubeConfigFile } = result;
 
     const panel = new KaitoTestPanel(extension.result.extensionUri);
     const dataProvider = new KaitoTestPanelDataProvider(
         clusterName,
         subscriptionId,
         resourceGroupName,
-        armId,
         kubectl,
         kubeConfigFile.filePath,
         sessionProvider.result,

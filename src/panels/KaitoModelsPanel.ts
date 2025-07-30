@@ -114,6 +114,9 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
             language: "yaml",
         });
         vscode.window.showTextDocument(doc);
+        vscode.window.showInformationMessage(
+            `Once you have made your edits, run "Deploy KAITO Workspace" via the Command Palette to apply.`,
+        );
     }
 
     nullIsFalse(value: boolean | null): boolean {
