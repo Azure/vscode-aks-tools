@@ -402,7 +402,7 @@
             },
             {
                 "command": "aks.aksSetupMCPServerCommands",
-                "title": "AKS: Setup MCP Server"
+                "title": "AKS: Setup AKS MCP Server"
             }
         ],
         "menus": {

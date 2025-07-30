@@ -7,8 +7,7 @@ export async function addMcpServerToUserSettings(): Promise<void> {
 
 
     // Read current "mcp.servers" or initialize it
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const current = config.get<{ [key: string]: any }>('mcp.servers') || {};
+    const current = config.get<{ [key: string]: unknown }>('mcp.servers') || {};
 
     // This extension controls the version of mcp-server used, so that:
     // 1. We don't need to rely on the user having previously downloaded it, and
@@ -34,5 +33,6 @@ export async function addMcpServerToUserSettings(): Promise<void> {
         vscode.ConfigurationTarget.Global // Use Global to persist in user settings.json
     );
 
-    vscode.window.showInformationMessage('MCP server AKS MCP added to settings.');
+    // Notify the user that the server has been configured
+    vscode.window.showInformationMessage('AKS MCP server has been configured successfully.');
 }
