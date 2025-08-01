@@ -173,7 +173,7 @@
                 },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.2",
+                    "default": "v0.0.3",
                     "title": "AKS MCP Server repository release tag",
                     "description": "Release tag for the stable AKS MCP Server tool release."
                 }
