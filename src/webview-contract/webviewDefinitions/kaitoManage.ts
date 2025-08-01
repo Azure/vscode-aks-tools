@@ -21,6 +21,7 @@ export type ToVsCodeMsgDef = {
     redeployWorkspaceRequest: { modelName: string; modelYaml: string | undefined; namespace: string };
     getLogsRequest: {};
     testWorkspaceRequest: { modelName: string; namespace: string };
+    portForwardRequest: { modelName: string; namespace: string };
 };
 
 export type ToWebViewMsgDef = {

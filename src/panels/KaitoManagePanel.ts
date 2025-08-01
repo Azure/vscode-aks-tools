@@ -8,7 +8,7 @@ import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
-import { getConditions, convertAgeToMinutes, deployModel } from "./utilities/KaitoHelpers";
+import { getConditions, convertAgeToMinutes, deployModel, getClusterIP } from "./utilities/KaitoHelpers";
 import { filterPodImage } from "../commands/utils/clusters";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient } from "../commands/utils/arm";
@@ -58,6 +58,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             redeployWorkspaceRequest: true,
             getLogsRequest: true,
             testWorkspaceRequest: true,
+            portForwardRequest: false,
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
@@ -76,6 +77,9 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             },
             testWorkspaceRequest: (params) => {
                 this.handleTestWorkspaceRequest(params.modelName, params.namespace);
+            },
+            portForwardRequest: (params) => {
+                this.handlePortForwardRequest(params.modelName, params.namespace);
             },
         };
     }
@@ -245,5 +249,80 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     private async handleTestWorkspaceRequest(modelName: string, namespace: string) {
         const args = { target: this.newtarget, modelName: modelName, namespace: namespace };
         vscode.commands.executeCommand("aks.aksKaitoTest", args);
+    }
+
+    private async getPort(serviceName: string, namespace: string) {
+        const command = `get svc ${serviceName} -n ${namespace} -o jsonpath="{.spec.ports[0].port}"`;
+        const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        if (failed(kubectlresult)) {
+            vscode.window.showErrorMessage(l10n.t(`Error getting port: {0}`, kubectlresult.error));
+            return undefined;
+        }
+        return kubectlresult.result.stdout;
+    }
+
+    // prompt the user for port number
+    private async promptForPort(): Promise<number | undefined> {
+        const portInput = await vscode.window.showInputBox({
+            placeHolder: "Enter port number (e.g., 8080)",
+            prompt: "Please enter a port number to use for port forwarding",
+            validateInput: (value: string) => {
+                const port = parseInt(value);
+                if (isNaN(port) || port < 1024 || port > 65535) {
+                    return "Port must be a valid number between 1024 and 65535";
+                }
+                return null;
+            },
+        });
+
+        if (portInput) {
+            const port = parseInt(portInput);
+            return port;
+        }
+        // fallback
+        return undefined;
+    }
+
+    private async handlePortForwardRequest(modelName: string, namespace: string) {
+        const port = await this.promptForPort();
+        // use 8080 by default
+        const localPort = port || 8080;
+
+        const clusterIP = await getClusterIP(this.kubeConfigFilePath, modelName, this.kubectl, namespace);
+        if (!clusterIP) {
+            vscode.window.showErrorMessage(`Failed to get cluster IP for model ${modelName}`);
+            return;
+        }
+
+        const servicePort = await this.getPort(modelName, namespace);
+        if (!servicePort) {
+            return;
+        }
+
+        const portForwardCommand = `kubectl --kubeconfig="${this.kubeConfigFilePath}" port-forward svc/${modelName} ${localPort}:${servicePort} -n ${namespace}`;
+
+        // Check for and use active workspace folder to open terminal
+        let workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath; // Get the first folder if available
+        // Provide fallback option for folder to open terminal in
+        if (!workspaceFolder) {
+            const selectedFolder = await vscode.window.showOpenDialog({
+                canSelectFolders: true,
+                openLabel: "Select a Folder",
+            });
+            if (!selectedFolder || selectedFolder.length === 0) {
+                vscode.window.showErrorMessage("No folder selected. Port forwarding cannot proceed.");
+                return;
+            }
+            workspaceFolder = selectedFolder[0].fsPath;
+        }
+
+        // Create a new terminal to run the kubectl command
+        const terminal = vscode.window.createTerminal({
+            name: `Port Forwarding ${modelName}`,
+            cwd: workspaceFolder,
+            isTransient: false,
+        });
+        terminal.show();
+        terminal.sendText(portForwardCommand);
     }
 }
