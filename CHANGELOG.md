@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.6.12]
+
+* Add AKS MCP Server using AKS Ext level command. (#1524)
+* Added option to port-forward KAITO workspace service (#1525)
+* Adding deploy workspace feature to KAITO (#1493)
+* Add fix for arm-container package update. (#1521)
+* Update Inspektor Gadget doc (#1522)
+* Dependabot updates and bumps.
+
+Thank you so much to @bosesuneha, @ReinierCC, @tejhan for review contributions, testing and reviews.
+
 ## [1.6.11]
 
 * Add new monitoring and profiling commands for Inspektor Gadget (#1512)
