@@ -10,7 +10,7 @@
 * Update Inspektor Gadget doc (#1522)
 * Dependabot updates and bumps.
 
-Thank you so much to @bosesuneha, @ReinierCC, @tejhan for review contributions, testing and reviews.
+Thank you so much to @bosesuneha, @ReinierCC, @pavneeta, @tejhan, Julia Yin for review contributions, testing and reviews.
 
 ## [1.6.11]
 
