@@ -45,7 +45,13 @@ function getArchiveFilename() {
         operatingSystem = "win";
     }
 
-    return `aks-mcp-${operatingSystem}-${architecture}`;
+    let extension = "";
+    if (operatingSystem === "win") {
+        operatingSystem = "windows";
+        extension = ".exe";
+    }
+
+    return `aks-mcp-${operatingSystem}-${architecture}${extension}`;
 }
 
 function getPathToBinaryInArchive() {
