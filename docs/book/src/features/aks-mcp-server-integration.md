@@ -11,7 +11,7 @@ The `AKS: Setup MCP Server` command is now available via the **Command Palette**
 
 ### On Successful Setup
 
-Upon successful installation, you’ll see sussful message like below:
+Upon successful installation, you’ll see a successful message like below:
 
 ![aks-mcp server command](../resources/aks-mcp-server-command.png)
 
