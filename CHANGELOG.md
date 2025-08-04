@@ -2,6 +2,7 @@
 
 ## [1.6.12]
 
+* Windows binary release for win arch is specific format. (#1526)
 * Add AKS MCP Server using AKS Ext level command. (#1524)
 * Added option to port-forward KAITO workspace service (#1525)
 * Adding deploy workspace feature to KAITO (#1493)
