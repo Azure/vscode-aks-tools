@@ -2,7 +2,7 @@
 
 ### AKS: Setup AKS MCP Server
 
-The `AKS: Setup MCP Server` command is now available via the **Command Palette**. This command provisions a lightweight MCP (Model-Connected Prompting) Server locally for enhanced Copilot Chat integration with AKS clusters.
+The `AKS: Setup MCP Server` command is now available via the **Command Palette**. This command provisions a lightweight Model Context Protocol (MCP) server locally for enhanced Copilot Chat integration with AKS clusters.
 
 ### How to Launch
 
