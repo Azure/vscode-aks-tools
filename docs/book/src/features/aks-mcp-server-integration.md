@@ -32,7 +32,7 @@ From there, you can:
 * Start the MCP server
 * View its status
 
-Once started, the MCP server will appear in the **Copilot Chat: Configure Tool** dropdown as a custom system tool, ready to enhance contextual prompts based on your AKS environment.
+Once started, the MCP server will appear in the **Copilot Chat: Configure Tool** dropdown as a custom system tool, ready to enhance contextual prompts based on your AKS environment. By default, all AKS MCP server tools are enabled. You can review the list of available tools and disable any that are not required for your specific scenario.
 
 ![aks-mcp ghc configuration](../resources/aks-mcp-server-ghc-configure.png)
 
