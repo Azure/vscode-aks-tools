@@ -328,13 +328,13 @@ async function createCluster(
     try {
         // Create deployment using the generic resources API with deployment resource type
         const deploymentResourceId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
-        
+
         const poller = await resourceManagementClient.resources.beginCreateOrUpdateById(
             deploymentResourceId,
             "2021-04-01", // API version for Microsoft.Resources/deployments
             {
-                properties: deploymentSpec.properties
-            }
+                properties: deploymentSpec.properties,
+            },
         );
         const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
         const deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
