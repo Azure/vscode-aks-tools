@@ -72,10 +72,10 @@ export class FleetPropertiesDataProvider implements PanelDataProvider<"fleetProp
     asFleetInfo(fleet: Fleet): FleetInfo {
         return {
             resourceGroup: this.resourceGroup,
-            provisioningState: fleet.provisioningState!, // getFleet() ensures this is defined
+            provisioningState: fleet.properties!.provisioningState!, // getFleet() ensures this is defined
             location: fleet.location!,
-            hubClusterMode: fleet.hubProfile === undefined ? HubMode.Without : HubMode.With,
-            fqdn: fleet.hubProfile === undefined ? undefined : fleet.hubProfile.fqdn,
+            hubClusterMode: fleet.properties!.hubProfile === undefined ? HubMode.Without : HubMode.With,
+            fqdn: fleet.properties!.hubProfile === undefined ? undefined : fleet.properties!.hubProfile.fqdn,
         };
     }
 }

@@ -804,7 +804,7 @@
         "@azure/arm-compute": "^22.4.0",
         "@azure/arm-containerregistry": "^10.1.0",
         "@azure/arm-containerservice": "22.2.0",
-        "@azure/arm-containerservicefleet": "^1.1.0",
+        "@azure/arm-containerservicefleet": "^2.0.0",
         "@azure/arm-devhub": "^1.0.0-beta.3",
         "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
