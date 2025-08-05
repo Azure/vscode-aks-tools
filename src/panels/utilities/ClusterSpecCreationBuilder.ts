@@ -1,7 +1,15 @@
-import { Deployment } from "@azure/arm-resources";
 import { PresetType } from "../../webview-contract/webviewDefinitions/createCluster";
 import automaticTemplate from "../templates/AutomaticCreateCluster.json";
 import devTestTemplate from "../templates/DevTestCreateCluster.json";
+
+// Define the Deployment type based on usage in this file
+type Deployment = {
+    properties: {
+        parameters: Record<string, unknown>;
+        template: Record<string, unknown>;
+        mode: string;
+    };
+};
 
 export type ClusterSpec = {
     location: string;

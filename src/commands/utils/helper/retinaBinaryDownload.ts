@@ -44,7 +44,7 @@ function getArchiveFilename(releaseTag: string) {
     let operatingSystem = os.platform().toLocaleLowerCase();
 
     if (architecture === "x64") {
-        architecture = "amd64";
+        architecture = "amd64" as typeof architecture;
     }
 
     if (operatingSystem === "win32") {
@@ -61,7 +61,7 @@ function getPathToBinaryInArchive() {
     let operatingSystem = os.platform().toLocaleLowerCase();
 
     if (architecture === "x64") {
-        architecture = "amd64";
+        architecture = "amd64" as typeof architecture;
     }
 
     let extension = "";
