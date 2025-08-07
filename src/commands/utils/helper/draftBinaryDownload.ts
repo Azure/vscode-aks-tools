@@ -36,7 +36,7 @@ function getDownloadFileName() {
     let operatingSystem = os.platform().toLocaleLowerCase();
 
     if (architecture === "x64") {
-        architecture = "amd64";
+        architecture = "amd64" as typeof architecture;
     }
     let draftBinaryFile = `draft-${operatingSystem}-${architecture}`;
 

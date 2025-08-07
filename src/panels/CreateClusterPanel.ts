@@ -326,10 +326,15 @@ async function createCluster(
     const eventName = commandId === "aks.createCluster" ? "command" : "aks.ghcp";
 
     try {
-        const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
-            groupName,
-            deploymentName,
-            deploymentSpec,
+        // Create deployment using the generic resources API with deployment resource type
+        const deploymentResourceId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
+
+        const poller = await resourceManagementClient.resources.beginCreateOrUpdateById(
+            deploymentResourceId,
+            "2021-04-01", // API version for Microsoft.Resources/deployments
+            {
+                properties: deploymentSpec.properties,
+            },
         );
         const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
         const deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
