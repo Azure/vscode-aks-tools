@@ -87,7 +87,7 @@ function asFleetMemberWithGroup(member: FleetMember): DefinedFleetMemberWithGrou
         resourceGroup: parseResource(member.id!).resourceGroupName!,
         id: member.id!,
         name: member.name!,
-        clusterResourceId: member.id!,
+        clusterResourceId: member.properties!.clusterResourceId!,
         parentResourceId: parseResource(member.id!).parentResourceId!,
     };
 }
