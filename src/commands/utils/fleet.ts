@@ -26,7 +26,7 @@ export async function createFleet(
 
     const environment = getEnvironment();
     try {
-        const result = await client.fleets.beginCreateOrUpdateAndWait(resourceGroupName, name, resource);
+        const result = await client.fleets.create(resourceGroupName, name, resource);
         const errorMessage = `Fleet creation failed: No ID returned. 
         Resource Group Name: ${resourceGroupName}, 
         Fleet Name: ${name}, 
@@ -85,7 +85,7 @@ function isValidFleet(fleet: Fleet): boolean {
         fleet.id !== undefined &&
         fleet.name !== undefined &&
         fleet.location !== undefined &&
-        fleet.provisioningState !== undefined
+        fleet.properties?.provisioningState !== undefined
     );
 }
 
