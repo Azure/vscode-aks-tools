@@ -832,7 +832,7 @@
         "rxjs": "^7.8.2",
         "semver": "^7.7.2",
         "sinon": "^20.0.0",
-        "tmp": "^0.2.4",
+        "tmp": "^0.2.5",
         "uuid": "^11.1.0",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
