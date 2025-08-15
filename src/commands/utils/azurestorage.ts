@@ -213,21 +213,9 @@ async function getStorageCredential(sessionProvider: ReadyAzureSessionProvider) 
                 throw new Error(`No Microsoft authentication session found: ${session.error}`);
             }
 
-            // Use the actual expiration timestamp if available, otherwise fallback to 1 hour from now
-            let expiresOnTimestamp: number;
-            if (session.result.expiresOn) {
-                // expiresOn may be a Date object or a string
-                const expiresOnDate = typeof session.result.expiresOn === "string"
-                    ? new Date(session.result.expiresOn)
-                    : session.result.expiresOn;
-                expiresOnTimestamp = expiresOnDate.getTime();
-            } else if (session.result.expiresOnTimestamp) {
-                expiresOnTimestamp = session.result.expiresOnTimestamp;
-            } else {
-                // Fallback: 1 hour from now
-                expiresOnTimestamp = Date.now() + 60 * 60 * 1000;
-            }
-            return { token: session.result.accessToken, expiresOnTimestamp };
+            // For Azure Storage, we don't need to set a specific expiration timestamp
+            // The Azure SDK will handle token refresh automatically
+            return { token: session.result.accessToken, expiresOnTimestamp: 0 };
         },
     };
 }
