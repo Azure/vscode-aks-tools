@@ -14,7 +14,6 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
 import * as vscode from "vscode";
 import { longRunning } from "./host";
-import { DefaultAzureCredential } from "@azure/identity";
 
 export enum LinkDuration {
     StartTime,
@@ -134,6 +133,7 @@ export async function getStorageAcctInfo(
 }
 
 export async function chooseContainerInStorageAccount(
+    sessionProvider: ReadyAzureSessionProvider,
     storageAccountId: string,
     blobEndpoint: string,
 ): Promise<string | undefined> {
@@ -151,7 +151,7 @@ export async function chooseContainerInStorageAccount(
         // List containers in the selected storage account
         const containers = await longRunning(
             `Getting containers in ${accountName}...`,
-            async () => await listStorageContainers(blobEndpoint),
+            async () => await listStorageContainers(sessionProvider, blobEndpoint),
         );
 
         if (containers.length === 0) {
@@ -183,9 +183,10 @@ export async function chooseContainerInStorageAccount(
     }
 }
 
-async function listStorageContainers(blobEndpoint: string): Promise<string[]> {
-    const credential = new DefaultAzureCredential();
-    const blobServiceClient = new BlobServiceClient(blobEndpoint, credential);
+async function listStorageContainers(sessionProvider: ReadyAzureSessionProvider, blobEndpoint: string): Promise<string[]> {
+    // Get a credential with the proper Azure Storage scope
+    const storageCredential = await getStorageCredential(sessionProvider);
+    const blobServiceClient = new BlobServiceClient(blobEndpoint, storageCredential);
 
     // List all containers
     const containers: string[] = [];
@@ -196,4 +197,20 @@ async function listStorageContainers(blobEndpoint: string): Promise<string[]> {
     }
 
     return containers;
+}
+
+async function getStorageCredential(sessionProvider: ReadyAzureSessionProvider) {
+    // Azure Storage requires the storage scope instead of the default ARM scope
+    const storageScopes = ["https://storage.azure.com/.default"];
+    
+    return {
+        getToken: async () => {
+            const session = await sessionProvider.getAuthSession({ scopes: storageScopes });
+            if (!session.succeeded) {
+                throw new Error(`No Microsoft authentication session found: ${session.error}`);
+            }
+
+            return { token: session.result.accessToken, expiresOnTimestamp: 0 };
+        },
+    };
 }

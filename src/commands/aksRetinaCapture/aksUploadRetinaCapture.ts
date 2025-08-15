@@ -72,6 +72,7 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
     }
 
     const containerName = await chooseContainerFromStorageAccount(
+        sessionProvider,
         clusterStorageAccountId,
         storageInfo.result.blobEndpoint,
     );
