@@ -183,7 +183,10 @@ export async function chooseContainerInStorageAccount(
     }
 }
 
-async function listStorageContainers(sessionProvider: ReadyAzureSessionProvider, blobEndpoint: string): Promise<string[]> {
+async function listStorageContainers(
+    sessionProvider: ReadyAzureSessionProvider,
+    blobEndpoint: string,
+): Promise<string[]> {
     // Get a credential with the proper Azure Storage scope
     const storageCredential = await getStorageCredential(sessionProvider);
     const blobServiceClient = new BlobServiceClient(blobEndpoint, storageCredential);
@@ -202,7 +205,7 @@ async function listStorageContainers(sessionProvider: ReadyAzureSessionProvider,
 async function getStorageCredential(sessionProvider: ReadyAzureSessionProvider) {
     // Azure Storage requires the storage scope instead of the default ARM scope
     const storageScopes = ["https://storage.azure.com/.default"];
-    
+
     return {
         getToken: async () => {
             const session = await sessionProvider.getAuthSession({ scopes: storageScopes });
