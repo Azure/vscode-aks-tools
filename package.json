@@ -801,7 +801,7 @@
     },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
-        "@azure/arm-compute": "^22.4.0",
+        "@azure/arm-compute": "^23.0.0",
         "@azure/arm-containerregistry": "^10.1.0",
         "@azure/arm-containerservice": "22.2.0",
         "@azure/arm-containerservicefleet": "^2.0.0",
