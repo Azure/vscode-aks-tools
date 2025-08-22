@@ -48,12 +48,14 @@ function execCore(cmd: string, shellOptions: ShellOptions): Promise<ShellResult>
 
     return new Promise<ShellResult>((resolve) => {
         const c = child.exec(cmd, options, function (err, stdout, stderr) {
+            const stdoutStr = typeof stdout === "string" ? stdout : (stdout?.toString() ?? "");
+            const stderrStr = typeof stderr === "string" ? stderr : (stderr?.toString() ?? "");
             if (!err) {
-                resolve({ code: 0, stdout, stderr });
+                resolve({ code: 0, stdout: stdoutStr, stderr: stderrStr });
             } else if (err.code === undefined) {
-                resolve({ code: 1, stdout, stderr });
+                resolve({ code: 1, stdout: stdoutStr, stderr: stderrStr });
             } else {
-                resolve({ code: err.code, stdout, stderr });
+                resolve({ code: err.code, stdout: stdoutStr, stderr: stderrStr });
             }
         });
 
