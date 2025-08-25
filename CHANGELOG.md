@@ -1,5 +1,16 @@
 # Change Log
 
+## [1.6.13]
+
+* Fix the client using sessionProvider instead of default. (#1564)
+* Bump AKS MCP server to v0.0.6 (#1563)
+* Update arm-containerservicefleet package and related changes. (#1550)
+* Update arm-resource and type-node package and related changes. (#1543)
+* Add documentation for AKS MCP Server. (#1527)
+* Dependabot updates and bumps.
+
+Thank you so much to @feiskyer, @bosesuneha, @ReinierCC, @tejhan, Julia Yin for review contributions, testing and reviews.
+
 ## [1.6.12]
 
 * Windows binary release for win arch is specific format. (#1526)
