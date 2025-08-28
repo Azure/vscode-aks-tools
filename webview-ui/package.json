@@ -22,7 +22,7 @@
     "rehype-raw": "^7.0.0"
   },
   "devDependencies": {
-    "@types/react": "^19.1.10",
+    "@types/react": "^19.1.11",
     "@types/react-dom": "^19.1.7",
     "@types/vscode-webview": "^1.57.5",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
