@@ -787,7 +787,7 @@
         "@vscode/test-electron": "^2.5.2",
         "@vscode/vsce": "^3.6.0",
         "eslint": "^9.35.0",
-        "chai": "^6.0.1",
+        "chai": "^6.2.0",
         "eslint-webpack-plugin": "^5.0.2",
         "glob": "^11.0.3",
         "globals": "^16.3.0",
