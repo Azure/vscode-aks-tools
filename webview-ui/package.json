@@ -17,13 +17,13 @@
     "@fortawesome/react-fontawesome": "^3.0.2",
     "@vscode/codicons": "^0.0.40",
     "react": "^19.0.0",
-    "react-dom": "^19.1.1",
+    "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.15",
-    "@types/react-dom": "^19.1.9",
+    "@types/react-dom": "^19.2.1",
     "@types/vscode-webview": "^1.57.5",
     "@typescript-eslint/eslint-plugin": "^8.46.0",
     "@typescript-eslint/parser": "^8.32.1",
