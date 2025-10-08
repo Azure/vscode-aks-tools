@@ -775,7 +775,7 @@
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^24.5.2",
+        "@types/node": "^24.7.0",
         "@types/semver": "^7.7.1",
         "@types/sinon": "^17.0.4",
         "@types/tmp": "^0.2.6",
