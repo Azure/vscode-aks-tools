@@ -833,7 +833,7 @@
         "semver": "^7.7.2",
         "sinon": "^21.0.0",
         "tmp": "^0.2.5",
-        "uuid": "^11.1.0",
+        "uuid": "^13.0.0",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
     "repository": {
