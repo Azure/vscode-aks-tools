@@ -781,7 +781,7 @@
         "@types/tmp": "^0.2.6",
         "@types/uuid": "^10.0.0",
         "@types/vscode": "^1.104.0",
-        "@typescript-eslint/eslint-plugin": "^8.46.0",
+        "@typescript-eslint/eslint-plugin": "^8.46.1",
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
         "@vscode/test-electron": "^2.5.2",
