@@ -823,7 +823,7 @@
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^3.5.1",
         "@octokit/rest": "^22.0.0",
-        "@vscode/extension-telemetry": "^1.0.0",
+        "@vscode/extension-telemetry": "^1.1.0",
         "@vscode/l10n": "^0.0.18",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.0",
