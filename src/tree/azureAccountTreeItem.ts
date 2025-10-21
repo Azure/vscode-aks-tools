@@ -205,15 +205,17 @@ function getSubscriptionContext(
         userId: session.account.id,
         environment,
         isCustomCloud: environment.name === "AzureCustomCloud",
-        createCredentialsForScopes: async (scopeListOrRequest: string[] | AuthenticationWwwAuthenticateRequest): Promise<TokenCredential> => {
+        createCredentialsForScopes: async (
+            scopeListOrRequest: string[] | AuthenticationWwwAuthenticateRequest,
+        ): Promise<TokenCredential> => {
             const scopes: string[] = Array.isArray(scopeListOrRequest)
                 ? scopeListOrRequest
                 : // attempt to read common properties from AuthenticationWwwAuthenticateRequest
-                  (('scopeList' in (scopeListOrRequest) && Array.isArray((scopeListOrRequest).scopeList))
-                      ? (scopeListOrRequest).scopeList
-                      : ('scopes' in (scopeListOrRequest) && Array.isArray((scopeListOrRequest).scopes))
-                          ? (scopeListOrRequest).scopes
-                          : []);
+                  "scopeList" in scopeListOrRequest && Array.isArray(scopeListOrRequest.scopeList)
+                  ? scopeListOrRequest.scopeList
+                  : "scopes" in scopeListOrRequest && Array.isArray(scopeListOrRequest.scopes)
+                    ? scopeListOrRequest.scopes
+                    : [];
 
             const authSession = await sessionProvider.getAuthSession({ scopes });
             if (failed(authSession)) {
