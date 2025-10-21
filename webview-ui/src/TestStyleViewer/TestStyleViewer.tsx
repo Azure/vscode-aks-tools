@@ -22,7 +22,9 @@ export function TestStyleViewer(initialState: InitialState) {
         function getCssVarsForWebview(): string[] {
             const matchingStyleSheets = [...document.styleSheets]
                 .filter((s) => !s.href)
-                .filter((s) => [...s.cssRules].filter((r) => isStyleRule(r) && r.selectorText === ":root").length === 1);
+                .filter(
+                    (s) => [...s.cssRules].filter((r) => isStyleRule(r) && r.selectorText === ":root").length === 1,
+                );
 
             if (matchingStyleSheets.length !== 1) {
                 return [];
