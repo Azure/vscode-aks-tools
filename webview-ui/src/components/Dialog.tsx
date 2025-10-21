@@ -8,28 +8,20 @@ interface DialogProps {
 export function Dialog(props: React.PropsWithChildren<DialogProps>) {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
+    // Keep refs to latest props so handlers don't capture stale closures.
+    const onCancelRef = useRef(props.onCancel);
     useEffect(() => {
-        document.body.addEventListener("click", handleDocumentClick);
-        return () => document.removeEventListener("click", handleDocumentClick);
-    });
+        onCancelRef.current = props.onCancel;
+    }, [props.onCancel]);
 
+    const isShownRef = useRef(props.isShown);
     useEffect(() => {
-        const elem = dialogRef.current;
-        elem?.addEventListener("close", handleClose);
-        return () => elem?.removeEventListener("close", handleClose);
-    });
-
-    useEffect(() => {
-        if (props.isShown && !dialogRef.current!.hasAttribute("open")) {
-            dialogRef.current!.showModal();
-        } else if (!props.isShown && dialogRef.current!.hasAttribute("open")) {
-            dialogRef.current!.close();
-        }
-    }, [props.isShown, dialogRef]);
+        isShownRef.current = props.isShown;
+    }, [props.isShown]);
 
     function handleClose() {
-        if (props.isShown) {
-            props.onCancel();
+        if (isShownRef.current) {
+            onCancelRef.current();
         }
     }
 
@@ -40,6 +32,26 @@ export function Dialog(props: React.PropsWithChildren<DialogProps>) {
             dialogRef.current!.close();
         }
     }
+
+    useEffect(() => {
+        document.body.addEventListener("click", handleDocumentClick);
+        return () => document.removeEventListener("click", handleDocumentClick);
+    }, []);
+
+    useEffect(() => {
+        const elem = dialogRef.current;
+        if (!elem) return;
+        elem.addEventListener("close", handleClose);
+        return () => elem.removeEventListener("close", handleClose);
+    }, []);
+
+    useEffect(() => {
+        if (props.isShown && !dialogRef.current!.hasAttribute("open")) {
+            dialogRef.current!.showModal();
+        } else if (!props.isShown && dialogRef.current!.hasAttribute("open")) {
+            dialogRef.current!.close();
+        }
+    }, [props.isShown, dialogRef]);
 
     return <dialog ref={dialogRef}>{props.children}</dialog>;
 }

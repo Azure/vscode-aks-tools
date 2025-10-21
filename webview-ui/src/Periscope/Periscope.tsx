@@ -9,13 +9,14 @@ import { stateUpdater, vscode } from "./state";
 export function Periscope(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
-    useEffect(() => {
-        sendUploadStatusRequest();
-    });
-
     function sendUploadStatusRequest() {
         vscode.postUploadStatusRequest();
     }
+
+    // Run once on mount to query upload status
+    useEffect(() => {
+        sendUploadStatusRequest();
+    }, []);
 
     function handleNodeClick(node: string) {
         eventHandlers.onSetSelectedNode(node);

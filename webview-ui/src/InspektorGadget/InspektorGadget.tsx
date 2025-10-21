@@ -34,9 +34,18 @@ export function InspektorGadget(initialState: InitialState) {
     });
 
     useEffect(() => {
+        // Avoid calling setState synchronously inside the effect body to prevent cascading renders.
+        // Defer the state update to the next tick and clean up the timer if the effect re-runs.
+        let t: number | undefined;
         if (state.version && state.version.server === null && !state.overviewStatus && activeTab !== "overview") {
-            setActiveTab("overview");
+            t = window.setTimeout(() => setActiveTab("overview"), 0);
         }
+
+        return () => {
+            if (t !== undefined) {
+                clearTimeout(t);
+            }
+        };
     }, [state.version, state.overviewStatus, activeTab, setActiveTab]);
 
     function handleRequestTraceId(): number {
