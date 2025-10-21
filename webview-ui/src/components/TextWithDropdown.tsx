@@ -81,8 +81,12 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
             const updatedAllItems = selectedItemNotInAllItems
                 ? [props.selectedItem!, ...props.items]
                 : [...props.items];
-            setAllItems(updatedAllItems);
+            // Defer state update to avoid calling setState synchronously within the effect body which
+            // can trigger cascading renders and trips the react-hooks lint rule.
+            const t = window.setTimeout(() => setAllItems(updatedAllItems), 0);
+            return () => window.clearTimeout(t);
         }
+        return;
     }, [props.items, props.selectedItem, allItems]);
 
     const itemLookup = new Map(allItems.map((item) => [item.toLowerCase(), item]));

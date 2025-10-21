@@ -186,12 +186,13 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
             const menuHeight = menuRef.current.offsetHeight;
             const viewportHeight = window.innerHeight;
 
-            if (dropdownRect.bottom + menuHeight > viewportHeight) {
-                setDropUp(true);
-            } else {
-                setDropUp(false);
-            }
+            const shouldDropUp = dropdownRect.bottom + menuHeight > viewportHeight;
+            // Defer state update to avoid calling setState synchronously within the effect body
+            // which can trigger cascading renders and trip the react-hooks lint rule.
+            const t = window.setTimeout(() => setDropUp(shouldDropUp), 0);
+            return () => window.clearTimeout(t);
         }
+        return;
     }, [isOpen]);
 
     const childrenArray = React.Children.toArray(children).filter(isReactElement);

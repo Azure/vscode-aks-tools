@@ -34,10 +34,18 @@ export function Traces(props: TracesProps) {
     const { initialGadgetResource, onResourceUsed } = props;
 
     // Auto-open new trace dialog when a specific resource command is selected from the menu
+    // Defer the state update to avoid calling setState synchronously inside the effect body
     useEffect(() => {
+        let t: number | undefined;
         if (initialGadgetResource) {
-            setIsTraceDialogShown(true);
+            t = window.setTimeout(() => setIsTraceDialogShown(true), 0);
         }
+
+        return () => {
+            if (t !== undefined) {
+                clearTimeout(t);
+            }
+        };
     }, [initialGadgetResource]);
 
     function handleAdd() {
