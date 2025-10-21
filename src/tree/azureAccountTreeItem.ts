@@ -6,7 +6,7 @@ import {
     TreeItemIconPath,
     registerEvent,
 } from "@microsoft/vscode-azext-utils";
-import { AuthenticationSession, l10n, ThemeIcon } from "vscode";
+import { AuthenticationSession, ThemeIcon, AuthenticationWwwAuthenticateRequest, l10n } from "vscode";
 import { assetUri } from "../assets";
 import { failed } from "../commands/utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -205,7 +205,18 @@ function getSubscriptionContext(
         userId: session.account.id,
         environment,
         isCustomCloud: environment.name === "AzureCustomCloud",
-        createCredentialsForScopes: async (scopes: string[]): Promise<TokenCredential> => {
+        createCredentialsForScopes: async (
+            scopeListOrRequest: string[] | AuthenticationWwwAuthenticateRequest,
+        ): Promise<TokenCredential> => {
+            const scopes: string[] = Array.isArray(scopeListOrRequest)
+                ? scopeListOrRequest
+                : // attempt to read common properties from AuthenticationWwwAuthenticateRequest
+                  "scopeList" in scopeListOrRequest && Array.isArray(scopeListOrRequest.scopeList)
+                  ? scopeListOrRequest.scopeList
+                  : "scopes" in scopeListOrRequest && Array.isArray(scopeListOrRequest.scopes)
+                    ? scopeListOrRequest.scopes
+                    : [];
+
             const authSession = await sessionProvider.getAuthSession({ scopes });
             if (failed(authSession)) {
                 throw new Error(l10n.t(`No Microsoft authentication session found: {0}`, authSession.error));
