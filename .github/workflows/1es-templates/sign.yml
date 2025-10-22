@@ -1,0 +1,26 @@
+parameters:
+  - name: displayName
+    type: string
+    default: Sign
+  - name: folderPath
+    type: string
+  - name: pattern
+    type: string
+  - name: inlineOperation
+    type: string
+
+steps:
+  - task: EsrpCodeSigning@5
+    displayName: ${{ parameters.displayName }}
+    inputs:
+      ConnectedServiceName: "ESRP-AME-AZCU"
+      UseMSIAuthentication: true
+      AppRegistrationClientId: "70ebf75b-d46f-46da-90e6-1fa654251514"
+      AppRegistrationTenantId: "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
+      EsrpClientId: "150f8d2b-ad88-4a27-b782-c9bc3b028430"
+      AuthAKVName: "upstreamci-ado"
+      AuthSignCertName: "azcu-ersp-corp"
+      FolderPath: ${{ parameters.folderPath }}
+      Pattern: ${{ parameters.pattern }}
+      signConfigType: inlineSignParams
+      inlineOperation: ${{ parameters.inlineOperation }}

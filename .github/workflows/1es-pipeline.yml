@@ -3,10 +3,15 @@ trigger: none
 # The `resources` specify the location and version of the 1ES PT.
 resources:
   repositories:
-  - repository: 1esPipelines
-    type: git
-    name: 1ESPipelineTemplates/1ESPipelineTemplates
-    ref: refs/tags/release
+    - repository: 1esPipelines
+      type: git
+      name: 1ESPipelineTemplates/1ESPipelineTemplates
+      ref: refs/tags/release
+
+parameters:
+  - name: nodeVersion
+    type: string
+    default: 22.x
 
 extends:
   # The pipeline extends the 1ES PT which will inject different SDL and compliance tasks.
@@ -29,17 +34,118 @@ extends:
         hostArchitecture: amd64
 
     stages:
-    - stage: Stage
-      jobs:
-      - job: HostJob
-        # If the pipeline publishes artifacts, use `templateContext` to define the artifacts.
-        # This will enable 1ES PT to run SDL analysis tools on the artifacts and then upload them.
-        # templateContext:
-        #   outputs:
-        #   - output: pipelineArtifact
-        #     targetPath: $(System.DefaultWorkingDirectory)/Samples
-        #     artifactName: artifactName
-        # # Define the steps that the pipeline will run.
-        # # In most cases, copy and paste the steps from the original pipeline.
-        steps:
-        - powershell: echo "Hello World from host"
+      - stage: Stage
+        jobs:
+          - job: HostJob
+            # If the pipeline publishes artifacts, use `templateContext` to define the artifacts.
+            # This will enable 1ES PT to run SDL analysis tools on the artifacts and then upload them.
+            # templateContext:
+            #   outputs:
+            #   - output: pipelineArtifact
+            #     targetPath: $(System.DefaultWorkingDirectory)/Samples
+            #     artifactName: artifactName
+            # # Define the steps that the pipeline will run.
+            # # In most cases, copy and paste the steps from the original pipeline.
+            steps:
+              - task: NodeTool@0
+                displayName: Install Node.js
+                retryCountOnTaskFailure: 3
+                inputs:
+                  versionSpec: ${{ parameters.nodeVersion }}
+              - checkout: self
+              - bash: echo "Hello World from host"
+
+              - script: npm run install:all
+                displayName: Install npm for project
+
+              - script: npm run webpack
+                displayName: Run webpack
+
+              # Generate VSIX package
+              - script: |
+                  echo "Generating VSIX package..."
+                  npx vsce package
+                displayName: "Run for VSIX Generation"
+
+              # List generated files (for debugging)
+              - script: |
+                  echo "Listing current directory contents..."
+                  ls -la
+                displayName: "Run list operation"
+
+              # Find and copy the VSIX to workspace dir
+              - script: |
+                  set -e  # fail on error
+                  echo "Finding .vsix file..."
+                  VSIX_PATH=$(find . -type f -name "*.vsix" -print -quit)
+
+                  if [ -z "$VSIX_PATH" ]; then
+                    echo "❌ No .vsix file found!" >&2
+                    exit 1
+                  fi
+
+                  echo "✅ Found: $VSIX_PATH"
+                  mkdir -p "$(Pipeline.Workspace)/vscode-extension-unsigned"
+                  cp "$VSIX_PATH" "$(Pipeline.Workspace)/vscode-extension-unsigned/"
+                  echo "Copied to $(Pipeline.Workspace)/vscode-extension-unsigned/"
+                displayName: "Copy VSIX to workspace directory"
+
+              # Verify contents in workspace directory
+              - script: |
+                  echo "Listing workspace directory contents..."
+                  ls -la "$(Pipeline.Workspace)/vscode-extension-unsigned"
+                displayName: "List the unsigned dir"
+
+              # - template: /1es-templates/sign-vsix.yml
+              #   parameters:
+              #     path: ""
+              #     pattern: "*.vsix"
+              #     displayName: Publish signed VSCode extension
+
+              - task: EsrpCodeSigning@5
+                displayName: Publish signed VSCode extension
+                inputs:
+                  ConnectedServiceName: "ESRP-AME-AZCU"
+                  UseMSIAuthentication: true
+                  AppRegistrationClientId: "70ebf75b-d46f-46da-90e6-1fa654251514"
+                  AppRegistrationTenantId: "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
+                  EsrpClientId: "150f8d2b-ad88-4a27-b782-c9bc3b028430"
+                  AuthAKVName: "upstreamci-ado"
+                  AuthSignCertName: "azcu-ersp-corp"
+                  FolderPath: $(Pipeline.Workspace)/vscode-extension-unsigned
+                  Pattern: "*.vsix"
+                  UseMinimatch: true
+                  signConfigType: inlineSignParams
+                  inlineOperation: |
+                    [
+                        {
+                            "KeyCode" : "CP-233016",
+                            "OperationCode" : "OpcSign",
+                            "Parameters" : {
+                                "FileDigest" : "/fd SHA256"
+                            },
+                            "ToolName" : "sign",
+                            "ToolVersion" : "1.0"
+                        },
+                        {
+                            "KeyCode" : "CP-233016",
+                            "OperationCode" : "OpcVerify",
+                            "Parameters" : {},
+                            "ToolName" : "sign",
+                            "ToolVersion" : "1.0"
+                        }
+                    ]
+
+              - bash: |
+                  az login --identity
+                  az account show
+                  npx vsce --version
+                  npx vsce ls
+                  npx vsce show ms-kubernetes-tools.vscode-aks-tools
+                  npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
+
+            # npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
+            # - template: /.github/workflows/1es-templates/sign-vsix.yml
+            #   parameters:
+            #     path: $(Pipeline.Workspace)
+            #     pattern: "*.vsix"

@@ -1,0 +1,28 @@
+parameters:
+    folderPath: ""
+    pattern: "**/*.vsix"
+
+steps:
+    - template: sign.yml
+      parameters:
+          folderPath: ${{ parameters.folderPath }}
+          pattern: ${{ parameters.pattern }}
+          inlineOperation: |
+              [
+                  {
+                      "KeyCode" : "CP-233016",
+                      "OperationCode" : "OpcSign",
+                      "Parameters" : {
+                          "FileDigest" : "/fd SHA256"
+                      },
+                      "ToolName" : "sign",
+                      "ToolVersion" : "1.0"
+                  },
+                  {
+                      "KeyCode" : "CP-233016",
+                      "OperationCode" : "OpcVerify",
+                      "Parameters" : {},
+                      "ToolName" : "sign",
+                      "ToolVersion" : "1.0"
+                  }
+              ]
