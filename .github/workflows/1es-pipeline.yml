@@ -118,23 +118,33 @@ extends:
                   signConfigType: inlineSignParams
                   inlineOperation: |
                     [
-                        {
-                            "KeyCode" : "CP-233016",
-                            "OperationCode" : "OpcSign",
-                            "Parameters" : {
-                                "FileDigest" : "/fd SHA256"
-                            },
-                            "ToolName" : "sign",
-                            "ToolVersion" : "1.0"
-                        },
-                        {
-                            "KeyCode" : "CP-233016",
-                            "OperationCode" : "OpcVerify",
-                            "Parameters" : {},
-                            "ToolName" : "sign",
-                            "ToolVersion" : "1.0"
-                        }
+                      {
+                        "keyCode": "CP-401405",
+                        "operationSetCode": "VSCodePublisherSign",
+                        "parameters" : [],
+                        "toolName": "sign",
+                        "toolVersion": "1.0"
+                      }
                     ]
+                  # inlineOperation: |
+                  #   [
+                  #       {
+                  #           "KeyCode" : "CP-233016",
+                  #           "OperationCode" : "OpcSign",
+                  #           "Parameters" : {
+                  #               "FileDigest" : "/fd SHA256"
+                  #           },
+                  #           "ToolName" : "sign",
+                  #           "ToolVersion" : "1.0"
+                  #       },
+                  #       {
+                  #           "KeyCode" : "CP-233016",
+                  #           "OperationCode" : "OpcVerify",
+                  #           "Parameters" : {},
+                  #           "ToolName" : "sign",
+                  #           "ToolVersion" : "1.0"
+                  #       }
+                  #   ]
 
               - bash: |
                   az login --identity
