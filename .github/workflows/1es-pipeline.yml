@@ -39,11 +39,11 @@ extends:
           - job: HostJob
             # If the pipeline publishes artifacts, use `templateContext` to define the artifacts.
             # This will enable 1ES PT to run SDL analysis tools on the artifacts and then upload them.
-            # templateContext:
-            #   outputs:
-            #   - output: pipelineArtifact
-            #     targetPath: $(System.DefaultWorkingDirectory)/Samples
-            #     artifactName: artifactName
+            templateContext:
+              outputs:
+                - output: pipelineArtifact
+                  targetPath: $(Pipeline.Workspace)/vscode-extension-unsigned
+                  artifactName: aks-desktop-signed
             # # Define the steps that the pipeline will run.
             # # In most cases, copy and paste the steps from the original pipeline.
             steps:
@@ -145,14 +145,25 @@ extends:
                             "ToolVersion" : "1.0"
                         }
                     ]
-
               - bash: |
-                  az login --identity
-                  az account show
-                  npx vsce --version
-                  npx vsce ls
-                  npx vsce show ms-kubernetes-tools.vscode-aks-tools
-                  npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
+                  echo "=== ARTIFACT PUBLISHING DEBUG ==="
+                  echo "Artifact will be published via 1ES templateContext:"
+                  echo "Artifact name: vscode-extension-signed"
+                  echo "Source path: $(Pipeline.Workspace)/vscode-extension-unsigned"
+                  echo "Artifact contents:"
+                  ls -la "$(Pipeline.Workspace)/vscode-extension-unsigned/"
+                  echo "Artifact size: $(du -sh "$(Pipeline.Workspace)/vscode-extension-unsigned" 2>/dev/null || echo 'Unable to calculate')"
+                  echo "Note: 1ES template will handle the actual artifact publishing"
+                  echo "=== END ARTIFACT DEBUG ==="
+                displayName: "Debug: Artifact Publishing"
+                condition: succeeded()
+              # - bash: |
+              #     az login --identity
+              #     az account show
+              #     npx vsce --version
+              #     npx vsce ls
+              #     npx vsce show ms-kubernetes-tools.vscode-aks-tools
+              #     npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
 
             # npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
             # - template: /.github/workflows/1es-templates/sign-vsix.yml
