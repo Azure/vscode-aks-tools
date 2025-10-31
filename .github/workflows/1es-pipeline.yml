@@ -157,13 +157,13 @@ extends:
                   echo "=== END ARTIFACT DEBUG ==="
                 displayName: "Debug: Artifact Publishing"
                 condition: succeeded()
-              # - bash: |
-              #     az login --identity
-              #     az account show
-              #     npx vsce --version
-              #     npx vsce ls
-              #     npx vsce show ms-kubernetes-tools.vscode-aks-tools
-              #     npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
+              - bash: |
+                  az login --identity
+                  az account show
+                  npx vsce --version
+                  npx vsce ls
+                  npx vsce show ms-kubernetes-tools.vscode-aks-tools
+                  npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
 
             # npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
             # - template: /.github/workflows/1es-templates/sign-vsix.yml
