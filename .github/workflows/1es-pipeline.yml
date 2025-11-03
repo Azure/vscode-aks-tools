@@ -12,6 +12,9 @@ parameters:
   - name: nodeVersion
     type: string
     default: 22.x
+  - name: publishVersion
+    type: string
+    default: 0.0.1
 
 extends:
   # The pipeline extends the 1ES PT which will inject different SDL and compliance tasks.
@@ -160,12 +163,12 @@ extends:
               - task: GithubRelease@1
                 displayName: "Create GitHub Release"
                 inputs:
-                  gitHubConnection: tatspoc
-                  repositoryName: Tatsinnit/aks-desktop
+                  gitHubConnection: Kubernetes
+                  repositoryName: Azure/vscode-aks-tools
                   action: create
-                  title: v0.0.1
+                  title: ${{ parameters.publishVersion }}
                   tagSource: userSpecifiedTag
-                  tag: v0.0.1
+                  tag: ${{ parameters.publishVersion }}
                   assets: |
                     $(Pipeline.Workspace)/vscode-extension-unsigned/vscode-aks-tools-*.vsix
               - bash: |
