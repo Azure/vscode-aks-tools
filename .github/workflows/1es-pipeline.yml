@@ -99,12 +99,6 @@ extends:
                   ls -la "$(Pipeline.Workspace)/vscode-extension-unsigned"
                 displayName: "List the unsigned dir"
 
-              # - template: /1es-templates/sign-vsix.yml
-              #   parameters:
-              #     path: ""
-              #     pattern: "*.vsix"
-              #     displayName: Publish signed VSCode extension
-
               - task: EsrpCodeSigning@5
                 displayName: Publish signed VSCode extension
                 inputs:
@@ -119,16 +113,6 @@ extends:
                   Pattern: "*.vsix"
                   UseMinimatch: true
                   signConfigType: inlineSignParams
-                  # inlineOperation: |
-                  #   [
-                  #     {
-                  #       "keyCode": "CP-401405",
-                  #       "operationSetCode": "VSCodePublisherSign",
-                  #       "parameters" : [],
-                  #       "toolName": "sign",
-                  #       "toolVersion": "1.0"
-                  #     }
-                  #   ]
                   inlineOperation: |
                     [
                         {
