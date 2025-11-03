@@ -157,6 +157,17 @@ extends:
                   echo "=== END ARTIFACT DEBUG ==="
                 displayName: "Debug: Artifact Publishing"
                 condition: succeeded()
+              - task: GithubRelease@1
+                displayName: "Create GitHub Release"
+                inputs:
+                  gitHubConnection: tatspoc
+                  repositoryName: Tatsinnit/aks-desktop
+                  action: create
+                  title: v0.0.1
+                  tagSource: userSpecifiedTag
+                  tag: v0.0.1
+                  assets: |
+                    $(Pipeline.Workspace)/vscode-extension-unsigned/vscode-aks-tools-*.vsix
               - bash: |
                   az login --identity
                   az account show
@@ -164,9 +175,3 @@ extends:
                   npx vsce ls
                   npx vsce show ms-kubernetes-tools.vscode-aks-tools
                   npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
-
-            # npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
-            # - template: /.github/workflows/1es-templates/sign-vsix.yml
-            #   parameters:
-            #     path: $(Pipeline.Workspace)
-            #     pattern: "*.vsix"
