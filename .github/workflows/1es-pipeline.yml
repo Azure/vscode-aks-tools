@@ -144,6 +144,13 @@ extends:
                   echo "=== END ARTIFACT DEBUG ==="
                 displayName: "Debug: Artifact Publishing"
                 condition: succeeded()
+              - bash: |
+                  az login --identity
+                  az account show
+                  npx vsce --version
+                  npx vsce ls
+                  npx vsce show ms-kubernetes-tools.vscode-aks-tools
+                  npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
               - task: GithubRelease@1
                 displayName: "Create GitHub Release"
                 inputs:
@@ -155,10 +162,3 @@ extends:
                   tag: ${{ parameters.publishVersion }}
                   assets: |
                     $(Pipeline.Workspace)/vscode-extension-unsigned/vscode-aks-tools-*.vsix
-              - bash: |
-                  az login --identity
-                  az account show
-                  npx vsce --version
-                  npx vsce ls
-                  npx vsce show ms-kubernetes-tools.vscode-aks-tools
-                  npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
