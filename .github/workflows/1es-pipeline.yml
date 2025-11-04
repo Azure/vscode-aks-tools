@@ -161,13 +161,16 @@ extends:
                   npx vsce ls
                   echo "Showing VSCE extension info..."
                   npx vsce show ms-kubernetes-tools.vscode-aks-tools
-                  VSIX_PATH=$(find . -name '*.vsix' -print -quit)
+                  VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-unsigned/" -type f -name "*.vsix" | head -n 1)
+                  echo "Found VSIX: $VSIX_PATH"
+
+                  # VSIX_PATH=$(Pipeline.Workspace)/vscode-extension-unsigned/$(find . -name '*.vsix' -print -quit)
                   if [ -z "$VSIX_PATH" ]; then
                     echo "❌ No VSIX package found to publish!" >&2
                     exit 1
                   fi
                   echo "Publishing VSIX package: $VSIX_PATH"
-                  if ! npx vsce publish --azure-credential  "${{ parameters.token }}" --packagePath "$VSIX_PATH"; then
+                  if ! npx vsce publish --packagePath "$VSIX_PATH"; then
                     echo "❌ VSCE publish failed!" >&2
                     exit 1
                   fi
