@@ -174,7 +174,7 @@ extends:
                     echo "Publishing VSIX package: $VSIX_PATH"
                     echo "Using PAT: ${TOKEN:0:4}**** (masked)"
             
-                    npx vsce publish --azure-credential "$TOKEN" --packagePath "$VSIX_PATH"
+                    npx vsce publish --pat "$TOKEN" --packagePath "$VSIX_PATH"
                 env:
                   TOKEN: ${{ parameters.token }}
               - task: GithubRelease@1
