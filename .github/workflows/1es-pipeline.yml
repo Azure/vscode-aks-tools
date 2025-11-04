@@ -147,35 +147,36 @@ extends:
                   echo "=== END ARTIFACT DEBUG ==="
                 displayName: "Debug: Artifact Publishing"
                 condition: succeeded()
-              - bash: |
-                  set -e
-                  echo "Logging in to Azure..."
-                  if ! az login --identity; then
-                    echo "❌ Azure login failed!" >&2
-                    exit 1
-                  fi
-                  az account show
-                  echo "Checking VSCE version..."
-                  npx vsce --version
-                  echo "Listing VSCE packages..."
-                  npx vsce ls
-                  echo "Showing VSCE extension info..."
-                  npx vsce show ms-kubernetes-tools.vscode-aks-tools
-                  VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-unsigned/" -type f -name "*.vsix" | head -n 1)
-                  echo "Found VSIX: $VSIX_PATH"
+              - task: Bash@3
+                displayName: "Publish VSIX to Marketplace"
+                inputs:
+                  targetType: inline
+                  script: |
+                    set -e
+                    echo "Logging in to Azure..."
+                    if ! az login --identity; then
+                      echo "❌ Azure login failed!" >&2
+                      exit 1
+                    fi
+                    az account show
+                    echo "Checking VSCE version..."
+                    npx vsce --version
+                    echo "Listing VSCE packages..."
+                    npx vsce ls
+                    echo "Showing VSCE extension info..."
+                    npx vsce show ms-kubernetes-tools.vscode-aks-tools
+                    VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-unsigned/" -type f -name "*.vsix" | head -n 1)
+                    echo "Found VSIX: $VSIX_PATH"
 
-                  # VSIX_PATH=$(Pipeline.Workspace)/vscode-extension-unsigned/$(find . -name '*.vsix' -print -quit)
-                  if [ -z "$VSIX_PATH" ]; then
-                    echo "❌ No VSIX package found to publish!" >&2
-                    exit 1
-                  fi
-                  echo "Publishing VSIX package: $VSIX_PATH"
-                  echo "test '$(parameters.token)'"
-                  if ! npx vsce publish --azure-credential "$(parameters.token)" --packagePath "$VSIX_PATH"; then
-                    echo "❌ VSCE publish failed!" >&2
-                    exit 1
-                  fi
-                displayName: "Publish to VS Code Marketplace"
+                    echo "Finding VSIX..."
+                    VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-unsigned/" -type f -name "*.vsix" | head -n 1)
+            
+                    echo "Publishing VSIX package: $VSIX_PATH"
+                    echo "Using PAT: ${TOKEN:0:4}**** (masked)"
+            
+                    npx vsce publish --azure-credential "$TOKEN" --packagePath "$VSIX_PATH"
+                env:
+                  TOKEN: ${{ parameters.token }}
               - task: GithubRelease@1
                 displayName: "Create GitHub Release"
                 inputs:
