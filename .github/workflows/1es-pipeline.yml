@@ -46,7 +46,7 @@ extends:
               outputs:
                 - output: pipelineArtifact
                   targetPath: $(Pipeline.Workspace)/vscode-extension-unsigned
-                  artifactName: aks-desktop-signed
+                  artifactName: vscode-extension-signed
             # # Define the steps that the pipeline will run.
             # # In most cases, copy and paste the steps from the original pipeline.
             steps:
