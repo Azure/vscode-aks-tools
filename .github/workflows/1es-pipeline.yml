@@ -145,12 +145,30 @@ extends:
                 displayName: "Debug: Artifact Publishing"
                 condition: succeeded()
               - bash: |
-                  az login --identity
+                  set -e
+                  echo "Logging in to Azure..."
+                  if ! az login --identity; then
+                    echo "❌ Azure login failed!" >&2
+                    exit 1
+                  fi
                   az account show
+                  echo "Checking VSCE version..."
                   npx vsce --version
+                  echo "Listing VSCE packages..."
                   npx vsce ls
+                  echo "Showing VSCE extension info..."
                   npx vsce show ms-kubernetes-tools.vscode-aks-tools
-                  npx vsce publish --azure-credential --packagePath "$(find . -name '*.vsix')"
+                  VSIX_PATH=$(find . -name '*.vsix' -print -quit)
+                  if [ -z "$VSIX_PATH" ]; then
+                    echo "❌ No VSIX package found to publish!" >&2
+                    exit 1
+                  fi
+                  echo "Publishing VSIX package: $VSIX_PATH"
+                  if ! npx vsce publish --azure-credential --packagePath "$VSIX_PATH"; then
+                    echo "❌ VSCE publish failed!" >&2
+                    exit 1
+                  fi
+                displayName: "Publish to VS Code Marketplace"
               - task: GithubRelease@1
                 displayName: "Create GitHub Release"
                 inputs:
