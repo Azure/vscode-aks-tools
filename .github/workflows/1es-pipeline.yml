@@ -15,6 +15,9 @@ parameters:
   - name: publishVersion
     type: string
     default: 0.0.1
+  - name: token
+    type: string
+    default: ""
 
 extends:
   # The pipeline extends the 1ES PT which will inject different SDL and compliance tasks.
@@ -164,7 +167,7 @@ extends:
                     exit 1
                   fi
                   echo "Publishing VSIX package: $VSIX_PATH"
-                  if ! npx vsce publish --azure-credential --packagePath "$VSIX_PATH"; then
+                  if ! npx vsce publish --azure-credential  "${{ parameters.token }}" --packagePath "$VSIX_PATH"; then
                     echo "❌ VSCE publish failed!" >&2
                     exit 1
                   fi
