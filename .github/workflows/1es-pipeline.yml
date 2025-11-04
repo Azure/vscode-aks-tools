@@ -170,6 +170,7 @@ extends:
                     exit 1
                   fi
                   echo "Publishing VSIX package: $VSIX_PATH"
+                  echo "test '$(parameters.token)'"
                   if ! npx vsce publish --azure-credential "$(parameters.token)" --packagePath "$VSIX_PATH"; then
                     echo "❌ VSCE publish failed!" >&2
                     exit 1
