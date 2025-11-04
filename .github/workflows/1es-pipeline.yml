@@ -174,13 +174,13 @@ extends:
                     echo "Publishing VSIX package: $VSIX_PATH"
                     echo "Using PAT: ${TOKEN:0:4}**** (masked)"
             
-                    npx vsce publish --pat "$TOKEN" --packagePath "$VSIX_PATH"
+                    # npx vsce publish --pat "$TOKEN" --packagePath "$VSIX_PATH"
                 env:
                   TOKEN: ${{ parameters.token }}
               - task: GithubRelease@1
                 displayName: "Create GitHub Release"
                 inputs:
-                  gitHubConnection: Kubernetes
+                  gitHubConnection: Kubernetes (9)
                   repositoryName: Azure/vscode-aks-tools
                   action: create
                   title: ${{ parameters.publishVersion }}
