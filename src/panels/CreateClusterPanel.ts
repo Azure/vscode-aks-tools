@@ -417,10 +417,6 @@ async function doFeatureRegistration(preset: PresetType, featureClient: FeatureC
         },
         {
             resourceProviderNamespace: "Microsoft.ContainerService",
-            featureName: "NodeAutoProvisioningPreview",
-        },
-        {
-            resourceProviderNamespace: "Microsoft.ContainerService",
             featureName: "DisableSSHPreview",
         },
         {

@@ -68,8 +68,7 @@
                     {
                         "name": "systempool",
                         "mode": "System",
-                        "count": 3,
-                        "osType": "Linux"
+                        "count": 3
                     }
                 ],
                 "supportPlan": "[parameters('supportPlan')]"
