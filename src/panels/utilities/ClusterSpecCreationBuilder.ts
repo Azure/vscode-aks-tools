@@ -24,7 +24,8 @@ export type ClusterSpec = {
 type TemplateContent = Record<string, unknown>;
 
 const deploymentApiVersion = "2023-08-01";
-const deploymentApiVersionPreview = "2024-03-02-preview";
+// Updated to latest stable API version (Nov 2024) - was 2024-03-02-preview
+const deploymentApiVersionPreview = "2025-08-01";
 const presetTemplates: Record<PresetType, TemplateContent> = {
     [PresetType.Automatic]: automaticTemplate,
     [PresetType.Dev]: devTestTemplate,
