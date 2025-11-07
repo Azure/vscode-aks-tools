@@ -165,6 +165,7 @@ extends:
                     npx vsce ls
                     echo "Showing VSCE extension info..."
                     npx vsce show ms-kubernetes-tools.vscode-aks-tools
+
                     echo "Finding VSIX..."
                     VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-unsigned/" -type f -name "*.vsix" | head -n 1)
 
