@@ -1,30 +1,33 @@
 name: Build & Publish V2
 on: [workflow_dispatch]
 
+# Please note we will gradually be migrating to a more restrictive default publishing mechanism
+# leaving comment for gradual retiring of this workflow.
 permissions:
   contents: read
+  security-events: none
 
 jobs:
   JobBuild:
-      name: release
-      runs-on: [self-hosted, "1ES.Pool=1es-vscode-aks-tools-pool"]
-      # Expose step outputs as job outputs
-      outputs:
-        currentversion: ${{ steps.package_version.outputs.current-version }}
-        changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
-      permissions: 
-        actions: read
-        contents: read
-        deployments: read
-        packages: none
-      steps:
+    name: release
+    runs-on: [self-hosted, "1ES.Pool=1es-vscode-aks-tools-pool"]
+    # Expose step outputs as job outputs
+    outputs:
+      currentversion: ${{ steps.package_version.outputs.current-version }}
+      changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
+    permissions:
+      actions: read
+      contents: read
+      deployments: read
+      packages: none
+    steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           egress-policy: audit
           disable-sudo: true
           disable-telemetry: true
-        
+
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
@@ -38,7 +41,7 @@ jobs:
         run: npm run install:all
 
       # Ensure project builds successfully before creating release
-      - name: Build 
+      - name: Build
         run: npm run webpack
 
       - name: Get current version from package.json
@@ -51,20 +54,20 @@ jobs:
         id: changelog_reader
         uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
         with:
-            validation_depth: 10
-            version: ${{ steps.package_version.outputs.current-version }}
-            path: 'CHANGELOG.md'
+          validation_depth: 10
+          version: ${{ steps.package_version.outputs.current-version }}
+          path: "CHANGELOG.md"
 
   JobsPublish:
     name: publish
     runs-on: [self-hosted, "1ES.Pool=1es-vscode-aks-tools-pool"]
     needs: JobBuild
-    permissions: 
-        actions: read
-        contents: write
-        deployments: read
-        packages: none
-        id-token: write
+    permissions:
+      actions: read
+      contents: write
+      deployments: read
+      packages: none
+      id-token: write
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
@@ -86,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: npm run install:all
 
-      - name: Build 
+      - name: Build
         run: npm run webpack
 
       - name: Package
@@ -110,11 +113,11 @@ jobs:
         id: create_release
         uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-            tag_name : ${{ needs.JobBuild.outputs.currentversion }}
-            release_name: ${{ needs.JobBuild.outputs.currentversion}}
-            body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
+          tag_name: ${{ needs.JobBuild.outputs.currentversion }}
+          release_name: ${{ needs.JobBuild.outputs.currentversion}}
+          body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
 
       - name: federated login
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
@@ -123,7 +126,7 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        
+
       - name: Publish packaged extension
         run: |
           npx vsce publish --azure-credential --packagePath ${{ steps.find-vsix.outputs.vsix_path }}
