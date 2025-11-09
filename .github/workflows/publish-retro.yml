@@ -83,7 +83,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.JobBuild.outputs.currentversion }}
-          release_name: ${{ needs.JobBuild.outputs.currentversion}}
+          release_name: ${{ needs.JobBuild.outputs.currentversion }}
           body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
       - name: Create vsix and publish to marketplace
         id: create_vsix
