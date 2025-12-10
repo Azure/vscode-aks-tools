@@ -125,8 +125,9 @@ export function fromSortString(sortString: string, allProperties: ItemProperty<s
         .filter((s) => s !== null) as SortSpecifier<string>[];
 }
 
-export interface DerivedItemProperty<TKey extends string, TDerivedKey extends string>
-    extends ItemProperty<TKey | TDerivedKey> {
+export interface DerivedItemProperty<TKey extends string, TDerivedKey extends string> extends ItemProperty<
+    TKey | TDerivedKey
+> {
     valueGetter: (item: DataItem<TKey>) => unknown;
 }
 
