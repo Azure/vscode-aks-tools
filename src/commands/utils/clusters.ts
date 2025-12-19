@@ -96,9 +96,14 @@ export async function getKubernetesClusterInfo(
     }
 
     const kubeconfigPath = getPath(await configuration.api.getKubeconfigPath());
+    const resolvedKubeconfigPath = resolveKubeconfigPathForCluster(kubeconfigPath, explorerCluster.name);
+    if (failed(resolvedKubeconfigPath)) {
+        return resolvedKubeconfigPath;
+    }
+
     const result = {
         name: explorerCluster.name,
-        kubeconfigYaml: fs.readFileSync(kubeconfigPath, "utf8"),
+        kubeconfigYaml: fs.readFileSync(resolvedKubeconfigPath.result, "utf8"),
     };
 
     return { succeeded: true, result };
@@ -113,6 +118,37 @@ function getPath(kubeconfigPath: ConfigurationV1.KubeconfigPath): string {
         case "wsl":
             return kubeconfigPath.wslPath;
     }
+}
+
+/**
+ * Handles multi-path kubeconfig strings (e.g. path1:path2 on Linux, path1;path2 on Windows).
+ * Returns the path to the file containing the specified cluster context.
+ */
+function resolveKubeconfigPathForCluster(kubeconfigPath: string, clusterName: string): Errorable<string> {
+    const paths = kubeconfigPath.split(path.delimiter);
+
+    for (const p of paths) {
+        const trimmedPath = p.trim();
+        if (!trimmedPath || !fs.existsSync(trimmedPath)) {
+            continue;
+        }
+
+        try {
+            const content = fs.readFileSync(trimmedPath, "utf8");
+            const config = yaml.load(content) as { contexts?: Array<{ name: string }> };
+
+            if (config?.contexts?.some((ctx) => ctx.name === clusterName)) {
+                return { succeeded: true, result: trimmedPath };
+            }
+        } catch {
+            continue;
+        }
+    }
+
+    return {
+        succeeded: false,
+        error: `No kubeconfig file containing context "${clusterName}" found in paths: ${kubeconfigPath}`,
+    };
 }
 
 export function getAksClusterTreeNode(
