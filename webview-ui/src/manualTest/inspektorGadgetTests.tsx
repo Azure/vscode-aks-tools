@@ -367,7 +367,7 @@ export function getInspektorGadgetScenarios() {
         }
     }
 
-    const initialState: InitialState = {};
+    const initialState: InitialState = { clusterName: "clusterName" };
 
     return [
         Scenario.create(

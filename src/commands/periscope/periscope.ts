@@ -2,12 +2,16 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as tmpfile from "../utils/tempfile";
-import { getAksClusterTreeNode, getKubeconfigYaml, getManagedCluster } from "../utils/clusters";
+import {
+    getAksClusterTreeNode,
+    getClusterDiagnosticSettings,
+    getKubeconfigYaml,
+    getManagedCluster,
+    chooseStorageAccount,
+} from "../utils/clusters";
 import { getKustomizeConfig } from "../utils/config";
 import { getExtension, longRunning } from "../utils/host";
 import {
-    getClusterDiagnosticSettings,
-    chooseStorageAccount,
     getStorageInfo,
     prepareAKSPeriscopeKustomizeOverlay,
     getNodeNames,
@@ -112,7 +116,10 @@ async function runAKSPeriscope(
 
     // TODO: It's possible to have diagnostics configured, but with no storage account. If that's the case,
     // we'll fail silently at this point. Need to improve the UX here.
-    const clusterStorageAccountId = await chooseStorageAccount(clusterDiagnosticSettings);
+    const clusterStorageAccountId = await chooseStorageAccount(
+        clusterDiagnosticSettings,
+        "Select storage account for Periscope deployment:",
+    );
     if (!clusterStorageAccountId) return;
 
     // Generate storage sas keys, manage aks persicope run.

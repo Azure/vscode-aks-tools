@@ -1,8 +1,8 @@
-import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./InspektorGadget.module.css";
 import { TraceGadget } from "./helpers/gadgets";
 import { ProcessSnapshotKey } from "./helpers/gadgets/snapshot";
 import { ItemProperty, ValueType } from "./helpers/gadgets/types";
+import { ProgressRing } from "../components/ProgressRing";
 
 export interface TraceOutputProps {
     trace: TraceGadget;
@@ -19,7 +19,7 @@ export function TraceOutput(props: TraceOutputProps) {
     if (props.trace.output === null) {
         return (
             <>
-                <VSCodeProgressRing></VSCodeProgressRing>
+                <ProgressRing />
                 Running Gadget...
             </>
         );
@@ -53,7 +53,7 @@ function displayValue(value: unknown, property: ItemProperty<string>) {
         case ValueType.CharByte:
             return <>{String.fromCharCode(value as number)}</>;
         case ValueType.Bytes:
-            return <>{value} B</>;
+            return <>{String(value ?? "")} B</>;
         case ValueType.StackTrace:
             return <pre>{value as string}</pre>;
         case ValueType.AddressArray:
@@ -61,7 +61,7 @@ function displayValue(value: unknown, property: ItemProperty<string>) {
         case ValueType.Timestamp:
             return <>{value ? formatTime(value as number) : ""}</>;
         default:
-            return <>{value}</>;
+            return <>{String(value ?? "")}</>;
     }
 }
 

@@ -1,7 +1,8 @@
-import { FormEvent } from "react";
 import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded } from "../utilities/lazy";
-import { VSCodeDropdown, VSCodeOption, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
-
+import { CustomDropdown } from "./CustomDropdown";
+import { CustomDropdownOption } from "./CustomDropdownOption";
+import { ProgressRing } from "./ProgressRing";
+import * as l10n from "@vscode/l10n";
 export interface ResourceSelectorProps<TResource> {
     resources: Lazy<TResource[]> | TResource[];
     selectedItem: TResource | null;
@@ -15,12 +16,9 @@ export interface ResourceSelectorProps<TResource> {
 export function ResourceSelector<TResource>(props: ResourceSelectorProps<TResource>) {
     const resources = asLazy(props.resources);
 
-    function handleChange(e: Event | FormEvent<HTMLElement>) {
-        const elem = e.target as HTMLInputElement;
+    function handleChange(value: string) {
         const resource =
-            elem.value && isLoaded(resources)
-                ? resources.value.find((r) => props.valueGetter(r) === elem.value) || null
-                : null;
+            value && isLoaded(resources) ? resources.value.find((r) => props.valueGetter(r) === value) || null : null;
         props.onSelect(resource);
     }
 
@@ -28,23 +26,26 @@ export function ResourceSelector<TResource>(props: ResourceSelectorProps<TResour
 
     return (
         <>
-            {isLoading(resources) && <VSCodeProgressRing style={{ height: "1rem" }} />}
-            {isNotLoaded(resources) && <VSCodeDropdown className={props.className} disabled={true} id={props.id} />}
+            {isLoading(resources) && <ProgressRing />}
+            {isNotLoaded(resources) && (
+                <CustomDropdown
+                    className={props.className}
+                    disabled={true}
+                    id={props.id}
+                    onChange={() => {}}
+                ></CustomDropdown>
+            )}
             {isLoaded(resources) && (
-                <VSCodeDropdown className={props.className} id={props.id} value={selectedValue} onChange={handleChange}>
-                    <VSCodeOption value="" selected={selectedValue === ""}>
-                        Select
-                    </VSCodeOption>
+                <CustomDropdown className={props.className} id={props.id} value={selectedValue} onChange={handleChange}>
+                    <CustomDropdownOption value="" label={l10n.t("Select")} />
                     {resources.value.map((r) => (
-                        <VSCodeOption
+                        <CustomDropdownOption
                             key={props.valueGetter(r)}
                             value={props.valueGetter(r)}
-                            selected={selectedValue === props.valueGetter(r)}
-                        >
-                            {props.labelGetter(r)}
-                        </VSCodeOption>
+                            label={props.labelGetter(r)}
+                        />
                     ))}
-                </VSCodeDropdown>
+                </CustomDropdown>
             )}
         </>
     );

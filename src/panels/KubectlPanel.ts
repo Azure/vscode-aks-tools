@@ -1,4 +1,4 @@
-import { Uri } from "vscode";
+import { l10n, Uri } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -27,16 +27,18 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
         readonly kubeConfigFilePath: string,
         readonly clusterName: string,
         readonly customCommands: PresetCommand[],
+        readonly initialCommand?: string,
     ) {}
 
     getTitle(): string {
-        return `Run Kubectl on ${this.clusterName}`;
+        return l10n.t(`Run Kubectl on {0}`, this.clusterName);
     }
 
     getInitialState(): InitialState {
         return {
             clusterName: this.clusterName,
             customCommands: this.customCommands,
+            initialCommand: this.initialCommand,
         };
     }
 
@@ -45,6 +47,7 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             runCommandRequest: true,
             addCustomCommandRequest: true,
             deleteCustomCommandRequest: true,
+            initialCommandRequest: true,
         };
     }
 
@@ -53,10 +56,19 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             runCommandRequest: (args) => this.handleRunCommandRequest(args.command, webview),
             addCustomCommandRequest: (args) => this.handleAddCustomCommandRequest(args.name, args.command),
             deleteCustomCommandRequest: (args) => this.handleDeleteCustomCommandRequest(args.name),
+            initialCommandRequest: (args) => this.handleRunCommandRequest(args.initialCommand, webview),
         };
     }
 
     private async handleRunCommandRequest(command: string, webview: MessageSink<ToWebViewMsgDef>) {
+        if (command.includes("kubectl")) {
+            command = command.replace("kubectl", "").trim();
+        }
+
+        if (command.includes("jsonpath")) {
+            command = this.transformCommandForJSONPath(command);
+        }
+
         const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
 
         if (failed(kubectlresult)) {
@@ -85,5 +97,19 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
 
     private async handleDeleteCustomCommandRequest(name: string) {
         await deleteKubectlCustomCommand(name);
+    }
+
+    private transformCommandForJSONPath(command: string): string {
+        // Regular expression to match JSONPATH expressions
+        const jsonpathRegex = /-o jsonpath='([^']+)'/g;
+
+        // Function to escape JSONPATH expression
+        const escapeJsonpath = (jsonpath: string): string => jsonpath.replaceAll('"', '\\"').replaceAll("'", '"');
+
+        // Replace JSONPATH expressions in the command
+        return command.replace(jsonpathRegex, (_match, jsonpath) => {
+            const escapedJsonpath = escapeJsonpath(jsonpath);
+            return `-o jsonpath="${escapedJsonpath}"`;
+        });
     }
 }

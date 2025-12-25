@@ -1,4 +1,4 @@
-import { Uri, window, WorkspaceFolder } from "vscode";
+import { l10n, Uri, window, WorkspaceFolder } from "vscode";
 import path from "path";
 import * as fs from "fs";
 import { BasePanel, PanelDataProvider } from "../BasePanel";
@@ -53,7 +53,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
     ) {}
 
     getTitle(): string {
-        return `Draft Deployment in ${this.workspaceFolder.name}`;
+        return l10n.t(`Draft Deployment in {0}`, this.workspaceFolder.name);
     }
 
     getInitialState(): InitialState {
@@ -283,7 +283,7 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
             .join(" ");
 
         const language = "java"; // So it doesn't attempt to autodetect the language
-        const command = `draft create --language ${language} --deployment-only --deploy-type ${args.deploymentSpecType} --app ${args.applicationName} ${variableArgs} --destination .${path.sep}${args.location} --skip-file-detection`;
+        const command = `draft create --language ${language} --deployment-only --deploy-type ${args.deploymentSpecType} ${variableArgs} --destination .${path.sep}${args.location} --skip-file-detection`;
 
         const execOptions: ShellOptions = {
             workingDir: this.workspaceFolder.uri.fsPath,

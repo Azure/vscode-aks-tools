@@ -1,4 +1,3 @@
-import { VSCodeButton, VSCodeCheckbox, VSCodeDivider, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import styles from "./InspektorGadget.module.css";
 import { Dialog } from "../components/Dialog";
 import { FormEvent, useEffect, useState, ChangeEvent as InputChangeEvent } from "react";
@@ -13,7 +12,8 @@ import { GadgetCategory, GadgetExtraProperties, SortSpecifier, toExtraPropertyOb
 import { NamespaceSelection } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { EventHandlers } from "../utilities/state";
 import { EventDef, vscode } from "./helpers/state";
-
+import { ProgressRing } from "../components/ProgressRing";
+import * as l10n from "@vscode/l10n";
 const defaultTimeoutInSeconds = 30;
 const defaultMaxItemCount = 20;
 
@@ -25,6 +25,8 @@ export interface NewTraceDialogProps {
     eventHandlers: EventHandlers<EventDef>;
     onCancel: () => void;
     onAccept: (trace: GadgetConfiguration) => void;
+    initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
 }
 
 export function NewTraceDialog(props: NewTraceDialogProps) {
@@ -41,7 +43,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
 
     const [traceConfig, setTraceConfig] = useState<GadgetConfiguration>({
         category: props.gadgetCategory,
-        resource: "",
+        resource: props.initialGadgetResource || "",
         filters: {
             namespace: NamespaceSelection.All,
         },
@@ -83,6 +85,12 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
             timeout,
         });
     }
+    useEffect(() => {
+        if (props.isShown && props.initialGadgetResource) {
+            onResourceChanged(props.initialGadgetResource);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.isShown, props.initialGadgetResource]);
 
     function handleNodeChanged(node: string | null) {
         const filters = { ...traceConfig.filters, nodeName: node || undefined };
@@ -143,10 +151,10 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
 
     return (
         <Dialog isShown={props.isShown} onCancel={() => props.onCancel()}>
-            <h2>New Trace</h2>
+            <h2>{l10n.t("New Trace")}</h2>
 
             <form onSubmit={handleSubmit}>
-                <VSCodeDivider />
+                <hr />
 
                 <div className={styles.inputContainer}>
                     <label htmlFor="gadget-dropdown" className={styles.label}>
@@ -157,11 +165,13 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                         className={styles.control}
                         required
                         category={props.gadgetCategory}
+                        initialValue={props.initialGadgetResource}
+                        disabled={!!props.isGadgetResourceStatic}
                         onResourceChanged={onResourceChanged}
                     />
 
                     <label htmlFor="node-dropdown" className={styles.label}>
-                        Node
+                        {l10n.t("Node")}
                     </label>
                     {isLoaded(props.nodes) ? (
                         <NodeSelector
@@ -171,13 +181,13 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                             className={styles.control}
                         />
                     ) : (
-                        <VSCodeProgressRing />
+                        <ProgressRing />
                     )}
 
                     {!extraProperties.noK8sResourceFiltering && (
                         <>
                             <label htmlFor="resource-selector" className={styles.label}>
-                                Resource
+                                {l10n.t("Resource")}
                             </label>
                             {isLoaded(props.resources) ? (
                                 <ResourceSelector
@@ -187,7 +197,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                                     userMessageHandlers={props.eventHandlers}
                                 />
                             ) : (
-                                <VSCodeProgressRing />
+                                <ProgressRing />
                             )}
                         </>
                     )}
@@ -195,7 +205,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     {extraProperties.sortingAllowed && (
                         <>
                             <label htmlFor="sort-selector" className={styles.label}>
-                                Sort by
+                                {l10n.t("Sort by")}
                             </label>
                             <TraceItemSortSelector
                                 id="sort-selector"
@@ -211,7 +221,7 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     {extraProperties.requiresMaxItemCount && (
                         <>
                             <label htmlFor="max-rows-input" className={styles.label}>
-                                Max rows
+                                {l10n.t("Max rows")}
                             </label>
                             <input
                                 id="max-rows-input"
@@ -227,18 +237,20 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     )}
 
                     {extraProperties.threadExclusionAllowed && (
-                        <VSCodeCheckbox
-                            checked={traceConfig.excludeThreads === false}
-                            onChange={handleDisplayThreadsChange}
-                        >
-                            Display threads
-                        </VSCodeCheckbox>
+                        <div>
+                            <input
+                                className={styles.displayCheckbox}
+                                type="checkbox"
+                                onChange={handleDisplayThreadsChange}
+                            />
+                            <label className={styles.displayLabel}>{l10n.t("Display Threads")}</label>
+                        </div>
                     )}
 
                     {extraProperties.requiresTimeout && (
                         <>
                             <label htmlFor="timeout-input" className={styles.label}>
-                                Timeout (s)
+                                {l10n.t("Timeout")} (s)
                             </label>
                             <input
                                 id="timeout-input"
@@ -254,13 +266,15 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
                     )}
                 </div>
 
-                <VSCodeDivider />
+                <hr />
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit" disabled={!canCreate()}>
-                        Ok
-                    </VSCodeButton>
-                    <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
+                    <button type="submit" disabled={!canCreate()}>
+                        {l10n.t("Ok")}
+                    </button>
+                    <button type="button" onClick={props.onCancel}>
+                        Cancel
+                    </button>
                 </div>
             </form>
         </Dialog>

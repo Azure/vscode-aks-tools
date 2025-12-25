@@ -1,23 +1,24 @@
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     CreateClusterParams,
-    Preset,
+    PresetType,
     ResourceGroup,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/createCluster";
+import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
 import { CreateClusterPresetInput } from "./CreateClusterPresetInput";
 import { CreateResourceGroupDialog } from "./CreateResourceGroup";
 import { EventDef } from "./helpers/state";
-import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
-
-type ChangeEvent = Event | FormEvent<HTMLElement>;
+import { CustomDropdown } from "../components/CustomDropdown";
+import { CustomDropdownOption } from "../components/CustomDropdownOption";
+import { MouseEvent } from "react";
+import * as l10n from "@vscode/l10n";
 
 interface CreateClusterInputProps {
     locations: string[];
@@ -31,8 +32,8 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
     const [name, setName] = useState<Validatable<string>>(unset());
     const [isNewResourceGroupDialogShown, setIsNewResourceGroupDialogShown] = useState(false);
     const [newResourceGroupName, setNewResourceGroupName] = useState<string | null>(null);
-    const [presetSelected, setPresetSelected] = useState<Preset>("dev");
-    const [selectedIndex, setSelectedIndex] = useState<number>(0);
+    const [presetSelected, setPresetSelected] = useState<PresetType>(PresetType.Automatic);
+    const [selectedResourceGroup, setSelectedResourceGroup] = useState<string>("");
     const [location, setLocation] = useState<Validatable<string>>(unset());
 
     const newResourceGroup = newResourceGroupName
@@ -51,48 +52,53 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
         setIsNewResourceGroupDialogShown(false);
         setExistingResourceGroup(valid(null));
         setNewResourceGroupName(groupName);
-        setSelectedIndex(1); // this is the index of the new resource group and the first option is "Select"
+        setSelectedResourceGroup(groupName);
     }
 
-    function handlePresetSelection(presetSelected: Preset) {
+    function handlePresetSelection(presetSelected: PresetType) {
         setPresetSelected(presetSelected);
     }
 
-    function handleValidationAndIndex(e: ChangeEvent) {
-        handleExistingResourceGroupChange(e);
-        const ele = e.currentTarget as HTMLSelectElement;
-        setSelectedIndex(ele.selectedIndex);
+    function handleValidationAndIndex(value: string) {
+        handleExistingResourceGroupChange(value);
+        setSelectedResourceGroup(value);
     }
 
-    function handleExistingResourceGroupChange(e: ChangeEvent) {
-        const elem = e.currentTarget as HTMLSelectElement;
-        const resourceGroup = elem.selectedIndex <= 0 ? null : allResourceGroups[elem.selectedIndex - 1];
+    function handleExistingResourceGroupChange(value: string) {
+        const resourceGroup = value ? allResourceGroups.find((group) => group.name === value) : null;
         const validatable = resourceGroup ? valid(resourceGroup) : invalid(null, "Resource Group is required.");
         setExistingResourceGroup(validatable);
     }
 
+    const handleCreateNewRG = (event: MouseEvent<HTMLButtonElement>) => {
+        setIsNewResourceGroupDialogShown(true);
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
     function getValidatedName(name: string): Validatable<string> {
-        if (!name) return invalid(name, "Cluster name must be at least 1 character long.");
-        if (name.length > 63) return invalid(name, "Cluster name must be at most 63 characters long.");
+        if (!name) return invalid(name, l10n.t("Cluster name must be at least 1 character long."));
+        if (name.length > 63) return invalid(name, l10n.t("Cluster name must be at most 63 characters long."));
         if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$/.test(name)) {
             return invalid(
                 name,
-                "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number.",
+                l10n.t(
+                    "The only allowed characters are letters, numbers, dashes, and underscore. The first and last character must be a letter or a number.",
+                ),
             );
         }
 
         return valid(name);
     }
 
-    function handleNameChange(e: ChangeEvent) {
-        const name = (e.currentTarget as HTMLInputElement).value;
+    function handleNameChange(e: FormEvent<HTMLInputElement>) {
+        const name = e.currentTarget.value;
         const validated = getValidatedName(name);
         setName(validated);
     }
 
-    function handleLocationChange(e: ChangeEvent) {
-        const elem = e.currentTarget as HTMLSelectElement;
-        const location = elem.selectedIndex <= 0 ? null : props.locations[elem.selectedIndex - 1];
+    function handleLocationChange(value: string) {
+        const location = value ? props.locations.find((loc) => loc === value) : null;
         const validated = location ? valid(location) : missing<string>("Location is required.");
         setLocation(validated);
     }
@@ -137,36 +143,36 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                 <div className={styles.inputContainer}>
                     <CreateClusterPresetInput onPresetSelected={handlePresetSelection}></CreateClusterPresetInput>
                     <label htmlFor="cluster-details" className={styles.clusterDetailsLabel}>
-                        Cluster details
+                        {l10n.t("Cluster details")}
                     </label>
+
                     <label htmlFor="existing-resource-group-dropdown" className={styles.label}>
-                        Resource Group*
+                        {l10n.t("Resource Group*")}
                     </label>
-                    <VSCodeDropdown
+                    <CustomDropdown
                         id="existing-resource-group-dropdown"
-                        className={styles.midControl}
-                        onBlur={handleValidationAndIndex}
+                        value={selectedResourceGroup}
                         onChange={handleValidationAndIndex}
-                        selectedIndex={selectedIndex}
+                        disabled={false}
                         aria-label="Select a resource group"
                     >
-                        <VSCodeOption selected value="">
-                            Select
-                        </VSCodeOption>
+                        <CustomDropdownOption value="" label={l10n.t("Select")} />
                         {allResourceGroups.length > 0 ? (
                             allResourceGroups.map((group) => (
-                                <VSCodeOption key={group.name} value={group.name}>
-                                    {group === newResourceGroup ? "(New)" : ""} {group.name}
-                                </VSCodeOption>
+                                <CustomDropdownOption
+                                    key={group.name}
+                                    value={group.name}
+                                    label={`${group === newResourceGroup ? "(New) " : ""}${group.name}`}
+                                />
                             ))
                         ) : (
-                            <VSCodeOption disabled>No resource groups available</VSCodeOption>
+                            <CustomDropdownOption value="" label={l10n.t("No resource groups available")} />
                         )}
-                    </VSCodeDropdown>
+                    </CustomDropdown>
 
-                    <VSCodeButton className={styles.sideControl} onClick={() => setIsNewResourceGroupDialogShown(true)}>
-                        Create New
-                    </VSCodeButton>
+                    <button className={styles.sideControl} onClick={handleCreateNewRG}>
+                        {l10n.t("Create New")}
+                    </button>
                     {hasMessage(existingResourceGroup) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
@@ -175,9 +181,10 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="name-input" className={styles.label}>
-                        Cluster Name*
+                        {l10n.t("Cluster Name*")}
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="name-input"
                         value={isValueSet(name) ? name.value : ""}
                         className={`${styles.longControl} ${styles.validatable}`}
@@ -192,21 +199,19 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                     )}
 
                     <label htmlFor="location-dropdown" className={styles.label}>
-                        Location*
+                        {l10n.t("Region*")}
                     </label>
-                    <VSCodeDropdown
+                    <CustomDropdown
                         id="location-dropdown"
-                        className={styles.longControl}
-                        onBlur={handleLocationChange}
+                        value={isValueSet(location) ? location.value : ""}
                         onChange={handleLocationChange}
+                        disabled={false}
                     >
-                        <VSCodeOption value="">Select</VSCodeOption>
+                        <CustomDropdownOption value="" label={l10n.t("Select")} />
                         {props.locations.map((location) => (
-                            <VSCodeOption key={location} value={location}>
-                                {location}
-                            </VSCodeOption>
+                            <CustomDropdownOption key={location} value={location} label={location} />
                         ))}
-                    </VSCodeDropdown>
+                    </CustomDropdown>
                     {hasMessage(location) && (
                         <span className={styles.validationMessage}>
                             <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
@@ -216,7 +221,7 @@ export function CreateClusterInput(props: CreateClusterInputProps) {
                 </div>
 
                 <div className={styles.buttonContainer}>
-                    <VSCodeButton type="submit">Create</VSCodeButton>
+                    <button type="submit">{l10n.t("Create")}</button>
                 </div>
             </form>
 

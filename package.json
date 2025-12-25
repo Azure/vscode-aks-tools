@@ -2,12 +2,13 @@
     "name": "vscode-aks-tools",
     "displayName": "Azure Kubernetes Service",
     "description": "Display Azure Kubernetes Services within VS Code",
-    "version": "1.4.8",
+    "version": "1.6.14",
     "aiKey": "0c6ae279ed8443289764825290e4f9e2-1a736e7c-1324-4338-be46-fc2a58ae4d14-7255",
     "publisher": "ms-kubernetes-tools",
+    "l10n": "./l10n",
     "icon": "resources/aks-tools.png",
     "engines": {
-        "vscode": "^1.91.0"
+        "vscode": "^1.107.0"
     },
     "capabilities": {
         "untrustedWorkspaces": {
@@ -34,45 +35,45 @@
         "walkthroughs": [
             {
                 "id": "aksvscodewalkthrough",
-                "title": "Welcome to AKS Extension",
-                "description": "Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS developers with single click feature deployment within VS Code ecosystem.",
+                "title": "%Welcome to AKS Extension%",
+                "description": "%Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS developers with single click feature deployment within VS Code ecosystem.%",
                 "steps": [
                     {
                         "id": "summarycommand",
-                        "title": "All Features",
-                        "description": "Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.",
+                        "title": "%All Features%",
+                        "description": "%Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.%",
                         "media": {
                             "markdown": "./docs/book/src/features/features.md"
                         }
                     },
                     {
                         "id": "runcommand",
-                        "title": "Cluster Operation Commands",
-                        "description": "AKS Managed Cluster Operations supported by this extension, such as create cluster, delete, start or stop cluster from show properties page, rotate cluster certificate, etc.",
+                        "title": "%Cluster Operation Commands%",
+                        "description": "%AKS Managed Cluster Operations supported by this extension, such as create cluster, delete, start or stop cluster from show properties page, rotate cluster certificate, etc.%",
                         "media": {
                             "markdown": "./docs/book/src/features/manage-cluster-operations.md"
                         }
                     },
                     {
                         "id": "developercommand",
-                        "title": "Developer Command",
-                        "description": "This extension provides a set of commands to help developers to run kubectl commands against AKS clusters.",
+                        "title": "%Developer Command%",
+                        "description": "%This extension provides a set of commands to help developers to run kubectl commands against AKS clusters.%",
                         "media": {
                             "markdown": "./docs/book/src/features/run-kubectl-command.md"
                         }
                     },
                     {
                         "id": "troubleshootingcommand",
-                        "title": "Troubleshooting Command",
-                        "description": "This extension provides a set of commands to help developers to troubleshoot AKS clusters such as quick run AKD Diagnostics using detectors, run AKS Periscope, run Inspektor Gadget, etc.",
+                        "title": "%Troubleshooting Command%",
+                        "description": "%This extension provides a set of commands to help developers to troubleshoot AKS clusters such as quick run AKD Diagnostics using detectors, run AKS Periscope, run Inspektor Gadget, etc.%",
                         "media": {
                             "markdown": "./docs/book/src/features/aks-periscope.md"
                         }
                     },
                     {
                         "id": "quickdeploymentcommand",
-                        "title": "Quick deployments",
-                        "description": "This extension also provides quick deployment features to help developers to quick deploy applications to AKS clusters such as inspektor gadget, azure service operator, etc.",
+                        "title": "%Quick deployments%",
+                        "description": "%This extension also provides quick deployment features to help developers to quick deploy applications to AKS clusters such as inspektor gadget, azure service operator, etc.%",
                         "media": {
                             "markdown": "./docs/book/src/features/install-azureserviceoperator.md"
                         }
@@ -86,6 +87,13 @@
                 "aks.selectedSubscriptions": {
                     "type": "array",
                     "description": "Selected Azure subscriptions",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "aks.selectedClusters": {
+                    "type": "array",
+                    "description": "Selected Azure Clusters",
                     "items": {
                         "type": "string"
                     }
@@ -122,7 +130,7 @@
                 },
                 "azure.kubectlgadget.releaseTag": {
                     "type": "string",
-                    "default": "v0.25.1",
+                    "default": "v0.38.0",
                     "title": "Kubectl-gadget repository release tag",
                     "description": "Release tag for the stable kubectl-gadget tool."
                 },
@@ -148,22 +156,42 @@
                 },
                 "aks.drafttool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.33",
+                    "default": "v0.0.38",
                     "title": "Draft repository release tag",
                     "description": "Release tag for the stable Draft tool release."
                 },
                 "aks.retinatool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.7",
+                    "default": "v0.0.26",
                     "title": "Retina repository release tag",
                     "description": "Release tag for the stable Retina tool release."
+                },
+                "aks.copilotEnabledPreview": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Set to true to enable GH Copilot hook. (Preview feature)"
+                },
+                "aks.aksmcpserver.releaseTag": {
+                    "type": "string",
+                    "default": "v0.0.11",
+                    "title": "AKS MCP Server repository release tag",
+                    "description": "Release tag for the stable AKS MCP Server tool release."
                 }
             }
         },
         "commands": [
             {
                 "command": "aks.selectSubscriptions",
-                "title": "Select subscriptions...",
+                "title": "%Select subscriptions...%",
+                "category": "AKS",
+                "icon": {
+                    "dark": "resources/dark/filter.svg",
+                    "light": "resources/light/filter.svg"
+                }
+            },
+            {
+                "command": "aks.clusterFilter",
+                "title": "%Select cluster...%",
                 "category": "AKS",
                 "icon": {
                     "dark": "resources/dark/filter.svg",
@@ -172,7 +200,7 @@
             },
             {
                 "command": "aks.refreshSubscription",
-                "title": "Refresh Subscription",
+                "title": "%Refresh Subscription%",
                 "icon": {
                     "dark": "resources/dark/refresh.svg",
                     "light": "resources/light/refresh.svg"
@@ -180,117 +208,201 @@
             },
             {
                 "command": "aks.signInToAzure",
-                "title": "Sign in to Azure...",
+                "title": "%Sign in to Azure...%",
                 "category": "AKS"
             },
             {
                 "command": "aks.selectTenant",
-                "title": "Select Tenant...",
+                "title": "%Select Tenant...%",
                 "category": "AKS"
             },
             {
                 "command": "aks.periscope",
-                "title": "Run AKS Periscope"
+                "title": "%Run AKS Periscope%"
             },
             {
                 "command": "aks.eraserTool",
-                "title": "Run Eraser Image Cleanup"
+                "title": "%Run Eraser Image Cleanup%"
             },
             {
                 "command": "aks.installAzureServiceOperator",
-                "title": "Install Azure Service Operator"
+                "title": "%Install Azure Service Operator%"
             },
             {
                 "command": "aks.aksCRUDDiagnostics",
-                "title": "Create, Upgrade, Delete and Scale"
+                "title": "%Create, Upgrade, Delete and Scale%"
             },
             {
                 "command": "aks.aksCategoryConnectivity",
-                "title": "Network Connectivity Issues"
+                "title": "%Network Connectivity Issues%"
             },
             {
                 "command": "aks.aksBestPracticesDiagnostics",
-                "title": "Best Practices"
+                "title": "%Best Practices%"
             },
             {
                 "command": "aks.aksIdentitySecurityDiagnostics",
-                "title": "Identity and Security"
+                "title": "%Identity and Security%"
             },
             {
                 "command": "aks.aksNodeHealthDiagnostics",
-                "title": "Node Health"
+                "title": "%Node Health%"
             },
             {
-                "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
-                "title": "Known Issues, Availability and Performance"
+                "command": "aks.aksCCPAvailabilityPerformanceDiagnostics",
+                "title": "%Cluster and Control Plane Availability and Performance%"
+            },
+            {
+                "command": "aks.aksStorageDiagnostics",
+                "title": "%Storage%"
             },
             {
                 "command": "aks.attachAcrToCluster",
-                "title": "Attach ACR to Cluster",
+                "title": "%Attach ACR to Cluster%",
                 "category": "AKS"
             },
             {
                 "command": "aks.draftDockerfile",
-                "title": "Create a Dockerfile",
+                "title": "%Create a Dockerfile%",
                 "category": "Automated Deployments"
             },
             {
                 "command": "aks.draftDeployment",
-                "title": "Create a Deployment",
+                "title": "%Create a Deployment%",
                 "category": "Automated Deployments"
             },
             {
                 "command": "aks.draftWorkflow",
-                "title": "Create a GitHub Workflow",
+                "title": "%Create a GitHub Workflow%",
                 "category": "Automated Deployments"
             },
             {
                 "command": "aks.showInPortal",
-                "title": "Show In Azure Portal"
+                "title": "%Show In Azure Portal%"
             },
             {
                 "command": "aks.clusterProperties",
-                "title": "Show Properties"
+                "title": "%Show Properties%"
             },
             {
                 "command": "aks.createClusterNavToAzurePortal",
-                "title": "Create Cluster From Azure Portal"
+                "title": "%Create Cluster From Azure Portal%"
             },
             {
                 "command": "aks.createCluster",
-                "title": "Create Cluster From VS Code"
+                "title": "%Create Cluster From VS Code%"
             },
             {
                 "command": "aks.aksDeleteCluster",
-                "title": "Delete Cluster"
+                "title": "%Delete Cluster%"
             },
             {
                 "command": "aks.aksRotateClusterCert",
-                "title": "Rotate Cluster Certificate"
+                "title": "%Rotate Cluster Certificate%"
             },
             {
                 "command": "aks.aksReconcileCluster",
-                "title": "Reconcile Cluster"
+                "title": "%Reconcile Cluster%"
             },
             {
                 "command": "aks.aksInspektorGadgetShow",
-                "title": "Show Inspektor Gadget"
+                "title": "%Show Inspektor Gadget%"
+            },
+            {
+                "command": "aks.aksInvestigateDns",
+                "title": "%Investigate DNS%"
+            },
+            {
+                "command": "aks.aksRealTimeTcpMonitoring",
+                "title": "%Real-time TCP Monitoring%"
+            },
+            {
+                "command": "aks.aksTraceExec",
+                "title": "%View processes executed in the kernel%"
+            },
+            {
+                "command": "aks.aksTopBlockIO",
+                "title": "%Identify Block I/O intensive processes%"
+            },
+            {
+                "command": "aks.aksTopFile",
+                "title": "%Identify files being read and written to%"
+            },
+            {
+                "command": "aks.aksProfileCpu",
+                "title": "%Profile CPU%"
             },
             {
                 "command": "aks.aksRunKubectlCommands",
-                "title": "Run Kubectl Commands"
+                "title": "%Run Kubectl Commands%"
+            },
+            {
+                "command": "aks.aksCreateClusterFromCopilot",
+                "title": "%Command to create an AKS cluster%"
+            },
+            {
+                "command": "aks.aksDeployManifest",
+                "title": "%Deploy application manifest from Github Copilot Chat%"
+            },
+            {
+                "command": "aks.aksOpenKubectlPanel",
+                "title": "%Run Kubectl Commands from Github Copilot Chat%"
             },
             {
                 "command": "aks.aksTCPDump",
-                "title": "Collect TCP Dumps"
+                "title": "%Collect TCP Dumps%"
             },
             {
                 "command": "aks.compareCluster",
-                "title": "Compare AKS Cluster"
+                "title": "%Compare AKS Cluster%"
             },
             {
-                "command": "aks.aksRetinaCapture",
-                "title": "Run Retina Capture"
+                "command": "aks.aksDownloadRetinaCapture",
+                "title": "%Download Artifacts Locally%"
+            },
+            {
+                "command": "aks.aksUploadRetinaCapture",
+                "title": "%Upload Artifacts to Blob Storage%"
+            },
+            {
+                "command": "aks.aksKaitoGenerateYaml",
+                "title": "%Create KAITO Workspace%"
+            },
+            {
+                "command": "aks.aksKaitoCreateCRD",
+                "title": "%Create KAITO Workspace%"
+            },
+            {
+                "command": "aks.aksKaitoDeployCRD",
+                "title": "Deploy KAITO Workspace"
+            },
+            {
+                "command": "aks.aksKaitoManage",
+                "title": "%Manage KAITO Models%"
+            },
+            {
+                "command": "aks.aksKaito",
+                "title": "%Install KAITO%"
+            },
+            {
+                "command": "aks.aksDraftValidate",
+                "title": "%Run Draft Validate for YAML%"
+            },
+            {
+                "command": "aks.aksKaitoTest",
+                "title": "%Test KAITO models%"
+            },
+            {
+                "command": "aks.aksCreateFleet",
+                "title": "%Create Fleet%"
+            },
+            {
+                "command": "aks.aksFleetProperties",
+                "title": "%Show Fleet Properties%"
+            },
+            {
+                "command": "aks.aksSetupMCPServerCommands",
+                "title": "AKS: Setup AKS MCP Server"
             }
         ],
         "menus": {
@@ -320,11 +432,24 @@
                 {
                     "command": "aks.draftDeployment",
                     "when": "explorerResourceIsFolder"
+                },
+                {
+                    "command": "aks.aksDraftValidate",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml"
+                },
+                {
+                    "command": "aks.aksDraftValidate",
+                    "when": "explorerResourceIsFolder"
                 }
             ],
             "view/item/context": [
                 {
                     "command": "aks.selectSubscriptions",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /Azure/i",
+                    "group": "inline"
+                },
+                {
+                    "command": "aks.clusterFilter",
                     "when": "viewItem == aks.subscription",
                     "group": "inline"
                 },
@@ -379,16 +504,47 @@
                 {
                     "command": "aks.aksRunKubectlCommands",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
-                    "group": "9@3"
+                    "group": "8@3"
                 },
                 {
                     "command": "aks.compareCluster",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
                 },
                 {
+                    "command": "aks.clusterFilter",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
                     "submenu": "aks.networkTroubleshootingSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
                     "group": "9@3"
+                },
+                {
+                    "submenu": "aks.troubleshootResourceUtilizationSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@4"
+                },
+                {
+                    "submenu": "aks.improveSecuritySubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@5"
+                },
+                {
+                    "submenu": "aks.kaitoInstallSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "group": "9@3"
+                },
+                {
+                    "submenu": "aks.fleetMangerSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.subscription/i"
+                },
+                {
+                    "command": "aks.aksFleetProperties",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.fleet/i"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetShow",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -399,6 +555,20 @@
                 {
                     "command": "aks.createCluster",
                     "group": "navigation"
+                }
+            ],
+            "aks.kaitoInstallSubMenu": [
+                {
+                    "command": "aks.aksKaito",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "aks.aksKaitoCreateCRD",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "aks.aksKaitoManage",
+                    "group": "navigation@3"
                 }
             ],
             "aks.detectorsSubMenu": [
@@ -419,7 +589,11 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
+                    "command": "aks.aksCCPAvailabilityPerformanceDiagnostics",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksStorageDiagnostics",
                     "group": "navigation"
                 },
                 {
@@ -449,11 +623,41 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksInspektorGadgetShow",
+                    "command": "aks.aksInvestigateDns",
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.aksRetinaCapture",
+                    "command": "aks.aksRealTimeTcpMonitoring",
+                    "group": "navigation"
+                },
+                {
+                    "submenu": "aks.aksRetinaCaptureSubMenu",
+                    "group": "navigation"
+                }
+            ],
+            "aks.troubleshootResourceUtilizationSubMenu": [
+                {
+                    "submenu": "aks.investigateBlockIOSubMenu",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksTopFile",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksProfileCpu",
+                    "group": "navigation"
+                }
+            ],
+            "aks.investigateBlockIOSubMenu": [
+                {
+                    "command": "aks.aksTopBlockIO",
+                    "group": "navigation"
+                }
+            ],
+            "aks.improveSecuritySubMenu": [
+                {
+                    "command": "aks.aksTraceExec",
                     "group": "navigation"
                 }
             ],
@@ -470,32 +674,72 @@
                     "command": "aks.aksReconcileCluster",
                     "group": "navigation"
                 }
+            ],
+            "aks.fleetMangerSubMenu": [
+                {
+                    "command": "aks.aksCreateFleet",
+                    "group": "navigation"
+                }
+            ],
+            "aks.aksRetinaCaptureSubMenu": [
+                {
+                    "command": "aks.aksDownloadRetinaCapture",
+                    "group": "navigation"
+                },
+                {
+                    "command": "aks.aksUploadRetinaCapture",
+                    "group": "navigation"
+                }
             ]
         },
         "submenus": [
             {
                 "id": "aks.detectorsSubMenu",
-                "label": "Run AKS Diagnostics"
+                "label": "%Run AKS Diagnostics%"
             },
             {
                 "id": "aks.automatedDeploymentsSubMenu",
-                "label": "Automated Deployments"
+                "label": "%Automated Deployments%"
             },
             {
                 "id": "aks.managedClusterOperationSubMenu",
-                "label": "Managed Cluster Operations"
+                "label": "%Managed Cluster Operations%"
             },
             {
                 "id": "aks.createClusterSubMenu",
-                "label": "Create Cluster"
+                "label": "%Create Cluster%"
             },
             {
                 "id": "aks.tcpDataCollectionSubMenu",
-                "label": "Collect TCP Dump"
+                "label": "%Collect TCP Dump%"
             },
             {
                 "id": "aks.networkTroubleshootingSubMenu",
-                "label": "Troubleshoot Network Health"
+                "label": "%Troubleshoot Network Health%"
+            },
+            {
+                "id": "aks.kaitoInstallSubMenu",
+                "label": "%Deploy a LLM with KAITO%"
+            },
+            {
+                "id": "aks.fleetMangerSubMenu",
+                "label": "%Fleet Manager%"
+            },
+            {
+                "id": "aks.aksRetinaCaptureSubMenu",
+                "label": "%Run Retina Capture%"
+            },
+            {
+                "id": "aks.troubleshootResourceUtilizationSubMenu",
+                "label": "%Troubleshoot Resource Utilization%"
+            },
+            {
+                "id": "aks.investigateBlockIOSubMenu",
+                "label": "%Investigate Block I/O%"
+            },
+            {
+                "id": "aks.improveSecuritySubMenu",
+                "label": "%Improve security of my cluster%"
             }
         ]
     },
@@ -512,66 +756,87 @@
         "webpack-dev": "webpack --mode development --watch",
         "test-compile": "npm run build:webview && tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test-compile && node ./out/src/tests/runTests.js"
+        "test": "npm run test-compile && node ./out/src/tests/runTests.js",
+        "lint": "npx eslint .",
+        "eslint-inspector": "npx @eslint/config-inspector@latest"
     },
     "extensionDependencies": [
         "vscode.git",
         "ms-kubernetes-tools.vscode-kubernetes-tools"
     ],
+    "agentMetadata": {
+        "version": "2.0",
+        "getPluginsCommand": "aks.getAzureKubernetesServicePlugins"
+    },
     "devDependencies": {
-        "@types/chai": "^4.3.16",
+        "@eslint/eslintrc": "^3.3.3",
+        "@eslint/js": "^9.37.0",
+        "@types/chai": "^5.2.3",
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
-        "@types/mocha": "^10.0.7",
-        "@types/node": "^22.0.0",
-        "@types/semver": "^7.5.8",
-        "@types/sinon": "^17.0.3",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^25.0.3",
+        "@types/semver": "^7.7.1",
+        "@types/sinon": "^21.0.0",
         "@types/tmp": "^0.2.6",
-        "@types/uuid": "^10.0.0",
-        "@types/vscode": "^1.91.0",
-        "@typescript-eslint/eslint-plugin": "^7.18.0",
-        "@typescript-eslint/parser": "^7.18.0",
-        "@vscode/test-electron": "^2.4.1",
-        "@vscode/vsce": "^2.31.1",
-        "chai": "^5.1.1",
-        "eslint": "^8.57.0",
-        "eslint-webpack-plugin": "^4.2.0",
-        "glob": "^11.0.0",
-        "mocha": "^10.7.0",
-        "prettier": "^3.3.3",
-        "sinon": "^18.0.0",
-        "ts-loader": "^9.5.1",
-        "typescript": "^5.5.4",
-        "webpack": "^5.93.0",
-        "webpack-cli": "^5.1.4"
+        "@types/uuid": "^11.0.0",
+        "@types/vscode": "^1.107.0",
+        "@typescript-eslint/eslint-plugin": "^8.50.1",
+        "@typescript-eslint/parser": "^8.32.1",
+        "@vscode/l10n-dev": "^0.0.35",
+        "@vscode/test-electron": "^2.5.2",
+        "@vscode/vsce": "^3.7.1",
+        "eslint": "^9.39.2",
+        "chai": "^6.2.2",
+        "eslint-webpack-plugin": "^5.0.2",
+        "glob": "^13.0.0",
+        "globals": "^16.5.0",
+        "mocha": "^11.7.5",
+        "prettier": "^3.7.4",
+        "sinon": "^21.0.1",
+        "ts-loader": "^9.5.4",
+        "typescript": "^5.9.3",
+        "webpack": "^5.104.1",
+        "webpack-cli": "^6.0.1"
     },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
-        "@azure/arm-containerregistry": "^10.1.0",
-        "@azure/arm-containerservice": "^21.0.0",
+        "@azure/arm-compute": "^23.2.0",
+        "@azure/arm-containerregistry": "^11.0.0",
+        "@azure/arm-containerservice": "24.0.0",
+        "@azure/arm-containerservicefleet": "^2.0.0",
+        "@azure/arm-devhub": "^1.0.0-beta.3",
+        "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
-        "@azure/arm-resources": "^5.2.0",
+        "@azure/arm-msi": "^2.2.0",
+        "@azure/arm-resourcegraph": "^4.2.1",
+        "@azure/arm-resources": "^7.0.0",
         "@azure/arm-resources-subscriptions": "^2.1.0",
-        "@azure/arm-storage": "^18.3.0",
-        "@azure/arm-subscriptions": "^5.1.0",
+        "@azure/arm-storage": "^19.0.0",
+        "@azure/arm-subscriptions": "^6.0.0",
         "@azure/container-registry": "^1.1.0",
-        "@azure/core-auth": "^1.7.2",
-        "@azure/identity": "^4.4.0",
+        "@azure/core-auth": "^1.10.1",
+        "@azure/identity": "^4.13.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
-        "@azure/storage-blob": "^12.24.0",
+        "@azure/storage-blob": "^12.29.1",
+        "@eslint/compat": "^2.0.0",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^2.5.10",
         "@octokit/rest": "^21.0.1",
         "@vscode/extension-telemetry": "^0.9.7",
+        "@microsoft/vscode-azext-utils": "^4.0.3",
+        "@octokit/rest": "^22.0.1",
+        "@vscode/extension-telemetry": "^1.2.0",
+        "@vscode/l10n": "^0.0.18",
         "decompress": "^4.2.1",
-        "js-yaml": "^4.1.0",
+        "js-yaml": "^4.1.1",
         "move-file": "^3.1.0",
         "node-fetch": "^3.3.2",
-        "rxjs": "^7.8.1",
-        "semver": "^7.6.3",
-        "sinon": "^18.0.0",
-        "tmp": "^0.2.3",
-        "uuid": "^10.0.0",
+        "rxjs": "^7.8.2",
+        "semver": "^7.7.3",
+        "sinon": "^21.0.1",
+        "tmp": "^0.2.5",
+        "uuid": "^13.0.0",
         "vscode-kubernetes-tools-api": "^1.0.0"
     },
     "repository": {

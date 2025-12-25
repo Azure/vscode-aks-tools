@@ -24,16 +24,26 @@ jobs:
       packages: none
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@0d381219ddf674d61a7572ddd19d7941e271515c # v2.9.0
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
-        egress-policy: audit
+        disable-sudo: true
+        disable-telemetry: true
+        egress-policy: block
+        allowed-endpoints: >
+          devdiv.pkgs.visualstudio.com:443
+          github.com:443
+          marketplace.visualstudio.com:443
+          objects.githubusercontent.com:443
+          registry.npmjs.org:443
+          update.code.visualstudio.com:443
+          vscode.download.prss.microsoft.com:443
 
     - name: Checkout Branch
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - name: Setup Node.js
-      uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+      uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
       with:
-        version: 20
+        node-version: 20
     - name: Build Extension
       run: |
         npm run install:all
@@ -51,7 +61,7 @@ jobs:
         mv *.vsix vsix
     - name: Archive Extension
       if: matrix.os == 'ubuntu-latest'
-      uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: vsix
         path: vsix

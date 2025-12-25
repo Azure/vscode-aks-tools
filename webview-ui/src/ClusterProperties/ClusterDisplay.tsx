@@ -1,10 +1,10 @@
-import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import { EventHandlers } from "../utilities/state";
 import styles from "./ClusterProperties.module.css";
 import { EventDef, vscode } from "./state";
 import { ClusterDisplayToolTip } from "./ClusterDisplayToolTip";
-
+import { ClusterUpgrade } from "./ClusterUpgrade";
+import * as l10n from "@vscode/l10n";
 export interface ClusterDisplayProps {
     clusterInfo: ClusterInfo;
     clusterOperationRequested: boolean;
@@ -56,6 +56,12 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
         props.eventHandlers.onSetClusterOperationRequested();
     }
 
+    function handleUpgradeVersion(version: string) {
+        // Update UI state immediately to show upgrading state
+        props.eventHandlers.onUpgradeVersionSelected(version);
+        props.eventHandlers.onSetClusterOperationRequested();
+    }
+
     const startStopState = determineStartStopState(props.clusterInfo);
     const showAbortButton = !unabortableProvisioningStates.includes(props.clusterInfo.provisioningState);
     const showReconcileButton =
@@ -64,34 +70,36 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
     const supportedPatchVersions = props.clusterInfo.supportedVersions.flatMap((v) => v.patchVersions);
     const isSupported = supportedPatchVersions.includes(props.clusterInfo.kubernetesVersion);
 
+    const isUpgrading = props.clusterInfo.provisioningState.toLowerCase() === "upgrading";
+
     return (
         <dl className={styles.propertyList}>
-            <dt>Provisioning State</dt>
+            <dt>{l10n.t("Provisioning State")}</dt>
             <dd>
                 {props.clusterInfo.provisioningState}
                 <div className={styles.buttonDiv}>
                     {showAbortButton && (
                         <>
                             &nbsp;
-                            <VSCodeButton
+                            <button
                                 disabled={props.clusterOperationRequested}
                                 onClick={() => handleAbortClick()}
-                                appearance="secondary"
+                                className="secondary-button"
                             >
-                                Abort
-                            </VSCodeButton>
+                                {l10n.t("Abort")}
+                            </button>
                         </>
                     )}
                     {showReconcileButton && (
                         <>
                             &nbsp;
-                            <VSCodeButton
+                            <button
                                 disabled={props.clusterOperationRequested}
                                 onClick={() => handleReconcileClick()}
-                                appearance="secondary"
+                                className="secondary-button"
                             >
-                                Reconcile
-                            </VSCodeButton>
+                                {l10n.t("Reconcile")}
+                            </button>
                         </>
                     )}
                 </div>
@@ -108,34 +116,32 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
                         </div>
                     </span>
                     <span className={styles.tooltiptext}>
-                        It is important that you don&#39;t repeatedly start/stop your cluster. Repeatedly
-                        starting/stopping your cluster may result in errors. Once your cluster is stopped, you should
-                        wait 15-30 minutes before starting it up again. &nbsp;
-                        <VSCodeLink href="https://docs.microsoft.com/en-au/azure/aks/start-stop-cluster?tabs=azure-cli#start-an-aks-cluster">
-                            Learn more
-                        </VSCodeLink>
+                        {l10n.t(
+                            "It is important that you don't repeatedly start/stop your cluster. Repeatedly starting/stopping your cluster may result in errors. Once your cluster is stopped, you should wait 15-30 minutes before starting it up again.",
+                        )}{" "}
+                        <a href="https://docs.microsoft.com/en-au/azure/aks/start-stop-cluster?tabs=azure-cli#start-an-aks-cluster">
+                            {l10n.t("Learn more")}
+                        </a>
                     </span>
                 </span>
                 <div className={styles.buttonDiv}>
                     {startStopState === "Started" && (
-                        <VSCodeButton
+                        <button
                             disabled={props.clusterOperationRequested}
                             onClick={handleStopCluster}
-                            className={styles.controlButton}
-                            appearance="secondary"
+                            className={`${styles.controlButton} secondary-button`}
                         >
-                            Stop Cluster
-                        </VSCodeButton>
+                            {l10n.t("Stop Cluster")}
+                        </button>
                     )}
                     {startStopState === "Stopped" && (
-                        <VSCodeButton
+                        <button
                             disabled={props.clusterOperationRequested}
                             onClick={handleStartCluster}
-                            className={styles.controlButton}
-                            appearance="secondary"
+                            className={`${styles.controlButton} secondary-button`}
                         >
-                            Start Cluster
-                        </VSCodeButton>
+                            {l10n.t("Start Cluster")}
+                        </button>
                     )}
                     {(startStopState === "Starting" || startStopState === "Stopping") && (
                         <span>{`Cluster is in ${startStopState} state`}</span>
@@ -145,11 +151,21 @@ export function ClusterDisplay(props: ClusterDisplayProps) {
 
             <dt>FQDN</dt>
             <dd>{props.clusterInfo.fqdn}</dd>
-            <dt>Kubernetes Version</dt>
+
+            <dt>Kubernetes {l10n.t("Version")}</dt>
             <dd>
-                {props.clusterInfo.kubernetesVersion} {isSupported ? "" : "(Out of support)"}
-                &nbsp;
-                <ClusterDisplayToolTip clusterInfo={props.clusterInfo}></ClusterDisplayToolTip>
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+                    <span>
+                        {props.clusterInfo.kubernetesVersion} {isSupported ? "" : l10n.t("(Out of support)")}
+                        {isUpgrading && <span className={styles.upgradeIndicator}>(Upgrading)</span>}
+                    </span>
+                    <ClusterDisplayToolTip clusterInfo={props.clusterInfo} />
+                    <ClusterUpgrade
+                        clusterInfo={props.clusterInfo}
+                        clusterOperationRequested={props.clusterOperationRequested}
+                        onUpgrade={handleUpgradeVersion}
+                    />
+                </div>
             </dd>
         </dl>
     );

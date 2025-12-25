@@ -11,6 +11,7 @@ export type ClusterInfo = {
     powerStateCode: string;
     agentPoolProfiles: AgentPoolProfileInfo[];
     supportedVersions: KubernetesVersionInfo[];
+    availableUpgradeVersions: string[];
 };
 
 export type AgentPoolProfileInfo = {
@@ -38,11 +39,15 @@ export type ToVsCodeMsgDef = {
     abortAgentPoolOperation: string;
     abortClusterOperation: void;
     reconcileClusterRequest: void;
+    refreshRequest: void;
+    upgradeClusterVersionRequest: string;
+    detectorCRUDRequest: void;
 };
 
 export type ToWebViewMsgDef = {
     getPropertiesResponse: ClusterInfo;
     errorNotification: string;
+    upgradeClusterVersionResponse: boolean;
 };
 
 export type ClusterPropertiesDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

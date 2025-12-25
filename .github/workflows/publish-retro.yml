@@ -1,39 +1,44 @@
 name: Build & Publish
 on: [workflow_dispatch]
 
+# Please note we will gradually be migrating to a more restrictive default publishing mechanism
+# leaving comment for gradual retiring of this workflow.
 permissions:
   contents: read
+  security-events: none
 
 jobs:
   JobBuild:
-      name: release
-      runs-on: ubuntu-latest
-      # Expose step outputs as job outputs
-      outputs:
-        currentversion: ${{ steps.package_version.outputs.current-version }}
-        changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
-      permissions: 
-        actions: read
-        contents: read
-        deployments: read
-        packages: none
-      steps:
+    name: release
+    runs-on: ubuntu-latest
+    # Expose step outputs as job outputs
+    outputs:
+      currentversion: ${{ steps.package_version.outputs.current-version }}
+      changelog_reader_changes: ${{ steps.changelog_reader.outputs.changes }}
+    permissions:
+      actions: read
+      contents: read
+      deployments: read
+      packages: none
+    steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0d381219ddf674d61a7572ddd19d7941e271515c # v2.9.0
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
         with:
           egress-policy: audit
+          disable-sudo: true
+          disable-telemetry: true
 
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Use Node.js
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version: 20
       # Run install dependencies
       - name: Install dependencies
         run: npm run install:all
       # Ensure project builds successfully before creating release
-      - name: Build 
+      - name: Build
         run: npm run webpack
       - name: Get current package version
         id: package_version
@@ -42,28 +47,30 @@ jobs:
         id: changelog_reader
         uses: mindsers/changelog-reader-action@32aa5b4c155d76c94e4ec883a223c947b2f02656 # v2.2.3
         with:
-            validation_depth: 10
-            version: ${{ steps.package_version.outputs.current-version }}
-            path: 'CHANGELOG.md'
+          validation_depth: 10
+          version: ${{ steps.package_version.outputs.current-version }}
+          path: "CHANGELOG.md"
   JobsPublish:
     name: publish
     runs-on: ubuntu-latest
     needs: JobBuild
-    permissions: 
-        actions: read
-        contents: write
-        deployments: read
-        packages: none
+    permissions:
+      actions: read
+      contents: write
+      deployments: read
+      packages: none
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0d381219ddf674d61a7572ddd19d7941e271515c # v2.9.0
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
         with:
           egress-policy: audit
+          disable-sudo: true
+          disable-telemetry: true
       # Checkout the code again for release
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Use Node.js
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version: 20
       # Run install dependencies
@@ -73,14 +80,14 @@ jobs:
         id: create_release
         uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-            tag_name : ${{ needs.JobBuild.outputs.currentversion }}
-            release_name: ${{ needs.JobBuild.outputs.currentversion}}
-            body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
+          tag_name: ${{ needs.JobBuild.outputs.currentversion }}
+          release_name: ${{ needs.JobBuild.outputs.currentversion }}
+          body: Publish ${{ needs.JobBuild.outputs.changelog_reader_changes }}
       - name: Create vsix and publish to marketplace
         id: create_vsix
-        uses: HaaLeo/publish-vscode-extension@28e2d3f5817fccf23c1f219eb0cecc903132d1a2 # v1.6.2
+        uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2.0.0
         with:
           pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
@@ -93,4 +100,3 @@ jobs:
           asset_path: ${{ steps.create_vsix.outputs.vsixPath}}
           asset_name: ${{ steps.create_vsix.outputs.vsixPath}}
           asset_content_type: application/vsix
-

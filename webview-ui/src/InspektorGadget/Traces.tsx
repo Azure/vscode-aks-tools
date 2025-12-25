@@ -1,8 +1,7 @@
-import { VSCodeButton, VSCodeCheckbox, VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrashCan, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { NewTraceDialog } from "./NewTraceDialog";
 import { ClusterResources, Nodes } from "./helpers/clusterResources";
 import { GadgetConfiguration, TraceGadget, getGadgetMetadata, toGadgetArguments } from "./helpers/gadgets";
@@ -19,6 +18,9 @@ export interface TracesProps {
     resources: ClusterResources;
     onRequestTraceId: () => number;
     eventHandlers: EventHandlers<EventDef>;
+    initialGadgetResource?: string;
+    isGadgetResourceStatic?: boolean;
+    onResourceUsed: () => void;
 }
 
 const streamingCategories: GadgetCategory[] = ["top", "trace"];
@@ -29,13 +31,28 @@ export function Traces(props: TracesProps) {
     const [selectedTraceId, setSelectedTraceId] = useState<number | null>(null);
     const [isWatching, setIsWatching] = useState<boolean>(false);
     const isStreamingTrace = streamingCategories.includes(props.category);
+    const { initialGadgetResource, onResourceUsed } = props;
+
+    // Auto-open new trace dialog when a specific resource command is selected from the menu
+    // Defer the state update to avoid calling setState synchronously inside the effect body
+    useEffect(() => {
+        let t: number | undefined;
+        if (initialGadgetResource) {
+            t = window.setTimeout(() => setIsTraceDialogShown(true), 0);
+        }
+
+        return () => {
+            if (t !== undefined) {
+                clearTimeout(t);
+            }
+        };
+    }, [initialGadgetResource]);
 
     function handleAdd() {
         setIsTraceDialogShown(true);
     }
 
     function ignoreClick(e: Event | FormEvent<HTMLElement>) {
-        e.preventDefault();
         e.stopPropagation();
     }
 
@@ -76,6 +93,8 @@ export function Traces(props: TracesProps) {
 
     function handleNewTraceDialogCancel() {
         setIsTraceDialogShown(false);
+        // Mark the initial resource as used when canceling to reset the state
+        onResourceUsed();
     }
 
     function handleNewTraceDialogAccept(traceConfig: GadgetConfiguration) {
@@ -95,6 +114,9 @@ export function Traces(props: TracesProps) {
         if (isStreamingTrace) {
             setIsWatching(true);
         }
+
+        // Mark the initial resource as used after the trace is created
+        onResourceUsed();
     }
 
     function getTraceRowClassNames(traceId?: number): string {
@@ -140,13 +162,15 @@ export function Traces(props: TracesProps) {
                                 className={getTraceRowClassNames(trace.traceId)}
                             >
                                 <td>
-                                    <VSCodeCheckbox
-                                        checked={checkedTraceIds.includes(trace.traceId)}
+                                    <input
+                                        type="checkbox"
                                         onClick={ignoreClick}
                                         onChange={() => toggleCheckedTraceId(trace.traceId)}
-                                        style={{ margin: "0", paddingRight: "0.5rem" }}
+                                        style={{ margin: "0 0.5rem 0 0" }}
                                     />
-                                    {getGadgetMetadata(trace.category, trace.resource)?.name}
+                                    <span className={styles.checkBoxLabel}>
+                                        {getGadgetMetadata(trace.category, trace.resource)?.name}
+                                    </span>
                                 </td>
                                 <td>{getNamespaceText(trace.filters.namespace)}</td>
                                 <td>{trace.filters.nodeName}</td>
@@ -159,19 +183,19 @@ export function Traces(props: TracesProps) {
             )}
 
             <div className={styles.buttonContainer}>
-                <VSCodeButton onClick={handleAdd}>
+                <button onClick={handleAdd}>
                     <FontAwesomeIcon icon={faPlus} />
                     &nbsp;Add
-                </VSCodeButton>
+                </button>
                 {checkedTraceIds.length > 0 && (
-                    <VSCodeButton onClick={handleDelete}>
+                    <button onClick={handleDelete}>
                         <FontAwesomeIcon icon={faTrashCan} />
                         &nbsp;Delete
-                    </VSCodeButton>
+                    </button>
                 )}
             </div>
 
-            <VSCodeDivider />
+            <hr />
 
             {selectedTrace && (
                 <>
@@ -197,6 +221,8 @@ export function Traces(props: TracesProps) {
                 eventHandlers={props.eventHandlers}
                 onCancel={handleNewTraceDialogCancel}
                 onAccept={handleNewTraceDialogAccept}
+                initialGadgetResource={props.initialGadgetResource}
+                isGadgetResourceStatic={props.isGadgetResourceStatic}
             />
         </>
     );

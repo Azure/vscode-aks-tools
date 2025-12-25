@@ -1,15 +1,20 @@
-import { SubscriptionClient } from "@azure/arm-resources-subscriptions";
-import { getCredential, getEnvironment } from "../../auth/azureAuth";
-import { PagedAsyncIterableIterator } from "@azure/core-paging";
-import { Errorable, getErrorMessage } from "./errorable";
-import { ResourceManagementClient } from "@azure/arm-resources";
-import { ContainerServiceClient } from "@azure/arm-containerservice";
-import { MonitorClient } from "@azure/arm-monitor";
-import { StorageManagementClient } from "@azure/arm-storage";
-import { ReadyAzureSessionProvider } from "../../auth/types";
-import { ContainerRegistryManagementClient } from "@azure/arm-containerregistry";
-import { ContainerRegistryClient } from "@azure/container-registry";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
+import { ContainerRegistryManagementClient } from "@azure/arm-containerregistry";
+import { ContainerServiceClient } from "@azure/arm-containerservice";
+import { FeatureClient } from "@azure/arm-features";
+import { MonitorClient } from "@azure/arm-monitor";
+import { ManagedServiceIdentityClient } from "@azure/arm-msi";
+import { ResourceManagementClient } from "@azure/arm-resources";
+import { SubscriptionClient } from "@azure/arm-resources-subscriptions";
+import { StorageManagementClient } from "@azure/arm-storage";
+import { ContainerRegistryClient } from "@azure/container-registry";
+import { PagedAsyncIterableIterator } from "@azure/core-paging";
+import { getCredential, getEnvironment } from "../../auth/azureAuth";
+import { ReadyAzureSessionProvider } from "../../auth/types";
+import { Errorable, getErrorMessage } from "./errorable";
+import { ComputeManagementClient } from "@azure/arm-compute";
+import { ContainerServiceFleetClient } from "@azure/arm-containerservicefleet";
+import { ResourceGraphClient } from "@azure/arm-resourcegraph";
 
 export function getSubscriptionClient(sessionProvider: ReadyAzureSessionProvider): SubscriptionClient {
     return new SubscriptionClient(getCredential(sessionProvider), { endpoint: getArmEndpoint() });
@@ -22,11 +27,28 @@ export function getResourceManagementClient(
     return new ResourceManagementClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
 
+export function getFeatureClient(sessionProvider: ReadyAzureSessionProvider, subscriptionId: string): FeatureClient {
+    return new FeatureClient(getCredential(sessionProvider), subscriptionId);
+}
+
 export function getAksClient(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
 ): ContainerServiceClient {
     return new ContainerServiceClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
+}
+
+export function getGraphResourceClient(sessionProvider: ReadyAzureSessionProvider): ResourceGraphClient {
+    return new ResourceGraphClient(getCredential(sessionProvider));
+}
+
+export function getAksFleetClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ContainerServiceFleetClient {
+    return new ContainerServiceFleetClient(getCredential(sessionProvider), subscriptionId, {
+        endpoint: getArmEndpoint(),
+    });
 }
 
 export function getMonitorClient(sessionProvider: ReadyAzureSessionProvider, subscriptionId: string): MonitorClient {
@@ -64,6 +86,20 @@ export function getAuthorizationManagementClient(
     return new AuthorizationManagementClient(getCredential(sessionProvider), subscriptionId, {
         endpoint: getArmEndpoint(),
     });
+}
+
+export function getManagedServiceIdentityClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ManagedServiceIdentityClient {
+    return new ManagedServiceIdentityClient(getCredential(sessionProvider), subscriptionId);
+}
+
+export function getComputeManagementClient(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): ComputeManagementClient {
+    return new ComputeManagementClient(getCredential(sessionProvider), subscriptionId, { endpoint: getArmEndpoint() });
 }
 
 function getArmEndpoint(): string {

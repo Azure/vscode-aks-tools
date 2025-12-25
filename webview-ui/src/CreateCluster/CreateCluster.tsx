@@ -3,8 +3,9 @@ import { CreateClusterInput } from "./CreateClusterInput";
 import { Success } from "./Success";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/createCluster";
 import { Stage, stateUpdater, vscode } from "./helpers/state";
-import { VSCodeLink, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react";
 import { useStateManagement } from "../utilities/state";
+import { ProgressRing } from "../components/ProgressRing";
+import * as l10n from "@vscode/l10n";
 
 export function CreateCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -27,7 +28,7 @@ export function CreateCluster(initialState: InitialState) {
         switch (state.stage) {
             case Stage.Uninitialized:
             case Stage.Loading:
-                return <p>Loading...</p>;
+                return <p>{l10n.t("Loading...")}</p>;
             case Stage.CollectingInput:
                 return (
                     <CreateClusterInput
@@ -38,31 +39,36 @@ export function CreateCluster(initialState: InitialState) {
                     />
                 );
             case Stage.Creating:
+                console.log("Creating cluster");
                 return (
                     <>
                         <h3>
-                            Creating Cluster {state.createParams!.name} in {state.createParams!.location}
+                            {l10n.t("Creating Cluster")} {state.createParams?.name} {l10n.t("in")}{" "}
+                            {state.createParams?.location}
                         </h3>
                         {state.deploymentPortalUrl && (
                             <p>
-                                Click <VSCodeLink href={state.deploymentPortalUrl}>here</VSCodeLink> to view the
-                                deployment in the Azure Portal.
+                                {l10n.t("Click")} <a href={state.deploymentPortalUrl}>{l10n.t("here")}</a>{" "}
+                                {l10n.t("to view the deployment in the AzurePortal.")}
                             </p>
                         )}
 
-                        <VSCodeProgressRing />
+                        <ProgressRing />
                     </>
                 );
             case Stage.Failed:
                 return (
                     <>
-                        <h3>Error Creating Cluster</h3>
+                        <h3>{l10n.t("Error Creating Cluster")}</h3>
                         <p>{state.message}</p>
                     </>
                 );
             case Stage.Succeeded:
                 return (
-                    <Success portalClusterUrl={state.createdCluster?.portalUrl || ""} name={state.createParams!.name} />
+                    <Success
+                        portalClusterUrl={state.createdCluster?.portalUrl || ""}
+                        name={state.createParams?.name || ""}
+                    />
                 );
             default:
                 throw new Error(`Unexpected stage ${state.stage}`);
@@ -71,8 +77,10 @@ export function CreateCluster(initialState: InitialState) {
 
     return (
         <>
-            <h1>Create Cluster</h1>
-            <label>Subscription: {state.subscriptionName}</label>
+            <h1>{l10n.t("Create AKS Cluster")}</h1>
+            <label>
+                {l10n.t("Subscription:")} {state.subscriptionName}
+            </label>
             {getBody()}
         </>
     );

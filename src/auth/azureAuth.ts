@@ -94,7 +94,7 @@ export function getTokenInfo(session: AuthenticationSession): Errorable<TokenInf
     try {
         jsonBody = Buffer.from(body, "base64").toString();
     } catch (e) {
-        return { succeeded: false, error: `Failed to decode JWT token body: ${body}` };
+        return { succeeded: false, error: `Failed to decode JWT token body: ${body}, with error ${e}` };
     }
 
     const jwt = parseJson<Jwt>(jsonBody);

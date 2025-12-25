@@ -44,7 +44,7 @@ function getArchiveFilename(releaseTag: string) {
     let operatingSystem = os.platform().toLocaleLowerCase();
 
     if (architecture === "x64") {
-        architecture = "amd64";
+        architecture = "amd64" as typeof architecture;
     }
 
     if (operatingSystem === "win32") {
@@ -56,13 +56,12 @@ function getArchiveFilename(releaseTag: string) {
     return `kubectl-retina-${operatingSystem}-${architecture}-${releaseTag}.tar.gz`;
 }
 
-
 function getPathToBinaryInArchive() {
     let architecture = os.arch();
     let operatingSystem = os.platform().toLocaleLowerCase();
 
     if (architecture === "x64") {
-        architecture = "amd64";
+        architecture = "amd64" as typeof architecture;
     }
 
     let extension = "";

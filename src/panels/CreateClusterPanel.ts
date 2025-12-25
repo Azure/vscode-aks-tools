@@ -1,25 +1,34 @@
 import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
+import { FeatureClient } from "@azure/arm-features";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import { Uri, window } from "vscode";
+import { getEnvironment } from "../auth/azureAuth";
+import { AzureAuthenticationSession, ReadyAzureSessionProvider } from "../auth/types";
+import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
+import { getDeploymentPortalUrl, getPortalResourceUrl } from "../commands/utils/env";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
+import {
+    createMultipleFeatureRegistrations,
+    MultipleFeatureRegistration,
+} from "../commands/utils/featureRegistrations";
+import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     InitialState,
-    Preset,
+    PresetType,
     ProgressEventType,
     ToVsCodeMsgDef,
     ToWebViewMsgDef,
     ResourceGroup as WebviewResourceGroup,
 } from "../webview-contract/webviewDefinitions/createCluster";
+import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
-import { getPortalResourceUrl } from "../commands/utils/env";
-import { TelemetryDefinition } from "../webview-contract/webviewTypes";
-import { getResourceGroups } from "../commands/utils/resourceGroups";
-import { getAksClient, getResourceManagementClient } from "../commands/utils/arm";
-import { getEnvironment } from "../auth/azureAuth";
-import { ReadyAzureSessionProvider } from "../auth/types";
+import { reporter } from "../commands/utils/reporter";
+import { getFilteredClusters } from "../commands/utils/config";
+import { addItemToClusterFilter } from "../commands/utils/clusterfilter";
+import * as l10n from "@vscode/l10n";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
     constructor(extensionUri: Uri) {
@@ -34,19 +43,23 @@ export class CreateClusterPanel extends BasePanel<"createCluster"> {
 export class CreateClusterDataProvider implements PanelDataProvider<"createCluster"> {
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly containerServiceClient: ContainerServiceClient;
-
+    private readonly featureClient: FeatureClient;
+    private readonly commandId: string;
     public constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
         readonly subscriptionId: string,
         readonly subscriptionName: string,
         readonly refreshTree: () => void,
+        commandId: string,
     ) {
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
+        this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
+        this.commandId = commandId;
     }
 
     getTitle(): string {
-        return `Create Cluster in ${this.subscriptionName}`;
+        return l10n.t(`Create Cluster in {0}`, this.subscriptionName);
     }
 
     getInitialState(): InitialState {
@@ -85,14 +98,17 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         const resourceTypes = provider.resourceTypes?.filter((t) => t.resourceType === "managedClusters");
         if (!resourceTypes || resourceTypes.length > 1) {
             window.showErrorMessage(
-                `Unexpected number of managedClusters resource types for provider (${resourceTypes?.length || 0}).`,
+                l10n.t(
+                    "Unexpected number of managedClusters resource types for provider ({0}).",
+                    resourceTypes?.length || 0,
+                ),
             );
             return;
         }
 
         const resourceType = resourceTypes[0];
         if (!resourceType.locations || resourceType.locations.length === 0) {
-            window.showErrorMessage("No locations for managedClusters resource type.");
+            window.showErrorMessage(l10n.t("No locations for managedClusters resource type."));
             return;
         }
 
@@ -104,7 +120,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         if (failed(groups)) {
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
-                operationDescription: "Retrieving resource groups",
+                operationDescription: l10n.t("Retrieving resource groups"),
                 errorMessage: groups.error,
                 deploymentPortalUrl: null,
                 createdCluster: null,
@@ -129,7 +145,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
         groupName: string,
         location: string,
         name: string,
-        preset: Preset,
+        preset: PresetType,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         if (isNewResourceGroup) {
@@ -150,9 +166,20 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             webview,
             this.containerServiceClient,
             this.resourceManagementClient,
+            this.featureClient,
+            this.commandId,
         );
 
-        this.refreshTree();
+        // Get the selected clusters from the configuration
+        const filteredClusters = getFilteredClusters();
+
+        if (filteredClusters.length === 0) {
+            // if there is no filter set, simply refresh the tree
+            this.refreshTree();
+        } else {
+            // if there is a filter set, add the cluster to the filter
+            await addItemToClusterFilter(this.subscriptionName, this.subscriptionId, name, this.sessionProvider);
+        }
     }
 }
 
@@ -168,7 +195,7 @@ async function createResourceGroup(
     webview: MessageSink<ToWebViewMsgDef>,
     resourceManagementClient: ResourceManagementClient,
 ) {
-    const operationDescription = `Creating resource group ${group.name}`;
+    const operationDescription = l10n.t(`Creating resource group {0}`, group.name);
     webview.postProgressUpdate({
         event: ProgressEventType.InProgress,
         operationDescription,
@@ -196,12 +223,14 @@ async function createCluster(
     groupName: string,
     location: string,
     name: string,
-    preset: Preset,
+    preset: PresetType,
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
+    featureClient: FeatureClient,
+    commandId: string,
 ) {
-    const operationDescription = `Creating cluster ${name}`;
+    const operationDescription = l10n.t(`Creating cluster {0}`, name);
     webview.postProgressUpdate({
         event: ProgressEventType.InProgress,
         operationDescription,
@@ -216,11 +245,11 @@ async function createCluster(
     const hasDefaultVersion = kubernetesVersions.some(isDefaultK8sVersion);
     const [kubernetesVersion] = hasDefaultVersion ? kubernetesVersions.filter(isDefaultK8sVersion) : kubernetesVersions;
     if (!kubernetesVersion?.version) {
-        window.showErrorMessage(`No Kubernetes versions available for location ${location}`);
+        window.showErrorMessage(l10n.t(`No Kubernetes versions available for location {0}`, location));
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
-            errorMessage: "No Kubernetes versions available for location",
+            errorMessage: l10n.t("No Kubernetes versions available for location"),
             deploymentPortalUrl: null,
             createdCluster: null,
         });
@@ -229,7 +258,7 @@ async function createCluster(
 
     const session = await sessionProvider.getAuthSession();
     if (failed(session)) {
-        window.showErrorMessage(`Error getting authentication session: ${session.error}`);
+        window.showErrorMessage(l10n.t(`Error getting authentication session: {0}`, session.error));
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
@@ -240,6 +269,23 @@ async function createCluster(
         return;
     }
 
+    // if automatic preset, we need role assignments for the cluster RBAC admin role which requires service principal id
+    let servicePrincipalId = "";
+    if (preset === PresetType.Automatic) {
+        servicePrincipalId = getServicePrincipalId(session.result);
+        if (!servicePrincipalId) {
+            window.showErrorMessage(l10n.t("No service principal id available for logged in user."));
+            webview.postProgressUpdate({
+                event: ProgressEventType.Failed,
+                operationDescription,
+                errorMessage: l10n.t("No service principal id available for logged in user."),
+                deploymentPortalUrl: null,
+                createdCluster: null,
+            });
+            return;
+        }
+    }
+
     const clusterSpec: ClusterSpec = {
         location,
         name,
@@ -247,25 +293,51 @@ async function createCluster(
         subscriptionId: subscriptionId,
         kubernetesVersion: kubernetesVersion.version,
         username: session.result.account.label, // Account label seems to be email address
+        servicePrincipalId: servicePrincipalId,
     };
 
     // Create a unique deployment name.
     const deploymentName = `${name}-${Math.random().toString(36).substring(5)}`;
     const deploymentSpec = new ClusterDeploymentBuilder()
-        .buildCommonParameters(clusterSpec)
+        .buildCommonParameters(clusterSpec, preset)
         .buildTemplate(preset)
         .getDeployment();
 
     const environment = getEnvironment();
 
+    // feature registration
     try {
-        const poller = await resourceManagementClient.deployments.beginCreateOrUpdate(
-            groupName,
-            deploymentName,
-            deploymentSpec,
+        await doFeatureRegistration(preset, featureClient);
+    } catch (error) {
+        window.showErrorMessage(
+            l10n.t("Error Registering preview features for AKS cluster {0}: {1}", name, getErrorMessage(error)),
+        );
+        webview.postProgressUpdate({
+            event: ProgressEventType.Failed,
+            operationDescription: l10n.t("Error Registering preview features for AKS cluster"),
+            errorMessage: getErrorMessage(error),
+            deploymentPortalUrl: null,
+            createdCluster: null,
+        });
+        return;
+    }
+
+    // event name for telemetry reporter
+    const eventName = commandId === "aks.createCluster" ? "command" : "aks.ghcp";
+
+    try {
+        // Create deployment using the generic resources API with deployment resource type
+        const deploymentResourceId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
+
+        const poller = await resourceManagementClient.resources.beginCreateOrUpdateById(
+            deploymentResourceId,
+            "2021-04-01", // API version for Microsoft.Resources/deployments
+            {
+                properties: deploymentSpec.properties,
+            },
         );
         const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
-        const deploymentPortalUrl = getPortalResourceUrl(environment, deploymentArmId);
+        const deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
         webview.postProgressUpdate({
             event: ProgressEventType.InProgress,
             operationDescription,
@@ -284,8 +356,9 @@ async function createCluster(
                     createdCluster: null,
                 });
             } else if (state.status === "failed") {
+                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "false" });
                 const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
-                window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
+                window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
                 webview.postProgressUpdate({
                     event: ProgressEventType.Failed,
                     operationDescription,
@@ -294,7 +367,8 @@ async function createCluster(
                     createdCluster: null,
                 });
             } else if (state.status === "succeeded") {
-                window.showInformationMessage(`Successfully created AKS cluster ${name}.`);
+                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "true" });
+                window.showInformationMessage(l10n.t(`Successfully created AKS cluster {0}.`, name));
                 const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
                 webview.postProgressUpdate({
                     event: ProgressEventType.Success,
@@ -312,7 +386,7 @@ async function createCluster(
         const errorMessage = isInvalidTemplateDeploymentError(ex)
             ? getInvalidTemplateErrorMessage(ex)
             : getErrorMessage(ex);
-        window.showErrorMessage(`Error creating AKS cluster ${name}: ${errorMessage}`);
+        window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
@@ -321,6 +395,37 @@ async function createCluster(
             createdCluster: null,
         });
     }
+}
+
+async function doFeatureRegistration(preset: PresetType, featureClient: FeatureClient) {
+    if (preset !== PresetType.Automatic) {
+        return;
+    }
+    //Doc link - https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-cli#register-the-feature-flags
+    const features: MultipleFeatureRegistration[] = [
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "EnableAPIServerVnetIntegrationPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "NRGLockdownPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "SafeguardsPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "DisableSSHPreview",
+        },
+        {
+            resourceProviderNamespace: "Microsoft.ContainerService",
+            featureName: "AutomaticSKUPreview",
+        },
+    ];
+
+    await createMultipleFeatureRegistrations(featureClient, features);
 }
 
 function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {
@@ -361,4 +466,20 @@ function isRestError(ex: unknown): ex is RestError {
 
 function isDefaultK8sVersion(version: KubernetesVersion): boolean {
     return "isDefault" in version && version.isDefault === true;
+}
+function getServicePrincipalId(result: AzureAuthenticationSession): string {
+    // we need servicePrincipalId of the logged in user which is after slash
+    if (!result?.account?.id) {
+        return "";
+    }
+    // account id is in the format of tenantID/servicePrincipalId
+    // sometimes in case of non aad auth it is in the format of servicePrincipalId.tenantID
+    const accountId = result.account.id;
+    if (accountId.includes("/")) {
+        return accountId.split("/")[1];
+    } else if (accountId.includes(".")) {
+        return accountId.split(".")[0];
+    } else {
+        return "";
+    }
 }

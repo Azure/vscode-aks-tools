@@ -1,6 +1,15 @@
-import { Deployment } from "@azure/arm-resources";
-import { Preset } from "../../webview-contract/webviewDefinitions/createCluster";
+import { PresetType } from "../../webview-contract/webviewDefinitions/createCluster";
+import automaticTemplate from "../templates/AutomaticCreateCluster.json";
 import devTestTemplate from "../templates/DevTestCreateCluster.json";
+
+// Define the Deployment type based on usage in this file
+type Deployment = {
+    properties: {
+        parameters: Record<string, unknown>;
+        template: Record<string, unknown>;
+        mode: string;
+    };
+};
 
 export type ClusterSpec = {
     location: string;
@@ -9,13 +18,17 @@ export type ClusterSpec = {
     subscriptionId: string;
     kubernetesVersion: string;
     username: string;
+    servicePrincipalId: string;
 };
 
 type TemplateContent = Record<string, unknown>;
 
 const deploymentApiVersion = "2023-08-01";
-const presetTemplates: Record<Preset, TemplateContent> = {
-    dev: devTestTemplate,
+// Updated to latest stable API version (Nov 2024) - was 2024-03-02-preview
+const deploymentApiVersionPreview = "2025-08-01";
+const presetTemplates: Record<PresetType, TemplateContent> = {
+    [PresetType.Automatic]: automaticTemplate,
+    [PresetType.Dev]: devTestTemplate,
 };
 
 export class ClusterDeploymentBuilder {
@@ -27,7 +40,50 @@ export class ClusterDeploymentBuilder {
         },
     };
 
-    public buildCommonParameters(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
+    public buildCommonParameters(clusterSpec: ClusterSpec, preset: PresetType): ClusterDeploymentBuilder {
+        return preset === PresetType.Automatic
+            ? this.buildParametersForAutomatic(clusterSpec)
+            : this.buildParametersForDev(clusterSpec);
+    }
+
+    public buildParametersForAutomatic(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
+        this.deployment.properties.parameters = {
+            ...this.deployment.properties.parameters,
+            location: {
+                value: clusterSpec.location,
+            },
+            resourceName: {
+                value: clusterSpec.name,
+            },
+            apiVersion: {
+                value: deploymentApiVersionPreview,
+            },
+            clusterIdentity: {
+                value: {
+                    type: "SystemAssigned",
+                },
+            },
+            clusterSku: {
+                value: {
+                    name: "Automatic",
+                    tier: "Standard",
+                },
+            },
+            subscriptionId: {
+                value: clusterSpec.subscriptionId,
+            },
+            supportPlan: {
+                value: "KubernetesOfficial",
+            },
+            userPrincipalId: {
+                value: clusterSpec.servicePrincipalId,
+            },
+        };
+
+        return this;
+    }
+
+    public buildParametersForDev(clusterSpec: ClusterSpec): ClusterDeploymentBuilder {
         this.deployment.properties.parameters = {
             ...this.deployment.properties.parameters,
             location: {
@@ -67,7 +123,7 @@ export class ClusterDeploymentBuilder {
         return this;
     }
 
-    public buildTemplate(preset: Preset) {
+    public buildTemplate(preset: PresetType) {
         this.deployment.properties.template = presetTemplates[preset];
         return this;
     }

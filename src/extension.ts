@@ -1,54 +1,91 @@
-import * as vscode from "vscode";
-import * as k8s from "vscode-kubernetes-tools-api";
-import { AksClusterTreeNode } from "./tree/aksClusterTreeItem";
-import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import {
-    createAzExtOutputChannel,
     AzExtTreeDataProvider,
-    registerCommand,
     CommandCallback,
+    createAzExtOutputChannel,
+    registerCommand,
     registerUIExtensionVariables,
 } from "@microsoft/vscode-azext-utils";
-import periscope from "./commands/periscope/periscope";
-import { Reporter, reporter } from "./commands/utils/reporter";
-import installAzureServiceOperator from "./commands/azureServiceOperators/installAzureServiceOperator";
-import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
+import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { setAssetContext } from "./assets";
+import { getReadySessionProvider } from "./auth/azureAuth";
+import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSessionProvider";
+import { registerUriHandler } from "./uriHandler";
+import { selectSubscriptions, selectTenant, signInToAzure } from "./commands/aksAccount/aksAccount";
 import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrToCluster";
-import { draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
+import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
+import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
+import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
+import aksCreateClusterNavToAzurePortal from "./commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal";
+import aksDeleteCluster from "./commands/aksDeleteCluster/aksDeleteCluster";
+import aksEraserTool from "./commands/aksEraserTool/erasertool";
+import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
+import { aksInvestigateDns } from "./commands/aksInspektorGadget/aksDnsTrace";
+import { aksRealTimeTcpMonitoring } from "./commands/aksInspektorGadget/aksTcpTrace";
+import { aksTraceExec } from "./commands/aksInspektorGadget/aksExecTrace";
+import { aksTopBlockIO } from "./commands/aksInspektorGadget/aksTopBlockIO";
+import { aksTopFile } from "./commands/aksInspektorGadget/aksTopFile";
+import { aksProfileCpu } from "./commands/aksInspektorGadget/aksProfileCpu";
+import aksKaito from "./commands/aksKaito/aksKaito";
+import aksKaitoGenerateYaml from "./commands/aksKaito/akskaitoGenerateYaml";
+import aksKaitoCreateCRD from "./commands/aksKaito/aksKaitoCreateCRD";
+import { aksKaitoDeployCRD } from "./commands/aksKaito/aksKaitoDeployCRD";
+import aksKaitoManage from "./commands/aksKaito/aksKaitoManage";
+import aksKaitoTest from "./commands/aksKaito/aksKaitoTest";
+import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
+import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
+import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
+import { aksDownloadRetinaCapture } from "./commands/aksRetinaCapture/aksDownloadRetinaCapture";
+import { aksUploadRetinaCapture } from "./commands/aksRetinaCapture/aksUploadRetinaCapture";
+import aksRotateClusterCert from "./commands/aksRotateClusterCert/aksRotateClusterCert";
+import { aksTCPDump } from "./commands/aksTCPCollection/tcpDumpCollection";
+import installAzureServiceOperator from "./commands/azureServiceOperators/installAzureServiceOperator";
 import {
-    aksCRUDDiagnostics,
     aksBestPracticesDiagnostics,
+    aksCategoryConnectivity,
+    aksCCPAvailabilityPerformanceDiagnostics,
+    aksCRUDDiagnostics,
     aksIdentitySecurityDiagnostics,
     aksNodeHealth,
-    aksKnownIssuesAvailabilityPerformanceDiagnostics,
-    aksCategoryConnectivity,
+    aksStorageDiagnostics,
 } from "./commands/detectors/detectors";
-import { failed } from "./commands/utils/errorable";
-import aksNavToPortal from "./commands/aksNavToPortal/aksNavToPortal";
-import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
-import aksCreateClusterNavToAzurePortal from "./commands/aksCreateClusterNavToAzurePortal/aksCreateClusterNavToAzurePortal";
-import { aksRunKubectlCommands } from "./commands/aksKubectlCommands/aksKubectlCommands";
-import { longRunning } from "./commands/utils/host";
-import { getKubeconfigYaml, getManagedCluster } from "./commands/utils/clusters";
-import aksDeleteCluster from "./commands/aksDeleteCluster/aksDeleteCluster";
-import aksRotateClusterCert from "./commands/aksRotateClusterCert/aksRotateClusterCert";
-import { aksInspektorGadgetShow } from "./commands/aksInspektorGadget/aksInspektorGadget";
-import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
-import aksReconcileCluster from "./commands/aksReconcileCluster/aksReconcileCluster";
-import { aksTCPDump } from "./commands/aksTCPCollection/tcpDumpCollection";
-import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
+import { draftValidate, draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
+import periscope from "./commands/periscope/periscope";
 import refreshSubscription from "./commands/refreshSubscriptions";
-import aksEraserTool from "./commands/aksEraserTool/erasertool";
-import { aksRetinaCapture } from "./commands/aksRetinaCapture/aksRetinaCapture";
-import { signInToAzure, selectSubscriptions, selectTenant } from "./commands/aksAccount/aksAccount";
-import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSessionProvider";
-import { getReadySessionProvider } from "./auth/azureAuth";
+import { getKubeconfigYaml, getManagedCluster } from "./commands/utils/clusters";
+import { failed } from "./commands/utils/errorable";
+import { longRunning } from "./commands/utils/host";
+import { Reporter, reporter } from "./commands/utils/reporter";
+import { AksClusterTreeNode } from "./tree/aksClusterTreeItem";
+import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
+import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
+import { getPlugins } from "./plugins/getPlugins";
+import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCreateClusterFromCopilot";
+import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
+import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
+import aksClusterFilter from "./commands/utils/clusterfilter";
+//import aksAutomatedDeployments from "./commands/devhub/aksAutomatedDeployments";
+import aksCreateFleet from "./commands/aksFleet/aksFleetManager";
+import aksFleetProperties from "./commands/aksFleetProperties/askFleetProperties";
+import * as l10n from "@vscode/l10n";
+import * as path from "path";
+import * as fs from "fs";
+import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
 
 export async function activate(context: vscode.ExtensionContext) {
+    const language = vscode.env.language;
+
+    const bundle = language === "en" ? "bundle.l10n.json" : `bundle.l10n.${language}.json`;
+    const newpath = path.join(__dirname, "..", "l10n", bundle);
+    if (fs.existsSync(newpath)) {
+        l10n.config({ fsPath: newpath });
+    }
+
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter());
     setAssetContext(context);
+
+    registerUriHandler(context);
 
     // Create and register the Azure session provider before accessing it.
     activateAzureSessionProvider(context);
@@ -62,13 +99,9 @@ export async function activate(context: vscode.ExtensionContext) {
             outputChannel: createAzExtOutputChannel("Azure Identity", ""),
             prefix: "",
         };
-
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerUIExtensionVariables(uiExtensionVariables);
-        vscode.commands.executeCommand("workbench.action.openWalkthrough", {
-            category: "ms-kubernetes-tools.vscode-aks-tools#aksvscodewalkthrough",
-        });
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectTenant", selectTenant);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
@@ -83,9 +116,10 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);
         registerCommandWithTelemetry("aks.aksNodeHealthDiagnostics", aksNodeHealth);
         registerCommandWithTelemetry(
-            "aks.aksKnownIssuesAvailabilityPerformanceDiagnostics",
-            aksKnownIssuesAvailabilityPerformanceDiagnostics,
+            "aks.aksCCPAvailabilityPerformanceDiagnostics",
+            aksCCPAvailabilityPerformanceDiagnostics,
         );
+        registerCommandWithTelemetry("aks.aksStorageDiagnostics", aksStorageDiagnostics);
         registerCommandWithTelemetry("aks.showInPortal", aksNavToPortal);
         registerCommandWithTelemetry("aks.clusterProperties", aksClusterProperties);
         registerCommandWithTelemetry("aks.createClusterNavToAzurePortal", aksCreateClusterNavToAzurePortal);
@@ -95,12 +129,35 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksRotateClusterCert", aksRotateClusterCert);
         registerCommandWithTelemetry("aks.aksReconcileCluster", aksReconcileCluster);
         registerCommandWithTelemetry("aks.aksInspektorGadgetShow", aksInspektorGadgetShow);
+        registerCommandWithTelemetry("aks.aksInvestigateDns", aksInvestigateDns);
+        registerCommandWithTelemetry("aks.aksRealTimeTcpMonitoring", aksRealTimeTcpMonitoring);
+        registerCommandWithTelemetry("aks.aksTraceExec", aksTraceExec);
+        registerCommandWithTelemetry("aks.aksTopBlockIO", aksTopBlockIO);
+        registerCommandWithTelemetry("aks.aksTopFile", aksTopFile);
+        registerCommandWithTelemetry("aks.aksProfileCpu", aksProfileCpu);
         registerCommandWithTelemetry("aks.createCluster", aksCreateCluster);
         registerCommandWithTelemetry("aks.aksTCPDump", aksTCPDump);
         registerCommandWithTelemetry("aks.compareCluster", aksCompareCluster);
         registerCommandWithTelemetry("aks.refreshSubscription", refreshSubscription);
         registerCommandWithTelemetry("aks.eraserTool", aksEraserTool);
-        registerCommandWithTelemetry("aks.aksRetinaCapture", aksRetinaCapture);
+        registerCommandWithTelemetry("aks.aksDownloadRetinaCapture", aksDownloadRetinaCapture);
+        registerCommandWithTelemetry("aks.aksUploadRetinaCapture", aksUploadRetinaCapture);
+        registerCommandWithTelemetry("aks.aksKaito", aksKaito);
+        registerCommandWithTelemetry("aks.aksKaitoGenerateYaml", aksKaitoGenerateYaml);
+        registerCommandWithTelemetry("aks.aksKaitoCreateCRD", aksKaitoCreateCRD);
+        registerCommandWithTelemetry("aks.aksKaitoDeployCRD", aksKaitoDeployCRD);
+        registerCommandWithTelemetry("aks.aksKaitoManage", aksKaitoManage);
+        registerCommandWithTelemetry("aks.aksKaitoTest", aksKaitoTest);
+        registerCommandWithTelemetry("aks.aksCreateClusterFromCopilot", aksCreateClusterFromCopilot);
+        registerCommandWithTelemetry("aks.aksDeployManifest", aksDeployManifest);
+        registerCommandWithTelemetry("aks.aksOpenKubectlPanel", aksOpenKubectlPanel);
+        registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
+        registerCommandWithTelemetry("aks.aksDraftValidate", draftValidate);
+        registerCommandWithTelemetry("aks.clusterFilter", aksClusterFilter);
+        //registerCommandWithTelemetry("aks.aksAutomatedDeployments", aksAutomatedDeployments);
+        registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
+        registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
+        registerCommandWithTelemetry("aks.aksSetupMCPServerCommands", addMcpServerToUserSettings);
 
         await registerAzureServiceNodes(context);
 
@@ -124,13 +181,13 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 
     const clusterExplorer = await k8s.extension.clusterExplorer.v1;
     if (!clusterExplorer.available) {
-        vscode.window.showWarningMessage(`Cluster explorer not available: ${clusterExplorer.reason}`);
+        vscode.window.showWarningMessage(l10n.t(`Cluster explorer not available: {0}`, clusterExplorer.reason));
         return;
     }
 
     const kubectl = await k8s.extension.kubectl.v1;
     if (!kubectl.available) {
-        vscode.window.showWarningMessage(`Kubectl not available: ${kubectl.reason}`);
+        vscode.window.showWarningMessage(l10n.t(`Kubectl not available: {0}`, kubectl.reason));
         return;
     }
 
@@ -145,7 +202,7 @@ async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<strin
         return;
     }
 
-    const properties = await longRunning(`Getting properties for cluster ${treeNode.name}.`, () =>
+    const properties = await longRunning(l10n.t(`Getting properties for cluster {0}.`, treeNode.name), () =>
         getManagedCluster(sessionProvider.result, treeNode.subscriptionId, treeNode.resourceGroupName, treeNode.name),
     );
     if (failed(properties)) {
@@ -153,7 +210,7 @@ async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<strin
         return undefined;
     }
 
-    const kubeconfig = await longRunning(`Retrieving kubeconfig for cluster ${treeNode.name}.`, () =>
+    const kubeconfig = await longRunning(l10n.t(`Retrieving kubeconfig for cluster {0}.`, treeNode.name), () =>
         getKubeconfigYaml(
             sessionProvider.result,
             treeNode.subscriptionId,

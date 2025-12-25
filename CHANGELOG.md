@@ -1,9 +1,264 @@
 # Change Log
 
+## [1.6.13]
+
+* Fix the client using sessionProvider instead of default. (#1564)
+* Bump AKS MCP server to v0.0.6 (#1563)
+* Update arm-containerservicefleet package and related changes. (#1550)
+* Update arm-resource and type-node package and related changes. (#1543)
+* Add documentation for AKS MCP Server. (#1527)
+* Dependabot updates and bumps.
+
+Thank you so much to @feiskyer, @bosesuneha, @ReinierCC, @tejhan, Julia Yin for review contributions, testing and reviews.
+
+## [1.6.12]
+
+* Windows binary release for win arch is specific format. (#1526)
+* Add AKS MCP Server using AKS Ext level command. (#1524)
+* Added option to port-forward KAITO workspace service (#1525)
+* Adding deploy workspace feature to KAITO (#1493)
+* Add fix for arm-container package update. (#1521)
+* Update Inspektor Gadget doc (#1522)
+* Dependabot updates and bumps.
+
+Thank you so much to @bosesuneha, @ReinierCC, @pavneeta, @tejhan, Julia Yin for review contributions, testing and reviews.
+
+## [1.6.11]
+
+* Add new monitoring and profiling commands for Inspektor Gadget (#1512)
+* Fix vsc update. (#1502)
+* Fix telemetery update failure. (#1501)
+* IG menu restructure: Investigate DNS and Real-time TCP Monitoring (#1466)
+* Dependabot updates and bumps.
+
+Thank you so much to @bosesuneha, @ReinierCC, @tejhan for review contributions, testing and reviews.
+
+## [1.6.10]
+
+* Kaito GA changes (#1475)
+* Resolving file path var for azure/identity upgrade fix (#1482)
+* Removing deprecated & adding newly supported models (#1465)
+* Add retro release for enabling. (#1447)
+* Fix for workflow. (#1446)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @lyantovski , @bosesuneha, or @davidgamero for review contributions, testing and reviews. Thank you @lyantovski for his testing work around KAITO update work.
+
+## [1.6.9]
+
+* Adding namespace awareness & different runtime support for KAITO models (#1444)
+* Setting up localization (#1429)
+* Adding ARIA roles & accessible keyboard navigation to customdropdown (#1430)
+* Fix for catering security alerts and permissions. (#1438)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @lyantovski , @kejatura-dev, @qpetraroia, @bosesuneha, @ReinierCC or @davidgamero for review contributions, testing and reviews. Welcome new contributor @lyantovski for his testing work around KAITO integration.
+
+## [1.6.8]
+
+* Fix the preview text. (#1425)
+* Fix messaging to add link to the doc. (#1411)
+* Fix the runner break as the version is deprecated. (#1427)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @kejatura-dev, @qpetraroia, @bosesuneha for review contributions, testing and reviews.
+
+## [1.6.7]
+
+* Add the enable copilot flag for gh copilot feature scenario. (#1408)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @kejatura-dev, @qpetraroia for review contributions, testing and reviews.
+
+## [1.6.6]
+
+* Automatically add newly created clusters to user's selected clusters (#1293)
+* Delete gpu node pool fix (#1319)
+* Updating vscode styling variables (#1350)
+* KAITO v4.4 support (#1318)
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan for various KAITO updates! + @ReinierCC, @bosesuneha, @hungry1526 for opening bug or review contributions, testing and reviews.
+
+## [1.6.5]
+
+* Update/detector upgrade scenario (#1348)
+* Update retina doc (#1364)
+* Fixing folder open for wsl (#1349)
+* Custom elements docs (#1331)
+* All webview-ui-toolkit content removed (#1330)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha, @tejhan for contributions, testing and reviews.
+
+
+## [1.6.4]
+
+* Reverting @azure/identity update to fix windows issue (#1345) Fix for [this bug](https://github.com/Azure/vscode-aks-tools/issues/1344)
+* Update retina doc (#1334)
+
+Thank you so much to @tejhan for identitify culprit package and @bosesuneha for retina docs, also to   kejatura-dev for contributions, testing and reviews.
+
+## [1.6.3]
+
+* Add upload logs feature for Retina Capture (#1306)
+* Full replacement of VSCodeDropdown & VSCodeOption with custom react elements [Webview-UI-toolkit deprecation] (#1276)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha, @tejhan for contributions, testing and reviews.
+
+## [1.6.2]
+
+* Feat: Removing components from ASO, Detectors, Kubectl, & Periscope commands (#1261)
+* Feat: Upgrade Cluster Kubernetes Version (#1296)
+* WebviewUI toolkit: deprecation for inspektor, retina, tcpdump (#1259)
+* Quick Refactor: Moving DiagnosticSetting function to a common location Cluster.ts. (#1295)
+* [Webview UI toolkit deprecation] AttachAcrToCluster, DraftDeployment/Dockerfile/Workflow Panel component removal (#1260)
+* tcp download fix (#1291)
+* Fix npm warning for build. (#1292)
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @bosesuneha @tejhan, @qpetraroia, @gambtho for contributions, testing and reviews.
+
+## [1.6.1]
+
+* Show Fleet Properties (#1245)
+* Treeview bug fix: showing members from different subscriptions (#1254)
+* [Webview UI toolkit deprecation] Cluster & fleet create, cluster properties component removal (#1258)
+* Fix: Deploy button not appearing (#1277)
+* Update: Retina Binary to recent release. (#1278)
+* packages: Update Inspektor Gadget to v0.38.0 (#1279)
+* Dependabot updates
+
+## [1.6.0]
+
+* [Backend] ACR Creation, App Registration Creation & Role Privileges (#1238)
+* Fix Cluster filter default behaviour (#1240)
+* Showing Fleets in the Treeview (#1237)
+* Proper Devhub Callback Auth (#1228)
+* Removing unused KAITO functions & variables (#1226)
+* Small addition to prettierrc & version bump (#1225)
+* Created vscode themed styling to replace several webview-ui-toolkit elements (#1222)
+* Added automatic cluster creation safeguards & feedback section for failed kaito installations (#1209)
+* Update kubectl generation RAG endpoint (#1221)
+* Create Fleet: UX Enhancement and Webview Testing (#1194)
+* Feature: Add Cluster Filtering in AKS VS Code Extension Tree Node (#1208)
+* Git Repo & Branch Population for Automated Deployments [Backend] (#1195)
+* Get Namespaces & Create Namespace Functionality [Backend] (#1196)
+* Initial Setup for Automated Deployments (Panel & Webview) (#1193)
+* Create Fleet: Full Cycle Completed (#1179)
+* Add prettier badge and development link. (#1181)
+* Add instruction for local vsix share. (#1180)
+* Create Fleet: panel implementation (#1161)
+* Remove old publishing workflow. (#1178)
+* Fix/permissions and pin actions format check (#1177)
+* Add prettier format check. (#1163)
+* Auto run Prettier-format. (#1164)
+* Fix the upgrade for eslint 9.17.0. (#1159)
+* Kaito Models - Code cleanup & memory/file handling improvements (#1122)
+* Fleet backend code. (#1160)
+* Dependabot updates and bumps.
+
+Thank you so much to @JunyuQian, @serbrech, @ReinierCC, @hsubramanianaks, @tejhan, @qpetraroia, @Tatsinnit for contributions, testing and reviews.
+
+## [1.5.5]
+
+* Right Click Draft Validate.
+* Dependabot updates and bumps.
+
+Thank you so much to @ReinierCC, @hsubramanianaks, @tejhan, @qpetraroia, @Tatsinnit for contributions, testing and reviews.
+
+## [1.5.4]
+
+* Add node os upgrade channel.
+* Adding refresh option to cluster properties page.
+* Dependabot updates and bumps.
+
+Thank you so much to @hsubramanianaks, @tejhan, @qpetraroia, @ReinierCC, @Tatsinnit for contributions, testing and reviews.
+
+## [1.5.3]
+
+* KAITO - Model Management & Chat Features.
+* Auto Deployments Utility Logic.
+* Remove activation event trigger.
+* kubectl-gadget: Update to v0.34.0.
+* Dependabot updates and bumps.
+
+Thank you so much to @burak-ok, @ReinierCC, @tejhan, @qpetraroia, @hsubramanianaks, @Tatsinnit for contributions, testing and reviews.
+
+## [1.5.2]
+
+* Engine and VSCE package update.
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @qpetraroia, @hsubramanianaks, @Tatsinnit for contributions, testing and reviews.
+
+## [1.5.1]
+
+* Track Version in the Extension Code, for walkthrough.
+* Remove unused and unnecessary parameters for automatic cluster creation.
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @ReinierCC, @kejatura-dev, @qpetraroia, @hsubramanianaks, @joybb, @sabbour for contributions, testing and reviews.
+
+## [1.5.0]
+
+* Kaito deployment & ux updates.
+* New Publish Action on Secure Runner.
+* Improvements for GH copilot handlers.
+* New Publish Workflow Fix.
+* Manually fetching package.json version.
+* Changing npm to npx.
+* Kaito additional error & quota handling.
+* kaito needs to be KAITO named.
+* Add documentation for GH Copilot handlers and telemetry.
+* Dependabot updates and bumps.
+
+Thank you so much to @tejhan, @ReinierCC, @kejatura-dev, @ivelisseca, @qpetraroia, @hsubramanianaks, Joy, Sachi for contributions, testing and reviews.
+
+## [1.4.11]
+
+* Add deploy manifest handler for GH Copilot.
+* Kubectl savedialog UX changes.
+* Support creating automatic aks from GH Copilot.
+* Kubectl command generation plugin for GH Copilot.
+* Add cluster options util for GH Copilot scenarios
+* Fix dependabot update for 1.94 with engine update.
+* Fix for different format of serviceprincal id from auth sessions.
+* Role assignments for automatic sku.
+* Support create automatic aks cluster.
+* New namespace creation in github workflow.
+* Dependabot updates and bumps.
+
+Welcome new contributors @kejatura-dev to the repo. Thanks to  @tejhan, @ReinierCC,  @ivelisseca, @qpetraroia, @hsubramanianaks, Joy for contributions, testing and reviews.
+
+## [1.4.10]
+
+* Fix for walkthrough and show welcome dependency.
+* Fixing freezing dockerfile create page.
+* Fix U/X Bugs.
+* Incremental In-Progress KAITO Work.
+* Dependabot updates and bumps.
+
+Welcome new contributors @tejhan & @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC, @tejhan for contributions, testing and reviews.
+
+## [1.4.9]
+
+* AKS diagnostic bug resolved & storage diagnostic added.
+* Updated github auth scope to repo.
+* Adding flag to prevent draft from checking for manifests.
+* U/X add border for the row.
+* Fix the eslint no-unused-vars errors.
+* changing draft version to .38 and removing manual appname.
+* Add U/X tooltip changes.
+* Dependabot updates and bumps.
+
+Welcome new contributors @tejhan & @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC, @tejhan for contributions, testing and reviews.
+
 ## [1.4.8]
 
 * Add Support Plan and Preview information in cluster Properties Page.
-* Fix Code Scanning Checkout to be pinned to the commit sha. 
+* Fix Code Scanning Checkout to be pinned to the commit sha.
 * Dependabot updates and bumps.
 
 Welcome new contributor @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetraroia, @hsubramanianaks, @ReinierCC for contributions, testing and reviews.
@@ -18,7 +273,7 @@ Welcome new contributor @ReinierCC to the repo. Thanks to  @ivelisseca, @qpetrar
 * Avoid querying graph APIs for ASO.
 * Add direct node-fetch dependency.
 * Remove deprecated starter workflow commands.
-* Remove starter workflow traces as its removed now. 
+* Remove starter workflow traces as its removed now.
 * Dependabot updates and bumps.
 
 Thanks to @peterbom, @ivelisseca, @qpetraroia, @hsubramanianaks for contributions, testing and reviews.
@@ -126,7 +381,7 @@ Collaborations and thanks to @peterbom.
 * Remove deprecated React function call and update webview-ui dependencies.
 * Dependent bot updates.
 
-Thank you so much to @peterbom, @sprab, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Suli, Yi, Tom, Indu, Sri, Prabha, Thank you all for your ideas and collaboration! 
+Thank you so much to @peterbom, @sprab, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Suli, Yi, Tom, Indu, Sri, Prabha, Thank you all for your ideas and collaboration!
 
 ## [1.3.15]
 
@@ -141,7 +396,7 @@ Thank you so much to @peterbom, @sprab, @hsubramanianaks and @qpetraroia. Specia
 * Default branch is now main.
 * Move kubectl commands to webview.
 
-Thank you so much to @peterbom, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Yi, Tom, Indu, Sri, Prabha, Chase, Thank you all for your ideas! 
+Thank you so much to @peterbom, @hsubramanianaks and @qpetraroia. Special thanks to countless folks who reach out to us and help us in improving with ideas. I would also extend huge thanks to indirect collaboration with Qi, June, Yi, Tom, Indu, Sri, Prabha, Chase, Thank you all for your ideas!
 
 ## [1.3.14]
 

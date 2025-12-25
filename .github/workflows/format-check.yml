@@ -1,0 +1,37 @@
+name: Prettier Check
+
+on:
+  pull_request:
+    paths:
+      - '**/*.ts'
+      - '**/*.tsx'
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  prettier-check:
+    runs-on: ubuntu-latest
+    permissions:
+        actions: read
+        contents: read
+        deployments: read
+        packages: none
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+            npm run install:all
+
+      - name: Run Prettier check
+        run: npx prettier --check "**/*.{ts,tsx,json,css,md}"

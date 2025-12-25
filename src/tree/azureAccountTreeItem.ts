@@ -6,16 +6,17 @@ import {
     TreeItemIconPath,
     registerEvent,
 } from "@microsoft/vscode-azext-utils";
-import { AuthenticationSession, ThemeIcon } from "vscode";
+import { AuthenticationSession, ThemeIcon, AuthenticationWwwAuthenticateRequest, l10n } from "vscode";
 import { assetUri } from "../assets";
 import { failed } from "../commands/utils/errorable";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { createSubscriptionTreeItem } from "./subscriptionTreeItem";
-import { getFilteredSubscriptionsChangeEvent } from "../commands/utils/config";
+import { getFilteredClustersChangeEvent, getFilteredSubscriptionsChangeEvent } from "../commands/utils/config";
 import { getCredential, getEnvironment } from "../auth/azureAuth";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import { Subscription } from "@azure/arm-resources-subscriptions";
 import { AzureSessionProvider, ReadyAzureSessionProvider, isReady } from "../auth/types";
+import { TokenCredential } from "@azure/identity";
 
 export function createAzureAccountTreeItem(
     sessionProvider: AzureSessionProvider,
@@ -32,8 +33,12 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
 
         const onStatusChange = this.sessionProvider.signInStatusChangeEvent;
         const onFilteredSubscriptionsChange = getFilteredSubscriptionsChangeEvent();
+        const onFilteredClustersChange = getFilteredClustersChangeEvent();
         registerEvent("azureAccountTreeItem.onSignInStatusChange", onStatusChange, (context) => this.refresh(context));
         registerEvent("azureAccountTreeItem.onSubscriptionFilterChange", onFilteredSubscriptionsChange, (context) =>
+            this.refresh(context),
+        );
+        registerEvent("azureAccountTreeItem.onClusterFilterChange", onFilteredClustersChange, (context) =>
             this.refresh(context),
         );
     }
@@ -76,7 +81,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             case "Initializing":
                 return [
                     new GenericTreeItem(this, {
-                        label: "Loading...",
+                        label: l10n.t("Loading..."),
                         contextValue: "azureCommand",
                         id: "aksAccountLoading",
                         iconPath: new ThemeIcon("loading~spin"),
@@ -85,7 +90,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             case "SignedOut":
                 return [
                     new GenericTreeItem(this, {
-                        label: "Sign in to Azure...",
+                        label: l10n.t("Sign in to Azure..."),
                         commandId: "aks.signInToAzure",
                         contextValue: "azureCommand",
                         id: "aksAccountSignIn",
@@ -96,7 +101,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             case "SigningIn":
                 return [
                     new GenericTreeItem(this, {
-                        label: "Waiting for Azure sign-in...",
+                        label: l10n.t("Waiting for Azure sign-in..."),
                         contextValue: "azureCommand",
                         id: "aksAccountSigningIn",
                         iconPath: new ThemeIcon("loading~spin"),
@@ -108,7 +113,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
             // Signed in, but no tenant selected, AND there is more than one tenant to choose from.
             return [
                 new GenericTreeItem(this, {
-                    label: "Select tenant...",
+                    label: l10n.t("Select tenant..."),
                     commandId: "aks.selectTenant",
                     contextValue: "azureCommand",
                     id: "aksAccountSelectTenant",
@@ -125,7 +130,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         if (failed(session) || !isReady(this.sessionProvider)) {
             return [
                 new GenericTreeItem(this, {
-                    label: "Error authenticating",
+                    label: l10n.t("Error authenticating"),
                     contextValue: "azureCommand",
                     id: "aksAccountError",
                     iconPath: new ThemeIcon("error"),
@@ -137,7 +142,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         if (failed(subscriptions)) {
             return [
                 new GenericTreeItem(this, {
-                    label: "Error loading subscriptions",
+                    label: l10n.t("Error loading subscriptions"),
                     contextValue: "azureCommand",
                     id: "aksAccountError",
                     iconPath: new ThemeIcon("error"),
@@ -149,7 +154,7 @@ class AzureAccountTreeItem extends AzExtParentTreeItem {
         if (subscriptions.result.length === 0) {
             return [
                 new GenericTreeItem(this, {
-                    label: "No subscriptions found",
+                    label: l10n.t("No subscriptions found"),
                     contextValue: "azureCommand",
                     id: "aksAccountNoSubs",
                     iconPath: new ThemeIcon("info"),
@@ -200,5 +205,28 @@ function getSubscriptionContext(
         userId: session.account.id,
         environment,
         isCustomCloud: environment.name === "AzureCustomCloud",
+        createCredentialsForScopes: async (
+            scopeListOrRequest: string[] | AuthenticationWwwAuthenticateRequest,
+        ): Promise<TokenCredential> => {
+            const scopes: string[] = Array.isArray(scopeListOrRequest)
+                ? scopeListOrRequest
+                : // attempt to read common properties from AuthenticationWwwAuthenticateRequest
+                  "scopeList" in scopeListOrRequest && Array.isArray(scopeListOrRequest.scopeList)
+                  ? scopeListOrRequest.scopeList
+                  : "scopes" in scopeListOrRequest && Array.isArray(scopeListOrRequest.scopes)
+                    ? scopeListOrRequest.scopes
+                    : [];
+
+            const authSession = await sessionProvider.getAuthSession({ scopes });
+            if (failed(authSession)) {
+                throw new Error(l10n.t(`No Microsoft authentication session found: {0}`, authSession.error));
+            }
+
+            return {
+                getToken: async () => {
+                    return { token: authSession.result.accessToken, expiresOnTimestamp: 0 };
+                },
+            };
+        },
     };
 }

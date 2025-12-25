@@ -1,4 +1,3 @@
-import { VSCodeDivider } from "@vscode/webview-ui-toolkit/react";
 import { CommandCategory, InitialState, PresetCommand } from "../../../src/webview-contract/webviewDefinitions/kubectl";
 import styles from "./Kubectl.module.css";
 import { CommandList } from "./CommandList";
@@ -7,6 +6,8 @@ import { CommandOutput } from "./CommandOutput";
 import { SaveCommandDialog } from "./SaveCommandDialog";
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
+import { useEffect } from "react";
+import * as l10n from "@vscode/l10n";
 
 export function Kubectl(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -61,11 +62,22 @@ export function Kubectl(initialState: InitialState) {
     const commandLookup = Object.fromEntries(state.allCommands.map((cmd) => [cmd.command, cmd]));
     const matchesExisting = state.selectedCommand !== null ? state.selectedCommand.trim() in commandLookup : false;
 
+    useEffect(() => {
+        const command = initialState?.initialCommand?.trim();
+        if (command) {
+            eventHandlers.onSetSelectedCommand({ command });
+        }
+        // dependencies are not needed as this effect runs only once on mount.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     return (
         <div className={styles.wrapper}>
             <header className={styles.mainHeading}>
-                <h2>Kubectl Command Run for {state.clusterName}</h2>
-                <VSCodeDivider />
+                <h2>
+                    Kubectl {l10n.t("Command Run for")} {state.clusterName}
+                </h2>
+                <hr />
             </header>
             <nav className={styles.commandNav}>
                 <CommandList
@@ -83,7 +95,7 @@ export function Kubectl(initialState: InitialState) {
                     onRunCommand={handleRunCommand}
                     onSaveRequest={handleSaveRequest}
                 />
-                <VSCodeDivider />
+                <hr />
                 <CommandOutput
                     isCommandRunning={state.isCommandRunning}
                     output={state.output}

@@ -16,10 +16,13 @@ body {
 a,
 a code {
     color: var(--vscode-textLink-foreground);
+    font-size: var(--vscode-font-size);
+    text-decoration: none;
 }
 
 a:hover {
     color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
 }
 
 a:focus,
@@ -28,15 +31,191 @@ select:focus,
 textarea:focus {
     outline: -webkit-focus-ring-color solid 1px;
     outline-offset: -1px;
+    outline-color: var(--vscode-focusBorder);
 }
 
-code {
+button {
+    padding: 4.6px 11.5px 4.6px 11.5px;
+    border: 1px solid var(--vscode-button-border);
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    font-family: inherit;
+    border-radius: 2px;
+}
+
+button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+    border-color: var(--vscode-button-hoverBorder);
+    cursor: pointer;
+}
+
+button:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.secondary-button {
+    padding: 4.6px 11.5px 4.6px 11.5px;
+    border: 1px solid var(--vscode-button-secondaryBorder);
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border-radius: 2px;
+}
+
+.secondary-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+    border-color: var(--vscode-button-secondaryHoverBorder);
+    cursor: pointer;
+}
+
+.secondary-button:disabled {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.secondary-button:hover:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.secondary-button code {
     color: var(--vscode-textPreformat-foreground);
+}
+
+.icon-button,
+.choose-location-button {
+    color: inherit;
+    background: none;
+    padding: 0rem 0.3rem 0rem 0.3rem;
+    border-radius: 5px;
+}
+.icon-button:hover,
+.choose-location-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.choose-location-button {
+    margin-top: 0.1rem;
+    padding: 0.15rem 0.3rem 0.15rem 0.1rem;
+}
+
+.icon-button:disabled,
+.choose-location-button:disabled {
+    background: none;
 }
 
 blockquote {
     background: var(--vscode-textBlockQuote-background);
     border-color: var(--vscode-textBlockQuote-border);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--vscode-settings-dropdownListBorder);
+    margin: 4px 0 4px 0;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"] {
+    height: 1.5rem;
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    padding: 0 9px;
+    box-sizing: border-box;
+    border-radius: 2px;
+    font-family: inherit;
+}
+
+input[type="text"]:read-only {
+    cursor: not-allowed;
+}
+
+input[type="text"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+input[type="checkbox"] {
+    width: 18.25px;
+    height: 18.25px;
+    cursor: pointer;
+}
+
+input[type="radio"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    background-color: var(--vscode-checkbox-background, none);
+    border: 1px solid var(--vscode-checkbox-border, --radio-border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    outline: none;
+    color: var(--vscode-checkbox-foreground, white);
+    margin: 0px;
+    padding: 0px;
+    position: relative;
+    top: 0.18rem;
+}
+
+input[type="radio"]:checked::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background-color: var(--vscode-checkbox-foreground, white);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+input[type="radio"]:focus-visible {
+    border: 1px solid var(--vscode-focusBorder, #007acc);
+}
+
+input[type="radio"]:active {
+    border: 1px solid var(--vscode-focusBorder, #007acc);
+}
+
+input[type="radio"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+fieldset:disabled label {
+    opacity: 0.4;
+}
+
+select {
+    height: 1.5rem;
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    padding: 0px 0px 0px 4px;
+    box-sizing: border-box;
+    font-family: inherit;
+    border-radius: 2px;
+}
+
+select:hover {
+    cursor: pointer;
+}
+
+option {
+    font-size: var(--vscode-font-size);
+}
+
+option:focus {
+    background-color: var(--vscode-list-activeSelectionBackground);
 }
 
 kbd {
@@ -100,15 +279,6 @@ fieldset {
     border: none;
     padding: 0;
     margin: 0;
-}
-
-input[type="number"] {
-    height: calc(var(--input-height) * 1px);
-    color: var(--input-foreground);
-    background-color: var(--input-background);
-    border: 0;
-    padding: 0 calc(var(--design-unit) * 2px + 1px);
-    box-sizing: border-box;
 }
 
 input[type="number"]::-webkit-inner-spin-button {

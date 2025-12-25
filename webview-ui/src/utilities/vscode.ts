@@ -20,6 +20,8 @@ import { isObject } from "./runtimeTypes";
 const vsCodeApi: WebviewApi<unknown> | undefined =
     typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : undefined;
 
+export const vscode = vsCodeApi!;
+
 interface NamedEventTarget {
     target: EventTarget;
     name: string;

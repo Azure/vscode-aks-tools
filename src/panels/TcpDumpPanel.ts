@@ -1,6 +1,6 @@
 import { platform } from "os";
 import { relative } from "path";
-import { Uri, commands, window, workspace } from "vscode";
+import { l10n, Uri, commands, window, workspace, env } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as semver from "semver";
 import { failed, map as errmap, Errorable } from "../commands/utils/errorable";
@@ -24,7 +24,16 @@ const tcpDumpCommandBase = "tcpdump --snapshot-length=0 -vvv";
 const captureDir = "/tmp";
 const captureFilePrefix = "vscodenodecap_";
 const captureFileBasePath = `${captureDir}/${captureFilePrefix}`;
-const captureFilePathRegex = `${captureFileBasePath.replace(/\//g, "\\$&")}(.*)\\.cap`; // Matches the part of the filename after the prefix
+const captureFileBasePathEscaped = escapeRegExp(captureFileBasePath);
+const captureFilePathRegex = `${captureFileBasePathEscaped}(.*)\\.cap`; // Matches the part of the filename after the prefix
+
+// Escape all regex meta characters to ensure sanitation and '/' for later use in regex pattern
+export function escapeRegExp(input: string): string {
+    return input.replace(/(\\)?([.*+?^${}()|[\]\\/])/g, (match, backslash, char) => {
+        // If there's a backslash before the character, return the match unchanged. (To prevent double escaping)
+        return backslash ? match : `\\${char}`;
+    });
+} //Reference for regex syntax chars: https://262.ecma-international.org/13.0/index.html#prod-SyntaxCharacter
 
 function getPodName(node: NodeName) {
     return `debug-${node}`;
@@ -79,7 +88,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
     ) {}
 
     getTitle(): string {
-        return `TCP Capture on ${this.clusterName}`;
+        return l10n.t(`TCP Capture on {0}`, this.clusterName);
     }
 
     getInitialState(): InitialState {
@@ -125,7 +134,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
             webview.postCheckNodeStateResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to get debug pod names:\n${podNames.error}`,
+                errorMessage: l10n.t(`Failed to get debug pod names:\n{0}`, podNames.error),
                 isDebugPodRunning: false,
                 runningCapture: null,
                 completedCaptures: [],
@@ -151,7 +160,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
             webview.postCheckNodeStateResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Pod ${getPodName(node)} is not ready:\n${waitResult.error}`,
+                errorMessage: l10n.t(`Pod {0} is not ready:\n{1}`, getPodName(node), waitResult.error),
                 isDebugPodRunning,
                 runningCapture: null,
                 completedCaptures: [],
@@ -164,7 +173,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
             webview.postCheckNodeStateResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to read running captures:\n${runningCaptureProcs.error}`,
+                errorMessage: l10n.t(`Failed to read running captures:\n{0}`, runningCaptureProcs.error),
                 isDebugPodRunning,
                 runningCapture: null,
                 completedCaptures: [],
@@ -181,7 +190,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
             webview.postCheckNodeStateResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to read completed captures:\n${completedCaptures.error}`,
+                errorMessage: l10n.t(`Failed to read completed captures:\n{0}`, completedCaptures.error),
                 isDebugPodRunning,
                 runningCapture,
                 completedCaptures: [],
@@ -242,7 +251,7 @@ spec:
             webview.postStartDebugPodResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Unable to create debug pod:\n${applyResult.error}`,
+                errorMessage: l10n.t(`Unable to create debug pod:\n{0}`, applyResult.error),
             });
             return;
         }
@@ -252,7 +261,7 @@ spec:
             webview.postStartDebugPodResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Pod ${getPodName(node)} is not ready:\n${waitResult.error}`,
+                errorMessage: l10n.t(`Pod {0} is not ready:\n{1}`, getPodName(node), waitResult.error),
             });
             return;
         }
@@ -262,7 +271,11 @@ spec:
             webview.postStartDebugPodResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Installing debug tools failed on ${getPodName(node)}:\n${installResult.error}`,
+                errorMessage: l10n.t(
+                    `Installing debug tools failed on {0}:\n{1}`,
+                    getPodName(node),
+                    installResult.error,
+                ),
             });
             return;
         }
@@ -281,7 +294,7 @@ spec:
             webview.postDeleteDebugPodResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to delete ${getPodName(node)}:\n${output.error}`,
+                errorMessage: l10n.t(`Failed to delete {0}:\n{1}`, getPodName(node), output.error),
             });
             return;
         }
@@ -291,7 +304,7 @@ spec:
             webview.postStartDebugPodResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Pod ${getPodName(node)} was not deleted:\n${waitResult.error}`,
+                errorMessage: l10n.t(`Pod {0} was not deleted:\n{1}`, getPodName(node), waitResult.error),
             });
             return;
         }
@@ -330,7 +343,7 @@ spec:
             webview.postStopCaptureResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to determine running captures:\n${runningCaptures.error}`,
+                errorMessage: l10n.t(`Failed to determine running captures:\n{0}`, runningCaptures.error),
                 capture: null,
             });
             return;
@@ -341,7 +354,7 @@ spec:
             webview.postStopCaptureResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Unable to find running capture ${capture}. Found: ${runningCaptures.result
+                errorMessage: `${l10n.t("Unable to find running capture")} ${capture}. ${l10n.t("Found:")} ${runningCaptures.result
                     .map((p) => p.capture)
                     .join(",")}`,
                 capture: null,
@@ -361,7 +374,7 @@ spec:
             webview.postStopCaptureResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to kill tcpdump process ${captureProcess.pid}:\n${killOutput.error}`,
+                errorMessage: l10n.t(`Failed to kill tcpdump process {0}:\n{1}`, captureProcess.pid, killOutput.error),
                 capture: null,
             });
             return;
@@ -372,7 +385,7 @@ spec:
             webview.postStopCaptureResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Failed to read completed captures:\n${completedCaptures.error}`,
+                errorMessage: l10n.t(`Failed to read completed captures:\n{0}`, completedCaptures.error),
                 capture: null,
             });
             return;
@@ -383,7 +396,7 @@ spec:
             webview.postStopCaptureResponse({
                 node,
                 succeeded: false,
-                errorMessage: `Cannot find capture file for ${capture}`,
+                errorMessage: l10n.t(`Cannot find capture file for {0}`, capture),
                 capture: null,
             });
             return;
@@ -405,11 +418,22 @@ spec:
         const localCaptureUri = await window.showSaveDialog({
             defaultUri: Uri.file(`${captureName}.cap`),
             filters: { "Capture Files": ["cap"] },
-            saveLabel: "Download",
-            title: "Download Capture File",
+            saveLabel: l10n.t("Download"),
+            title: l10n.t("Download Capture File"),
         });
 
         if (!localCaptureUri) {
+            //  Reset download state with error message if no file path was selected
+            webview.postDownloadCaptureFileResponse({
+                node,
+                captureName,
+                localCapturePath: "",
+                succeeded: false,
+                errorMessage: l10n.t(
+                    `Failed to download capture '{0}'. No file path was selected, please try again.`,
+                    captureName,
+                ),
+            });
             return;
         }
 
@@ -432,7 +456,7 @@ spec:
                 captureName,
                 localCapturePath: localCaptureUri.fsPath,
                 succeeded: false,
-                errorMessage: `Failed to download ${captureName} to ${localCaptureUri.fsPath}:\n${output.error}`,
+                errorMessage: `${l10n.t("Failed to download")} ${captureName} ${l10n.t("to")} ${localCaptureUri.fsPath}:\n${output.error}`,
             });
             return;
         }
@@ -447,7 +471,13 @@ spec:
     }
 
     private handleOpenFolder(path: string) {
-        commands.executeCommand("revealFileInOS", Uri.file(path));
+        // Open the folder in the respective file explorer
+        if (env.remoteName === "wsl") {
+            commands.executeCommand("remote-wsl.revealInExplorer", Uri.file(path));
+        } else {
+            // revealFileInOS doesn't work in WSL
+            commands.executeCommand("revealFileInOS", Uri.file(path));
+        }
     }
 
     private async handleGetInterfaces(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
@@ -587,7 +617,7 @@ spec:
             const sizeInKB = parseInt(parts[1]);
             const name = getCaptureFromFilePath(filePath);
             if (name === null) {
-                const errorMessage = `Error extracting capture name from ${findOutputLine}`;
+                const errorMessage = l10n.t(`Error extracting capture name from {0}`, findOutputLine);
                 window.showErrorMessage(errorMessage);
                 throw new Error(errorMessage);
             }

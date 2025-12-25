@@ -1,10 +1,10 @@
 import { faTimesCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 import { FormEvent, useState } from "react";
 import { Dialog } from "../components/Dialog";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, unset, valid } from "../utilities/validation";
 import styles from "./CreateCluster.module.css";
+import * as l10n from "@vscode/l10n";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
@@ -19,10 +19,10 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
     const [name, setName] = useState<Validatable<string>>(unset());
 
     function getValidatedName(name: string): Validatable<string> {
-        if (!name) return invalid(name, "Resource Group name must be at least 1 character long.");
-        if (name.length > 90) return invalid(name, "Resource Group name must be at most 90 characters long.");
+        if (!name) return invalid(name, l10n.t("Resource Group name must be at least 1 character long."));
+        if (name.length > 90) return invalid(name, l10n.t("Resource Group name must be at most 90 characters long."));
         if (!/[\p{Letter}0-9_\-.()]+/u.test(name)) {
-            return invalid(name, "Resource Group name contains invalid characters.");
+            return invalid(name, l10n.t("Resource Group name contains invalid characters."));
         }
 
         return valid(name);
@@ -47,14 +47,15 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
 
     return (
         <Dialog isShown={props.isShown} onCancel={() => props.onCancel()}>
-            <h2>New Resource Group</h2>
+            <h2>{l10n.t("New Resource Group")}</h2>
 
             <form className={styles.createForm} onSubmit={handleSubmit}>
                 <div className={styles.inputContainer}>
                     <label htmlFor="rg-name-input" className={styles.label}>
-                        Name*
+                        {l10n.t("Name*")}
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="rg-name-input"
                         value={isValueSet(name) ? name.value : ""}
                         className={`${styles.longControl} ${styles.validatable}`}
@@ -70,8 +71,8 @@ export function CreateResourceGroupDialog(props: CreateResourceGroupDialogProps)
                 </div>
 
                 <div className={styles.buttonContainer} style={{ justifyContent: "flex-end" }}>
-                    <VSCodeButton type="submit">Create</VSCodeButton>
-                    <VSCodeButton onClick={props.onCancel}>Cancel</VSCodeButton>
+                    <button type="submit">{l10n.t("Create")}</button>
+                    <button onClick={props.onCancel}>{l10n.t("Cancel")}</button>
                 </div>
             </form>
         </Dialog>

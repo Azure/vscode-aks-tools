@@ -40,19 +40,12 @@ import { useStateManagement } from "../../utilities/state";
 import styles from "../Draft.module.css";
 import { Maybe, isNothing, just, nothing } from "../../utilities/maybe";
 import { ResourceSelector } from "../../components/ResourceSelector";
-import {
-    VSCodeButton,
-    VSCodeLink,
-    VSCodeRadio,
-    VSCodeRadioGroup,
-    VSCodeTextField,
-} from "@vscode/webview-ui-toolkit/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTimesCircle, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { faFolder } from "@fortawesome/free-regular-svg-icons";
 import { distinct, filterNulls, replaceItem } from "../../utilities/array";
 import { TextWithDropdown } from "../../components/TextWithDropdown";
-
+import * as l10n from "@vscode/l10n";
 export function DraftWorkflow(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
@@ -87,11 +80,11 @@ export function DraftWorkflow(initialState: InitialState) {
         eventHandlers.onSetSelectedWorkflowName(validated);
 
         function getValidatedWorkflowName(name: string): Validatable<string> {
-            if (!name) return missing("Workflow name is required.");
+            if (!name) return missing(l10n.t("Workflow name is required."));
 
             // TODO: valid filename checking
             if (state.existingWorkflowFiles.some((f) => f.name === name)) {
-                return invalid(name, "Workflow with this name already exists.");
+                return invalid(name, l10n.t("Workflow with this name already exists."));
             }
 
             return valid(name);
@@ -99,18 +92,18 @@ export function DraftWorkflow(initialState: InitialState) {
     }
 
     function handleGitHubRepoSelect(repo: GitHubRepo | null) {
-        const validated = repo === null ? missing<GitHubRepo>("GitHub repository is required.") : valid(repo);
+        const validated = repo === null ? missing<GitHubRepo>(l10n.t("GitHub repository is required.")) : valid(repo);
         eventHandlers.onSetSelectedGitHubRepo(validated);
     }
 
     function handleBranchSelect(branch: string | null) {
-        const validated = branch === null ? missing<string>("Branch is required.") : valid(branch);
+        const validated = branch === null ? missing<string>(l10n.t("Branch is required.")) : valid(branch);
         eventHandlers.onSetSelectedBranchName(validated);
     }
 
     function handleSubscriptionSelect(subscription: Subscription | null) {
         const validated =
-            subscription === null ? missing<Subscription>("Subscription is required.") : valid(subscription);
+            subscription === null ? missing<Subscription>(l10n.t("Subscription is required.")) : valid(subscription);
         eventHandlers.onSetSelectedSubscription(validated);
     }
 
@@ -121,7 +114,7 @@ export function DraftWorkflow(initialState: InitialState) {
                 defaultPath: state.workspaceConfig.fullPath,
                 type: "file",
                 title: "Dockerfile",
-                buttonLabel: "Select",
+                buttonLabel: l10n.t("Select"),
                 filters: { Dockerfile: ["Dockerfile"] },
             },
         });
@@ -133,20 +126,20 @@ export function DraftWorkflow(initialState: InitialState) {
             options: {
                 defaultPath: state.workspaceConfig.fullPath,
                 type: "directory",
-                title: "Build context path",
-                buttonLabel: "Select",
+                title: l10n.t("Build context path"),
+                buttonLabel: l10n.t("Select"),
             },
         });
     }
 
     function handleAcrResourceGroupSelect(resourceGroup: string | null) {
         const validated =
-            resourceGroup === null ? missing<string>("ACR Resource Group is required.") : valid(resourceGroup);
+            resourceGroup === null ? missing<string>(l10n.t("ACR Resource Group is required.")) : valid(resourceGroup);
         eventHandlers.onSetSelectedAcrResourceGroup(validated);
     }
 
     function handleAcrSelect(acr: string | null) {
-        const validated = acr === null ? missing<string>("ACR is required.") : valid(acr);
+        const validated = acr === null ? missing<string>(l10n.t("ACR is required.")) : valid(acr);
         eventHandlers.onSetSelectedAcr(validated);
     }
 
@@ -155,19 +148,21 @@ export function DraftWorkflow(initialState: InitialState) {
         eventHandlers.onSetSelectedRepositoryName(validated);
 
         function getValidatedRepository(): Validatable<NewOrExisting<string>> {
-            if (!repository) return missing("Azure Container Registry image is required.");
+            if (!repository) return missing(l10n.t("Azure Container Registry image is required."));
             return valid({ isNew, value: repository });
         }
     }
 
     function handleClusterResourceGroupSelect(resourceGroup: string | null) {
         const validated =
-            resourceGroup === null ? missing<string>("Cluster Resource Group is required.") : valid(resourceGroup);
+            resourceGroup === null
+                ? missing<string>(l10n.t("Cluster Resource Group is required."))
+                : valid(resourceGroup);
         eventHandlers.onSetSelectedClusterResourceGroup(validated);
     }
 
     function handleClusterSelect(cluster: string | null) {
-        const validated = cluster === null ? missing<string>("Cluster is required.") : valid(cluster);
+        const validated = cluster === null ? missing<string>(l10n.t("Cluster is required.")) : valid(cluster);
         eventHandlers.onSetSelectedCluster(validated);
     }
 
@@ -176,7 +171,7 @@ export function DraftWorkflow(initialState: InitialState) {
         eventHandlers.onSetSelectedClusterNamespace(validated);
 
         function getValidatedNamespace(): Validatable<NewOrExisting<string>> {
-            if (!namespace) return missing("Namespace is required.");
+            if (!namespace) return missing(l10n.t("Namespace is required."));
             return valid({ isNew, value: namespace });
         }
     }
@@ -192,8 +187,8 @@ export function DraftWorkflow(initialState: InitialState) {
             options: {
                 defaultPath: state.workspaceConfig.fullPath,
                 type: "file",
-                title: "Select all Manifest Files",
-                buttonLabel: "Select Files",
+                title: l10n.t("Select all Manifest Files"),
+                buttonLabel: l10n.t("Select Files"),
                 filters: { YAML: ["yaml", "yml"] },
                 canSelectMany: true,
             },
@@ -205,7 +200,7 @@ export function DraftWorkflow(initialState: InitialState) {
             const currentPaths = state.manifestsParamsState.selectedManifestPaths.value;
             const newPaths = currentPaths.filter((p) => p !== path);
             if (newPaths.length === 0) {
-                eventHandlers.onSetSelectedManifestPaths(missing("Manifest paths are required."));
+                eventHandlers.onSetSelectedManifestPaths(missing(l10n.t("Manifest paths are required.")));
             } else {
                 eventHandlers.onSetSelectedManifestPaths(valid(newPaths));
             }
@@ -218,8 +213,8 @@ export function DraftWorkflow(initialState: InitialState) {
             options: {
                 defaultPath: state.workspaceConfig.fullPath,
                 type: "directory",
-                title: "Helm charts folder",
-                buttonLabel: "Select",
+                title: l10n.t("{0} charts folder", "Helm"),
+                buttonLabel: l10n.t("Select"),
             },
         });
     }
@@ -230,8 +225,8 @@ export function DraftWorkflow(initialState: InitialState) {
             options: {
                 defaultPath: state.workspaceConfig.fullPath,
                 type: "file",
-                title: "Helm Values.yaml file",
-                buttonLabel: "Select",
+                title: l10n.t("{0} file", "Helm Values.yaml"),
+                buttonLabel: l10n.t("Select"),
                 filters: { YAML: ["yaml", "yml"] },
             },
         });
@@ -250,13 +245,13 @@ export function DraftWorkflow(initialState: InitialState) {
         function getValidatedOverrideKey(key: string): Validatable<string> {
             key = key.trim();
 
-            if (!key) return missing("Key is required.");
+            if (!key) return missing(l10n.t("Key is required."));
             const otherKeys = state.helmParamsState.selectedOverrides
                 .filter((o) => o !== override)
                 .map((o) => o.key)
                 .filter(isValueSet)
                 .map((k) => k.value);
-            if (otherKeys.includes(key)) return invalid(key, "Key already exists.");
+            if (otherKeys.includes(key)) return invalid(key, l10n.t("Key already exists."));
 
             // TODO: valid key checking
             return valid(key);
@@ -274,7 +269,7 @@ export function DraftWorkflow(initialState: InitialState) {
         eventHandlers.onSetSelectedHelmOverrides(overrides);
 
         function getValidatedOverrideValue(value: string): Validatable<string> {
-            if (!value) return missing("Value is required.");
+            if (!value) return missing(l10n.t("Value is required."));
 
             // TODO: Valid value checking
             return valid(value);
@@ -385,35 +380,40 @@ export function DraftWorkflow(initialState: InitialState) {
         vscode.postCreateWorkflowRequest(createParams.value);
     }
 
-    const [manifests, helm]: DeploymentSpecType[] = ["manifests", "helm"];
     const existingFile = getExistingFile(state, state.selectedWorkflowName);
 
-    const gitHubRepoTooltipMessage =
-        "Select the primary/upstream fork of this repository.\n\nThis will allow you to select which branch will trigger the workflow.";
+    const gitHubRepoTooltipMessage = l10n.t(
+        "Select the primary/upstream fork of this repository.\n\nThis will allow you to select which branch will trigger the workflow.",
+    );
+
+    const namespaceTooltipMessage =
+        "To create a new namespace, write the desired name in the field. If the namespace does not already exist, it will be not be created until the workflow runs.";
 
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-                <h2>Automated Deployments: Draft a GitHub Workflow</h2>
+                <h2>{l10n.t("Automated Deployments: Draft a GitHub Workflow")}</h2>
                 <p className={styles.fullWidth}>
-                    Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make
-                    sure you have created a Dockerfile and Deployment. You can do this using the{" "}
-                    <VSCodeLink href="#" onClick={handleDraftDockerfileClick}>
-                        Automated Deployments: Create a Dockerfile
-                    </VSCodeLink>{" "}
+                    {l10n.t(
+                        "Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make sure you have created a Dockerfile and Deployment. You can do this using the",
+                    )}{" "}
+                    <a href="#" onClick={handleDraftDockerfileClick}>
+                        {l10n.t("Automated Deployments: Create a Dockerfile")}
+                    </a>{" "}
                     and{" "}
-                    <VSCodeLink href="#" onClick={handleDraftDeploymentClick}>
-                        Automated Deployments: Create a Deployment
-                    </VSCodeLink>{" "}
-                    commands.
+                    <a href="#" onClick={handleDraftDeploymentClick}>
+                        {l10n.t("Automated Deployments: Create a Deployment")}
+                    </a>{" "}
+                    {l10n.t("commands.")}
                 </p>
 
-                <h3 className={styles.fullWidth}>Workflow properties</h3>
+                <h3 className={styles.fullWidth}>{l10n.t("Workflow properties")}</h3>
                 <fieldset className={styles.inputContainer} disabled={state.status !== "Editing"}>
                     <label htmlFor="workflow-name-input" className={styles.label}>
-                        Workflow name *
+                        {l10n.t("Workflow name *")}
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="workflow-name-input"
                         value={orDefault(state.selectedWorkflowName, "")}
                         className={styles.control}
@@ -428,7 +428,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     )}
 
                     <label htmlFor="gh-repo-input" className={styles.label}>
-                        GitHub repository *
+                        {l10n.t("GitHub repository *")}
                         <span className={"tooltip-holder"} data-tooltip-text={gitHubRepoTooltipMessage}>
                             <i className={`${styles.inlineIcon} codicon codicon-info`} />
                         </span>
@@ -446,7 +446,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     {isValid(state.selectedGitHubRepo) && (
                         <>
                             <label htmlFor="branch-input" className={styles.label}>
-                                Branch *
+                                {l10n.t("Branch *")}
                             </label>
                             <ResourceSelector<string>
                                 id="branch-input"
@@ -467,7 +467,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     )}
 
                     <label htmlFor="subscription-input" className={styles.label}>
-                        Subscription *
+                        {l10n.t("Subscription *")}
                     </label>
                     <ResourceSelector<Subscription>
                         id="subscription-input"
@@ -490,7 +490,8 @@ export function DraftWorkflow(initialState: InitialState) {
                     <label htmlFor="dockerfile-input" className={styles.label}>
                         Dockerfile *
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="dockerfile-input"
                         value={
                             isValueSet(state.selectedDockerfilePath)
@@ -501,12 +502,12 @@ export function DraftWorkflow(initialState: InitialState) {
                         className={styles.control}
                     />
                     <div className={styles.controlSupplement}>
-                        <VSCodeButton appearance="icon" onClick={handleChooseDockerfileClick}>
+                        <button className="choose-location-button" onClick={handleChooseDockerfileClick}>
                             <span className={styles.iconButton}>
                                 <FontAwesomeIcon icon={faFolder} />
-                                &nbsp;Choose Dockerfile
+                                &nbsp;{l10n.t("Choose")} Dockerfile
                             </span>
-                        </VSCodeButton>
+                        </button>
                     </div>
                     {hasMessage(state.selectedDockerfilePath) && (
                         <span className={styles.validationMessage}>
@@ -516,28 +517,29 @@ export function DraftWorkflow(initialState: InitialState) {
                     )}
 
                     <label htmlFor="build-context-input" className={styles.label}>
-                        Build context *
+                        {l10n.t("Build context *")}
                     </label>
-                    <VSCodeTextField
+                    <input
+                        type="text"
                         id="build-context-input"
                         value={`.${state.workspaceConfig.pathSeparator}${state.selectedBuildContextPath}`}
                         readOnly
                         className={styles.control}
                     />
                     <div className={styles.controlSupplement}>
-                        <VSCodeButton appearance="icon" onClick={handleChooseBuildContextClick}>
+                        <button className="choose-location-button" onClick={handleChooseBuildContextClick}>
                             <span className={styles.iconButton}>
                                 <FontAwesomeIcon icon={faFolder} />
-                                &nbsp;Choose build context
+                                &nbsp;{l10n.t("Choose build context")}
                             </span>
-                        </VSCodeButton>
+                        </button>
                     </div>
 
                     {isValid(state.selectedSubscription) && (
                         <>
                             <h3 className={styles.fullWidth}>Azure Container Registry details</h3>
                             <label htmlFor="acr-rg-input" className={styles.label}>
-                                ACR Resource Group *
+                                {l10n.t("ACR Resource Group *")}
                             </label>
                             <ResourceSelector<string>
                                 id="acr-rg-input"
@@ -560,7 +562,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     {isValid(state.selectedAcrResourceGroup) && (
                         <>
                             <label htmlFor="acr-input" className={styles.label}>
-                                Container Registry *
+                                {l10n.t("Container Registry *")}
                             </label>
                             <ResourceSelector<string>
                                 id="acr-input"
@@ -583,7 +585,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     {isValid(state.selectedAcr) && (
                         <>
                             <label htmlFor="acr-repo-input" className={styles.label}>
-                                Azure Container Registry image *
+                                {l10n.t("Azure Container Registry image *")}
                             </label>
 
                             <TextWithDropdown
@@ -609,7 +611,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     {isValid(state.selectedSubscription) && (
                         <>
                             <label htmlFor="cluster-rg-input" className={styles.label}>
-                                Cluster Resource Group *
+                                {l10n.t("Cluster Resource Group *")}
                             </label>
                             <ResourceSelector<string>
                                 id="cluster-rg-input"
@@ -632,7 +634,7 @@ export function DraftWorkflow(initialState: InitialState) {
                     {isValid(state.selectedClusterResourceGroup) && (
                         <>
                             <label htmlFor="cluster-input" className={styles.label}>
-                                Cluster *
+                                {l10n.t("Cluster *")}
                             </label>
                             <ResourceSelector<string>
                                 id="cluster-input"
@@ -655,7 +657,10 @@ export function DraftWorkflow(initialState: InitialState) {
                     {isValid(state.selectedCluster) && (
                         <>
                             <label htmlFor="namespace-input" className={styles.label}>
-                                Namespace *
+                                {l10n.t("Namespace *")}
+                                <span className={"tooltip-holder"} data-tooltip-text={namespaceTooltipMessage}>
+                                    <i className={`${styles.inlineIcon} codicon codicon-info`} />
+                                </span>
                             </label>
 
                             <TextWithDropdown
@@ -677,37 +682,51 @@ export function DraftWorkflow(initialState: InitialState) {
                     )}
 
                     <label htmlFor="deployment-type-input" className={styles.label}>
-                        Type
+                        {l10n.t("Type")}
                     </label>
-                    <VSCodeRadioGroup
-                        id="deployment-type-input"
-                        className={styles.control}
-                        value={state.selectedDeploymentSpecType}
-                        orientation="vertical"
-                        onChange={handleDeploymentSpecTypeChange}
-                    >
-                        <VSCodeRadio value={manifests}>Manifests</VSCodeRadio>
-                        <VSCodeRadio value={helm}>Helm</VSCodeRadio>
-                    </VSCodeRadioGroup>
+
+                    <div id="deployment-type-input" className={styles.control}>
+                        <div className={styles.radioLine}>
+                            <input
+                                type="radio"
+                                name="deployment-type"
+                                value="manifests"
+                                checked={state.selectedDeploymentSpecType === "manifests"}
+                                onChange={handleDeploymentSpecTypeChange}
+                            />
+
+                            <label className={styles.radioLabel}>Manifests</label>
+                        </div>
+                        <div className={styles.radioLine}>
+                            <input
+                                type="radio"
+                                name="deployment-type"
+                                value="helm"
+                                checked={state.selectedDeploymentSpecType === "helm"}
+                                onChange={handleDeploymentSpecTypeChange}
+                            />
+                            <label className={styles.radioLabel}>Helm</label>
+                        </div>
+                    </div>
 
                     {state.selectedDeploymentSpecType === "manifests" && (
                         <>
                             <label htmlFor="manifest-paths" className={styles.label}>
-                                Manifest file paths *
+                                Manifest {l10n.t("file paths *")}
                             </label>
                             <div className={styles.control}>
-                                <VSCodeButton appearance="icon" onClick={handleChooseManifestPathsClick}>
+                                <button className="choose-location-button" onClick={handleChooseManifestPathsClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faFolder} />
-                                        &nbsp;Choose manifest file paths
+                                        &nbsp;{l10n.t("Choose")} manifest {l10n.t("file paths")}
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                             {isValid(state.manifestsParamsState.selectedManifestPaths) && (
                                 <ul className={`${styles.existingFileList} ${styles.control}`} id="manifest-paths">
                                     {state.manifestsParamsState.selectedManifestPaths.value.map((path, i) => (
                                         <li key={i} className={styles.removable}>
-                                            <VSCodeLink
+                                            <a
                                                 href="#"
                                                 onClick={(e) => {
                                                     e.preventDefault();
@@ -715,17 +734,15 @@ export function DraftWorkflow(initialState: InitialState) {
                                                 }}
                                             >
                                                 {path}
-                                            </VSCodeLink>
-                                            <VSCodeButton
-                                                appearance="icon"
+                                            </a>
+                                            <button
+                                                className="icon-button"
                                                 onClick={() => handleDeleteManifestPathClick(path)}
-                                                aria-label="Remove"
-                                                title="Remove"
+                                                aria-label={l10n.t("Remove")}
+                                                title={l10n.t("Remove")}
                                             >
-                                                <span className={styles.iconButton}>
-                                                    <FontAwesomeIcon icon={faTrash} />
-                                                </span>
-                                            </VSCodeButton>
+                                                <FontAwesomeIcon className={styles.linkColor} icon={faTrash} />
+                                            </button>
                                         </li>
                                     ))}
                                 </ul>
@@ -742,9 +759,10 @@ export function DraftWorkflow(initialState: InitialState) {
                     {state.selectedDeploymentSpecType === "helm" && (
                         <>
                             <label htmlFor="chart-path-input" className={styles.label}>
-                                Chart path *
+                                {l10n.t("Chart path *")}
                             </label>
-                            <VSCodeTextField
+                            <input
+                                type="text"
                                 id="chart-path-input"
                                 value={
                                     isValid(state.helmParamsState.selectedChartPath)
@@ -755,12 +773,12 @@ export function DraftWorkflow(initialState: InitialState) {
                                 className={styles.control}
                             />
                             <div className={styles.controlSupplement}>
-                                <VSCodeButton appearance="icon" onClick={handleChooseHelmChartFolderClick}>
+                                <button className="choose-location-button" onClick={handleChooseHelmChartFolderClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faFolder} />
-                                        &nbsp;Choose Helm chart folder
+                                        &nbsp;{l10n.t("Choose {0} chart folder", "Helm")}
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                             {hasMessage(state.helmParamsState.selectedChartPath) && (
                                 <span className={styles.validationMessage}>
@@ -770,9 +788,10 @@ export function DraftWorkflow(initialState: InitialState) {
                             )}
 
                             <label htmlFor="values-path-input" className={styles.label}>
-                                Values.yaml path *
+                                Values.yaml {l10n.t("path")} *
                             </label>
-                            <VSCodeTextField
+                            <input
+                                type="text"
                                 id="values-path-input"
                                 value={
                                     isValid(state.helmParamsState.selectedValuesYamlPath)
@@ -783,12 +802,12 @@ export function DraftWorkflow(initialState: InitialState) {
                                 className={styles.control}
                             />
                             <div className={styles.controlSupplement}>
-                                <VSCodeButton appearance="icon" onClick={handleChooseHelmValuesFileClick}>
+                                <button className="choose-location-button" onClick={handleChooseHelmValuesFileClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faFolder} />
-                                        &nbsp;Choose values.yaml file
+                                        &nbsp;{l10n.t("Choose")} values.yaml {l10n.t("file")}
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                             {hasMessage(state.helmParamsState.selectedValuesYamlPath) && (
                                 <span className={styles.validationMessage}>
@@ -801,7 +820,8 @@ export function DraftWorkflow(initialState: InitialState) {
                             {state.helmParamsState.selectedOverrides.map((o, i) => (
                                 <>
                                     <div key={i} className={styles.control} style={{ display: "flex" }}>
-                                        <VSCodeTextField
+                                        <input
+                                            type="text"
                                             id={`override-key-input-${i}`}
                                             className={`${styles.longControl} ${styles.validatable}`}
                                             onBlur={(e) => handleOverrideKeyChange(e, o)}
@@ -809,23 +829,22 @@ export function DraftWorkflow(initialState: InitialState) {
                                             value={orDefault(o.key, "")}
                                         />
                                         =
-                                        <VSCodeTextField
+                                        <input
+                                            type="text"
                                             id={`override-value-input-${i}`}
                                             className={`${styles.longControl} ${styles.validatable}`}
                                             onBlur={(e) => handleOverrideValueChange(e, o)}
                                             onInput={(e) => handleOverrideValueChange(e, o)}
                                             value={orDefault(o.value, "")}
                                         />
-                                        <VSCodeButton
-                                            appearance="icon"
+                                        <button
+                                            className="icon-button"
                                             onClick={() => handleDeleteOverrideClick(o)}
-                                            aria-label="Remove"
-                                            title="Remove"
+                                            aria-label={l10n.t("Remove")}
+                                            title={l10n.t("Remove")}
                                         >
-                                            <span className={styles.iconButton}>
-                                                <FontAwesomeIcon icon={faTrash} />
-                                            </span>
-                                        </VSCodeButton>
+                                            <FontAwesomeIcon className={styles.linkColor} icon={faTrash} />
+                                        </button>
                                     </div>
                                     {hasMessage(o.key) && (
                                         <span className={styles.validationMessage}>
@@ -848,12 +867,12 @@ export function DraftWorkflow(initialState: InitialState) {
                                         : styles.controlSupplement
                                 }
                             >
-                                <VSCodeButton appearance="icon" onClick={handleAddHelmOverrideClick}>
+                                <button className="choose-location-button" onClick={handleAddHelmOverrideClick}>
                                     <span className={styles.iconButton}>
                                         <FontAwesomeIcon icon={faPlus} />
-                                        &nbsp;Add override
+                                        &nbsp;{l10n.t("Add override")}
                                     </span>
-                                </VSCodeButton>
+                                </button>
                             </div>
                         </>
                     )}
@@ -861,15 +880,15 @@ export function DraftWorkflow(initialState: InitialState) {
 
                 <div className={styles.buttonContainer}>
                     {state.status !== "Created" && (
-                        <VSCodeButton type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
-                            Create
-                        </VSCodeButton>
+                        <button type="submit" disabled={state.status !== "Editing" || isNothing(validate())}>
+                            {l10n.t("Create")}
+                        </button>
                     )}
 
                     {existingFile && (
-                        <VSCodeButton appearance="secondary" onClick={() => vscode.postOpenFileRequest(existingFile)}>
-                            Open Workflow File
-                        </VSCodeButton>
+                        <button className="secondary-button" onClick={() => vscode.postOpenFileRequest(existingFile)}>
+                            {l10n.t("Open Workflow File")}
+                        </button>
                     )}
                 </div>
 
@@ -877,29 +896,32 @@ export function DraftWorkflow(initialState: InitialState) {
                     <div className={styles.nextStepsContainer}>
                         <i className={`codicon codicon-sparkle ${styles.icon}`}></i>
                         <div className={styles.content}>
-                            <h3>Next steps</h3>
+                            <h3>{l10n.t("Next steps")}</h3>
 
                             <p>
-                                To ensure the generated workflow file runs correctly, you will need to ensure
+                                {l10n.t(
+                                    "To ensure the generated workflow file runs correctly, you will need to ensure",
+                                )}
                                 <ul>
                                     <li>
-                                        The ACR {isValueSet(state.selectedAcr) ? `(${state.selectedAcr.value})` : ""}{" "}
-                                        <VSCodeLink href="#" onClick={handleLaunchAttachAcrToClusterClick}>
-                                            is attached
-                                        </VSCodeLink>{" "}
-                                        to the cluster{" "}
+                                        {l10n.t("The ACR")}{" "}
+                                        {isValueSet(state.selectedAcr) ? `(${state.selectedAcr.value})` : ""}{" "}
+                                        <a href="#" onClick={handleLaunchAttachAcrToClusterClick}>
+                                            {l10n.t("is attached")}
+                                        </a>{" "}
+                                        {l10n.t("to the cluster")}{" "}
                                         {isValueSet(state.selectedCluster) ? `(${state.selectedCluster.value})` : ""}.
-                                        You can follow for guidance.
+                                        {l10n.t("You can follow for guidance")}.
                                     </li>
                                     <li>
-                                        Your GitHub repository{" "}
+                                        {l10n.t("Your GitHub repository")}{" "}
                                         {isValueSet(state.selectedGitHubRepo)
                                             ? `(${state.selectedGitHubRepo.value.gitHubRepoOwner}/${state.selectedGitHubRepo.value.gitHubRepoName})`
                                             : ""}{" "}
-                                        <VSCodeLink href="https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure">
-                                            is configured
-                                        </VSCodeLink>{" "}
-                                        to access the ACR and cluster.
+                                        <a href="https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure">
+                                            {l10n.t("is configured")}
+                                        </a>{" "}
+                                        {l10n.t("to access the ACR and cluster.")}
                                     </li>
                                 </ul>
                             </p>

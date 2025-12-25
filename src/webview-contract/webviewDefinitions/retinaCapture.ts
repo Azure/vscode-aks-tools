@@ -7,6 +7,7 @@ export interface InitialState {
     allNodes: string[];
     captureFolderName: string;
     isNodeExplorerPodExists: boolean;
+    isDownloadRetinaCapture: boolean;
 }
 
 export type ToVsCodeMsgDef = {

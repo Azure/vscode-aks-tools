@@ -1,3 +1,10 @@
+import * as azcs from "@azure/arm-containerservice";
+import * as fs from "fs";
+import * as yaml from "js-yaml";
+import * as path from "path";
+import { dirSync } from "tmp";
+import { AuthenticationSession, QuickPickItem, authentication, window } from "vscode";
+import * as vscode from "vscode";
 import {
     API,
     APIAvailable,
@@ -7,22 +14,21 @@ import {
     KubectlV1,
     extension,
 } from "vscode-kubernetes-tools-api";
+import { getReadySessionProvider, getTokenInfo } from "../../auth/azureAuth";
+import { ReadyAzureSessionProvider, TokenInfo } from "../../auth/types";
 import { AksClusterTreeNode } from "../../tree/aksClusterTreeItem";
-import * as azcs from "@azure/arm-containerservice";
-import { Errorable, failed, getErrorMessage, map as errmap, succeeded } from "./errorable";
 import { SubscriptionTreeNode, isSubscriptionTreeNode } from "../../tree/subscriptionTreeItem";
-import * as yaml from "js-yaml";
-import * as fs from "fs";
-import * as path from "path";
+import { getAksClient, getMonitorClient } from "./arm";
+import { Errorable, map as errmap, failed, getErrorMessage, succeeded } from "./errorable";
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
-import { dirSync } from "tmp";
-import { ReadyAzureSessionProvider, TokenInfo } from "../../auth/types";
-import { AuthenticationSession, authentication } from "vscode";
-import { getTokenInfo } from "../../auth/azureAuth";
-import { getAksClient } from "./arm";
-import { withOptionalTempFile } from "./tempfile";
 import { invokeKubectlCommand } from "./kubectl";
+import { withOptionalTempFile } from "./tempfile";
+import { getResources } from "./azureResources";
+import { ClusterFilter } from "./config";
+import { DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
+import { parseResource } from "../../azure-api-utils";
+import * as k8s from "vscode-kubernetes-tools-api";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -34,6 +40,8 @@ export interface KubernetesClusterInfo {
  */
 export type DefinedManagedCluster = azcs.ManagedCluster &
     Required<Pick<azcs.ManagedCluster, "id" | "name" | "location">>;
+
+export type ClusterQuickPickItem = QuickPickItem & { Cluster: ClusterFilter };
 
 export async function getKubernetesClusterInfo(
     sessionProvider: ReadyAzureSessionProvider,
@@ -399,6 +407,33 @@ export async function getManagedCluster(
     }
 }
 
+export enum SelectionType {
+    Filtered,
+    All,
+    AllIfNoFilters,
+}
+
+export async function getAllManagedCluster(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<DefinedManagedCluster>> {
+    const client = getAksClient(sessionProvider, subscriptionId);
+    try {
+        const managedCluster = await client.managedClusters.get(resourceGroup, clusterName);
+        if (isDefinedManagedCluster(managedCluster)) {
+            return { succeeded: true, result: managedCluster };
+        }
+        return {
+            succeeded: false,
+            error: `Failed to retrieve Cluster ${clusterName}`,
+        };
+    } catch (e) {
+        return { succeeded: false, error: `Failed to retrieve cluster ${clusterName}: ${e}` };
+    }
+}
+
 export async function getKubernetesVersionInfo(
     client: azcs.ContainerServiceClient,
     location: string,
@@ -408,6 +443,30 @@ export async function getKubernetesVersionInfo(
         return { succeeded: true, result: managedCluster };
     } catch (e) {
         return { succeeded: false, error: `Failed to list Kubernetes versions in ${location}: ${getErrorMessage(e)}` };
+    }
+}
+
+export async function getClusterUpgradeProfile(
+    containerClient: azcs.ContainerServiceClient,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<azcs.ManagedClusterUpgradeProfile>> {
+    if (!resourceGroup || resourceGroup.trim() === "") {
+        return { succeeded: false, error: "Resource group name cannot be empty." };
+    }
+
+    if (!clusterName || clusterName.trim() === "") {
+        return { succeeded: false, error: "Cluster name cannot be empty." };
+    }
+
+    try {
+        const upgradeProfile = await containerClient.managedClusters.getUpgradeProfile(resourceGroup, clusterName);
+        return { succeeded: true, result: upgradeProfile };
+    } catch (e) {
+        return {
+            succeeded: false,
+            error: `Failed to retrieve upgrade profile for cluster ${clusterName}: ${getErrorMessage(e)}`,
+        };
     }
 }
 
@@ -473,6 +532,45 @@ export async function getClusterNamespaces(
     });
 }
 
+export async function createClusterNamespace(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    namespace: string,
+): Promise<Errorable<string>> {
+    if (!validateNamespaceName(namespace)) {
+        return { succeeded: false, error: `Invalid namespace name: ${namespace}` };
+    }
+
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `create namespace ${namespace}`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+
+        if (output.succeeded) {
+            return { succeeded: true, result: `Namespace ${namespace} created` };
+        }
+
+        //Check For Namespace Already Exists
+        if (output.error.includes("AlreadyExists")) {
+            return { succeeded: true, result: "Namespace already exists" };
+        }
+
+        return output;
+    });
+}
+
 export async function deleteCluster(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
@@ -535,6 +633,236 @@ export async function rotateClusterCert(
     }
 }
 
+export async function filterPodName(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    podNameStartsWith: string,
+): Promise<Errorable<string[]>> {
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `get pods --all-namespaces --no-headers -o custom-columns=":metadata.name"`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        return errmap(output, (sr) => sr.stdout.trim().split("\n"));
+    });
+
+    let filterPodName: string[] = [];
+    if (succeeded(result)) {
+        filterPodName = result.result.filter((podName) => podName.includes(podNameStartsWith));
+    }
+
+    return { succeeded: true, result: filterPodName };
+}
+
+// Returns pods that start with given image name
+export async function filterPodImage(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    imageNameStartsWith: string,
+): Promise<Errorable<{ nameSpace: string; podName: string; imageName: string }[]>> {
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `get pods -A -o jsonpath="{range .items[*]}{.metadata.namespace};{.metadata.name};{.spec.containers[*].image};{end}"`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        if (failed(output)) {
+            vscode.window.showErrorMessage(output.error);
+            return [];
+        }
+
+        const strOutput = output.result.stdout;
+        const pods = strOutput
+            .trim()
+            .split(";")
+            .reduce<{ nameSpace: string; podName: string; imageName: string }[]>((acc, val, index, arr) => {
+                if (index % 3 === 0 && arr[index + 1] && arr[index + 2]) {
+                    acc.push({ nameSpace: val, podName: arr[index + 1], imageName: arr[index + 2] });
+                }
+                return acc;
+            }, []);
+
+        return pods;
+    });
+    return { succeeded: true, result: result.filter((pod) => pod.imageName.startsWith(imageNameStartsWith)) };
+}
+
+//Must meet RFC 1123: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+function validateNamespaceName(namespace: string): boolean {
+    const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+    return namespaceRegex.test(namespace);
+}
+
 function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is DefinedManagedCluster {
-    return cluster.id !== undefined && cluster.name !== undefined && cluster.location !== undefined;
+    return (
+        cluster.id !== undefined &&
+        cluster.name !== undefined &&
+        cluster.location !== undefined &&
+        cluster.nodeResourceGroup !== undefined
+    );
+}
+
+export type Cluster = {
+    name: string;
+    clusterId: string;
+    resourceGroup: string;
+    subscriptionId: string;
+};
+
+export async function getClusters(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): Promise<Cluster[]> {
+    const clusters = await getResources(sessionProvider, subscriptionId, "Microsoft.ContainerService/managedClusters");
+    if (failed(clusters)) {
+        window.showErrorMessage(clusters.error);
+        return [];
+    }
+
+    return clusters.result.map((cluster) => {
+        return {
+            name: cluster.name,
+            clusterId: cluster.id,
+            resourceGroup: cluster.resourceGroup,
+            subscriptionId: subscriptionId,
+        };
+    });
+}
+
+export async function getClusterDiagnosticSettings(
+    sessionProvider: ReadyAzureSessionProvider,
+    clusterNode: AksClusterTreeNode,
+): Promise<DiagnosticSettingsResourceCollection | undefined> {
+    try {
+        // Get diagnostic setting via diagnostic monitor
+        const client = getMonitorClient(sessionProvider, clusterNode.subscriptionId);
+        const diagnosticSettings = await client.diagnosticSettings.list(clusterNode.armId);
+
+        return diagnosticSettings;
+    } catch (e) {
+        vscode.window.showErrorMessage(`Error fetching cluster diagnostic settings: ${e}`);
+        return undefined;
+    }
+}
+
+export async function chooseStorageAccount(
+    diagnosticSettings: DiagnosticSettingsResourceCollection,
+    placeholderText: string,
+): Promise<string | void> {
+    /*
+        Check the diagnostic setting is 1 or more than 1:
+          1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
+          2. For the scenario for more than 1 then show VsCode quickPick to select and get SAS of selected.
+    */
+    if (!diagnosticSettings || !diagnosticSettings.value) return undefined;
+
+    if (diagnosticSettings.value.length === 1) {
+        // In case of only one storage account associated, use the one (1) as default storage account
+        const selectedStorageAccount = diagnosticSettings.value![0].storageAccountId!;
+        if (!selectedStorageAccount) {
+            vscode.window.showInformationMessage("Diagnostic setting does not have storage account associated.");
+            return;
+        }
+        const storageAccountName = parseResource(selectedStorageAccount).name;
+        if (!storageAccountName) {
+            vscode.window.showInformationMessage(`Storage ID is malformed: ${selectedStorageAccount}`);
+            return;
+        }
+        vscode.window.showInformationMessage(`Using the only available storage account: ${storageAccountName}`);
+        return selectedStorageAccount;
+    }
+
+    const storageAccountNameToStorageIdArray: { id: string; label: string }[] = [];
+
+    diagnosticSettings.value?.forEach((item) => {
+        if (item.storageAccountId) {
+            const { name } = parseResource(item.storageAccountId!);
+            if (!name) {
+                vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
+                return;
+            }
+            storageAccountNameToStorageIdArray.push({ id: item.storageAccountId, label: name });
+        }
+    });
+
+    // accounts is now an array of {id, name}
+    const accountQuickPicks = storageAccountNameToStorageIdArray;
+
+    // Create quick pick for more than 1 storage account scenario.
+    const selectedQuickPick = await vscode.window.showQuickPick(accountQuickPicks, {
+        placeHolder: placeholderText,
+        ignoreFocusOut: true,
+    });
+
+    if (selectedQuickPick) {
+        return selectedQuickPick.id;
+    }
+}
+
+export interface ClusterValidationResult {
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>;
+    cloudExplorer: k8s.APIAvailable<k8s.CloudExplorerV1>;
+    clusterExplorer: k8s.APIAvailable<k8s.ClusterExplorerV1>;
+    sessionProvider: ReadyAzureSessionProvider;
+}
+
+export async function validatePrerequisites(): Promise<Errorable<ClusterValidationResult>> {
+    const kubectl = await k8s.extension.kubectl.v1;
+    const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+    const clusterExplorer = await k8s.extension.clusterExplorer.v1;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        return { succeeded: false, error: sessionProvider.error };
+    }
+
+    if (!kubectl.available) {
+        return { succeeded: false, error: `Kubectl is unavailable.` };
+    }
+
+    if (!cloudExplorer.available) {
+        return { succeeded: false, error: `Cloud explorer is unavailable.` };
+    }
+
+    if (!clusterExplorer.available) {
+        return { succeeded: false, error: `Cluster explorer is unavailable.` };
+    }
+
+    return {
+        succeeded: true,
+        result: {
+            kubectl,
+            cloudExplorer,
+            clusterExplorer,
+            sessionProvider: sessionProvider.result,
+        },
+    };
+}
+
+export function getCopilotFlagMarkdownMessage(flagValue: boolean): vscode.MarkdownString {
+    const message = `The AKS extension Copilot flag is currently set to ${flagValue}. Please set this flag to true in order to enable this functionality.`;
+    return new vscode.MarkdownString(
+        `${message} [Learn more](https://azure.github.io/vscode-aks-tools/features/aks-plugins-github-copilot.html#features).`,
+    );
 }

@@ -1,4 +1,5 @@
 import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
+import { FleetTreeNode } from "./fleetTreeItem";
 import { CloudExplorerV1 } from "vscode-kubernetes-tools-api";
 import { assetUri } from "../assets";
 import { DefinedResourceWithGroup } from "../commands/utils/azureResources";
@@ -14,10 +15,11 @@ export interface AksClusterTreeNode {
     readonly subscriptionTreeNode: SubscriptionTreeNode;
     readonly subscriptionId: string;
     readonly resourceGroupName: string;
+    readonly clusterResource: DefinedResourceWithGroup;
 }
 
 export function createClusterTreeNode(
-    parent: AzExtParentTreeItem & SubscriptionTreeNode,
+    parent: (AzExtParentTreeItem & SubscriptionTreeNode) | (AzExtParentTreeItem & FleetTreeNode),
     subscriptionId: string,
     clusterResource: DefinedResourceWithGroup,
 ): AzExtTreeItem {
@@ -31,14 +33,18 @@ class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
     public readonly name: string;
 
     constructor(
-        parent: AzExtParentTreeItem & SubscriptionTreeNode,
+        parent: (AzExtParentTreeItem & SubscriptionTreeNode) | (AzExtParentTreeItem & FleetTreeNode),
         readonly subscriptionId: string,
         readonly clusterResource: DefinedResourceWithGroup,
     ) {
         super(parent);
 
         this.iconPath = assetUri("resources/aks-tools.png");
-        this.subscriptionTreeNode = parent;
+        if (parent.nodeType === "subscription") {
+            this.subscriptionTreeNode = parent;
+        } else {
+            this.subscriptionTreeNode = parent.subscriptionTreeNode;
+        }
         this.id = `${this.clusterResource.name} ${clusterResource.resourceGroup}`;
         this.armId = this.clusterResource.id;
         this.resourceGroupName = clusterResource.resourceGroup;

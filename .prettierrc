@@ -1,5 +1,9 @@
 {
     "tabWidth": 4,
     "printWidth": 120,
-    "bracketSpacing": true
+    "bracketSpacing": true,
+    "endOfLine": "lf",
+    "arrowParens": "always",
+    "singleQuote": false,
+    "semi": true
 }

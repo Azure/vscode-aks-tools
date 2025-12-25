@@ -1,4 +1,6 @@
-import { Disposable, Webview, window, Uri, ViewColumn } from "vscode";
+import { Disposable, Uri, ViewColumn, Webview, window } from "vscode";
+import { reporter } from "../commands/utils/reporter";
+import { encodeState } from "../webview-contract/initialState";
 import {
     CommandKeys,
     Message,
@@ -9,8 +11,6 @@ import {
     asMessageSink,
     isValidMessage,
 } from "../webview-contract/messaging";
-import { getNonce, getUri } from "./utilities/webview";
-import { encodeState } from "../webview-contract/initialState";
 import {
     ContentId,
     InitialState,
@@ -21,8 +21,10 @@ import {
     ToWebviewMsgDef,
     VsCodeMessageContext,
 } from "../webview-contract/webviewTypes";
-import { reporter } from "../commands/utils/reporter";
-
+import { getNonce, getUri } from "./utilities/webview";
+import * as vscode from "vscode";
+import { readFile } from "fs/promises";
+import { l10n } from "vscode";
 const viewType = "aksVsCodeTools";
 
 /**
@@ -59,7 +61,6 @@ export abstract class BasePanel<TContent extends ContentId> {
         const title = dataProvider.getTitle();
 
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
-
         // Set up messaging between VSCode and the webview.
         const telemetryDefinition = dataProvider.getTelemetryDefinition();
         const messageContext = getMessageContext(
@@ -110,7 +111,7 @@ export abstract class BasePanel<TContent extends ContentId> {
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} 'self'">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource} 'self'; img-src ${webview.cspSource} 'self'">
                 <link rel="stylesheet" type="text/css" href="${stylesUri}">
                 <title>${title}</title>
             </head>
@@ -136,10 +137,26 @@ function getMessageContext<TContent extends ContentId>(
         subscribeToMessages: (handler) => {
             webview.onDidReceiveMessage(
                 (message: object) => {
+                    // if bundle request is received, send the language back to the webview
+                    if ((message as Message<ToVsCodeMsgDef<TContent>>).command === "request-bundle") {
+                        if (vscode.l10n.uri?.fsPath) {
+                            readFile(vscode.l10n.uri?.fsPath, "utf-8").then((fileContent) => {
+                                webview.postMessage({
+                                    type: "bundle",
+                                    payload: fileContent,
+                                });
+                            });
+                        } else {
+                            webview.postMessage({
+                                type: "bundle",
+                                payload: undefined,
+                            });
+                        }
+                        return;
+                    }
                     if (!isValidMessage<ToVsCodeMsgDef<TContent>>(message)) {
                         throw new Error(`Invalid message to VsCode: ${JSON.stringify(message)}`);
                     }
-
                     const telemetryData = getTelemetryData(contentId, telemetryDefinition, message);
                     if (telemetryData !== null) {
                         reporter.sendTelemetryEvent("command", telemetryData);
@@ -149,7 +166,7 @@ function getMessageContext<TContent extends ContentId>(
                     if (action) {
                         action(message.parameters, message.command);
                     } else {
-                        window.showErrorMessage(`No handler found for command ${message.command}`);
+                        window.showErrorMessage(l10n.t(`No handler found for command {0}`, message.command));
                     }
                 },
                 undefined,

@@ -1,4 +1,3 @@
-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react";
 import { ClusterInfo } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import styles from "./ClusterProperties.module.css";
 
@@ -8,13 +7,16 @@ export interface ClusterDisplayToolTipProps {
 
 export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
     return (
-        <span className={styles.tooltip}>
-            <span className={styles.infoIndicator}>
+        <span className={styles.tooltip} style={{ display: "inline-block", verticalAlign: "middle", margin: "0 8px" }}>
+            <span
+                className={styles.infoIndicator}
+                style={{ position: "relative", display: "inline-block", height: "auto", width: "auto" }}
+            >
                 <div className="icon">
                     <i className="codicon codicon-info" aria-label="info icon using vscode icons"></i>
                 </div>
             </span>
-            <span className={styles.tooltiptext}>
+            <span className={styles.tooltiptext} style={{ top: "100%", left: "-120px", marginTop: "5px" }}>
                 <table>
                     <caption className={styles.tableHeader}>Current Versions Available</caption>
                     <tr>
@@ -42,9 +44,9 @@ export function ClusterDisplayToolTip(props: ClusterDisplayToolTipProps) {
                     <tfoot>
                         <tr>
                             <td colSpan={3} className={styles.textLeftAlign}>
-                                <VSCodeLink href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
+                                <a href="https://learn.microsoft.com/en-us/azure/aks/supported-kubernetes-versions?tabs=azure-cli#aks-kubernetes-release-calendar">
                                     Learn more
-                                </VSCodeLink>
+                                </a>
                             </td>
                         </tr>
                     </tfoot>

@@ -1,16 +1,20 @@
-import { VSCodeLink, VSCodePanelTab, VSCodePanelView, VSCodePanels } from "@vscode/webview-ui-toolkit/react";
 import { Overview } from "./Overview";
 import { Traces, TracesProps } from "./Traces";
 import styles from "./InspektorGadget.module.css";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GadgetCategory } from "./helpers/gadgets/types";
 import { isNotLoaded } from "../utilities/lazy";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/inspektorGadget";
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./helpers/state";
-
+import * as l10n from "@vscode/l10n";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEraser } from "@fortawesome/free-solid-svg-icons";
 export function InspektorGadget(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
+    const [hasInitialResource, setHasInitialResource] = useState<boolean>(!!initialState.initialGadgetResource);
+    // used to track active tab, initialized from props if provided
+    const [activeTab, setActiveTab] = useState(initialState.initialActiveTab || "overview");
 
     useEffect(() => {
         if (!state.initializationStarted) {
@@ -29,13 +33,52 @@ export function InspektorGadget(initialState: InitialState) {
         }
     });
 
+    useEffect(() => {
+        // Avoid calling setState synchronously inside the effect body to prevent cascading renders.
+        // Defer the state update to the next tick and clean up the timer if the effect re-runs.
+        let t: number | undefined;
+        if (state.version && state.version.server === null && !state.overviewStatus && activeTab !== "overview") {
+            t = window.setTimeout(() => setActiveTab("overview"), 0);
+        }
+
+        return () => {
+            if (t !== undefined) {
+                clearTimeout(t);
+            }
+        };
+    }, [state.version, state.overviewStatus, activeTab, setActiveTab]);
+
     function handleRequestTraceId(): number {
         eventHandlers.onIncrementTraceId();
         return state.nextTraceId;
     }
 
+    function handleResourceUsed(): void {
+        if (hasInitialResource) {
+            setHasInitialResource(false);
+            eventHandlers.onResetInitialGadgetResource();
+        }
+    }
+
+    function handleUndeploy(): void {
+        eventHandlers.onUndeploy();
+        vscode.postUndeployRequest();
+        setActiveTab("overview");
+    }
+
     function getTracesProps(category: GadgetCategory): TracesProps {
         const traces = state.allTraces.filter((t) => t.category === category);
+        // Only pass initialGadgetResource if we still have one to use and the category matches
+        const initialGadgetResource =
+            hasInitialResource && category === initialState.initialGadgetCategory && initialState.initialGadgetResource
+                ? initialState.initialGadgetResource
+                : undefined;
+
+        const isGadgetResourceStatic =
+            hasInitialResource && category === initialState.initialGadgetCategory
+                ? initialState.isGadgetResourceStatic
+                : undefined;
+
         return {
             category,
             traces,
@@ -43,6 +86,9 @@ export function InspektorGadget(initialState: InitialState) {
             resources: state.resources,
             onRequestTraceId: handleRequestTraceId,
             eventHandlers: eventHandlers,
+            initialGadgetResource,
+            isGadgetResourceStatic,
+            onResourceUsed: handleResourceUsed,
         };
     }
 
@@ -50,43 +96,78 @@ export function InspektorGadget(initialState: InitialState) {
 
     return (
         <>
-            <h2>Inspektor Gadget</h2>
+            <h2>{l10n.t("Inspektor Gadget")}</h2>
             <p>
-                Inspektor Gadget provides a wide selection of BPF tools to dig deep into your Kubernetes cluster.
-                <VSCodeLink href="https://www.inspektor-gadget.io/">&nbsp;Learn more</VSCodeLink>
+                {l10n.t(
+                    "Inspektor Gadget provides a wide selection of BPF tools to dig deep into your Kubernetes cluster.",
+                )}
+                <a href="https://www.inspektor-gadget.io/">&nbsp;{l10n.t("Learn more")}</a>
             </p>
 
-            <VSCodePanels aria-label="Inspektory Gadget functions">
-                <VSCodePanelTab>OVERVIEW</VSCodePanelTab>
-                {isDeployed && <VSCodePanelTab>TRACES</VSCodePanelTab>}
-                {isDeployed && <VSCodePanelTab>TOP</VSCodePanelTab>}
-                {isDeployed && <VSCodePanelTab>SNAPSHOTS</VSCodePanelTab>}
-                {isDeployed && <VSCodePanelTab>PROFILE</VSCodePanelTab>}
+            {isDeployed && activeTab !== "overview" && (
+                <div style={{ marginBottom: "16px", textAlign: "right" }}>
+                    <button className="secondary-button" onClick={handleUndeploy}>
+                        <FontAwesomeIcon icon={faEraser} />
+                        &nbsp;Undeploy
+                    </button>
+                </div>
+            )}
 
-                <VSCodePanelView className={styles.tab}>
-                    <Overview status={state.overviewStatus} version={state.version} eventHandlers={eventHandlers} />
-                </VSCodePanelView>
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("trace")} />
-                    </VSCodePanelView>
-                )}
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("top")} />
-                    </VSCodePanelView>
-                )}
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("snapshot")} />
-                    </VSCodePanelView>
-                )}
-                {isDeployed && (
-                    <VSCodePanelView className={styles.tab}>
-                        <Traces {...getTracesProps("profile")} />
-                    </VSCodePanelView>
-                )}
-            </VSCodePanels>
+            {/* implementation of tabs */}
+            <div className={styles.tabContainer}>
+                <div className={styles.tabHeader}>
+                    <div
+                        className={`${styles.tabItem} ${activeTab === "overview" ? styles.active : ""}`}
+                        onClick={() => setActiveTab("overview")}
+                    >
+                        {l10n.t("OVERVIEW")}
+                    </div>
+                    {isDeployed && (
+                        <>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "trace" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("trace")}
+                            >
+                                {l10n.t("TRACES")}
+                            </div>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "top" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("top")}
+                            >
+                                {l10n.t("TOP")}
+                            </div>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "snapshot" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("snapshot")}
+                            >
+                                {l10n.t("SNAPSHOTS")}
+                            </div>
+                            <div
+                                className={`${styles.tabItem} ${activeTab === "profile" ? styles.active : ""}`}
+                                onClick={() => setActiveTab("profile")}
+                            >
+                                {l10n.t("PROFILE")}
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                <div>
+                    {activeTab === "overview" && (
+                        <>
+                            <Overview
+                                status={state.overviewStatus}
+                                version={state.version}
+                                eventHandlers={eventHandlers}
+                            />
+                        </>
+                    )}
+                    {isDeployed && activeTab === "trace" && <Traces {...getTracesProps("trace")} />}
+                    {isDeployed && activeTab === "top" && <Traces {...getTracesProps("top")} />}
+                    {isDeployed && activeTab === "snapshot" && <Traces {...getTracesProps("snapshot")} />}
+                    {isDeployed && activeTab === "profile" && <Traces {...getTracesProps("profile")} />}
+                </div>
+            </div>
         </>
     );
 }
