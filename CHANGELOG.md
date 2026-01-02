@@ -1,5 +1,11 @@
 # Change Log
 
+> **⚠️ DEPRECATED**: This changelog is no longer actively maintained as of version 1.6.14. For the latest release notes and detailed information about new releases, please visit the [Releases](https://github.com/Azure/vscode-aks-tools/releases) page.
+
+## [1.6.14]
+
+* **Infrastructure**: Migrated to internal signed release pipeline for enhanced security and compliance. All releases from 1.6.14 onwards are published using the new secure signing process. Users can view detailed release information directly in the [Releases](https://github.com/Azure/vscode-aks-tools/releases) section.
+
 ## [1.6.13]
 
 * Fix the client using sessionProvider instead of default. (#1564)
