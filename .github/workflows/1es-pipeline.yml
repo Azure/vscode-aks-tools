@@ -29,7 +29,7 @@ extends:
     # Update the pool with your team's 1ES hosted pool.
     pool:
       name: staging-pool-amd64-mariner-2
-      image: 1es-azlinux-3-amd64
+      image: 1es-azlinux-3-amd64-custom-disk
       os: linux
       hostArchitecture: amd64
     sdl:
