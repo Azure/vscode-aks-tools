@@ -102,6 +102,11 @@ extends:
                   ls -la "$(Pipeline.Workspace)/vscode-extension-unsigned"
                 displayName: "List the unsigned dir"
 
+              # Add this Command to Include the .NET SDK and runtimes
+              - task: UseDotNet@2
+                displayName: Use .NET Runtime
+                inputs:
+                  packageType: "runtime"
               - task: EsrpCodeSigning@5
                 displayName: Publish signed VSCode extension
                 inputs:
