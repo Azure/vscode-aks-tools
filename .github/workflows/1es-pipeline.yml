@@ -178,12 +178,6 @@ extends:
                   targetType: inline
                   script: |
                     set -e
-                    echo "Logging in to Azure..."
-                    if ! az login --identity; then
-                      echo "❌ Azure login failed!" >&2
-                      exit 1
-                    fi
-                    az account show
                     echo "Checking VSCE version..."
                     npx vsce --version
                     echo "Listing VSCE packages..."
