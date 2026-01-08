@@ -26,7 +26,6 @@ extends:
   template: v1/1ES.Unofficial.PipelineTemplate.yml@1esPipelines
   parameters:
     # Update the pool with your team's 1ES hosted pool.
-    # Update the pool with your team's 1ES hosted pool.
     pool:
       name: staging-pool-amd64-mariner-2
       image: 1es-azlinux-3-amd64-custom-disk
@@ -50,16 +49,32 @@ extends:
                 - output: pipelineArtifact
                   targetPath: $(Pipeline.Workspace)/vscode-extension-unsigned
                   artifactName: vscode-extension-signed
-            # # Define the steps that the pipeline will run.
-            # # In most cases, copy and paste the steps from the original pipeline.
             steps:
+              # =====================================================
+              # INSTALL PREREQUISITES FIRST
+              # =====================================================
+
               - task: NodeTool@0
                 displayName: Install Node.js
                 retryCountOnTaskFailure: 3
                 inputs:
                   versionSpec: ${{ parameters.nodeVersion }}
+
+              # FIX: Install .NET SDK early (required for ESRP Code Signing)
+              # Changed from "runtime" to "sdk" and added version specification
+              - task: UseDotNet@2
+                displayName: Install .NET SDK (required for ESRP signing)
+                inputs:
+                  packageType: "sdk"
+                  version: "6.x" # Use 6.x or 8.x depending on ESRP requirements
+
               - checkout: self
+
               - bash: echo "Hello World from host"
+
+              # =====================================================
+              # BUILD AND PACKAGE
+              # =====================================================
 
               - script: npm run install:all
                 displayName: Install npm for project
@@ -102,13 +117,12 @@ extends:
                   ls -la "$(Pipeline.Workspace)/vscode-extension-unsigned"
                 displayName: "List the unsigned dir"
 
-              # Add this Command to Include the .NET SDK and runtimes
-              - task: UseDotNet@2
-                displayName: Use .NET Runtime
-                inputs:
-                  packageType: "runtime"
+              # =====================================================
+              # CODE SIGNING
+              # =====================================================
+
               - task: EsrpCodeSigning@5
-                displayName: Publish signed VSCode extension
+                displayName: Sign VSCode extension with ESRP
                 inputs:
                   ConnectedServiceName: "ESRP-AME-AZCU"
                   UseMSIAuthentication: true
@@ -140,6 +154,11 @@ extends:
                             "ToolVersion" : "1.0"
                         }
                     ]
+
+              # =====================================================
+              # PUBLISH
+              # =====================================================
+
               - bash: |
                   echo "=== ARTIFACT PUBLISHING DEBUG ==="
                   echo "Artifact will be published via 1ES templateContext:"
@@ -152,6 +171,7 @@ extends:
                   echo "=== END ARTIFACT DEBUG ==="
                 displayName: "Debug: Artifact Publishing"
                 condition: succeeded()
+
               - task: Bash@3
                 displayName: "Publish VSIX to Marketplace"
                 inputs:
@@ -180,6 +200,7 @@ extends:
                     npx vsce publish --pat "$TOKEN" --packagePath "$VSIX_PATH"
                 env:
                   TOKEN: ${{ parameters.token }}
+
               - task: GithubRelease@1
                 displayName: "Create GitHub Release"
                 inputs:
