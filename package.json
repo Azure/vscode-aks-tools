@@ -780,7 +780,7 @@
         "@types/sinon": "^21.0.0",
         "@types/tmp": "^0.2.6",
         "@types/uuid": "^11.0.0",
-        "@types/vscode": "^1.107.0",
+        "@types/vscode": "^1.108.1",
         "@typescript-eslint/eslint-plugin": "^8.53.0",
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
