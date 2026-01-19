@@ -1,0 +1,102 @@
+name: Fuzzing Tests
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+    schedule:
+        # Run fuzzing tests daily at 2 AM UTC
+        - cron: "0 2 * * *"
+    workflow_dispatch:
+
+jobs:
+    fuzz:
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                node-version: [18.x, 20.x]
+
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+            - name: Setup Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Install webview dependencies
+              run: |
+                  cd webview-ui
+                  npm ci
+                  cd ..
+
+            - name: Build webview
+              run: npm run build:webview
+
+            - name: Compile TypeScript
+              run: npm run test-compile
+
+            - name: Run Fuzzing Tests
+              run: npm run test:fuzz
+              timeout-minutes: 10
+
+            - name: Upload fuzzing results
+              if: always()
+              uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+              with:
+                  name: fuzzing-results-${{ matrix.node-version }}
+                  path: |
+                      test-results/
+                      coverage/
+                  retention-days: 30
+
+    # Extended fuzzing with more iterations (optional, runs less frequently)
+    extended-fuzz:
+        runs-on: ubuntu-latest
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+            - name: Setup Node.js
+              uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+              with:
+                  node-version: 20.x
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Install webview dependencies
+              run: |
+                  cd webview-ui
+                  npm ci
+                  cd ..
+
+            - name: Build webview
+              run: npm run build:webview
+
+            - name: Compile TypeScript
+              run: npm run test-compile
+
+            - name: Run Extended Fuzzing Tests (10x iterations)
+              run: npm run test:fuzz
+              timeout-minutes: 30
+              env:
+                  FUZZ_ITERATIONS: 10000
+
+            - name: Upload extended fuzzing results
+              if: always()
+              uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+              with:
+                  name: extended-fuzzing-results
+                  path: |
+                      test-results/
+                      coverage/
+                  retention-days: 90
