@@ -818,7 +818,7 @@
         "@azure/core-auth": "^1.10.1",
         "@azure/identity": "^4.13.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
-        "@azure/storage-blob": "^12.29.1",
+        "@azure/storage-blob": "^12.30.0",
         "@eslint/compat": "^2.0.1",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^4.0.3",
