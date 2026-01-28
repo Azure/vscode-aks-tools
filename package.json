@@ -757,6 +757,7 @@
         "test-compile": "npm run build:webview && tsc -p ./",
         "watch": "tsc -watch -p ./",
         "test": "npm run test-compile && node ./out/src/tests/runTests.js",
+        "test:fuzz": "npm run test-compile && mocha --require source-map-support/register 'out/src/tests/fuzz/**/*.test.js'",
         "lint": "npx eslint .",
         "eslint-inspector": "npx @eslint/config-inspector@latest"
     },
@@ -785,6 +786,7 @@
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
         "@vscode/test-electron": "^2.5.2",
+        "fast-check": "^3.23.1",
         "@vscode/vsce": "^3.7.1",
         "eslint": "^9.39.2",
         "chai": "^6.2.2",
