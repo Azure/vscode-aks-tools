@@ -67,6 +67,11 @@ jobs:
   extended-fuzz:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      actions: read
+      contents: read
+      deployments: read
+      packages: none
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
