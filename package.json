@@ -174,7 +174,7 @@
                 "aks.containerAssistEnabledPreview": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Set to true to enable Container Assist recommendations. (Preview feature)"
+                    "description": "Set to true to enable deployment related file generation capability using AI tool. (Preview feature)"
                 },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
