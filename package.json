@@ -171,6 +171,11 @@
                     "default": true,
                     "description": "Set to true to enable GH Copilot hook. (Preview feature)"
                 },
+                "aks.containerAssistEnabledPreview": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set to true to enable deployment related file generation capability using AI tool. (Preview feature)"
+                },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
                     "default": "v0.0.11",
