@@ -25,6 +25,11 @@ const config = {
         "utf-8-validate": "commonjs utf-8-validate",
         "applicationinsights-native-metrics": "applicationinsights-native-metrics",
         "@opentelemetry/tracing": "@opentelemetry/tracing",
+        // Exclude native modules from containerization-assist-mcp dependencies
+        "cpu-features": "commonjs cpu-features",
+        ssh2: "commonjs ssh2",
+        dockerode: "commonjs dockerode",
+        "docker-modem": "commonjs docker-modem",
     },
     plugins: [
         new ESLintPlugin({
@@ -48,6 +53,10 @@ const config = {
                         loader: "ts-loader",
                     },
                 ],
+            },
+            {
+                test: /\.node$/,
+                loader: "node-loader",
             },
         ],
     },
