@@ -71,6 +71,7 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import * as fs from "fs";
 import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
+import { runContainerAssist } from "./commands/aksContainerAssist/aksContainerAssist";
 
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
@@ -158,6 +159,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
         registerCommandWithTelemetry("aks.aksSetupMCPServerCommands", addMcpServerToUserSettings);
+        registerCommandWithTelemetry("aks.runContainerAssist", runContainerAssist);
 
         await registerAzureServiceNodes(context);
 

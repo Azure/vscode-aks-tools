@@ -408,6 +408,10 @@
             {
                 "command": "aks.aksSetupMCPServerCommands",
                 "title": "AKS: Setup AKS MCP Server"
+            },
+            {
+                "command": "aks.runContainerAssist",
+                "title": "AKS: Run Container Assist For AKS Deployment Generation"
             }
         ],
         "menus": {
@@ -445,6 +449,10 @@
                 {
                     "command": "aks.aksDraftValidate",
                     "when": "explorerResourceIsFolder"
+                },
+                {
+                    "command": "aks.runContainerAssist",
+                    "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview"
                 }
             ],
             "view/item/context": [
@@ -791,14 +799,15 @@
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
         "@vscode/test-electron": "^2.5.2",
-        "fast-check": "^3.23.1",
         "@vscode/vsce": "^3.7.1",
-        "eslint": "^9.39.2",
         "chai": "^6.2.2",
+        "eslint": "^9.39.2",
         "eslint-webpack-plugin": "^5.0.2",
+        "fast-check": "^3.23.1",
         "glob": "^13.0.0",
         "globals": "^17.0.0",
-        "mocha": "^11.7.5",
+        "mocha": "^11.3.0",
+        "node-loader": "^2.1.0",
         "prettier": "^3.8.1",
         "sinon": "^21.0.1",
         "ts-loader": "^9.5.4",
@@ -832,6 +841,7 @@
         "@octokit/rest": "^22.0.1",
         "@vscode/extension-telemetry": "^1.4.0",
         "@vscode/l10n": "^0.0.18",
+        "containerization-assist-mcp": "^1.0.2",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.1",
         "move-file": "^3.1.0",
