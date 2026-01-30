@@ -841,7 +841,7 @@
         "@octokit/rest": "^22.0.1",
         "@vscode/extension-telemetry": "^1.4.0",
         "@vscode/l10n": "^0.0.18",
-        "containerization-assist-mcp": "^1.0.2",
+        "containerization-assist-mcp": "^1.1.0-dev.4",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.1",
         "move-file": "^3.1.0",
