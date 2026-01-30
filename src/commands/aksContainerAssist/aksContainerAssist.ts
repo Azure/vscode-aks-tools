@@ -44,12 +44,7 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
 
     // Process selected actions
     for (const action of selectedActions) {
-        await processContainerAssistAction(
-            action,
-            containerAssistService,
-            workspaceFolder,
-            targetUri.fsPath,
-        );
+        await processContainerAssistAction(action, containerAssistService, workspaceFolder, targetUri.fsPath);
     }
 }
 
@@ -159,10 +154,7 @@ async function generateDeploymentFiles(
                 }
 
                 if (result.generatedFiles && result.generatedFiles.length > 0) {
-                    const message = l10n.t(
-                        "Successfully generated {0} deployment files",
-                        result.generatedFiles.length,
-                    );
+                    const message = l10n.t("Successfully generated {0} deployment files", result.generatedFiles.length);
                     const openFiles = l10n.t("Open Files");
 
                     vscode.window.showInformationMessage(message, openFiles).then((selection) => {
@@ -188,10 +180,7 @@ async function generateDeploymentFiles(
 /**
  * Generate default workflow (placeholder for future implementation)
  */
-async function generateDefaultWorkflow(
-    _workspaceFolder: vscode.WorkspaceFolder,
-    _targetPath: string,
-): Promise<void> {
+async function generateDefaultWorkflow(_workspaceFolder: vscode.WorkspaceFolder, _targetPath: string): Promise<void> {
     console.log("Generate Default Workflow feature is not yet implemented.");
     console.log(`${_workspaceFolder}, ${_targetPath}`);
     vscode.window.showInformationMessage(

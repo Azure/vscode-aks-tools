@@ -82,9 +82,12 @@ export class ContainerAssistService {
                 l10n.t("Container Assist: Analyzing repository at {0}...", folderPath),
             );
 
-            const result = await runtime.result.execute("analyze-repo" as never, {
-                repositoryPath: folderPath,
-            } as never);
+            const result = await runtime.result.execute(
+                "analyze-repo" as never,
+                {
+                    repositoryPath: folderPath,
+                } as never,
+            );
 
             if (!result.ok) {
                 return {
@@ -122,10 +125,7 @@ export class ContainerAssistService {
     /**
      * Generate a Dockerfile for the repository
      */
-    async generateDockerfile(
-        folderPath: string,
-        analysisResult: AnalyzeRepositoryResult,
-    ): Promise<Errorable<string>> {
+    async generateDockerfile(folderPath: string, analysisResult: AnalyzeRepositoryResult): Promise<Errorable<string>> {
         try {
             const runtime = await this.initializeRuntime();
             if (failed(runtime)) {
@@ -139,12 +139,15 @@ export class ContainerAssistService {
                 l10n.t("Container Assist: Generating Dockerfile for {0}...", folderPath),
             );
 
-            const result = await runtime.result.execute("generate-dockerfile" as never, {
-                repositoryPath: folderPath,
-                language: analysisResult.language,
-                framework: analysisResult.framework,
-                port: analysisResult.port,
-            } as never);
+            const result = await runtime.result.execute(
+                "generate-dockerfile" as never,
+                {
+                    repositoryPath: folderPath,
+                    language: analysisResult.language,
+                    framework: analysisResult.framework,
+                    port: analysisResult.port,
+                } as never,
+            );
 
             if (!result.ok) {
                 return {
@@ -188,21 +191,21 @@ export class ContainerAssistService {
                 l10n.t("Container Assist: Generating Kubernetes manifests for {0}...", appName),
             );
 
-            const result = await runtime.result.execute("generate-k8s-manifests" as never, {
-                path: folderPath,
-                appName: appName,
-                namespace: "default",
-                serviceType: "ClusterIP",
-                replicas: 1,
-            } as never);
+            const result = await runtime.result.execute(
+                "generate-k8s-manifests" as never,
+                {
+                    path: folderPath,
+                    appName: appName,
+                    namespace: "default",
+                    serviceType: "ClusterIP",
+                    replicas: 1,
+                } as never,
+            );
 
             if (!result.ok) {
                 return {
                     succeeded: false,
-                    error: l10n.t(
-                        "Failed to generate Kubernetes manifests: {0}",
-                        String(result.error),
-                    ),
+                    error: l10n.t("Failed to generate Kubernetes manifests: {0}", String(result.error)),
                 };
             }
 

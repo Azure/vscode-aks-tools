@@ -167,7 +167,9 @@ describe("Container Assist Tests", () => {
                 index: 0,
             } as vscode.WorkspaceFolder;
 
-            const getWorkspaceFolderStub = sandbox.stub(vscode.workspace, "getWorkspaceFolder").returns(workspaceFolder);
+            const getWorkspaceFolderStub = sandbox
+                .stub(vscode.workspace, "getWorkspaceFolder")
+                .returns(workspaceFolder);
             const getConfigStub = sandbox.stub(vscode.workspace, "getConfiguration").returns({
                 get: sandbox.stub().returns(false),
             } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
@@ -188,7 +190,9 @@ describe("Container Assist Tests", () => {
                 index: 0,
             } as vscode.WorkspaceFolder;
 
-            const getWorkspaceFolderStub = sandbox.stub(vscode.workspace, "getWorkspaceFolder").returns(workspaceFolder);
+            const getWorkspaceFolderStub = sandbox
+                .stub(vscode.workspace, "getWorkspaceFolder")
+                .returns(workspaceFolder);
             const getConfigStub = sandbox.stub(vscode.workspace, "getConfiguration").returns({
                 get: sandbox.stub().returns(true),
             } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
@@ -206,7 +210,7 @@ describe("Container Assist Tests", () => {
     describe("Error Handling", () => {
         it("handles exceptions in service methods gracefully", async () => {
             const service = new ContainerAssistService();
-            
+
             // Force an exception by stubbing showInformationMessage to throw
             sandbox.stub(vscode.window, "showInformationMessage").throws(new Error("Test error"));
 
@@ -251,7 +255,9 @@ describe("Container Assist Tests", () => {
                 index: 0,
             } as vscode.WorkspaceFolder;
 
-            const getWorkspaceFolderStub = sandbox.stub(vscode.workspace, "getWorkspaceFolder").returns(workspaceFolder);
+            const getWorkspaceFolderStub = sandbox
+                .stub(vscode.workspace, "getWorkspaceFolder")
+                .returns(workspaceFolder);
             const getConfigStub = sandbox.stub(vscode.workspace, "getConfiguration").returns({
                 get: sandbox.stub().returns(true),
             } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
