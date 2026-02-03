@@ -176,7 +176,9 @@ describe("TCP Dump Command Parsing - Fuzz Tests", () => {
         });
 
         it("should handle shell metacharacters in file paths", () => {
-            const shellMetachars = fc.string().map(s => s + fc.sample(fc.constantFrom(";", "|", "&", "$", "`", ">", "<", "\n", "\r"), 1)[0]);
+            const shellMetachars = fc
+                .string()
+                .map((s) => s + fc.sample(fc.constantFrom(";", "|", "&", "$", "`", ">", "<", "\n", "\r"), 1)[0]);
 
             fc.assert(
                 fc.property(shellMetachars, (metachars) => {
