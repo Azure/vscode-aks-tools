@@ -77,7 +77,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
 
         it("should handle empty and whitespace strings", () => {
             fc.assert(
-                fc.property(fc.stringOf(fc.constantFrom(" ", "\t", "\n", "\r", "")), (input) => {
+                fc.property(fc.array(fc.constantFrom(" ", "\t", "\n", "\r", "")).map(arr => arr.join("")), (input) => {
                     try {
                         const result = parseResource(input);
                         expect(result).to.be.an("object");

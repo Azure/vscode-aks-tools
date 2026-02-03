@@ -105,7 +105,7 @@ describe("KAITO GPU Parsing - Fuzz Tests", () => {
 
         it("should handle empty and whitespace strings", () => {
             fc.assert(
-                fc.property(fc.stringOf(fc.constantFrom(" ", "\t", "\n", "")), (input) => {
+                fc.property(fc.string({ unit: fc.constantFrom(" ", "\t", "\n", "") }), (input) => {
                     try {
                         const [family, count] = parseGPU(input);
                         expect(family).to.be.a("string");
