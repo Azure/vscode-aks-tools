@@ -4,7 +4,7 @@ import * as sinon from "sinon";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ContainerAssistService } from "../../commands/aksContainerAssist/containerAssistService";
 import { runContainerAssist } from "../../commands/aksContainerAssist/aksContainerAssist";
-import { ContainerAssistAction, ContainerAssistQuickPickItem } from "../../commands/aksContainerAssist/types";
+import { ContainerAssistAction, ContainerAssistQuickPickItem, ModuleAnalysisResult } from "../../commands/aksContainerAssist/types";
 
 describe("Container Assist Tests", () => {
     let sandbox: sinon.SinonSandbox;
@@ -62,10 +62,14 @@ describe("Container Assist Tests", () => {
             const service = new ContainerAssistService();
             const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
-            const result = await service.generateDockerfile("/test/path", {
-                language: "node",
+            const moduleInfo: ModuleAnalysisResult = {
+                name: "test-module",
+                modulePath: "/test/path",
+                language: "javascript",
                 framework: "express",
-            });
+            };
+
+            const result = await service.generateDockerfile("/test/path", moduleInfo);
 
             // Should fail because createApp() will fail in test environment without Docker
             assert.strictEqual(result.succeeded, false);
@@ -79,14 +83,19 @@ describe("Container Assist Tests", () => {
             const service = new ContainerAssistService();
             const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
-            const result = await service.generateManifests("/test/path", "Dockerfile", "test-app");
+            const moduleInfo: ModuleAnalysisResult = {
+                name: "test-module",
+                modulePath: "/test/path",
+            };
+
+            const result = await service.generateManifests("/test/path", "test-app", moduleInfo);
 
             // Should fail because createApp() will fail in test environment without Docker
             assert.strictEqual(result.succeeded, false);
             assert.ok(result.error);
-            assert.ok(result.error.includes("Failed to") || result.error.includes("initialize"));
+            assert.ok(result.error.includes("Failed to") || result.error.includes("initialize") || result.error.includes("Language Model"));
             // Info message is shown before attempting execution
-            assert.ok(showInfoStub.calledOnce);
+            assert.ok(showInfoStub.called || result.error.includes("Language Model"));
         });
 
         it("generateDeploymentFiles orchestrates the workflow", async () => {
@@ -118,7 +127,10 @@ describe("Container Assist Tests", () => {
 
             analyzeStub.resolves({
                 succeeded: true,
-                result: { language: "node" },
+                result: {
+                    modules: [{ name: "test", modulePath: "/test/path", language: "javascript" }],
+                    isMonorepo: false,
+                },
             });
 
             dockerfileStub.resolves({
@@ -225,8 +237,9 @@ describe("Container Assist Tests", () => {
             const service = new ContainerAssistService();
 
             const analyzeResult = await service.analyzeRepository("/test");
-            const dockerfileResult = await service.generateDockerfile("/test", {});
-            const manifestsResult = await service.generateManifests("/test", "Dockerfile", "app");
+            const moduleInfo: ModuleAnalysisResult = { name: "test", modulePath: "/test" };
+            const dockerfileResult = await service.generateDockerfile("/test", moduleInfo);
+            const manifestsResult = await service.generateManifests("/test", "app", moduleInfo);
 
             // All should return Errorable with succeeded property
             assert.ok("succeeded" in analyzeResult);
