@@ -8,10 +8,6 @@ import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
 
-/**
- * Main command handler for Container Assist feature
- * Displays a QuickPick with checklist options for deployment generation
- */
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
         logger.info("Container Assist command started");
@@ -80,9 +76,6 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
     }
 }
 
-/**
- * Extract the URI from the command target
- */
 function getTargetUri(target: unknown): vscode.Uri | undefined {
     if (target instanceof vscode.Uri) {
         return target;
@@ -98,10 +91,6 @@ function getTargetUri(target: unknown): vscode.Uri | undefined {
     return undefined;
 }
 
-/**
- * Find the project root by searching upward for project indicator files
- * Looks for: package.json, pom.xml, build.gradle, go.mod, Cargo.toml, requirements.txt, etc.
- */
 async function findProjectRoot(startPath: string, workspaceRoot: string): Promise<string> {
     const projectIndicators = [
         "package.json",
@@ -122,7 +111,6 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
     while (currentPath.startsWith(workspaceRoot)) {
         for (const indicator of projectIndicators) {
             if (indicator.startsWith(".")) {
-                // Handle file extension indicators (like .csproj, .sln)
                 try {
                     const files = await fs.readdir(currentPath);
                     if (files.some((f) => f.endsWith(indicator))) {
@@ -139,7 +127,7 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
                     logger.debug(`Found project root at: ${currentPath} (indicator: ${indicator})`);
                     return currentPath;
                 } catch {
-                    // File doesn't exist, continue searching
+                    // File doesn't exist
                 }
             }
         }
@@ -155,9 +143,6 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
     return startPath;
 }
 
-/**
- * Show QuickPick with checklist for Container Assist actions
- */
 async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] | undefined> {
     const items: ContainerAssistQuickPickItem[] = [
         {
@@ -187,9 +172,6 @@ async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] |
     return selected.map((item) => item.action);
 }
 
-/**
- * Process a single Container Assist action
- */
 async function processContainerAssistAction(
     action: ContainerAssistAction,
     service: ContainerAssistService,
@@ -211,10 +193,6 @@ async function processContainerAssistAction(
     }
 }
 
-/**
- * Generate deployment files using Container Assist
- * Orchestrates: Analyze → Dockerfile → K8s Manifests
- */
 async function generateDeploymentFiles(
     service: ContainerAssistService,
     _workspaceFolder: vscode.WorkspaceFolder,
@@ -231,7 +209,6 @@ async function generateDeploymentFiles(
             cancellable: true,
         },
         async (progress, token) => {
-            // Create abort controller for cancellation support
             const abortController = new AbortController();
             token.onCancellationRequested(() => {
                 logger.info("Operation cancelled by user");
@@ -293,9 +270,6 @@ async function generateDeploymentFiles(
     );
 }
 
-/**
- * Generate default workflow (placeholder for future implementation)
- */
 function generateDefaultWorkflow(): void {
     logger.info("Generate Default Workflow feature is not yet implemented");
     vscode.window.showInformationMessage(
