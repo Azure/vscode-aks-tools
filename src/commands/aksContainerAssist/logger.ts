@@ -49,11 +49,11 @@ class ContainerAssistLogger {
     }
 
     /**
-     * Log a debug message with optional data (only in development)
+     * Log a debug message with optional data (disabled by default in production)
      */
     debug(message: string, data?: unknown): void {
         const config = vscode.workspace.getConfiguration("aks");
-        const debugEnabled = config.get<boolean>("containerAssistDebugLogging", true);
+        const debugEnabled = config.get<boolean>("containerAssistDebugLogging", false);
 
         if (debugEnabled) {
             this.getChannel().appendLine(`[DEBUG] ${this.timestamp()} ${message}`);
