@@ -14,16 +14,31 @@ export interface ContainerAssistQuickPickItem extends vscode.QuickPickItem {
     action: ContainerAssistAction;
 }
 
-export interface ContainerAssistResult {
-    succeeded: boolean;
-    error?: string;
-    generatedFiles?: string[];
+/**
+ * Result of the deployment file generation workflow
+ */
+export interface DeploymentResult {
+    generatedFiles: string[];
 }
 
-export interface AnalyzeRepositoryResult {
+/**
+ * Module information extracted from repository analysis
+ */
+export interface ModuleAnalysisResult {
+    name: string;
+    modulePath: string;
     language?: string;
     framework?: string;
     port?: number;
     buildCommand?: string;
-    startCommand?: string;
+    dependencies?: string[];
+    entryPoint?: string;
+}
+
+/**
+ * Result of the repository analysis - supports monorepos with multiple modules
+ */
+export interface AnalyzeRepositoryResult {
+    modules: ModuleAnalysisResult[];
+    isMonorepo: boolean;
 }
