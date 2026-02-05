@@ -63,8 +63,8 @@ describe("ContainerAssistService", () => {
             assert.strictEqual(result.succeeded, false);
             assert.ok(
                 result.error?.includes("Language Model") ||
-                result.error?.includes("Failed to") ||
-                result.error?.includes("Copilot"),
+                    result.error?.includes("Failed to") ||
+                    result.error?.includes("Copilot"),
             );
         });
     });
@@ -81,8 +81,8 @@ describe("ContainerAssistService", () => {
             assert.strictEqual(result.succeeded, false);
             assert.ok(
                 result.error?.includes("Language Model") ||
-                result.error?.includes("Failed to") ||
-                result.error?.includes("Copilot"),
+                    result.error?.includes("Failed to") ||
+                    result.error?.includes("Copilot"),
             );
         });
     });
@@ -130,11 +130,11 @@ describe("ContainerAssistService", () => {
         });
     });
 
-    describe("isLanguageModelAvailable", () => {
+    describe("selectLanguageModel", () => {
         it("returns error when no models found", async () => {
             sandbox.stub(vscode.lm, "selectChatModels").resolves([]);
 
-            const result = await service.isLanguageModelAvailable();
+            const result = await service.selectLanguageModel();
 
             assert.strictEqual(result.succeeded, false);
             assert.ok(result.error?.includes("No Language Model") || result.error?.includes("Copilot"));
@@ -149,7 +149,7 @@ describe("ContainerAssistService", () => {
             } as vscode.LanguageModelChat;
             sandbox.stub(vscode.lm, "selectChatModels").resolves([mockModel]);
 
-            const result = await service.isLanguageModelAvailable(false);
+            const result = await service.selectLanguageModel(false);
 
             assert.strictEqual(result.succeeded, true);
             if (result.succeeded) {
@@ -168,7 +168,7 @@ describe("ContainerAssistService", () => {
                 model: mockModels[1],
             } as unknown as vscode.QuickPickItem);
 
-            const result = await service.isLanguageModelAvailable(true);
+            const result = await service.selectLanguageModel(true);
 
             assert.strictEqual(result.succeeded, true);
             if (result.succeeded) {
@@ -184,7 +184,7 @@ describe("ContainerAssistService", () => {
             sandbox.stub(vscode.lm, "selectChatModels").resolves(mockModels);
             sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
 
-            const result = await service.isLanguageModelAvailable(true);
+            const result = await service.selectLanguageModel(true);
 
             assert.strictEqual(result.succeeded, false);
             assert.ok(result.error?.includes("cancelled"));
@@ -249,7 +249,7 @@ describe("ContainerAssistService", () => {
                 hasK8sManifests: false,
             });
             sandbox.stub(vscode.window, "showWarningMessage").resolves("Overwrite" as unknown as vscode.MessageItem);
-            sandbox.stub(service, "isLanguageModelAvailable").resolves({
+            sandbox.stub(service, "selectLanguageModel").resolves({
                 succeeded: false,
                 error: "No LM available",
             });

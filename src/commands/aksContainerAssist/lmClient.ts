@@ -59,7 +59,7 @@ export class LMClient {
         }
     }
 
-    async selectModel(allowSelection: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
+    async selectModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
         try {
             logger.info("Checking Language Model availability...");
 
@@ -75,30 +75,27 @@ export class LMClient {
 
             logger.debug(`Found ${allModels.length} available models`);
 
-            if (allowSelection && allModels.length > 1) {
-                const selectedModel = await this.showModelSelectionQuickPick(allModels);
-                if (!selectedModel) {
-                    return { succeeded: false, error: l10n.t("Model selection cancelled") };
-                }
-                this.languageModel = selectedModel;
+            const preferences = this.getModelPreferences();
+            const preferredModels = allModels.filter((m) => this.isPreferredModel(m, preferences));
+
+            let selectedModel: vscode.LanguageModelChat | undefined;
+
+            if (showPicker) {
+                selectedModel = await this.showModelSelectionQuickPick(allModels, preferences);
             } else {
-                const config = vscode.workspace.getConfiguration("aks.containerAssist");
-                const preferredFamily = config.get<string>("modelFamily", DEFAULT_LM_MODEL_FAMILY);
-                const preferredVendor = config.get<string>("modelVendor", DEFAULT_LM_MODEL_VENDOR);
-
-                const preferredModels = await vscode.lm.selectChatModels({
-                    vendor: preferredVendor,
-                    family: preferredFamily,
-                });
-
-                if (preferredModels && preferredModels.length > 0) {
-                    this.languageModel = preferredModels[0];
-                } else {
-                    logger.warn(`Preferred model (${preferredVendor}/${preferredFamily}) not found, using first available`);
-                    this.languageModel = allModels[0];
+                selectedModel = preferredModels[0] ?? allModels[0];
+                if (selectedModel !== preferredModels[0] && preferredModels.length === 0) {
+                    logger.warn(
+                        `Preferred model (${preferences.vendor}/${preferences.family}) not found, using first available`,
+                    );
                 }
             }
 
+            if (!selectedModel) {
+                return { succeeded: false, error: l10n.t("Model selection cancelled") };
+            }
+
+            this.languageModel = selectedModel;
             logger.info(`Language Model selected: ${this.languageModel.name} (${this.languageModel.id})`);
             return { succeeded: true, result: this.languageModel };
         } catch (error) {
@@ -107,13 +104,40 @@ export class LMClient {
         }
     }
 
-    private async showModelSelectionQuickPick(models: vscode.LanguageModelChat[]): Promise<vscode.LanguageModelChat | undefined> {
-        const items: ModelQuickPickItem[] = models.map((model) => ({
-            label: model.name,
-            description: `${model.vendor} / ${model.family}`,
-            detail: model.id,
-            model,
-        }));
+    private getModelPreferences() {
+        const config = vscode.workspace.getConfiguration("aks.containerAssist");
+        return {
+            family: config.get<string>("modelFamily", DEFAULT_LM_MODEL_FAMILY),
+            vendor: config.get<string>("modelVendor", DEFAULT_LM_MODEL_VENDOR),
+        };
+    }
+
+    private isPreferredModel(
+        model: vscode.LanguageModelChat,
+        preferences: { family: string; vendor: string },
+    ): boolean {
+        return model.family === preferences.family && model.vendor === preferences.vendor;
+    }
+
+    private async showModelSelectionQuickPick(
+        models: vscode.LanguageModelChat[],
+        preferences: { family: string; vendor: string },
+    ): Promise<vscode.LanguageModelChat | undefined> {
+        const items: ModelQuickPickItem[] = models
+            .map((model) => {
+                const isPreferred = this.isPreferredModel(model, preferences);
+                return {
+                    label: isPreferred ? `$(star-full) ${model.name}` : model.name,
+                    description: `${model.vendor} / ${model.family}`,
+                    detail: isPreferred ? l10n.t("Configured as preferred model") : model.id,
+                    model,
+                    isPreferred,
+                };
+            })
+            .sort((a, b) => {
+                if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
+                return a.label.localeCompare(b.label);
+            });
 
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: l10n.t("Select a Language Model for generating deployment files"),

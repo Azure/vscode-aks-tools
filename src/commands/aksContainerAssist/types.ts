@@ -43,4 +43,5 @@ export interface ExistingFilesCheckResult {
 
 export interface ModelQuickPickItem extends vscode.QuickPickItem {
     model: vscode.LanguageModelChat;
+    isPreferred: boolean;
 }

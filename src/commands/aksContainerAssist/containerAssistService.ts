@@ -17,7 +17,12 @@ import {
 import { LMClient } from "./lmClient";
 import { extractContent, parseManifestsFromLMResponse } from "./contentParser";
 import { checkExistingFiles, writeFile, ensureDirectory, getK8sManifestFolder } from "./fileOperations";
-import { DOCKERFILE_SYSTEM_PROMPT, K8S_MANIFEST_SYSTEM_PROMPT, buildDockerfileUserPrompt, buildK8sManifestUserPrompt } from "./prompts";
+import {
+    DOCKERFILE_SYSTEM_PROMPT,
+    K8S_MANIFEST_SYSTEM_PROMPT,
+    buildDockerfileUserPrompt,
+    buildK8sManifestUserPrompt,
+} from "./prompts";
 
 export class ContainerAssistService {
     private lmClient: LMClient;
@@ -62,8 +67,8 @@ export class ContainerAssistService {
         return checkExistingFiles(folderPath);
     }
 
-    async isLanguageModelAvailable(allowSelection: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
-        return this.lmClient.selectModel(allowSelection);
+    async selectLanguageModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
+        return this.lmClient.selectModel(showPicker);
     }
 
     async analyzeRepository(folderPath: string, signal?: AbortSignal): Promise<Errorable<AnalyzeRepositoryResult>> {
@@ -97,7 +102,9 @@ export class ContainerAssistService {
             const isMonorepo = analysis.isMonorepo ?? modules.length > 1;
 
             logger.info(`Repository analysis complete: ${modules.length} module(s), isMonorepo: ${isMonorepo}`);
-            modules.forEach((m, i) => logger.debug(`Module ${i + 1}`, m));
+            if (modules.length > 0) {
+                logger.debug(`Analyzed ${modules.length} modules`, modules);
+            }
 
             return {
                 succeeded: true,
@@ -197,7 +204,16 @@ export class ContainerAssistService {
                 modulePath,
                 name: appName,
                 namespace,
-                language: moduleInfo.language as "java" | "dotnet" | "javascript" | "typescript" | "python" | "rust" | "go" | "other" | undefined,
+                language: moduleInfo.language as
+                    | "java"
+                    | "dotnet"
+                    | "javascript"
+                    | "typescript"
+                    | "python"
+                    | "rust"
+                    | "go"
+                    | "other"
+                    | undefined,
                 ports: moduleInfo.port ? [moduleInfo.port] : undefined,
                 detectedDependencies: moduleInfo.dependencies,
                 entryPoint: moduleInfo.entryPoint,
@@ -261,45 +277,44 @@ export class ContainerAssistService {
         appName: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
-        allowModelSelection: boolean = true,
+        showModelPicker: boolean = false,
+        onProgress?: (message: string) => void,
     ): Promise<Errorable<DeploymentResult>> {
+        const reportProgress = (message: string) => onProgress?.(message);
+
         logger.info(`Starting deployment workflow for: ${appName}`);
         logger.debug("Deployment workflow params", { folderPath, appName });
 
         logger.info("Step 0: Checking for existing deployment files...");
         const existingFiles = await this.checkExistingFiles(folderPath);
-        
-        if (existingFiles.hasDockerfile || existingFiles.hasK8sManifests) {
-            const existingFilesList: string[] = [];
-            if (existingFiles.hasDockerfile) {
-                existingFilesList.push("Dockerfile");
-            }
-            if (existingFiles.hasK8sManifests) {
-                existingFilesList.push(`${getK8sManifestFolder()}/ manifests`);
-            }
-            
-            logger.info(`Found existing files: ${existingFilesList.join(", ")}`);
-            
-            const overwrite = l10n.t("Overwrite");
-            const cancel = l10n.t("Cancel");
+
+        const skipDockerfile = existingFiles.hasDockerfile;
+        const skipK8sManifests = existingFiles.hasK8sManifests;
+
+        if (skipDockerfile && skipK8sManifests) {
             const message = l10n.t(
-                "Existing deployment files found ({0}). Do you want to overwrite them?",
-                existingFilesList.join(", "),
+                "Deployment files already exist (Dockerfile and {0}/ manifests). No new files generated.",
+                getK8sManifestFolder(),
             );
-            
-            const selection = await vscode.window.showWarningMessage(message, { modal: true }, overwrite, cancel);
-            
-            if (selection !== overwrite) {
-                logger.info("User cancelled due to existing files");
-                return {
-                    succeeded: false,
-                    error: l10n.t("Operation cancelled. Existing deployment files were not modified."),
-                };
-            }
+            logger.info(message);
+            vscode.window.showInformationMessage(message);
+            return {
+                succeeded: true,
+                result: { generatedFiles: [] },
+            };
         }
 
-        logger.info("Step 1: Checking Language Model availability...");
-        const lmResult = await this.isLanguageModelAvailable(allowModelSelection);
+        if (skipDockerfile || skipK8sManifests) {
+            const existingList = [
+                skipDockerfile && "Dockerfile",
+                skipK8sManifests && `${getK8sManifestFolder()}/ manifests`,
+            ].filter(Boolean);
+            logger.info(`Existing files found (will be preserved): ${existingList.join(", ")}`);
+            vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", existingList.join(", ")));
+        }
+
+        logger.info("Step 1: Selecting Language Model...");
+        const lmResult = await this.selectLanguageModel(showModelPicker);
         if (failed(lmResult)) {
             logger.error("Language Model not available", lmResult.error);
             return lmResult;
@@ -325,27 +340,46 @@ export class ContainerAssistService {
 
         const allGeneratedFiles: string[] = [];
 
-        logger.info(`Step 3: Generating Dockerfiles for ${modules.length} module(s)...`);
-        for (const module of modules) {
-            logger.info(`Generating Dockerfile for module: ${module.name}`);
-            const dockerfileResult = await this.generateDockerfile(module.modulePath, module, signal, token);
-            if (failed(dockerfileResult)) {
-                logger.error(`Workflow failed at Dockerfile step for module: ${module.name}`, dockerfileResult.error);
-                return dockerfileResult;
+        if (!skipDockerfile) {
+            logger.info(`Step 3: Generating Dockerfiles for ${modules.length} module(s)...`);
+            for (const module of modules) {
+                logger.info(`Generating Dockerfile for module: ${module.name}`);
+                reportProgress(l10n.t("Generating Dockerfile for {0}...", module.name));
+                const dockerfileResult = await this.generateDockerfile(module.modulePath, module, signal, token);
+                if (failed(dockerfileResult)) {
+                    logger.error(
+                        `Workflow failed at Dockerfile step for module: ${module.name}`,
+                        dockerfileResult.error,
+                    );
+                    return dockerfileResult;
+                }
+                allGeneratedFiles.push(dockerfileResult.result);
             }
-            allGeneratedFiles.push(dockerfileResult.result);
+        } else {
+            logger.info("Step 3: Skipping Dockerfile generation (existing files preserved)");
         }
 
-        logger.info(`Step 4: Generating Kubernetes manifests for ${modules.length} module(s)...`);
-        for (const module of modules) {
-            const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
-            logger.info(`Generating manifests for module: ${module.name} as ${manifestAppName}`);
-            const manifestsResult = await this.generateManifests(module.modulePath, manifestAppName, module, signal, token);
-            if (failed(manifestsResult)) {
-                logger.error(`Workflow failed at manifests step for module: ${module.name}`, manifestsResult.error);
-                return manifestsResult;
+        if (!skipK8sManifests) {
+            logger.info(`Step 4: Generating Kubernetes manifests for ${modules.length} module(s)...`);
+            for (const module of modules) {
+                const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
+                logger.info(`Generating manifests for module: ${module.name} as ${manifestAppName}`);
+                reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
+                const manifestsResult = await this.generateManifests(
+                    module.modulePath,
+                    manifestAppName,
+                    module,
+                    signal,
+                    token,
+                );
+                if (failed(manifestsResult)) {
+                    logger.error(`Workflow failed at manifests step for module: ${module.name}`, manifestsResult.error);
+                    return manifestsResult;
+                }
+                allGeneratedFiles.push(...manifestsResult.result);
             }
-            allGeneratedFiles.push(...manifestsResult.result);
+        } else {
+            logger.info("Step 4: Skipping K8s manifest generation (existing files preserved)");
         }
 
         logger.info(`Deployment workflow completed: ${allGeneratedFiles.length} files generated`);

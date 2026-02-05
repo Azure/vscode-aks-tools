@@ -109,26 +109,28 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
     let currentPath = startPath;
 
     while (currentPath.startsWith(workspaceRoot)) {
-        for (const indicator of projectIndicators) {
-            if (indicator.startsWith(".")) {
-                try {
-                    const files = await fs.readdir(currentPath);
-                    if (files.some((f) => f.endsWith(indicator))) {
-                        logger.debug(`Found project root at: ${currentPath} (indicator: *${indicator})`);
-                        return currentPath;
-                    }
-                } catch {
-                    // Ignore directory read errors
-                }
-            } else {
-                const indicatorPath = path.join(currentPath, indicator);
-                try {
-                    await fs.access(indicatorPath);
-                    logger.debug(`Found project root at: ${currentPath} (indicator: ${indicator})`);
+        const extensionIndicators = projectIndicators.filter((ind) => ind.startsWith("."));
+        if (extensionIndicators.length > 0) {
+            try {
+                const files = await fs.readdir(currentPath);
+                const foundExtension = extensionIndicators.find((ext) => files.some((f) => f.endsWith(ext)));
+                if (foundExtension) {
+                    logger.debug(`Found project root at: ${currentPath} (indicator: *${foundExtension})`);
                     return currentPath;
-                } catch {
-                    // File doesn't exist
                 }
+            } catch {
+                // Ignore directory read errors
+            }
+        }
+
+        const fileIndicators = projectIndicators.filter((ind) => !ind.startsWith("."));
+        for (const indicator of fileIndicators) {
+            try {
+                await fs.access(path.join(currentPath, indicator));
+                logger.debug(`Found project root at: ${currentPath} (indicator: ${indicator})`);
+                return currentPath;
+            } catch {
+                // File doesn't exist, continue
             }
         }
 
@@ -202,7 +204,21 @@ async function generateDeploymentFiles(
     logger.info(`Starting deployment file generation for app: ${appName}`);
     logger.debug("Target path", targetPath);
 
-    await vscode.window.withProgress(
+    const useDefault = l10n.t("Use Default Model");
+    const selectModel = l10n.t("Select Model...");
+    const modelChoice = await vscode.window.showQuickPick([useDefault, selectModel], {
+        placeHolder: l10n.t("Choose Language Model"),
+        title: l10n.t("Container Assist - Language Model"),
+    });
+
+    if (!modelChoice) {
+        logger.info("Model selection cancelled");
+        return;
+    }
+
+    const showModelPicker = modelChoice === selectModel;
+
+    const result = await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
             title: l10n.t("Container Assist"),
@@ -216,58 +232,78 @@ async function generateDeploymentFiles(
             });
 
             try {
-                progress.report({ message: l10n.t("Generating deployment files for {0}...", appName) });
+                progress.report({ message: l10n.t("Analyzing project {0}...", appName) });
 
-                const result = await service.generateDeploymentFiles(targetPath, appName, abortController.signal);
+                const generationResult = await service.generateDeploymentFiles(
+                    targetPath,
+                    appName,
+                    abortController.signal,
+                    token,
+                    showModelPicker,
+                    (step: string) => progress.report({ message: step }),
+                );
 
                 if (token.isCancellationRequested) {
-                    return;
+                    return undefined;
                 }
 
-                if (failed(result)) {
-                    logger.error("Deployment file generation failed", result.error);
-                    vscode.window.showErrorMessage(l10n.t("Failed to generate deployment files: {0}", result.error));
-                    return;
-                }
-
-                const generatedFiles = result.result.generatedFiles;
-                logger.info(`Successfully generated ${generatedFiles.length} files`);
-                logger.debug("Generated files", generatedFiles);
-
-                if (generatedFiles.length > 0) {
-                    const message = l10n.t("Successfully generated {0} deployment files", generatedFiles.length);
-                    const openFiles = l10n.t("Open Files");
-                    const showLogs = l10n.t("Show Logs");
-
-                    const selection = await vscode.window.showInformationMessage(message, openFiles, showLogs);
-                    if (selection === openFiles) {
-                        for (const file of generatedFiles) {
-                            try {
-                                const doc = await vscode.workspace.openTextDocument(file);
-                                await vscode.window.showTextDocument(doc, { preview: false });
-                            } catch (error) {
-                                logger.error(`Failed to open file: ${file}`, error);
-                            }
-                        }
-                    } else if (selection === showLogs) {
-                        logger.show();
-                    }
-                } else {
-                    logger.warn("No files were generated");
-                    vscode.window.showWarningMessage(l10n.t("No deployment files were generated."));
-                }
+                progress.report({ message: l10n.t("Completing...") });
+                return generationResult;
             } catch (error) {
                 if (error instanceof Error && error.name === "AbortError") {
                     logger.info("Operation was aborted");
-                    return;
+                    return undefined;
                 }
                 logger.error("Exception during deployment file generation", error);
                 vscode.window.showErrorMessage(
                     l10n.t("An error occurred while generating deployment files: {0}", String(error)),
                 );
+                return undefined;
             }
         },
     );
+
+    if (!result) {
+        return;
+    }
+
+    if (failed(result)) {
+        logger.error("Deployment file generation failed", result.error);
+        vscode.window.showErrorMessage(l10n.t("Failed to generate deployment files: {0}", result.error));
+        return;
+    }
+
+    const generatedFiles = result.result.generatedFiles;
+    logger.info(`Successfully generated ${generatedFiles.length} files`);
+    logger.debug("Generated files", generatedFiles);
+
+    if (generatedFiles.length === 0) {
+        logger.warn("No files were generated");
+        vscode.window.showWarningMessage(l10n.t("No deployment files were generated."));
+        return;
+    }
+
+    const message = l10n.t("Successfully generated {0} deployment files", generatedFiles.length);
+    const openFiles = l10n.t("Open Files");
+    const showLogs = l10n.t("Show Logs");
+
+    const selection = await vscode.window.showInformationMessage(message, openFiles, showLogs);
+    if (selection === openFiles) {
+        await openGeneratedFiles(generatedFiles);
+    } else if (selection === showLogs) {
+        logger.show();
+    }
+}
+
+async function openGeneratedFiles(files: string[]): Promise<void> {
+    for (const file of files) {
+        try {
+            const doc = await vscode.workspace.openTextDocument(file);
+            await vscode.window.showTextDocument(doc, { preview: false });
+        } catch (error) {
+            logger.error(`Failed to open file: ${file}`, error);
+        }
+    }
 }
 
 function generateDefaultWorkflow(): void {
