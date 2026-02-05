@@ -6,6 +6,10 @@
         "lib": ["ES2022"],
         "sourceMap": true,
         "rootDir": ".", /* This is not the `src` directory because some TS files import `package.json` */
+        "baseUrl": ".",
+        "paths": {
+            "containerization-assist-mcp/sdk": ["node_modules/containerization-assist-mcp/dist-cjs/src/sdk"]
+        },
         "strict": true, /* enable all strict type-checking options */
         "noUnusedLocals": true, /* Report errors on unused locals. */
         "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */

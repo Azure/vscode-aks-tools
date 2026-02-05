@@ -1,63 +1,61 @@
 import * as vscode from "vscode";
+import * as path from "path";
 import { Errorable, failed } from "../utils/errorable";
-import { AnalyzeRepositoryResult, ContainerAssistResult } from "./types";
+import { AnalyzeRepositoryResult, DeploymentResult, ExistingFilesCheckResult, ModuleAnalysisResult } from "./types";
+import { logger } from "./logger";
 import * as l10n from "@vscode/l10n";
-import { createApp, AppRuntime } from "containerization-assist-mcp";
+import {
+    analyzeRepo,
+    generateDockerfile as sdkGenerateDockerfile,
+    generateK8sManifests as sdkGenerateK8sManifests,
+    formatErrorForLLM,
+    type RepositoryAnalysis,
+    type DockerfilePlan,
+    type ManifestPlan,
+} from "containerization-assist-mcp/sdk";
 
-/**
- * Service for interacting with Container Assist MCP tools
- */
+import { LMClient } from "./lmClient";
+import { extractContent, parseManifestsFromLMResponse } from "./contentParser";
+import { checkExistingFiles, writeFile, ensureDirectory, getK8sManifestFolder } from "./fileOperations";
+import {
+    DOCKERFILE_SYSTEM_PROMPT,
+    K8S_MANIFEST_SYSTEM_PROMPT,
+    buildDockerfileUserPrompt,
+    buildK8sManifestUserPrompt,
+} from "./prompts";
+
 export class ContainerAssistService {
-    private appRuntime: AppRuntime | null = null;
+    private lmClient: LMClient;
 
-    /**
-     * Initialize the Container Assist app runtime
-     */
-    private async initializeRuntime(): Promise<Errorable<AppRuntime>> {
-        if (this.appRuntime) {
-            return { succeeded: true, result: this.appRuntime };
-        }
-
-        try {
-            this.appRuntime = await createApp();
-            return { succeeded: true, result: this.appRuntime };
-        } catch (error) {
-            return {
-                succeeded: false,
-                error: l10n.t("Failed to initialize Container Assist runtime: {0}", String(error)),
-            };
-        }
+    constructor() {
+        this.lmClient = new LMClient();
     }
 
-    /**
-     * Check if Container Assist tools are available
-     */
+    private handleSdkError(operation: string, error: unknown): Errorable<never> {
+        logger.error(`${operation} exception`, error);
+        return {
+            succeeded: false,
+            error: l10n.t("Failed to {0}: {1}", operation, String(error)),
+        };
+    }
+
     async isAvailable(): Promise<Errorable<boolean>> {
         try {
-            // Check if the containerAssistEnabledPreview setting is enabled
             const config = vscode.workspace.getConfiguration("aks");
             const isEnabled = config.get<boolean>("containerAssistEnabledPreview", false);
+            logger.debug("containerAssistEnabledPreview setting", isEnabled);
 
             if (!isEnabled) {
-                return {
-                    succeeded: false,
-                    error: l10n.t(
-                        "Container Assist is not enabled. Please enable 'aks.containerAssistEnabledPreview' in settings.",
-                    ),
-                };
+                const errorMsg = l10n.t(
+                    "Container Assist is not enabled. Please enable 'aks.containerAssistEnabledPreview' in settings.",
+                );
+                return { succeeded: false, error: errorMsg };
             }
 
-            // Check if we can initialize the runtime
-            const runtime = await this.initializeRuntime();
-            if (failed(runtime)) {
-                return {
-                    succeeded: false,
-                    error: runtime.error,
-                };
-            }
-
+            logger.info("Container Assist is available and enabled");
             return { succeeded: true, result: true };
         } catch (error) {
+            logger.error("Failed to check availability", error);
             return {
                 succeeded: false,
                 error: l10n.t("Failed to check Container Assist availability: {0}", String(error)),
@@ -65,206 +63,331 @@ export class ContainerAssistService {
         }
     }
 
-    /**
-     * Analyze the repository to determine language, framework, and other metadata
-     */
-    async analyzeRepository(folderPath: string): Promise<Errorable<AnalyzeRepositoryResult>> {
-        try {
-            const runtime = await this.initializeRuntime();
-            if (failed(runtime)) {
-                return {
-                    succeeded: false,
-                    error: runtime.error,
-                };
-            }
-
-            vscode.window.showInformationMessage(
-                l10n.t("Container Assist: Analyzing repository at {0}...", folderPath),
-            );
-
-            const result = await runtime.result.execute(
-                "analyze-repo" as never,
-                {
-                    repositoryPath: folderPath,
-                } as never,
-            );
-
-            if (!result.ok) {
-                return {
-                    succeeded: false,
-                    error: l10n.t("Failed to analyze repository: {0}", String(result.error)),
-                };
-            }
-
-            const analysis = result.value as {
-                language?: string;
-                framework?: string;
-                port?: number;
-                buildCommands?: string[];
-                startCommands?: string[];
-            };
-
-            return {
-                succeeded: true,
-                result: {
-                    language: analysis.language,
-                    framework: analysis.framework,
-                    port: analysis.port,
-                    buildCommand: analysis.buildCommands?.[0],
-                    startCommand: analysis.startCommands?.[0],
-                },
-            };
-        } catch (error) {
-            return {
-                succeeded: false,
-                error: l10n.t("Failed to analyze repository: {0}", String(error)),
-            };
-        }
+    async checkExistingFiles(folderPath: string): Promise<ExistingFilesCheckResult> {
+        return checkExistingFiles(folderPath);
     }
 
-    /**
-     * Generate a Dockerfile for the repository
-     */
-    async generateDockerfile(folderPath: string, analysisResult: AnalyzeRepositoryResult): Promise<Errorable<string>> {
-        try {
-            const runtime = await this.initializeRuntime();
-            if (failed(runtime)) {
-                return {
-                    succeeded: false,
-                    error: runtime.error,
-                };
-            }
-
-            vscode.window.showInformationMessage(
-                l10n.t("Container Assist: Generating Dockerfile for {0}...", folderPath),
-            );
-
-            const result = await runtime.result.execute(
-                "generate-dockerfile" as never,
-                {
-                    repositoryPath: folderPath,
-                    language: analysisResult.language,
-                    framework: analysisResult.framework,
-                    port: analysisResult.port,
-                } as never,
-            );
-
-            if (!result.ok) {
-                return {
-                    succeeded: false,
-                    error: l10n.t("Failed to generate Dockerfile: {0}", String(result.error)),
-                };
-            }
-
-            // The Dockerfile should have been written to the folder
-            const dockerfilePath = `${folderPath}/Dockerfile`;
-            return {
-                succeeded: true,
-                result: dockerfilePath,
-            };
-        } catch (error) {
-            return {
-                succeeded: false,
-                error: l10n.t("Failed to generate Dockerfile: {0}", String(error)),
-            };
-        }
+    async selectLanguageModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
+        return this.lmClient.selectModel(showPicker);
     }
 
-    /**
-     * Generate Kubernetes manifests for the application
-     */
-    async generateManifests(
-        folderPath: string,
-        _dockerfilePath: string,
-        appName: string,
-    ): Promise<Errorable<string[]>> {
+    async analyzeRepository(folderPath: string, signal?: AbortSignal): Promise<Errorable<AnalyzeRepositoryResult>> {
+        logger.info(`Analyzing repository at: ${folderPath}`);
         try {
-            const runtime = await this.initializeRuntime();
-            if (failed(runtime)) {
-                return {
-                    succeeded: false,
-                    error: runtime.error,
-                };
-            }
+            const requestParams = { repositoryPath: folderPath };
+            logger.debug("analyzeRepo request", requestParams);
 
-            vscode.window.showInformationMessage(
-                l10n.t("Container Assist: Generating Kubernetes manifests for {0}...", appName),
-            );
-
-            const result = await runtime.result.execute(
-                "generate-k8s-manifests" as never,
-                {
-                    path: folderPath,
-                    appName: appName,
-                    namespace: "default",
-                    serviceType: "ClusterIP",
-                    replicas: 1,
-                } as never,
-            );
+            const result = await analyzeRepo(requestParams, { signal });
 
             if (!result.ok) {
-                return {
-                    succeeded: false,
-                    error: l10n.t("Failed to generate Kubernetes manifests: {0}", String(result.error)),
-                };
+                const errorMessage = formatErrorForLLM(result.error, result.guidance);
+                logger.error("analyzeRepo failed", { error: result.error, guidance: result.guidance });
+                return { succeeded: false, error: errorMessage };
             }
 
-            // The manifests should have been written to the folder
-            const resultValue = result.value as { files?: string[] };
-            const manifestPaths: string[] = [];
-            if (resultValue.files) {
-                for (const file of resultValue.files) {
-                    manifestPaths.push(`${folderPath}/${file}`);
-                }
+            const analysis: RepositoryAnalysis = result.value;
+            logger.debug("analyzeRepo response", analysis);
+
+            const modules: ModuleAnalysisResult[] = (analysis.modules || []).map((module) => ({
+                name: module.name,
+                modulePath: module.modulePath,
+                language: module.language,
+                framework: module.frameworks?.[0]?.name,
+                port: module.ports?.[0],
+                buildCommand: module.buildSystems?.[0]?.type,
+                dependencies: module.dependencies,
+                entryPoint: module.entryPoint,
+            }));
+
+            const isMonorepo = analysis.isMonorepo ?? modules.length > 1;
+
+            logger.info(`Repository analysis complete: ${modules.length} module(s), isMonorepo: ${isMonorepo}`);
+            if (modules.length > 0) {
+                logger.debug(`Analyzed ${modules.length} modules`, modules);
             }
 
             return {
                 succeeded: true,
-                result: manifestPaths,
+                result: { modules, isMonorepo },
             };
         } catch (error) {
-            return {
-                succeeded: false,
-                error: l10n.t("Failed to generate Kubernetes manifests: {0}", String(error)),
-            };
+            return this.handleSdkError("analyze repository", error);
         }
     }
 
-    /**
-     * Execute the complete deployment generation workflow
-     * This orchestrates: Analyze → Generate Dockerfile → Generate K8s Manifests
-     */
-    async generateDeploymentFiles(folderPath: string, appName: string): Promise<ContainerAssistResult> {
-        // Step 1: Analyze the repository
-        const analysisResult = await this.analyzeRepository(folderPath);
-        if (failed(analysisResult)) {
-            return {
-                succeeded: false,
-                error: analysisResult.error,
-            };
+    async generateDockerfile(
+        modulePath: string,
+        moduleInfo: ModuleAnalysisResult,
+        signal?: AbortSignal,
+        token?: vscode.CancellationToken,
+    ): Promise<Errorable<string>> {
+        logger.info(`Generating Dockerfile for module: ${moduleInfo.name} at ${modulePath}`);
+
+        const lmResult = await this.lmClient.ensureModel();
+        if (failed(lmResult)) {
+            return lmResult;
         }
 
-        // Step 2: Generate Dockerfile
-        const dockerfileResult = await this.generateDockerfile(folderPath, analysisResult.result);
-        if (failed(dockerfileResult)) {
-            return {
-                succeeded: false,
-                error: dockerfileResult.error,
+        try {
+            const requestParams = {
+                repositoryPath: modulePath,
+                modulePath: modulePath,
+                language: moduleInfo.language,
+                framework: moduleInfo.framework,
+                detectedDependencies: moduleInfo.dependencies,
             };
-        }
+            logger.debug("generateDockerfile request", requestParams);
 
-        // Step 3: Generate Kubernetes manifests
-        const manifestsResult = await this.generateManifests(folderPath, dockerfileResult.result, appName);
-        if (failed(manifestsResult)) {
-            return {
-                succeeded: false,
-                error: manifestsResult.error,
-            };
+            const result = await sdkGenerateDockerfile(requestParams, { signal });
+
+            if (!result.ok) {
+                const errorMessage = formatErrorForLLM(result.error, result.guidance);
+                logger.error("generateDockerfile failed", { error: result.error, guidance: result.guidance });
+                return { succeeded: false, error: errorMessage };
+            }
+
+            const plan: DockerfilePlan = result.value;
+            logger.debug("generateDockerfile response", plan);
+
+            const dockerfileContent = await this.generateDockerfileWithLM(plan, token);
+            if (failed(dockerfileContent)) {
+                return dockerfileContent;
+            }
+
+            const dockerfilePath = path.join(modulePath, "Dockerfile");
+            await writeFile(dockerfilePath, dockerfileContent.result);
+
+            logger.info(`Dockerfile generated: ${dockerfilePath}`);
+            return { succeeded: true, result: dockerfilePath };
+        } catch (error) {
+            return this.handleSdkError("generate Dockerfile", error);
+        }
+    }
+
+    private async generateDockerfileWithLM(
+        plan: DockerfilePlan,
+        token?: vscode.CancellationToken,
+    ): Promise<Errorable<string>> {
+        const userPrompt = buildDockerfileUserPrompt(plan);
+        const response = await this.lmClient.sendRequest(DOCKERFILE_SYSTEM_PROMPT, userPrompt, token);
+
+        if (failed(response)) {
+            return response;
         }
 
         return {
             succeeded: true,
-            generatedFiles: [dockerfileResult.result, ...manifestsResult.result],
+            result: extractContent(response.result, "dockerfile"),
+        };
+    }
+
+    async generateManifests(
+        modulePath: string,
+        appName: string,
+        moduleInfo: ModuleAnalysisResult,
+        signal?: AbortSignal,
+        token?: vscode.CancellationToken,
+    ): Promise<Errorable<string[]>> {
+        logger.info(`Generating Kubernetes manifests for: ${appName}`);
+
+        const lmResult = await this.lmClient.ensureModel();
+        if (failed(lmResult)) {
+            return lmResult;
+        }
+
+        try {
+            const config = vscode.workspace.getConfiguration("aks.containerAssist");
+            const namespace = config.get<string>("defaultNamespace", "default");
+
+            const requestParams = {
+                manifestType: "kubernetes" as const,
+                modulePath,
+                name: appName,
+                namespace,
+                language: moduleInfo.language as
+                    | "java"
+                    | "dotnet"
+                    | "javascript"
+                    | "typescript"
+                    | "python"
+                    | "rust"
+                    | "go"
+                    | "other"
+                    | undefined,
+                ports: moduleInfo.port ? [moduleInfo.port] : undefined,
+                detectedDependencies: moduleInfo.dependencies,
+                entryPoint: moduleInfo.entryPoint,
+            };
+            logger.debug("generateK8sManifests request", requestParams);
+
+            const result = await sdkGenerateK8sManifests(requestParams, { signal });
+
+            if (!result.ok) {
+                const errorMessage = formatErrorForLLM(result.error, result.guidance);
+                logger.error("generateK8sManifests failed", { error: result.error, guidance: result.guidance });
+                return { succeeded: false, error: errorMessage };
+            }
+
+            const plan: ManifestPlan = result.value;
+            logger.debug("generateK8sManifests response", plan);
+
+            const manifestsContent = await this.generateManifestsWithLM(plan, appName, namespace, token);
+            if (failed(manifestsContent)) {
+                return manifestsContent;
+            }
+
+            const k8sFolder = path.join(modulePath, getK8sManifestFolder());
+            await ensureDirectory(k8sFolder);
+
+            const manifestPaths: string[] = [];
+            for (const manifest of manifestsContent.result) {
+                const manifestPath = path.join(k8sFolder, manifest.filename);
+                await writeFile(manifestPath, manifest.content);
+                manifestPaths.push(manifestPath);
+            }
+
+            logger.info(`Generated ${manifestPaths.length} manifest files`);
+            logger.debug("Generated manifest paths", manifestPaths);
+
+            return { succeeded: true, result: manifestPaths };
+        } catch (error) {
+            return this.handleSdkError("generate Kubernetes manifests", error);
+        }
+    }
+
+    private async generateManifestsWithLM(
+        plan: ManifestPlan,
+        appName: string,
+        namespace: string,
+        token?: vscode.CancellationToken,
+    ): Promise<Errorable<Array<{ filename: string; content: string }>>> {
+        const userPrompt = buildK8sManifestUserPrompt(plan, appName, namespace);
+        const response = await this.lmClient.sendRequest(K8S_MANIFEST_SYSTEM_PROMPT, userPrompt, token);
+
+        if (failed(response)) {
+            return response;
+        }
+
+        const manifests = parseManifestsFromLMResponse(response.result, appName);
+        return { succeeded: true, result: manifests };
+    }
+
+    async generateDeploymentFiles(
+        folderPath: string,
+        appName: string,
+        signal?: AbortSignal,
+        token?: vscode.CancellationToken,
+        showModelPicker: boolean = false,
+        onProgress?: (message: string) => void,
+    ): Promise<Errorable<DeploymentResult>> {
+        const reportProgress = (message: string) => onProgress?.(message);
+
+        logger.info(`Starting deployment workflow for: ${appName}`);
+        logger.debug("Deployment workflow params", { folderPath, appName });
+
+        logger.info("Step 0: Checking for existing deployment files...");
+        const existingFiles = await this.checkExistingFiles(folderPath);
+
+        const skipDockerfile = existingFiles.hasDockerfile;
+        const skipK8sManifests = existingFiles.hasK8sManifests;
+
+        if (skipDockerfile && skipK8sManifests) {
+            const message = l10n.t(
+                "Deployment files already exist (Dockerfile and {0}/ manifests). No new files generated.",
+                getK8sManifestFolder(),
+            );
+            logger.info(message);
+            vscode.window.showInformationMessage(message);
+            return {
+                succeeded: true,
+                result: { generatedFiles: [] },
+            };
+        }
+
+        if (skipDockerfile || skipK8sManifests) {
+            const existingList = [
+                skipDockerfile && "Dockerfile",
+                skipK8sManifests && `${getK8sManifestFolder()}/ manifests`,
+            ].filter(Boolean);
+            logger.info(`Existing files found (will be preserved): ${existingList.join(", ")}`);
+            vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", existingList.join(", ")));
+        }
+
+        logger.info("Step 1: Selecting Language Model...");
+        const lmResult = await this.selectLanguageModel(showModelPicker);
+        if (failed(lmResult)) {
+            logger.error("Language Model not available", lmResult.error);
+            return lmResult;
+        }
+
+        logger.info("Step 2: Analyzing repository...");
+        const analysisResult = await this.analyzeRepository(folderPath, signal);
+        if (failed(analysisResult)) {
+            logger.error("Workflow failed at analysis step", analysisResult.error);
+            return analysisResult;
+        }
+
+        const { modules, isMonorepo } = analysisResult.result;
+
+        if (modules.length === 0) {
+            return {
+                succeeded: false,
+                error: l10n.t("No modules detected in repository. Unable to generate deployment files."),
+            };
+        }
+
+        logger.info(`Detected ${modules.length} module(s), isMonorepo: ${isMonorepo}`);
+
+        const allGeneratedFiles: string[] = [];
+
+        if (!skipDockerfile) {
+            logger.info(`Step 3: Generating Dockerfiles for ${modules.length} module(s)...`);
+            for (const module of modules) {
+                logger.info(`Generating Dockerfile for module: ${module.name}`);
+                reportProgress(l10n.t("Generating Dockerfile for {0}...", module.name));
+                const dockerfileResult = await this.generateDockerfile(module.modulePath, module, signal, token);
+                if (failed(dockerfileResult)) {
+                    logger.error(
+                        `Workflow failed at Dockerfile step for module: ${module.name}`,
+                        dockerfileResult.error,
+                    );
+                    return dockerfileResult;
+                }
+                allGeneratedFiles.push(dockerfileResult.result);
+            }
+        } else {
+            logger.info("Step 3: Skipping Dockerfile generation (existing files preserved)");
+        }
+
+        if (!skipK8sManifests) {
+            logger.info(`Step 4: Generating Kubernetes manifests for ${modules.length} module(s)...`);
+            for (const module of modules) {
+                const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
+                logger.info(`Generating manifests for module: ${module.name} as ${manifestAppName}`);
+                reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
+                const manifestsResult = await this.generateManifests(
+                    module.modulePath,
+                    manifestAppName,
+                    module,
+                    signal,
+                    token,
+                );
+                if (failed(manifestsResult)) {
+                    logger.error(`Workflow failed at manifests step for module: ${module.name}`, manifestsResult.error);
+                    return manifestsResult;
+                }
+                allGeneratedFiles.push(...manifestsResult.result);
+            }
+        } else {
+            logger.info("Step 4: Skipping K8s manifest generation (existing files preserved)");
+        }
+
+        logger.info(`Deployment workflow completed: ${allGeneratedFiles.length} files generated`);
+        logger.debug("Generated files", allGeneratedFiles);
+
+        return {
+            succeeded: true,
+            result: { generatedFiles: allGeneratedFiles },
         };
     }
 }
