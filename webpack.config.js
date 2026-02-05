@@ -38,7 +38,6 @@ const config = {
     ],
     resolve: {
         extensions: [".ts", ".js", ".json"],
-        symlinks: false,
     },
     module: {
         rules: [

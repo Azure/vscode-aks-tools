@@ -65,7 +65,9 @@ async function findYamlFiles(dirPath: string): Promise<string[]> {
 
         const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
         return files
-            .filter(([name, type]) => type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml")))
+            .filter(
+                ([name, type]) => type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml")),
+            )
             .map(([name]) => path.join(dirPath, name));
     } catch {
         return [];

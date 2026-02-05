@@ -52,7 +52,7 @@ kind: Service
 export function buildDockerfileUserPrompt(plan: DockerfilePlan): string {
     const repoInfo = plan.repositoryInfo;
     const formattedPlan = formatGenerateDockerfileResult(plan);
-    
+
     let prompt = `Generate a Dockerfile based on the following analysis and recommendations:
 
 ${formattedPlan}

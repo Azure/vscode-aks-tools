@@ -170,7 +170,7 @@ export class ContainerAssistService {
     ): Promise<Errorable<string>> {
         const userPrompt = buildDockerfileUserPrompt(plan);
         const response = await this.lmClient.sendRequest(DOCKERFILE_SYSTEM_PROMPT, userPrompt, token);
-        
+
         if (failed(response)) {
             return response;
         }
@@ -263,7 +263,7 @@ export class ContainerAssistService {
     ): Promise<Errorable<Array<{ filename: string; content: string }>>> {
         const userPrompt = buildK8sManifestUserPrompt(plan, appName, namespace);
         const response = await this.lmClient.sendRequest(K8S_MANIFEST_SYSTEM_PROMPT, userPrompt, token);
-        
+
         if (failed(response)) {
             return response;
         }
