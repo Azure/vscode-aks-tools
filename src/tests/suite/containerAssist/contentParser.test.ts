@@ -134,7 +134,10 @@ kind: Deployment`;
 
         it("uses fallback name for unknown content", () => {
             const input = `some:
-  arbitrary: yaml`;
+  arbitrary: yaml
+---
+more:
+  data: here`;
             assert.ok(parseYamlDocuments(input, "my-app")[0].filename.includes("my-app"));
         });
 

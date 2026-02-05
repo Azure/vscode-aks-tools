@@ -66,7 +66,7 @@ describe("runContainerAssist Command", () => {
         sandbox.stub(vscode.workspace, "getConfiguration").returns({
             get: sandbox.stub().returns(true),
         } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
-        sandbox.stub(fs, "stat").resolves({ isFile: () => false } as any);
+        sandbox.stub(fs, "stat").resolves({ isFile: () => false } as Awaited<ReturnType<typeof fs.stat>>);
         sandbox.stub(fs, "readdir").resolves([]);
         const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
 
@@ -86,7 +86,7 @@ describe("runContainerAssist Command", () => {
         sandbox.stub(vscode.workspace, "getConfiguration").returns({
             get: sandbox.stub().returns(true),
         } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
-        sandbox.stub(fs, "stat").resolves({ isFile: () => false } as any);
+        sandbox.stub(fs, "stat").resolves({ isFile: () => false } as Awaited<ReturnType<typeof fs.stat>>);
         sandbox.stub(fs, "readdir").resolves([]);
 
         const capturedItems: ContainerAssistQuickPickItem[] = [];
