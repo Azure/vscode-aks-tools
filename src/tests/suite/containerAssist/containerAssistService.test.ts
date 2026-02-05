@@ -90,6 +90,7 @@ describe("ContainerAssistService", () => {
     describe("checkExistingFiles", () => {
         it("returns empty when no files exist", async () => {
             sandbox.stub(vscode.workspace.fs, "stat").rejects(new Error("Not found"));
+            sandbox.stub(vscode.workspace.fs, "readDirectory").rejects(new Error("Not found"));
 
             const result = await service.checkExistingFiles("/test/path");
 
@@ -104,6 +105,7 @@ describe("ContainerAssistService", () => {
                 }
                 return Promise.reject(new Error("Not found"));
             });
+            sandbox.stub(vscode.workspace.fs, "readDirectory").rejects(new Error("Not found"));
 
             const result = await service.checkExistingFiles("/test/path");
 
@@ -112,13 +114,17 @@ describe("ContainerAssistService", () => {
         });
 
         it("detects K8s manifests", async () => {
-            sandbox.stub(vscode.workspace.fs, "stat").callsFake((uri) => {
+            const statStub = sandbox.stub(vscode.workspace.fs, "stat");
+            const readDirStub = sandbox.stub(vscode.workspace.fs, "readDirectory");
+
+            statStub.callsFake((uri) => {
                 if (uri.fsPath.endsWith("k8s")) {
                     return Promise.resolve({ type: vscode.FileType.Directory } as vscode.FileStat);
                 }
                 return Promise.reject(new Error("Not found"));
             });
-            sandbox.stub(vscode.workspace.fs, "readDirectory").resolves([
+
+            readDirStub.resolves([
                 ["deployment.yaml", vscode.FileType.File],
                 ["service.yaml", vscode.FileType.File],
             ]);
@@ -192,7 +198,79 @@ describe("ContainerAssistService", () => {
     });
 
     describe("generateDeploymentFiles workflow", () => {
+        it("returns success when all files exist", async () => {
+            sandbox.stub(service, "checkExistingFiles").resolves({
+                hasDockerfile: true,
+                hasK8sManifests: true,
+                dockerfilePath: "/test/path/Dockerfile",
+                k8sManifestPaths: ["/test/path/k8s/deployment.yaml"],
+            });
+            const infoStub = sandbox.stub(vscode.window, "showInformationMessage");
+
+            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+
+            assert.strictEqual(result.succeeded, true);
+            if (result.succeeded) {
+                assert.strictEqual(result.result.generatedFiles.length, 0);
+            }
+            assert.ok(infoStub.calledOnce);
+        });
+
+        it("preserves existing files and generates missing ones", async () => {
+            sandbox.stub(service, "checkExistingFiles").resolves({
+                hasDockerfile: true,
+                hasK8sManifests: false,
+                dockerfilePath: "/test/path/Dockerfile",
+            });
+            const infoStub = sandbox.stub(vscode.window, "showInformationMessage");
+            const mockModel = { id: "test", name: "Test", vendor: "copilot", family: "gpt-4o" } as vscode.LanguageModelChat;
+            sandbox.stub(service, "selectLanguageModel").resolves({ succeeded: true, result: mockModel });
+            sandbox.stub(service, "analyzeRepository").resolves({
+                succeeded: true,
+                result: {
+                    modules: [{ name: "test", modulePath: "/test/path", language: "javascript" }],
+                    isMonorepo: false,
+                },
+            });
+            const dockerfileStub = sandbox.stub(service, "generateDockerfile");
+            sandbox.stub(service, "generateManifests").resolves({
+                succeeded: true,
+                result: ["/test/path/k8s/deployment.yaml"],
+            });
+
+            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+
+            assert.strictEqual(result.succeeded, true);
+            assert.ok(infoStub.calledOnce);
+            assert.ok(infoStub.firstCall.args[0].includes("preserved"));
+            assert.ok(dockerfileStub.notCalled, "Dockerfile generation should be skipped");
+        });
+
+        it("stops on LM unavailable", async () => {
+            sandbox.stub(service, "checkExistingFiles").resolves({
+                hasDockerfile: false,
+                hasK8sManifests: false,
+            });
+            sandbox.stub(service, "selectLanguageModel").resolves({
+                succeeded: false,
+                error: "No LM available",
+            });
+            const analyzeStub = sandbox.stub(service, "analyzeRepository");
+
+            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+
+            assert.strictEqual(result.succeeded, false);
+            assert.strictEqual(result.error, "No LM available");
+            assert.ok(analyzeStub.notCalled);
+        });
+
         it("stops on analysis failure", async () => {
+            sandbox.stub(service, "checkExistingFiles").resolves({
+                hasDockerfile: false,
+                hasK8sManifests: false,
+            });
+            const mockModel = { id: "test", name: "Test", vendor: "copilot", family: "gpt-4o" } as vscode.LanguageModelChat;
+            sandbox.stub(service, "selectLanguageModel").resolves({ succeeded: true, result: mockModel });
             const analyzeStub = sandbox.stub(service, "analyzeRepository").resolves({
                 succeeded: false,
                 error: "Analysis failed",
@@ -208,6 +286,12 @@ describe("ContainerAssistService", () => {
         });
 
         it("stops on dockerfile failure", async () => {
+            sandbox.stub(service, "checkExistingFiles").resolves({
+                hasDockerfile: false,
+                hasK8sManifests: false,
+            });
+            const mockModel = { id: "test", name: "Test", vendor: "copilot", family: "gpt-4o" } as vscode.LanguageModelChat;
+            sandbox.stub(service, "selectLanguageModel").resolves({ succeeded: true, result: mockModel });
             sandbox.stub(service, "analyzeRepository").resolves({
                 succeeded: true,
                 result: {
@@ -226,40 +310,6 @@ describe("ContainerAssistService", () => {
             assert.strictEqual(result.succeeded, false);
             assert.strictEqual(result.error, "Dockerfile generation failed");
             assert.ok(manifestsStub.notCalled);
-        });
-
-        it("prompts on existing files", async () => {
-            sandbox.stub(service, "checkExistingFiles").resolves({
-                hasDockerfile: true,
-                hasK8sManifests: false,
-                dockerfilePath: "/test/path/Dockerfile",
-            });
-            const warningStub = sandbox.stub(vscode.window, "showWarningMessage").resolves(undefined);
-
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
-
-            assert.strictEqual(result.succeeded, false);
-            assert.ok(result.error?.includes("cancelled") || result.error?.includes("not modified"));
-            assert.ok(warningStub.calledOnce);
-        });
-
-        it("continues on overwrite confirmation", async () => {
-            sandbox.stub(service, "checkExistingFiles").resolves({
-                hasDockerfile: true,
-                hasK8sManifests: false,
-            });
-            sandbox.stub(vscode.window, "showWarningMessage").resolves("Overwrite" as unknown as vscode.MessageItem);
-            sandbox.stub(service, "selectLanguageModel").resolves({
-                succeeded: false,
-                error: "No LM available",
-            });
-
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
-
-            assert.strictEqual(result.succeeded, false);
-            if (!result.succeeded) {
-                assert.strictEqual(result.error, "No LM available");
-            }
         });
     });
 });

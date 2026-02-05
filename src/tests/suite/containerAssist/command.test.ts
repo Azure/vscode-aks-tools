@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import * as sinon from "sinon";
+import { promises as fs } from "fs";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { runContainerAssist } from "../../../commands/aksContainerAssist/aksContainerAssist";
 import { ContainerAssistAction, ContainerAssistQuickPickItem } from "../../../commands/aksContainerAssist/types";
@@ -65,6 +66,8 @@ describe("runContainerAssist Command", () => {
         sandbox.stub(vscode.workspace, "getConfiguration").returns({
             get: sandbox.stub().returns(true),
         } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
+        sandbox.stub(fs, "stat").resolves({ isFile: () => false } as any);
+        sandbox.stub(fs, "readdir").resolves([]);
         const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
 
         await runContainerAssist({} as IActionContext, testUri);
@@ -83,6 +86,8 @@ describe("runContainerAssist Command", () => {
         sandbox.stub(vscode.workspace, "getConfiguration").returns({
             get: sandbox.stub().returns(true),
         } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
+        sandbox.stub(fs, "stat").resolves({ isFile: () => false } as any);
+        sandbox.stub(fs, "readdir").resolves([]);
 
         const capturedItems: ContainerAssistQuickPickItem[] = [];
         sandbox.stub(vscode.window, "showQuickPick").callsFake((items: unknown) => {
