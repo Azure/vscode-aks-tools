@@ -804,7 +804,7 @@
         "eslint": "^9.39.2",
         "eslint-webpack-plugin": "^5.0.2",
         "fast-check": "^4.5.3",
-        "glob": "^13.0.0",
+        "glob": "^13.0.1",
         "globals": "^17.3.0",
         "mocha": "^11.3.0",
         "node-loader": "^2.1.0",
