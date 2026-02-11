@@ -835,7 +835,7 @@
         "@azure/identity": "^4.13.0",
         "@azure/ms-rest-azure-env": "^2.0.0",
         "@azure/storage-blob": "^12.30.0",
-        "@eslint/compat": "^2.0.1",
+        "@eslint/compat": "^2.0.2",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^4.0.4",
         "@octokit/rest": "^22.0.1",
