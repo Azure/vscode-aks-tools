@@ -1,5 +1,9 @@
 import * as assert from "assert";
-import { renderWorkflowTemplate, validateWorkflowConfig, WorkflowConfig } from "../../../commands/aksContainerAssist/workflowTemplate";
+import {
+    renderWorkflowTemplate,
+    validateWorkflowConfig,
+    WorkflowConfig,
+} from "../../../commands/aksContainerAssist/workflowTemplate";
 
 suite("Workflow Template Tests", () => {
     const validConfig: WorkflowConfig = {

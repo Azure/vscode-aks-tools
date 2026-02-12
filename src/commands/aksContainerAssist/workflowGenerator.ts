@@ -155,9 +155,7 @@ async function collectWorkflowConfiguration(
     logger.debug("Dockerfile path selected", dockerfilePath);
 
     // 7. Build context path - detect from Dockerfile location
-    const defaultBuildContext = dockerfilePath.includes("/")
-        ? path.dirname(dockerfilePath)
-        : ".";
+    const defaultBuildContext = dockerfilePath.includes("/") ? path.dirname(dockerfilePath) : ".";
     const buildContextPath = await promptForBuildContext(defaultBuildContext);
     if (!buildContextPath) return undefined;
     logger.debug("Build context path selected", buildContextPath);
@@ -223,9 +221,7 @@ async function promptForDockerfilePath(
     detectedPath: string | undefined,
 ): Promise<string | undefined> {
     const defaultPath = detectedPath || "Dockerfile";
-    const detectionNote = detectedPath
-        ? l10n.t("✓ Found: {0}", detectedPath)
-        : l10n.t("Not found - using default");
+    const detectionNote = detectedPath ? l10n.t("✓ Found: {0}", detectedPath) : l10n.t("Not found - using default");
 
     const result = await vscode.window.showInputBox({
         prompt: l10n.t("Enter Dockerfile path (relative to project root)\n{0}", detectionNote),
@@ -279,9 +275,7 @@ async function promptForBuildContext(defaultContext: string): Promise<string | u
  */
 async function promptForManifestPath(detectedPath: string | undefined): Promise<string | undefined> {
     const defaultPath = detectedPath || "k8s/*.yaml";
-    const detectionNote = detectedPath
-        ? l10n.t("✓ Found: {0}", detectedPath)
-        : l10n.t("Not found - using default");
+    const detectionNote = detectedPath ? l10n.t("✓ Found: {0}", detectedPath) : l10n.t("Not found - using default");
 
     const result = await vscode.window.showInputBox({
         prompt: l10n.t("Enter Kubernetes manifest path (supports wildcards like *.yaml)\n{0}", detectionNote),
@@ -316,7 +310,9 @@ async function selectAzureSubscription(
 
     if (subscriptionsResult.result.length === 0) {
         vscode.window.showErrorMessage(
-            l10n.t("No Azure subscriptions found. Please sign in to Azure and ensure you have access to subscriptions."),
+            l10n.t(
+                "No Azure subscriptions found. Please sign in to Azure and ensure you have access to subscriptions.",
+            ),
         );
         return undefined;
     }
@@ -416,21 +412,25 @@ async function selectClusterAcr(
 
     if (acrList.length === 0) {
         vscode.window.showErrorMessage(
-            l10n.t("No Azure Container Registries found in subscription. Please create an ACR and attach it to your cluster."),
+            l10n.t(
+                "No Azure Container Registries found in subscription. Please create an ACR and attach it to your cluster.",
+            ),
         );
         return undefined;
     }
 
-    const acrItems = acrList.sort((a, b) => a.name.localeCompare(b.name)).map((acr) => ({
-        label: acr.name,
-        description: acr.resourceGroup,
-        detail: l10n.t("Ensure this ACR is attached to cluster '{0}'", cluster.name),
-        acr: {
-            id: acr.id,
-            name: acr.name,
-            resourceGroup: acr.resourceGroup,
-        },
-    }));
+    const acrItems = acrList
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((acr) => ({
+            label: acr.name,
+            description: acr.resourceGroup,
+            detail: l10n.t("Ensure this ACR is attached to cluster '{0}'", cluster.name),
+            acr: {
+                id: acr.id,
+                name: acr.name,
+                resourceGroup: acr.resourceGroup,
+            },
+        }));
 
     const selected = await vscode.window.showQuickPick(acrItems, {
         placeHolder: l10n.t("Select Azure Container Registry attached to '{0}'", cluster.name),

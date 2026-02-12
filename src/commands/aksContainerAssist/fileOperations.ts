@@ -108,11 +108,7 @@ export async function workflowFileExists(workspacePath: string, workflowName: st
  * @param content Workflow YAML content
  * @returns Path to the created workflow file
  */
-export async function writeWorkflowFile(
-    workspacePath: string,
-    workflowName: string,
-    content: string,
-): Promise<string> {
+export async function writeWorkflowFile(workspacePath: string, workflowName: string, content: string): Promise<string> {
     const workflowsDir = await ensureGitHubWorkflowsDirectory(workspacePath);
     const workflowPath = path.join(workflowsDir, `${workflowName}.yml`);
 
