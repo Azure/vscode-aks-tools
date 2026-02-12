@@ -73,3 +73,47 @@ async function findYamlFiles(dirPath: string): Promise<string[]> {
         return [];
     }
 }
+
+/**
+ * Ensures the .github/workflows directory exists
+ * @param workspacePath Root path of the workspace
+ * @returns Path to the workflows directory
+ */
+export async function ensureGitHubWorkflowsDirectory(workspacePath: string): Promise<string> {
+    const githubDir = path.join(workspacePath, ".github");
+    const workflowsDir = path.join(githubDir, "workflows");
+
+    await ensureDirectory(githubDir);
+    await ensureDirectory(workflowsDir);
+
+    logger.debug("Ensured .github/workflows directory", workflowsDir);
+    return workflowsDir;
+}
+
+/**
+ * Checks if a workflow file already exists
+ * @param workspacePath Root path of the workspace
+ * @param workflowName Name of the workflow file (without .yml extension)
+ * @returns True if the workflow file exists
+ */
+export async function workflowFileExists(workspacePath: string, workflowName: string): Promise<boolean> {
+    const workflowPath = path.join(workspacePath, ".github", "workflows", `${workflowName}.yml`);
+    return await fileExists(workflowPath);
+}
+
+/**
+ * Writes a workflow file to the .github/workflows directory
+ * @param workspacePath Root path of the workspace
+ * @param workflowName Name of the workflow file (without .yml extension)
+ * @param content Workflow YAML content
+ * @returns Path to the created workflow file
+ */
+export async function writeWorkflowFile(workspacePath: string, workflowName: string, content: string): Promise<string> {
+    const workflowsDir = await ensureGitHubWorkflowsDirectory(workspacePath);
+    const workflowPath = path.join(workflowsDir, `${workflowName}.yml`);
+
+    await writeFile(workflowPath, content);
+    logger.info(`Workflow file created: ${workflowPath}`);
+
+    return workflowPath;
+}

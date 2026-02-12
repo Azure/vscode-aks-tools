@@ -3,6 +3,7 @@
 const path = require("path");
 const webpack = require("webpack");
 const ESLintPlugin = require("eslint-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin");
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -35,6 +36,15 @@ const config = {
         // Prevent webpack from trying to bundle electron, or require it as a direct dependency:
         // https://github.com/sindresorhus/got/issues/345#issuecomment-329939488
         new webpack.IgnorePlugin({ resourceRegExp: /^electron$/ }),
+        // Copy workflow template file to dist
+        new CopyPlugin({
+            patterns: [
+                {
+                    from: "src/commands/aksContainerAssist/aks-deploy.template.yaml",
+                    to: "[name][ext]",
+                },
+            ],
+        }),
     ],
     resolve: {
         extensions: [".ts", ".js", ".json"],
