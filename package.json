@@ -176,6 +176,31 @@
                     "default": false,
                     "description": "Set to true to enable deployment related file generation capability using AI tool. (Preview feature)"
                 },
+                "aks.containerAssist.k8sManifestFolder": {
+                    "type": "string",
+                    "default": "k8s",
+                    "description": "Folder name for generated Kubernetes manifests (relative to project root)."
+                },
+                "aks.containerAssist.enableGitHubIntegration": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable Git staging and GitHub PR creation for generated container and K8s files."
+                },
+                "aks.containerAssist.promptForPullRequest": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Prompt before creating a Pull Request after staging generated files."
+                },
+                "aks.containerAssist.prDefaultBranch": {
+                    "type": "string",
+                    "default": "main",
+                    "description": "Default base branch for Pull Requests created from Container Assist."
+                },
+                "aks.containerAssist.prCreateAsDraft": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Create Pull Requests as draft by default."
+                },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
                     "default": "v0.0.11",
