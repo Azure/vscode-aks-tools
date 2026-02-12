@@ -9,6 +9,7 @@ import { promises as fs } from "fs";
 import { logger } from "./logger";
 import { generateGitHubWorkflow } from "./workflowGenerator";
 import { stageFilesAndCreatePR, isGitExtensionAvailable, isGitHubExtensionAvailable } from "./gitHubIntegration";
+import { setupOIDCForGitHub } from "./oidcSetup";
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
@@ -289,14 +290,17 @@ async function generateDeploymentFiles(
     const openFiles = l10n.t("Open Files");
     const showLogs = l10n.t("Show Logs");
     const addToGit = l10n.t("Add to Git & Create PR");
+    const setupOIDC = l10n.t("Setup OIDC for GitHub");
 
-    const selection = await vscode.window.showInformationMessage(message, openFiles, showLogs, addToGit);
+    const selection = await vscode.window.showInformationMessage(message, openFiles, showLogs, addToGit, setupOIDC);
     if (selection === openFiles) {
         await openGeneratedFiles(generatedFiles);
     } else if (selection === showLogs) {
         logger.show();
     } else if (selection === addToGit) {
         await handleGitHubIntegration(generatedFiles, _workspaceFolder, appName);
+    } else if (selection === setupOIDC) {
+        await setupOIDCForGitHub(_workspaceFolder, appName);
     }
 }
 
