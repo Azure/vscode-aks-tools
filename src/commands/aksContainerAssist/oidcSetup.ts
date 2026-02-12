@@ -27,10 +27,7 @@ interface OIDCSetupResult {
 /**
  * Sets up OIDC federated identity for GitHub Actions workflow
  */
-export async function setupOIDCForGitHub(
-    workspaceFolder: vscode.WorkspaceFolder,
-    appName: string,
-): Promise<void> {
+export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder, appName: string): Promise<void> {
     try {
         logger.info("Starting OIDC setup for GitHub Actions");
 
@@ -298,7 +295,7 @@ async function assignContributorRole(
         logger.info("Contributor role assigned successfully");
     } catch (error) {
         // If role already exists, that's fine
-        if (error && typeof error === 'object' && 'code' in error && error.code !== "RoleAssignmentExists") {
+        if (error && typeof error === "object" && "code" in error && error.code !== "RoleAssignmentExists") {
             throw error;
         }
         logger.info("Role assignment already exists");
@@ -317,16 +314,11 @@ async function createFederatedCredential(
     const credentialName = "GitHubActions";
     const subject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${repoInfo.branch}`;
 
-    await msiClient.federatedIdentityCredentials.createOrUpdate(
-        resourceGroup,
-        identityName,
-        credentialName,
-        {
-            issuer: "https://token.actions.githubusercontent.com",
-            subject: subject,
-            audiences: ["api://AzureADTokenExchange"],
-        },
-    );
+    await msiClient.federatedIdentityCredentials.createOrUpdate(resourceGroup, identityName, credentialName, {
+        issuer: "https://token.actions.githubusercontent.com",
+        subject: subject,
+        audiences: ["api://AzureADTokenExchange"],
+    });
 
     logger.info(`Federated credential created with subject: ${subject}`);
 }

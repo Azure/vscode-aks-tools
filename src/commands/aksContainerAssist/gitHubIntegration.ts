@@ -97,7 +97,9 @@ export async function stageFilesAndCreatePR(
                         filesToStage.push(relativePath);
                         logger.debug(`File exists and will be staged: ${relativePath}`);
                     } catch (error) {
-                        logger.warn(`File does not exist, skipping: ${file} - ${error instanceof Error ? error.message : String(error)}`);
+                        logger.warn(
+                            `File does not exist, skipping: ${file} - ${error instanceof Error ? error.message : String(error)}`,
+                        );
                     }
                 }
 
@@ -111,7 +113,7 @@ export async function stageFilesAndCreatePR(
                     logger.info(`Successfully staged ${filesToStage.length} files via Git API`);
                 } catch (gitError) {
                     logger.error("Git API add failed, attempting manual git command", gitError);
-                    
+
                     // Fallback: use git command directly
                     try {
                         const args = ["add", ...filesToStage];
@@ -120,7 +122,9 @@ export async function stageFilesAndCreatePR(
                         logger.info(`Successfully staged ${filesToStage.length} files via git command`);
                     } catch (cmdError) {
                         logger.error("Git command also failed", cmdError);
-                        throw new Error(`Failed to stage files: ${cmdError instanceof Error ? cmdError.message : String(cmdError)}`);
+                        throw new Error(
+                            `Failed to stage files: ${cmdError instanceof Error ? cmdError.message : String(cmdError)}`,
+                        );
                     }
                 }
 
@@ -143,9 +147,7 @@ export async function stageFilesAndCreatePR(
         logger.error("Error during Git staging and PR creation", error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error("Error details", errorMessage);
-        vscode.window.showErrorMessage(
-            l10n.t("Failed to stage files or create PR: {0}", errorMessage),
-        );
+        vscode.window.showErrorMessage(l10n.t("Failed to stage files or create PR: {0}", errorMessage));
     }
 }
 
