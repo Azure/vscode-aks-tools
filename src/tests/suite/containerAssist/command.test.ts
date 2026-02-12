@@ -68,6 +68,7 @@ describe("runContainerAssist Command", () => {
         } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
         sandbox.stub(fs, "stat").resolves({ isFile: () => false } as Awaited<ReturnType<typeof fs.stat>>);
         sandbox.stub(fs, "readdir").resolves([]);
+        sandbox.stub(fs, "access").rejects(new Error("File not found"));
         const showQuickPickStub = sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
 
         await runContainerAssist({} as IActionContext, testUri);
@@ -88,6 +89,7 @@ describe("runContainerAssist Command", () => {
         } as Partial<vscode.WorkspaceConfiguration> as vscode.WorkspaceConfiguration);
         sandbox.stub(fs, "stat").resolves({ isFile: () => false } as Awaited<ReturnType<typeof fs.stat>>);
         sandbox.stub(fs, "readdir").resolves([]);
+        sandbox.stub(fs, "access").rejects(new Error("File not found"));
 
         const capturedItems: ContainerAssistQuickPickItem[] = [];
         sandbox.stub(vscode.window, "showQuickPick").callsFake((items: unknown) => {
@@ -101,7 +103,7 @@ describe("runContainerAssist Command", () => {
 
         assert.strictEqual(capturedItems.length, 2);
         assert.ok(capturedItems[0].label.includes("Generate Deployment Files"));
-        assert.ok(capturedItems[1].label.includes("Generate Default Workflow"));
+        assert.ok(capturedItems[1].label.includes("Generate GitHub Workflow"));
         assert.strictEqual(capturedItems[0].action, ContainerAssistAction.GenerateDeployment);
         assert.strictEqual(capturedItems[1].action, ContainerAssistAction.GenerateWorkflow);
     });
