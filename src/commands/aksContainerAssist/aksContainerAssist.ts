@@ -8,6 +8,7 @@ import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
 import { generateGitHubWorkflow } from "./workflowGenerator";
+import { stageFilesAndCreatePR, isGitExtensionAvailable, isGitHubExtensionAvailable } from "./gitHubIntegration";
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
@@ -287,12 +288,15 @@ async function generateDeploymentFiles(
     const message = l10n.t("Successfully generated {0} deployment files", generatedFiles.length);
     const openFiles = l10n.t("Open Files");
     const showLogs = l10n.t("Show Logs");
+    const addToGit = l10n.t("Add to Git & Create PR");
 
-    const selection = await vscode.window.showInformationMessage(message, openFiles, showLogs);
+    const selection = await vscode.window.showInformationMessage(message, openFiles, showLogs, addToGit);
     if (selection === openFiles) {
         await openGeneratedFiles(generatedFiles);
     } else if (selection === showLogs) {
         logger.show();
+    } else if (selection === addToGit) {
+        await handleGitHubIntegration(generatedFiles, _workspaceFolder, appName);
     }
 }
 
@@ -334,4 +338,49 @@ async function generateWorkflowFile(workspaceFolder: vscode.WorkspaceFolder, tar
     } else if (selection === showLogs) {
         logger.show();
     }
+}
+
+async function handleGitHubIntegration(
+    generatedFiles: string[],
+    workspaceFolder: vscode.WorkspaceFolder,
+    appName: string,
+): Promise<void> {
+    logger.info("Handling GitHub integration for generated files");
+
+    // Check if Git extension is available
+    const hasGit = await isGitExtensionAvailable();
+    if (!hasGit) {
+        const message = l10n.t(
+            "Git extension is required for this feature. Please install or enable the Git extension.",
+        );
+        vscode.window.showWarningMessage(message);
+        logger.warn(message);
+        return;
+    }
+
+    // Check configuration
+    const config = vscode.workspace.getConfiguration("aks.containerAssist");
+    const enableGitHubIntegration = config.get<boolean>("enableGitHubIntegration", true);
+
+    if (!enableGitHubIntegration) {
+        logger.info("GitHub integration is disabled in settings");
+        vscode.window.showInformationMessage(
+            l10n.t(
+                'GitHub integration is disabled. Enable it in settings: "aks.containerAssist.enableGitHubIntegration"',
+            ),
+        );
+        return;
+    }
+
+    // Warn if GitHub extension is not available
+    const hasGitHub = await isGitHubExtensionAvailable();
+    if (!hasGitHub) {
+        const message = l10n.t(
+            "GitHub Pull Requests extension is recommended for creating PRs. Files will be staged, but you'll need to create the PR manually.",
+        );
+        logger.warn(message);
+        // Continue anyway - we can still stage files
+    }
+
+    await stageFilesAndCreatePR(generatedFiles, workspaceFolder.uri, appName);
 }
