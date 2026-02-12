@@ -7,6 +7,7 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
+import { generateGitHubWorkflow } from "./workflowGenerator";
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
@@ -154,8 +155,8 @@ async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] |
             picked: false,
         },
         {
-            label: l10n.t("$(github-action) Generate Default Workflow"),
-            description: l10n.t("Create GitHub Actions workflow (Coming soon)"),
+            label: l10n.t("$(github-action) Generate GitHub Workflow"),
+            description: l10n.t("Create GitHub Actions workflow for CI/CD to AKS"),
             action: ContainerAssistAction.GenerateWorkflow,
             picked: false,
         },
@@ -186,7 +187,7 @@ async function processContainerAssistAction(
             break;
 
         case ContainerAssistAction.GenerateWorkflow:
-            generateDefaultWorkflow();
+            await generateWorkflowFile(workspaceFolder, targetPath);
             break;
 
         default:
@@ -306,11 +307,31 @@ async function openGeneratedFiles(files: string[]): Promise<void> {
     }
 }
 
-function generateDefaultWorkflow(): void {
-    logger.info("Generate Default Workflow feature is not yet implemented");
-    vscode.window.showInformationMessage(
-        l10n.t(
-            "Generate Default Workflow feature is coming soon. This will create a GitHub Actions workflow for CI/CD.",
-        ),
-    );
+async function generateWorkflowFile(workspaceFolder: vscode.WorkspaceFolder, targetPath: string): Promise<void> {
+    logger.info("Starting GitHub workflow generation");
+
+    // No progress notification - just generate the workflow
+    const result = await generateGitHubWorkflow(workspaceFolder, targetPath);
+
+    if (failed(result)) {
+        logger.error("GitHub workflow generation failed", result.error);
+        vscode.window.showErrorMessage(l10n.t("Failed to generate GitHub workflow: {0}", result.error));
+        return;
+    }
+
+    const workflowPath = result.result;
+    logger.info(`GitHub workflow created at: ${workflowPath}`);
+
+    // Show success message AFTER file is generated
+    const message = l10n.t("Successfully generated GitHub workflow");
+    const openFile = l10n.t("Open Workflow");
+    const showLogs = l10n.t("Show Logs");
+
+    const selection = await vscode.window.showInformationMessage(message, openFile, showLogs);
+    if (selection === openFile) {
+        const doc = await vscode.workspace.openTextDocument(workflowPath);
+        await vscode.window.showTextDocument(doc, { preview: false });
+    } else if (selection === showLogs) {
+        logger.show();
+    }
 }
