@@ -5,7 +5,7 @@ import {
     WorkflowConfig,
 } from "../../../commands/aksContainerAssist/workflowTemplate";
 
-suite("Workflow Template Tests", () => {
+describe("Workflow Template Tests", () => {
     const validConfig: WorkflowConfig = {
         workflowName: "Deploy to AKS",
         branchName: "main",
@@ -20,8 +20,8 @@ suite("Workflow Template Tests", () => {
         namespace: "default",
     };
 
-    suite("renderWorkflowTemplate", () => {
-        test("should render template with all variables replaced", () => {
+    describe("renderWorkflowTemplate", () => {
+        it("should render template with all variables replaced", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("name: Deploy to AKS"), "Workflow name should be in output");
@@ -37,22 +37,22 @@ suite("Workflow Template Tests", () => {
             assert.ok(result.includes("NAMESPACE: default"), "Namespace should be in output");
         });
 
-        test("should not contain any unreplaced template variables", () => {
+        it("should not contain any unreplaced template variables", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            // Check for our template variables ({{WORD}} without $ prefix)
+            // Check for our template variables ({ { WORD } } without $ prefix)
             // GitHub Actions variables like ${{ }} should be preserved
             const lines = result.split("\n");
             const ourTemplateVars = lines.filter((line) => {
-                // Match {{WORD}} but not ${{...}}
-                const match = line.match(/(?<!\$){{[A-Z]+}}/);
+                // Match { { WORD } } but not ${{...}}
+                const match = line.match(/(?<!\$)\{\s*\{\s*[A-Z]+\s*\}\s*\}/);
                 return match !== null;
             });
 
             assert.strictEqual(ourTemplateVars.length, 0, "Should not contain unreplaced template variables");
         });
 
-        test("should preserve GitHub Actions variable syntax", () => {
+        it("should preserve GitHub Actions variable syntax", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             // Check that GitHub Actions variables are preserved (these use ${{ }} syntax)
@@ -61,7 +61,7 @@ suite("Workflow Template Tests", () => {
             assert.ok(result.includes("${{ github.sha }}"), "Should preserve GitHub context syntax");
         });
 
-        test("should generate valid YAML structure", () => {
+        it("should generate valid YAML structure", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("name:"), "Should have name field");
@@ -73,13 +73,13 @@ suite("Workflow Template Tests", () => {
         });
     });
 
-    suite("validateWorkflowConfig", () => {
-        test("should return no errors for valid configuration", () => {
+    describe("validateWorkflowConfig", () => {
+        it("should return no errors for valid configuration", () => {
             const errors = validateWorkflowConfig(validConfig);
             assert.strictEqual(errors.length, 0, "Valid config should have no errors");
         });
 
-        test("should return error when workflow name is empty", () => {
+        it("should return error when workflow name is empty", () => {
             const config = { ...validConfig, workflowName: "" };
             const errors = validateWorkflowConfig(config);
             assert.ok(errors.length > 0, "Should have validation errors");
@@ -89,7 +89,7 @@ suite("Workflow Template Tests", () => {
             );
         });
 
-        test("should return error when branch name is empty", () => {
+        it("should return error when branch name is empty", () => {
             const config = { ...validConfig, branchName: "" };
             const errors = validateWorkflowConfig(config);
             assert.ok(errors.length > 0, "Should have validation errors");
@@ -99,7 +99,7 @@ suite("Workflow Template Tests", () => {
             );
         });
 
-        test("should return error when container name is empty", () => {
+        it("should return error when container name is empty", () => {
             const config = { ...validConfig, containerName: "" };
             const errors = validateWorkflowConfig(config);
             assert.ok(errors.length > 0, "Should have validation errors");
@@ -109,7 +109,7 @@ suite("Workflow Template Tests", () => {
             );
         });
 
-        test("should return error when dockerfile path is empty", () => {
+        it("should return error when dockerfile path is empty", () => {
             const config = { ...validConfig, dockerFile: "" };
             const errors = validateWorkflowConfig(config);
             assert.ok(errors.length > 0, "Should have validation errors");
@@ -119,7 +119,7 @@ suite("Workflow Template Tests", () => {
             );
         });
 
-        test("should return error when ACR name is empty", () => {
+        it("should return error when ACR name is empty", () => {
             const config = { ...validConfig, azureContainerRegistry: "" };
             const errors = validateWorkflowConfig(config);
             assert.ok(errors.length > 0, "Should have validation errors");
@@ -129,7 +129,7 @@ suite("Workflow Template Tests", () => {
             );
         });
 
-        test("should return error when cluster name is empty", () => {
+        it("should return error when cluster name is empty", () => {
             const config = { ...validConfig, clusterName: "" };
             const errors = validateWorkflowConfig(config);
             assert.ok(errors.length > 0, "Should have validation errors");
@@ -139,7 +139,7 @@ suite("Workflow Template Tests", () => {
             );
         });
 
-        test("should return error when namespace is empty", () => {
+        it("should return error when namespace is empty", () => {
             const config = { ...validConfig, namespace: "" };
             const errors = validateWorkflowConfig(config);
             assert.ok(errors.length > 0, "Should have validation errors");
@@ -149,7 +149,7 @@ suite("Workflow Template Tests", () => {
             );
         });
 
-        test("should return multiple errors for multiple invalid fields", () => {
+        it("should return multiple errors for multiple invalid fields", () => {
             const config = {
                 ...validConfig,
                 workflowName: "",
@@ -161,8 +161,8 @@ suite("Workflow Template Tests", () => {
         });
     });
 
-    suite("Template Content", () => {
-        test("should include buildImage job with correct steps", () => {
+    describe("Template Content", () => {
+        it("should include buildImage job with correct steps", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("buildImage:"), "Should have buildImage job");
@@ -172,35 +172,35 @@ suite("Workflow Template Tests", () => {
             assert.ok(result.includes("az acr build"), "Should build and push image");
         });
 
-        test("should include deploy job with correct dependencies", () => {
+        it("should include deploy job with correct dependencies", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("deploy:"), "Should have deploy job");
             assert.ok(result.includes("needs: [buildImage]"), "Should depend on buildImage");
         });
 
-        test("should include kubelogin setup", () => {
+        it("should include kubelogin setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("azure/use-kubelogin@v1"), "Should use kubelogin action");
             assert.ok(result.includes("kubelogin-version"), "Should specify kubelogin version");
         });
 
-        test("should include AKS context setup", () => {
+        it("should include AKS context setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("azure/aks-set-context@v4"), "Should set AKS context");
-            assert.ok(result.includes("use-kubelogin: 'true'"), "Should enable kubelogin");
+            assert.ok(result.includes('use-kubelogin: "true"'), "Should enable kubelogin");
         });
 
-        test("should include deployment step", () => {
+        it("should include deployment step", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("Azure/k8s-deploy@v5"), "Should use k8s-deploy action");
             assert.ok(result.includes("action: deploy"), "Should specify deploy action");
         });
 
-        test("should handle private cluster checks", () => {
+        it("should handle private cluster checks", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("Is private cluster"), "Should check if cluster is private");

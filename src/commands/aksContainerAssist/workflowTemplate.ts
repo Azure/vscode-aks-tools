@@ -48,25 +48,27 @@ export function renderWorkflowTemplate(config: WorkflowConfig): string {
 
     // Replace all template variables with their values
     const replacements: Record<string, string> = {
-        "{{WORKFLOWNAME}}": config.workflowName,
-        "{{BRANCHNAME}}": config.branchName,
-        "{{CONTAINERNAME}}": config.containerName,
-        "{{DOCKERFILE}}": config.dockerFile,
-        "{{BUILDCONTEXTPATH}}": config.buildContextPath,
-        "{{ACRRESOURCEGROUP}}": config.acrResourceGroup,
-        "{{AZURECONTAINERREGISTRY}}": config.azureContainerRegistry,
-        "{{CLUSTERNAME}}": config.clusterName,
-        "{{CLUSTERRESOURCEGROUP}}": config.clusterResourceGroup,
-        "{{DEPLOYMENTMANIFESTPATH}}": config.deploymentManifestPath,
-        "{{NAMESPACE}}": config.namespace,
+        "{ { WORKFLOWNAME } }": config.workflowName,
+        "{ { BRANCHNAME } }": config.branchName,
+        "{ { CONTAINERNAME } }": config.containerName,
+        "{ { DOCKERFILE } }": config.dockerFile,
+        "{ { BUILDCONTEXTPATH } }": config.buildContextPath,
+        "{ { ACRRESOURCEGROUP } }": config.acrResourceGroup,
+        "{ { AZURECONTAINERREGISTRY } }": config.azureContainerRegistry,
+        "{ { CLUSTERNAME } }": config.clusterName,
+        "{ { CLUSTERRESOURCEGROUP } }": config.clusterResourceGroup,
+        "{ { DEPLOYMENTMANIFESTPATH } }": config.deploymentManifestPath,
+        "{ { NAMESPACE } }": config.namespace,
     };
 
     for (const [placeholder, value] of Object.entries(replacements)) {
-        rendered = rendered.replace(new RegExp(placeholder, "g"), value);
+        // Escape special regex characters in the placeholder
+        const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        rendered = rendered.replace(new RegExp(escapedPlaceholder, "g"), value);
     }
 
     // Check for any unreplaced placeholders and throw an error if found
-    const unreplacedPlaceholders = rendered.match(/{{[A-Z_]+}}/g);
+    const unreplacedPlaceholders = rendered.match(/\{\s*\{\s*[A-Z_]+\s*\}\s*\}/g);
     if (unreplacedPlaceholders && unreplacedPlaceholders.length > 0) {
         throw new Error(`Template contains unreplaced placeholders: ${unreplacedPlaceholders.join(", ")}`);
     }
