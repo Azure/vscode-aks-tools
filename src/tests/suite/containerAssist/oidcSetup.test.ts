@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import * as vscode from "vscode";  
+import * as vscode from "vscode";
 import * as sinon from "sinon";
 import { setupOIDCForGitHub } from "../../../commands/aksContainerAssist/oidcSetup";
 import * as logger from "../../../commands/aksContainerAssist/logger";
@@ -10,7 +10,7 @@ describe("OIDC Setup", () => {
 
     beforeEach(() => {
         sandbox = sinon.createSandbox();
-        
+
         // Setup mock workspace folder
         mockWorkspaceFolder = {
             uri: vscode.Uri.file("/test/workspace"),
@@ -38,7 +38,7 @@ describe("OIDC Setup", () => {
                 await setupOIDCForGitHub(mockWorkspaceFolder, "testapp");
                 assert.ok(true, "Function completed without throwing");
             } catch (error: any) {
-                // This is expected in test environment since we're not in a real git repo  
+                // This is expected in test environment since we're not in a real git repo
                 // Just verify we didn't get the promisify stubbing error
                 assert.ok(!error.message.includes("promisify"), "Should not have promisify errors");
                 assert.ok(true, "Test completed as expected");
@@ -62,7 +62,7 @@ describe("OIDC Setup", () => {
                 name: "test",
                 index: 0,
             };
-            
+
             try {
                 await setupOIDCForGitHub(invalidWorkspace, "testapp");
                 assert.ok(true, "Function handled invalid workspace");
@@ -78,23 +78,23 @@ describe("OIDC Setup", () => {
     describe("Input Validation", () => {
         it("should handle empty app name", async () => {
             await setupOIDCForGitHub(mockWorkspaceFolder, "");
-            
+
             // Function should handle empty app name gracefully
             assert.ok(true, "Function handles empty app name without crashing");
         });
 
         it("should handle special characters in app name", async () => {
             await setupOIDCForGitHub(mockWorkspaceFolder, "test@app#123");
-            
+
             // Function should handle special characters gracefully
             assert.ok(true, "Function handles special characters without crashing");
         });
 
         it("should handle very long app name", async () => {
             const longAppName = "a".repeat(100);
-            
+
             await setupOIDCForGitHub(mockWorkspaceFolder, longAppName);
-            
+
             // Function should handle long app names gracefully
             assert.ok(true, "Function handles long app names without crashing");
         });
