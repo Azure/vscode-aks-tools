@@ -309,11 +309,15 @@ async function selectAzureSubscription(
     }
 
     if (subscriptionsResult.result.length === 0) {
-        vscode.window.showErrorMessage(
-            l10n.t(
-                "No Azure subscriptions found. Please sign in to Azure and ensure you have access to subscriptions.",
-            ),
-        );
+        const openPortal = l10n.t("Open in Portal");
+        const selection = await vscode.window.showWarningMessage(l10n.t("No Azure subscriptions found."), openPortal);
+        logger.warn("No subscriptions available - cancelling workflow generation");
+
+        if (selection === openPortal) {
+            vscode.env.openExternal(
+                vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+            );
+        }
         return undefined;
     }
 
@@ -341,9 +345,16 @@ async function selectAksCluster(
     const clustersResult = await getClusters(sessionProvider, subscriptionId);
 
     if (!clustersResult || clustersResult.length === 0) {
-        vscode.window.showErrorMessage(
-            l10n.t("No AKS clusters found in subscription. Please create an AKS cluster first."),
+        const openPortal = l10n.t("Open in Portal");
+        const selection = await vscode.window.showWarningMessage(
+            l10n.t("No AKS clusters found in subscription."),
+            openPortal,
         );
+        logger.warn("No AKS clusters available - cancelling workflow generation");
+
+        if (selection === openPortal) {
+            vscode.env.openExternal(vscode.Uri.parse("https://portal.azure.com/#create/microsoft.aks"));
+        }
         return undefined;
     }
 
@@ -411,11 +422,16 @@ async function selectClusterAcr(
     const acrList = acrsResult.result;
 
     if (acrList.length === 0) {
-        vscode.window.showErrorMessage(
-            l10n.t(
-                "No Azure Container Registries found in subscription. Please create an ACR and attach it to your cluster.",
-            ),
+        const openPortal = l10n.t("Open in Portal");
+        const selection = await vscode.window.showWarningMessage(
+            l10n.t("No Azure Container Registries found in subscription."),
+            openPortal,
         );
+        logger.warn("No ACRs available - cancelling workflow generation");
+
+        if (selection === openPortal) {
+            vscode.env.openExternal(vscode.Uri.parse("https://portal.azure.com/#create/Microsoft.ContainerRegistry"));
+        }
         return undefined;
     }
 
@@ -471,7 +487,8 @@ async function selectClusterNamespace(
     }
 
     if (namespacesResult.result.length === 0) {
-        vscode.window.showErrorMessage(l10n.t("No namespaces found in cluster."));
+        vscode.window.showWarningMessage(l10n.t("No namespaces found in cluster."));
+        logger.warn("No namespaces available - cancelling workflow generation");
         return undefined;
     }
 

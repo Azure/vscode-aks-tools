@@ -66,8 +66,40 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
         }
 
         logger.info(`Selected actions: ${selectedActions.join(", ")}`);
+
+        // Determine if both actions are selected
+        const hasBothActions =
+            selectedActions.includes(ContainerAssistAction.GenerateDeployment) &&
+            selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
+
+        const generatedFiles: string[] = [];
+        let workflowPath: string | undefined;
+
         for (const action of selectedActions) {
-            await processContainerAssistAction(action, containerAssistService, workspaceFolder, projectRoot);
+            const result = await processContainerAssistAction(
+                action,
+                containerAssistService,
+                workspaceFolder,
+                projectRoot,
+                hasBothActions,
+            );
+
+            if (result) {
+                if (action === ContainerAssistAction.GenerateDeployment && result.deploymentFiles) {
+                    generatedFiles.push(...result.deploymentFiles);
+                } else if (action === ContainerAssistAction.GenerateWorkflow && result.workflowPath) {
+                    workflowPath = result.workflowPath;
+                }
+            }
+        }
+
+        // If both actions were selected, show post-generation options once
+        if (hasBothActions) {
+            const allFiles = [...generatedFiles];
+            if (workflowPath) {
+                allFiles.push(workflowPath);
+            }
+            await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
         }
 
         logger.info("Container Assist command completed successfully");
@@ -177,24 +209,29 @@ async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] |
     return selected.map((item) => item.action);
 }
 
+interface ActionResult {
+    deploymentFiles?: string[];
+    workflowPath?: string;
+}
+
 async function processContainerAssistAction(
     action: ContainerAssistAction,
     service: ContainerAssistService,
     workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
-): Promise<void> {
+    hasBothActions: boolean,
+): Promise<ActionResult | undefined> {
     switch (action) {
         case ContainerAssistAction.GenerateDeployment:
-            await generateDeploymentFiles(service, workspaceFolder, targetPath);
-            break;
+            return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions);
 
         case ContainerAssistAction.GenerateWorkflow:
-            await generateWorkflowFile(workspaceFolder, targetPath);
-            break;
+            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions);
 
         default:
             logger.warn(`Unknown action: ${action}`);
             vscode.window.showWarningMessage(l10n.t("Unknown action: {0}", action));
+            return undefined;
     }
 }
 
@@ -202,7 +239,8 @@ async function generateDeploymentFiles(
     service: ContainerAssistService,
     _workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
-): Promise<void> {
+    hasBothActions: boolean,
+): Promise<ActionResult | undefined> {
     const appName = path.basename(targetPath);
     logger.info(`Starting deployment file generation for app: ${appName}`);
     logger.debug("Target path", targetPath);
@@ -267,13 +305,13 @@ async function generateDeploymentFiles(
     );
 
     if (!result) {
-        return;
+        return undefined;
     }
 
     if (failed(result)) {
         logger.error("Deployment file generation failed", result.error);
         vscode.window.showErrorMessage(l10n.t("Failed to generate deployment files: {0}", result.error));
-        return;
+        return undefined;
     }
 
     const generatedFiles = result.result.generatedFiles;
@@ -283,24 +321,109 @@ async function generateDeploymentFiles(
     if (generatedFiles.length === 0) {
         logger.warn("No files were generated");
         vscode.window.showWarningMessage(l10n.t("No deployment files were generated."));
-        return;
+        return undefined;
     }
 
-    const message = l10n.t("Successfully generated {0} deployment files", generatedFiles.length);
-    const openFiles = l10n.t("Open Files");
-    const showLogs = l10n.t("Show Logs");
-    const addToGit = l10n.t("Add to Git & Create PR");
-    const setupOIDC = l10n.t("Setup OIDC for GitHub");
+    // If both actions are selected, don't show options here - they'll be shown at the end
+    if (hasBothActions) {
+        return { deploymentFiles: generatedFiles };
+    }
 
-    const selection = await vscode.window.showInformationMessage(message, openFiles, showLogs, addToGit, setupOIDC);
-    if (selection === openFiles) {
-        await openGeneratedFiles(generatedFiles);
-    } else if (selection === showLogs) {
-        logger.show();
-    } else if (selection === addToGit) {
-        await handleGitHubIntegration(generatedFiles, _workspaceFolder, appName);
+    // Show options only for deployment files
+    await showPostGenerationOptions(generatedFiles, _workspaceFolder, appName, false);
+    return { deploymentFiles: generatedFiles };
+}
+
+async function generateWorkflowFile(
+    workspaceFolder: vscode.WorkspaceFolder,
+    targetPath: string,
+    hasBothActions: boolean,
+): Promise<ActionResult | undefined> {
+    logger.info("Starting GitHub workflow generation");
+
+    // Show progress notification when both actions are selected
+    const result = hasBothActions
+        ? await vscode.window.withProgress(
+              {
+                  location: vscode.ProgressLocation.Notification,
+                  title: l10n.t("Generating GitHub workflow file..."),
+                  cancellable: false,
+              },
+              async () => {
+                  return await generateGitHubWorkflow(workspaceFolder, targetPath);
+              },
+          )
+        : await generateGitHubWorkflow(workspaceFolder, targetPath);
+
+    if (failed(result)) {
+        logger.error("GitHub workflow generation failed", result.error);
+        vscode.window.showErrorMessage(l10n.t("Failed to generate GitHub workflow: {0}", result.error));
+        return undefined;
+    }
+
+    const workflowPath = result.result;
+    logger.info(`GitHub workflow created at: ${workflowPath}`);
+
+    // If both actions are selected, don't show options here - they'll be shown at the end
+    if (hasBothActions) {
+        return { workflowPath };
+    }
+
+    // Show success message and OIDC option only for workflow generation
+    const message = l10n.t("Successfully generated GitHub workflow");
+    const openFile = l10n.t("Open Workflow");
+    const setupOIDC = l10n.t("Setup OIDC for GitHub");
+    const addToGit = l10n.t("Add to Git & Create PR");
+
+    const selection = await vscode.window.showInformationMessage(message, openFile, setupOIDC, addToGit);
+
+    if (selection === openFile) {
+        const doc = await vscode.workspace.openTextDocument(workflowPath);
+        await vscode.window.showTextDocument(doc, { preview: false });
     } else if (selection === setupOIDC) {
-        await setupOIDCForGitHub(_workspaceFolder, appName);
+        await setupOIDCForGitHub(workspaceFolder, path.basename(targetPath));
+    } else if (selection === addToGit) {
+        await handleGitHubIntegration([workflowPath], workspaceFolder, path.basename(targetPath));
+    }
+
+    return { workflowPath };
+}
+
+async function showPostGenerationOptions(
+    generatedFiles: string[],
+    workspaceFolder: vscode.WorkspaceFolder,
+    appName: string,
+    includeOIDC: boolean,
+): Promise<void> {
+    const message = includeOIDC
+        ? l10n.t("Successfully generated {0} files", generatedFiles.length)
+        : l10n.t("Successfully generated {0} deployment files", generatedFiles.length);
+
+    const openFiles = l10n.t("Open Files");
+    const addToGit = l10n.t("Add to Git & Create PR");
+
+    const options = [openFiles, addToGit];
+
+    // Only show OIDC option if workflow was generated
+    if (includeOIDC) {
+        const setupOIDC = l10n.t("Setup OIDC for GitHub");
+        options.push(setupOIDC);
+
+        const selection = await vscode.window.showInformationMessage(message, ...options);
+        if (selection === openFiles) {
+            await openGeneratedFiles(generatedFiles);
+        } else if (selection === addToGit) {
+            await handleGitHubIntegration(generatedFiles, workspaceFolder, appName);
+        } else if (selection === setupOIDC) {
+            await setupOIDCForGitHub(workspaceFolder, appName);
+        }
+    } else {
+        const selection = await vscode.window.showInformationMessage(message, ...options);
+        if (selection === openFiles) {
+            await openGeneratedFiles(generatedFiles);
+        } else if (selection === addToGit) {
+            await handleGitHubIntegration(generatedFiles, workspaceFolder, appName);
+        }
     }
 }
 
@@ -312,35 +435,6 @@ async function openGeneratedFiles(files: string[]): Promise<void> {
         } catch (error) {
             logger.error(`Failed to open file: ${file}`, error);
         }
-    }
-}
-
-async function generateWorkflowFile(workspaceFolder: vscode.WorkspaceFolder, targetPath: string): Promise<void> {
-    logger.info("Starting GitHub workflow generation");
-
-    // No progress notification - just generate the workflow
-    const result = await generateGitHubWorkflow(workspaceFolder, targetPath);
-
-    if (failed(result)) {
-        logger.error("GitHub workflow generation failed", result.error);
-        vscode.window.showErrorMessage(l10n.t("Failed to generate GitHub workflow: {0}", result.error));
-        return;
-    }
-
-    const workflowPath = result.result;
-    logger.info(`GitHub workflow created at: ${workflowPath}`);
-
-    // Show success message AFTER file is generated
-    const message = l10n.t("Successfully generated GitHub workflow");
-    const openFile = l10n.t("Open Workflow");
-    const showLogs = l10n.t("Show Logs");
-
-    const selection = await vscode.window.showInformationMessage(message, openFile, showLogs);
-    if (selection === openFile) {
-        const doc = await vscode.workspace.openTextDocument(workflowPath);
-        await vscode.window.showTextDocument(doc, { preview: false });
-    } else if (selection === showLogs) {
-        logger.show();
     }
 }
 

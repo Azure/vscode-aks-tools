@@ -42,12 +42,14 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
         }
 
         // Check for K8s manifests
-        const k8sFolder = path.join(folderPath, getK8sManifestFolder());
-        const yamlFiles = await findYamlFiles(k8sFolder);
-        if (yamlFiles.length > 0) {
+        const manifests = await scanForK8sManifests(folderPath);
+
+        if (manifests.length > 0) {
             result.hasK8sManifests = true;
-            result.k8sManifestPaths = yamlFiles;
-            logger.debug("Found existing K8s manifests", yamlFiles);
+            result.k8sManifestPaths = manifests;
+            logger.info(`Found ${manifests.length} total K8s manifest(s)`);
+        } else {
+            logger.debug("No K8s manifests found in project");
         }
     } catch (error) {
         logger.error("Error checking existing files", error);
@@ -56,21 +58,168 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
     return result;
 }
 
-async function findYamlFiles(dirPath: string): Promise<string[]> {
+/**
+ * Unified scanner for K8s manifests with single-pass directory traversal
+ * Searches common locations first, then falls back to shallow recursive scan
+ */
+async function scanForK8sManifests(rootPath: string): Promise<string[]> {
+    const manifestSet = new Set<string>();
+
+    // Common K8s manifest folders (checked first for performance)
+    const priorityFolders = [
+        getK8sManifestFolder(), // User-configured or default "k8s"
+        "manifests",
+        "kubernetes",
+        "deploy",
+        "deployment",
+        ".kube",
+        "charts",
+        "config",
+        "infra",
+        "infrastructure",
+    ];
+
+    // Check priority folders
+    for (const folder of priorityFolders) {
+        const folderPath = path.join(rootPath, folder);
+        await scanDirectory(folderPath, manifestSet, false);
+    }
+
+    // Check root directory for loose manifests
+    await scanDirectory(rootPath, manifestSet, false);
+
+    // If nothing found, do shallow recursive search (max 2 levels)
+    if (manifestSet.size === 0) {
+        logger.debug("No manifests in common locations, performing shallow recursive search");
+        await scanDirectoryRecursive(rootPath, manifestSet, 2, 0);
+    }
+
+    return Array.from(manifestSet);
+}
+
+/**
+ * Scans a single directory for K8s manifests (non-recursive)
+ */
+async function scanDirectory(dirPath: string, manifestSet: Set<string>, isRecursive: boolean): Promise<void> {
     try {
         const dirStat = await vscode.workspace.fs.stat(vscode.Uri.file(dirPath));
         if (dirStat.type !== vscode.FileType.Directory) {
-            return [];
+            return;
         }
 
-        const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
-        return files
+        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+
+        const fileChecks = entries
             .filter(
                 ([name, type]) => type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml")),
             )
-            .map(([name]) => path.join(dirPath, name));
+            .map(async ([name]) => {
+                const fullPath = path.join(dirPath, name);
+                if (await isKubernetesManifest(fullPath)) {
+                    manifestSet.add(fullPath);
+                    if (!isRecursive) {
+                        logger.debug(`Found K8s manifest: ${fullPath}`);
+                    }
+                }
+            });
+
+        await Promise.all(fileChecks);
     } catch {
-        return [];
+        // Directory doesn't exist or can't be read - skip silently
+    }
+}
+
+/**
+ * Recursively scans directories for K8s manifests up to specified depth
+ */
+async function scanDirectoryRecursive(
+    dirPath: string,
+    manifestSet: Set<string>,
+    maxDepth: number,
+    currentDepth: number,
+): Promise<void> {
+    if (currentDepth > maxDepth) {
+        return;
+    }
+
+    // Folders to exclude from recursive search
+    const excludedFolders = new Set([
+        "node_modules",
+        ".git",
+        "dist",
+        "build",
+        "out",
+        "vendor",
+        ".vscode",
+        "coverage",
+        "target",
+        ".next",
+        ".nuxt",
+        "__pycache__",
+        "venv",
+        ".env",
+        "bin",
+        "obj",
+        ".terraform",
+    ]);
+
+    try {
+        const dirStat = await vscode.workspace.fs.stat(vscode.Uri.file(dirPath));
+        if (dirStat.type !== vscode.FileType.Directory) {
+            return;
+        }
+
+        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+
+        for (const [name, type] of entries) {
+            if (excludedFolders.has(name)) {
+                continue;
+            }
+
+            const fullPath = path.join(dirPath, name);
+
+            if (type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml"))) {
+                if (await isKubernetesManifest(fullPath)) {
+                    manifestSet.add(fullPath);
+                }
+            } else if (type === vscode.FileType.Directory) {
+                await scanDirectoryRecursive(fullPath, manifestSet, maxDepth, currentDepth + 1);
+            }
+        }
+    } catch (error) {
+        logger.debug(`Skipping directory ${dirPath}:`, error);
+    }
+}
+
+/**
+ * Validates if a YAML file is a Kubernetes manifest
+ */
+async function isKubernetesManifest(filePath: string): Promise<boolean> {
+    try {
+        const content = await vscode.workspace.fs.readFile(vscode.Uri.file(filePath));
+        const previewSize = Math.min(content.length, 1024);
+        const text = Buffer.from(content.slice(0, previewSize)).toString("utf-8");
+
+        // Must have both apiVersion and kind
+        const hasApiVersion = /^apiVersion:\s*.+$/m.test(text);
+        const hasKind = /^kind:\s*([A-Z]\w*)$/m.test(text);
+
+        if (!hasApiVersion || !hasKind) {
+            return false;
+        }
+
+        // Extract kind value for flexible validation
+        const kindMatch = text.match(/^kind:\s*([A-Z]\w*)$/m);
+        if (!kindMatch) {
+            return false;
+        }
+
+        const kind = kindMatch[1].trim();
+
+        return /^[A-Z][a-zA-Z0-9]*$/.test(kind);
+    } catch (error) {
+        logger.debug(`Failed to validate manifest ${filePath}`, error);
+        return false;
     }
 }
 
