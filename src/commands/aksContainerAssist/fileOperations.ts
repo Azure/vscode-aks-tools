@@ -110,7 +110,9 @@ async function scanDirectory(dirPath: string, manifestSet: Set<string>, isRecurs
         const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
 
         const fileChecks = entries
-            .filter(([name, type]) => type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml")))
+            .filter(
+                ([name, type]) => type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml")),
+            )
             .map(async ([name]) => {
                 const fullPath = path.join(dirPath, name);
                 if (await isKubernetesManifest(fullPath)) {
@@ -134,7 +136,7 @@ async function scanDirectoryRecursive(
     dirPath: string,
     manifestSet: Set<string>,
     maxDepth: number,
-    currentDepth: number
+    currentDepth: number,
 ): Promise<void> {
     if (currentDepth > maxDepth) {
         return;
@@ -142,9 +144,23 @@ async function scanDirectoryRecursive(
 
     // Folders to exclude from recursive search
     const excludedFolders = new Set([
-        "node_modules", ".git", "dist", "build", "out", "vendor", ".vscode",
-        "coverage", "target", ".next", ".nuxt", "__pycache__", "venv", ".env",
-        "bin", "obj", ".terraform"
+        "node_modules",
+        ".git",
+        "dist",
+        "build",
+        "out",
+        "vendor",
+        ".vscode",
+        "coverage",
+        "target",
+        ".next",
+        ".nuxt",
+        "__pycache__",
+        "venv",
+        ".env",
+        "bin",
+        "obj",
+        ".terraform",
     ]);
 
     try {

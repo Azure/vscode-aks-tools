@@ -180,10 +180,7 @@ async function promptForAzureConfig(appName: string): Promise<{
 
     if (subscriptions.length === 0) {
         const openPortal = l10n.t("Open in Portal");
-        const selection = await vscode.window.showWarningMessage(
-            l10n.t("No Azure subscriptions found."),
-            openPortal,
-        );
+        const selection = await vscode.window.showWarningMessage(l10n.t("No Azure subscriptions found."), openPortal);
 
         if (selection === openPortal) {
             vscode.env.openExternal(

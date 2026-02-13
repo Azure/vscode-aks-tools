@@ -68,8 +68,9 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
         logger.info(`Selected actions: ${selectedActions.join(", ")}`);
 
         // Determine if both actions are selected
-        const hasBothActions = selectedActions.includes(ContainerAssistAction.GenerateDeployment) &&
-                               selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
+        const hasBothActions =
+            selectedActions.includes(ContainerAssistAction.GenerateDeployment) &&
+            selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
 
         const generatedFiles: string[] = [];
         let workflowPath: string | undefined;
@@ -80,7 +81,7 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
                 containerAssistService,
                 workspaceFolder,
                 projectRoot,
-                hasBothActions
+                hasBothActions,
             );
 
             if (result) {
@@ -350,7 +351,7 @@ async function generateWorkflowFile(
               },
               async () => {
                   return await generateGitHubWorkflow(workspaceFolder, targetPath);
-              }
+              },
           )
         : await generateGitHubWorkflow(workspaceFolder, targetPath);
 
@@ -374,12 +375,7 @@ async function generateWorkflowFile(
     const setupOIDC = l10n.t("Setup OIDC for GitHub");
     const addToGit = l10n.t("Add to Git & Create PR");
 
-    const selection = await vscode.window.showInformationMessage(
-        message,
-        openFile,
-        setupOIDC,
-        addToGit
-    );
+    const selection = await vscode.window.showInformationMessage(message, openFile, setupOIDC, addToGit);
 
     if (selection === openFile) {
         const doc = await vscode.workspace.openTextDocument(workflowPath);
