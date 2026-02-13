@@ -179,7 +179,17 @@ async function promptForAzureConfig(appName: string): Promise<{
     const subscriptions = subscriptionsResult.result;
 
     if (subscriptions.length === 0) {
-        vscode.window.showErrorMessage(l10n.t("No Azure subscriptions found. Please sign in to Azure."));
+        const openPortal = l10n.t("Open in Portal");
+        const selection = await vscode.window.showWarningMessage(
+            l10n.t("No Azure subscriptions found."),
+            openPortal,
+        );
+
+        if (selection === openPortal) {
+            vscode.env.openExternal(
+                vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+            );
+        }
         return null;
     }
 
