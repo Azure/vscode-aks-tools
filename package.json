@@ -437,6 +437,10 @@
             {
                 "command": "aks.runContainerAssist",
                 "title": "AKS: Run Container Assist For AKS Deployment Generation"
+            },
+            {
+                "command": "aks.setupOIDCForGitHub",
+                "title": "AKS: Setup OIDC for GitHub Actions"
             }
         ],
         "menus": {
@@ -455,6 +459,10 @@
                 },
                 {
                     "command": "aks.draftWorkflow",
+                    "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.setupOIDCForGitHub",
                     "when": "workspaceFolderCount >= 1"
                 }
             ],
