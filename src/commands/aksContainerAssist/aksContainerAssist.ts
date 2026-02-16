@@ -370,7 +370,9 @@ async function generateWorkflowFile(
     }
 
     // Show success message and OIDC option only for workflow generation
-    const message = l10n.t("✅ GitHub workflow generated successfully! 🔐 OIDC authentication required for Azure deployment.");
+    const message = l10n.t(
+        "✅ GitHub workflow generated successfully! 🔐 OIDC authentication required for Azure deployment.",
+    );
     const setupOIDC = l10n.t("🔐 Setup OIDC Authentication");
     const openFile = l10n.t("Open Workflow");
     const addToGit = l10n.t("Add to Git & Create PR");
@@ -378,14 +380,16 @@ async function generateWorkflowFile(
 
     const selection = await vscode.window.showInformationMessage(
         message,
-        { 
+        {
             modal: true, // Make it modal to emphasize OIDC requirement
-            detail: l10n.t("Your workflow is ready, but it needs OIDC authentication to deploy to Azure. Set up federated credentials now or the workflow will fail during deployment.")
+            detail: l10n.t(
+                "Your workflow is ready, but it needs OIDC authentication to deploy to Azure. Set up federated credentials now or the workflow will fail during deployment.",
+            ),
         },
         setupOIDC, // Put OIDC first for prominence
         openFile,
         learnMore,
-        addToGit
+        addToGit,
     );
 
     if (selection === setupOIDC) {
@@ -394,7 +398,11 @@ async function generateWorkflowFile(
         const doc = await vscode.workspace.openTextDocument(workflowPath);
         await vscode.window.showTextDocument(doc, { preview: false });
     } else if (selection === learnMore) {
-        vscode.env.openExternal(vscode.Uri.parse('https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure'));
+        vscode.env.openExternal(
+            vscode.Uri.parse(
+                "https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure",
+            ),
+        );
     } else if (selection === addToGit) {
         await handleGitHubIntegration([workflowPath], workspaceFolder, path.basename(targetPath));
     }
@@ -412,34 +420,43 @@ async function showPostGenerationOptions(
     const addToGit = l10n.t("Add to Git & Create PR");
 
     // Check if workflow files were generated
-    const hasWorkflowFile = generatedFiles.some(file => file.includes('.github/workflows/'));
-    
+    const hasWorkflowFile = generatedFiles.some((file) => file.includes(".github/workflows/"));
+
     let message: string;
     const options = [openFiles, addToGit];
 
     // Only show OIDC option if workflow was generated
     if (includeOIDC && hasWorkflowFile) {
-        message = l10n.t("Generated {0} files including GitHub workflow! Do you wish to setup OIDC for GitHub Actions?", generatedFiles.length);
+        message = l10n.t(
+            "Generated {0} files including GitHub workflow! Do you wish to setup OIDC for GitHub Actions?",
+            generatedFiles.length,
+        );
         const setupOIDC = l10n.t("🔐 Setup OIDC Authentication");
         const learnMore = l10n.t("📖 Learn More About OIDC");
-        
+
         // Insert OIDC options at the beginning for prominence
         options.unshift(setupOIDC);
         options.push(learnMore);
 
         const selection = await vscode.window.showInformationMessage(
             message,
-            { 
+            {
                 modal: true, // Make it modal to ensure users see the OIDC requirement
-                detail: l10n.t("Your GitHub workflow needs OIDC authentication to deploy to Azure. Without it, the workflow will fail when trying to authenticate with Azure.")
+                detail: l10n.t(
+                    "Your GitHub workflow needs OIDC authentication to deploy to Azure. Without it, the workflow will fail when trying to authenticate with Azure.",
+                ),
             },
-            ...options
+            ...options,
         );
 
         if (selection === setupOIDC) {
             await setupOIDCForGitHub(workspaceFolder, appName);
         } else if (selection === learnMore) {
-            vscode.env.openExternal(vscode.Uri.parse('https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure'));
+            vscode.env.openExternal(
+                vscode.Uri.parse(
+                    "https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure",
+                ),
+            );
         } else if (selection === openFiles) {
             await openGeneratedFiles(generatedFiles);
         } else if (selection === addToGit) {

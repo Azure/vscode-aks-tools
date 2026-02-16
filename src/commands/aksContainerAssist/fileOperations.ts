@@ -276,7 +276,7 @@ export async function writeWorkflowFile(workspacePath: string, workflowName: str
  */
 async function writeOIDCSetupGuide(workspacePath: string): Promise<void> {
     const oidcGuidePath = path.join(workspacePath, "GITHUB-OIDC-SETUP.md");
-    
+
     // Only create if it doesn't exist
     if (await fileExists(oidcGuidePath)) {
         return;
