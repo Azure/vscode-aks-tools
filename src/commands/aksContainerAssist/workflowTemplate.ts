@@ -36,13 +36,13 @@ export interface WorkflowConfig {
  */
 function loadWorkflowTemplate(): Errorable<string> {
     // Configure the starter workflow data.
-    const templatePath = getWorkflowYaml("aks-deploy.template");
-    if (failed(templatePath)) {
-        vscode.window.showErrorMessage(templatePath.error);
-        return { succeeded: false, error: templatePath.error };
+    const templateContent = getWorkflowYaml("aks-deploy.template");
+    if (failed(templateContent)) {
+        vscode.window.showErrorMessage(templateContent.error);
+        return { succeeded: false, error: templateContent.error };
     }
 
-    return { succeeded: true, result: templatePath.result };
+    return { succeeded: true, result: templateContent.result };
 }
 
 /**
