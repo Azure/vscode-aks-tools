@@ -7,12 +7,16 @@
 #   - https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-existing-aks-clusters
 #   - https://github.com/Azure/aks-create-action
 #
-# To configure this workflow:
+# 🔐 IMPORTANT: OIDC Authentication Required!
+# This workflow uses OpenID Connect (OIDC) to authenticate with Azure without storing secrets.
+# You MUST configure the following GitHub repository secrets for this workflow to work:
+#    - AZURE_CLIENT_ID     (Client ID of the managed identity or service principal) 
+#    - AZURE_TENANT_ID     (Your Azure AD tenant ID)
+#    - AZURE_SUBSCRIPTION_ID (Your Azure subscription ID)
 #
-# Set the following secrets in your repository (instructions for getting these can be found at https://docs.microsoft.com/en-us/azure/developer/github/connect-from-azure?tabs=azure-cli%2Clinux):
-#    - AZURE_CLIENT_ID
-#    - AZURE_TENANT_ID
-#    - AZURE_SUBSCRIPTION_ID
+# To set up OIDC authentication:
+# 1. Use the AKS VS Code Extension "Setup OIDC for GitHub" command, OR
+# 2. Follow the manual setup guide: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure
 #
 name: { { WORKFLOWNAME } }
 
