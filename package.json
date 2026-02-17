@@ -832,7 +832,7 @@
         "fast-check": "^4.5.3",
         "glob": "^13.0.1",
         "globals": "^17.3.0",
-        "mocha": "^11.3.0",
+        "mocha": "^11.7.5",
         "node-loader": "^2.1.0",
         "prettier": "^3.8.1",
         "sinon": "^21.0.1",
