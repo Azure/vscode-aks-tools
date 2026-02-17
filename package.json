@@ -437,6 +437,10 @@
             {
                 "command": "aks.runContainerAssist",
                 "title": "AKS: Run Container Assist For AKS Deployment Generation"
+            },
+            {
+                "command": "aks.setupOIDCForGitHub",
+                "title": "AKS: Setup OIDC for GitHub Actions"
             }
         ],
         "menus": {
@@ -455,6 +459,10 @@
                 },
                 {
                     "command": "aks.draftWorkflow",
+                    "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.setupOIDCForGitHub",
                     "when": "workspaceFolderCount >= 1"
                 }
             ],
@@ -792,7 +800,7 @@
         "package": "vsce package",
         "webpack": "npm run build:webview && webpack --mode production",
         "webpack-dev": "webpack --mode development --watch",
-        "test-compile": "npm run build:webview && tsc -p ./ && cp src/commands/aksContainerAssist/*.yaml out/src/commands/aksContainerAssist/",
+        "test-compile": "npm run build:webview && tsc -p ./ && cp resources/yaml/aks-deploy.template.yaml out/src/commands/aksContainerAssist/",
         "watch": "tsc -watch -p ./",
         "test": "npm run test-compile && node ./out/src/tests/runTests.js",
         "test:fuzz": "npm run test-compile && mocha --require source-map-support/register 'out/src/tests/fuzz/**/*.test.js'",

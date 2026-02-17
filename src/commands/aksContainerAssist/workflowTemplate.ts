@@ -3,8 +3,9 @@
  * This module is independent of the Container Assist SDK and handles workflow file generation
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as vscode from "vscode";
+import { Errorable, failed } from "../utils/errorable";
+import { getWorkflowYaml } from "../utils/configureWorkflowHelper";
 
 export interface WorkflowConfig {
     // Workflow metadata
@@ -33,9 +34,15 @@ export interface WorkflowConfig {
  * Loads the workflow template from the YAML file
  * @returns The workflow template content
  */
-function loadWorkflowTemplate(): string {
-    const templatePath = path.join(__dirname, "aks-deploy.template.yaml");
-    return fs.readFileSync(templatePath, "utf-8");
+function loadWorkflowTemplate(): Errorable<string> {
+    // Configure the starter workflow data.
+    const templateContent = getWorkflowYaml("aks-deploy.template");
+    if (failed(templateContent)) {
+        vscode.window.showErrorMessage(templateContent.error);
+        return { succeeded: false, error: templateContent.error };
+    }
+
+    return { succeeded: true, result: templateContent.result };
 }
 
 /**
@@ -44,7 +51,12 @@ function loadWorkflowTemplate(): string {
  * @returns Rendered workflow YAML content
  */
 export function renderWorkflowTemplate(config: WorkflowConfig): string {
-    let rendered = loadWorkflowTemplate();
+    const templateResult = loadWorkflowTemplate();
+    if (failed(templateResult)) {
+        throw new Error(templateResult.error);
+    }
+
+    let rendered = templateResult.result;
 
     // Replace all template variables with their values
     const replacements: Record<string, string> = {

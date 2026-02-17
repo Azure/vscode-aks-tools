@@ -72,6 +72,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
 import { runContainerAssist } from "./commands/aksContainerAssist/aksContainerAssist";
+import { setupOIDCForGitHub } from "./commands/aksContainerAssist/oidcSetup";
 
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
@@ -160,6 +161,15 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
         registerCommandWithTelemetry("aks.aksSetupMCPServerCommands", addMcpServerToUserSettings);
         registerCommandWithTelemetry("aks.runContainerAssist", runContainerAssist);
+        registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage(l10n.t("No workspace folder found. Please open a folder first."));
+                return;
+            }
+            const appName = path.basename(workspaceFolder.uri.fsPath);
+            await setupOIDCForGitHub(workspaceFolder, appName);
+        });
 
         await registerAzureServiceNodes(context);
 
