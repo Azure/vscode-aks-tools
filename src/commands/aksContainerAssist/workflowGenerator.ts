@@ -10,24 +10,16 @@ import * as l10n from "@vscode/l10n";
 import { Errorable, failed } from "../utils/errorable";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { ReadyAzureSessionProvider } from "../../auth/types";
-import { getSubscriptions, SelectionType } from "../utils/subscriptions";
-import { getResources } from "../utils/azureResources";
-import { getClusters, Cluster, getClusterNamespaces, getManagedCluster } from "../utils/clusters";
 import { WorkflowConfig, renderWorkflowTemplate, validateWorkflowConfig } from "./workflowTemplate";
-import { writeWorkflowFile, workflowFileExists, fileExists } from "./fileOperations";
+import { writeWorkflowFile, workflowFileExists, fileExists, scanForK8sManifests } from "./fileOperations";
 import { logger } from "./logger";
-import { extension } from "vscode-kubernetes-tools-api";
-
-interface AzureResource {
-    id: string;
-    name: string;
-    resourceGroup: string;
-}
-
-interface SubscriptionInfo {
-    id: string;
-    name: string;
-}
+import {
+    selectAzureSubscription as pickAzureSubscription,
+    selectAksCluster as pickAksCluster,
+    selectClusterAcr as pickClusterAcr,
+    selectClusterNamespace as pickClusterNamespace,
+} from "./azureSelections";
+import type { SubscriptionInfo, AzureResource } from "./azureSelections";
 
 /**
  * Main function to generate GitHub workflow with user interaction
@@ -37,6 +29,7 @@ interface SubscriptionInfo {
 export async function generateGitHubWorkflow(
     workspaceFolder: vscode.WorkspaceFolder,
     projectRoot: string,
+    preselectedAcr?: SelectedAcrContext,
 ): Promise<Errorable<string>> {
     try {
         logger.info("Starting GitHub workflow generation");
@@ -52,7 +45,12 @@ export async function generateGitHubWorkflow(
         logger.info("Azure authentication successful");
 
         // Step 2: Collect workflow configuration from user (no progress bars during input)
-        const config = await collectWorkflowConfiguration(sessionProvider.result, workspaceFolder, projectRoot);
+        const config = await collectWorkflowConfiguration(
+            sessionProvider.result,
+            workspaceFolder,
+            projectRoot,
+            preselectedAcr,
+        );
         if (!config) {
             logger.info("Workflow generation cancelled by user");
             return { succeeded: false, error: "Workflow generation cancelled" };
@@ -100,28 +98,34 @@ export async function generateGitHubWorkflow(
  * Collects workflow configuration from user through interactive prompts
  * Uses smart defaults and minimal inputs
  */
+export interface SelectedAcrContext {
+    subscription: SubscriptionInfo;
+    acr: AzureResource;
+}
+
 async function collectWorkflowConfiguration(
     sessionProvider: ReadyAzureSessionProvider,
     _workspaceFolder: vscode.WorkspaceFolder,
     projectRoot: string,
+    preselected?: SelectedAcrContext,
 ): Promise<WorkflowConfig | undefined> {
     // 1. Azure Subscription (REQUIRED - show all available)
-    const subscription = await selectAzureSubscription(sessionProvider);
+    const subscription = preselected?.subscription ?? (await pickAzureSubscription(sessionProvider));
     if (!subscription) return undefined;
     logger.debug("Subscription selected", subscription.name);
 
     // 2. AKS Cluster Selection (REQUIRED - cluster-first approach)
-    const cluster = await selectAksCluster(sessionProvider, subscription.id);
+    const cluster = await pickAksCluster(sessionProvider, subscription.id);
     if (!cluster) return undefined;
     logger.debug("Cluster selected", cluster.name);
 
     // 3. Get ACRs attached to the cluster
-    const acr = await selectClusterAcr(sessionProvider, subscription.id, cluster);
+    const acr = preselected?.acr ?? (await pickClusterAcr(sessionProvider, subscription.id, cluster));
     if (!acr) return undefined;
     logger.debug("ACR selected", acr.name);
 
     // 4. Get namespaces from the cluster
-    const namespace = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
+    const namespace = await pickClusterNamespace(sessionProvider, subscription.id, cluster);
     if (!namespace) return undefined;
     logger.debug("Namespace selected", namespace);
 
@@ -160,11 +164,14 @@ async function collectWorkflowConfiguration(
     if (!buildContextPath) return undefined;
     logger.debug("Build context path selected", buildContextPath);
 
-    // 8. Manifest path - detect and allow user to customize
-    const detectedManifest = await detectManifestPath(projectRoot);
-    const manifestPath = await promptForManifestPath(detectedManifest);
-    if (!manifestPath) return undefined;
-    logger.debug("Manifest path selected", manifestPath);
+    // 8. Manifest path - detect and allow user to select
+    const detectedManifests = await scanForK8sManifests(projectRoot);
+    // Convert absolute paths to relative (repo-root-relative)
+    const relativeManifests = detectedManifests.map((p) => path.relative(projectRoot, p));
+    const selectedManifests = await promptForManifestSelection(relativeManifests);
+    if (!selectedManifests) return undefined;
+    const manifestPath = formatManifestPathForYamlBlock(selectedManifests);
+    logger.debug("Manifest paths selected", selectedManifests);
 
     return {
         workflowName,
@@ -190,26 +197,6 @@ async function detectDockerfilePath(projectRoot: string): Promise<string | undef
     if (await fileExists(dockerfilePath)) {
         return "Dockerfile";
     }
-    return undefined;
-}
-
-/**
- * Detects Kubernetes manifest path in the project
- * Checks for k8s/ or manifests/ folders
- */
-async function detectManifestPath(projectRoot: string): Promise<string | undefined> {
-    // Check k8s folder first
-    const k8sPath = path.join(projectRoot, "k8s");
-    if (await fileExists(k8sPath)) {
-        return "k8s/*.yaml";
-    }
-
-    // Check manifests folder as fallback
-    const manifestsPath = path.join(projectRoot, "manifests");
-    if (await fileExists(manifestsPath)) {
-        return "manifests/*.yaml";
-    }
-
     return undefined;
 }
 
@@ -271,240 +258,51 @@ async function promptForBuildContext(defaultContext: string): Promise<string | u
 }
 
 /**
- * Prompts user to enter or confirm Kubernetes manifest path
+ * Prompts user to select Kubernetes manifest files from a multi-select dropdown.
+ * Detected manifests are pre-selected. User can also type a custom path.
  */
-async function promptForManifestPath(detectedPath: string | undefined): Promise<string | undefined> {
-    const defaultPath = detectedPath || "k8s/*.yaml";
-    const detectionNote = detectedPath ? l10n.t("✓ Found: {0}", detectedPath) : l10n.t("Not found - using default");
-
-    const result = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter Kubernetes manifest path (supports wildcards like *.yaml)\n{0}", detectionNote),
-        placeHolder: "k8s/*.yaml",
-        value: defaultPath,
-        title: l10n.t("Kubernetes Manifest Path"),
-        ignoreFocusOut: true,
-        validateInput: (value) => {
-            if (!value || value.trim() === "") {
-                return l10n.t("Manifest path is required");
-            }
-            return undefined;
-        },
-    });
-
-    return result?.trim();
-}
-
-/**
- * Prompts user to select an Azure subscription
- * Shows all subscriptions available to the signed-in user
- */
-async function selectAzureSubscription(
-    sessionProvider: ReadyAzureSessionProvider,
-): Promise<SubscriptionInfo | undefined> {
-    const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
-
-    if (failed(subscriptionsResult)) {
-        vscode.window.showErrorMessage(subscriptionsResult.error);
-        return undefined;
-    }
-
-    if (subscriptionsResult.result.length === 0) {
-        const openPortal = l10n.t("Open in Portal");
-        const selection = await vscode.window.showWarningMessage(l10n.t("No Azure subscriptions found."), openPortal);
-        logger.warn("No subscriptions available - cancelling workflow generation");
-
-        if (selection === openPortal) {
-            vscode.env.openExternal(
-                vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
-            );
-        }
-        return undefined;
-    }
-
-    const subscriptionItems = subscriptionsResult.result.map((sub) => ({
-        label: sub.displayName,
-        description: sub.subscriptionId,
-        subscription: { id: sub.subscriptionId, name: sub.displayName },
-    }));
-
-    const selected = await vscode.window.showQuickPick(subscriptionItems, {
-        placeHolder: l10n.t("Select Azure subscription"),
-        title: l10n.t("Azure Subscription ({0} available)", subscriptionsResult.result.length),
-    });
-
-    return selected?.subscription;
-}
-
-/**
- * Prompts user to select an AKS cluster
- */
-async function selectAksCluster(
-    sessionProvider: ReadyAzureSessionProvider,
-    subscriptionId: string,
-): Promise<Cluster | undefined> {
-    const clustersResult = await getClusters(sessionProvider, subscriptionId);
-
-    if (!clustersResult || clustersResult.length === 0) {
-        const openPortal = l10n.t("Open in Portal");
-        const selection = await vscode.window.showWarningMessage(
-            l10n.t("No AKS clusters found in subscription."),
-            openPortal,
-        );
-        logger.warn("No AKS clusters available - cancelling workflow generation");
-
-        if (selection === openPortal) {
-            vscode.env.openExternal(vscode.Uri.parse("https://portal.azure.com/#create/microsoft.aks"));
-        }
-        return undefined;
-    }
-
-    const clusterItems = clustersResult
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((cluster) => ({
-            label: cluster.name,
-            description: cluster.resourceGroup,
-            cluster,
-        }));
-
-    const selected = await vscode.window.showQuickPick(clusterItems, {
-        placeHolder: l10n.t("Select AKS cluster for deployment"),
-        title: l10n.t("AKS Cluster ({0} available)", clustersResult.length),
-    });
-
-    return selected?.cluster;
-}
-
-/**
- * Prompts user to select an ACR attached to the cluster
- * Shows ONLY ACRs connected to the selected cluster
- */
-async function selectClusterAcr(
-    sessionProvider: ReadyAzureSessionProvider,
-    subscriptionId: string,
-    cluster: Cluster,
-): Promise<AzureResource | undefined> {
-    // Get the managed cluster details to find attached ACRs
-    const managedCluster = await getManagedCluster(
-        sessionProvider,
-        subscriptionId,
-        cluster.resourceGroup,
-        cluster.name,
-    );
-
-    if (failed(managedCluster)) {
-        vscode.window.showErrorMessage(managedCluster.error);
-        return undefined;
-    }
-
-    // Get attached ACR resource IDs from the cluster's acrProfile
-    const attachedAcrIds: string[] = [];
-
-    // Check if ACR integration is configured
-    if (managedCluster.result.networkProfile?.networkPlugin) {
-        // Try to get ACR IDs from the identity profile
-        const acrPullIdentity = managedCluster.result.identityProfile?.kubeletidentity?.resourceId;
-        if (acrPullIdentity) {
-            attachedAcrIds.push(acrPullIdentity);
-        }
-    }
-
-    // Get all ACRs in the subscription
-    const acrsResult = await getResources(sessionProvider, subscriptionId, "Microsoft.ContainerRegistry/registries");
-
-    if (failed(acrsResult)) {
-        vscode.window.showErrorMessage(acrsResult.error);
-        return undefined;
-    }
-
-    // Filter to show ONLY attached ACRs
-    // For now, if we can't determine attached ACRs from the API, show all ACRs but with a note
-    // that they should be attached to the cluster
-    const acrList = acrsResult.result;
-
-    if (acrList.length === 0) {
-        const openPortal = l10n.t("Open in Portal");
-        const selection = await vscode.window.showWarningMessage(
-            l10n.t("No Azure Container Registries found in subscription."),
-            openPortal,
-        );
-        logger.warn("No ACRs available - cancelling workflow generation");
-
-        if (selection === openPortal) {
-            vscode.env.openExternal(vscode.Uri.parse("https://portal.azure.com/#create/Microsoft.ContainerRegistry"));
-        }
-        return undefined;
-    }
-
-    const acrItems = acrList
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((acr) => ({
-            label: acr.name,
-            description: acr.resourceGroup,
-            detail: l10n.t("Ensure this ACR is attached to cluster '{0}'", cluster.name),
-            acr: {
-                id: acr.id,
-                name: acr.name,
-                resourceGroup: acr.resourceGroup,
+async function 
+(detectedPaths: string[]): Promise<string[] | undefined> {
+    if (detectedPaths.length === 0) {
+        // No manifests detected — fall back to a simple input box
+        const result = await vscode.window.showInputBox({
+            prompt: l10n.t("No manifests detected. Enter Kubernetes manifest path (relative to repo root)"),
+            placeHolder: "k8s/deployment.yaml",
+            value: "k8s/deployment.yaml",
+            title: l10n.t("Kubernetes Manifests"),
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value || value.trim() === "") {
+                    return l10n.t("At least one manifest path is required");
+                }
+                return undefined;
             },
-        }));
-
-    const selected = await vscode.window.showQuickPick(acrItems, {
-        placeHolder: l10n.t("Select Azure Container Registry attached to '{0}'", cluster.name),
-        title: l10n.t("Container Registry ({0} available)", acrList.length),
-    });
-
-    return selected?.acr;
-}
-
-/**
- * Prompts user to select a namespace from the cluster
- * Shows only namespaces the user has access to
- */
-async function selectClusterNamespace(
-    sessionProvider: ReadyAzureSessionProvider,
-    subscriptionId: string,
-    cluster: Cluster,
-): Promise<string | undefined> {
-    const kubectl = await extension.kubectl.v1;
-    if (!kubectl.available) {
-        vscode.window.showErrorMessage(l10n.t("kubectl is not available. Please install kubectl extension."));
-        return undefined;
+        });
+        return result ? [result.trim()] : undefined;
     }
 
-    const namespacesResult = await getClusterNamespaces(
-        sessionProvider,
-        kubectl,
-        subscriptionId,
-        cluster.resourceGroup,
-        cluster.name,
-    );
-
-    if (failed(namespacesResult)) {
-        vscode.window.showErrorMessage(
-            l10n.t("Failed to retrieve namespaces from cluster: {0}", namespacesResult.error),
-        );
-        return undefined;
-    }
-
-    if (namespacesResult.result.length === 0) {
-        vscode.window.showWarningMessage(l10n.t("No namespaces found in cluster."));
-        logger.warn("No namespaces available - cancelling workflow generation");
-        return undefined;
-    }
-
-    const namespaceItems = namespacesResult.result.sort().map((ns) => ({
-        label: ns,
-        description: ns === "default" ? l10n.t("Default namespace") : undefined,
+    const items: vscode.QuickPickItem[] = detectedPaths.map((p) => ({
+        label: p,
+        picked: true,
     }));
 
-    const selected = await vscode.window.showQuickPick(namespaceItems, {
-        placeHolder: l10n.t("Select Kubernetes namespace"),
-        title: l10n.t("Namespace ({0} available)", namespacesResult.result.length),
+    const selected = await vscode.window.showQuickPick(items, {
+        canPickMany: true,
+        placeHolder: l10n.t("Select Kubernetes manifests to include in the workflow"),
+        title: l10n.t("Kubernetes Manifests ({0} detected)", detectedPaths.length),
+        ignoreFocusOut: true,
     });
 
-    return selected?.label;
+    if (!selected || selected.length === 0) return undefined;
+    return selected.map((item) => item.label);
 }
 
+function formatManifestPathForYamlBlock(manifests: string[]): string {
+    if (manifests.length === 1) {
+        return manifests[0];
+    }
+    return `|\n${manifests.map((manifest) => `        ${manifest}`).join("\n")}`;
+}
 /**
  * Sanitizes workflow name to be used as filename
  */
