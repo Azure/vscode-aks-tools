@@ -76,6 +76,7 @@ export class ContainerAssistService {
         try {
             const requestParams = { repositoryPath: folderPath };
             logger.debug("analyzeRepo request", requestParams);
+            logger.toolRequest("analyzeRepo", requestParams);
 
             const result = await analyzeRepo(requestParams, { signal });
 
@@ -87,6 +88,7 @@ export class ContainerAssistService {
 
             const analysis: RepositoryAnalysis = result.value;
             logger.debug("analyzeRepo response", analysis);
+            logger.toolResponse("analyzeRepo", analysis);
 
             const modules: ModuleAnalysisResult[] = (analysis.modules || []).map((module) => ({
                 name: module.name,
@@ -137,6 +139,7 @@ export class ContainerAssistService {
                 detectedDependencies: moduleInfo.dependencies,
             };
             logger.debug("generateDockerfile request", requestParams);
+            logger.toolRequest("generateDockerfile", requestParams);
 
             const result = await sdkGenerateDockerfile(requestParams, { signal });
 
@@ -148,6 +151,7 @@ export class ContainerAssistService {
 
             const plan: DockerfilePlan = result.value;
             logger.debug("generateDockerfile response", plan);
+            logger.toolResponse("generateDockerfile", plan);
 
             const dockerfileContent = await this.generateDockerfileWithLM(plan, token);
             if (failed(dockerfileContent)) {
