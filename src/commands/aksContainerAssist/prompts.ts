@@ -80,7 +80,12 @@ Enhancement guidance:
     return prompt;
 }
 
-export function buildK8sManifestUserPrompt(plan: ManifestPlan, appName: string, namespace: string): string {
+export function buildK8sManifestUserPrompt(
+    plan: ManifestPlan,
+    appName: string,
+    namespace: string,
+    imageRepository?: string,
+): string {
     const repoInfo = plan.repositoryInfo;
     const formattedPlan = formatGenerateK8sManifestsResult(plan);
 
@@ -92,6 +97,8 @@ export function buildK8sManifestUserPrompt(plan: ManifestPlan, appName: string, 
     const hasExternalDependencies = dependencies.some((d) => EXTERNAL_DEPENDENCY_REGEX.test(d));
 
     const manifestGuidance = buildManifestGuidance(isWebApp, hasExternalDependencies, ports);
+
+    const imageLine = imageRepository ? `- Image Repository: ${imageRepository}` : undefined;
 
     return `Generate Kubernetes manifests based on the following analysis and recommendations:
 
@@ -105,6 +112,7 @@ Application Details:
 - Ports: ${ports.join(", ") || "none detected"}
 - Entry Point: ${repoInfo?.entryPoint || "unknown"}
 - Dependencies: ${dependencies.join(", ") || "none"}
+${imageLine ? `${imageLine}` : ""}
 ${manifestGuidance}
 
 Generate ONLY the manifests that are appropriate for this application.

@@ -7,9 +7,11 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
-import { generateGitHubWorkflow } from "./workflowGenerator";
+import { generateGitHubWorkflow, SelectedAcrContext } from "./workflowGenerator";
 import { stageFilesAndCreatePR, isGitExtensionAvailable, isGitHubExtensionAvailable } from "./gitHubIntegration";
 import { setupOIDCForGitHub } from "./oidcSetup";
+import { getReadySessionProvider } from "../../auth/azureAuth";
+import { selectAzureSubscription, selectAcr } from "./azureSelections";
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
@@ -72,6 +74,37 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             selectedActions.includes(ContainerAssistAction.GenerateDeployment) &&
             selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
 
+        const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
+
+        // When deployment is selected, collect Azure context (subscription + ACR) upfront.
+        // This avoids asking the user again during workflow generation.
+        let acrContext: SelectedAcrContext | undefined;
+        if (hasDeployment) {
+            const sessionProvider = await getReadySessionProvider();
+            if (failed(sessionProvider)) {
+                vscode.window.showErrorMessage(
+                    l10n.t("Azure login required. Please sign in to Azure to select a Container Registry."),
+                );
+                return;
+            }
+
+            const subscription = await selectAzureSubscription(sessionProvider.result);
+            if (!subscription) {
+                logger.info("Subscription selection cancelled");
+                return;
+            }
+            logger.debug("Subscription selected", subscription.name);
+
+            const acr = await selectAcr(sessionProvider.result, subscription.id);
+            if (!acr) {
+                logger.info("ACR selection cancelled");
+                return;
+            }
+            logger.info(`ACR selected: ${acr.name}.azurecr.io`);
+
+            acrContext = { subscription, acr };
+        }
+
         const generatedFiles: string[] = [];
         let workflowPath: string | undefined;
 
@@ -82,6 +115,7 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
                 workspaceFolder,
                 projectRoot,
                 hasBothActions,
+                acrContext,
             );
 
             if (result) {
@@ -220,13 +254,19 @@ async function processContainerAssistAction(
     workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
+    acrContext?: SelectedAcrContext,
 ): Promise<ActionResult | undefined> {
     switch (action) {
         case ContainerAssistAction.GenerateDeployment:
-            return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions);
+            return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions, acrContext);
 
         case ContainerAssistAction.GenerateWorkflow:
-            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions);
+            return await generateWorkflowFile(
+                workspaceFolder,
+                targetPath,
+                hasBothActions,
+                hasBothActions ? acrContext : undefined,
+            );
 
         default:
             logger.warn(`Unknown action: ${action}`);
@@ -240,10 +280,40 @@ async function generateDeploymentFiles(
     _workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
+    acrContext?: SelectedAcrContext,
 ): Promise<ActionResult | undefined> {
     const appName = path.basename(targetPath);
     logger.info(`Starting deployment file generation for app: ${appName}`);
     logger.debug("Target path", targetPath);
+
+    // If no context was provided (deployment-only without prior selection), collect it now
+    let acrLoginServer: string | undefined;
+    if (acrContext) {
+        acrLoginServer = `${acrContext.acr.name}.azurecr.io`;
+    } else {
+        const sessionProvider = await getReadySessionProvider();
+        if (failed(sessionProvider)) {
+            vscode.window.showErrorMessage(
+                l10n.t("Azure login required. Please sign in to Azure to select a Container Registry."),
+            );
+            return;
+        }
+
+        const subscription = await selectAzureSubscription(sessionProvider.result);
+        if (!subscription) {
+            logger.info("Subscription selection cancelled");
+            return;
+        }
+        logger.debug("Subscription selected", subscription.name);
+
+        const acr = await selectAcr(sessionProvider.result, subscription.id);
+        if (!acr) {
+            logger.info("ACR selection cancelled");
+            return;
+        }
+        acrLoginServer = `${acr.name}.azurecr.io`;
+    }
+    logger.info(`ACR login server: ${acrLoginServer}`);
 
     const useDefault = l10n.t("Use Default Model");
     const selectModel = l10n.t("Select Model...");
@@ -278,6 +348,7 @@ async function generateDeploymentFiles(
                 const generationResult = await service.generateDeploymentFiles(
                     targetPath,
                     appName,
+                    acrLoginServer,
                     abortController.signal,
                     token,
                     showModelPicker,
@@ -338,6 +409,7 @@ async function generateWorkflowFile(
     workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
+    preselectedAcr?: SelectedAcrContext,
 ): Promise<ActionResult | undefined> {
     logger.info("Starting GitHub workflow generation");
 
@@ -350,7 +422,7 @@ async function generateWorkflowFile(
                   cancellable: false,
               },
               async () => {
-                  return await generateGitHubWorkflow(workspaceFolder, targetPath);
+                  return await generateGitHubWorkflow(workspaceFolder, targetPath, preselectedAcr);
               },
           )
         : await generateGitHubWorkflow(workspaceFolder, targetPath);

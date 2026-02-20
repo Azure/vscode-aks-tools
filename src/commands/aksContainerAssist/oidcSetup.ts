@@ -125,6 +125,9 @@ async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder): Promi
     owner: string;
     repo: string;
     branch: string;
+    targetBranch?: string;
+    sourceBranch?: string;
+    mainBranch?: string;
 } | null> {
     try {
         // Get remote URL
@@ -146,10 +149,41 @@ async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder): Promi
             cwd: workspaceFolder.uri.fsPath,
         });
 
+        // Try to get main/default branch
+        let mainBranch: string | undefined = undefined;
+        try {
+            // Try to get symbolic-ref for origin/HEAD (default branch)
+            const { stdout: headRef } = await execFilePromise("git", ["symbolic-ref", "refs/remotes/origin/HEAD"], {
+                cwd: workspaceFolder.uri.fsPath,
+            });
+            // refs/remotes/origin/main or refs/remotes/origin/master
+            mainBranch = headRef.trim().split("/").pop();
+        } catch {
+            // fallback: try to get 'main' or 'master' if exists
+            try {
+                const { stdout: branches } = await execFilePromise("git", ["branch", "-r"], {
+                    cwd: workspaceFolder.uri.fsPath,
+                });
+                if (branches.includes("origin/main")) {
+                    mainBranch = "main";
+                } else if (branches.includes("origin/master")) {
+                    mainBranch = "master";
+                }
+            } catch {
+                // Fallback will be used if branch detection fails
+            }
+        }
+
+        const sourceBranch = branch.trim();
+        const targetBranch = mainBranch || "main";
+
         return {
             owner,
             repo,
             branch: branch.trim(),
+            sourceBranch,
+            targetBranch,
+            mainBranch,
         };
     } catch (error) {
         logger.error("Failed to get GitHub repo info", error);
@@ -314,12 +348,14 @@ async function createFederatedCredential(
     subscriptionId: string,
     resourceGroup: string,
     identityName: string,
-    repoInfo: { owner: string; repo: string; branch: string },
+    repoInfo: { owner: string; repo: string; branch: string; mainBranch?: string },
 ): Promise<void> {
     const msiClient = new ManagedServiceIdentityClient(credential, subscriptionId);
 
     const credentialName = "GitHubActions";
-    const subject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${repoInfo.branch}`;
+    // Always use 'main' as the branch for federated credential, matching workflow default
+    const branch = repoInfo.mainBranch || "main";
+    const subject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${branch}`;
 
     await msiClient.federatedIdentityCredentials.createOrUpdate(resourceGroup, identityName, credentialName, {
         issuer: "https://token.actions.githubusercontent.com",
