@@ -7,50 +7,45 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as l10n from "@vscode/l10n";
-import { Errorable, failed } from "../utils/errorable";
-import { getReadySessionProvider } from "../../auth/azureAuth";
+import { Errorable } from "../utils/errorable";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { WorkflowConfig, renderWorkflowTemplate, validateWorkflowConfig } from "./workflowTemplate";
 import { writeWorkflowFile, workflowFileExists, fileExists, scanForK8sManifests } from "./fileOperations";
 import { logger } from "./logger";
 import {
+    authenticateAzure,
     selectAzureSubscription as pickAzureSubscription,
     selectAksCluster as pickAksCluster,
     selectClusterAcr as pickClusterAcr,
     selectClusterNamespace as pickClusterNamespace,
+    promptForWorkflowName,
 } from "./azureSelections";
-import type { SubscriptionInfo, AzureResource } from "./azureSelections";
+import type { SubscriptionInfo, AzureResource, Cluster } from "./azureSelections";
 
-/**
- * Main function to generate GitHub workflow with user interaction
- * @param workspaceFolder The workspace folder where the workflow will be created
- * @param projectRoot The project root path
- */
 export async function generateGitHubWorkflow(
     workspaceFolder: vscode.WorkspaceFolder,
     projectRoot: string,
-    preselectedAcr?: SelectedAcrContext,
+    preselected?: PreselectedAzureContext,
 ): Promise<Errorable<string>> {
     try {
         logger.info("Starting GitHub workflow generation");
 
-        // Step 1: Authenticate with Azure
-        const sessionProvider = await getReadySessionProvider();
-        if (failed(sessionProvider)) {
-            vscode.window.showErrorMessage(
-                l10n.t("Azure login required. Please sign in to Azure using the Azure Account extension."),
-            );
-            return { succeeded: false, error: sessionProvider.error };
+        // Authenticate (reuse session if provided)
+        let sessionProvider: ReadyAzureSessionProvider;
+        if (preselected?.sessionProvider) {
+            sessionProvider = preselected.sessionProvider;
+            logger.info("Reusing existing Azure session");
+        } else {
+            const freshSession = await authenticateAzure();
+            if (!freshSession) {
+                return { succeeded: false, error: "Azure authentication required" };
+            }
+            sessionProvider = freshSession;
+            logger.info("Azure authentication successful");
         }
-        logger.info("Azure authentication successful");
 
-        // Step 2: Collect workflow configuration from user (no progress bars during input)
-        const config = await collectWorkflowConfiguration(
-            sessionProvider.result,
-            workspaceFolder,
-            projectRoot,
-            preselectedAcr,
-        );
+        // Collect workflow configuration
+        const config = await collectWorkflowConfiguration(sessionProvider, workspaceFolder, projectRoot, preselected);
         if (!config) {
             logger.info("Workflow generation cancelled by user");
             return { succeeded: false, error: "Workflow generation cancelled" };
@@ -103,11 +98,19 @@ export interface SelectedAcrContext {
     acr: AzureResource;
 }
 
+export interface PreselectedAzureContext extends SelectedAcrContext {
+    sessionProvider: ReadyAzureSessionProvider;
+    cluster?: Cluster;
+    namespace?: string;
+    showModelPicker?: boolean;
+    workflowName?: string;
+}
+
 async function collectWorkflowConfiguration(
     sessionProvider: ReadyAzureSessionProvider,
     _workspaceFolder: vscode.WorkspaceFolder,
     projectRoot: string,
-    preselected?: SelectedAcrContext,
+    preselected?: PreselectedAzureContext,
 ): Promise<WorkflowConfig | undefined> {
     // 1. Azure Subscription (REQUIRED - show all available)
     const subscription = preselected?.subscription ?? (await pickAzureSubscription(sessionProvider));
@@ -115,7 +118,7 @@ async function collectWorkflowConfiguration(
     logger.debug("Subscription selected", subscription.name);
 
     // 2. AKS Cluster Selection (REQUIRED - cluster-first approach)
-    const cluster = await pickAksCluster(sessionProvider, subscription.id);
+    const cluster = preselected?.cluster ?? (await pickAksCluster(sessionProvider, subscription.id));
     if (!cluster) return undefined;
     logger.debug("Cluster selected", cluster.name);
 
@@ -125,50 +128,52 @@ async function collectWorkflowConfiguration(
     logger.debug("ACR selected", acr.name);
 
     // 4. Get namespaces from the cluster
-    const namespace = await pickClusterNamespace(sessionProvider, subscription.id, cluster);
+    const namespace = preselected?.namespace ?? (await pickClusterNamespace(sessionProvider, subscription.id, cluster));
     if (!namespace) return undefined;
     logger.debug("Namespace selected", namespace);
 
     // 5. Smart defaults for remaining values
     const appName = path.basename(projectRoot);
 
-    // Generate workflow name suggestion
-    const defaultWorkflowName = `deploy-${appName}-to-aks`;
-
-    const workflowName = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter workflow name"),
-        placeHolder: defaultWorkflowName,
-        value: defaultWorkflowName,
-        validateInput: (value) => {
-            if (!value || value.trim() === "") {
-                return l10n.t("Workflow name is required");
-            }
-            if (!/^[a-zA-Z0-9-_]+$/.test(value)) {
-                return l10n.t("Workflow name can only contain letters, numbers, hyphens, and underscores");
-            }
-            return undefined;
-        },
-    });
+    const workflowName = preselected?.workflowName ?? (await promptForWorkflowName(appName));
     if (!workflowName) return undefined;
-    logger.debug("Workflow name selected", workflowName);
+    logger.debug("Workflow name resolved", workflowName);
 
     // 6. Dockerfile path - detect and allow user to customize
     const detectedDockerfile = await detectDockerfilePath(projectRoot);
-    const dockerfilePath = await promptForDockerfilePath(projectRoot, detectedDockerfile);
+    let dockerfilePath: string | undefined;
+    if (preselected && detectedDockerfile) {
+        dockerfilePath = detectedDockerfile;
+        logger.debug("Dockerfile auto-detected (skipping prompt)", dockerfilePath);
+    } else {
+        dockerfilePath = await promptForDockerfilePath(projectRoot, detectedDockerfile);
+    }
     if (!dockerfilePath) return undefined;
     logger.debug("Dockerfile path selected", dockerfilePath);
 
-    // 7. Build context path - detect from Dockerfile location
+    // 7. Build context: auto-derive when Dockerfile was auto-detected, otherwise prompt
+    let buildContextPath: string | undefined;
     const defaultBuildContext = dockerfilePath.includes("/") ? path.dirname(dockerfilePath) : ".";
-    const buildContextPath = await promptForBuildContext(defaultBuildContext);
+    if (preselected && detectedDockerfile) {
+        buildContextPath = defaultBuildContext;
+        logger.debug("Build context auto-detected (skipping prompt)", buildContextPath);
+    } else {
+        buildContextPath = await promptForBuildContext(defaultBuildContext);
+    }
     if (!buildContextPath) return undefined;
     logger.debug("Build context path selected", buildContextPath);
 
-    // 8. Manifest path - detect and allow user to select
+    // 8. Manifests: auto-select all when deployment was just generated, otherwise prompt
     const detectedManifests = await scanForK8sManifests(projectRoot);
-    // Convert absolute paths to relative (repo-root-relative)
     const relativeManifests = detectedManifests.map((p) => path.relative(projectRoot, p));
-    const selectedManifests = await promptForManifestSelection(relativeManifests);
+
+    let selectedManifests: string[] | undefined;
+    if (preselected && relativeManifests.length > 0) {
+        selectedManifests = relativeManifests;
+        logger.debug(`Auto-selected ${selectedManifests.length} manifest(s) (skipping prompt)`, selectedManifests);
+    } else {
+        selectedManifests = await promptForManifestSelection(relativeManifests);
+    }
     if (!selectedManifests) return undefined;
     const manifestPath = formatManifestPathForYamlBlock(selectedManifests);
     logger.debug("Manifest paths selected", selectedManifests);

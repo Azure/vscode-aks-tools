@@ -125,8 +125,6 @@ async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder): Promi
     owner: string;
     repo: string;
     branch: string;
-    targetBranch?: string;
-    sourceBranch?: string;
     mainBranch?: string;
 } | null> {
     try {
@@ -174,15 +172,10 @@ async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder): Promi
             }
         }
 
-        const sourceBranch = branch.trim();
-        const targetBranch = mainBranch || "main";
-
         return {
             owner,
             repo,
             branch: branch.trim(),
-            sourceBranch,
-            targetBranch,
             mainBranch,
         };
     } catch (error) {
