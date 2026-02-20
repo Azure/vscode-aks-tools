@@ -261,8 +261,7 @@ async function promptForBuildContext(defaultContext: string): Promise<string | u
  * Prompts user to select Kubernetes manifest files from a multi-select dropdown.
  * Detected manifests are pre-selected. User can also type a custom path.
  */
-async function 
-(detectedPaths: string[]): Promise<string[] | undefined> {
+async function promptForManifestSelection(detectedPaths: string[]): Promise<string[] | undefined> {
     if (detectedPaths.length === 0) {
         // No manifests detected — fall back to a simple input box
         const result = await vscode.window.showInputBox({
