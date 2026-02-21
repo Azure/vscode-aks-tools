@@ -805,7 +805,8 @@
         "test": "npm run test-compile && node ./out/src/tests/runTests.js",
         "test:fuzz": "npm run test-compile && mocha --require source-map-support/register 'out/src/tests/fuzz/**/*.test.js'",
         "lint": "npx eslint .",
-        "eslint-inspector": "npx @eslint/config-inspector@latest"
+        "eslint-inspector": "npx @eslint/config-inspector@latest",
+        "prepare": "husky"
     },
     "extensionDependencies": [
         "vscode.git",
@@ -840,6 +841,8 @@
         "fast-check": "^4.5.3",
         "glob": "^13.0.1",
         "globals": "^17.3.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.1.0",
         "mocha": "^11.7.5",
         "node-loader": "^2.1.0",
         "prettier": "^3.8.1",
@@ -848,6 +851,9 @@
         "typescript": "^5.9.3",
         "webpack": "^5.104.1",
         "webpack-cli": "^6.0.1"
+    },
+    "lint-staged": {
+        "*": "prettier --write --ignore-unknown"
     },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
