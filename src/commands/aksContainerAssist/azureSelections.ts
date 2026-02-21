@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as l10n from "@vscode/l10n";
+import * as path from "path";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
@@ -401,4 +402,63 @@ export async function selectAcr(
     });
 
     return selected?.acr;
+}
+
+export interface AzureContext {
+    acrName: string;
+    acrResourceGroup: string;
+    clusterName?: string;
+    clusterResourceGroup?: string;
+    namespace?: string;
+    workflowName?: string;
+}
+
+/**
+ * Collects Azure context from the user through a series of prompts.
+ * Returns undefined if the user cancels any step.
+ */
+export async function collectAzureContext(
+    hasWorkflow: boolean,
+    projectRoot: string,
+): Promise<AzureContext | undefined> {
+    const sessionProvider = await authenticateAzure();
+    if (!sessionProvider) return undefined;
+
+    const subscription = await selectAzureSubscription(sessionProvider);
+    if (!subscription) return undefined;
+    logger.debug("Subscription selected", subscription.name);
+
+    // Deployment only : need only subscription and ACR
+    if (!hasWorkflow) {
+        const acr = await selectAcr(sessionProvider, subscription.id);
+        if (!acr) return undefined;
+        logger.info(`ACR selected: ${acr.name}.azurecr.io`);
+
+        return { acrName: acr.name, acrResourceGroup: acr.resourceGroup };
+    }
+
+    // Workflow (with or without deployment): need full cluster context
+    const cluster = await selectAksCluster(sessionProvider, subscription.id);
+    if (!cluster) return undefined;
+    logger.debug("Cluster selected", cluster.name);
+
+    const acr = await selectClusterAcr(sessionProvider, subscription.id, cluster);
+    if (!acr) return undefined;
+    logger.info(`ACR selected: ${acr.name}.azurecr.io`);
+
+    const namespace = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
+    if (!namespace) return undefined;
+    logger.debug("Namespace selected", namespace);
+
+    const workflowName = await promptForWorkflowName(path.basename(projectRoot));
+    if (!workflowName) return undefined;
+
+    return {
+        acrName: acr.name,
+        acrResourceGroup: acr.resourceGroup,
+        clusterName: cluster.name,
+        clusterResourceGroup: cluster.resourceGroup,
+        namespace,
+        workflowName,
+    };
 }

@@ -7,18 +7,10 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
-import { generateGitHubWorkflow, PreselectedAzureContext } from "./workflowGenerator";
+import { generateGitHubWorkflow } from "./workflowGenerator";
 import { stageFilesAndCreatePR, isGitExtensionAvailable, isGitHubExtensionAvailable } from "./gitHubIntegration";
 import { setupOIDCForGitHub } from "./oidcSetup";
-import {
-    authenticateAzure,
-    selectAzureSubscription,
-    selectAcr,
-    selectAksCluster,
-    selectClusterAcr,
-    selectClusterNamespace,
-    promptForWorkflowName,
-} from "./azureSelections";
+import { collectAzureContext, AzureContext } from "./azureSelections";
 
 async function promptForModelChoice(): Promise<boolean | undefined> {
     const useDefault = l10n.t("Use Default Model");
@@ -90,12 +82,10 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
 
         logger.info(`Selected actions: ${selectedActions.join(", ")}`);
 
-        // Determine if both actions are selected
-        const hasBothActions =
-            selectedActions.includes(ContainerAssistAction.GenerateDeployment) &&
-            selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
-
+        // Determine which actions are selected
         const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
+        const hasWorkflow = selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
+        const hasBothActions = hasDeployment && hasWorkflow;
 
         let showModelPicker: boolean | undefined;
         if (hasDeployment) {
@@ -103,49 +93,9 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             if (showModelPicker === undefined) return;
         }
 
-        // Collect Azure context upfront
-        let preselected: PreselectedAzureContext | undefined;
-        if (hasDeployment) {
-            const sessionProvider = await authenticateAzure();
-            if (!sessionProvider) return;
-
-            const subscription = await selectAzureSubscription(sessionProvider);
-            if (!subscription) return;
-            logger.debug("Subscription selected", subscription.name);
-
-            if (hasBothActions) {
-                const cluster = await selectAksCluster(sessionProvider, subscription.id);
-                if (!cluster) return;
-                logger.debug("Cluster selected", cluster.name);
-
-                const acr = await selectClusterAcr(sessionProvider, subscription.id, cluster);
-                if (!acr) return;
-                logger.info(`ACR selected: ${acr.name}.azurecr.io`);
-
-                const namespace = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
-                if (!namespace) return;
-                logger.debug("Namespace selected", namespace);
-
-                const workflowName = await promptForWorkflowName(path.basename(projectRoot));
-                if (!workflowName) return;
-
-                preselected = {
-                    sessionProvider,
-                    subscription,
-                    acr,
-                    cluster,
-                    namespace,
-                    showModelPicker,
-                    workflowName,
-                };
-            } else {
-                const acr = await selectAcr(sessionProvider, subscription.id);
-                if (!acr) return;
-                logger.info(`ACR selected: ${acr.name}.azurecr.io`);
-
-                preselected = { sessionProvider, subscription, acr, showModelPicker };
-            }
-        }
+        // Collect Azure context upfront for all actions
+        const azureContext = await collectAzureContext(hasWorkflow, projectRoot);
+        if (!azureContext) return;
 
         const generatedFiles: string[] = [];
         let workflowPath: string | undefined;
@@ -157,7 +107,8 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
                 workspaceFolder,
                 projectRoot,
                 hasBothActions,
-                preselected,
+                azureContext,
+                showModelPicker,
             );
 
             if (result) {
@@ -296,14 +247,22 @@ async function processContainerAssistAction(
     workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
-    preselected?: PreselectedAzureContext,
+    azureContext: AzureContext,
+    showModelPicker: boolean | undefined,
 ): Promise<ActionResult | undefined> {
     switch (action) {
         case ContainerAssistAction.GenerateDeployment:
-            return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions, preselected);
+            return await generateDeploymentFiles(
+                service,
+                workspaceFolder,
+                targetPath,
+                hasBothActions,
+                azureContext,
+                showModelPicker,
+            );
 
         case ContainerAssistAction.GenerateWorkflow:
-            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions, preselected);
+            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions, azureContext);
 
         default:
             logger.warn(`Unknown action: ${action}`);
@@ -317,22 +276,15 @@ async function generateDeploymentFiles(
     _workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
-    preselected?: PreselectedAzureContext,
+    azureContext: AzureContext,
+    showModelPicker: boolean | undefined,
 ): Promise<ActionResult | undefined> {
     const appName = path.basename(targetPath);
     logger.info(`Starting deployment file generation for app: ${appName}`);
     logger.debug("Target path", targetPath);
 
-    // Preselected context is always provided by the orchestrator for deployment flows
-    if (!preselected) {
-        logger.error("generateDeploymentFiles called without preselected context");
-        return undefined;
-    }
-
-    const acrLoginServer = `${preselected.acr.name}.azurecr.io`;
+    const acrLoginServer = `${azureContext.acrName}.azurecr.io`;
     logger.info(`ACR login server: ${acrLoginServer}`);
-
-    const showModelPicker = preselected.showModelPicker ?? false;
 
     const result = await vscode.window.withProgress(
         {
@@ -356,7 +308,7 @@ async function generateDeploymentFiles(
                     acrLoginServer,
                     abortController.signal,
                     token,
-                    showModelPicker,
+                    showModelPicker ?? false,
                     (step: string) => progress.report({ message: step }),
                 );
 
@@ -414,7 +366,7 @@ async function generateWorkflowFile(
     workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
-    preselected?: PreselectedAzureContext,
+    azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
     logger.info("Starting GitHub workflow generation");
 
@@ -427,10 +379,10 @@ async function generateWorkflowFile(
                   cancellable: false,
               },
               async () => {
-                  return await generateGitHubWorkflow(workspaceFolder, targetPath, preselected);
+                  return await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
               },
           )
-        : await generateGitHubWorkflow(workspaceFolder, targetPath);
+        : await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
 
     if (failed(result)) {
         logger.error("GitHub workflow generation failed", result.error);
