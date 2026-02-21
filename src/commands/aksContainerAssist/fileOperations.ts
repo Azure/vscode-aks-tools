@@ -62,7 +62,7 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
  * Unified scanner for K8s manifests with single-pass directory traversal
  * Searches common locations first, then falls back to shallow recursive scan
  */
-async function scanForK8sManifests(rootPath: string): Promise<string[]> {
+export async function scanForK8sManifests(rootPath: string): Promise<string[]> {
     const manifestSet = new Set<string>();
 
     // Common K8s manifest folders (checked first for performance)

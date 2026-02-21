@@ -77,7 +77,7 @@ describe("ContainerAssistService", () => {
                 modulePath: "/test/path",
             };
 
-            const result = await service.generateManifests("/test/path", "test-app", moduleInfo);
+            const result = await service.generateManifests("/test/path", "test-app", moduleInfo, "default");
 
             assert.strictEqual(result.succeeded, false);
             assert.ok(

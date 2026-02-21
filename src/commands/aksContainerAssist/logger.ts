@@ -24,6 +24,23 @@ class ContainerAssistLogger {
         return new Date().toISOString();
     }
 
+    private formatData(data: unknown): string {
+        if (data === undefined || data === null) {
+            return "(no payload)";
+        }
+
+        if (typeof data === "string") {
+            return data;
+        }
+
+        try {
+            return JSON.stringify(data, null, 2);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return `(unserializable payload: ${message})`;
+        }
+    }
+
     info(message: string): void {
         this.getChannel().appendLine(`[INFO] ${this.timestamp()} ${message}`);
     }
@@ -44,6 +61,22 @@ class ContainerAssistLogger {
         if (data !== undefined) {
             this.getChannel().appendLine(JSON.stringify(data, null, 2));
         }
+    }
+
+    toolRequest(toolName: string, payload: unknown): void {
+        const config = vscode.workspace.getConfiguration("aks");
+        if (!config.get<boolean>("containerAssistDebugLogging", false)) return;
+
+        this.getChannel().appendLine(`[TOOL REQUEST] ${this.timestamp()} ${toolName}`);
+        this.getChannel().appendLine(this.formatData(payload));
+    }
+
+    toolResponse(toolName: string, payload: unknown): void {
+        const config = vscode.workspace.getConfiguration("aks");
+        if (!config.get<boolean>("containerAssistDebugLogging", false)) return;
+
+        this.getChannel().appendLine(`[TOOL RESPONSE] ${this.timestamp()} ${toolName}`);
+        this.getChannel().appendLine(this.formatData(payload));
     }
 
     warn(message: string): void {

@@ -76,6 +76,7 @@ export class ContainerAssistService {
         try {
             const requestParams = { repositoryPath: folderPath };
             logger.debug("analyzeRepo request", requestParams);
+            logger.toolRequest("analyzeRepo", requestParams);
 
             const result = await analyzeRepo(requestParams, { signal });
 
@@ -87,6 +88,7 @@ export class ContainerAssistService {
 
             const analysis: RepositoryAnalysis = result.value;
             logger.debug("analyzeRepo response", analysis);
+            logger.toolResponse("analyzeRepo", analysis);
 
             const modules: ModuleAnalysisResult[] = (analysis.modules || []).map((module) => ({
                 name: module.name,
@@ -137,6 +139,7 @@ export class ContainerAssistService {
                 detectedDependencies: moduleInfo.dependencies,
             };
             logger.debug("generateDockerfile request", requestParams);
+            logger.toolRequest("generateDockerfile", requestParams);
 
             const result = await sdkGenerateDockerfile(requestParams, { signal });
 
@@ -148,6 +151,7 @@ export class ContainerAssistService {
 
             const plan: DockerfilePlan = result.value;
             logger.debug("generateDockerfile response", plan);
+            logger.toolResponse("generateDockerfile", plan);
 
             const dockerfileContent = await this.generateDockerfileWithLM(plan, token);
             if (failed(dockerfileContent)) {
@@ -185,6 +189,8 @@ export class ContainerAssistService {
         modulePath: string,
         appName: string,
         moduleInfo: ModuleAnalysisResult,
+        namespace: string,
+        imageRepository?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
     ): Promise<Errorable<string[]>> {
@@ -196,14 +202,13 @@ export class ContainerAssistService {
         }
 
         try {
-            const config = vscode.workspace.getConfiguration("aks.containerAssist");
-            const namespace = config.get<string>("defaultNamespace", "default");
+            const targetNamespace = namespace || "default";
 
             const requestParams = {
                 manifestType: "kubernetes" as const,
                 modulePath,
                 name: appName,
-                namespace,
+                namespace: targetNamespace,
                 language: moduleInfo.language as
                     | "java"
                     | "dotnet"
@@ -219,6 +224,7 @@ export class ContainerAssistService {
                 entryPoint: moduleInfo.entryPoint,
             };
             logger.debug("generateK8sManifests request", requestParams);
+            logger.toolRequest("generateK8sManifests", requestParams);
 
             const result = await sdkGenerateK8sManifests(requestParams, { signal });
 
@@ -230,8 +236,15 @@ export class ContainerAssistService {
 
             const plan: ManifestPlan = result.value;
             logger.debug("generateK8sManifests response", plan);
+            logger.toolResponse("generateK8sManifests", plan);
 
-            const manifestsContent = await this.generateManifestsWithLM(plan, appName, namespace, token);
+            const manifestsContent = await this.generateManifestsWithLM(
+                plan,
+                appName,
+                targetNamespace,
+                imageRepository,
+                token,
+            );
             if (failed(manifestsContent)) {
                 return manifestsContent;
             }
@@ -259,9 +272,10 @@ export class ContainerAssistService {
         plan: ManifestPlan,
         appName: string,
         namespace: string,
+        imageRepository: string | undefined,
         token?: vscode.CancellationToken,
     ): Promise<Errorable<Array<{ filename: string; content: string }>>> {
-        const userPrompt = buildK8sManifestUserPrompt(plan, appName, namespace);
+        const userPrompt = buildK8sManifestUserPrompt(plan, appName, namespace, imageRepository);
         const response = await this.lmClient.sendRequest(K8S_MANIFEST_SYSTEM_PROMPT, userPrompt, token);
 
         if (failed(response)) {
@@ -275,6 +289,7 @@ export class ContainerAssistService {
     async generateDeploymentFiles(
         folderPath: string,
         appName: string,
+        acrLoginServer?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
         showModelPicker: boolean = false,
@@ -283,7 +298,7 @@ export class ContainerAssistService {
         const reportProgress = (message: string) => onProgress?.(message);
 
         logger.info(`Starting deployment workflow for: ${appName}`);
-        logger.debug("Deployment workflow params", { folderPath, appName });
+        logger.debug("Deployment workflow params", { folderPath, appName, acrLoginServer });
 
         logger.info("Step 0: Checking for existing deployment files...");
         const existingFiles = await this.checkExistingFiles(folderPath);
@@ -365,10 +380,14 @@ export class ContainerAssistService {
                 const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
                 logger.info(`Generating manifests for module: ${module.name} as ${manifestAppName}`);
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
+                const manifestNamespace = "default";
+                const imageRepository = acrLoginServer ? `${acrLoginServer}/${manifestAppName}` : undefined;
                 const manifestsResult = await this.generateManifests(
                     module.modulePath,
                     manifestAppName,
                     module,
+                    manifestNamespace,
+                    imageRepository,
                     signal,
                     token,
                 );
@@ -387,7 +406,9 @@ export class ContainerAssistService {
 
         return {
             succeeded: true,
-            result: { generatedFiles: allGeneratedFiles },
+            result: {
+                generatedFiles: allGeneratedFiles,
+            },
         };
     }
 }

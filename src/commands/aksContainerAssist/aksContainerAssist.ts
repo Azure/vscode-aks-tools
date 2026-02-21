@@ -10,6 +10,21 @@ import { logger } from "./logger";
 import { generateGitHubWorkflow } from "./workflowGenerator";
 import { stageFilesAndCreatePR, isGitExtensionAvailable, isGitHubExtensionAvailable } from "./gitHubIntegration";
 import { setupOIDCForGitHub } from "./oidcSetup";
+import { collectAzureContext, AzureContext } from "./azureSelections";
+
+async function promptForModelChoice(): Promise<boolean | undefined> {
+    const useDefault = l10n.t("Use Default Model");
+    const selectModel = l10n.t("Select Model...");
+    const modelChoice = await vscode.window.showQuickPick([useDefault, selectModel], {
+        placeHolder: l10n.t("Choose Language Model"),
+        title: l10n.t("Container Assist - Language Model"),
+    });
+    if (!modelChoice) {
+        logger.info("Model selection cancelled");
+        return undefined;
+    }
+    return modelChoice === selectModel;
+}
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
@@ -67,10 +82,20 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
 
         logger.info(`Selected actions: ${selectedActions.join(", ")}`);
 
-        // Determine if both actions are selected
-        const hasBothActions =
-            selectedActions.includes(ContainerAssistAction.GenerateDeployment) &&
-            selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
+        // Determine which actions are selected
+        const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
+        const hasWorkflow = selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
+        const hasBothActions = hasDeployment && hasWorkflow;
+
+        let showModelPicker: boolean | undefined;
+        if (hasDeployment) {
+            showModelPicker = await promptForModelChoice();
+            if (showModelPicker === undefined) return;
+        }
+
+        // Collect Azure context upfront for all actions
+        const azureContext = await collectAzureContext(hasWorkflow, projectRoot);
+        if (!azureContext) return;
 
         const generatedFiles: string[] = [];
         let workflowPath: string | undefined;
@@ -82,6 +107,8 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
                 workspaceFolder,
                 projectRoot,
                 hasBothActions,
+                azureContext,
+                showModelPicker,
             );
 
             if (result) {
@@ -93,7 +120,7 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             }
         }
 
-        // If both actions were selected, show post-generation options once
+        // Show post-generation options once when both actions completed
         if (hasBothActions) {
             const allFiles = [...generatedFiles];
             if (workflowPath) {
@@ -220,13 +247,22 @@ async function processContainerAssistAction(
     workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
+    azureContext: AzureContext,
+    showModelPicker: boolean | undefined,
 ): Promise<ActionResult | undefined> {
     switch (action) {
         case ContainerAssistAction.GenerateDeployment:
-            return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions);
+            return await generateDeploymentFiles(
+                service,
+                workspaceFolder,
+                targetPath,
+                hasBothActions,
+                azureContext,
+                showModelPicker,
+            );
 
         case ContainerAssistAction.GenerateWorkflow:
-            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions);
+            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions, azureContext);
 
         default:
             logger.warn(`Unknown action: ${action}`);
@@ -240,24 +276,15 @@ async function generateDeploymentFiles(
     _workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
+    azureContext: AzureContext,
+    showModelPicker: boolean | undefined,
 ): Promise<ActionResult | undefined> {
     const appName = path.basename(targetPath);
     logger.info(`Starting deployment file generation for app: ${appName}`);
     logger.debug("Target path", targetPath);
 
-    const useDefault = l10n.t("Use Default Model");
-    const selectModel = l10n.t("Select Model...");
-    const modelChoice = await vscode.window.showQuickPick([useDefault, selectModel], {
-        placeHolder: l10n.t("Choose Language Model"),
-        title: l10n.t("Container Assist - Language Model"),
-    });
-
-    if (!modelChoice) {
-        logger.info("Model selection cancelled");
-        return;
-    }
-
-    const showModelPicker = modelChoice === selectModel;
+    const acrLoginServer = `${azureContext.acrName}.azurecr.io`;
+    logger.info(`ACR login server: ${acrLoginServer}`);
 
     const result = await vscode.window.withProgress(
         {
@@ -278,9 +305,10 @@ async function generateDeploymentFiles(
                 const generationResult = await service.generateDeploymentFiles(
                     targetPath,
                     appName,
+                    acrLoginServer,
                     abortController.signal,
                     token,
-                    showModelPicker,
+                    showModelPicker ?? false,
                     (step: string) => progress.report({ message: step }),
                 );
 
@@ -324,7 +352,7 @@ async function generateDeploymentFiles(
         return undefined;
     }
 
-    // If both actions are selected, don't show options here - they'll be shown at the end
+    // Defer post-generation options when both actions are selected
     if (hasBothActions) {
         return { deploymentFiles: generatedFiles };
     }
@@ -338,6 +366,7 @@ async function generateWorkflowFile(
     workspaceFolder: vscode.WorkspaceFolder,
     targetPath: string,
     hasBothActions: boolean,
+    azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
     logger.info("Starting GitHub workflow generation");
 
@@ -350,10 +379,10 @@ async function generateWorkflowFile(
                   cancellable: false,
               },
               async () => {
-                  return await generateGitHubWorkflow(workspaceFolder, targetPath);
+                  return await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
               },
           )
-        : await generateGitHubWorkflow(workspaceFolder, targetPath);
+        : await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
 
     if (failed(result)) {
         logger.error("GitHub workflow generation failed", result.error);
@@ -364,48 +393,12 @@ async function generateWorkflowFile(
     const workflowPath = result.result;
     logger.info(`GitHub workflow created at: ${workflowPath}`);
 
-    // If both actions are selected, don't show options here - they'll be shown at the end
+    // Defer post-generation options when both actions are selected
     if (hasBothActions) {
         return { workflowPath };
     }
 
-    // Show success message and OIDC option only for workflow generation
-    const message = l10n.t(
-        "✅ GitHub workflow generated successfully! 🔐 OIDC authentication required for Azure deployment.",
-    );
-    const setupOIDC = l10n.t("🔐 Setup OIDC Authentication");
-    const openFile = l10n.t("Open Workflow");
-    const addToGit = l10n.t("Add to Git & Create PR");
-    const learnMore = l10n.t("📖 Learn About OIDC");
-
-    const selection = await vscode.window.showInformationMessage(
-        message,
-        {
-            modal: true, // Make it modal to emphasize OIDC requirement
-            detail: l10n.t(
-                "Your workflow is ready, but it needs OIDC authentication to deploy to Azure. Set up federated credentials now or the workflow will fail during deployment.",
-            ),
-        },
-        setupOIDC, // Put OIDC first for prominence
-        openFile,
-        learnMore,
-        addToGit,
-    );
-
-    if (selection === setupOIDC) {
-        await setupOIDCForGitHub(workspaceFolder, path.basename(targetPath));
-    } else if (selection === openFile) {
-        const doc = await vscode.workspace.openTextDocument(workflowPath);
-        await vscode.window.showTextDocument(doc, { preview: false });
-    } else if (selection === learnMore) {
-        vscode.env.openExternal(
-            vscode.Uri.parse(
-                "https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure",
-            ),
-        );
-    } else if (selection === addToGit) {
-        await handleGitHubIntegration([workflowPath], workspaceFolder, path.basename(targetPath));
-    }
+    await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true);
 
     return { workflowPath };
 }
