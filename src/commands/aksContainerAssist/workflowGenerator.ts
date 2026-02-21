@@ -22,12 +22,7 @@ export async function generateGitHubWorkflow(
     try {
         logger.info("Starting GitHub workflow generation");
 
-        const config = await collectWorkflowConfiguration(
-            workspaceFolder,
-            projectRoot,
-            azureContext,
-            hasBothActions,
-        );
+        const config = await collectWorkflowConfiguration(workspaceFolder, projectRoot, azureContext, hasBothActions);
         if (!config) {
             logger.info("Workflow generation cancelled by user");
             return { succeeded: false, error: "Workflow generation cancelled" };
@@ -70,7 +65,6 @@ export async function generateGitHubWorkflow(
         return { succeeded: false, error: `Failed to generate workflow: ${errorMsg}` };
     }
 }
-
 
 async function collectWorkflowConfiguration(
     _workspaceFolder: vscode.WorkspaceFolder,
