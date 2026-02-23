@@ -630,7 +630,10 @@ export async function getClusterNamespacesWithTypes(
                     },
                 );
             } catch (e) {
-                throw new Error(`Failed to parse namespace JSON: ${e}`);
+                return {
+                    succeeded: false,
+                    error: `Failed to parse namespace JSON: ${clusterName}: ${getErrorMessage(e)}`,
+                };
             }
         });
     });
