@@ -23,6 +23,7 @@ import {
     buildDockerfileUserPrompt,
     buildK8sManifestUserPrompt,
 } from "./prompts";
+import { PROJECT_TOOLS, handleToolCall } from "./tools";
 
 export class ContainerAssistService {
     private lmClient: LMClient;
@@ -153,7 +154,7 @@ export class ContainerAssistService {
             logger.debug("generateDockerfile response", plan);
             logger.toolResponse("generateDockerfile", plan);
 
-            const dockerfileContent = await this.generateDockerfileWithLM(plan, token);
+            const dockerfileContent = await this.generateDockerfileWithLM(plan, modulePath, token);
             if (failed(dockerfileContent)) {
                 return dockerfileContent;
             }
@@ -170,10 +171,20 @@ export class ContainerAssistService {
 
     private async generateDockerfileWithLM(
         plan: DockerfilePlan,
+        workspaceRoot: string,
         token?: vscode.CancellationToken,
     ): Promise<Errorable<string>> {
         const userPrompt = buildDockerfileUserPrompt(plan);
-        const response = await this.lmClient.sendRequest(DOCKERFILE_SYSTEM_PROMPT, userPrompt, token);
+        const response = await this.lmClient.sendRequestWithTools(
+            DOCKERFILE_SYSTEM_PROMPT,
+            userPrompt,
+            {
+                tools: PROJECT_TOOLS,
+                toolHandler: (call) => handleToolCall(call, workspaceRoot),
+                maxToolRounds: 5,
+            },
+            token,
+        );
 
         if (failed(response)) {
             return response;
@@ -243,6 +254,7 @@ export class ContainerAssistService {
                 appName,
                 targetNamespace,
                 imageRepository,
+                modulePath,
                 token,
             );
             if (failed(manifestsContent)) {
@@ -273,10 +285,20 @@ export class ContainerAssistService {
         appName: string,
         namespace: string,
         imageRepository: string | undefined,
+        workspaceRoot: string,
         token?: vscode.CancellationToken,
     ): Promise<Errorable<Array<{ filename: string; content: string }>>> {
         const userPrompt = buildK8sManifestUserPrompt(plan, appName, namespace, imageRepository);
-        const response = await this.lmClient.sendRequest(K8S_MANIFEST_SYSTEM_PROMPT, userPrompt, token);
+        const response = await this.lmClient.sendRequestWithTools(
+            K8S_MANIFEST_SYSTEM_PROMPT,
+            userPrompt,
+            {
+                tools: PROJECT_TOOLS,
+                toolHandler: (call) => handleToolCall(call, workspaceRoot),
+                maxToolRounds: 5,
+            },
+            token,
+        );
 
         if (failed(response)) {
             return response;
