@@ -88,7 +88,7 @@ Repository Info:
     // Add verification hints for fields the deterministic analysis couldn't resolve
     const verificationHints: string[] = [];
 
-    if (!repoInfo?.entryPoint || repoInfo.entryPoint === "unknown") {
+    if (!repoInfo?.entryPoint || repoInfo.entryPoint === "unknown" || repoInfo.entryPoint.trim() === "") {
         verificationHints.push(
             "- Entry point is unknown. Use listDirectory to find source files, then readProjectFile to identify the main entry point.",
         );
@@ -217,7 +217,7 @@ function buildK8sVerificationHints(ports: number[], entryPoint: string | undefin
         );
     }
 
-    if (!entryPoint || entryPoint === "unknown") {
+    if (!entryPoint || entryPoint === "unknown" || entryPoint.trim() === "") {
         hints.push(
             "- Entry point is unknown. Check the Dockerfile or source code to determine if the app is a web server, worker, or CLI tool — this affects which manifests to generate.",
         );

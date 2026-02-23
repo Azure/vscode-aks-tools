@@ -66,9 +66,28 @@ export function isBlockedFile(relativePath: string): boolean {
     return BLOCKED_FILE_PATTERNS.some((p) => p.test(filename));
 }
 
-function isPathTraversal(relativePath: string): boolean {
+function isPathTraversal(relativePath: string, workspaceRoot?: string): boolean {
     const normalized = path.normalize(relativePath);
-    return normalized.startsWith("..") || path.isAbsolute(normalized);
+
+    // Check for obvious traversal and absolute paths
+    if (normalized.startsWith("..") || path.isAbsolute(normalized)) {
+        return true;
+    }
+
+    // Windows-specific: reject drive-relative paths (e.g., "C:file.txt") and UNC paths ("\\server\share")
+    if (/^[a-zA-Z]:/.test(relativePath) || relativePath.startsWith("\\\\")) {
+        return true;
+    }
+
+    // If workspace root is provided, resolve and verify the path stays within the workspace
+    if (workspaceRoot) {
+        const resolved = path.resolve(workspaceRoot, normalized);
+        if (!resolved.startsWith(path.resolve(workspaceRoot) + path.sep) && resolved !== path.resolve(workspaceRoot)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // --- Excluded directories for listDirectory ---
@@ -101,7 +120,7 @@ export async function handleReadProjectFile(
 ): Promise<string> {
     const relativePath = input.path;
 
-    if (isPathTraversal(relativePath)) {
+    if (isPathTraversal(relativePath, workspaceRoot)) {
         logger.warn(`Tool readProjectFile: path traversal rejected for "${relativePath}"`);
         return `Refused: path traversal is not allowed ("${relativePath}")`;
     }
@@ -137,7 +156,7 @@ export async function handleListDirectory(
 ): Promise<string> {
     const relativePath = input.path;
 
-    if (isPathTraversal(relativePath)) {
+    if (isPathTraversal(relativePath, workspaceRoot)) {
         logger.warn(`Tool listDirectory: path traversal rejected for "${relativePath}"`);
         return `Refused: path traversal is not allowed ("${relativePath}")`;
     }
@@ -208,17 +227,25 @@ export async function handleToolCall(call: vscode.LanguageModelToolCallPart, wor
     const input = call.input as Record<string, unknown>;
 
     switch (call.name) {
-        case "readProjectFile":
+        case "readProjectFile": {
+            if (typeof input.path !== "string" || input.path.trim() === "") {
+                return `Error: "path" is required and must be a non-empty string for readProjectFile.`;
+            }
             return handleReadProjectFile(
-                { path: input.path as string, maxLines: input.maxLines as number | undefined },
+                { path: input.path, maxLines: input.maxLines as number | undefined },
                 workspaceRoot,
             );
+        }
 
-        case "listDirectory":
+        case "listDirectory": {
+            if (typeof input.path !== "string" || input.path.trim() === "") {
+                return `Error: "path" is required and must be a non-empty string for listDirectory.`;
+            }
             return handleListDirectory(
-                { path: input.path as string, maxDepth: input.maxDepth as number | undefined },
+                { path: input.path, maxDepth: input.maxDepth as number | undefined },
                 workspaceRoot,
             );
+        }
 
         default:
             logger.warn(`Tool call for unknown tool: "${call.name}"`);

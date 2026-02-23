@@ -198,6 +198,12 @@ describe("tools", () => {
             assert.ok(result.includes("utils/"));
             assert.ok(result.includes("helper.ts"));
         });
+
+        it("caps maxDepth at hard limit", async () => {
+            const resultAtCap = await handleListDirectory({ path: ".", maxDepth: 3 }, tempDir);
+            const resultOverCap = await handleListDirectory({ path: ".", maxDepth: 100 }, tempDir);
+            assert.strictEqual(resultAtCap, resultOverCap);
+        });
     });
 
     describe("handleToolCall", () => {
@@ -234,6 +240,42 @@ describe("tools", () => {
             const result = await handleToolCall(call, tempDir);
             assert.ok(result.includes("Unknown tool"));
             assert.ok(result.includes("unknownTool"));
+        });
+
+        it("returns error when readProjectFile input.path is missing", async () => {
+            const call = {
+                callId: "test-4",
+                name: "readProjectFile",
+                input: {},
+            } as unknown as vscode.LanguageModelToolCallPart;
+
+            const result = await handleToolCall(call, tempDir);
+            assert.ok(result.includes("Error"));
+            assert.ok(result.includes("required"));
+        });
+
+        it("returns error when listDirectory input.path is missing", async () => {
+            const call = {
+                callId: "test-5",
+                name: "listDirectory",
+                input: {},
+            } as unknown as vscode.LanguageModelToolCallPart;
+
+            const result = await handleToolCall(call, tempDir);
+            assert.ok(result.includes("Error"));
+            assert.ok(result.includes("required"));
+        });
+
+        it("returns error when input.path is null", async () => {
+            const call = {
+                callId: "test-6",
+                name: "readProjectFile",
+                input: { path: null },
+            } as unknown as vscode.LanguageModelToolCallPart;
+
+            const result = await handleToolCall(call, tempDir);
+            assert.ok(result.includes("Error"));
+            assert.ok(result.includes("required"));
         });
     });
 });

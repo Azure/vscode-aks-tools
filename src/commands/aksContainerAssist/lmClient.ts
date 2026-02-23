@@ -121,7 +121,26 @@ export class LMClient {
                 // Execute tool handlers and build result parts
                 const resultParts: vscode.LanguageModelToolResultPart[] = [];
                 for (const toolCall of toolCallParts) {
-                    const resultText = await options.toolHandler(toolCall);
+                    logger.debug("Invoking tool", {
+                        name: toolCall.name,
+                        callId: toolCall.callId,
+                        input: JSON.stringify(toolCall.input),
+                    });
+
+                    let resultText: string;
+                    try {
+                        resultText = await options.toolHandler(toolCall);
+                    } catch (toolError) {
+                        logger.error(`Tool handler error for "${toolCall.name}"`, toolError);
+                        resultText = `Error executing tool "${toolCall.name}": ${String(toolError)}`;
+                    }
+
+                    logger.debug("Tool result", {
+                        name: toolCall.name,
+                        callId: toolCall.callId,
+                        resultLength: resultText.length,
+                    });
+
                     resultParts.push(
                         new vscode.LanguageModelToolResultPart(toolCall.callId, [
                             new vscode.LanguageModelTextPart(resultText),
