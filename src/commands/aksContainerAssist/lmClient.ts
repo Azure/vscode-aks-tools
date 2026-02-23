@@ -59,6 +59,92 @@ export class LMClient {
         }
     }
 
+    async sendRequestWithTools(
+        systemPrompt: string,
+        userPrompt: string,
+        options: {
+            tools: vscode.LanguageModelChatTool[];
+            toolHandler: (call: vscode.LanguageModelToolCallPart) => Promise<string>;
+            maxToolRounds?: number;
+        },
+        token?: vscode.CancellationToken,
+    ): Promise<Errorable<string>> {
+        if (!this.languageModel) {
+            return {
+                succeeded: false,
+                error: l10n.t("Language Model not available"),
+            };
+        }
+
+        const maxRounds = options.maxToolRounds ?? 5;
+
+        try {
+            const messages: vscode.LanguageModelChatMessage[] = [
+                vscode.LanguageModelChatMessage.User(systemPrompt),
+                vscode.LanguageModelChatMessage.User(userPrompt),
+            ];
+
+            logger.debug("Sending request with tools to Language Model", {
+                model: this.languageModel.name,
+                tools: options.tools.map((t) => t.name),
+                maxRounds,
+            });
+
+            for (let round = 0; round < maxRounds; round++) {
+                const response = await this.languageModel.sendRequest(messages, { tools: options.tools }, token);
+
+                const textParts: vscode.LanguageModelTextPart[] = [];
+                const toolCallParts: vscode.LanguageModelToolCallPart[] = [];
+
+                for await (const part of response.stream) {
+                    if (part instanceof vscode.LanguageModelTextPart) {
+                        textParts.push(part);
+                    } else if (part instanceof vscode.LanguageModelToolCallPart) {
+                        toolCallParts.push(part);
+                    }
+                }
+
+                // If no tool calls, we're done — return accumulated text
+                if (toolCallParts.length === 0) {
+                    const content = textParts.map((p) => p.value).join("");
+                    logger.debug("Tool calling complete", { round: round + 1, contentLength: content.length });
+                    return { succeeded: true, result: content };
+                }
+
+                // Build assistant message echoing back text and tool call parts
+                const assistantParts: (vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart)[] = [
+                    ...textParts,
+                    ...toolCallParts,
+                ];
+                messages.push(vscode.LanguageModelChatMessage.Assistant(assistantParts));
+
+                // Execute tool handlers and build result parts
+                const resultParts: vscode.LanguageModelToolResultPart[] = [];
+                for (const toolCall of toolCallParts) {
+                    const resultText = await options.toolHandler(toolCall);
+                    resultParts.push(
+                        new vscode.LanguageModelToolResultPart(toolCall.callId, [
+                            new vscode.LanguageModelTextPart(resultText),
+                        ]),
+                    );
+                }
+
+                // Append user message with tool results
+                messages.push(vscode.LanguageModelChatMessage.User(resultParts));
+            }
+
+            // Max rounds exhausted — return error
+            logger.warn("Max tool rounds exhausted");
+            return {
+                succeeded: false,
+                error: l10n.t("Language Model tool calling exceeded maximum rounds ({0})", maxRounds),
+            };
+        } catch (error) {
+            logger.error("Language Model request with tools failed", error);
+            return this.handleError(error);
+        }
+    }
+
     async selectModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
         try {
             logger.info("Checking Language Model availability...");
