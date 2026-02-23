@@ -544,6 +544,14 @@ export async function getWindowsNodePoolKubernetesVersions(
     }
 }
 
+export interface NamespaceWithType {
+    namespace: string;
+    name: string;
+    type: "system" | "user" | "managed" | "unknown";
+    labels?: { [key: string]: string };
+    annotations?: { [key: string]: string };
+}
+
 export async function getClusterNamespaces(
     sessionProvider: ReadyAzureSessionProvider,
     kubectl: APIAvailable<KubectlV1>,
@@ -566,6 +574,100 @@ export async function getClusterNamespaces(
         const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
         return errmap(output, (sr) => sr.stdout.trim().split("\n"));
     });
+}
+
+export async function getClusterNamespacesWithTypes(
+    sessionProvider: ReadyAzureSessionProvider,
+    kubectl: APIAvailable<KubectlV1>,
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<NamespaceWithType[]>> {
+    const cluster = await getManagedCluster(sessionProvider, subscriptionId, resourceGroup, clusterName);
+    if (failed(cluster)) {
+        return cluster;
+    }
+
+    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    if (failed(kubeconfig)) {
+        return kubeconfig;
+    }
+
+    return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
+        const command = `get namespace -o json`;
+        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        return errmap(output, (sr) => {
+            try {
+                const namespacesJson = JSON.parse(sr.stdout);
+                return namespacesJson.items.map(
+                    (ns: {
+                        metadata: {
+                            name: string;
+                            labels?: Record<string, string>;
+                            annotations?: Record<string, string>;
+                        };
+                    }) => {
+                        const name = ns.metadata.name;
+                        const labels = ns.metadata.labels || {};
+                        const annotations = ns.metadata.annotations || {};
+
+                        // Determine namespace type
+                        let type: "system" | "user" | "managed" | "unknown";
+                        if (isSystemNamespace(name)) {
+                            type = "system";
+                        } else if (isManagedNamespace(labels, annotations)) {
+                            type = "managed";
+                        } else {
+                            type = "user";
+                        }
+
+                        return {
+                            name,
+                            type,
+                            labels,
+                            annotations,
+                        };
+                    },
+                );
+            } catch (e) {
+                return {
+                    succeeded: false,
+                    error: `Failed to parse namespace JSON: ${clusterName}: ${getErrorMessage(e)}`,
+                };
+            }
+        });
+    });
+}
+
+function isSystemNamespace(name: string): boolean {
+    const systemNamespaces = ["kube-system", "kube-public", "kube-node-lease", "default", "kube-lease"];
+    return systemNamespaces.includes(name);
+}
+
+function isManagedNamespace(labels: { [key: string]: string }, annotations: { [key: string]: string }): boolean {
+    // Check for common managed service labels and annotations
+    const managedLabels = [
+        "app.kubernetes.io/managed-by",
+        "kubernetes.azure.com/managed-by",
+        "azure.workload.identity/use",
+        "managed-by",
+        "headlamp.dev/project-managed-by",
+    ];
+
+    const managedAnnotations = [
+        "kubernetes.azure.com/managed",
+        "azure.workload.identity/service-account-token-expiration",
+    ];
+
+    return (
+        managedLabels.some((label) => labels[label]) ||
+        managedAnnotations.some((annotation) => annotations[annotation]) ||
+        // Check for Azure-specific managed namespaces
+        labels["app.kubernetes.io/component"] === "azure-workload-identity" ||
+        labels["control-plane"] === "controller-manager" ||
+        // Check for AKS Desktop managed namespaces
+        labels["headlamp.dev/project-managed-by"] === "aks-desktop"
+    );
 }
 
 export async function createClusterNamespace(

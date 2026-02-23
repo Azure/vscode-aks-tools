@@ -5,7 +5,7 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
 import { getResources, DefinedResourceWithGroup } from "../utils/azureResources";
-import { getClusters, Cluster, getClusterNamespaces, getManagedCluster } from "../utils/clusters";
+import { getClusters, Cluster, getManagedCluster, getClusterNamespacesWithTypes } from "../utils/clusters";
 import { extension } from "vscode-kubernetes-tools-api";
 import { getAuthorizationManagementClient } from "../utils/arm";
 import { getPrincipalRoleAssignmentsForAcr } from "../utils/roleAssignments";
@@ -137,13 +137,15 @@ export async function selectClusterNamespace(
         return undefined;
     }
 
-    const namespacesResult = await getClusterNamespaces(
+    const namespacesResult = await getClusterNamespacesWithTypes(
         sessionProvider,
         kubectl,
         subscriptionId,
         cluster.resourceGroup,
         cluster.name,
     );
+
+    logger.debug(`Namespaces with types for cluster '${cluster.name}':`, namespacesResult);
 
     if (!namespacesResult.succeeded) {
         vscode.window.showErrorMessage(
@@ -157,10 +159,19 @@ export async function selectClusterNamespace(
         return undefined;
     }
 
-    const namespaceItems = namespacesResult.result.sort().map((ns) => ({
-        label: ns,
-        description: ns === "default" ? l10n.t("Default namespace") : undefined,
-    }));
+    const namespaceItems = namespacesResult.result
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((ns) => ({
+            label: ns.name,
+            description:
+                ns.name === "default"
+                    ? l10n.t("Default namespace")
+                    : ns.type === "system"
+                      ? l10n.t("System namespace")
+                      : ns.type === "managed"
+                        ? l10n.t("Managed namespace")
+                        : undefined,
+        }));
 
     const selected = await vscode.window.showQuickPick(namespaceItems, {
         placeHolder: l10n.t("Select Kubernetes namespace"),
