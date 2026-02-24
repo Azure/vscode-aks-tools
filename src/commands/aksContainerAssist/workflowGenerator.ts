@@ -20,11 +20,8 @@ export async function generateGitHubWorkflow(
     hasBothActions: boolean,
 ): Promise<Errorable<string>> {
     try {
-        logger.info("Starting GitHub workflow generation");
-
         const config = await collectWorkflowConfiguration(workspaceFolder, projectRoot, azureContext, hasBothActions);
         if (!config) {
-            logger.info("Workflow generation cancelled by user");
             return { succeeded: false, error: "Workflow generation cancelled" };
         }
 
@@ -46,7 +43,6 @@ export async function generateGitHubWorkflow(
                 l10n.t("Cancel"),
             );
             if (overwrite !== l10n.t("Overwrite")) {
-                logger.info("User chose not to overwrite existing workflow");
                 return { succeeded: false, error: "Workflow file already exists" };
             }
         }
@@ -56,7 +52,6 @@ export async function generateGitHubWorkflow(
         logger.debug("Workflow template rendered successfully");
 
         const workflowPath = await writeWorkflowFile(projectRoot, workflowName, workflowContent);
-        logger.info(`Workflow file created at: ${workflowPath}`);
 
         return { succeeded: true, result: workflowPath };
     } catch (error) {

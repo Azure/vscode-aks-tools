@@ -12,6 +12,9 @@ import { getPrincipalRoleAssignmentsForAcr } from "../utils/roleAssignments";
 import { acrPullRoleDefinitionName } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { failed } from "../utils/errorable";
 import { logger } from "./logger";
+import { longRunning } from "../utils/host";
+import { getPortalCreateUrl } from "../utils/env";
+import { getEnvironment } from "../../auth/azureAuth";
 
 export type { Cluster } from "../utils/clusters";
 
@@ -24,6 +27,29 @@ export interface AzureResource {
     id: string;
     name: string;
     resourceGroup: string;
+}
+
+/**
+ * Common function to handle wizard exit confirmation with "Go Back" option.
+ * Shows a modal dialog asking if user wants to exit the Container Assist wizard.
+ * If user chooses "Go Back", calls the provided retry function.
+ * If user chooses "Exit" or closes dialog, returns undefined.
+ */
+async function showWizardExitConfirmation<T>(retryFunction: () => Promise<T>): Promise<T | undefined> {
+    const continueWizard = l10n.t("Exit Container Assist");
+    const goBack = l10n.t("Go Back");
+    const choice = await vscode.window.showWarningMessage(
+        l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+        { modal: true },
+        goBack,
+        continueWizard,
+    );
+
+    if (choice === goBack) {
+        return retryFunction();
+    }
+    // If they chose "Exit Container Assist" or closed the dialog, return undefined
+    return undefined;
 }
 
 async function fetchSubscriptionAcrs(
@@ -46,7 +72,7 @@ async function fetchSubscriptionAcrs(
 
         if (selection === openPortal) {
             void vscode.env.openExternal(
-                vscode.Uri.parse("https://portal.azure.com/#create/Microsoft.ContainerRegistry"),
+                vscode.Uri.parse(getPortalCreateUrl(getEnvironment(), "create/Microsoft.ContainerRegistry")),
             );
         }
         return undefined;
@@ -58,7 +84,9 @@ async function fetchSubscriptionAcrs(
 export async function selectAzureSubscription(
     sessionProvider: ReadyAzureSessionProvider,
 ): Promise<SubscriptionInfo | undefined> {
-    const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
+    const subscriptionsResult = await longRunning(l10n.t("Loading Azure subscriptions..."), () =>
+        getSubscriptions(sessionProvider, SelectionType.All),
+    );
 
     if (!subscriptionsResult.succeeded) {
         vscode.window.showErrorMessage(subscriptionsResult.error);
@@ -71,7 +99,9 @@ export async function selectAzureSubscription(
 
         if (selection === openPortal) {
             void vscode.env.openExternal(
-                vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+                vscode.Uri.parse(
+                    getPortalCreateUrl(getEnvironment(), "view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+                ),
             );
         }
         return undefined;
@@ -88,14 +118,21 @@ export async function selectAzureSubscription(
         title: l10n.t("Azure Subscription ({0} available)", subscriptionsResult.result.length),
     });
 
-    return selected?.subscription;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        return showWizardExitConfirmation(() => selectAzureSubscription(sessionProvider));
+    }
+
+    return selected.subscription;
 }
 
 export async function selectAksCluster(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
 ): Promise<Cluster | undefined> {
-    const clustersResult = await getClusters(sessionProvider, subscriptionId);
+    const clustersResult = await longRunning(l10n.t("Loading AKS clusters..."), () =>
+        getClusters(sessionProvider, subscriptionId),
+    );
 
     if (!clustersResult || clustersResult.length === 0) {
         const openPortal = l10n.t("Open in Portal");
@@ -105,7 +142,9 @@ export async function selectAksCluster(
         );
 
         if (selection === openPortal) {
-            void vscode.env.openExternal(vscode.Uri.parse("https://portal.azure.com/#create/microsoft.aks"));
+            void vscode.env.openExternal(
+                vscode.Uri.parse(getPortalCreateUrl(getEnvironment(), "create/microsoft.aks")),
+            );
         }
         return undefined;
     }
@@ -123,7 +162,12 @@ export async function selectAksCluster(
         title: l10n.t("AKS Cluster ({0} available)", clustersResult.length),
     });
 
-    return selected?.cluster;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        return showWizardExitConfirmation(() => selectAksCluster(sessionProvider, subscriptionId));
+    }
+
+    return selected.cluster;
 }
 
 export async function selectClusterNamespace(
@@ -137,12 +181,8 @@ export async function selectClusterNamespace(
         return undefined;
     }
 
-    const namespacesResult = await getClusterNamespacesWithTypes(
-        sessionProvider,
-        kubectl,
-        subscriptionId,
-        cluster.resourceGroup,
-        cluster.name,
+    const namespacesResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
+        getClusterNamespacesWithTypes(sessionProvider, kubectl, subscriptionId, cluster.resourceGroup, cluster.name),
     );
 
     logger.debug(`Namespaces with types for cluster '${cluster.name}':`, namespacesResult);
@@ -178,7 +218,12 @@ export async function selectClusterNamespace(
         title: l10n.t("Namespace ({0} available)", namespacesResult.result.length),
     });
 
-    return selected?.label;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster));
+    }
+
+    return selected.label;
 }
 
 export async function selectClusterAcr(
@@ -186,21 +231,19 @@ export async function selectClusterAcr(
     subscriptionId: string,
     cluster: Cluster,
 ): Promise<AzureResource | undefined> {
-    const allAcrs = await fetchSubscriptionAcrs(sessionProvider, subscriptionId);
+    const allAcrs = await longRunning(l10n.t("Loading Azure Container Registries..."), () =>
+        fetchSubscriptionAcrs(sessionProvider, subscriptionId),
+    );
     if (!allAcrs) return undefined;
 
     // Attempt to filter ACRs to only those attached to the cluster via AcrPull role
-    const attachedAcrs = await getAttachedAcrs(sessionProvider, subscriptionId, cluster, allAcrs);
+    const attachedAcrs = await longRunning(l10n.t("Checking attached registries..."), () =>
+        getAttachedAcrs(sessionProvider, subscriptionId, cluster, allAcrs),
+    );
 
     // If we found attached ACRs, show only those; otherwise fall back to all ACRs
     const acrsToShow = attachedAcrs.length > 0 ? attachedAcrs : allAcrs;
     const showingAttachedOnly = attachedAcrs.length > 0;
-
-    if (showingAttachedOnly) {
-        logger.info(`Showing ${acrsToShow.length} attached ACR(s) for cluster '${cluster.name}'`);
-    } else {
-        logger.info(`No attached ACRs found — falling back to all ${acrsToShow.length} ACR(s) in subscription`);
-    }
 
     const acrItems = acrsToShow
         .sort((a, b) => a.name.localeCompare(b.name))
@@ -226,7 +269,12 @@ export async function selectClusterAcr(
         title,
     });
 
-    return selected?.acr;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        return showWizardExitConfirmation(() => selectClusterAcr(sessionProvider, subscriptionId, cluster));
+    }
+
+    return selected.acr;
 }
 
 /**
@@ -239,8 +287,6 @@ async function getAttachedAcrs(
     cluster: Cluster,
     allAcrs: DefinedResourceWithGroup[],
 ): Promise<DefinedResourceWithGroup[]> {
-    logger.info(`Checking ${allAcrs.length} ACR(s) for AcrPull role attachment to cluster '${cluster.name}'`);
-
     // Get the cluster's kubelet principal ID
     const principalId = await getClusterPrincipalId(sessionProvider, subscriptionId, cluster);
     if (!principalId) {
@@ -276,16 +322,12 @@ async function getAttachedAcrs(
         });
 
         if (hasAcrPull) {
-            logger.info(`ACR '${acr.name}' is attached to cluster '${cluster.name}' (AcrPull role found)`);
             attachedAcrs.push(acr);
         } else {
             logger.debug(`ACR '${acr.name}' is NOT attached to cluster '${cluster.name}' (no AcrPull role)`);
         }
     }
 
-    logger.info(
-        `Attached ACR filtering complete: ${attachedAcrs.length} of ${allAcrs.length} ACR(s) attached to cluster '${cluster.name}'`,
-    );
     return attachedAcrs;
 }
 
@@ -324,7 +366,6 @@ async function getClusterPrincipalId(
             managedCluster.identityProfile.kubeletidentity.objectId
         ) {
             const principalId = managedCluster.identityProfile.kubeletidentity.objectId;
-            logger.info(`Cluster '${cluster.name}' kubelet identity principal ID: ${principalId}`);
             return principalId;
         }
         logger.warn(`Cluster '${cluster.name}' has managed identity but no kubelet identity object ID`);
@@ -334,7 +375,7 @@ async function getClusterPrincipalId(
     // Fall back to service principal
     const spClientId = managedCluster.servicePrincipalProfile?.clientId;
     if (spClientId) {
-        logger.info(`Cluster '${cluster.name}' service principal client ID: ${spClientId}`);
+        // Service principal found
     } else {
         logger.warn(`Cluster '${cluster.name}' has no kubelet identity or service principal`);
     }
@@ -376,10 +417,12 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
             return undefined;
         },
     });
+
+    // Show confirmation dialog if user cancelled
     if (!workflowName) {
-        logger.info("Workflow name input cancelled");
-        return undefined;
+        return showWizardExitConfirmation(() => promptForWorkflowName(appName));
     }
+
     logger.debug("Workflow name selected", workflowName);
     return workflowName;
 }
@@ -392,7 +435,9 @@ export async function selectAcr(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
 ): Promise<AzureResource | undefined> {
-    const allAcrs = await fetchSubscriptionAcrs(sessionProvider, subscriptionId);
+    const allAcrs = await longRunning(l10n.t("Loading Azure Container Registries..."), () =>
+        fetchSubscriptionAcrs(sessionProvider, subscriptionId),
+    );
     if (!allAcrs) return undefined;
 
     const acrItems = allAcrs
@@ -412,7 +457,12 @@ export async function selectAcr(
         title: l10n.t("Container Registry ({0} available)", allAcrs.length),
     });
 
-    return selected?.acr;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        return showWizardExitConfirmation(() => selectAcr(sessionProvider, subscriptionId));
+    }
+
+    return selected.acr;
 }
 
 export interface AzureContext {
@@ -443,7 +493,6 @@ export async function collectAzureContext(
     if (!hasWorkflow) {
         const acr = await selectAcr(sessionProvider, subscription.id);
         if (!acr) return undefined;
-        logger.info(`ACR selected: ${acr.name}.azurecr.io`);
 
         return { acrName: acr.name, acrResourceGroup: acr.resourceGroup };
     }
@@ -455,7 +504,6 @@ export async function collectAzureContext(
 
     const acr = await selectClusterAcr(sessionProvider, subscription.id, cluster);
     if (!acr) return undefined;
-    logger.info(`ACR selected: ${acr.name}.azurecr.io`);
 
     const namespace = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
     if (!namespace) return undefined;

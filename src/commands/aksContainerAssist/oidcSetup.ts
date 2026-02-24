@@ -29,8 +29,6 @@ interface OIDCSetupResult {
  */
 export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder, appName: string): Promise<void> {
     try {
-        logger.info("Starting OIDC setup for GitHub Actions");
-
         // Get GitHub repository information
         const repoInfo = await getGitHubRepoInfo(workspaceFolder);
         if (!repoInfo) {
@@ -45,7 +43,6 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
         // Prompt user for Azure details
         const azureConfig = await promptForAzureConfig(appName);
         if (!azureConfig) {
-            logger.info("OIDC setup cancelled by user");
             return;
         }
 
@@ -76,8 +73,6 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
                     azureConfig.location,
                 );
 
-                logger.info(`Managed identity created with clientId: ${identityResult.clientId}`);
-
                 progress.report({ message: l10n.t("Assigning role permissions...") });
 
                 await assignContributorRole(
@@ -86,8 +81,6 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
                     azureConfig.resourceGroup,
                     identityResult.principalId,
                 );
-
-                logger.info("Role assigned successfully");
 
                 progress.report({ message: l10n.t("Configuring federated credentials...") });
 
@@ -98,8 +91,6 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
                     azureConfig.identityName,
                     repoInfo,
                 );
-
-                logger.info("Federated credential created successfully");
 
                 return {
                     clientId: identityResult.clientId,
@@ -281,7 +272,6 @@ async function createManagedIdentity(
         await resourceClient.resourceGroups.createOrUpdate(resourceGroup, {
             location,
         });
-        logger.info(`Resource group ${resourceGroup} created or already exists`);
     } catch (error) {
         logger.warn(`Failed to create resource group: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -326,13 +316,11 @@ async function assignContributorRole(
             principalId: principalId,
             principalType: "ServicePrincipal",
         });
-        logger.info("Contributor role assigned successfully");
     } catch (error) {
         // If role already exists, that's fine
         if (error && typeof error === "object" && "code" in error && error.code !== "RoleAssignmentExists") {
             throw error;
         }
-        logger.info("Role assignment already exists");
     }
 }
 
@@ -355,43 +343,19 @@ async function createFederatedCredential(
         subject: subject,
         audiences: ["api://AzureADTokenExchange"],
     });
-
-    logger.info(`Federated credential created with subject: ${subject}`);
 }
 
 async function displayOIDCResults(result: OIDCSetupResult): Promise<void> {
-    const message = l10n.t("OIDC setup completed successfully! Add these secrets to your GitHub repository:");
-
-    const copyAll = l10n.t("Copy All");
-    const viewInstructions = l10n.t("View Instructions");
+    // Show success information to user
+    const message = l10n.t("OIDC setup completed successfully! Your federated identity is ready for GitHub Actions.");
+    const copyAll = l10n.t("Copy GitHub Secrets");
+    const viewInstructions = l10n.t("View Output");
 
     const secretsText = `AZURE_CLIENT_ID: ${result.clientId}
 AZURE_TENANT_ID: ${result.tenantId}
 AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
 
     // Show in output channel with detailed info
-    logger.info("=== OIDC Setup Complete ===");
-    logger.info(`Identity Name: ${result.identityName}`);
-    logger.info(`Resource Group: ${result.resourceGroup}`);
-    logger.info(`\nGitHub Secrets (add these to your repository):`);
-    logger.info(`AZURE_CLIENT_ID: ${result.clientId}`);
-    logger.info(`AZURE_TENANT_ID: ${result.tenantId}`);
-    logger.info(`AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`);
-    logger.info(`\nWorkflow snippet:`);
-    logger.info(`permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: azure/login@v2
-        with:
-          client-id: \${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: \${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: \${{ secrets.AZURE_SUBSCRIPTION_ID }}`);
-    logger.info("===========================");
 
     const selection = await vscode.window.showInformationMessage(message, copyAll, viewInstructions);
 

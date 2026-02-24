@@ -47,7 +47,6 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
         if (manifests.length > 0) {
             result.hasK8sManifests = true;
             result.k8sManifestPaths = manifests;
-            logger.info(`Found ${manifests.length} total K8s manifest(s)`);
         } else {
             logger.debug("No K8s manifests found in project");
         }
@@ -262,7 +261,6 @@ export async function writeWorkflowFile(workspacePath: string, workflowName: str
     const workflowPath = path.join(workflowsDir, `${workflowName}.yml`);
 
     await writeFile(workflowPath, content);
-    logger.info(`Workflow file created: ${workflowPath}`);
 
     // Also create an OIDC setup guide
     await writeOIDCSetupGuide(workspacePath);
@@ -322,5 +320,4 @@ Once configured, your workflow will:
 `;
 
     await writeFile(oidcGuidePath, oidcGuideContent);
-    logger.info(`OIDC setup guide created: ${oidcGuidePath}`);
 }

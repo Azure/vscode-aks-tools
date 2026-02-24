@@ -53,7 +53,6 @@ export class ContainerAssistService {
                 return { succeeded: false, error: errorMsg };
             }
 
-            logger.info("Container Assist is available and enabled");
             return { succeeded: true, result: true };
         } catch (error) {
             logger.error("Failed to check availability", error);
@@ -73,7 +72,6 @@ export class ContainerAssistService {
     }
 
     async analyzeRepository(folderPath: string, signal?: AbortSignal): Promise<Errorable<AnalyzeRepositoryResult>> {
-        logger.info(`Analyzing repository at: ${folderPath}`);
         try {
             const requestParams = { repositoryPath: folderPath };
             logger.debug("analyzeRepo request", requestParams);
@@ -104,7 +102,6 @@ export class ContainerAssistService {
 
             const isMonorepo = analysis.isMonorepo ?? modules.length > 1;
 
-            logger.info(`Repository analysis complete: ${modules.length} module(s), isMonorepo: ${isMonorepo}`);
             if (modules.length > 0) {
                 logger.debug(`Analyzed ${modules.length} modules`, modules);
             }
@@ -124,8 +121,6 @@ export class ContainerAssistService {
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
     ): Promise<Errorable<string>> {
-        logger.info(`Generating Dockerfile for module: ${moduleInfo.name} at ${modulePath}`);
-
         const lmResult = await this.lmClient.ensureModel();
         if (failed(lmResult)) {
             return lmResult;
@@ -162,7 +157,6 @@ export class ContainerAssistService {
             const dockerfilePath = path.join(modulePath, "Dockerfile");
             await writeFile(dockerfilePath, dockerfileContent.result);
 
-            logger.info(`Dockerfile generated: ${dockerfilePath}`);
             return { succeeded: true, result: dockerfilePath };
         } catch (error) {
             return this.handleSdkError("generate Dockerfile", error);
@@ -205,8 +199,6 @@ export class ContainerAssistService {
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
     ): Promise<Errorable<string[]>> {
-        logger.info(`Generating Kubernetes manifests for: ${appName}`);
-
         const lmResult = await this.lmClient.ensureModel();
         if (failed(lmResult)) {
             return lmResult;
@@ -271,7 +263,6 @@ export class ContainerAssistService {
                 manifestPaths.push(manifestPath);
             }
 
-            logger.info(`Generated ${manifestPaths.length} manifest files`);
             logger.debug("Generated manifest paths", manifestPaths);
 
             return { succeeded: true, result: manifestPaths };
@@ -319,10 +310,8 @@ export class ContainerAssistService {
     ): Promise<Errorable<DeploymentResult>> {
         const reportProgress = (message: string) => onProgress?.(message);
 
-        logger.info(`Starting deployment workflow for: ${appName}`);
         logger.debug("Deployment workflow params", { folderPath, appName, acrLoginServer });
 
-        logger.info("Step 0: Checking for existing deployment files...");
         const existingFiles = await this.checkExistingFiles(folderPath);
 
         const skipDockerfile = existingFiles.hasDockerfile;
@@ -333,7 +322,6 @@ export class ContainerAssistService {
                 "Deployment files already exist (Dockerfile and {0}/ manifests). No new files generated.",
                 getK8sManifestFolder(),
             );
-            logger.info(message);
             vscode.window.showInformationMessage(message);
             return {
                 succeeded: true,
@@ -346,18 +334,15 @@ export class ContainerAssistService {
                 skipDockerfile && "Dockerfile",
                 skipK8sManifests && `${getK8sManifestFolder()}/ manifests`,
             ].filter(Boolean);
-            logger.info(`Existing files found (will be preserved): ${existingList.join(", ")}`);
             vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", existingList.join(", ")));
         }
 
-        logger.info("Step 1: Selecting Language Model...");
         const lmResult = await this.selectLanguageModel(showModelPicker);
         if (failed(lmResult)) {
             logger.error("Language Model not available", lmResult.error);
             return lmResult;
         }
 
-        logger.info("Step 2: Analyzing repository...");
         const analysisResult = await this.analyzeRepository(folderPath, signal);
         if (failed(analysisResult)) {
             logger.error("Workflow failed at analysis step", analysisResult.error);
@@ -373,14 +358,10 @@ export class ContainerAssistService {
             };
         }
 
-        logger.info(`Detected ${modules.length} module(s), isMonorepo: ${isMonorepo}`);
-
         const allGeneratedFiles: string[] = [];
 
         if (!skipDockerfile) {
-            logger.info(`Step 3: Generating Dockerfiles for ${modules.length} module(s)...`);
             for (const module of modules) {
-                logger.info(`Generating Dockerfile for module: ${module.name}`);
                 reportProgress(l10n.t("Generating Dockerfile for {0}...", module.name));
                 const dockerfileResult = await this.generateDockerfile(module.modulePath, module, signal, token);
                 if (failed(dockerfileResult)) {
@@ -392,15 +373,11 @@ export class ContainerAssistService {
                 }
                 allGeneratedFiles.push(dockerfileResult.result);
             }
-        } else {
-            logger.info("Step 3: Skipping Dockerfile generation (existing files preserved)");
         }
 
         if (!skipK8sManifests) {
-            logger.info(`Step 4: Generating Kubernetes manifests for ${modules.length} module(s)...`);
             for (const module of modules) {
                 const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
-                logger.info(`Generating manifests for module: ${module.name} as ${manifestAppName}`);
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
                 const manifestNamespace = "default";
                 const imageRepository = acrLoginServer ? `${acrLoginServer}/${manifestAppName}` : undefined;
@@ -419,11 +396,8 @@ export class ContainerAssistService {
                 }
                 allGeneratedFiles.push(...manifestsResult.result);
             }
-        } else {
-            logger.info("Step 4: Skipping K8s manifest generation (existing files preserved)");
         }
 
-        logger.info(`Deployment workflow completed: ${allGeneratedFiles.length} files generated`);
         logger.debug("Generated files", allGeneratedFiles);
 
         return {

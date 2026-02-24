@@ -45,7 +45,6 @@ export async function stageFilesAndCreatePR(
     appName: string,
 ): Promise<void> {
     try {
-        logger.info("Starting Git staging and PR creation workflow");
         logger.debug("Files to stage", generatedFiles);
 
         // Get Git extension
@@ -110,7 +109,6 @@ export async function stageFilesAndCreatePR(
                 // Try to stage files using Git API
                 try {
                     await repository.add(filesToStage);
-                    logger.info(`Successfully staged ${filesToStage.length} files via Git API`);
                 } catch (gitError) {
                     logger.error("Git API add failed, attempting manual git command", gitError);
 
@@ -119,7 +117,6 @@ export async function stageFilesAndCreatePR(
                         const args = ["add", ...filesToStage];
                         logger.debug(`Running: git ${args.join(" ")}`);
                         await execFilePromise("git", args, { cwd: repository.rootUri.fsPath });
-                        logger.info(`Successfully staged ${filesToStage.length} files via git command`);
                     } catch (cmdError) {
                         logger.error("Git command also failed", cmdError);
                         throw new Error(
@@ -166,8 +163,6 @@ async function shouldCreatePR(): Promise<boolean> {
 
 async function createPullRequest(generatedFiles: string[], appName: string): Promise<void> {
     try {
-        logger.info("Attempting to create Pull Request via GitHub extension");
-
         // Check if GitHub Pull Requests extension is installed
         const githubExtension =
             vscode.extensions.getExtension("github.vscode-pull-request-github") ||
@@ -218,12 +213,10 @@ async function createPullRequest(generatedFiles: string[], appName: string): Pro
         // Note: The exact command signature may vary based on GitHub extension version
         try {
             await vscode.commands.executeCommand("pr.create", options);
-            logger.info("Pull Request creation dialog opened");
         } catch (error) {
             // Fallback: try alternative command
             logger.debug("First PR command failed, trying alternative", error);
             await vscode.commands.executeCommand("github.createPullRequest");
-            logger.info("GitHub PR creation panel opened (manual mode)");
 
             // Show helpful message with suggested PR details
             vscode.window.showInformationMessage(
