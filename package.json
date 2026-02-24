@@ -206,6 +206,11 @@
                     "default": "v0.0.11",
                     "title": "AKS MCP Server repository release tag",
                     "description": "Release tag for the stable AKS MCP Server tool release."
+                },
+                "aks.simplifiedMenuStructure": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable simplified menu structure with grouped commands by role (Develop & Deploy, Troubleshoot & Diagnose, Manage Cluster). Requires reload after changing."
                 }
             }
         },
@@ -513,18 +518,33 @@
                     "group": "inline"
                 },
                 {
+                    "submenu": "aks.developDeploySubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.simplifiedMenuStructure",
+                    "group": "7@1"
+                },
+                {
+                    "submenu": "aks.troubleshootDiagnoseSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.simplifiedMenuStructure",
+                    "group": "7@2"
+                },
+                {
+                    "submenu": "aks.manageClusterSubMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.simplifiedMenuStructure",
+                    "group": "7@3"
+                },
+                {
                     "submenu": "aks.detectorsSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "8@1"
                 },
                 {
                     "command": "aks.periscope",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "8@2"
                 },
                 {
                     "command": "aks.eraserTool",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
+                    "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)",
                     "group": "8@3"
                 },
                 {
@@ -539,11 +559,11 @@
                 },
                 {
                     "command": "aks.installAzureServiceOperator",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i"
+                    "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)"
                 },
                 {
                     "submenu": "aks.automatedDeploymentsSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@1"
                 },
                 {
@@ -552,12 +572,12 @@
                 },
                 {
                     "submenu": "aks.managedClusterOperationSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@3"
                 },
                 {
                     "command": "aks.aksRunKubectlCommands",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i || view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i",
+                    "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)",
                     "group": "8@3"
                 },
                 {
@@ -570,22 +590,22 @@
                 },
                 {
                     "submenu": "aks.networkTroubleshootingSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@3"
                 },
                 {
                     "submenu": "aks.troubleshootResourceUtilizationSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@4"
                 },
                 {
                     "submenu": "aks.improveSecuritySubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@5"
                 },
                 {
                     "submenu": "aks.kaitoInstallSubMenu",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@3"
                 },
                 {
@@ -598,7 +618,7 @@
                 },
                 {
                     "command": "aks.aksInspektorGadgetShow",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i"
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure"
                 }
             ],
             "aks.createClusterSubMenu": [
@@ -744,6 +764,86 @@
                     "command": "aks.aksUploadRetinaCapture",
                     "group": "navigation"
                 }
+            ],
+            "aks.developDeploySubMenu": [
+                {
+                    "command": "aks.aksRunKubectlCommands",
+                    "group": "1_developer@1"
+                },
+                {
+                    "command": "aks.attachAcrToCluster",
+                    "group": "2_deploy@1"
+                },
+                {
+                    "command": "aks.draftDeployment",
+                    "group": "2_deploy@2",
+                    "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.draftWorkflow",
+                    "group": "2_deploy@3",
+                    "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "submenu": "aks.kaitoInstallSubMenu",
+                    "group": "3_ai@1"
+                },
+                {
+                    "command": "aks.installAzureServiceOperator",
+                    "group": "4_operators@1"
+                }
+            ],
+            "aks.troubleshootDiagnoseSubMenu": [
+                {
+                    "submenu": "aks.detectorsSubMenu",
+                    "group": "1_diagnostics@1"
+                },
+                {
+                    "command": "aks.periscope",
+                    "group": "2_tools@1"
+                },
+                {
+                    "command": "aks.aksInspektorGadgetShow",
+                    "group": "2_tools@2"
+                },
+                {
+                    "submenu": "aks.networkTroubleshootingSubMenu",
+                    "group": "3_network@1"
+                },
+                {
+                    "submenu": "aks.troubleshootResourceUtilizationSubMenu",
+                    "group": "4_resources@1"
+                },
+                {
+                    "command": "aks.eraserTool",
+                    "group": "5_security@1"
+                },
+                {
+                    "submenu": "aks.improveSecuritySubMenu",
+                    "group": "5_security@2"
+                }
+            ],
+            "aks.manageClusterSubMenu": [
+                {
+                    "command": "aks.clusterProperties",
+                    "group": "1_view@1"
+                },
+                {
+                    "command": "aks.showInPortal",
+                    "group": "1_view@2"
+                },
+                {
+                    "command": "aks.aksDeleteCluster",
+                    "group": "2_operations@1"
+                },
+                {
+                    "command": "aks.aksRotateClusterCert",
+                    "group": "2_operations@2"
+                },
+                {
+                    "command": "aks.aksReconcileCluster",
+                    "group": "2_operations@3"
+                }
             ]
         },
         "submenus": [
@@ -794,6 +894,18 @@
             {
                 "id": "aks.improveSecuritySubMenu",
                 "label": "%Improve security of my cluster%"
+            },
+            {
+                "id": "aks.developDeploySubMenu",
+                "label": "🚀 Develop & Deploy"
+            },
+            {
+                "id": "aks.troubleshootDiagnoseSubMenu",
+                "label": "🔍 Troubleshoot & Diagnose"
+            },
+            {
+                "id": "aks.manageClusterSubMenu",
+                "label": "⚙️ Manage Cluster"
             }
         ]
     },
