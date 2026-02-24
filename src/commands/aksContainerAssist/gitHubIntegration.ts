@@ -14,12 +14,16 @@ interface GitAPI {
 
 interface Repository {
     rootUri: vscode.Uri;
+    inputBox: { value: string };
     add(paths: string[]): Promise<void>;
     commit(message: string): Promise<void>;
+    createBranch(name: string, checkout: boolean, ref?: string): Promise<void>;
     state: RepositoryState;
+    onDidCommit: vscode.Event<void>;
 }
 
 interface RepositoryState {
+    HEAD: { name?: string; upstream?: { name: string; remote: string } } | undefined;
     workingTreeChanges: Change[];
     indexChanges: Change[];
 }
@@ -37,55 +41,62 @@ interface GitHubPROptions {
 }
 
 /**
- * Stages generated files to Git and optionally creates a PR via GitHub extension
+ * Acquires the Git extension API (v1), activating it if needed.
  */
-export async function stageFilesAndCreatePR(
-    generatedFiles: string[],
-    workspaceUri: vscode.Uri,
-    appName: string,
-): Promise<void> {
+async function getGitAPI(): Promise<GitAPI | undefined> {
+    const gitExtension = vscode.extensions.getExtension<{ getAPI(version: number): GitAPI }>("vscode.git");
+    if (!gitExtension) {
+        logger.warn("Git extension is not installed");
+        return undefined;
+    }
+
+    if (!gitExtension.isActive) {
+        logger.debug("Activating Git extension");
+        await gitExtension.activate();
+    }
+
+    return gitExtension.exports.getAPI(1);
+}
+
+/**
+ * Resolves the Git repository for a given workspace URI.
+ * Shows user-facing warnings when the extension or repository is not found.
+ */
+export async function getGitRepository(workspaceUri: vscode.Uri): Promise<Repository | undefined> {
+    const git = await getGitAPI();
+    if (!git) {
+        vscode.window.showWarningMessage(
+            l10n.t("Git extension is not available. Please install or enable the Git extension."),
+        );
+        return undefined;
+    }
+
+    const repository = git.getRepository(workspaceUri);
+    if (!repository) {
+        vscode.window.showWarningMessage(
+            l10n.t("No Git repository found. Please initialize Git in your workspace first."),
+        );
+        return undefined;
+    }
+
+    logger.debug("Git repository found", repository.rootUri.fsPath);
+    return repository;
+}
+
+/**
+ * Stages the given files in the Git index.
+ * Uses the Git extension API, with a fallback to the `git` CLI.
+ */
+export async function stageFiles(repository: Repository, generatedFiles: string[]): Promise<boolean> {
     try {
-        logger.debug("Files to stage", generatedFiles);
-
-        // Get Git extension
-        const gitExtension = vscode.extensions.getExtension<{ getAPI(version: number): GitAPI }>("vscode.git");
-        if (!gitExtension) {
-            const message = l10n.t("Git extension is not available. Please install or enable the Git extension.");
-            vscode.window.showWarningMessage(message);
-            logger.warn(message);
-            return;
-        }
-
-        if (!gitExtension.isActive) {
-            logger.debug("Activating Git extension");
-            await gitExtension.activate();
-        }
-
-        const git = gitExtension.exports.getAPI(1);
-        logger.debug("Git API version 1 acquired");
-
-        const repository = git.getRepository(workspaceUri);
-
-        if (!repository) {
-            const message = l10n.t("No Git repository found. Please initialize Git in your workspace first.");
-            vscode.window.showWarningMessage(message);
-            logger.warn(message);
-            return;
-        }
-
-        logger.debug("Git repository found", repository.rootUri.fsPath);
-
-        // Stage generated files
-        await vscode.window.withProgress(
+        return await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: l10n.t("Container Assist - Git Integration"),
+                title: l10n.t("Container Assist"),
                 cancellable: false,
             },
             async (progress) => {
                 progress.report({ message: l10n.t("Staging generated files...") });
-
-                logger.debug("Repository root", repository.rootUri.fsPath);
 
                 // Verify files exist and convert to relative paths
                 const filesToStage: string[] = [];
@@ -103,12 +114,14 @@ export async function stageFilesAndCreatePR(
                 }
 
                 if (filesToStage.length === 0) {
-                    throw new Error("No valid files to stage");
+                    vscode.window.showWarningMessage(l10n.t("No valid files to stage."));
+                    return false;
                 }
 
                 // Try to stage files using Git API
                 try {
                     await repository.add(filesToStage);
+                    logger.info(`Successfully staged ${filesToStage.length} files via Git API`);
                 } catch (gitError) {
                     logger.error("Git API add failed, attempting manual git command", gitError);
 
@@ -117,51 +130,133 @@ export async function stageFilesAndCreatePR(
                         const args = ["add", ...filesToStage];
                         logger.debug(`Running: git ${args.join(" ")}`);
                         await execFilePromise("git", args, { cwd: repository.rootUri.fsPath });
+                        logger.info(`Successfully staged ${filesToStage.length} files via git command`);
                     } catch (cmdError) {
                         logger.error("Git command also failed", cmdError);
-                        throw new Error(
-                            `Failed to stage files: ${cmdError instanceof Error ? cmdError.message : String(cmdError)}`,
+                        vscode.window.showErrorMessage(
+                            l10n.t(
+                                "Failed to stage files: {0}",
+                                cmdError instanceof Error ? cmdError.message : String(cmdError),
+                            ),
                         );
+                        return false;
                     }
                 }
 
                 progress.report({ message: l10n.t("Files staged successfully") });
+                return true;
             },
         );
-
-        // Ask user if they want to create a PR
-        const config = vscode.workspace.getConfiguration("aks.containerAssist");
-        const promptForPR = config.get<boolean>("promptForPullRequest", true);
-
-        if (!promptForPR || (await shouldCreatePR())) {
-            await createPullRequest(generatedFiles, appName);
-        } else {
-            vscode.window.showInformationMessage(
-                l10n.t("Files have been staged. You can commit and create a PR manually."),
-            );
-        }
     } catch (error) {
-        logger.error("Error during Git staging and PR creation", error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error("Error details", errorMessage);
-        vscode.window.showErrorMessage(l10n.t("Failed to stage files or create PR: {0}", errorMessage));
+        logger.error("Error during file staging", error);
+        vscode.window.showErrorMessage(
+            l10n.t("Failed to stage files: {0}", error instanceof Error ? error.message : String(error)),
+        );
+        return false;
     }
 }
 
-async function shouldCreatePR(): Promise<boolean> {
-    const createPR = l10n.t("Create Pull Request");
-    const stageOnly = l10n.t("Stage Only");
+/**
+ * Offers to create a feature branch if the user is on a primary branch (main/master).
+ * Uses a non-modal notification so it doesn't steal focus or dismiss on outside clicks.
+ * Returns true if a branch was created (or the user chose to stay), false if cancelled.
+ */
+export async function offerFeatureBranch(repository: Repository, appName: string): Promise<boolean> {
+    const currentBranch = repository.state.HEAD?.name;
+    if (!currentBranch || (currentBranch !== "main" && currentBranch !== "master")) {
+        // Already on a non-primary branch, nothing to do
+        return true;
+    }
+
+    const safeName = appName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+    const suggestedBranch = `feat/aks-deploy-${safeName}`;
+
+    const createBranch = l10n.t("Create Branch");
+    const stay = l10n.t("Stay on {0}", currentBranch);
 
     const selection = await vscode.window.showInformationMessage(
-        l10n.t("Files have been staged. Would you like to create a Pull Request?"),
-        createPR,
-        stageOnly,
+        l10n.t(
+            'You are on "{0}". It is recommended to create a feature branch ("{1}") for these changes.',
+            currentBranch,
+            suggestedBranch,
+        ),
+        createBranch,
+        stay,
     );
 
-    return selection === createPR;
+    if (!selection) {
+        // Dismissed — treat as "stay" so the flow continues rather than cancelling
+        return true;
+    }
+
+    if (selection === createBranch) {
+        try {
+            await repository.createBranch(suggestedBranch, true);
+            logger.info(`Created and checked out branch: ${suggestedBranch}`);
+        } catch (error) {
+            logger.error("Failed to create branch", error);
+            vscode.window.showErrorMessage(
+                l10n.t("Failed to create branch: {0}", error instanceof Error ? error.message : String(error)),
+            );
+            return false;
+        }
+    }
+
+    return true;
 }
 
-async function createPullRequest(generatedFiles: string[], appName: string): Promise<void> {
+/**
+ * Generates a conventional commit message for the generated files.
+ */
+export function generateCommitMessage(generatedFiles: string[], appName: string): string {
+    const fileNames = generatedFiles.map((f) => path.basename(f));
+    const hasDockerfile = fileNames.some((f) => f === "Dockerfile");
+    const hasWorkflow = generatedFiles.some((f) => f.includes(".github/workflows/"));
+    const hasK8s = generatedFiles.some(
+        (f) => !f.includes(".github/workflows/") && (f.endsWith(".yaml") || f.endsWith(".yml")),
+    );
+
+    // Build a concise description from what's actually staged
+    const parts: string[] = [];
+    if (hasDockerfile) parts.push("Dockerfile");
+    if (hasK8s) parts.push("k8s manifests");
+    if (hasWorkflow) parts.push("CI workflow");
+
+    // Determine scope from staged file types
+    let scope: string;
+    if (hasWorkflow && !hasDockerfile && !hasK8s) {
+        scope = "ci";
+    } else {
+        scope = "deploy";
+    }
+
+    const description = parts.length > 0 ? parts.join(", ") : fileNames.join(", ");
+
+    return `feat(${scope}): add ${description} for ${appName}`;
+}
+
+/**
+ * Pre-fills the SCM commit message box and focuses the Source Control view,
+ * so the user can review diffs and commit at their own pace.
+ */
+export async function prepareCommitInSCM(
+    repository: Repository,
+    generatedFiles: string[],
+    appName: string,
+): Promise<void> {
+    // Only pre-fill if the input box is currently empty to avoid overwriting user's message
+    if (!repository.inputBox.value) {
+        repository.inputBox.value = generateCommitMessage(generatedFiles, appName);
+    }
+
+    // Focus the Source Control view so the user sees staged changes
+    await vscode.commands.executeCommand("workbench.view.scm");
+}
+
+/**
+ * Creates a pull request via the GitHub Pull Requests extension.
+ */
+export async function createPullRequest(generatedFiles: string[], appName: string): Promise<void> {
     try {
         // Check if GitHub Pull Requests extension is installed
         const githubExtension =
