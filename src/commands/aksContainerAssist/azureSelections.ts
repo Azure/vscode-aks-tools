@@ -27,6 +27,29 @@ export interface AzureResource {
     resourceGroup: string;
 }
 
+/**
+ * Common function to handle wizard exit confirmation with "Go Back" option.
+ * Shows a modal dialog asking if user wants to exit the Container Assist wizard.
+ * If user chooses "Go Back", calls the provided retry function.
+ * If user chooses "Exit" or closes dialog, returns undefined.
+ */
+async function showWizardExitConfirmation<T>(retryFunction: () => Promise<T>): Promise<T | undefined> {
+    const continueWizard = l10n.t("Exit Container Assist");
+    const goBack = l10n.t("Go Back");
+    const choice = await vscode.window.showWarningMessage(
+        l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+        { modal: true },
+        goBack,
+        continueWizard,
+    );
+
+    if (choice === goBack) {
+        return retryFunction();
+    }
+    // If they chose "Exit Container Assist" or closed the dialog, return undefined
+    return undefined;
+}
+
 async function fetchSubscriptionAcrs(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
@@ -93,21 +116,7 @@ export async function selectAzureSubscription(
 
     // Show confirmation dialog if user cancelled
     if (!selected) {
-        const continueWizard = l10n.t("Exit Container Assist");
-        const goBack = l10n.t("Go Back");
-        const choice = await vscode.window.showWarningMessage(
-            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
-            { modal: true },
-            goBack,
-            continueWizard,
-        );
-
-        if (choice === goBack) {
-            // Recursively call the function to go back to subscription selection
-            return selectAzureSubscription(sessionProvider);
-        }
-        // If they chose "Exit Container Assist" or closed the dialog, return undefined
-        return undefined;
+        return showWizardExitConfirmation(() => selectAzureSubscription(sessionProvider));
     }
 
     return selected.subscription;
@@ -149,21 +158,7 @@ export async function selectAksCluster(
 
     // Show confirmation dialog if user cancelled
     if (!selected) {
-        const continueWizard = l10n.t("Exit Container Assist");
-        const goBack = l10n.t("Go Back");
-        const choice = await vscode.window.showWarningMessage(
-            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
-            { modal: true },
-            goBack,
-            continueWizard,
-        );
-
-        if (choice === goBack) {
-            // Recursively call the function to go back to cluster selection
-            return selectAksCluster(sessionProvider, subscriptionId);
-        }
-        // If they chose "Exit Container Assist" or closed the dialog, return undefined
-        return undefined;
+        return showWizardExitConfirmation(() => selectAksCluster(sessionProvider, subscriptionId));
     }
 
     return selected.cluster;
@@ -219,21 +214,7 @@ export async function selectClusterNamespace(
 
     // Show confirmation dialog if user cancelled
     if (!selected) {
-        const continueWizard = l10n.t("Exit Container Assist");
-        const goBack = l10n.t("Go Back");
-        const choice = await vscode.window.showWarningMessage(
-            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
-            { modal: true },
-            goBack,
-            continueWizard,
-        );
-
-        if (choice === goBack) {
-            // Recursively call the function to go back to namespace selection
-            return selectClusterNamespace(sessionProvider, subscriptionId, cluster);
-        }
-        // If they chose "Exit Container Assist" or closed the dialog, return undefined
-        return undefined;
+        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster));
     }
 
     return selected.label;
@@ -284,21 +265,7 @@ export async function selectClusterAcr(
 
     // Show confirmation dialog if user cancelled
     if (!selected) {
-        const continueWizard = l10n.t("Exit Container Assist");
-        const goBack = l10n.t("Go Back");
-        const choice = await vscode.window.showWarningMessage(
-            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
-            { modal: true },
-            goBack,
-            continueWizard,
-        );
-
-        if (choice === goBack) {
-            // Recursively call the function to go back to ACR selection
-            return selectClusterAcr(sessionProvider, subscriptionId, cluster);
-        }
-        // If they chose "Exit Container Assist" or closed the dialog, return undefined
-        return undefined;
+        return showWizardExitConfirmation(() => selectClusterAcr(sessionProvider, subscriptionId, cluster));
     }
 
     return selected.acr;
@@ -447,21 +414,7 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
 
     // Show confirmation dialog if user cancelled
     if (!workflowName) {
-        const continueWizard = l10n.t("Exit Container Assist");
-        const goBack = l10n.t("Go Back");
-        const choice = await vscode.window.showWarningMessage(
-            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
-            { modal: true },
-            goBack,
-            continueWizard,
-        );
-
-        if (choice === goBack) {
-            // Recursively call the function to go back to workflow name input
-            return promptForWorkflowName(appName);
-        }
-        // If they chose "Exit Container Assist" or closed the dialog, return undefined
-        return undefined;
+        return showWizardExitConfirmation(() => promptForWorkflowName(appName));
     }
 
     logger.debug("Workflow name selected", workflowName);
@@ -500,21 +453,7 @@ export async function selectAcr(
 
     // Show confirmation dialog if user cancelled
     if (!selected) {
-        const continueWizard = l10n.t("Exit Container Assist");
-        const goBack = l10n.t("Go Back");
-        const choice = await vscode.window.showWarningMessage(
-            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
-            { modal: true },
-            goBack,
-            continueWizard,
-        );
-
-        if (choice === goBack) {
-            // Recursively call the function to go back to ACR selection
-            return selectAcr(sessionProvider, subscriptionId);
-        }
-        // If they chose "Exit Container Assist" or closed the dialog, return undefined
-        return undefined;
+        return showWizardExitConfirmation(() => selectAcr(sessionProvider, subscriptionId));
     }
 
     return selected.acr;
