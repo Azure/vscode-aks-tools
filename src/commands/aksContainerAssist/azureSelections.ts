@@ -12,6 +12,7 @@ import { getPrincipalRoleAssignmentsForAcr } from "../utils/roleAssignments";
 import { acrPullRoleDefinitionName } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { failed } from "../utils/errorable";
 import { logger } from "./logger";
+import { longRunning } from "../utils/host";
 
 export type { Cluster } from "../utils/clusters";
 
@@ -58,7 +59,9 @@ async function fetchSubscriptionAcrs(
 export async function selectAzureSubscription(
     sessionProvider: ReadyAzureSessionProvider,
 ): Promise<SubscriptionInfo | undefined> {
-    const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
+    const subscriptionsResult = await longRunning(l10n.t("Loading Azure subscriptions..."), () =>
+        getSubscriptions(sessionProvider, SelectionType.All),
+    );
 
     if (!subscriptionsResult.succeeded) {
         vscode.window.showErrorMessage(subscriptionsResult.error);
@@ -88,14 +91,35 @@ export async function selectAzureSubscription(
         title: l10n.t("Azure Subscription ({0} available)", subscriptionsResult.result.length),
     });
 
-    return selected?.subscription;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        const continueWizard = l10n.t("Exit Container Assist");
+        const goBack = l10n.t("Go Back");
+        const choice = await vscode.window.showWarningMessage(
+            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+            { modal: true },
+            goBack,
+            continueWizard,
+        );
+
+        if (choice === goBack) {
+            // Recursively call the function to go back to subscription selection
+            return selectAzureSubscription(sessionProvider);
+        }
+        // If they chose "Exit Container Assist" or closed the dialog, return undefined
+        return undefined;
+    }
+
+    return selected.subscription;
 }
 
 export async function selectAksCluster(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
 ): Promise<Cluster | undefined> {
-    const clustersResult = await getClusters(sessionProvider, subscriptionId);
+    const clustersResult = await longRunning(l10n.t("Loading AKS clusters..."), () =>
+        getClusters(sessionProvider, subscriptionId),
+    );
 
     if (!clustersResult || clustersResult.length === 0) {
         const openPortal = l10n.t("Open in Portal");
@@ -123,7 +147,26 @@ export async function selectAksCluster(
         title: l10n.t("AKS Cluster ({0} available)", clustersResult.length),
     });
 
-    return selected?.cluster;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        const continueWizard = l10n.t("Exit Container Assist");
+        const goBack = l10n.t("Go Back");
+        const choice = await vscode.window.showWarningMessage(
+            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+            { modal: true },
+            goBack,
+            continueWizard,
+        );
+
+        if (choice === goBack) {
+            // Recursively call the function to go back to cluster selection
+            return selectAksCluster(sessionProvider, subscriptionId);
+        }
+        // If they chose "Exit Container Assist" or closed the dialog, return undefined
+        return undefined;
+    }
+
+    return selected.cluster;
 }
 
 export async function selectClusterNamespace(
@@ -137,12 +180,8 @@ export async function selectClusterNamespace(
         return undefined;
     }
 
-    const namespacesResult = await getClusterNamespacesWithTypes(
-        sessionProvider,
-        kubectl,
-        subscriptionId,
-        cluster.resourceGroup,
-        cluster.name,
+    const namespacesResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
+        getClusterNamespacesWithTypes(sessionProvider, kubectl, subscriptionId, cluster.resourceGroup, cluster.name),
     );
 
     logger.debug(`Namespaces with types for cluster '${cluster.name}':`, namespacesResult);
@@ -178,7 +217,26 @@ export async function selectClusterNamespace(
         title: l10n.t("Namespace ({0} available)", namespacesResult.result.length),
     });
 
-    return selected?.label;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        const continueWizard = l10n.t("Exit Container Assist");
+        const goBack = l10n.t("Go Back");
+        const choice = await vscode.window.showWarningMessage(
+            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+            { modal: true },
+            goBack,
+            continueWizard,
+        );
+
+        if (choice === goBack) {
+            // Recursively call the function to go back to namespace selection
+            return selectClusterNamespace(sessionProvider, subscriptionId, cluster);
+        }
+        // If they chose "Exit Container Assist" or closed the dialog, return undefined
+        return undefined;
+    }
+
+    return selected.label;
 }
 
 export async function selectClusterAcr(
@@ -186,11 +244,15 @@ export async function selectClusterAcr(
     subscriptionId: string,
     cluster: Cluster,
 ): Promise<AzureResource | undefined> {
-    const allAcrs = await fetchSubscriptionAcrs(sessionProvider, subscriptionId);
+    const allAcrs = await longRunning(l10n.t("Loading Azure Container Registries..."), () =>
+        fetchSubscriptionAcrs(sessionProvider, subscriptionId),
+    );
     if (!allAcrs) return undefined;
 
     // Attempt to filter ACRs to only those attached to the cluster via AcrPull role
-    const attachedAcrs = await getAttachedAcrs(sessionProvider, subscriptionId, cluster, allAcrs);
+    const attachedAcrs = await longRunning(l10n.t("Checking attached registries..."), () =>
+        getAttachedAcrs(sessionProvider, subscriptionId, cluster, allAcrs),
+    );
 
     // If we found attached ACRs, show only those; otherwise fall back to all ACRs
     const acrsToShow = attachedAcrs.length > 0 ? attachedAcrs : allAcrs;
@@ -220,7 +282,26 @@ export async function selectClusterAcr(
         title,
     });
 
-    return selected?.acr;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        const continueWizard = l10n.t("Exit Container Assist");
+        const goBack = l10n.t("Go Back");
+        const choice = await vscode.window.showWarningMessage(
+            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+            { modal: true },
+            goBack,
+            continueWizard,
+        );
+
+        if (choice === goBack) {
+            // Recursively call the function to go back to ACR selection
+            return selectClusterAcr(sessionProvider, subscriptionId, cluster);
+        }
+        // If they chose "Exit Container Assist" or closed the dialog, return undefined
+        return undefined;
+    }
+
+    return selected.acr;
 }
 
 /**
@@ -363,9 +444,26 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
             return undefined;
         },
     });
+
+    // Show confirmation dialog if user cancelled
     if (!workflowName) {
+        const continueWizard = l10n.t("Exit Container Assist");
+        const goBack = l10n.t("Go Back");
+        const choice = await vscode.window.showWarningMessage(
+            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+            { modal: true },
+            goBack,
+            continueWizard,
+        );
+
+        if (choice === goBack) {
+            // Recursively call the function to go back to workflow name input
+            return promptForWorkflowName(appName);
+        }
+        // If they chose "Exit Container Assist" or closed the dialog, return undefined
         return undefined;
     }
+
     logger.debug("Workflow name selected", workflowName);
     return workflowName;
 }
@@ -378,7 +476,9 @@ export async function selectAcr(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
 ): Promise<AzureResource | undefined> {
-    const allAcrs = await fetchSubscriptionAcrs(sessionProvider, subscriptionId);
+    const allAcrs = await longRunning(l10n.t("Loading Azure Container Registries..."), () =>
+        fetchSubscriptionAcrs(sessionProvider, subscriptionId),
+    );
     if (!allAcrs) return undefined;
 
     const acrItems = allAcrs
@@ -398,7 +498,26 @@ export async function selectAcr(
         title: l10n.t("Container Registry ({0} available)", allAcrs.length),
     });
 
-    return selected?.acr;
+    // Show confirmation dialog if user cancelled
+    if (!selected) {
+        const continueWizard = l10n.t("Exit Container Assist");
+        const goBack = l10n.t("Go Back");
+        const choice = await vscode.window.showWarningMessage(
+            l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+            { modal: true },
+            goBack,
+            continueWizard,
+        );
+
+        if (choice === goBack) {
+            // Recursively call the function to go back to ACR selection
+            return selectAcr(sessionProvider, subscriptionId);
+        }
+        // If they chose "Exit Container Assist" or closed the dialog, return undefined
+        return undefined;
+    }
+
+    return selected.acr;
 }
 
 export interface AzureContext {

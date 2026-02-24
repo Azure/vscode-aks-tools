@@ -373,7 +373,6 @@ export class ContainerAssistService {
                 }
                 allGeneratedFiles.push(dockerfileResult.result);
             }
-        } else {
         }
 
         if (!skipK8sManifests) {
@@ -397,7 +396,6 @@ export class ContainerAssistService {
                 }
                 allGeneratedFiles.push(...manifestsResult.result);
             }
-        } else {
         }
 
         logger.debug("Generated files", allGeneratedFiles);
