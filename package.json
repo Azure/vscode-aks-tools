@@ -897,15 +897,15 @@
             },
             {
                 "id": "aks.developDeploySubMenu",
-                "label": "🚀 Develop & Deploy"
+                "label": "%Develop & Deploy%"
             },
             {
                 "id": "aks.troubleshootDiagnoseSubMenu",
-                "label": "🔍 Troubleshoot & Diagnose"
+                "label": "%Troubleshoot & Diagnose%"
             },
             {
                 "id": "aks.manageClusterSubMenu",
-                "label": "⚙️ Manage Cluster"
+                "label": "%Manage Cluster%"
             }
         ]
     },
