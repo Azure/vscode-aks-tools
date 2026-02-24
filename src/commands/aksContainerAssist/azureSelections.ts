@@ -13,6 +13,8 @@ import { acrPullRoleDefinitionName } from "../../webview-contract/webviewDefinit
 import { failed } from "../utils/errorable";
 import { logger } from "./logger";
 import { longRunning } from "../utils/host";
+import { getPortalCreateUrl } from "../utils/env";
+import { getEnvironment } from "../../auth/azureAuth";
 
 export type { Cluster } from "../utils/clusters";
 
@@ -70,7 +72,7 @@ async function fetchSubscriptionAcrs(
 
         if (selection === openPortal) {
             void vscode.env.openExternal(
-                vscode.Uri.parse("https://portal.azure.com/#create/Microsoft.ContainerRegistry"),
+                vscode.Uri.parse(getPortalCreateUrl(getEnvironment(), "create/Microsoft.ContainerRegistry")),
             );
         }
         return undefined;
@@ -97,7 +99,9 @@ export async function selectAzureSubscription(
 
         if (selection === openPortal) {
             void vscode.env.openExternal(
-                vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+                vscode.Uri.parse(
+                    getPortalCreateUrl(getEnvironment(), "view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+                ),
             );
         }
         return undefined;
@@ -138,7 +142,9 @@ export async function selectAksCluster(
         );
 
         if (selection === openPortal) {
-            void vscode.env.openExternal(vscode.Uri.parse("https://portal.azure.com/#create/microsoft.aks"));
+            void vscode.env.openExternal(
+                vscode.Uri.parse(getPortalCreateUrl(getEnvironment(), "create/microsoft.aks")),
+            );
         }
         return undefined;
     }

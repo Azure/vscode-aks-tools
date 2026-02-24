@@ -3,6 +3,8 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getAksClusterSubscriptionNode } from "../utils/clusters";
 import { failed } from "../utils/errorable";
+import { getPortalCreateUrl } from "../utils/env";
+import { getEnvironment } from "../../auth/azureAuth";
 
 export default async function aksCreateClusterNavToAzurePortal(
     _context: IActionContext,
@@ -16,5 +18,5 @@ export default async function aksCreateClusterNavToAzurePortal(
         return;
     }
 
-    vscode.env.openExternal(vscode.Uri.parse(`https://portal.azure.com/#create/microsoft.aks`));
+    vscode.env.openExternal(vscode.Uri.parse(getPortalCreateUrl(getEnvironment(), "create/microsoft.aks")));
 }

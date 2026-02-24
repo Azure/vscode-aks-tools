@@ -21,3 +21,9 @@ export function getDeploymentPortalUrl(environment: Environment, armId: string):
     const encodedReferrerContext = encodeURIComponent(meta.name);
     return `${portalUrl}/#view/HubsExtension/DeploymentDetailsBlade/~/overview/id/${encodedArmId}?api-version=2020-06-01&referrer_source=vscode&referrer_context=${encodedReferrerContext}`;
 }
+
+export function getPortalCreateUrl(environment: Environment, resourcePath: string): string {
+    const portalUrl = environment.portalUrl.replace(/\/$/, "");
+    const encodedReferrerContext = encodeURIComponent(meta.name);
+    return `${portalUrl}/#${resourcePath}?referrer_source=vscode&referrer_context=${encodedReferrerContext}`;
+}
