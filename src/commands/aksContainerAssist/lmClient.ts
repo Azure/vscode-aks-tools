@@ -166,8 +166,6 @@ export class LMClient {
 
     async selectModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
         try {
-            logger.info("Checking Language Model availability...");
-
             const allModels = await vscode.lm.selectChatModels({});
 
             if (!allModels || allModels.length === 0) {
@@ -201,7 +199,6 @@ export class LMClient {
             }
 
             this.languageModel = selectedModel;
-            logger.info(`Language Model selected: ${this.languageModel.name} (${this.languageModel.id})`);
             return { succeeded: true, result: this.languageModel };
         } catch (error) {
             logger.error("Failed to check Language Model availability", error);

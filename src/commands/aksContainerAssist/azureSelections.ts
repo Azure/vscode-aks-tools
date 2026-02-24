@@ -196,12 +196,6 @@ export async function selectClusterAcr(
     const acrsToShow = attachedAcrs.length > 0 ? attachedAcrs : allAcrs;
     const showingAttachedOnly = attachedAcrs.length > 0;
 
-    if (showingAttachedOnly) {
-        logger.info(`Showing ${acrsToShow.length} attached ACR(s) for cluster '${cluster.name}'`);
-    } else {
-        logger.info(`No attached ACRs found — falling back to all ${acrsToShow.length} ACR(s) in subscription`);
-    }
-
     const acrItems = acrsToShow
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((acr) => ({
@@ -239,8 +233,6 @@ async function getAttachedAcrs(
     cluster: Cluster,
     allAcrs: DefinedResourceWithGroup[],
 ): Promise<DefinedResourceWithGroup[]> {
-    logger.info(`Checking ${allAcrs.length} ACR(s) for AcrPull role attachment to cluster '${cluster.name}'`);
-
     // Get the cluster's kubelet principal ID
     const principalId = await getClusterPrincipalId(sessionProvider, subscriptionId, cluster);
     if (!principalId) {
@@ -276,16 +268,12 @@ async function getAttachedAcrs(
         });
 
         if (hasAcrPull) {
-            logger.info(`ACR '${acr.name}' is attached to cluster '${cluster.name}' (AcrPull role found)`);
             attachedAcrs.push(acr);
         } else {
             logger.debug(`ACR '${acr.name}' is NOT attached to cluster '${cluster.name}' (no AcrPull role)`);
         }
     }
 
-    logger.info(
-        `Attached ACR filtering complete: ${attachedAcrs.length} of ${allAcrs.length} ACR(s) attached to cluster '${cluster.name}'`,
-    );
     return attachedAcrs;
 }
 
@@ -324,7 +312,6 @@ async function getClusterPrincipalId(
             managedCluster.identityProfile.kubeletidentity.objectId
         ) {
             const principalId = managedCluster.identityProfile.kubeletidentity.objectId;
-            logger.info(`Cluster '${cluster.name}' kubelet identity principal ID: ${principalId}`);
             return principalId;
         }
         logger.warn(`Cluster '${cluster.name}' has managed identity but no kubelet identity object ID`);
@@ -334,7 +321,7 @@ async function getClusterPrincipalId(
     // Fall back to service principal
     const spClientId = managedCluster.servicePrincipalProfile?.clientId;
     if (spClientId) {
-        logger.info(`Cluster '${cluster.name}' service principal client ID: ${spClientId}`);
+        // Service principal found
     } else {
         logger.warn(`Cluster '${cluster.name}' has no kubelet identity or service principal`);
     }
@@ -377,7 +364,6 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
         },
     });
     if (!workflowName) {
-        logger.info("Workflow name input cancelled");
         return undefined;
     }
     logger.debug("Workflow name selected", workflowName);
@@ -443,7 +429,6 @@ export async function collectAzureContext(
     if (!hasWorkflow) {
         const acr = await selectAcr(sessionProvider, subscription.id);
         if (!acr) return undefined;
-        logger.info(`ACR selected: ${acr.name}.azurecr.io`);
 
         return { acrName: acr.name, acrResourceGroup: acr.resourceGroup };
     }
@@ -455,7 +440,6 @@ export async function collectAzureContext(
 
     const acr = await selectClusterAcr(sessionProvider, subscription.id, cluster);
     if (!acr) return undefined;
-    logger.info(`ACR selected: ${acr.name}.azurecr.io`);
 
     const namespace = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
     if (!namespace) return undefined;

@@ -20,7 +20,6 @@ async function promptForModelChoice(): Promise<boolean | undefined> {
         title: l10n.t("Container Assist - Language Model"),
     });
     if (!modelChoice) {
-        logger.info("Model selection cancelled");
         return undefined;
     }
     return modelChoice === selectModel;
@@ -28,7 +27,6 @@ async function promptForModelChoice(): Promise<boolean | undefined> {
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
-        logger.info("Container Assist command started");
         logger.debug("Command target", target);
 
         const targetUri = getTargetUri(target);
@@ -56,7 +54,6 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             vscode.window.showErrorMessage(availabilityCheck.error);
             return;
         }
-        logger.info("Container Assist is available and enabled");
 
         let startPath = targetUri.fsPath;
         try {
@@ -72,15 +69,11 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
         }
 
         const projectRoot = await findProjectRoot(startPath, workspaceFolder.uri.fsPath);
-        logger.info(`Project root detected: ${projectRoot}`);
 
         const selectedActions = await showContainerAssistQuickPick();
         if (!selectedActions || selectedActions.length === 0) {
-            logger.info("No actions selected, operation cancelled");
             return;
         }
-
-        logger.info(`Selected actions: ${selectedActions.join(", ")}`);
 
         // Determine which actions are selected
         const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
@@ -128,8 +121,6 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             }
             await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
         }
-
-        logger.info("Container Assist command completed successfully");
     } catch (error) {
         logger.error("Unexpected error in Container Assist", error);
         vscode.window.showErrorMessage(
@@ -280,11 +271,9 @@ async function generateDeploymentFiles(
     showModelPicker: boolean | undefined,
 ): Promise<ActionResult | undefined> {
     const appName = path.basename(targetPath);
-    logger.info(`Starting deployment file generation for app: ${appName}`);
     logger.debug("Target path", targetPath);
 
     const acrLoginServer = `${azureContext.acrName}.azurecr.io`;
-    logger.info(`ACR login server: ${acrLoginServer}`);
 
     const result = await vscode.window.withProgress(
         {
@@ -295,7 +284,6 @@ async function generateDeploymentFiles(
         async (progress, token) => {
             const abortController = new AbortController();
             token.onCancellationRequested(() => {
-                logger.info("Operation cancelled by user");
                 abortController.abort();
             });
 
@@ -320,7 +308,6 @@ async function generateDeploymentFiles(
                 return generationResult;
             } catch (error) {
                 if (error instanceof Error && error.name === "AbortError") {
-                    logger.info("Operation was aborted");
                     return undefined;
                 }
                 logger.error("Exception during deployment file generation", error);
@@ -343,7 +330,6 @@ async function generateDeploymentFiles(
     }
 
     const generatedFiles = result.result.generatedFiles;
-    logger.info(`Successfully generated ${generatedFiles.length} files`);
     logger.debug("Generated files", generatedFiles);
 
     if (generatedFiles.length === 0) {
@@ -368,8 +354,6 @@ async function generateWorkflowFile(
     hasBothActions: boolean,
     azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
-    logger.info("Starting GitHub workflow generation");
-
     // Show progress notification when both actions are selected
     const result = hasBothActions
         ? await vscode.window.withProgress(
@@ -391,7 +375,6 @@ async function generateWorkflowFile(
     }
 
     const workflowPath = result.result;
-    logger.info(`GitHub workflow created at: ${workflowPath}`);
 
     // Defer post-generation options when both actions are selected
     if (hasBothActions) {
@@ -496,8 +479,6 @@ async function handleGitHubIntegration(
     workspaceFolder: vscode.WorkspaceFolder,
     appName: string,
 ): Promise<void> {
-    logger.info("Handling GitHub integration for generated files");
-
     // Check if Git extension is available
     const hasGit = await isGitExtensionAvailable();
     if (!hasGit) {
@@ -514,7 +495,6 @@ async function handleGitHubIntegration(
     const enableGitHubIntegration = config.get<boolean>("enableGitHubIntegration", true);
 
     if (!enableGitHubIntegration) {
-        logger.info("GitHub integration is disabled in settings");
         vscode.window.showInformationMessage(
             l10n.t(
                 'GitHub integration is disabled. Enable it in settings: "aks.containerAssist.enableGitHubIntegration"',
