@@ -9,10 +9,20 @@ const WEB_FRAMEWORK_REGEX = /express|fastify|flask|django|spring|asp\.net|gin|ec
 const EXTERNAL_DEPENDENCY_REGEX = /redis|postgres|mysql|mongo|rabbitmq|kafka|elasticsearch/i;
 
 export const DOCKERFILE_SYSTEM_PROMPT = `You are an expert at creating optimized, production-ready Dockerfiles.
-Based on the analysis and recommendations provided, generate a complete Dockerfile.
-Follow all security best practices, use multi-stage builds when recommended, and include appropriate comments.
+You have access to tools that let you inspect the project:
+- readProjectFile: Read any file in the project (source code, config, etc.). Path is relative to project root.
+- listDirectory: List files and subdirectories to understand project structure.
 
-IMPORTANT: Your response must contain ONLY the Dockerfile content wrapped in <content></content> markers.
+WORKFLOW:
+1. Review the analysis and recommendations provided in the user message.
+2. BEFORE generating the Dockerfile, use readProjectFile to verify critical details:
+   - The entry point file exists at the expected path
+   - The build configuration matches detected settings (tsconfig.json outDir, package.json scripts, pom.xml packaging, etc.)
+   - Any framework-specific configuration
+3. If the analysis says "unknown" for entry point or other critical fields, use listDirectory and readProjectFile to find the correct values.
+4. Generate the Dockerfile based on ACTUAL project files, not assumptions.
+
+IMPORTANT: Your final response must contain ONLY the Dockerfile content wrapped in <content></content> markers.
 Do not include any explanations, markdown code fences, or text outside the content markers.
 
 Example response format:
@@ -22,7 +32,18 @@ FROM node:20-alpine
 </content>`;
 
 export const K8S_MANIFEST_SYSTEM_PROMPT = `You are an expert at creating production-ready Kubernetes manifests.
-Based on the analysis and recommendations provided, generate ONLY the Kubernetes YAML manifests that are necessary for this specific application.
+You have access to tools that let you inspect the project:
+- readProjectFile: Read any file in the project (source code, config, Dockerfile, etc.). Path is relative to project root.
+- listDirectory: List files and subdirectories to understand project structure.
+
+WORKFLOW:
+1. Review the analysis and recommendations provided in the user message.
+2. BEFORE generating manifests, use readProjectFile to verify critical details:
+   - Read the Dockerfile (if it exists) to determine the EXPOSE port, ENTRYPOINT, and health check paths.
+   - Check configuration files for environment variables, secrets, or external service references.
+   - Verify the application type (web server, worker, CLI tool) to decide which manifests are needed.
+3. If the analysis says "unknown" for ports or other critical fields, use tools to find the correct values.
+4. Generate manifests based on ACTUAL project files, not assumptions.
 
 Guidelines:
 - ALWAYS generate: deployment.yaml (required for any application)
@@ -59,21 +80,58 @@ ${formattedPlan}
 
 Repository Info:
 - Language: ${repoInfo?.language || "unknown"}
-- Framework: ${repoInfo?.frameworks?.map((f) => f.name).join(", ") || "none"}
-- Entry Point: ${repoInfo?.entryPoint || "unknown"}
-- Ports: ${repoInfo?.ports?.join(", ") || "none detected"}`;
+- Framework: ${repoInfo?.frameworks?.map((f) => `${f.name}${f.version ? ` v${f.version}` : ""}`).join(", ") || "none"}
+- Entry Point: ${repoInfo?.entryPoint || "unknown — use readProjectFile to find it"}
+- Ports: ${repoInfo?.ports?.join(", ") || "none detected"}
+- Dependencies: ${repoInfo?.dependencies?.slice(0, 15).join(", ") || "none"}`;
+
+    // Add verification hints for fields the deterministic analysis couldn't resolve
+    const verificationHints: string[] = [];
+
+    if (!repoInfo?.entryPoint || repoInfo.entryPoint === "unknown" || repoInfo.entryPoint.trim() === "") {
+        verificationHints.push(
+            "- Entry point is unknown. Use listDirectory to find source files, then readProjectFile to identify the main entry point.",
+        );
+    }
+
+    if (!repoInfo?.ports || repoInfo.ports.length === 0) {
+        verificationHints.push("- No ports detected. Check config files or source code for port configuration.");
+    }
+
+    const lang = repoInfo?.language;
+    if (lang === "typescript" || lang === "javascript") {
+        verificationHints.push(
+            "- Check package.json 'scripts.build' and tsconfig.json 'outDir' to determine build output path for COPY instructions.",
+        );
+    } else if (lang === "java") {
+        verificationHints.push(
+            "- Check pom.xml or build.gradle for packaging type (jar/war) and artifact name for the COPY instruction.",
+        );
+    } else if (lang === "dotnet") {
+        verificationHints.push(
+            "- Check the .csproj file for AssemblyName and TargetFramework to construct the correct ENTRYPOINT.",
+        );
+    } else if (lang === "go") {
+        verificationHints.push(
+            "- Check go.mod for the module name and look for cmd/ directory or main.go to determine the binary name.",
+        );
+    } else if (lang === "rust") {
+        verificationHints.push(
+            "- Check Cargo.toml for the package name and [[bin]] targets to determine the binary output path.",
+        );
+    } else if (lang === "python") {
+        verificationHints.push(
+            "- Look for manage.py (Django), app.py/main.py (Flask/FastAPI), or pyproject.toml scripts to determine the run command.",
+        );
+    }
+
+    if (verificationHints.length > 0) {
+        prompt += `\n\nVerification needed (use tools to resolve before generating):\n${verificationHints.join("\n")}`;
+    }
 
     if (plan.existingDockerfile) {
         const guidance = plan.existingDockerfile.guidance;
-        prompt += `
-
-Existing Dockerfile to enhance:
-${plan.existingDockerfile.content}
-
-Enhancement guidance:
-- Preserve: ${guidance.preserve.join(", ")}
-- Improve: ${guidance.improve.join(", ")}
-- Add missing: ${guidance.addMissing.join(", ")}`;
+        prompt += `\n\nExisting Dockerfile to enhance:\n${plan.existingDockerfile.content}\n\nEnhancement guidance:\n- Preserve: ${guidance.preserve.join(", ")}\n- Improve: ${guidance.improve.join(", ")}\n- Add missing: ${guidance.addMissing.join(", ")}`;
     }
 
     prompt += "\n\nGenerate the complete Dockerfile now. Remember to wrap the output in <content></content> markers:";
@@ -109,12 +167,12 @@ Application Details:
 - Namespace: ${namespace}
 - Language: ${repoInfo?.language || "unknown"}
 - Framework: ${frameworks.join(", ") || "none"}
-- Ports: ${ports.join(", ") || "none detected"}
+- Ports: ${ports.join(", ") || "none detected — use readProjectFile to check the Dockerfile or source code"}
 - Entry Point: ${repoInfo?.entryPoint || "unknown"}
 - Dependencies: ${dependencies.join(", ") || "none"}
 ${imageLine ? `${imageLine}` : ""}
 ${manifestGuidance}
-
+${buildK8sVerificationHints(ports, repoInfo?.entryPoint)}
 Generate ONLY the manifests that are appropriate for this application.
 Each manifest should be in a separate <content filename="..."></content> block:`;
 }
@@ -144,4 +202,28 @@ Based on the analysis, determine which manifests are needed:
     }
 
     return guidance;
+}
+
+function buildK8sVerificationHints(ports: number[], entryPoint: string | undefined): string {
+    const hints: string[] = [];
+
+    hints.push(
+        "- Read the Dockerfile (if present) with readProjectFile to confirm EXPOSE ports and ENTRYPOINT for accurate containerPort and health check configuration.",
+    );
+
+    if (!ports || ports.length === 0) {
+        hints.push(
+            "- No ports detected. Use readProjectFile to check the Dockerfile EXPOSE directive or source code for port configuration before choosing containerPort.",
+        );
+    }
+
+    if (!entryPoint || entryPoint === "unknown" || entryPoint.trim() === "") {
+        hints.push(
+            "- Entry point is unknown. Check the Dockerfile or source code to determine if the app is a web server, worker, or CLI tool — this affects which manifests to generate.",
+        );
+    }
+
+    return hints.length > 0
+        ? `\nVerification needed (use tools to resolve before generating):\n${hints.join("\n")}`
+        : "";
 }
