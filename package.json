@@ -839,7 +839,7 @@
         "eslint": "^9.39.2",
         "eslint-webpack-plugin": "^5.0.2",
         "fast-check": "^4.5.3",
-        "glob": "^13.0.1",
+        "glob": "^13.0.6",
         "globals": "^17.3.0",
         "husky": "^9.1.7",
         "lint-staged": "^16.1.0",
