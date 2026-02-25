@@ -404,7 +404,7 @@ async function getManagedIdentity(
             throw new Error("Failed to retrieve managed identity: missing required properties");
         }
 
-        logger.info(`Using existing managed identity: ${identityName}`);
+        logger.debug(`Using existing managed identity: ${identityName}`);
 
         return {
             clientId: identity.clientId,
