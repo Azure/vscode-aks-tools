@@ -24,6 +24,14 @@ interface OIDCSetupResult {
     resourceGroup: string;
 }
 
+interface AzureConfig {
+    subscriptionId: string;
+    resourceGroup: string;
+    identityName: string;
+    location: string;
+    isExistingIdentity: boolean;
+}
+
 /**
  * Sets up OIDC federated identity for GitHub Actions workflow
  */
@@ -63,14 +71,19 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
 
                 const credential = getCredential(sessionProvider);
 
-                progress.report({ message: l10n.t("Creating managed identity...") });
+                if (azureConfig.isExistingIdentity) {
+                    progress.report({ message: l10n.t("Retrieving managed identity...") });
+                } else {
+                    progress.report({ message: l10n.t("Creating managed identity...") });
+                }
 
-                const identityResult = await createManagedIdentity(
+                const identityResult = await getManagedIdentity(
                     credential,
                     azureConfig.subscriptionId,
                     azureConfig.resourceGroup,
                     azureConfig.identityName,
                     azureConfig.location,
+                    azureConfig.isExistingIdentity,
                 );
 
                 progress.report({ message: l10n.t("Assigning role permissions...") });
@@ -175,12 +188,7 @@ async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder): Promi
     }
 }
 
-async function promptForAzureConfig(appName: string): Promise<{
-    subscriptionId: string;
-    resourceGroup: string;
-    identityName: string;
-    location: string;
-} | null> {
+async function promptForAzureConfig(appName: string): Promise<AzureConfig | null> {
     // Get subscription
     const sessionProvider = await getSessionProvider();
     if (!isReady(sessionProvider)) {
@@ -230,29 +238,83 @@ async function promptForAzureConfig(appName: string): Promise<{
 
     if (!resourceGroup) return null;
 
-    // Get identity name
-    const identityName = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter managed identity name"),
-        value: `id-${appName}-github`,
-        title: l10n.t("OIDC Setup - Identity Name"),
-    });
+    // Get credential for listing identities
+    const credential = getCredential(sessionProvider);
 
-    if (!identityName) return null;
+    // List existing managed identities in the resource group
+    const existingIdentities = await listManagedIdentities(credential, selectedSub.subscriptionId, resourceGroup);
 
-    // Get location
-    const location = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter Azure region"),
-        value: "eastus",
-        title: l10n.t("OIDC Setup - Location"),
-    });
+    // Decide whether to use existing or create new
+    let useExistingIdentity = false;
+    let selectedIdentityName: string | null = null;
+    let location: string | undefined = undefined;
 
-    if (!location) return null;
+    if (existingIdentities.length > 0) {
+        const identityChoice = await vscode.window.showQuickPick(
+            [
+                { label: l10n.t("Create new managed identity"), description: "", value: "new" },
+                { label: l10n.t("Use existing managed identity"), description: "", value: "existing" },
+            ],
+            {
+                placeHolder: l10n.t("Choose managed identity option"),
+                title: l10n.t("OIDC Setup - Managed Identity"),
+            },
+        );
+
+        if (!identityChoice) return null;
+
+        if (identityChoice.value === "existing") {
+            useExistingIdentity = true;
+
+            const identityItems = existingIdentities.map((identity) => ({
+                label: identity.name,
+                description: identity.clientId,
+            }));
+
+            const selectedIdentity = await vscode.window.showQuickPick(identityItems, {
+                placeHolder: l10n.t("Select managed identity"),
+                title: l10n.t("OIDC Setup - Select Identity"),
+            });
+
+            if (!selectedIdentity) return null;
+
+            selectedIdentityName = selectedIdentity.label;
+        }
+    }
+
+    // Get identity name if creating new
+    let identityName: string;
+    if (useExistingIdentity && selectedIdentityName) {
+        identityName = selectedIdentityName;
+        location = "eastus"; // Dummy value, not used for existing identities
+    } else {
+        const newIdentityName = await vscode.window.showInputBox({
+            prompt: l10n.t("Enter managed identity name"),
+            value: `id-${appName}-github`,
+            title: l10n.t("OIDC Setup - Identity Name"),
+        });
+
+        if (!newIdentityName) return null;
+
+        identityName = newIdentityName;
+
+        // Get location only if creating new
+        const newLocation = await vscode.window.showInputBox({
+            prompt: l10n.t("Enter Azure region"),
+            value: "eastus",
+            title: l10n.t("OIDC Setup - Location"),
+        });
+
+        if (!newLocation) return null;
+        location = newLocation;
+    }
 
     return {
         subscriptionId: selectedSub.subscriptionId,
         resourceGroup,
         identityName,
         location,
+        isExistingIdentity: useExistingIdentity,
     };
 }
 
@@ -294,6 +356,65 @@ async function createManagedIdentity(
         tenantId: identity.tenantId,
         principalId: identity.principalId,
     };
+}
+
+async function listManagedIdentities(
+    credential: TokenCredential,
+    subscriptionId: string,
+    resourceGroup: string,
+): Promise<Array<{ name: string; clientId: string; principalId: string }>> {
+    try {
+        const msiClient = new ManagedServiceIdentityClient(credential, subscriptionId);
+        const identities = await msiClient.userAssignedIdentities.listByResourceGroup(resourceGroup);
+
+        const result: Array<{ name: string; clientId: string; principalId: string }> = [];
+        for await (const identity of identities) {
+            if (identity.name && identity.clientId && identity.principalId) {
+                result.push({
+                    name: identity.name,
+                    clientId: identity.clientId,
+                    principalId: identity.principalId,
+                });
+            }
+        }
+
+        return result;
+    } catch (error) {
+        // If the resource group doesn't exist yet, return empty array
+        logger.debug("No existing managed identities found:", error);
+        return [];
+    }
+}
+
+async function getManagedIdentity(
+    credential: TokenCredential,
+    subscriptionId: string,
+    resourceGroup: string,
+    identityName: string,
+    location: string,
+    isExisting: boolean,
+): Promise<{ clientId: string; tenantId: string; principalId: string }> {
+    const msiClient = new ManagedServiceIdentityClient(credential, subscriptionId);
+
+    if (isExisting) {
+        // Retrieve existing managed identity
+        const identity = await msiClient.userAssignedIdentities.get(resourceGroup, identityName);
+
+        if (!identity.clientId || !identity.tenantId || !identity.principalId) {
+            throw new Error("Failed to retrieve managed identity: missing required properties");
+        }
+
+        logger.debug(`Using existing managed identity: ${identityName}`);
+
+        return {
+            clientId: identity.clientId,
+            tenantId: identity.tenantId,
+            principalId: identity.principalId,
+        };
+    } else {
+        // Create new managed identity
+        return await createManagedIdentity(credential, subscriptionId, resourceGroup, identityName, location);
+    }
 }
 
 async function assignContributorRole(
