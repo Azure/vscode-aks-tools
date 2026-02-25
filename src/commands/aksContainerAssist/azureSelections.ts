@@ -209,7 +209,9 @@ export async function selectClusterNamespace(
                     : ns.type === "system"
                       ? l10n.t("System namespace")
                       : ns.type === "managed"
-                        ? l10n.t("Managed namespace")
+                        ? ns.labels?.["headlamp.dev/project-managed-by"] === "aks-desktop"
+                            ? l10n.t("aks-desktop (managed namespace)")
+                            : l10n.t("Managed namespace")
                         : undefined,
         }));
 
