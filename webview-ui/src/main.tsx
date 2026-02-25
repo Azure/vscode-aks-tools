@@ -16,7 +16,6 @@ import { KaitoManage } from "./KaitoManage/KaitoManage";
 import { KaitoTest } from "./KaitoTest/KaitoTest";
 import { Kubectl } from "./Kubectl/Kubectl";
 import "./main.css";
-import { Periscope } from "./Periscope/Periscope";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
 import { TcpDump } from "./TCPDump/TcpDump";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
@@ -70,7 +69,6 @@ function getVsCodeContent(rootElem: HTMLElement): JSX.Element {
         style: () => <TestStyleViewer {...getInitialState()} />,
         attachAcrToCluster: () => <AttachAcrToCluster {...getInitialState()} />,
         clusterProperties: () => <ClusterProperties {...getInitialState()} />,
-        periscope: () => <Periscope {...getInitialState()} />,
         detector: () => <Detector {...getInitialState()} />,
         draftDeployment: () => <DraftDeployment {...getInitialState()} />,
         draftDockerfile: () => <DraftDockerfile {...getInitialState()} />,

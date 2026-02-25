@@ -65,9 +65,9 @@
                     {
                         "id": "troubleshootingcommand",
                         "title": "%Troubleshooting Command%",
-                        "description": "%This extension provides a set of commands to help developers to troubleshoot AKS clusters such as quick run AKD Diagnostics using detectors, run AKS Periscope, run Inspektor Gadget, etc.%",
+                        "description": "%This extension provides a set of commands to help developers to troubleshoot AKS clusters such as quick run AKD Diagnostics using detectors, run Inspektor Gadget, etc.%",
                         "media": {
-                            "markdown": "./docs/book/src/features/aks-periscope.md"
+                            "markdown": "./docs/book/src/features/aks-diagnostics.md"
                         }
                     },
                     {
@@ -98,30 +98,7 @@
                         "type": "string"
                     }
                 },
-                "aks.periscope.repoOrg": {
-                    "type": "string",
-                    "default": "azure",
-                    "title": "Periscope GitHub repository organization",
-                    "description": "GitHub organization for the repository containing the Kustomize base template."
-                },
-                "aks.periscope.containerRegistry": {
-                    "type": "string",
-                    "default": "mcr.microsoft.com",
-                    "title": "Periscope image container registry",
-                    "description": "Container registry to pull Periscope images from."
-                },
-                "aks.periscope.releaseTag": {
-                    "type": "string",
-                    "default": "0.0.13",
-                    "title": "Periscope repository release tag",
-                    "description": "Release tag for the Kustomize templates in the Periscope repository."
-                },
-                "aks.periscope.imageVersion": {
-                    "type": "string",
-                    "default": "0.0.13",
-                    "title": "Periscope image version",
-                    "description": "Docker image tag corresponding to the Periscope version."
-                },
+
                 "azure.kubelogin.releaseTag": {
                     "type": "string",
                     "default": "v0.0.31",
@@ -251,10 +228,7 @@
                 "title": "%Select Tenant...%",
                 "category": "AKS"
             },
-            {
-                "command": "aks.periscope",
-                "title": "%Run AKS Periscope%"
-            },
+
             {
                 "command": "aks.eraserTool",
                 "title": "%Run Eraser Image Cleanup%"
@@ -537,11 +511,7 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "8@1"
                 },
-                {
-                    "command": "aks.periscope",
-                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
-                    "group": "8@2"
-                },
+
                 {
                     "command": "aks.eraserTool",
                     "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)",
@@ -798,10 +768,7 @@
                     "submenu": "aks.detectorsSubMenu",
                     "group": "1_diagnostics@1"
                 },
-                {
-                    "command": "aks.periscope",
-                    "group": "2_tools@1"
-                },
+
                 {
                     "command": "aks.aksInspektorGadgetShow",
                     "group": "2_tools@2"

@@ -14,7 +14,6 @@ import { KaitoModelsDefinition } from "./webviewDefinitions/kaitoModels";
 import { KaitoManageDefinition } from "./webviewDefinitions/kaitoManage";
 import { KaitoTestDefinition } from "./webviewDefinitions/kaitoTest";
 import { KubectlDefinition } from "./webviewDefinitions/kubectl";
-import { PeriscopeDefinition } from "./webviewDefinitions/periscope";
 import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
 import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
 import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer";
@@ -43,7 +42,6 @@ type AllWebviewDefinitions = {
     style: TestStyleViewerDefinition;
     clusterProperties: ClusterPropertiesDefinition;
     attachAcrToCluster: AttachAcrToClusterDefinition;
-    periscope: PeriscopeDefinition;
     createCluster: CreateClusterDefinition;
     detector: DetectorDefinition;
     draftDeployment: DraftDeploymentDefinition;

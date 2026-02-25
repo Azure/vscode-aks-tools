@@ -1,12 +1,8 @@
 import * as vscode from "vscode";
-import { combine, failed, Errorable } from "./errorable";
-import { KubeloginConfig, KustomizeConfig } from "../periscope/models/config";
-import * as semver from "semver";
+import { failed, Errorable } from "./errorable";
 import { CommandCategory, PresetCommand } from "../../webview-contract/webviewDefinitions/kubectl";
-import { RetinaDownloadConfig } from "../periscope/models/RetinaDownloadConfig";
 import { isObject } from "./runtimeTypes";
 import { Environment, EnvironmentParameters } from "@azure/ms-rest-azure-env";
-import { AKSMCPServerConfig } from "../periscope/models/aksMCPServerConfig";
 
 export function getConfiguredAzureEnv(): Environment {
     // See:
@@ -172,39 +168,7 @@ function mergeClusterFilterLists(
     return [...filters, ...filteredExistingClusters];
 }
 
-export function getKustomizeConfig(): Errorable<KustomizeConfig> {
-    const periscopeConfig = vscode.workspace.getConfiguration("aks.periscope");
-    const props = combine([
-        getConfigValue(periscopeConfig, "repoOrg"),
-        getConfigValue(periscopeConfig, "containerRegistry"),
-        getConfigValue(periscopeConfig, "releaseTag"),
-        getConfigValue(periscopeConfig, "imageVersion"),
-    ]);
-
-    if (failed(props)) {
-        return { succeeded: false, error: `Failed to read aks.periscope configuration: ${props.error}` };
-    }
-
-    const config = {
-        repoOrg: props.result[0],
-        containerRegistry: props.result[1],
-        releaseTag: props.result[2],
-        imageVersion: props.result[3],
-    };
-
-    const minimumSupportedVersion = "0.0.11";
-    if (semver.parse(config.imageVersion) && semver.lt(config.imageVersion, minimumSupportedVersion)) {
-        config.imageVersion = minimumSupportedVersion;
-    }
-
-    if (semver.parse(config.releaseTag) && semver.lt(config.releaseTag, minimumSupportedVersion)) {
-        config.releaseTag = minimumSupportedVersion;
-    }
-
-    return { succeeded: true, result: config };
-}
-
-export function getKubeloginConfig(): Errorable<KubeloginConfig> {
+export function getKubeloginConfig(): Errorable<{ releaseTag: string }> {
     const kubeloginConfig = vscode.workspace.getConfiguration("azure.kubelogin");
     const config = getConfigValue(kubeloginConfig, "releaseTag");
 
@@ -222,7 +186,7 @@ export function getKubeloginConfig(): Errorable<KubeloginConfig> {
     return { succeeded: true, result: configresult };
 }
 
-export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
+export function getKubectlGadgetConfig(): Errorable<{ releaseTag: string }> {
     const kubectlGadgetConfig = vscode.workspace.getConfiguration("azure.kubectlgadget");
     const config = getConfigValue(kubectlGadgetConfig, "releaseTag");
 
@@ -240,7 +204,7 @@ export function getKubectlGadgetConfig(): Errorable<KubeloginConfig> {
     return { succeeded: true, result: configresult };
 }
 
-export function getDraftConfig(): Errorable<RetinaDownloadConfig> {
+export function getDraftConfig(): Errorable<{ releaseTag: string }> {
     const draftConfig = vscode.workspace.getConfiguration("aks.drafttool");
     const props = getConfigValue(draftConfig, "releaseTag");
 
@@ -258,7 +222,7 @@ export function getDraftConfig(): Errorable<RetinaDownloadConfig> {
     return { succeeded: true, result: config };
 }
 
-export function getRetinaConfig(): Errorable<RetinaDownloadConfig> {
+export function getRetinaConfig(): Errorable<{ releaseTag: string }> {
     const retinaconfig = vscode.workspace.getConfiguration("aks.retinatool");
     const props = getConfigValue(retinaconfig, "releaseTag");
 
@@ -276,7 +240,7 @@ export function getRetinaConfig(): Errorable<RetinaDownloadConfig> {
     return { succeeded: true, result: config };
 }
 
-export function getMCPServerConfig(): Errorable<AKSMCPServerConfig> {
+export function getMCPServerConfig(): Errorable<{ releaseTag: string }> {
     const mcpServerConfig = vscode.workspace.getConfiguration("aks.aksmcpserver");
     const props = getConfigValue(mcpServerConfig, "releaseTag");
 
