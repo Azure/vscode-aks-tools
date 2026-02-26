@@ -303,6 +303,7 @@ export class ContainerAssistService {
         folderPath: string,
         appName: string,
         acrLoginServer?: string,
+        namespace?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
         showModelPicker: boolean = false,
@@ -310,7 +311,7 @@ export class ContainerAssistService {
     ): Promise<Errorable<DeploymentResult>> {
         const reportProgress = (message: string) => onProgress?.(message);
 
-        logger.debug("Deployment workflow params", { folderPath, appName, acrLoginServer });
+        logger.debug("Deployment workflow params", { folderPath, appName, acrLoginServer, namespace });
 
         const existingFiles = await this.checkExistingFiles(folderPath);
 
@@ -379,7 +380,7 @@ export class ContainerAssistService {
             for (const module of modules) {
                 const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
-                const manifestNamespace = "default";
+                const manifestNamespace = namespace || "default";
                 const imageRepository = acrLoginServer ? `${acrLoginServer}/${manifestAppName}` : undefined;
                 const manifestsResult = await this.generateManifests(
                     module.modulePath,

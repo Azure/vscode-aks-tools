@@ -294,6 +294,7 @@ async function generateDeploymentFiles(
                     targetPath,
                     appName,
                     acrLoginServer,
+                    azureContext.namespace,
                     abortController.signal,
                     token,
                     showModelPicker ?? false,
