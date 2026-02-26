@@ -170,11 +170,16 @@ export async function selectAksCluster(
     return selected.cluster;
 }
 
+export interface NamespaceSelection {
+    name: string;
+    isManaged: boolean;
+}
+
 export async function selectClusterNamespace(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     cluster: Cluster,
-): Promise<string | undefined> {
+): Promise<NamespaceSelection | undefined> {
     const kubectl = await extension.kubectl.v1;
     if (!kubectl.available) {
         vscode.window.showErrorMessage(l10n.t("kubectl is not available. Please install kubectl extension."));
@@ -194,12 +199,15 @@ export async function selectClusterNamespace(
         return undefined;
     }
 
-    if (namespacesResult.result.length === 0) {
+    // Filter out system namespaces - they should not be deployment targets
+    const nonSystemNamespaces = namespacesResult.result.filter((ns) => ns.type !== "system" || ns.name === "default");
+
+    if (nonSystemNamespaces.length === 0) {
         vscode.window.showWarningMessage(l10n.t("No namespaces found in cluster."));
         return undefined;
     }
 
-    const namespaceItems = namespacesResult.result
+    const namespaceItems = nonSystemNamespaces
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((ns) => ({
             label: ns.name,
@@ -213,11 +221,12 @@ export async function selectClusterNamespace(
                             ? l10n.t("aks desktop project: {0}", ns.name)
                             : l10n.t("Managed namespace")
                         : undefined,
+            isManaged: ns.type === "managed",
         }));
 
     const selected = await vscode.window.showQuickPick(namespaceItems, {
         placeHolder: l10n.t("Select Kubernetes namespace"),
-        title: l10n.t("Namespace ({0} available)", namespacesResult.result.length),
+        title: l10n.t("Namespace ({0} available)", nonSystemNamespaces.length),
     });
 
     // Show confirmation dialog if user cancelled
@@ -225,7 +234,7 @@ export async function selectClusterNamespace(
         return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster));
     }
 
-    return selected.label;
+    return { name: selected.label, isManaged: selected.isManaged };
 }
 
 export async function selectClusterAcr(
@@ -473,6 +482,7 @@ export interface AzureContext {
     clusterName?: string;
     clusterResourceGroup?: string;
     namespace?: string;
+    isManagedNamespace?: boolean;
     workflowName?: string;
 }
 
@@ -507,9 +517,9 @@ export async function collectAzureContext(
     const acr = await selectClusterAcr(sessionProvider, subscription.id, cluster);
     if (!acr) return undefined;
 
-    const namespace = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
-    if (!namespace) return undefined;
-    logger.debug("Namespace selected", namespace);
+    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
+    if (!namespaceSelection) return undefined;
+    logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
 
     const workflowName = await promptForWorkflowName(path.basename(projectRoot));
     if (!workflowName) return undefined;
@@ -519,7 +529,8 @@ export async function collectAzureContext(
         acrResourceGroup: acr.resourceGroup,
         clusterName: cluster.name,
         clusterResourceGroup: cluster.resourceGroup,
-        namespace,
+        namespace: namespaceSelection.name,
+        isManagedNamespace: namespaceSelection.isManaged,
         workflowName,
     };
 }
