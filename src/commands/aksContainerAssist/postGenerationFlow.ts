@@ -15,7 +15,7 @@ import { setupOIDCForGitHub } from "./oidcSetup";
 // ─── Post-Generation Flow ─────────────────────────────────────────────────────
 //
 // After files are generated the flow is:
-//   1. (If workflow) OIDC notification – "Setup OIDC" / "Skip"
+//   1. (If workflow) OIDC modal – "Setup OIDC" / "Skip"
 //   2. Stage notification – "Stage & Review" / "Open Files"
 //        • offers a feature branch when on main/master (non-modal notification)
 //        • stages files, pre-fills commit message, focuses SCM view
@@ -62,6 +62,7 @@ async function promptOIDCSetup(workspaceFolder: vscode.WorkspaceFolder, appName:
         l10n.t(
             "Your GitHub workflow requires OIDC authentication to deploy to Azure. Without it the workflow will fail.",
         ),
+        { modal: true },
         setup,
         skip,
     );
