@@ -18,6 +18,7 @@ describe("Workflow Template Tests", () => {
         clusterResourceGroup: "my-cluster-rg",
         deploymentManifestPath: "k8s/*.yaml",
         namespace: "default",
+        isManagedNamespace: false,
     };
 
     describe("renderWorkflowTemplate", () => {
@@ -200,11 +201,31 @@ describe("Workflow Template Tests", () => {
             assert.ok(result.includes("action: deploy"), "Should specify deploy action");
         });
 
-        it("should handle private cluster checks", () => {
+        it("should not include private cluster checks", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("Is private cluster"), "Should check if cluster is private");
-            assert.ok(result.includes("PRIVATE_CLUSTER"), "Should set PRIVATE_CLUSTER output");
+            assert.ok(!result.includes("Is private cluster"), "Should not check if cluster is private");
+            assert.ok(!result.includes("PRIVATE_CLUSTER"), "Should not have PRIVATE_CLUSTER output");
+        });
+
+        it("should use aks-set-context for non-managed namespaces", () => {
+            const result = renderWorkflowTemplate(validConfig);
+
+            assert.ok(result.includes("azure/aks-set-context@v4"), "Should use aks-set-context");
+            assert.ok(!result.includes("az aks namespace get-credentials"), "Should not use namespace get-credentials");
+        });
+
+        it("should use az aks namespace get-credentials for managed namespaces", () => {
+            const managedConfig = { ...validConfig, isManagedNamespace: true };
+            const result = renderWorkflowTemplate(managedConfig);
+
+            assert.ok(
+                !result.includes("azure/aks-set-context@v4"),
+                "Should not use aks-set-context for managed namespace",
+            );
+            assert.ok(result.includes("az aks namespace get-credentials"), "Should use namespace get-credentials");
+            assert.ok(result.includes("kubelogin convert-kubeconfig"), "Should convert kubeconfig with kubelogin");
+            assert.ok(result.includes("managed namespace"), "Should indicate managed namespace in comments");
         });
     });
 });

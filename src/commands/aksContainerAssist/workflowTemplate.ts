@@ -28,15 +28,17 @@ export interface WorkflowConfig {
     // Deployment configuration
     deploymentManifestPath: string;
     namespace: string;
+    isManagedNamespace: boolean;
 }
 
 /**
  * Loads the workflow template from the YAML file
+ * @param isManagedNamespace Whether to load the managed namespace variant
  * @returns The workflow template content
  */
-function loadWorkflowTemplate(): Errorable<string> {
-    // Configure the starter workflow data.
-    const templateContent = getWorkflowYaml("aks-deploy.template");
+function loadWorkflowTemplate(isManagedNamespace: boolean): Errorable<string> {
+    const templateName = isManagedNamespace ? "aks-deploy-managed-ns.template" : "aks-deploy.template";
+    const templateContent = getWorkflowYaml(templateName);
     if (failed(templateContent)) {
         vscode.window.showErrorMessage(templateContent.error);
         return { succeeded: false, error: templateContent.error };
@@ -51,7 +53,7 @@ function loadWorkflowTemplate(): Errorable<string> {
  * @returns Rendered workflow YAML content
  */
 export function renderWorkflowTemplate(config: WorkflowConfig): string {
-    const templateResult = loadWorkflowTemplate();
+    const templateResult = loadWorkflowTemplate(config.isManagedNamespace);
     if (failed(templateResult)) {
         throw new Error(templateResult.error);
     }

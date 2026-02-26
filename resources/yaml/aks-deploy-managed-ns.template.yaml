@@ -1,0 +1,116 @@
+# This workflow will build and push an application to a Azure Kubernetes Service (AKS) cluster when you push your code
+#
+# This workflow assumes you have already created the target AKS cluster and have created an Azure Container Registry (ACR) and attached it to the AKS cluster.
+# For instructions see:
+#   - https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-portal
+#   - https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal
+#   - https://learn.microsoft.com/en-us/azure/aks/cluster-container-registry-integration?tabs=azure-cli#configure-acr-integration-for-existing-aks-clusters
+#   - https://github.com/Azure/aks-create-action
+#
+# 🔐 IMPORTANT: OIDC Authentication Required!
+# This workflow uses OpenID Connect (OIDC) to authenticate with Azure without storing secrets.
+# You MUST configure the following GitHub repository secrets for this workflow to work:
+#    - AZURE_CLIENT_ID     (Client ID of the managed identity or service principal) 
+#    - AZURE_TENANT_ID     (Your Azure AD tenant ID)
+#    - AZURE_SUBSCRIPTION_ID (Your Azure subscription ID)
+#
+# To set up OIDC authentication:
+# 1. Use the AKS VS Code Extension "Setup OIDC for GitHub" command, OR
+# 2. Follow the manual setup guide: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure
+#
+name: { { WORKFLOWNAME } }
+
+on:
+    push:
+        branches: [{ { BRANCHNAME } }]
+    workflow_dispatch:
+
+env:
+    ACR_RESOURCE_GROUP: { { ACRRESOURCEGROUP } }
+    AZURE_CONTAINER_REGISTRY: { { AZURECONTAINERREGISTRY } }
+    CONTAINER_NAME: { { CONTAINERNAME } }
+    CLUSTER_NAME: { { CLUSTERNAME } }
+    CLUSTER_RESOURCE_GROUP: { { CLUSTERRESOURCEGROUP } }
+    DEPLOYMENT_MANIFEST_PATH: { { DEPLOYMENTMANIFESTPATH } }
+    DOCKER_FILE: { { DOCKERFILE } }
+    BUILD_CONTEXT_PATH: { { BUILDCONTEXTPATH } }
+    NAMESPACE: { { NAMESPACE } }
+
+jobs:
+    buildImage:
+        permissions:
+            contents: read
+            id-token: write
+        runs-on: ubuntu-latest
+        steps:
+            # Checks out the repository this file is in
+            - uses: actions/checkout@v4
+
+            # Logs in with your Azure credentials
+            - name: Azure login
+              uses: azure/login@v2
+              with:
+                  client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                  tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                  subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+            # Logs into ACR
+            - name: Log into ACR
+              run: |
+                  az acr login -n ${{ env.AZURE_CONTAINER_REGISTRY }}
+
+            # Builds and pushes an image up to your Azure Container Registry
+            - name: Build and push image to ACR
+              run: |
+                  az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.ACR_RESOURCE_GROUP }} -f ${{ env.DOCKER_FILE }} ${{ env.BUILD_CONTEXT_PATH }}
+    deploy:
+        permissions:
+            actions: read
+            contents: read
+            id-token: write
+        runs-on: ubuntu-latest
+        needs: [buildImage]
+        steps:
+            # Checks out the repository this file is in
+            - uses: actions/checkout@v4
+
+            # Logs in with your Azure credentials
+            - name: Azure login
+              uses: azure/login@v2
+              with:
+                  client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                  tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                  subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+            # Use kubelogin to configure your kubeconfig for Azure auth
+            - name: Set up kubelogin for non-interactive login
+              uses: azure/use-kubelogin@v1
+              with:
+                  kubelogin-version: "v0.0.25"
+
+            # Retrieves kubeconfig for managed namespace via Azure CLI
+            # (aks-set-context does not support managed namespaces yet)
+            - name: Get K8s context (managed namespace)
+              run: |
+                  az aks namespace get-credentials \
+                    --name ${{ env.NAMESPACE }} \
+                    --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} \
+                    --cluster-name ${{ env.CLUSTER_NAME }} \
+                    --file "${{ runner.temp }}/kubeconfig" \
+                    --overwrite-existing
+
+                  kubelogin convert-kubeconfig \
+                    -l azurecli \
+                    --kubeconfig "${{ runner.temp }}/kubeconfig"
+              env:
+                  KUBECONFIG: ${{ runner.temp }}/kubeconfig
+
+            # Deploys application based on given manifest file
+            - name: Deploys application
+              uses: Azure/k8s-deploy@v5
+              with:
+                  action: deploy
+                  manifests: ${{ env.DEPLOYMENT_MANIFEST_PATH }}
+                  images: |
+                      ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
+                  namespace: ${{ env.NAMESPACE }}
