@@ -88,7 +88,7 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
 
                 progress.report({ message: l10n.t("Assigning role permissions...") });
 
-                await assignContributorRole(
+                await assignAksClusterUserRole(
                     credential,
                     azureConfig.subscriptionId,
                     azureConfig.resourceGroup,
@@ -417,23 +417,24 @@ async function getManagedIdentity(
     }
 }
 
-async function assignContributorRole(
+async function assignAksClusterUserRole(
     credential: TokenCredential,
     subscriptionId: string,
     resourceGroup: string,
     principalId: string,
 ): Promise<void> {
     const authClient = new AuthorizationManagementClient(credential, subscriptionId);
-
+    // documentation official here https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
     const scope = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}`;
-    const contributorRoleId = `/subscriptions/${subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c`;
+    // Azure Kubernetes Service Cluster User Role
+    const aksClusterUserRoleId = `/subscriptions/${subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/4abbcc35-e782-43d8-92c5-2d3f1bd2253f`;
 
     // Generate a GUID for the role assignment
     const roleAssignmentName = randomUUID();
 
     try {
         await authClient.roleAssignments.create(scope, roleAssignmentName, {
-            roleDefinitionId: contributorRoleId,
+            roleDefinitionId: aksClusterUserRoleId,
             principalId: principalId,
             principalType: "ServicePrincipal",
         });
