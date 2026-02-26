@@ -72,7 +72,11 @@ import * as path from "path";
 import * as fs from "fs";
 import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
 import { runContainerAssist } from "./commands/aksContainerAssist/aksContainerAssist";
-import { setupOIDCForGitHub } from "./commands/aksContainerAssist/oidcSetup";
+import {
+    setupOIDCForGitHub,
+    setGitHubActionsSecrets,
+    getGitHubRepoInfo,
+} from "./commands/aksContainerAssist/oidcSetup";
 
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
@@ -169,6 +173,44 @@ export async function activate(context: vscode.ExtensionContext) {
             }
             const appName = path.basename(workspaceFolder.uri.fsPath);
             await setupOIDCForGitHub(workspaceFolder, appName);
+        });
+        registerCommandWithTelemetry("aks.setGitHubActionsSecrets", async () => {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage(l10n.t("No workspace folder found. Please open a folder first."));
+                return;
+            }
+            const repoInfo = await getGitHubRepoInfo(workspaceFolder);
+            if (!repoInfo) {
+                vscode.window.showErrorMessage(
+                    l10n.t("Unable to determine GitHub repository. Please ensure this is a GitHub repository."),
+                );
+                return;
+            }
+            // Prompt the user for the secret values
+            const clientId = await vscode.window.showInputBox({
+                prompt: l10n.t("Enter the Azure Client ID (AZURE_CLIENT_ID)"),
+                title: l10n.t("Set GitHub Actions Secrets"),
+                ignoreFocusOut: true,
+            });
+            if (!clientId) return;
+            const tenantId = await vscode.window.showInputBox({
+                prompt: l10n.t("Enter the Azure Tenant ID (AZURE_TENANT_ID)"),
+                title: l10n.t("Set GitHub Actions Secrets"),
+                ignoreFocusOut: true,
+            });
+            if (!tenantId) return;
+            const subscriptionId = await vscode.window.showInputBox({
+                prompt: l10n.t("Enter the Azure Subscription ID (AZURE_SUBSCRIPTION_ID)"),
+                title: l10n.t("Set GitHub Actions Secrets"),
+                ignoreFocusOut: true,
+            });
+            if (!subscriptionId) return;
+            await setGitHubActionsSecrets(repoInfo.owner, repoInfo.repo, {
+                AZURE_CLIENT_ID: clientId,
+                AZURE_TENANT_ID: tenantId,
+                AZURE_SUBSCRIPTION_ID: subscriptionId,
+            });
         });
 
         await registerAzureServiceNodes(context);
