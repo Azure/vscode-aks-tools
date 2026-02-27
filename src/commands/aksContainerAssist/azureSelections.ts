@@ -212,15 +212,9 @@ export async function selectClusterNamespace(
         .map((ns) => ({
             label: ns.name,
             description:
-                ns.name === "default"
-                    ? l10n.t("Default namespace")
-                    : ns.type === "system"
-                      ? l10n.t("System namespace")
-                      : ns.type === "managed"
-                        ? ns.labels?.["headlamp.dev/project-managed-by"] === "aks-desktop"
-                            ? l10n.t("aks desktop project: {0}", ns.name)
-                            : l10n.t("Managed namespace")
-                        : undefined,
+                ns.labels?.["headlamp.dev/project-managed-by"] === "aks-desktop"
+                    ? l10n.t("aks desktop project: {0}", ns.name)
+                    : undefined,
             isManaged: ns.type === "managed",
         }));
 
