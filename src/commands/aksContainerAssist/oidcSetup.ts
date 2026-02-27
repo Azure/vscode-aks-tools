@@ -498,104 +498,118 @@ AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
     }
 }
 
+/** Creates an Octokit client for the given token. Exported for testability. */
+export function createOctokitClient(token: string): Octokit {
+    return new Octokit({ auth: `token ${token}` });
+}
+
 /**
  * Authenticates with GitHub using the VS Code GitHub authentication extension
  * and sets repository secrets for GitHub Actions via the Octokit API.
+ *
+ * Returns `true` if all secrets were set successfully, `false` otherwise.
+ * On failure, shows an error dialog with "Copy Secrets" / "View Output"
+ * fallback buttons so the user can still retrieve their secret values.
  */
 export async function setGitHubActionsSecrets(
     owner: string,
     repo: string,
     secrets: Record<string, string>,
-): Promise<void> {
+): Promise<boolean> {
+    // Build a copyable text of the secrets for fallback buttons on error dialogs.
+    const secretsText = Object.entries(secrets)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\n");
+
+    /** Shows an error message with "Copy Secrets" / "View Output" fallback buttons. */
+    async function showError(message: string): Promise<void> {
+        const copySecrets = l10n.t("Copy Secrets");
+        const viewOutput = l10n.t("View Output");
+        const selection = await vscode.window.showErrorMessage(message, copySecrets, viewOutput);
+        if (selection === copySecrets) {
+            await vscode.env.clipboard.writeText(secretsText);
+            vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
+        } else if (selection === viewOutput) {
+            logger.show();
+        }
+    }
+
+    /**
+     * Shows an SSO error with "Authorize Token" plus fallback buttons.
+     * Opens the SSO authorization URL if the user clicks "Authorize Token".
+     */
+    async function showSSOError(message: string, ssoUrl: string): Promise<void> {
+        const authorize = l10n.t("Authorize Token");
+        const copySecrets = l10n.t("Copy Secrets");
+        const viewOutput = l10n.t("View Output");
+        const selection = await vscode.window.showErrorMessage(message, authorize, copySecrets, viewOutput);
+        if (selection === authorize) {
+            vscode.env.openExternal(vscode.Uri.parse(ssoUrl));
+        } else if (selection === copySecrets) {
+            await vscode.env.clipboard.writeText(secretsText);
+            vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
+        } else if (selection === viewOutput) {
+            logger.show();
+        }
+    }
+
     // Step 1: Authenticate with GitHub
     let session: vscode.AuthenticationSession;
     try {
-        const result = await vscode.authentication.getSession("github", ["repo"], {
-            forceNewSession: { detail: l10n.t("GitHub authentication is required to set repository secrets.") },
+        session = await vscode.authentication.getSession("github", ["repo"], {
+            createIfNone: true,
         });
-
-        if (!result) {
-            vscode.window.showWarningMessage(l10n.t("GitHub authentication was cancelled."));
-            return;
-        }
-        session = result;
     } catch (error) {
         logger.error("GitHub authentication failed", error);
-        vscode.window.showErrorMessage(
+        await showError(
             l10n.t("GitHub authentication failed. Please ensure the GitHub extension is installed and try again."),
         );
-        return;
+        return false;
     }
 
-    const octokit = new Octokit({ auth: `token ${session.accessToken}` });
+    // Call through `exports` so the function is stubbable in tests (CJS binds
+    // local names at definition time, not at call time).
+    const octokit = (exports as { createOctokitClient: typeof createOctokitClient }).createOctokitClient(
+        session.accessToken,
+    );
 
-    // Step 2: Verify the user has access to the repository
+    // Step 2: Verify the user has access to the repository (repo access check)
     try {
         const { data: repoData } = await octokit.repos.get({ owner, repo });
+
+        if (repoData.archived) {
+            await showError(
+                l10n.t("Repository {0}/{1} is archived. Secrets cannot be set on archived repositories.", owner, repo),
+            );
+            return false;
+        }
 
         // Check permissions — need admin or push access to set secrets
         const permissions = repoData.permissions;
         if (permissions && !permissions.admin && !permissions.push) {
-            const contactAdmin = l10n.t("Contact Admin");
-            const selection = await vscode.window.showErrorMessage(
+            await showError(
                 l10n.t(
-                    "You don't have write access to {0}/{1}. Setting repository secrets requires admin or write permissions.",
+                    "You don't have write access to {0}/{1}. Setting repository secrets requires admin or write permissions. Contact the repository admin to request access.",
                     owner,
                     repo,
                 ),
-                contactAdmin,
             );
-            if (selection === contactAdmin) {
-                vscode.env.openExternal(vscode.Uri.parse(`https://github.com/${owner}/${repo}/settings/access`));
-            }
-            return;
+            return false;
         }
     } catch (error: unknown) {
-        const statusCode = isOctokitError(error) ? error.status : undefined;
-
-        if (statusCode === 401) {
-            vscode.window.showErrorMessage(
-                l10n.t("GitHub authentication token is invalid or expired. Please try again to re-authenticate."),
-            );
-        } else if (statusCode === 403) {
-            const openSettings = l10n.t("Open Repo Settings");
-            const selection = await vscode.window.showErrorMessage(
-                l10n.t(
-                    "You don't have permission to access {0}/{1}. Setting secrets requires admin or write access to the repository.",
-                    owner,
-                    repo,
-                ),
-                openSettings,
-            );
-            if (selection === openSettings) {
-                vscode.env.openExternal(vscode.Uri.parse(`https://github.com/${owner}/${repo}/settings/access`));
-            }
-        } else if (statusCode === 404) {
-            vscode.window.showErrorMessage(
-                l10n.t(
-                    "Repository {0}/{1} was not found. Please verify the repository exists and you have access to it.",
-                    owner,
-                    repo,
-                ),
-            );
-        } else {
-            logger.error("Failed to verify repository access", error);
-            vscode.window.showErrorMessage(
-                l10n.t("Unable to reach GitHub. Please check your internet connection and try again."),
-            );
-        }
-        return;
+        await handleReposGetError(error, owner, repo, showError, showSSOError);
+        return false;
     }
 
     // Step 3: Fetch the repo public key and set secrets
     try {
-        await vscode.window.withProgress(
+        const hasFailures = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
                 title: l10n.t("Setting GitHub Actions secrets"),
                 cancellable: false,
             },
-            async (progress) => {
+            async (progress): Promise<boolean> => {
                 progress.report({ message: l10n.t("Fetching repository public key...") });
 
                 let key: string;
@@ -606,6 +620,17 @@ export async function setGitHubActionsSecrets(
                     keyId = resp.data.key_id;
                 } catch (error: unknown) {
                     const statusCode = isOctokitError(error) ? error.status : undefined;
+                    const ssoUrl = statusCode === 403 ? getSAMLSSOUrl(error) : undefined;
+
+                    if (statusCode === 403 && ssoUrl) {
+                        throw new GitHubSecretsError(
+                            l10n.t(
+                                "This organization requires SAML SSO authorization to manage secrets. Please authorize your token and try again.",
+                            ),
+                            ssoUrl,
+                        );
+                    }
+
                     if (statusCode === 403) {
                         throw new GitHubSecretsError(
                             l10n.t(
@@ -615,7 +640,14 @@ export async function setGitHubActionsSecrets(
                             ),
                         );
                     }
-                    throw error;
+
+                    throw new GitHubSecretsError(
+                        l10n.t(
+                            "Failed to fetch the repository encryption key for {0}/{1}. Please check your connection and try again.",
+                            owner,
+                            repo,
+                        ),
+                    );
                 }
 
                 // Ensure libsodium is ready
@@ -632,7 +664,6 @@ export async function setGitHubActionsSecrets(
 
                     try {
                         const encryptedValue = encryptSecret(key, value);
-
                         await octokit.actions.createOrUpdateRepoSecret({
                             owner,
                             repo,
@@ -646,56 +677,131 @@ export async function setGitHubActionsSecrets(
                     }
                 }
 
-                if (failedSecrets.length > 0) {
-                    const succeeded = entries.length - failedSecrets.length;
-                    if (succeeded === 0) {
-                        throw new GitHubSecretsError(
-                            l10n.t(
-                                "Failed to set any secrets on {0}/{1}. Please check your repository permissions.",
-                                owner,
-                                repo,
-                            ),
-                        );
-                    } else {
-                        vscode.window.showWarningMessage(
-                            l10n.t(
-                                "Set {0}/{1} secrets successfully. Failed: {2}",
-                                succeeded,
-                                entries.length,
-                                failedSecrets.join(", "),
-                            ),
-                        );
-                        return;
-                    }
+                if (failedSecrets.length === 0) {
+                    return false; // no failures
                 }
+
+                const succeededCount = entries.length - failedSecrets.length;
+                if (succeededCount === 0) {
+                    throw new GitHubSecretsError(
+                        l10n.t(
+                            "Failed to set any secrets on {0}/{1}. Please check your repository permissions.",
+                            owner,
+                            repo,
+                        ),
+                    );
+                }
+
+                vscode.window.showWarningMessage(
+                    l10n.t(
+                        "Set {0}/{1} secrets successfully. Failed: {2}",
+                        succeededCount,
+                        entries.length,
+                        failedSecrets.join(", "),
+                    ),
+                );
+                return true; // had failures
             },
         );
+
+        if (hasFailures) {
+            return false;
+        }
 
         vscode.window.showInformationMessage(
             l10n.t("GitHub Actions secrets set successfully on {0}/{1}! Your workflow is ready to use.", owner, repo),
         );
+        return true;
     } catch (error) {
-        if (error instanceof GitHubSecretsError) {
-            vscode.window.showErrorMessage(error.message);
-        } else {
+        if (!(error instanceof GitHubSecretsError)) {
             logger.error("Failed to set GitHub Actions secrets", error);
-            vscode.window.showErrorMessage(
+            await showError(
                 l10n.t("Failed to set GitHub secrets: {0}", error instanceof Error ? error.message : String(error)),
             );
+            return false;
         }
+
+        if (error.ssoUrl) {
+            await showSSOError(error.message, error.ssoUrl);
+            return false;
+        }
+
+        await showError(error.message);
+        return false;
     }
 }
 
+/**
+ * Handles errors from octokit.repos.get() during the repo access check.
+ * Each error case shows a specific user-facing message and returns.
+ */
+async function handleReposGetError(
+    error: unknown,
+    owner: string,
+    repo: string,
+    showError: (message: string) => Promise<void>,
+    showSSOError: (message: string, ssoUrl: string) => Promise<void>,
+): Promise<void> {
+    const statusCode = isOctokitError(error) ? error.status : undefined;
+
+    if (statusCode === 401) {
+        await showError(
+            l10n.t("GitHub authentication token is invalid or expired. Please try again to re-authenticate."),
+        );
+        return;
+    }
+
+    if (statusCode === 403) {
+        const ssoUrl = getSAMLSSOUrl(error);
+        if (ssoUrl) {
+            await showSSOError(
+                l10n.t(
+                    "This organization requires SAML SSO. You must authorize your GitHub token for this organization before setting secrets.",
+                ),
+                ssoUrl,
+            );
+            return;
+        }
+
+        await showError(
+            l10n.t(
+                "You don't have permission to access {0}/{1}. Setting secrets requires admin or write access to the repository. Contact the repository admin to request access.",
+                owner,
+                repo,
+            ),
+        );
+        return;
+    }
+
+    if (statusCode === 404) {
+        await showError(
+            l10n.t(
+                "Repository {0}/{1} was not found. Please verify the repository exists and you have access to it.",
+                owner,
+                repo,
+            ),
+        );
+        return;
+    }
+
+    logger.error("Failed to verify repository access", error);
+    await showError(l10n.t("Unable to reach GitHub. Please check your internet connection and try again."));
+}
+
+// ─── Shared helpers ────────────────────────────────────────────────────────────
+
 /** Custom error class for GitHub secrets-specific errors with user-friendly messages */
-class GitHubSecretsError extends Error {
-    constructor(message: string) {
+export class GitHubSecretsError extends Error {
+    readonly ssoUrl?: string;
+    constructor(message: string, ssoUrl?: string) {
         super(message);
         this.name = "GitHubSecretsError";
+        this.ssoUrl = ssoUrl;
     }
 }
 
 /** Type guard to check if an error is an Octokit RequestError (has a status property) */
-function isOctokitError(error: unknown): error is { status: number; message: string } {
+export function isOctokitError(error: unknown): error is { status: number; message: string } {
     return (
         typeof error === "object" &&
         error !== null &&
@@ -705,10 +811,35 @@ function isOctokitError(error: unknown): error is { status: number; message: str
 }
 
 /**
+ * Extracts the SAML SSO authorization URL from an Octokit error, if present.
+ * GitHub returns a `X-GitHub-SSO` response header with format `required; url=<authorization_url>`
+ * when a token has not been authorized for an organization that enforces SAML SSO.
+ */
+export function getSAMLSSOUrl(error: unknown): string | undefined {
+    if (typeof error !== "object" || error === null || !("response" in error)) {
+        return undefined;
+    }
+
+    const response = (error as { response: unknown }).response;
+    if (typeof response !== "object" || response === null || !("headers" in response)) {
+        return undefined;
+    }
+
+    const headers = (response as { headers: Record<string, unknown> }).headers;
+    const ssoHeader = headers?.["x-github-sso"];
+    if (typeof ssoHeader !== "string" || !ssoHeader.startsWith("required;")) {
+        return undefined;
+    }
+
+    const match = ssoHeader.match(/url=(.+)$/);
+    return match?.[1];
+}
+
+/**
  * Encrypts a secret value using the repository's public key (NaCl sealed box).
  * GitHub requires secrets to be encrypted with the repo public key before being set.
  */
-function encryptSecret(publicKeyBase64: string, secretValue: string): string {
+export function encryptSecret(publicKeyBase64: string, secretValue: string): string {
     const publicKey = sodium.from_base64(publicKeyBase64, sodium.base64_variants.ORIGINAL);
     const messageBytes = sodium.from_string(secretValue);
     const encryptedBytes = sodium.crypto_box_seal(messageBytes, publicKey);
