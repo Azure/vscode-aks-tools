@@ -507,20 +507,88 @@ export async function setGitHubActionsSecrets(
     repo: string,
     secrets: Record<string, string>,
 ): Promise<void> {
+    // Step 1: Authenticate with GitHub
+    let session: vscode.AuthenticationSession;
     try {
-        // Authenticate via the VS Code GitHub extension
-        // Force a new session to ensure we have a fresh token with the right scopes
-        const session = await vscode.authentication.getSession("github", ["repo"], {
+        const result = await vscode.authentication.getSession("github", ["repo"], {
             forceNewSession: { detail: l10n.t("GitHub authentication is required to set repository secrets.") },
         });
 
-        if (!session) {
+        if (!result) {
             vscode.window.showWarningMessage(l10n.t("GitHub authentication was cancelled."));
             return;
         }
+        session = result;
+    } catch (error) {
+        logger.error("GitHub authentication failed", error);
+        vscode.window.showErrorMessage(
+            l10n.t("GitHub authentication failed. Please ensure the GitHub extension is installed and try again."),
+        );
+        return;
+    }
 
-        const octokit = new Octokit({ auth: `token ${session.accessToken}` });
+    const octokit = new Octokit({ auth: `token ${session.accessToken}` });
 
+    // Step 2: Verify the user has access to the repository
+    try {
+        const { data: repoData } = await octokit.repos.get({ owner, repo });
+
+        // Check permissions — need admin or push access to set secrets
+        const permissions = repoData.permissions;
+        if (permissions && !permissions.admin && !permissions.push) {
+            const contactAdmin = l10n.t("Contact Admin");
+            const selection = await vscode.window.showErrorMessage(
+                l10n.t(
+                    "You don't have write access to {0}/{1}. Setting repository secrets requires admin or write permissions.",
+                    owner,
+                    repo,
+                ),
+                contactAdmin,
+            );
+            if (selection === contactAdmin) {
+                vscode.env.openExternal(vscode.Uri.parse(`https://github.com/${owner}/${repo}/settings/access`));
+            }
+            return;
+        }
+    } catch (error: unknown) {
+        const statusCode = isOctokitError(error) ? error.status : undefined;
+
+        if (statusCode === 401) {
+            vscode.window.showErrorMessage(
+                l10n.t("GitHub authentication token is invalid or expired. Please try again to re-authenticate."),
+            );
+        } else if (statusCode === 403) {
+            const openSettings = l10n.t("Open Repo Settings");
+            const selection = await vscode.window.showErrorMessage(
+                l10n.t(
+                    "You don't have permission to access {0}/{1}. Setting secrets requires admin or write access to the repository.",
+                    owner,
+                    repo,
+                ),
+                openSettings,
+            );
+            if (selection === openSettings) {
+                vscode.env.openExternal(vscode.Uri.parse(`https://github.com/${owner}/${repo}/settings/access`));
+            }
+        } else if (statusCode === 404) {
+            vscode.window.showErrorMessage(
+                l10n.t(
+                    "Repository {0}/{1} was not found. Please verify the repository exists and you have access to it.",
+                    owner,
+                    repo,
+                ),
+            );
+        } else {
+            logger.error("Failed to verify repository access", error);
+            vscode.window.showErrorMessage(
+                l10n.t("Unable to reach GitHub. Please check your internet connection and try again."),
+            );
+        }
+        return;
+    }
+
+    // Step 3: Fetch the repo public key and set secrets
+    try {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -530,32 +598,75 @@ export async function setGitHubActionsSecrets(
             async (progress) => {
                 progress.report({ message: l10n.t("Fetching repository public key...") });
 
-                // Get the repo public key (required for encrypting secrets)
-                const {
-                    // eslint-disable-next-line @typescript-eslint/naming-convention
-                    data: { key, key_id },
-                } = await octokit.actions.getRepoPublicKey({ owner, repo });
+                let key: string;
+                let keyId: string;
+                try {
+                    const resp = await octokit.actions.getRepoPublicKey({ owner, repo });
+                    key = resp.data.key;
+                    keyId = resp.data.key_id;
+                } catch (error: unknown) {
+                    const statusCode = isOctokitError(error) ? error.status : undefined;
+                    if (statusCode === 403) {
+                        throw new GitHubSecretsError(
+                            l10n.t(
+                                "You don't have permission to manage secrets for {0}/{1}. This requires admin access to the repository.",
+                                owner,
+                                repo,
+                            ),
+                        );
+                    }
+                    throw error;
+                }
 
                 // Ensure libsodium is ready
                 await sodium.ready;
 
                 const entries = Object.entries(secrets);
+                const failedSecrets: string[] = [];
+
                 for (let i = 0; i < entries.length; i++) {
                     const [name, value] = entries[i];
                     progress.report({
                         message: l10n.t("Setting secret {0} ({1}/{2})...", name, i + 1, entries.length),
                     });
 
-                    // Encrypt the secret value using the repo public key
-                    const encryptedValue = encryptSecret(key, value);
+                    try {
+                        const encryptedValue = encryptSecret(key, value);
 
-                    await octokit.actions.createOrUpdateRepoSecret({
-                        owner,
-                        repo,
-                        secret_name: name,
-                        encrypted_value: encryptedValue,
-                        key_id,
-                    });
+                        await octokit.actions.createOrUpdateRepoSecret({
+                            owner,
+                            repo,
+                            secret_name: name,
+                            encrypted_value: encryptedValue,
+                            key_id: keyId,
+                        });
+                    } catch (error: unknown) {
+                        logger.error(`Failed to set secret ${name}`, error);
+                        failedSecrets.push(name);
+                    }
+                }
+
+                if (failedSecrets.length > 0) {
+                    const succeeded = entries.length - failedSecrets.length;
+                    if (succeeded === 0) {
+                        throw new GitHubSecretsError(
+                            l10n.t(
+                                "Failed to set any secrets on {0}/{1}. Please check your repository permissions.",
+                                owner,
+                                repo,
+                            ),
+                        );
+                    } else {
+                        vscode.window.showWarningMessage(
+                            l10n.t(
+                                "Set {0}/{1} secrets successfully. Failed: {2}",
+                                succeeded,
+                                entries.length,
+                                failedSecrets.join(", "),
+                            ),
+                        );
+                        return;
+                    }
                 }
             },
         );
@@ -564,11 +675,33 @@ export async function setGitHubActionsSecrets(
             l10n.t("GitHub Actions secrets set successfully on {0}/{1}! Your workflow is ready to use.", owner, repo),
         );
     } catch (error) {
-        logger.error("Failed to set GitHub Actions secrets", error);
-        vscode.window.showErrorMessage(
-            l10n.t("Failed to set GitHub secrets: {0}", error instanceof Error ? error.message : String(error)),
-        );
+        if (error instanceof GitHubSecretsError) {
+            vscode.window.showErrorMessage(error.message);
+        } else {
+            logger.error("Failed to set GitHub Actions secrets", error);
+            vscode.window.showErrorMessage(
+                l10n.t("Failed to set GitHub secrets: {0}", error instanceof Error ? error.message : String(error)),
+            );
+        }
     }
+}
+
+/** Custom error class for GitHub secrets-specific errors with user-friendly messages */
+class GitHubSecretsError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "GitHubSecretsError";
+    }
+}
+
+/** Type guard to check if an error is an Octokit RequestError (has a status property) */
+function isOctokitError(error: unknown): error is { status: number; message: string } {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        typeof (error as { status: unknown }).status === "number"
+    );
 }
 
 /**
