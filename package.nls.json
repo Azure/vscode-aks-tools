@@ -69,5 +69,8 @@
   "Run Retina Capture": "Run Retina Capture",
   "Troubleshoot Resource Utilization": "Troubleshoot Resource Utilization",
   "Investigate Block I/O": "Investigate Block I/O",
-  "Improve security of my cluster": "Improve security of my cluster"
+  "Improve security of my cluster": "Improve security of my cluster",
+  "Develop & Deploy": "Develop & Deploy",
+  "Troubleshoot & Diagnose": "Troubleshoot & Diagnose",
+  "Manage Cluster": "Manage Cluster"
 }
