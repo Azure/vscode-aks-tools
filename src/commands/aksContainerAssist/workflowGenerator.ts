@@ -67,7 +67,15 @@ async function collectWorkflowConfiguration(
     azureContext: AzureContext,
     hasBothActions: boolean,
 ): Promise<WorkflowConfig | undefined> {
-    const { clusterName, clusterResourceGroup, acrName, acrResourceGroup, namespace, workflowName } = azureContext;
+    const {
+        clusterName,
+        clusterResourceGroup,
+        acrName,
+        acrResourceGroup,
+        namespace,
+        isManagedNamespace,
+        workflowName,
+    } = azureContext;
     if (!clusterName || !clusterResourceGroup || !namespace || !workflowName) {
         logger.error("collectWorkflowConfiguration called with incomplete Azure context");
         return undefined;
@@ -130,6 +138,7 @@ async function collectWorkflowConfiguration(
         clusterResourceGroup,
         deploymentManifestPath: manifestPath,
         namespace,
+        isManagedNamespace: isManagedNamespace ?? false,
     };
 }
 

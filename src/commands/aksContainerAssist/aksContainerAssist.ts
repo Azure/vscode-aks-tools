@@ -8,9 +8,9 @@ import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
 import { generateGitHubWorkflow } from "./workflowGenerator";
-import { stageFilesAndCreatePR, isGitExtensionAvailable, isGitHubExtensionAvailable } from "./gitHubIntegration";
-import { setupOIDCForGitHub } from "./oidcSetup";
+
 import { collectAzureContext, AzureContext } from "./azureSelections";
+import { showPostGenerationOptions } from "./postGenerationFlow";
 
 async function promptForModelChoice(): Promise<boolean | undefined> {
     const useDefault = l10n.t("Use Default Model");
@@ -294,6 +294,7 @@ async function generateDeploymentFiles(
                     targetPath,
                     appName,
                     acrLoginServer,
+                    azureContext.namespace,
                     abortController.signal,
                     token,
                     showModelPicker ?? false,
@@ -384,138 +385,4 @@ async function generateWorkflowFile(
     await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true);
 
     return { workflowPath };
-}
-
-async function showPostGenerationOptions(
-    generatedFiles: string[],
-    workspaceFolder: vscode.WorkspaceFolder,
-    appName: string,
-    includeOIDC: boolean,
-): Promise<void> {
-    const openFiles = l10n.t("Open Files");
-    const addToGit = l10n.t("Add to Git & Create PR");
-
-    // Check if workflow files were generated
-    const hasWorkflowFile = generatedFiles.some((file) => file.includes(".github/workflows/"));
-
-    let message: string;
-    const options = [openFiles, addToGit];
-
-    // Only show OIDC option if workflow was generated
-    if (includeOIDC && hasWorkflowFile) {
-        message = l10n.t(
-            "Generated {0} files including GitHub workflow! Do you wish to setup OIDC for GitHub Actions?",
-            generatedFiles.length,
-        );
-        const setupOIDC = l10n.t("🔐 Setup OIDC Authentication");
-        const setSecrets = l10n.t("🔑 Set GitHub Actions Secrets");
-        const learnMore = l10n.t("📖 Learn More About OIDC");
-
-        // Insert OIDC options at the beginning for prominence
-        options.unshift(setupOIDC);
-        options.push(setSecrets);
-        options.push(learnMore);
-
-        const selection = await vscode.window.showInformationMessage(
-            message,
-            {
-                modal: true, // Make it modal to ensure users see the OIDC requirement
-                detail: l10n.t(
-                    "Your GitHub workflow needs OIDC authentication to deploy to Azure. Without it, the workflow will fail when trying to authenticate with Azure.",
-                ),
-            },
-            ...options,
-        );
-
-        if (selection === setupOIDC) {
-            await setupOIDCForGitHub(workspaceFolder, appName);
-        } else if (selection === setSecrets) {
-            await vscode.commands.executeCommand("aks.setGitHubActionsSecrets");
-        } else if (selection === learnMore) {
-            vscode.env.openExternal(
-                vscode.Uri.parse(
-                    "https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure",
-                ),
-            );
-        } else if (selection === openFiles) {
-            await openGeneratedFiles(generatedFiles);
-        } else if (selection === addToGit) {
-            await handleGitHubIntegration(generatedFiles, workspaceFolder, appName);
-        }
-    } else if (includeOIDC) {
-        // Workflow generated but not detected in file list
-        message = l10n.t("Successfully generated {0} files", generatedFiles.length);
-        const setupOIDC = l10n.t("Setup OIDC for GitHub");
-        options.push(setupOIDC);
-
-        const selection = await vscode.window.showInformationMessage(message, ...options);
-        if (selection === openFiles) {
-            await openGeneratedFiles(generatedFiles);
-        } else if (selection === addToGit) {
-            await handleGitHubIntegration(generatedFiles, workspaceFolder, appName);
-        } else if (selection === setupOIDC) {
-            await setupOIDCForGitHub(workspaceFolder, appName);
-        }
-    } else {
-        message = l10n.t("Successfully generated {0} deployment files", generatedFiles.length);
-        const selection = await vscode.window.showInformationMessage(message, ...options);
-        if (selection === openFiles) {
-            await openGeneratedFiles(generatedFiles);
-        } else if (selection === addToGit) {
-            await handleGitHubIntegration(generatedFiles, workspaceFolder, appName);
-        }
-    }
-}
-
-async function openGeneratedFiles(files: string[]): Promise<void> {
-    for (const file of files) {
-        try {
-            const doc = await vscode.workspace.openTextDocument(file);
-            await vscode.window.showTextDocument(doc, { preview: false });
-        } catch (error) {
-            logger.error(`Failed to open file: ${file}`, error);
-        }
-    }
-}
-
-async function handleGitHubIntegration(
-    generatedFiles: string[],
-    workspaceFolder: vscode.WorkspaceFolder,
-    appName: string,
-): Promise<void> {
-    // Check if Git extension is available
-    const hasGit = await isGitExtensionAvailable();
-    if (!hasGit) {
-        const message = l10n.t(
-            "Git extension is required for this feature. Please install or enable the Git extension.",
-        );
-        vscode.window.showWarningMessage(message);
-        logger.warn(message);
-        return;
-    }
-
-    // Check configuration
-    const config = vscode.workspace.getConfiguration("aks.containerAssist");
-    const enableGitHubIntegration = config.get<boolean>("enableGitHubIntegration", true);
-
-    if (!enableGitHubIntegration) {
-        vscode.window.showInformationMessage(
-            l10n.t(
-                'GitHub integration is disabled. Enable it in settings: "aks.containerAssist.enableGitHubIntegration"',
-            ),
-        );
-        return;
-    }
-
-    // Warn if GitHub extension is not available
-    const hasGitHub = await isGitHubExtensionAvailable();
-    if (!hasGitHub) {
-        const message = l10n.t(
-            "GitHub Pull Requests extension is recommended for creating PRs. Files will be staged, but you'll need to create the PR manually.",
-        );
-        logger.warn(message);
-        // Continue anyway - we can still stage files
-    }
-
-    await stageFilesAndCreatePR(generatedFiles, workspaceFolder.uri, appName);
 }
