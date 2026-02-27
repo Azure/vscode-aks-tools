@@ -441,6 +441,10 @@
             {
                 "command": "aks.setupOIDCForGitHub",
                 "title": "AKS: Setup OIDC for GitHub Actions"
+            },
+            {
+                "command": "aks.setGitHubActionsSecrets",
+                "title": "AKS: Set GitHub Actions Secrets"
             }
         ],
         "menus": {
@@ -463,6 +467,10 @@
                 },
                 {
                     "command": "aks.setupOIDCForGitHub",
+                    "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.setGitHubActionsSecrets",
                     "when": "workspaceFolderCount >= 1"
                 }
             ],
@@ -822,6 +830,7 @@
         "@types/chai": "^5.2.3",
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
+        "@types/libsodium-wrappers": "^0.7.14",
         "@types/mocha": "^10.0.10",
         "@types/node": "^25.3.0",
         "@types/semver": "^7.7.1",
@@ -884,6 +893,7 @@
         "containerization-assist-mcp": "^1.2.0",
         "decompress": "^4.2.1",
         "js-yaml": "^4.1.1",
+        "libsodium-wrappers": "^0.8.2",
         "move-file": "^4.1.0",
         "node-fetch": "^3.3.2",
         "rxjs": "^7.8.2",

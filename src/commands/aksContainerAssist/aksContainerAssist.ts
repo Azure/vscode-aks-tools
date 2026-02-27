@@ -408,10 +408,12 @@ async function showPostGenerationOptions(
             generatedFiles.length,
         );
         const setupOIDC = l10n.t("🔐 Setup OIDC Authentication");
+        const setSecrets = l10n.t("🔑 Set GitHub Actions Secrets");
         const learnMore = l10n.t("📖 Learn More About OIDC");
 
         // Insert OIDC options at the beginning for prominence
         options.unshift(setupOIDC);
+        options.push(setSecrets);
         options.push(learnMore);
 
         const selection = await vscode.window.showInformationMessage(
@@ -427,6 +429,8 @@ async function showPostGenerationOptions(
 
         if (selection === setupOIDC) {
             await setupOIDCForGitHub(workspaceFolder, appName);
+        } else if (selection === setSecrets) {
+            await vscode.commands.executeCommand("aks.setGitHubActionsSecrets");
         } else if (selection === learnMore) {
             vscode.env.openExternal(
                 vscode.Uri.parse(

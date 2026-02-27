@@ -3,6 +3,8 @@ import * as l10n from "@vscode/l10n";
 import { ManagedServiceIdentityClient } from "@azure/arm-msi";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { ResourceManagementClient } from "@azure/arm-resources";
+import { Octokit } from "@octokit/rest";
+import sodium from "libsodium-wrappers";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
 import { isReady } from "../../auth/types";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
@@ -88,7 +90,7 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
 
                 progress.report({ message: l10n.t("Assigning role permissions...") });
 
-                await assignContributorRole(
+                await assignAksClusterUserRole(
                     credential,
                     azureConfig.subscriptionId,
                     azureConfig.resourceGroup,
@@ -116,7 +118,7 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
         );
 
         // Display the results
-        await displayOIDCResults(result);
+        await displayOIDCResults(result, repoInfo);
     } catch (error) {
         logger.error("Error during OIDC setup", error);
         vscode.window.showErrorMessage(
@@ -125,7 +127,7 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
     }
 }
 
-async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder): Promise<{
+export async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder): Promise<{
     owner: string;
     repo: string;
     branch: string;
@@ -417,23 +419,24 @@ async function getManagedIdentity(
     }
 }
 
-async function assignContributorRole(
+async function assignAksClusterUserRole(
     credential: TokenCredential,
     subscriptionId: string,
     resourceGroup: string,
     principalId: string,
 ): Promise<void> {
     const authClient = new AuthorizationManagementClient(credential, subscriptionId);
-
+    // documentation official here https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
     const scope = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}`;
-    const contributorRoleId = `/subscriptions/${subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c`;
+    // Azure Kubernetes Service Cluster User Role
+    const aksClusterUserRoleId = `/subscriptions/${subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/4abbcc35-e782-43d8-92c5-2d3f1bd2253f`;
 
     // Generate a GUID for the role assignment
     const roleAssignmentName = randomUUID();
 
     try {
         await authClient.roleAssignments.create(scope, roleAssignmentName, {
-            roleDefinitionId: contributorRoleId,
+            roleDefinitionId: aksClusterUserRoleId,
             principalId: principalId,
             principalType: "ServicePrincipal",
         });
@@ -466,10 +469,11 @@ async function createFederatedCredential(
     });
 }
 
-async function displayOIDCResults(result: OIDCSetupResult): Promise<void> {
+async function displayOIDCResults(result: OIDCSetupResult, repoInfo: { owner: string; repo: string }): Promise<void> {
     // Show success information to user
     const message = l10n.t("OIDC setup completed successfully! Your federated identity is ready for GitHub Actions.");
     const copyAll = l10n.t("Copy GitHub Secrets");
+    const setSecrets = l10n.t("Set GitHub Secrets");
     const viewInstructions = l10n.t("View Output");
 
     const secretsText = `AZURE_CLIENT_ID: ${result.clientId}
@@ -478,12 +482,102 @@ AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
 
     // Show in output channel with detailed info
 
-    const selection = await vscode.window.showInformationMessage(message, copyAll, viewInstructions);
+    const selection = await vscode.window.showInformationMessage(message, copyAll, setSecrets, viewInstructions);
 
     if (selection === copyAll) {
         await vscode.env.clipboard.writeText(secretsText);
         vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
+    } else if (selection === setSecrets) {
+        await setGitHubActionsSecrets(repoInfo.owner, repoInfo.repo, {
+            AZURE_CLIENT_ID: result.clientId,
+            AZURE_TENANT_ID: result.tenantId,
+            AZURE_SUBSCRIPTION_ID: result.subscriptionId,
+        });
     } else if (selection === viewInstructions) {
         logger.show();
     }
+}
+
+/**
+ * Authenticates with GitHub using the VS Code GitHub authentication extension
+ * and sets repository secrets for GitHub Actions via the Octokit API.
+ */
+export async function setGitHubActionsSecrets(
+    owner: string,
+    repo: string,
+    secrets: Record<string, string>,
+): Promise<void> {
+    try {
+        // Authenticate via the VS Code GitHub extension
+        // Force a new session to ensure we have a fresh token with the right scopes
+        const session = await vscode.authentication.getSession("github", ["repo"], {
+            forceNewSession: { detail: l10n.t("GitHub authentication is required to set repository secrets.") },
+        });
+
+        if (!session) {
+            vscode.window.showWarningMessage(l10n.t("GitHub authentication was cancelled."));
+            return;
+        }
+
+        const octokit = new Octokit({ auth: `token ${session.accessToken}` });
+
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: l10n.t("Setting GitHub Actions secrets"),
+                cancellable: false,
+            },
+            async (progress) => {
+                progress.report({ message: l10n.t("Fetching repository public key...") });
+
+                // Get the repo public key (required for encrypting secrets)
+                const {
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
+                    data: { key, key_id },
+                } = await octokit.actions.getRepoPublicKey({ owner, repo });
+
+                // Ensure libsodium is ready
+                await sodium.ready;
+
+                const entries = Object.entries(secrets);
+                for (let i = 0; i < entries.length; i++) {
+                    const [name, value] = entries[i];
+                    progress.report({
+                        message: l10n.t("Setting secret {0} ({1}/{2})...", name, i + 1, entries.length),
+                    });
+
+                    // Encrypt the secret value using the repo public key
+                    const encryptedValue = encryptSecret(key, value);
+
+                    await octokit.actions.createOrUpdateRepoSecret({
+                        owner,
+                        repo,
+                        secret_name: name,
+                        encrypted_value: encryptedValue,
+                        key_id,
+                    });
+                }
+            },
+        );
+
+        vscode.window.showInformationMessage(
+            l10n.t("GitHub Actions secrets set successfully on {0}/{1}! Your workflow is ready to use.", owner, repo),
+        );
+    } catch (error) {
+        logger.error("Failed to set GitHub Actions secrets", error);
+        vscode.window.showErrorMessage(
+            l10n.t("Failed to set GitHub secrets: {0}", error instanceof Error ? error.message : String(error)),
+        );
+    }
+}
+
+/**
+ * Encrypts a secret value using the repository's public key (NaCl sealed box).
+ * GitHub requires secrets to be encrypted with the repo public key before being set.
+ */
+function encryptSecret(publicKeyBase64: string, secretValue: string): string {
+    const publicKey = sodium.from_base64(publicKeyBase64, sodium.base64_variants.ORIGINAL);
+    const messageBytes = sodium.from_string(secretValue);
+    const encryptedBytes = sodium.crypto_box_seal(messageBytes, publicKey);
+    return sodium.to_base64(encryptedBytes, sodium.base64_variants.ORIGINAL);
 }
