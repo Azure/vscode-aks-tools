@@ -467,11 +467,11 @@
                 },
                 {
                     "command": "aks.setupOIDCForGitHub",
-                    "when": "workspaceFolderCount >= 1"
+                    "when": "workspaceFolderCount >= 1 && config.aks.containerAssistEnabledPreview"
                 },
                 {
                     "command": "aks.setGitHubActionsSecrets",
-                    "when": "workspaceFolderCount >= 1"
+                    "when": "workspaceFolderCount >= 1 && config.aks.containerAssistEnabledPreview"
                 }
             ],
             "explorer/context": [
