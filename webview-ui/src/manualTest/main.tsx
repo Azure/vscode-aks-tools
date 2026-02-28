@@ -17,7 +17,6 @@ import { getKaitoModelScenarios } from "./kaitoModelTests";
 import { getKaitoManageScenarios } from "./kaitoManageTests";
 import { getKaitoTestScenarios } from "./kaitoTestTests";
 import { getKubectlScenarios } from "./kubectlTests";
-import { getPeriscopeScenarios } from "./periscopeTests";
 import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
 import { getTCPDumpScenarios } from "./tcpDumpTests";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
@@ -43,7 +42,6 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     clusterProperties: getClusterPropertiesScenarios(),
     attachAcrToCluster: getAttachAcrToClusterScenarios(),
     createCluster: getCreateClusterScenarios(),
-    periscope: getPeriscopeScenarios(),
     detector: getDetectorScenarios(),
     draftDeployment: getDraftDeploymentScenarios(),
     draftDockerfile: getDraftDockerfileScenarios(),

@@ -50,7 +50,6 @@ import {
     aksStorageDiagnostics,
 } from "./commands/detectors/detectors";
 import { draftValidate, draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
-import periscope from "./commands/periscope/periscope";
 import refreshSubscription from "./commands/refreshSubscriptions";
 import { getKubeconfigYaml, getManagedCluster } from "./commands/utils/clusters";
 import { failed } from "./commands/utils/errorable";
@@ -111,7 +110,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectTenant", selectTenant);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
-        registerCommandWithTelemetry("aks.periscope", periscope);
         registerCommandWithTelemetry("aks.installAzureServiceOperator", installAzureServiceOperator);
         registerCommandWithTelemetry("aks.aksCRUDDiagnostics", aksCRUDDiagnostics);
         registerCommandWithTelemetry("aks.aksBestPracticesDiagnostics", aksBestPracticesDiagnostics);
