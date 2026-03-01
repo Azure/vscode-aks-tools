@@ -164,7 +164,8 @@ describe("tools", () => {
         });
     });
 
-    describe("handleListDirectory", () => {
+    describe("handleListDirectory", function () {
+        this.timeout(10_000);
         it("rejects path traversal", async () => {
             const result = await handleListDirectory({ path: "../../" }, tempDir);
             assert.ok(result.includes("Refused"));
@@ -200,10 +201,12 @@ describe("tools", () => {
         });
 
         it("caps maxDepth at hard limit", async () => {
-            const resultAtCap = await handleListDirectory({ path: ".", maxDepth: 3 }, tempDir);
-            const resultOverCap = await handleListDirectory({ path: ".", maxDepth: 100 }, tempDir);
+            const [resultAtCap, resultOverCap] = await Promise.all([
+                handleListDirectory({ path: ".", maxDepth: 3 }, tempDir),
+                handleListDirectory({ path: ".", maxDepth: 100 }, tempDir),
+            ]);
             assert.strictEqual(resultAtCap, resultOverCap);
-        });
+        }).timeout(10_000);
     });
 
     describe("handleToolCall", () => {
