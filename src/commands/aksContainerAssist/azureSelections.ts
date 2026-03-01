@@ -528,3 +528,60 @@ export async function collectAzureContext(
         workflowName,
     };
 }
+
+/**
+ * Collects Azure context when invoked from the AKS cluster tree.
+ * Subscription and cluster are already known from the tree node, so we skip those prompts.
+ * Only prompts for ACR, namespace (if workflow), and workflow name (if workflow).
+ */
+export async function collectAzureContextFromTree(
+    subscriptionId: string,
+    clusterName: string,
+    clusterResourceGroup: string,
+    hasWorkflow: boolean,
+    projectRoot: string,
+): Promise<AzureContext | undefined> {
+    const sessionProvider = await authenticateAzure();
+    if (!sessionProvider) return undefined;
+
+    const cluster: Cluster = {
+        name: clusterName,
+        clusterId: `/subscriptions/${subscriptionId}/resourceGroups/${clusterResourceGroup}/providers/Microsoft.ContainerService/managedClusters/${clusterName}`,
+        resourceGroup: clusterResourceGroup,
+        subscriptionId,
+    };
+
+    // Deployment only: need only ACR (subscription already known)
+    if (!hasWorkflow) {
+        const acr = await selectAcr(sessionProvider, subscriptionId);
+        if (!acr) return undefined;
+
+        return {
+            acrName: acr.name,
+            acrResourceGroup: acr.resourceGroup,
+            clusterName: cluster.name,
+            clusterResourceGroup: cluster.resourceGroup,
+        };
+    }
+
+    // Workflow: need ACR, namespace, workflow name — cluster is already known
+    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
+    if (!acr) return undefined;
+
+    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster);
+    if (!namespaceSelection) return undefined;
+    logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
+
+    const workflowName = await promptForWorkflowName(path.basename(projectRoot));
+    if (!workflowName) return undefined;
+
+    return {
+        acrName: acr.name,
+        acrResourceGroup: acr.resourceGroup,
+        clusterName: cluster.name,
+        clusterResourceGroup: cluster.resourceGroup,
+        namespace: namespaceSelection.name,
+        isManagedNamespace: namespaceSelection.isManaged,
+        workflowName,
+    };
+}

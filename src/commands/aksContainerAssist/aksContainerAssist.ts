@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ContainerAssistService } from "./containerAssistService";
 import { ContainerAssistAction, ContainerAssistQuickPickItem } from "./types";
@@ -9,8 +10,9 @@ import { promises as fs } from "fs";
 import { logger } from "./logger";
 import { generateGitHubWorkflow } from "./workflowGenerator";
 
-import { collectAzureContext, AzureContext } from "./azureSelections";
+import { collectAzureContext, collectAzureContextFromTree, AzureContext } from "./azureSelections";
 import { showPostGenerationOptions } from "./postGenerationFlow";
+import { getAksClusterTreeNode } from "../utils/clusters";
 
 async function promptForModelChoice(): Promise<boolean | undefined> {
     const useDefault = l10n.t("Use Default Model");
@@ -127,6 +129,132 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             l10n.t("Container Assist error: {0}", error instanceof Error ? error.message : String(error)),
         );
     }
+}
+
+/**
+ * Runs Container Assist from the AKS cluster tree context menu.
+ * Subscription and cluster are extracted from the tree node, so the user
+ * is NOT prompted for those — only ACR, namespace, and workflow name are asked.
+ */
+export async function runContainerAssistFromTree(_context: IActionContext, target: unknown): Promise<void> {
+    try {
+        logger.debug("Container Assist from tree, target", target);
+
+        // Step 1: Resolve the cluster tree node
+        const cloudExplorer = await k8s.extension.cloudExplorer.v1;
+        const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
+        if (failed(clusterNode)) {
+            vscode.window.showErrorMessage(clusterNode.error);
+            return;
+        }
+
+        const { subscriptionId, resourceGroupName, name: clusterName } = clusterNode.result;
+        logger.debug("Cluster from tree", { subscriptionId, resourceGroupName, clusterName });
+
+        // Step 2: Determine workspace folder / project root
+        const workspaceFolder = await pickWorkspaceFolder();
+        if (!workspaceFolder) return;
+
+        const projectRoot = await findProjectRoot(workspaceFolder.uri.fsPath, workspaceFolder.uri.fsPath);
+
+        // Step 3: Check availability
+        const containerAssistService = new ContainerAssistService();
+        const availabilityCheck = await containerAssistService.isAvailable();
+        if (failed(availabilityCheck)) {
+            logger.warn(`Not available: ${availabilityCheck.error}`);
+            vscode.window.showErrorMessage(availabilityCheck.error);
+            return;
+        }
+
+        // Step 4: Let user choose actions (deployment files, workflow, or both)
+        const selectedActions = await showContainerAssistQuickPick();
+        if (!selectedActions || selectedActions.length === 0) return;
+
+        const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
+        const hasWorkflow = selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
+        const hasBothActions = hasDeployment && hasWorkflow;
+
+        let showModelPicker: boolean | undefined;
+        if (hasDeployment) {
+            showModelPicker = await promptForModelChoice();
+            if (showModelPicker === undefined) return;
+        }
+
+        // Step 5: Collect Azure context — subscription and cluster are pre-filled from tree
+        const azureContext = await collectAzureContextFromTree(
+            subscriptionId,
+            clusterName,
+            resourceGroupName,
+            hasWorkflow,
+            projectRoot,
+        );
+        if (!azureContext) return;
+
+        // Step 6: Execute selected actions (reuse existing processing logic)
+        const generatedFiles: string[] = [];
+        let workflowPath: string | undefined;
+
+        for (const action of selectedActions) {
+            const result = await processContainerAssistAction(
+                action,
+                containerAssistService,
+                workspaceFolder,
+                projectRoot,
+                hasBothActions,
+                azureContext,
+                showModelPicker,
+            );
+
+            if (result) {
+                if (action === ContainerAssistAction.GenerateDeployment && result.deploymentFiles) {
+                    generatedFiles.push(...result.deploymentFiles);
+                } else if (action === ContainerAssistAction.GenerateWorkflow && result.workflowPath) {
+                    workflowPath = result.workflowPath;
+                }
+            }
+        }
+
+        if (hasBothActions) {
+            const allFiles = [...generatedFiles];
+            if (workflowPath) {
+                allFiles.push(workflowPath);
+            }
+            await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
+        }
+    } catch (error) {
+        logger.error("Unexpected error in Container Assist (from tree)", error);
+        vscode.window.showErrorMessage(
+            l10n.t("Container Assist error: {0}", error instanceof Error ? error.message : String(error)),
+        );
+    }
+}
+
+/**
+ * Prompts the user to pick a workspace folder if multiple are open,
+ * or uses the single workspace folder automatically.
+ */
+async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        vscode.window.showErrorMessage(
+            l10n.t("No workspace folder found. Please open a folder to use Container Assist."),
+        );
+        return undefined;
+    }
+
+    if (folders.length === 1) {
+        return folders[0];
+    }
+
+    const picked = await vscode.window.showWorkspaceFolderPick({
+        placeHolder: l10n.t("Select workspace folder for Container Assist"),
+    });
+
+    if (!picked) {
+        return undefined;
+    }
+
+    return picked;
 }
 
 function getTargetUri(target: unknown): vscode.Uri | undefined {
