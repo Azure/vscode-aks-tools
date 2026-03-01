@@ -415,15 +415,19 @@
             },
             {
                 "command": "aks.runContainerAssist",
-                "title": "AKS: Run Container Assist For AKS Deployment Generation"
+                "title": "AKS: Run Container Assist For AKS Deployment Generation (Preview)"
+            },
+            {
+                "command": "aks.runContainerAssistFromTree",
+                "title": "AKS: Run Container Assist (Preview)"
             },
             {
                 "command": "aks.setupOIDCForGitHub",
-                "title": "AKS: Setup OIDC for GitHub Actions"
+                "title": "AKS: Setup OIDC for GitHub Actions (Preview)"
             },
             {
                 "command": "aks.setGitHubActionsSecrets",
-                "title": "AKS: Set GitHub Actions Secrets"
+                "title": "AKS: Set GitHub Actions Secrets (Preview)"
             }
         ],
         "menus": {
@@ -451,9 +455,18 @@
                 {
                     "command": "aks.setGitHubActionsSecrets",
                     "when": "workspaceFolderCount >= 1 && config.aks.containerAssistEnabledPreview"
+                },
+                {
+                    "command": "aks.runContainerAssistFromTree",
+                    "when": "workspaceFolderCount >= 1 && config.aks.containerAssistEnabledPreview"
                 }
             ],
             "explorer/context": [
+                {
+                    "command": "aks.runContainerAssist",
+                    "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
+                    "group": "2_workspace@10"
+                },
                 {
                     "command": "aks.draftDockerfile",
                     "when": "explorerResourceIsFolder"
@@ -469,10 +482,6 @@
                 {
                     "command": "aks.aksDraftValidate",
                     "when": "explorerResourceIsFolder"
-                },
-                {
-                    "command": "aks.runContainerAssist",
-                    "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview"
                 }
             ],
             "view/item/context": [
@@ -512,6 +521,11 @@
                     "group": "8@1"
                 },
 
+                {
+                    "command": "aks.runContainerAssistFromTree",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure && config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1",
+                    "group": "8@2"
+                },
                 {
                     "command": "aks.eraserTool",
                     "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)",
@@ -739,6 +753,11 @@
                 {
                     "command": "aks.aksRunKubectlCommands",
                     "group": "1_developer@1"
+                },
+                {
+                    "command": "aks.runContainerAssistFromTree",
+                    "group": "1_developer@2",
+                    "when": "config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1"
                 },
                 {
                     "command": "aks.attachAcrToCluster",
