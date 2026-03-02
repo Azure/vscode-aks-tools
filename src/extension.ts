@@ -70,7 +70,7 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import * as fs from "fs";
 import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
-import { runContainerAssist } from "./commands/aksContainerAssist/aksContainerAssist";
+import { runContainerAssist, runContainerAssistFromTree } from "./commands/aksContainerAssist/aksContainerAssist";
 import {
     setupOIDCForGitHub,
     setGitHubActionsSecrets,
@@ -163,6 +163,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
         registerCommandWithTelemetry("aks.aksSetupMCPServerCommands", addMcpServerToUserSettings);
         registerCommandWithTelemetry("aks.runContainerAssist", runContainerAssist);
+        registerCommandWithTelemetry("aks.runContainerAssistFromTree", runContainerAssistFromTree);
         registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
