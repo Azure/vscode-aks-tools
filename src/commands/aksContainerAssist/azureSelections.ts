@@ -213,7 +213,7 @@ export async function selectClusterNamespace(
             label: ns.name,
             description:
                 ns.labels?.["headlamp.dev/project-managed-by"] === "aks-desktop"
-                    ? l10n.t("aks desktop project: {0}", ns.name)
+                    ? l10n.t("(AKS desktop Project: {0})", ns.name)
                     : undefined,
             isManaged: ns.type === "managed",
         }));
@@ -409,7 +409,7 @@ export async function authenticateAzure(): Promise<ReadyAzureSessionProvider | u
 export async function promptForWorkflowName(appName: string): Promise<string | undefined> {
     const defaultWorkflowName = `deploy-${appName}-to-aks`;
     const workflowName = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter workflow name"),
+        prompt: l10n.t("Enter workflow/pipeline name"),
         placeHolder: defaultWorkflowName,
         value: defaultWorkflowName,
         validateInput: (value) => {
