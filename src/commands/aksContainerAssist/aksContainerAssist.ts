@@ -72,57 +72,9 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
 
         const projectRoot = await findProjectRoot(startPath, workspaceFolder.uri.fsPath);
 
-        const selectedActions = await showContainerAssistQuickPick();
-        if (!selectedActions || selectedActions.length === 0) {
-            return;
-        }
-
-        // Determine which actions are selected
-        const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
-        const hasWorkflow = selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
-        const hasBothActions = hasDeployment && hasWorkflow;
-
-        let showModelPicker: boolean | undefined;
-        if (hasDeployment) {
-            showModelPicker = await promptForModelChoice();
-            if (showModelPicker === undefined) return;
-        }
-
-        // Collect Azure context upfront for all actions
-        const azureContext = await collectAzureContext(hasWorkflow, projectRoot);
-        if (!azureContext) return;
-
-        const generatedFiles: string[] = [];
-        let workflowPath: string | undefined;
-
-        for (const action of selectedActions) {
-            const result = await processContainerAssistAction(
-                action,
-                containerAssistService,
-                workspaceFolder,
-                projectRoot,
-                hasBothActions,
-                azureContext,
-                showModelPicker,
-            );
-
-            if (result) {
-                if (action === ContainerAssistAction.GenerateDeployment && result.deploymentFiles) {
-                    generatedFiles.push(...result.deploymentFiles);
-                } else if (action === ContainerAssistAction.GenerateWorkflow && result.workflowPath) {
-                    workflowPath = result.workflowPath;
-                }
-            }
-        }
-
-        // Show post-generation options once when both actions completed
-        if (hasBothActions) {
-            const allFiles = [...generatedFiles];
-            if (workflowPath) {
-                allFiles.push(workflowPath);
-            }
-            await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
-        }
+        await executeContainerAssistActions(containerAssistService, workspaceFolder, projectRoot, (hasWorkflow) =>
+            collectAzureContext(hasWorkflow, projectRoot),
+        );
     } catch (error) {
         logger.error("Unexpected error in Container Assist", error);
         vscode.window.showErrorMessage(
@@ -166,61 +118,10 @@ export async function runContainerAssistFromTree(_context: IActionContext, targe
             return;
         }
 
-        // Step 4: Let user choose actions (deployment files, workflow, or both)
-        const selectedActions = await showContainerAssistQuickPick();
-        if (!selectedActions || selectedActions.length === 0) return;
-
-        const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
-        const hasWorkflow = selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
-        const hasBothActions = hasDeployment && hasWorkflow;
-
-        let showModelPicker: boolean | undefined;
-        if (hasDeployment) {
-            showModelPicker = await promptForModelChoice();
-            if (showModelPicker === undefined) return;
-        }
-
-        // Step 5: Collect Azure context — subscription and cluster are pre-filled from tree
-        const azureContext = await collectAzureContextFromTree(
-            subscriptionId,
-            clusterName,
-            resourceGroupName,
-            hasWorkflow,
-            projectRoot,
+        // Step 4: Execute shared action selection & processing logic
+        await executeContainerAssistActions(containerAssistService, workspaceFolder, projectRoot, (hasWorkflow) =>
+            collectAzureContextFromTree(subscriptionId, clusterName, resourceGroupName, hasWorkflow, projectRoot),
         );
-        if (!azureContext) return;
-
-        // Step 6: Execute selected actions (reuse existing processing logic)
-        const generatedFiles: string[] = [];
-        let workflowPath: string | undefined;
-
-        for (const action of selectedActions) {
-            const result = await processContainerAssistAction(
-                action,
-                containerAssistService,
-                workspaceFolder,
-                projectRoot,
-                hasBothActions,
-                azureContext,
-                showModelPicker,
-            );
-
-            if (result) {
-                if (action === ContainerAssistAction.GenerateDeployment && result.deploymentFiles) {
-                    generatedFiles.push(...result.deploymentFiles);
-                } else if (action === ContainerAssistAction.GenerateWorkflow && result.workflowPath) {
-                    workflowPath = result.workflowPath;
-                }
-            }
-        }
-
-        if (hasBothActions) {
-            const allFiles = [...generatedFiles];
-            if (workflowPath) {
-                allFiles.push(workflowPath);
-            }
-            await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
-        }
     } catch (error) {
         logger.error("Unexpected error in Container Assist (from tree)", error);
         vscode.window.showErrorMessage(
@@ -353,6 +254,67 @@ async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] |
     }
 
     return selected.map((item) => item.action);
+}
+
+/**
+ * Shared logic for both runContainerAssist and runContainerAssistFromTree.
+ * Handles action selection (QuickPick), model picker, Azure context collection,
+ * action processing, and post-generation options.
+ */
+async function executeContainerAssistActions(
+    containerAssistService: ContainerAssistService,
+    workspaceFolder: vscode.WorkspaceFolder,
+    projectRoot: string,
+    azureContextProvider: (hasWorkflow: boolean) => Promise<AzureContext | undefined>,
+): Promise<void> {
+    const selectedActions = await showContainerAssistQuickPick();
+    if (!selectedActions || selectedActions.length === 0) {
+        return;
+    }
+
+    const hasDeployment = selectedActions.includes(ContainerAssistAction.GenerateDeployment);
+    const hasWorkflow = selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
+    const hasBothActions = hasDeployment && hasWorkflow;
+
+    let showModelPicker: boolean | undefined;
+    if (hasDeployment) {
+        showModelPicker = await promptForModelChoice();
+        if (showModelPicker === undefined) return;
+    }
+
+    const azureContext = await azureContextProvider(hasWorkflow);
+    if (!azureContext) return;
+
+    const generatedFiles: string[] = [];
+    let workflowPath: string | undefined;
+
+    for (const action of selectedActions) {
+        const result = await processContainerAssistAction(
+            action,
+            containerAssistService,
+            workspaceFolder,
+            projectRoot,
+            hasBothActions,
+            azureContext,
+            showModelPicker,
+        );
+
+        if (result) {
+            if (action === ContainerAssistAction.GenerateDeployment && result.deploymentFiles) {
+                generatedFiles.push(...result.deploymentFiles);
+            } else if (action === ContainerAssistAction.GenerateWorkflow && result.workflowPath) {
+                workflowPath = result.workflowPath;
+            }
+        }
+    }
+
+    if (hasBothActions) {
+        const allFiles = [...generatedFiles];
+        if (workflowPath) {
+            allFiles.push(workflowPath);
+        }
+        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
+    }
 }
 
 interface ActionResult {

@@ -458,14 +458,14 @@
                 },
                 {
                     "command": "aks.runContainerAssistFromTree",
-                    "when": "workspaceFolderCount >= 1 && config.aks.containerAssistEnabledPreview"
+                    "when": "never"
                 }
             ],
             "explorer/context": [
                 {
                     "command": "aks.runContainerAssist",
                     "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
-                    "group": "2_workspace@10"
+                    "group": "5_cutcopypaste@50"
                 },
                 {
                     "command": "aks.draftDockerfile",
