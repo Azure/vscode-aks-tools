@@ -405,7 +405,7 @@
             },
             {
                 "command": "aks.runContainerAssist",
-                "title": "AKS: Deploy application to AKS  (Preview)"
+                "title": "AKS: Deploy application to AKS (Preview)"
             },
             {
                 "command": "aks.runContainerAssistFromTree",
