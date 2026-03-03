@@ -473,15 +473,6 @@ export async function collectAzureContext(
     if (!subscription) return undefined;
     logger.debug("Subscription selected", subscription.name);
 
-    // Deployment only : need only subscription and ACR
-    if (!hasWorkflow) {
-        const acr = await selectAcr(sessionProvider, subscription.id);
-        if (!acr) return undefined;
-
-        return { acrName: acr.name, acrResourceGroup: acr.resourceGroup };
-    }
-
-    // Workflow (with or without deployment): need full cluster context
     const cluster = await selectAksCluster(sessionProvider, subscription.id);
     if (!cluster) return undefined;
     logger.debug("Cluster selected", cluster.name);
@@ -493,18 +484,23 @@ export async function collectAzureContext(
     if (!namespaceSelection) return undefined;
     logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
 
-    const workflowName = await promptForWorkflowName(path.basename(projectRoot));
-    if (!workflowName) return undefined;
-
-    return {
+    const baseContext: AzureContext = {
         acrName: acr.name,
         acrResourceGroup: acr.resourceGroup,
         clusterName: cluster.name,
         clusterResourceGroup: cluster.resourceGroup,
         namespace: namespaceSelection.name,
         isManagedNamespace: namespaceSelection.isManaged,
-        workflowName,
     };
+
+    if (!hasWorkflow) {
+        return baseContext;
+    }
+
+    const workflowName = await promptForWorkflowName(path.basename(projectRoot));
+    if (!workflowName) return undefined;
+
+    return { ...baseContext, workflowName };
 }
 
 /**
