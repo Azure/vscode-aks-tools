@@ -2,18 +2,18 @@ import * as vscode from "vscode";
 import { Errorable } from "../utils/errorable";
 import { ModelQuickPickItem } from "./types";
 import { logger } from "./logger";
-import { showWizardExitConfirmation } from "./aksContainerAssist";
+import { showWizardExitConfirmation } from "./wizardUtils";
 import * as l10n from "@vscode/l10n";
 
 /**
  * Reads the configured model family and vendor from user/workspace settings.
  * Defaults are defined in package.json under aks.containerAssist.modelFamily / modelVendor.
  */
-function getModelPreferencesFromConfig() {
+function getModelPreferencesFromConfig(): { family: string; vendor: string } {
     const config = vscode.workspace.getConfiguration("aks.containerAssist");
     return {
-        family: config.get<string>("modelFamily")!,
-        vendor: config.get<string>("modelVendor")!,
+        family: config.get<string>("modelFamily") ?? "",
+        vendor: config.get<string>("modelVendor") ?? "",
     };
 }
 

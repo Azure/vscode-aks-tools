@@ -15,7 +15,7 @@ import { logger } from "./logger";
 import { longRunning } from "../utils/host";
 import { getPortalCreateUrl } from "../utils/env";
 import { getEnvironment } from "../../auth/azureAuth";
-import { showWizardExitConfirmation } from "./aksContainerAssist";
+import { showWizardExitConfirmation } from "./wizardUtils";
 
 export type { Cluster } from "../utils/clusters";
 

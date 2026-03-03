@@ -174,7 +174,7 @@ export function generateCommitMessage(generatedFiles: string[], appName: string)
     const desc =
         parts.length > 1
             ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`
-            : (parts[0] ?? path.basename(generatedFiles[0]));
+            : (parts[0] ?? (generatedFiles.length > 0 ? path.basename(generatedFiles[0]) : "deployment files"));
     return `Add: ${desc} for ${appName}`;
 }
 
