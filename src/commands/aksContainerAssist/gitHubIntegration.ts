@@ -156,83 +156,26 @@ export async function stageFiles(repository: Repository, generatedFiles: string[
     }
 }
 
-/**
- * Offers to create a feature branch if the user is on a primary branch (main/master).
- * Uses a non-modal notification so it doesn't steal focus or dismiss on outside clicks.
- * Returns true if a branch was created (or the user chose to stay), false if cancelled.
- */
-export async function offerFeatureBranch(repository: Repository, appName: string): Promise<boolean> {
-    const currentBranch = repository.state.HEAD?.name;
-    if (!currentBranch || (currentBranch !== "main" && currentBranch !== "master")) {
-        // Already on a non-primary branch, nothing to do
-        return true;
-    }
-
-    const safeName = appName.toLowerCase().replace(/[^a-z0-9]/g, "-");
-    const suggestedBranch = `feat/aks-deploy-${safeName}`;
-
-    const createBranch = l10n.t("Create Branch");
-    const stay = l10n.t("Stay on {0}", currentBranch);
-
-    const selection = await vscode.window.showInformationMessage(
-        l10n.t(
-            'You are on "{0}". It is recommended to create a feature branch ("{1}") for these changes.',
-            currentBranch,
-            suggestedBranch,
-        ),
-        createBranch,
-        stay,
-    );
-
-    if (!selection) {
-        // Dismissed — treat as "stay" so the flow continues rather than cancelling
-        return true;
-    }
-
-    if (selection === createBranch) {
-        try {
-            await repository.createBranch(suggestedBranch, true);
-            logger.info(`Created and checked out branch: ${suggestedBranch}`);
-        } catch (error) {
-            logger.error("Failed to create branch", error);
-            vscode.window.showErrorMessage(
-                l10n.t("Failed to create branch: {0}", error instanceof Error ? error.message : String(error)),
-            );
-            return false;
-        }
-    }
-
-    return true;
-}
-
-/**
- * Generates a conventional commit message for the generated files.
- */
 export function generateCommitMessage(generatedFiles: string[], appName: string): string {
-    const fileNames = generatedFiles.map((f) => path.basename(f));
-    const hasDockerfile = fileNames.some((f) => f === "Dockerfile");
-    const hasWorkflow = generatedFiles.some((f) => f.includes(".github/workflows/"));
-    const hasK8s = generatedFiles.some(
-        (f) => !f.includes(".github/workflows/") && (f.endsWith(".yaml") || f.endsWith(".yml")),
-    );
+    let hasDockerfile = false,
+        hasK8s = false,
+        hasWorkflow = false;
+    for (const f of generatedFiles) {
+        if (path.basename(f) === "Dockerfile") hasDockerfile = true;
+        if (f.includes(".github/workflows/")) hasWorkflow = true;
+        if (!f.includes(".github/workflows/") && (f.endsWith(".yaml") || f.endsWith(".yml"))) hasK8s = true;
+    }
 
-    // Build a concise description from what's actually staged
     const parts: string[] = [];
     if (hasDockerfile) parts.push("Dockerfile");
     if (hasK8s) parts.push("k8s manifests");
-    if (hasWorkflow) parts.push("CI workflow");
+    if (hasWorkflow) parts.push("GitHub Action workflow");
 
-    // Determine scope from staged file types
-    let scope: string;
-    if (hasWorkflow && !hasDockerfile && !hasK8s) {
-        scope = "ci";
-    } else {
-        scope = "deploy";
-    }
-
-    const description = parts.length > 0 ? parts.join(", ") : fileNames.join(", ");
-
-    return `feat(${scope}): add ${description} for ${appName}`;
+    const desc =
+        parts.length > 1
+            ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`
+            : (parts[0] ?? path.basename(generatedFiles[0]));
+    return `Add: ${desc} for ${appName}`;
 }
 
 /**
