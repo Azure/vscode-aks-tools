@@ -36,7 +36,12 @@ export async function selectLanguageModel(lmClient: LMClient): Promise<boolean |
         return showWizardExitConfirmation(() => selectLanguageModel(lmClient));
     }
     const result = await lmClient.selectModel(choice === pickModel);
-    return result.succeeded ? true : undefined;
+    if (!result.succeeded) {
+        vscode.window.showErrorMessage(result.error);
+        return undefined;
+    }
+
+    return true;
 }
 
 export class LMClient {
