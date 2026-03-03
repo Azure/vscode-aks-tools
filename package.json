@@ -281,16 +281,6 @@
                 "category": "AKS"
             },
             {
-                "command": "aks.draftDockerfile",
-                "title": "%Create a Dockerfile%",
-                "category": "Automated Deployments"
-            },
-            {
-                "command": "aks.draftDeployment",
-                "title": "%Create a Deployment%",
-                "category": "Automated Deployments"
-            },
-            {
                 "command": "aks.draftWorkflow",
                 "title": "%Create a GitHub Workflow%",
                 "category": "Automated Deployments"
@@ -425,7 +415,7 @@
             },
             {
                 "command": "aks.runContainerAssist",
-                "title": "AKS: Run Container Assist For AKS Deployment Generation (Preview)"
+                "title": "AKS: Deploy application to AKS (Preview)"
             },
             {
                 "command": "aks.runContainerAssistFromTree",
@@ -445,14 +435,6 @@
                 {
                     "command": "aks.refreshSubscription",
                     "when": "never"
-                },
-                {
-                    "command": "aks.draftDockerfile",
-                    "when": "workspaceFolderCount >= 1"
-                },
-                {
-                    "command": "aks.draftDeployment",
-                    "when": "workspaceFolderCount >= 1"
                 },
                 {
                     "command": "aks.draftWorkflow",
@@ -476,14 +458,6 @@
                     "command": "aks.runContainerAssist",
                     "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
                     "group": "5_cutcopypaste@50"
-                },
-                {
-                    "command": "aks.draftDockerfile",
-                    "when": "explorerResourceIsFolder"
-                },
-                {
-                    "command": "aks.draftDeployment",
-                    "when": "explorerResourceIsFolder"
                 },
                 {
                     "command": "aks.aksDraftValidate",
@@ -675,11 +649,6 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "aks.draftDeployment",
-                    "group": "navigation",
-                    "when": "workspaceFolderCount >= 1"
-                },
-                {
                     "command": "aks.draftWorkflow",
                     "group": "navigation",
                     "when": "workspaceFolderCount >= 1"
@@ -772,11 +741,6 @@
                 {
                     "command": "aks.attachAcrToCluster",
                     "group": "2_deploy@1"
-                },
-                {
-                    "command": "aks.draftDeployment",
-                    "group": "2_deploy@2",
-                    "when": "workspaceFolderCount >= 1"
                 },
                 {
                     "command": "aks.draftWorkflow",
@@ -954,7 +918,7 @@
         "chai": "^6.2.2",
         "copy-webpack-plugin": "^13.0.1",
         "eslint": "^9.39.2",
-        "eslint-webpack-plugin": "^5.0.2",
+        "eslint-webpack-plugin": "^5.0.3",
         "fast-check": "^4.5.3",
         "glob": "^13.0.6",
         "globals": "^17.3.0",
@@ -966,7 +930,7 @@
         "sinon": "^21.0.1",
         "ts-loader": "^9.5.4",
         "typescript": "^5.9.3",
-        "webpack": "^5.105.2",
+        "webpack": "^5.105.3",
         "webpack-cli": "^6.0.1"
     },
     "lint-staged": {
@@ -1005,7 +969,7 @@
         "move-file": "^4.1.0",
         "node-fetch": "^3.3.2",
         "rxjs": "^7.8.2",
-        "semver": "^7.7.3",
+        "semver": "^7.7.4",
         "sinon": "^21.0.1",
         "tmp": "^0.2.5",
         "uuid": "^13.0.0",
