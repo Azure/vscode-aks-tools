@@ -15,6 +15,7 @@ import { logger } from "./logger";
 import { longRunning } from "../utils/host";
 import { getPortalCreateUrl } from "../utils/env";
 import { getEnvironment } from "../../auth/azureAuth";
+import { showWizardExitConfirmation } from "./wizardUtils";
 
 export type { Cluster } from "../utils/clusters";
 
@@ -27,29 +28,6 @@ export interface AzureResource {
     id: string;
     name: string;
     resourceGroup: string;
-}
-
-/**
- * Common function to handle wizard exit confirmation with "Go Back" option.
- * Shows a modal dialog asking if user wants to exit the Container Assist wizard.
- * If user chooses "Go Back", calls the provided retry function.
- * If user chooses "Exit" or closes dialog, returns undefined.
- */
-async function showWizardExitConfirmation<T>(retryFunction: () => Promise<T>): Promise<T | undefined> {
-    const continueWizard = l10n.t("Exit Container Assist");
-    const goBack = l10n.t("Go Back");
-    const choice = await vscode.window.showWarningMessage(
-        l10n.t("Are you sure you want to exit the Container Assist wizard?"),
-        { modal: true },
-        goBack,
-        continueWizard,
-    );
-
-    if (choice === goBack) {
-        return retryFunction();
-    }
-    // If they chose "Exit Container Assist" or closed the dialog, return undefined
-    return undefined;
 }
 
 async function fetchSubscriptionAcrs(
@@ -495,15 +473,6 @@ export async function collectAzureContext(
     if (!subscription) return undefined;
     logger.debug("Subscription selected", subscription.name);
 
-    // Deployment only : need only subscription and ACR
-    if (!hasWorkflow) {
-        const acr = await selectAcr(sessionProvider, subscription.id);
-        if (!acr) return undefined;
-
-        return { acrName: acr.name, acrResourceGroup: acr.resourceGroup };
-    }
-
-    // Workflow (with or without deployment): need full cluster context
     const cluster = await selectAksCluster(sessionProvider, subscription.id);
     if (!cluster) return undefined;
     logger.debug("Cluster selected", cluster.name);
@@ -515,18 +484,23 @@ export async function collectAzureContext(
     if (!namespaceSelection) return undefined;
     logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
 
-    const workflowName = await promptForWorkflowName(path.basename(projectRoot));
-    if (!workflowName) return undefined;
-
-    return {
+    const baseContext: AzureContext = {
         acrName: acr.name,
         acrResourceGroup: acr.resourceGroup,
         clusterName: cluster.name,
         clusterResourceGroup: cluster.resourceGroup,
         namespace: namespaceSelection.name,
         isManagedNamespace: namespaceSelection.isManaged,
-        workflowName,
     };
+
+    if (!hasWorkflow) {
+        return baseContext;
+    }
+
+    const workflowName = await promptForWorkflowName(path.basename(projectRoot));
+    if (!workflowName) return undefined;
+
+    return { ...baseContext, workflowName };
 }
 
 /**

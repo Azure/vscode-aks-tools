@@ -26,7 +26,7 @@ import {
 import { PROJECT_TOOLS, handleToolCall } from "./tools";
 
 export class ContainerAssistService {
-    private lmClient: LMClient;
+    readonly lmClient: LMClient;
 
     constructor() {
         this.lmClient = new LMClient();
@@ -65,10 +65,6 @@ export class ContainerAssistService {
 
     async checkExistingFiles(folderPath: string): Promise<ExistingFilesCheckResult> {
         return checkExistingFiles(folderPath);
-    }
-
-    async selectLanguageModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
-        return this.lmClient.selectModel(showPicker);
     }
 
     async analyzeRepository(folderPath: string, signal?: AbortSignal): Promise<Errorable<AnalyzeRepositoryResult>> {
@@ -306,7 +302,6 @@ export class ContainerAssistService {
         namespace?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
-        showModelPicker: boolean = false,
         onProgress?: (message: string) => void,
     ): Promise<Errorable<DeploymentResult>> {
         const reportProgress = (message: string) => onProgress?.(message);
@@ -338,7 +333,7 @@ export class ContainerAssistService {
             vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", existingList.join(", ")));
         }
 
-        const lmResult = await this.selectLanguageModel(showModelPicker);
+        const lmResult = await this.lmClient.ensureModel();
         if (failed(lmResult)) {
             logger.error("Language Model not available", lmResult.error);
             return lmResult;

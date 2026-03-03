@@ -4,7 +4,6 @@ import { logger } from "./logger";
 import {
     getGitRepository,
     stageFiles,
-    offerFeatureBranch,
     prepareCommitInSCM,
     createPullRequest,
     isGitExtensionAvailable,
@@ -17,7 +16,6 @@ import { setupOIDCForGitHub } from "./oidcSetup";
 // After files are generated the flow is:
 //   1. (If workflow) OIDC modal – "Setup OIDC" / "Skip"
 //   2. Stage notification – "Stage & Review" / "Open Files"
-//        • offers a feature branch when on main/master (non-modal notification)
 //        • stages files, pre-fills commit message, focuses SCM view
 //   3. onDidCommit listener – when the user commits, a notification offers
 //      "Create Pull Request"
@@ -145,12 +143,6 @@ async function stageAndPrepare(
 
     const repository = await getGitRepository(workspaceFolder.uri);
     if (!repository) {
-        return false;
-    }
-
-    // Offer a feature branch when on main/master
-    const branchOk = await offerFeatureBranch(repository, appName);
-    if (!branchOk) {
         return false;
     }
 

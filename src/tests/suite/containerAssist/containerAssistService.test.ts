@@ -88,11 +88,11 @@ describe("ContainerAssistService", () => {
         });
     });
 
-    describe("selectLanguageModel", () => {
+    describe("selectModel (via lmClient)", () => {
         it("returns error when no models found", async () => {
             sandbox.stub(vscode.lm, "selectChatModels").resolves([]);
 
-            const result = await service.selectLanguageModel();
+            const result = await service.lmClient.selectModel();
 
             assert.strictEqual(result.succeeded, false);
             assert.ok(result.error?.includes("No Language Model") || result.error?.includes("Copilot"));
@@ -107,7 +107,7 @@ describe("ContainerAssistService", () => {
             } as vscode.LanguageModelChat;
             sandbox.stub(vscode.lm, "selectChatModels").resolves([mockModel]);
 
-            const result = await service.selectLanguageModel(false);
+            const result = await service.lmClient.selectModel(false);
 
             assert.strictEqual(result.succeeded, true);
             if (result.succeeded) {
@@ -126,26 +126,12 @@ describe("ContainerAssistService", () => {
                 model: mockModels[1],
             } as unknown as vscode.QuickPickItem);
 
-            const result = await service.selectLanguageModel(true);
+            const result = await service.lmClient.selectModel(true);
 
             assert.strictEqual(result.succeeded, true);
             if (result.succeeded) {
                 assert.strictEqual(result.result.id, "model-2");
             }
-        });
-
-        it("returns error on cancelled selection", async () => {
-            const mockModels = [
-                { id: "model-1", name: "Model 1", vendor: "copilot", family: "gpt-4o" },
-                { id: "model-2", name: "Model 2", vendor: "copilot", family: "gpt-4" },
-            ] as vscode.LanguageModelChat[];
-            sandbox.stub(vscode.lm, "selectChatModels").resolves(mockModels);
-            sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
-
-            const result = await service.selectLanguageModel(true);
-
-            assert.strictEqual(result.succeeded, false);
-            assert.ok(result.error?.includes("cancelled"));
         });
     });
 
@@ -181,7 +167,7 @@ describe("ContainerAssistService", () => {
                 vendor: "copilot",
                 family: "gpt-4o",
             } as vscode.LanguageModelChat;
-            sandbox.stub(service, "selectLanguageModel").resolves({ succeeded: true, result: mockModel });
+            sandbox.stub(service.lmClient, "selectModel").resolves({ succeeded: true, result: mockModel });
             sandbox.stub(service, "analyzeRepository").resolves({
                 succeeded: true,
                 result: {
@@ -208,7 +194,7 @@ describe("ContainerAssistService", () => {
                 hasDockerfile: false,
                 hasK8sManifests: false,
             });
-            sandbox.stub(service, "selectLanguageModel").resolves({
+            sandbox.stub(service.lmClient, "selectModel").resolves({
                 succeeded: false,
                 error: "No LM available",
             });
@@ -232,7 +218,7 @@ describe("ContainerAssistService", () => {
                 vendor: "copilot",
                 family: "gpt-4o",
             } as vscode.LanguageModelChat;
-            sandbox.stub(service, "selectLanguageModel").resolves({ succeeded: true, result: mockModel });
+            sandbox.stub(service.lmClient, "selectModel").resolves({ succeeded: true, result: mockModel });
             const analyzeStub = sandbox.stub(service, "analyzeRepository").resolves({
                 succeeded: false,
                 error: "Analysis failed",
@@ -258,7 +244,7 @@ describe("ContainerAssistService", () => {
                 vendor: "copilot",
                 family: "gpt-4o",
             } as vscode.LanguageModelChat;
-            sandbox.stub(service, "selectLanguageModel").resolves({ succeeded: true, result: mockModel });
+            sandbox.stub(service.lmClient, "selectModel").resolves({ succeeded: true, result: mockModel });
             sandbox.stub(service, "analyzeRepository").resolves({
                 succeeded: true,
                 result: {

@@ -2,10 +2,47 @@ import * as vscode from "vscode";
 import { Errorable } from "../utils/errorable";
 import { ModelQuickPickItem } from "./types";
 import { logger } from "./logger";
+import { showWizardExitConfirmation } from "./wizardUtils";
 import * as l10n from "@vscode/l10n";
 
-export const DEFAULT_LM_MODEL_FAMILY = "gpt-4o";
-export const DEFAULT_LM_MODEL_VENDOR = "copilot";
+/**
+ * Reads the configured model family and vendor from user/workspace settings.
+ * Defaults are defined in package.json under aks.containerAssist.modelFamily / modelVendor.
+ */
+function getModelPreferencesFromConfig(): { family: string; vendor: string } {
+    const config = vscode.workspace.getConfiguration("aks.containerAssist");
+    return {
+        family: config.get<string>("modelFamily") ?? "",
+        vendor: config.get<string>("modelVendor") ?? "",
+    };
+}
+
+/**
+ * Prompts the user to choose between the default model or picking one,
+ * then selects it on the given LMClient.
+ * Returns true if a model was successfully selected, or undefined if cancelled.
+ */
+export async function selectLanguageModel(lmClient: LMClient): Promise<boolean | undefined> {
+    const { family, vendor } = getModelPreferencesFromConfig();
+    const defaultModelLabel = `${vendor}/${family}`;
+
+    const useDefault = l10n.t("Use Default Model");
+    const pickModel = l10n.t("Select Model...");
+    const choice = await vscode.window.showQuickPick([useDefault, pickModel], {
+        placeHolder: l10n.t("Choose Language Model (Default: {0})", defaultModelLabel),
+        title: l10n.t("Container Assist - Language Model"),
+    });
+    if (!choice) {
+        return showWizardExitConfirmation(() => selectLanguageModel(lmClient));
+    }
+    const result = await lmClient.selectModel(choice === pickModel);
+    if (!result.succeeded) {
+        vscode.window.showErrorMessage(result.error);
+        return undefined;
+    }
+
+    return true;
+}
 
 export class LMClient {
     private languageModel: vscode.LanguageModelChat | undefined;
@@ -18,10 +55,11 @@ export class LMClient {
         return this.languageModel !== undefined;
     }
 
+    /**
+     * Returns the cached model if available, otherwise auto-selects the default.
+     * This is equivalent to `selectModel(false)` which already short-circuits on cache hit.
+     */
     async ensureModel(): Promise<Errorable<vscode.LanguageModelChat>> {
-        if (this.languageModel) {
-            return { succeeded: true, result: this.languageModel };
-        }
         return this.selectModel(false);
     }
 
@@ -165,6 +203,10 @@ export class LMClient {
     }
 
     async selectModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
+        if (!showPicker && this.languageModel) {
+            return { succeeded: true, result: this.languageModel };
+        }
+
         try {
             const allModels = await vscode.lm.selectChatModels({});
 
@@ -178,7 +220,7 @@ export class LMClient {
 
             logger.debug(`Found ${allModels.length} available models`);
 
-            const preferences = this.getModelPreferences();
+            const preferences = getModelPreferencesFromConfig();
             const preferredModels = allModels.filter((m) => this.isPreferredModel(m, preferences));
 
             let selectedModel: vscode.LanguageModelChat | undefined;
@@ -206,19 +248,14 @@ export class LMClient {
         }
     }
 
-    private getModelPreferences() {
-        const config = vscode.workspace.getConfiguration("aks.containerAssist");
-        return {
-            family: config.get<string>("modelFamily", DEFAULT_LM_MODEL_FAMILY),
-            vendor: config.get<string>("modelVendor", DEFAULT_LM_MODEL_VENDOR),
-        };
-    }
-
     private isPreferredModel(
         model: vscode.LanguageModelChat,
         preferences: { family: string; vendor: string },
     ): boolean {
-        return model.family === preferences.family && model.vendor === preferences.vendor;
+        return (
+            model.family.toLowerCase() === preferences.family.toLowerCase() &&
+            model.vendor.toLowerCase() === preferences.vendor.toLowerCase()
+        );
     }
 
     private async showModelSelectionQuickPick(
@@ -231,7 +268,7 @@ export class LMClient {
                 return {
                     label: isPreferred ? `$(star-full) ${model.name}` : model.name,
                     description: `${model.vendor} / ${model.family}`,
-                    detail: isPreferred ? l10n.t("Configured as preferred model") : model.id,
+                    detail: isPreferred ? l10n.t("Configured as default model") : model.id,
                     model,
                     isPreferred,
                 };
@@ -241,10 +278,16 @@ export class LMClient {
                 return a.label.localeCompare(b.label);
             });
 
+        const defaultModelLabel = `${preferences.vendor}/${preferences.family}`;
+
         const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: l10n.t("Select a Language Model for generating deployment files"),
+            placeHolder: l10n.t("Select a Language Model (default: {0})", defaultModelLabel),
             title: l10n.t("Container Assist - Model Selection"),
         });
+
+        if (!selected) {
+            return showWizardExitConfirmation(() => this.showModelSelectionQuickPick(models, preferences));
+        }
 
         return selected?.model;
     }
