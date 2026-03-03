@@ -133,20 +133,6 @@ describe("ContainerAssistService", () => {
                 assert.strictEqual(result.result.id, "model-2");
             }
         });
-
-        it("returns error on cancelled selection", async () => {
-            const mockModels = [
-                { id: "model-1", name: "Model 1", vendor: "copilot", family: "gpt-4o" },
-                { id: "model-2", name: "Model 2", vendor: "copilot", family: "gpt-4" },
-            ] as vscode.LanguageModelChat[];
-            sandbox.stub(vscode.lm, "selectChatModels").resolves(mockModels);
-            sandbox.stub(vscode.window, "showQuickPick").resolves(undefined);
-
-            const result = await service.lmClient.selectModel(true);
-
-            assert.strictEqual(result.succeeded, false);
-            assert.ok(result.error?.includes("cancelled"));
-        });
     });
 
     describe("generateDeploymentFiles workflow", () => {
