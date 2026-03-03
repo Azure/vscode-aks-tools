@@ -83,11 +83,7 @@ export class LMClient {
 
             logger.debug("Sending request to Language Model", { model: this.languageModel.name });
             const response = await this.languageModel.sendRequest(messages, {}, token);
-
-            let content = "";
-            for await (const chunk of response.text) {
-                content += chunk;
-            }
+            const content = await this.collectResponseText(response);
 
             logger.debug("Language Model response received", { contentLength: content.length });
             return { succeeded: true, result: content };
@@ -114,7 +110,7 @@ export class LMClient {
             };
         }
 
-        const maxRounds = options.maxToolRounds ?? 5;
+        const maxRounds = options.maxToolRounds ?? 15;
 
         try {
             const messages: vscode.LanguageModelChatMessage[] = [
@@ -130,17 +126,7 @@ export class LMClient {
 
             for (let round = 0; round < maxRounds; round++) {
                 const response = await this.languageModel.sendRequest(messages, { tools: options.tools }, token);
-
-                const textParts: vscode.LanguageModelTextPart[] = [];
-                const toolCallParts: vscode.LanguageModelToolCallPart[] = [];
-
-                for await (const part of response.stream) {
-                    if (part instanceof vscode.LanguageModelTextPart) {
-                        textParts.push(part);
-                    } else if (part instanceof vscode.LanguageModelToolCallPart) {
-                        toolCallParts.push(part);
-                    }
-                }
+                const { textParts, toolCallParts } = await this.consumeStream(response);
 
                 // If no tool calls, we're done — return accumulated text
                 if (toolCallParts.length === 0) {
@@ -150,48 +136,28 @@ export class LMClient {
                 }
 
                 // Build assistant message echoing back text and tool call parts
-                const assistantParts: (vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart)[] = [
-                    ...textParts,
-                    ...toolCallParts,
-                ];
-                messages.push(vscode.LanguageModelChatMessage.Assistant(assistantParts));
+                messages.push(vscode.LanguageModelChatMessage.Assistant([...textParts, ...toolCallParts]));
 
-                // Execute tool handlers and build result parts
-                const resultParts: vscode.LanguageModelToolResultPart[] = [];
-                for (const toolCall of toolCallParts) {
-                    logger.debug("Invoking tool", {
-                        name: toolCall.name,
-                        callId: toolCall.callId,
-                        input: JSON.stringify(toolCall.input),
-                    });
-
-                    let resultText: string;
-                    try {
-                        resultText = await options.toolHandler(toolCall);
-                    } catch (toolError) {
-                        logger.error(`Tool handler error for "${toolCall.name}"`, toolError);
-                        resultText = `Error executing tool "${toolCall.name}": ${String(toolError)}`;
-                    }
-
-                    logger.debug("Tool result", {
-                        name: toolCall.name,
-                        callId: toolCall.callId,
-                        resultLength: resultText.length,
-                    });
-
-                    resultParts.push(
-                        new vscode.LanguageModelToolResultPart(toolCall.callId, [
-                            new vscode.LanguageModelTextPart(resultText),
-                        ]),
-                    );
-                }
+                // Execute all tool handlers concurrently and build result parts
+                const resultParts = await this.executeToolCalls(toolCallParts, options.toolHandler);
 
                 // Append user message with tool results
                 messages.push(vscode.LanguageModelChatMessage.User(resultParts));
             }
 
-            // Max rounds exhausted — return error
-            logger.warn("Max tool rounds exhausted");
+            // Max rounds exhausted — send one final request without tools so the
+            // model is forced to produce its text output (e.g. Dockerfile / manifests)
+            // instead of attempting further tool calls.
+            logger.warn("Max tool rounds exhausted, sending final request without tools");
+            const finalResponse = await this.languageModel.sendRequest(messages, {}, token);
+            const finalContent = await this.collectResponseText(finalResponse);
+
+            if (finalContent.length > 0) {
+                logger.debug("Final response after max rounds", { contentLength: finalContent.length });
+                return { succeeded: true, result: finalContent };
+            }
+
+            // If the model still returned nothing useful, report the error.
             return {
                 succeeded: false,
                 error: l10n.t("Language Model tool calling exceeded maximum rounds ({0})", maxRounds),
@@ -200,6 +166,73 @@ export class LMClient {
             logger.error("Language Model request with tools failed", error);
             return this.handleError(error);
         }
+    }
+
+    /**
+     * Consumes the response stream, separating text parts from tool call parts.
+     */
+    private async consumeStream(
+        response: vscode.LanguageModelChatResponse,
+    ): Promise<{ textParts: vscode.LanguageModelTextPart[]; toolCallParts: vscode.LanguageModelToolCallPart[] }> {
+        const textParts: vscode.LanguageModelTextPart[] = [];
+        const toolCallParts: vscode.LanguageModelToolCallPart[] = [];
+
+        for await (const part of response.stream) {
+            if (part instanceof vscode.LanguageModelTextPart) {
+                textParts.push(part);
+            } else if (part instanceof vscode.LanguageModelToolCallPart) {
+                toolCallParts.push(part);
+            }
+        }
+
+        return { textParts, toolCallParts };
+    }
+
+    /**
+     * Collects all text chunks from a response into a single string.
+     */
+    private async collectResponseText(response: vscode.LanguageModelChatResponse): Promise<string> {
+        let content = "";
+        for await (const chunk of response.text) {
+            content += chunk;
+        }
+        return content;
+    }
+
+    /**
+     * Executes tool handlers concurrently and returns the result parts.
+     */
+    private async executeToolCalls(
+        toolCallParts: vscode.LanguageModelToolCallPart[],
+        toolHandler: (call: vscode.LanguageModelToolCallPart) => Promise<string>,
+    ): Promise<vscode.LanguageModelToolResultPart[]> {
+        return Promise.all(
+            toolCallParts.map(async (toolCall) => {
+                logger.debug("Invoking tool", {
+                    name: toolCall.name,
+                    callId: toolCall.callId,
+                    input: JSON.stringify(toolCall.input),
+                });
+
+                let resultText: string;
+                try {
+                    resultText = await toolHandler(toolCall);
+                } catch (toolError) {
+                    logger.error(`Tool handler error for "${toolCall.name}"`, toolError);
+                    resultText = `Error executing tool "${toolCall.name}": ${String(toolError)}`;
+                }
+
+                logger.debug("Tool result", {
+                    name: toolCall.name,
+                    callId: toolCall.callId,
+                    resultLength: resultText.length,
+                });
+
+                return new vscode.LanguageModelToolResultPart(toolCall.callId, [
+                    new vscode.LanguageModelTextPart(resultText),
+                ]);
+            }),
+        );
     }
 
     async selectModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {
