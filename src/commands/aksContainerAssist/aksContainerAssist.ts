@@ -13,19 +13,7 @@ import { generateGitHubWorkflow } from "./workflowGenerator";
 import { collectAzureContext, collectAzureContextFromTree, AzureContext } from "./azureSelections";
 import { showPostGenerationOptions } from "./postGenerationFlow";
 import { getAksClusterTreeNode } from "../utils/clusters";
-
-async function promptForModelChoice(): Promise<boolean | undefined> {
-    const useDefault = l10n.t("Use Default Model");
-    const selectModel = l10n.t("Select Model...");
-    const modelChoice = await vscode.window.showQuickPick([useDefault, selectModel], {
-        placeHolder: l10n.t("Choose Language Model"),
-        title: l10n.t("Container Assist - Language Model"),
-    });
-    if (!modelChoice) {
-        return undefined;
-    }
-    return modelChoice === selectModel;
-}
+import { selectLanguageModel } from "./lmClient";
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
     try {
@@ -276,10 +264,11 @@ async function executeContainerAssistActions(
     const hasWorkflow = selectedActions.includes(ContainerAssistAction.GenerateWorkflow);
     const hasBothActions = hasDeployment && hasWorkflow;
 
-    let showModelPicker: boolean | undefined;
     if (hasDeployment) {
-        showModelPicker = await promptForModelChoice();
-        if (showModelPicker === undefined) return;
+        const modelResult = await selectLanguageModel(containerAssistService.lmClient);
+        if (!modelResult) {
+            return;
+        }
     }
 
     const azureContext = await azureContextProvider(hasWorkflow);
@@ -296,7 +285,6 @@ async function executeContainerAssistActions(
             projectRoot,
             hasBothActions,
             azureContext,
-            showModelPicker,
         );
 
         if (result) {
@@ -329,18 +317,10 @@ async function processContainerAssistAction(
     targetPath: string,
     hasBothActions: boolean,
     azureContext: AzureContext,
-    showModelPicker: boolean | undefined,
 ): Promise<ActionResult | undefined> {
     switch (action) {
         case ContainerAssistAction.GenerateDeployment:
-            return await generateDeploymentFiles(
-                service,
-                workspaceFolder,
-                targetPath,
-                hasBothActions,
-                azureContext,
-                showModelPicker,
-            );
+            return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions, azureContext);
 
         case ContainerAssistAction.GenerateWorkflow:
             return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions, azureContext);
@@ -358,7 +338,6 @@ async function generateDeploymentFiles(
     targetPath: string,
     hasBothActions: boolean,
     azureContext: AzureContext,
-    showModelPicker: boolean | undefined,
 ): Promise<ActionResult | undefined> {
     const appName = path.basename(targetPath);
     logger.debug("Target path", targetPath);
@@ -387,7 +366,6 @@ async function generateDeploymentFiles(
                     azureContext.namespace,
                     abortController.signal,
                     token,
-                    showModelPicker ?? false,
                     (step: string) => progress.report({ message: step }),
                 );
 
@@ -475,4 +453,27 @@ async function generateWorkflowFile(
     await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true);
 
     return { workflowPath };
+}
+
+/**
+ * Common function to handle wizard exit confirmation with "Go Back" option.
+ * Shows a modal dialog asking if user wants to exit the Container Assist wizard.
+ * If user chooses "Go Back", calls the provided retry function.
+ * If user chooses "Exit" or closes dialog, returns undefined.
+ */
+export async function showWizardExitConfirmation<T>(retryFunction: () => Promise<T>): Promise<T | undefined> {
+    const continueWizard = l10n.t("Exit Container Assist");
+    const goBack = l10n.t("Go Back");
+    const choice = await vscode.window.showWarningMessage(
+        l10n.t("Are you sure you want to exit the Container Assist wizard?"),
+        { modal: true },
+        goBack,
+        continueWizard,
+    );
+
+    if (choice === goBack) {
+        return retryFunction();
+    }
+    // If they chose "Exit Container Assist" or closed the dialog, return undefined
+    return undefined;
 }

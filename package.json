@@ -178,6 +178,16 @@
                     "default": true,
                     "description": "Create Pull Requests as draft by default."
                 },
+                "aks.containerAssist.modelFamily": {
+                    "type": "string",
+                    "default": "gpt-5.2-codex",
+                    "description": "Default language model family for Container Assist (e.g. gpt-5.2, claude-sonnet)."
+                },
+                "aks.containerAssist.modelVendor": {
+                    "type": "string",
+                    "default": "copilot",
+                    "description": "Default language model vendor for Container Assist (e.g. copilot)."
+                },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
                     "default": "v0.0.11",
