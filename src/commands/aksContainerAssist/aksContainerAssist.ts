@@ -275,35 +275,64 @@ async function executeContainerAssistActions(
     const azureContext = await azureContextProvider(hasWorkflow);
     if (!azureContext) return;
 
-    const generatedFiles: string[] = [];
-    let workflowPath: string | undefined;
-
-    for (const action of selectedActions) {
-        const result = await processContainerAssistAction(
-            action,
+    // When both actions are selected, workflow generation depends on deployment artifacts.
+    // Run deployment first, and only proceed to workflow generation if Dockerfile + manifests exist.
+    if (hasBothActions) {
+        const deploymentResult = await processContainerAssistAction(
+            ContainerAssistAction.GenerateDeployment,
             containerAssistService,
             workspaceFolder,
             projectRoot,
-            hasBothActions,
+            true,
             azureContext,
         );
 
-        if (result) {
-            if (action === ContainerAssistAction.GenerateDeployment && result.deploymentFiles) {
-                generatedFiles.push(...result.deploymentFiles);
-            } else if (action === ContainerAssistAction.GenerateWorkflow && result.workflowPath) {
-                workflowPath = result.workflowPath;
+        const deploymentFiles = deploymentResult?.deploymentFiles ?? [];
+
+        if (deploymentFiles.length === 0) {
+            if (!deploymentResult) {
+                return;
+            }
+
+            const existing = await containerAssistService.checkExistingFiles(projectRoot);
+            if (!existing.hasDockerfile || !existing.hasK8sManifests) {
+                logger.warn("Skipping workflow generation: deployment artifacts missing on disk");
+                vscode.window.showErrorMessage(
+                    l10n.t(
+                        "GitHub workflow generation was skipped because both Dockerfile and Kubernetes manifests are required but could not be found.",
+                    ),
+                );
+                return;
             }
         }
+
+        const workflowResult = await processContainerAssistAction(
+            ContainerAssistAction.GenerateWorkflow,
+            containerAssistService,
+            workspaceFolder,
+            projectRoot,
+            true,
+            azureContext,
+        );
+
+        if (!workflowResult?.workflowPath) {
+            return;
+        }
+
+        const allFiles = [...deploymentFiles, workflowResult.workflowPath];
+        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
+        return;
     }
 
-    if (hasBothActions) {
-        const allFiles = [...generatedFiles];
-        if (workflowPath) {
-            allFiles.push(workflowPath);
-        }
-        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
-    }
+    // Single-action flow
+    await processContainerAssistAction(
+        selectedActions[0],
+        containerAssistService,
+        workspaceFolder,
+        projectRoot,
+        false,
+        azureContext,
+    );
 }
 
 interface ActionResult {
@@ -404,6 +433,9 @@ async function generateDeploymentFiles(
 
     if (generatedFiles.length === 0) {
         logger.warn("No files were generated");
+        if (hasBothActions) {
+            return { deploymentFiles: [] };
+        }
         vscode.window.showWarningMessage(l10n.t("No deployment files were generated."));
         return undefined;
     }

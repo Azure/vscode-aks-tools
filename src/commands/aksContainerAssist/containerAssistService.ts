@@ -171,7 +171,6 @@ export class ContainerAssistService {
             {
                 tools: PROJECT_TOOLS,
                 toolHandler: (call) => handleToolCall(call, workspaceRoot),
-                maxToolRounds: 5,
             },
             token,
         );
@@ -282,7 +281,6 @@ export class ContainerAssistService {
             {
                 tools: PROJECT_TOOLS,
                 toolHandler: (call) => handleToolCall(call, workspaceRoot),
-                maxToolRounds: 5,
             },
             token,
         );
