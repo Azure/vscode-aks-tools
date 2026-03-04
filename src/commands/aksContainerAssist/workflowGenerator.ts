@@ -22,7 +22,7 @@ export async function generateGitHubWorkflow(
     try {
         const config = await collectWorkflowConfiguration(workspaceFolder, projectRoot, azureContext, hasBothActions);
         if (!config) {
-            return { succeeded: false, error: "Workflow generation cancelled" };
+            return { succeeded: false, error: "cancelled" };
         }
 
         // Validate configuration
@@ -33,7 +33,9 @@ export async function generateGitHubWorkflow(
             return { succeeded: false, error: `Invalid configuration: ${errorMsg}` };
         }
 
-        // Check if workflow already exists
+        // Check if workflow already exists — ask the user before starting any
+        // long-running operation so the overwrite dialog is not buried under
+        // a progress notification.
         const workflowName = sanitizeWorkflowName(config.workflowName);
         const exists = await workflowFileExists(projectRoot, workflowName);
         if (exists) {
@@ -43,7 +45,7 @@ export async function generateGitHubWorkflow(
                 l10n.t("Cancel"),
             );
             if (overwrite !== l10n.t("Overwrite")) {
-                return { succeeded: false, error: "Workflow file already exists" };
+                return { succeeded: false, error: "cancelled" };
             }
         }
 

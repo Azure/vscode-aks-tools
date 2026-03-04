@@ -466,7 +466,11 @@ async function generateWorkflowFile(
     hasBothActions: boolean,
     azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
-    // Show progress notification when both actions are selected
+    // generateGitHubWorkflow runs all user-facing prompts (Dockerfile path,
+    // manifests, duplicate-file dialog) synchronously before doing any I/O,
+    // so we only wrap the call in a progress notification when hasBothActions
+    // is true — and the notification will close immediately if the user
+    // cancels any prompt inside the function.
     const result = hasBothActions
         ? await vscode.window.withProgress(
               {
@@ -481,6 +485,11 @@ async function generateWorkflowFile(
         : await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
 
     if (failed(result)) {
+        if (result.error === "cancelled") {
+            // User chose to cancel (dismissed a prompt or declined overwrite) — no toast needed.
+            logger.debug("Workflow generation cancelled by user");
+            return undefined;
+        }
         logger.error("GitHub workflow generation failed", result.error);
         vscode.window.showErrorMessage(l10n.t("Failed to generate GitHub workflow: {0}", result.error));
         return undefined;
