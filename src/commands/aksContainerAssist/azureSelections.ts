@@ -411,6 +411,7 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
 }
 
 export interface AzureContext {
+    subscriptionId: string;
     acrName: string;
     acrResourceGroup: string;
     clusterName?: string;
@@ -439,6 +440,7 @@ async function collectAzureContextForCluster(
     logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
 
     const baseContext: AzureContext = {
+        subscriptionId,
         acrName: acr.name,
         acrResourceGroup: acr.resourceGroup,
         clusterName: cluster.name,

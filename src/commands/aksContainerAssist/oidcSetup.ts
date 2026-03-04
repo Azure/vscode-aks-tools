@@ -15,6 +15,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { randomUUID } from "crypto";
 import type { TokenCredential } from "@azure/identity";
+import { AzureContext } from "./azureSelections";
 
 const execFilePromise = promisify(execFile);
 
@@ -37,7 +38,11 @@ interface AzureConfig {
 /**
  * Sets up OIDC federated identity for GitHub Actions workflow
  */
-export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder, appName: string): Promise<void> {
+export async function setupOIDCForGitHub(
+    workspaceFolder: vscode.WorkspaceFolder,
+    appName: string,
+    azureContext?: AzureContext,
+): Promise<void> {
     try {
         // Get GitHub repository information
         const repoInfo = await getGitHubRepoInfo(workspaceFolder);
@@ -51,7 +56,7 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
         logger.debug("GitHub repository info", repoInfo);
 
         // Prompt user for Azure details
-        const azureConfig = await promptForAzureConfig(appName);
+        const azureConfig = await promptForAzureConfig(appName, azureContext);
         if (!azureConfig) {
             return;
         }
@@ -190,7 +195,7 @@ export async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder)
     }
 }
 
-async function promptForAzureConfig(appName: string): Promise<AzureConfig | null> {
+async function promptForAzureConfig(appName: string, azureContext?: AzureContext): Promise<AzureConfig | null> {
     // Get subscription
     const sessionProvider = await getSessionProvider();
     if (!isReady(sessionProvider)) {
@@ -198,53 +203,76 @@ async function promptForAzureConfig(appName: string): Promise<AzureConfig | null
         return null;
     }
 
-    const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
-    if (!succeeded(subscriptionsResult)) {
-        vscode.window.showErrorMessage(l10n.t("Failed to get subscriptions: {0}", subscriptionsResult.error));
-        return null;
-    }
+    let subscriptionId: string;
 
-    const subscriptions = subscriptionsResult.result;
-
-    if (subscriptions.length === 0) {
-        const openPortal = l10n.t("Open in Portal");
-        const selection = await vscode.window.showWarningMessage(l10n.t("No Azure subscriptions found."), openPortal);
-
-        if (selection === openPortal) {
-            vscode.env.openExternal(
-                vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
-            );
+    if (azureContext?.subscriptionId) {
+        // Subscription already known from the generation flow — skip the QuickPick.
+        subscriptionId = azureContext.subscriptionId;
+        logger.debug("OIDC: using subscription from AzureContext", subscriptionId);
+    } else {
+        const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
+        if (!succeeded(subscriptionsResult)) {
+            vscode.window.showErrorMessage(l10n.t("Failed to get subscriptions: {0}", subscriptionsResult.error));
+            return null;
         }
-        return null;
+
+        const subscriptions = subscriptionsResult.result;
+
+        if (subscriptions.length === 0) {
+            const openPortal = l10n.t("Open in Portal");
+            const selection = await vscode.window.showWarningMessage(
+                l10n.t("No Azure subscriptions found."),
+                openPortal,
+            );
+
+            if (selection === openPortal) {
+                vscode.env.openExternal(
+                    vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+                );
+            }
+            return null;
+        }
+
+        const subItems = subscriptions.map((sub) => ({
+            label: sub.displayName,
+            description: sub.subscriptionId,
+            subscriptionId: sub.subscriptionId,
+        }));
+
+        const selectedSub = await vscode.window.showQuickPick(subItems, {
+            placeHolder: l10n.t("Select Azure subscription"),
+            title: l10n.t("OIDC Setup - Subscription"),
+        });
+
+        if (!selectedSub) return null;
+
+        subscriptionId = selectedSub.subscriptionId;
     }
 
-    const subItems = subscriptions.map((sub) => ({
-        label: sub.displayName,
-        description: sub.subscriptionId,
-        subscriptionId: sub.subscriptionId,
-    }));
+    // Resource group: prefer clusterResourceGroup from AzureContext, otherwise prompt.
+    let resourceGroup: string;
 
-    const selectedSub = await vscode.window.showQuickPick(subItems, {
-        placeHolder: l10n.t("Select Azure subscription"),
-        title: l10n.t("OIDC Setup - Subscription"),
-    });
+    const prefilledResourceGroup = azureContext?.clusterResourceGroup;
+    if (prefilledResourceGroup) {
+        resourceGroup = prefilledResourceGroup;
+        logger.debug("OIDC: using resource group from AzureContext", resourceGroup);
+    } else {
+        const enteredResourceGroup = await vscode.window.showInputBox({
+            prompt: l10n.t("Enter resource group name (will be created if it doesn't exist)"),
+            value: `rg-${appName}-oidc`,
+            title: l10n.t("OIDC Setup - Resource Group"),
+        });
 
-    if (!selectedSub) return null;
+        if (!enteredResourceGroup) return null;
 
-    // Get resource group
-    const resourceGroup = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter resource group name (will be created if it doesn't exist)"),
-        value: `rg-${appName}-oidc`,
-        title: l10n.t("OIDC Setup - Resource Group"),
-    });
-
-    if (!resourceGroup) return null;
+        resourceGroup = enteredResourceGroup;
+    }
 
     // Get credential for listing identities
     const credential = getCredential(sessionProvider);
 
     // List existing managed identities in the resource group
-    const existingIdentities = await listManagedIdentities(credential, selectedSub.subscriptionId, resourceGroup);
+    const existingIdentities = await listManagedIdentities(credential, subscriptionId, resourceGroup);
 
     // Decide whether to use existing or create new
     let useExistingIdentity = false;
@@ -312,7 +340,7 @@ async function promptForAzureConfig(appName: string): Promise<AzureConfig | null
     }
 
     return {
-        subscriptionId: selectedSub.subscriptionId,
+        subscriptionId,
         resourceGroup,
         identityName,
         location,

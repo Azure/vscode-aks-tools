@@ -330,7 +330,7 @@ async function executeContainerAssistActions(
         }
 
         const allFiles = [...deploymentFiles, workflowResult.workflowPath];
-        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
+        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true, azureContext);
         return;
     }
 
@@ -493,7 +493,7 @@ async function generateWorkflowFile(
         return { workflowPath };
     }
 
-    await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true);
+    await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true, azureContext);
 
     return { workflowPath };
 }
