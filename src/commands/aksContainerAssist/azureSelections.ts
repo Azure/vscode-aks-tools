@@ -410,44 +410,6 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
     return workflowName;
 }
 
-/**
- * Prompts user to select an ACR from the subscription (no cluster required).
- * Returns the AzureResource for the selected ACR.
- */
-export async function selectAcr(
-    sessionProvider: ReadyAzureSessionProvider,
-    subscriptionId: string,
-): Promise<AzureResource | undefined> {
-    const allAcrs = await longRunning(l10n.t("Loading Azure Container Registries..."), () =>
-        fetchSubscriptionAcrs(sessionProvider, subscriptionId),
-    );
-    if (!allAcrs) return undefined;
-
-    const acrItems = allAcrs
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((acr) => ({
-            label: `${acr.name}.azurecr.io`,
-            description: acr.resourceGroup,
-            acr: {
-                id: acr.id,
-                name: acr.name,
-                resourceGroup: acr.resourceGroup,
-            },
-        }));
-
-    const selected = await vscode.window.showQuickPick(acrItems, {
-        placeHolder: l10n.t("Select Azure Container Registry"),
-        title: l10n.t("Container Registry ({0} available)", allAcrs.length),
-    });
-
-    // Show confirmation dialog if user cancelled
-    if (!selected) {
-        return showWizardExitConfirmation(() => selectAcr(sessionProvider, subscriptionId));
-    }
-
-    return selected.acr;
-}
-
 export interface AzureContext {
     acrName: string;
     acrResourceGroup: string;
@@ -459,28 +421,20 @@ export interface AzureContext {
 }
 
 /**
- * Collects Azure context from the user through a series of prompts.
- * Returns undefined if the user cancels any step.
+ * Shared tail for both collectAzureContext paths: prompts for ACR, namespace, and optionally
+ * workflow name given an already-resolved session provider, subscription ID, and cluster.
  */
-export async function collectAzureContext(
+async function collectAzureContextForCluster(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
     hasWorkflow: boolean,
     projectRoot: string,
 ): Promise<AzureContext | undefined> {
-    const sessionProvider = await authenticateAzure();
-    if (!sessionProvider) return undefined;
-
-    const subscription = await selectAzureSubscription(sessionProvider);
-    if (!subscription) return undefined;
-    logger.debug("Subscription selected", subscription.name);
-
-    const cluster = await selectAksCluster(sessionProvider, subscription.id);
-    if (!cluster) return undefined;
-    logger.debug("Cluster selected", cluster.name);
-
-    const acr = await selectClusterAcr(sessionProvider, subscription.id, cluster);
+    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
     if (!acr) return undefined;
 
-    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscription.id, cluster);
+    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster);
     if (!namespaceSelection) return undefined;
     logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
 
@@ -504,9 +458,31 @@ export async function collectAzureContext(
 }
 
 /**
+ * Collects Azure context from the user through a series of prompts.
+ * Returns undefined if the user cancels any step.
+ */
+export async function collectAzureContext(
+    hasWorkflow: boolean,
+    projectRoot: string,
+): Promise<AzureContext | undefined> {
+    const sessionProvider = await authenticateAzure();
+    if (!sessionProvider) return undefined;
+
+    const subscription = await selectAzureSubscription(sessionProvider);
+    if (!subscription) return undefined;
+    logger.debug("Subscription selected", subscription.name);
+
+    const cluster = await selectAksCluster(sessionProvider, subscription.id);
+    if (!cluster) return undefined;
+    logger.debug("Cluster selected", cluster.name);
+
+    return collectAzureContextForCluster(sessionProvider, subscription.id, cluster, hasWorkflow, projectRoot);
+}
+
+/**
  * Collects Azure context when invoked from the AKS cluster tree.
  * Subscription and cluster are already known from the tree node, so we skip those prompts.
- * Only prompts for ACR, namespace (if workflow), and workflow name (if workflow).
+ * Always prompts for ACR and namespace; additionally prompts for workflow name when hasWorkflow is true.
  */
 export async function collectAzureContextFromTree(
     subscriptionId: string,
@@ -525,37 +501,5 @@ export async function collectAzureContextFromTree(
         subscriptionId,
     };
 
-    // Deployment only: need only ACR (subscription already known)
-    if (!hasWorkflow) {
-        const acr = await selectAcr(sessionProvider, subscriptionId);
-        if (!acr) return undefined;
-
-        return {
-            acrName: acr.name,
-            acrResourceGroup: acr.resourceGroup,
-            clusterName: cluster.name,
-            clusterResourceGroup: cluster.resourceGroup,
-        };
-    }
-
-    // Workflow: need ACR, namespace, workflow name — cluster is already known
-    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
-    if (!acr) return undefined;
-
-    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster);
-    if (!namespaceSelection) return undefined;
-    logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
-
-    const workflowName = await promptForWorkflowName(path.basename(projectRoot));
-    if (!workflowName) return undefined;
-
-    return {
-        acrName: acr.name,
-        acrResourceGroup: acr.resourceGroup,
-        clusterName: cluster.name,
-        clusterResourceGroup: cluster.resourceGroup,
-        namespace: namespaceSelection.name,
-        isManagedNamespace: namespaceSelection.isManaged,
-        workflowName,
-    };
+    return collectAzureContextForCluster(sessionProvider, subscriptionId, cluster, hasWorkflow, projectRoot);
 }
