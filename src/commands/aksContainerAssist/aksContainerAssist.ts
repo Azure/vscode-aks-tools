@@ -14,6 +14,7 @@ import { collectAzureContext, collectAzureContextFromTree, AzureContext } from "
 import { showPostGenerationOptions } from "./postGenerationFlow";
 import { getAksClusterTreeNode } from "../utils/clusters";
 import { selectLanguageModel } from "./lmClient";
+import { showWizardExitConfirmation } from "./wizardUtils";
 export { showWizardExitConfirmation } from "./wizardUtils";
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
@@ -141,7 +142,7 @@ async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined
     });
 
     if (!picked) {
-        return undefined;
+        return showWizardExitConfirmation(() => pickWorkspaceFolder());
     }
 
     return picked;
@@ -239,7 +240,7 @@ async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] |
     });
 
     if (!selected || selected.length === 0) {
-        return undefined;
+        return showWizardExitConfirmation(() => showContainerAssistQuickPick());
     }
 
     return selected.map((item) => item.action);
@@ -266,6 +267,15 @@ async function executeContainerAssistActions(
     const hasBothActions = hasDeployment && hasWorkflow;
 
     if (hasDeployment) {
+        // Deployment file generation requires a language model. Check availability before
+        // proceeding further so the user gets a clear error rather than a silent failure
+        // deep in the flow.
+        const lmCheck = await containerAssistService.lmClient.selectModel(false);
+        if (!lmCheck.succeeded) {
+            vscode.window.showErrorMessage(lmCheck.error);
+            return;
+        }
+
         const modelResult = await selectLanguageModel(containerAssistService.lmClient);
         if (!modelResult) {
             return;
