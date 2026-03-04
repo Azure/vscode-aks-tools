@@ -25,8 +25,6 @@ import {
 } from "./prompts";
 import { PROJECT_TOOLS, handleToolCall } from "./tools";
 
-const MAX_TOOL_ROUNDS = 15;
-
 export class ContainerAssistService {
     readonly lmClient: LMClient;
 
@@ -173,7 +171,6 @@ export class ContainerAssistService {
             {
                 tools: PROJECT_TOOLS,
                 toolHandler: (call) => handleToolCall(call, workspaceRoot),
-                maxToolRounds: MAX_TOOL_ROUNDS,
             },
             token,
         );
@@ -284,7 +281,6 @@ export class ContainerAssistService {
             {
                 tools: PROJECT_TOOLS,
                 toolHandler: (call) => handleToolCall(call, workspaceRoot),
-                maxToolRounds: MAX_TOOL_ROUNDS,
             },
             token,
         );

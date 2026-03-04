@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { showWizardExitConfirmation } from "./wizardUtils";
 import * as l10n from "@vscode/l10n";
 
+const MAX_TOOL_CALLS = 20;
 /**
  * Reads the configured model family and vendor from user/workspace settings.
  * Defaults are defined in package.json under aks.containerAssist.modelFamily / modelVendor.
@@ -110,8 +111,7 @@ export class LMClient {
             };
         }
 
-        const maxRounds = options.maxToolRounds ?? 15;
-
+        const maxRounds = options.maxToolRounds ?? MAX_TOOL_CALLS;
         try {
             const messages: vscode.LanguageModelChatMessage[] = [
                 vscode.LanguageModelChatMessage.User(systemPrompt),

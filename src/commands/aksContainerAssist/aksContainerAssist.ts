@@ -433,6 +433,9 @@ async function generateDeploymentFiles(
 
     if (generatedFiles.length === 0) {
         logger.warn("No files were generated");
+        if (hasBothActions) {
+            return { deploymentFiles: [] };
+        }
         vscode.window.showWarningMessage(l10n.t("No deployment files were generated."));
         return undefined;
     }
