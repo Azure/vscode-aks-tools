@@ -262,7 +262,7 @@ export class LMClient {
                 selectedModel = await this.showModelSelectionQuickPick(allModels, preferences);
             } else {
                 selectedModel = preferredModels[0] ?? allModels[0];
-                if (selectedModel !== preferredModels[0] && preferredModels.length === 0) {
+                if (preferredModels.length === 0) {
                     logger.warn(
                         `Preferred model (${preferences.vendor}/${preferences.family}) not found, using first available`,
                     );
