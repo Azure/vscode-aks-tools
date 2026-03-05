@@ -520,30 +520,44 @@ async function createFederatedCredential(
     });
 }
 
-async function displayOIDCResults(result: OIDCSetupResult, repoInfo: { owner: string; repo: string }): Promise<void> {
+async function displayOIDCResults(
+    result: OIDCSetupResult,
+    repoInfo: { owner: string; repo: string; branch: string; mainBranch?: string },
+): Promise<void> {
     // Show success information to user
-    const message = l10n.t("OIDC setup completed successfully! Your federated identity is ready for GitHub Actions.");
-    const copyAll = l10n.t("Copy GitHub Secrets");
-    const setSecrets = l10n.t("Set GitHub Secrets");
+    const message = l10n.t(
+        "Managed Identity configured. Add the identity details to your repository secrets to complete the pipeline setup.",
+    );
+    const setSecrets = l10n.t("Set GH Secrets");
+    const copyAll = l10n.t("Copy GH Secrets and set manually");
     const viewInstructions = l10n.t("View Output");
 
     const secretsText = `AZURE_CLIENT_ID: ${result.clientId}
 AZURE_TENANT_ID: ${result.tenantId}
 AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
 
-    // Show in output channel with detailed info
+    const federatedBranch = repoInfo.mainBranch ?? "main";
+    const federatedSubject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${federatedBranch}`;
 
-    const selection = await vscode.window.showInformationMessage(message, copyAll, setSecrets, viewInstructions);
+    logger.info("--- Managed Identity / OIDC Setup Complete ---");
+    logger.info(`Identity:         ${result.identityName}`);
+    logger.info(`Resource group:   ${result.resourceGroup}`);
+    logger.info(`Subscription:     ${result.subscriptionId}`);
+    logger.info(`GitHub repo:      ${repoInfo.owner}/${repoInfo.repo}`);
+    logger.info(`Federated branch: ${federatedBranch} (subject: ${federatedSubject})`);
+    logger.info(`Required GitHub Actions secrets:\n${secretsText}`);
 
-    if (selection === copyAll) {
-        await vscode.env.clipboard.writeText(secretsText);
-        vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
-    } else if (selection === setSecrets) {
+    const selection = await vscode.window.showInformationMessage(message, setSecrets, copyAll, viewInstructions);
+
+    if (selection === setSecrets) {
         await setGitHubActionsSecrets(repoInfo.owner, repoInfo.repo, {
             AZURE_CLIENT_ID: result.clientId,
             AZURE_TENANT_ID: result.tenantId,
             AZURE_SUBSCRIPTION_ID: result.subscriptionId,
         });
+    } else if (selection === copyAll) {
+        await vscode.env.clipboard.writeText(secretsText);
+        vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
     } else if (selection === viewInstructions) {
         logger.show();
     }

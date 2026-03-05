@@ -59,12 +59,12 @@ async function promptOIDCSetup(
     appName: string,
     azureContext?: AzureContext,
 ): Promise<void> {
-    const setup = l10n.t("Setup OIDC");
+    const setup = l10n.t("Configure Pipeline with Managed Identity");
     const skip = l10n.t("Skip");
 
     const selection = await vscode.window.showWarningMessage(
         l10n.t(
-            "Your GitHub workflow requires OIDC authentication to deploy to Azure. Without it the workflow will fail.",
+            "Your pipeline needs an Azure Managed Identity to connect to AKS. Set one up now using OIDC, or skip and configure it later.",
         ),
         setup,
         skip,
@@ -119,9 +119,7 @@ async function promptStageAndReview(
 
     // Show a confirmation notification
     vscode.window.showInformationMessage(
-        l10n.t(
-            "Files staged with a suggested commit message. Review the diffs in Source Control and commit when ready.",
-        ),
+        l10n.t("Files staged for review. Commit when ready via Source Control or using git in the terminal."),
     );
 
     // Step 3 — Listen for the user's commit, then offer PR creation
