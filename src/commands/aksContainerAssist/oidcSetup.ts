@@ -759,7 +759,7 @@ export async function setGitHubActionsSecrets(
 
                 vscode.window.showWarningMessage(
                     l10n.t(
-                        "Set {0}/{1} secrets successfully. Failed: {2}",
+                        "{0} of {1} secrets were set. Could not set: {2}. Add the missing secrets manually.",
                         succeededCount,
                         entries.length,
                         failedSecrets.join(", "),
@@ -774,7 +774,7 @@ export async function setGitHubActionsSecrets(
         }
 
         vscode.window.showInformationMessage(
-            l10n.t("GitHub Actions secrets set successfully on {0}/{1}! Your workflow is ready to use.", owner, repo),
+            l10n.t("GitHub Actions secrets set on {0}/{1}. Your pipeline is ready to run.", owner, repo),
         );
         return true;
     } catch (error) {
