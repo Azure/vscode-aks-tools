@@ -66,7 +66,6 @@ async function promptOIDCSetup(
         l10n.t(
             "Your GitHub workflow requires OIDC authentication to deploy to Azure. Without it the workflow will fail.",
         ),
-        { modal: true },
         setup,
         skip,
     );

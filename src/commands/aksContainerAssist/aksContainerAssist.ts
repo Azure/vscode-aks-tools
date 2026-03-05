@@ -124,7 +124,7 @@ export async function runContainerAssistFromTree(_context: IActionContext, targe
  * Prompts the user to pick a workspace folder if multiple are open,
  * or uses the single workspace folder automatically.
  */
-async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
+export async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
         vscode.window.showErrorMessage(
@@ -267,9 +267,6 @@ async function executeContainerAssistActions(
     const hasBothActions = hasDeployment && hasWorkflow;
 
     if (hasDeployment) {
-        // Deployment file generation requires a language model. Check availability before
-        // proceeding further so the user gets a clear error rather than a silent failure
-        // deep in the flow.
         const lmCheck = await containerAssistService.lmClient.selectModel(false);
         if (!lmCheck.succeeded) {
             vscode.window.showErrorMessage(lmCheck.error);
@@ -442,10 +439,11 @@ async function generateDeploymentFiles(
     logger.debug("Generated files", generatedFiles);
 
     if (generatedFiles.length === 0) {
-        logger.warn("No files were generated");
         if (hasBothActions) {
+            logger.debug("No new deployment files generated (files may already exist)");
             return { deploymentFiles: [] };
         }
+        logger.warn("No files were generated");
         vscode.window.showWarningMessage(l10n.t("No deployment files were generated."));
         return undefined;
     }
@@ -466,11 +464,6 @@ async function generateWorkflowFile(
     hasBothActions: boolean,
     azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
-    // generateGitHubWorkflow runs all user-facing prompts (Dockerfile path,
-    // manifests, duplicate-file dialog) synchronously before doing any I/O,
-    // so we only wrap the call in a progress notification when hasBothActions
-    // is true — and the notification will close immediately if the user
-    // cancels any prompt inside the function.
     const result = hasBothActions
         ? await vscode.window.withProgress(
               {
@@ -486,7 +479,6 @@ async function generateWorkflowFile(
 
     if (failed(result)) {
         if (result.error === "cancelled") {
-            // User chose to cancel (dismissed a prompt or declined overwrite) — no toast needed.
             logger.debug("Workflow generation cancelled by user");
             return undefined;
         }

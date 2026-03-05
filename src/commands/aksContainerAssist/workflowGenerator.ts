@@ -33,9 +33,6 @@ export async function generateGitHubWorkflow(
             return { succeeded: false, error: `Invalid configuration: ${errorMsg}` };
         }
 
-        // Check if workflow already exists — ask the user before starting any
-        // long-running operation so the overwrite dialog is not buried under
-        // a progress notification.
         const workflowName = sanitizeWorkflowName(config.workflowName);
         const exists = await workflowFileExists(projectRoot, workflowName);
         if (exists) {
