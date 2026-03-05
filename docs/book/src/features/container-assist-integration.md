@@ -28,7 +28,6 @@ This can also be achieve from the user setting UI of vscode as well.
 
 ![Container Assist Flag from User Setting](../resources/container-assist/container-assist-user-settings-flag.png)
 
-
 ## Where you can launch it
 
 Container Assist can be launched from:

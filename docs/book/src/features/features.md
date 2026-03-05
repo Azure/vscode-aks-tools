@@ -24,6 +24,12 @@ Container Assist release screenshots:
 
 ![Container Assist workspace menu entry](../resources/container-assist/container-assist-workspacemenu.png)
 
+Menu simplification release screenshots:
+
+![Classic AKS cluster context menu](../resources/new-menu-structure/simplified-menu-1.png)
+
+![Simplified AKS cluster context menu](../resources/new-menu-structure/simplified-menu-2.png)
+
 ![Cloud explorer extension menu](../resources/right-click-menu.png)
 
 ![Cloud explorer extension menu](../resources/right-click-menu-workflow.png)

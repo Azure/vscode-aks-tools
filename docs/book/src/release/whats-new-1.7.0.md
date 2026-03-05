@@ -70,7 +70,8 @@ Read full details:
 
 ![Container Assist menu entry in AKS cluster context menu](../resources/container-assist/container-assist-commands-1.png)
 
-Remaining release screenshots can be added when available:
+![Classic AKS menu structure](../resources/new-menu-structure/simplified-menu-1.png)
 
-- `release-1.7.0-overview.png`
-- `release-1.7.0-feature-flags-settings.png`
+![Simplified AKS menu structure](../resources/new-menu-structure/simplified-menu-2.png)
+
+![Simplified menu flag in user settings](../resources/new-menu-structure/simplified-menu-user-setting.png)

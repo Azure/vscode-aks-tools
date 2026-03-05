@@ -56,18 +56,12 @@ This allows gradual rollout, internal validation, and user feedback collection w
 3. Collect feedback on discoverability and click depth.
 4. Promote to default once validated.
 
-## Screenshot placeholders
+## Screenshots
 
-Add screenshots under `docs/book/src/resources/` and then replace the placeholder notes below.
+![Classic AKS cluster context menu structure](../resources/new-menu-structure/simplified-menu-1.png)
 
-Placeholder 1:
-- Suggested file: `aks-menu-old-structure.png`
-- Context: AKS cluster context menu with classic structure (`aks.simplifiedMenuStructure = false`)
+![Simplified AKS cluster context menu with grouped categories](../resources/new-menu-structure/simplified-menu-2.png)
 
-Placeholder 2:
-- Suggested file: `aks-menu-simplified-structure.png`
-- Context: AKS cluster context menu with grouped structure (`aks.simplifiedMenuStructure = true`)
+![Develop and Deploy submenu with Container Assist and related commands](../resources/new-menu-structure/simplified-menu-3.png)
 
-Placeholder 3:
-- Suggested file: `aks-menu-develop-deploy-container-assist.png`
-- Context: `Develop & Deploy` submenu expanded with Container Assist visible
+![VS Code user settings showing simplified menu feature flag](../resources/new-menu-structure/simplified-menu-user-setting.png)
