@@ -66,18 +66,11 @@ Read full details:
 2. Validate expected menu visibility and command flow.
 3. Roll out to team settings after confirmation.
 
-## Screenshot placeholders
+## Screenshots
 
-Add screenshots under `docs/book/src/resources/` and update this page once assets are available.
+![Container Assist menu entry in AKS cluster context menu](../resources/container-assist/container-assist-commands-1.png)
 
-Placeholder 1:
-- Suggested file: `release-1.7.0-overview.png`
-- Context: Side-by-side view of classic vs simplified AKS menu
+Remaining release screenshots can be added when available:
 
-Placeholder 2:
-- Suggested file: `release-1.7.0-container-assist-preview.png`
-- Context: Cluster menu showing `AKS: Run Container Assist (Preview)`
-
-Placeholder 3:
-- Suggested file: `release-1.7.0-feature-flags-settings.png`
-- Context: VS Code settings page with both flags enabled
+- `release-1.7.0-overview.png`
+- `release-1.7.0-feature-flags-settings.png`

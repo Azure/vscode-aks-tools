@@ -94,22 +94,40 @@ This supports a full path from local generation to reviewable GitHub PR with min
 `aks.containerAssist.modelVendor`
 : Default model vendor used by Container Assist. Default: `copilot`.
 
-## Screenshot placeholders
+## Screenshots
 
-Add screenshots under `docs/book/src/resources/` and then replace the placeholder notes below.
+### Menu entry points
 
-Placeholder 1:
-- Suggested file: `container-assist-cluster-menu.png`
-- Context: AKS cluster right-click menu showing `AKS: Run Container Assist (Preview)`
+![Container Assist from workspace explorer menu](../resources/container-assist/container-assist-workspacemenu.png)
 
-Placeholder 2:
-- Suggested file: `container-assist-action-picker.png`
-- Context: Multi-select action picker (`Generate Deployment Files`, `Generate GitHub Workflow`)
+![Container Assist from AKS cluster menu](../resources/container-assist/container-assist-commands-1.png)
 
-Placeholder 3:
-- Suggested file: `container-assist-stage-review.png`
-- Context: Post-generation `Stage & Review` notification and SCM handoff
+### Container Assist and GitHub integration flow
 
-Placeholder 4:
-- Suggested file: `container-assist-pr-flow.png`
-- Context: PR creation prompt flow after commit
+![Container Assist flow step 2](../resources/container-assist/container-assist-commands-2.png)
+
+![Container Assist flow step 3](../resources/container-assist/container-assist-commands-3.png)
+
+![Container Assist flow step 4](../resources/container-assist/container-assist-commands-4.png)
+
+![Container Assist flow step 5](../resources/container-assist/container-assist-commands-5.png)
+
+![Container Assist flow step 6](../resources/container-assist/container-assist-commands-6.png)
+
+![Container Assist flow step 7](../resources/container-assist/container-assist-commands-7.png)
+
+![Container Assist flow step 8](../resources/container-assist/container-assist-commands-8.png)
+
+![Container Assist flow step 9](../resources/container-assist/container-assist-commands-9.png)
+
+![Container Assist flow step 10](../resources/container-assist/container-assist-commands-10.png)
+
+![Container Assist flow step 11](../resources/container-assist/container-assist-commands-11.png)
+
+![Container Assist flow step 12](../resources/container-assist/container-assist-commands-12.png)
+
+![Container Assist flow step 13](../resources/container-assist/container-assist-commands-13.png)
+
+![Container Assist flow step 14](../resources/container-assist/container-assist-commands-14.png)
+
+![Container Assist flow step 15](../resources/container-assist/container-assist-commands-15.png)

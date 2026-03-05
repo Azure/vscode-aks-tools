@@ -18,11 +18,11 @@ These can be enabled independently:
 }
 ```
 
-Screenshot placeholders for this release:
+Container Assist release screenshots:
 
-- Suggested image: `container-assist-cluster-menu.png`
-- Suggested image: `container-assist-action-picker.png`
-- Suggested image: `aks-menu-simplified-structure.png`
+![Container Assist menu in AKS cluster context menu](../resources/container-assist/container-assist-commands-1.png)
+
+![Container Assist workspace menu entry](../resources/container-assist/container-assist-workspacemenu.png)
 
 ![Cloud explorer extension menu](../resources/right-click-menu.png)
 
