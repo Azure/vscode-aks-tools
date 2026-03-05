@@ -14,6 +14,7 @@ import { collectAzureContext, collectAzureContextFromTree, AzureContext } from "
 import { showPostGenerationOptions } from "./postGenerationFlow";
 import { getAksClusterTreeNode } from "../utils/clusters";
 import { selectLanguageModel } from "./lmClient";
+import { showWizardExitConfirmation } from "./wizardUtils";
 export { showWizardExitConfirmation } from "./wizardUtils";
 
 export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
@@ -123,7 +124,7 @@ export async function runContainerAssistFromTree(_context: IActionContext, targe
  * Prompts the user to pick a workspace folder if multiple are open,
  * or uses the single workspace folder automatically.
  */
-async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
+export async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
         vscode.window.showErrorMessage(
@@ -141,7 +142,7 @@ async function pickWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined
     });
 
     if (!picked) {
-        return undefined;
+        return showWizardExitConfirmation(() => pickWorkspaceFolder());
     }
 
     return picked;
@@ -239,7 +240,7 @@ async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] |
     });
 
     if (!selected || selected.length === 0) {
-        return undefined;
+        return showWizardExitConfirmation(() => showContainerAssistQuickPick());
     }
 
     return selected.map((item) => item.action);
@@ -266,6 +267,12 @@ async function executeContainerAssistActions(
     const hasBothActions = hasDeployment && hasWorkflow;
 
     if (hasDeployment) {
+        const lmCheck = await containerAssistService.lmClient.selectModel(false);
+        if (!lmCheck.succeeded) {
+            vscode.window.showErrorMessage(lmCheck.error);
+            return;
+        }
+
         const modelResult = await selectLanguageModel(containerAssistService.lmClient);
         if (!modelResult) {
             return;
@@ -320,7 +327,7 @@ async function executeContainerAssistActions(
         }
 
         const allFiles = [...deploymentFiles, workflowResult.workflowPath];
-        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true);
+        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true, azureContext);
         return;
     }
 
@@ -432,10 +439,11 @@ async function generateDeploymentFiles(
     logger.debug("Generated files", generatedFiles);
 
     if (generatedFiles.length === 0) {
-        logger.warn("No files were generated");
         if (hasBothActions) {
+            logger.debug("No new deployment files generated (files may already exist)");
             return { deploymentFiles: [] };
         }
+        logger.warn("No files were generated");
         vscode.window.showWarningMessage(l10n.t("No deployment files were generated."));
         return undefined;
     }
@@ -456,7 +464,6 @@ async function generateWorkflowFile(
     hasBothActions: boolean,
     azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
-    // Show progress notification when both actions are selected
     const result = hasBothActions
         ? await vscode.window.withProgress(
               {
@@ -471,6 +478,10 @@ async function generateWorkflowFile(
         : await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
 
     if (failed(result)) {
+        if (result.error === "cancelled") {
+            logger.debug("Workflow generation cancelled by user");
+            return undefined;
+        }
         logger.error("GitHub workflow generation failed", result.error);
         vscode.window.showErrorMessage(l10n.t("Failed to generate GitHub workflow: {0}", result.error));
         return undefined;
@@ -483,7 +494,7 @@ async function generateWorkflowFile(
         return { workflowPath };
     }
 
-    await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true);
+    await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true, azureContext);
 
     return { workflowPath };
 }

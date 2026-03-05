@@ -8,13 +8,16 @@ import sodium from "libsodium-wrappers";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
 import { isReady } from "../../auth/types";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
-import { getCredential } from "../../auth/azureAuth";
+import { getCredential, getEnvironment } from "../../auth/azureAuth";
+import { getPortalCreateUrl } from "../utils/env";
 import { succeeded } from "../utils/errorable";
 import { logger } from "./logger";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { randomUUID } from "crypto";
 import type { TokenCredential } from "@azure/identity";
+import { AzureContext } from "./azureSelections";
+import { showWizardExitConfirmation } from "./wizardUtils";
 
 const execFilePromise = promisify(execFile);
 
@@ -37,7 +40,11 @@ interface AzureConfig {
 /**
  * Sets up OIDC federated identity for GitHub Actions workflow
  */
-export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder, appName: string): Promise<void> {
+export async function setupOIDCForGitHub(
+    workspaceFolder: vscode.WorkspaceFolder,
+    appName: string,
+    azureContext?: AzureContext,
+): Promise<void> {
     try {
         // Get GitHub repository information
         const repoInfo = await getGitHubRepoInfo(workspaceFolder);
@@ -51,7 +58,7 @@ export async function setupOIDCForGitHub(workspaceFolder: vscode.WorkspaceFolder
         logger.debug("GitHub repository info", repoInfo);
 
         // Prompt user for Azure details
-        const azureConfig = await promptForAzureConfig(appName);
+        const azureConfig = await promptForAzureConfig(appName, azureContext);
         if (!azureConfig) {
             return;
         }
@@ -190,7 +197,7 @@ export async function getGitHubRepoInfo(workspaceFolder: vscode.WorkspaceFolder)
     }
 }
 
-async function promptForAzureConfig(appName: string): Promise<AzureConfig | null> {
+async function promptForAzureConfig(appName: string, azureContext?: AzureContext): Promise<AzureConfig | null> {
     // Get subscription
     const sessionProvider = await getSessionProvider();
     if (!isReady(sessionProvider)) {
@@ -198,72 +205,103 @@ async function promptForAzureConfig(appName: string): Promise<AzureConfig | null
         return null;
     }
 
-    const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
-    if (!succeeded(subscriptionsResult)) {
-        vscode.window.showErrorMessage(l10n.t("Failed to get subscriptions: {0}", subscriptionsResult.error));
-        return null;
-    }
+    let subscriptionId: string;
 
-    const subscriptions = subscriptionsResult.result;
-
-    if (subscriptions.length === 0) {
-        const openPortal = l10n.t("Open in Portal");
-        const selection = await vscode.window.showWarningMessage(l10n.t("No Azure subscriptions found."), openPortal);
-
-        if (selection === openPortal) {
-            vscode.env.openExternal(
-                vscode.Uri.parse("https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade"),
-            );
+    if (azureContext?.subscriptionId) {
+        subscriptionId = azureContext.subscriptionId;
+        logger.debug("OIDC: using subscription from AzureContext", subscriptionId);
+    } else {
+        const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
+        if (!succeeded(subscriptionsResult)) {
+            vscode.window.showErrorMessage(l10n.t("Failed to get subscriptions: {0}", subscriptionsResult.error));
+            return null;
         }
-        return null;
+
+        const subscriptions = subscriptionsResult.result;
+
+        if (subscriptions.length === 0) {
+            const openPortal = l10n.t("Open in Portal");
+            const selection = await vscode.window.showWarningMessage(
+                l10n.t("No Azure subscriptions found."),
+                openPortal,
+            );
+
+            if (selection === openPortal) {
+                void vscode.env.openExternal(
+                    vscode.Uri.parse(
+                        getPortalCreateUrl(getEnvironment(), "view/Microsoft_Azure_Billing/SubscriptionsBlade"),
+                    ),
+                );
+            }
+            return null;
+        }
+
+        const subItems = subscriptions.map((sub) => ({
+            label: sub.displayName,
+            description: sub.subscriptionId,
+            subscriptionId: sub.subscriptionId,
+        }));
+
+        let selectedSub: (typeof subItems)[number] | undefined;
+        while (!selectedSub) {
+            selectedSub = await vscode.window.showQuickPick(subItems, {
+                placeHolder: l10n.t("Select Azure subscription"),
+                title: l10n.t("OIDC Setup - Subscription"),
+            });
+            if (!selectedSub) {
+                if ((await showWizardExitConfirmation(async () => null)) === undefined) return null;
+            }
+        }
+
+        subscriptionId = selectedSub.subscriptionId;
     }
 
-    const subItems = subscriptions.map((sub) => ({
-        label: sub.displayName,
-        description: sub.subscriptionId,
-        subscriptionId: sub.subscriptionId,
-    }));
-
-    const selectedSub = await vscode.window.showQuickPick(subItems, {
-        placeHolder: l10n.t("Select Azure subscription"),
-        title: l10n.t("OIDC Setup - Subscription"),
-    });
-
-    if (!selectedSub) return null;
-
-    // Get resource group
-    const resourceGroup = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter resource group name (will be created if it doesn't exist)"),
-        value: `rg-${appName}-oidc`,
-        title: l10n.t("OIDC Setup - Resource Group"),
-    });
-
-    if (!resourceGroup) return null;
+    let resourceGroup: string | undefined;
+    while (!resourceGroup) {
+        resourceGroup = await vscode.window.showInputBox({
+            prompt: l10n.t("Enter resource group name for the managed identity (will be created if it doesn't exist)"),
+            value: azureContext?.clusterResourceGroup ?? `rg-${appName}-oidc`,
+            title: l10n.t("OIDC Setup - Resource Group"),
+            validateInput: (v) => (v.trim() ? undefined : l10n.t("Resource group name cannot be empty")),
+        });
+        if (resourceGroup === undefined) {
+            if ((await showWizardExitConfirmation(async () => null)) === undefined) return null;
+        }
+    }
 
     // Get credential for listing identities
     const credential = getCredential(sessionProvider);
 
     // List existing managed identities in the resource group
-    const existingIdentities = await listManagedIdentities(credential, selectedSub.subscriptionId, resourceGroup);
+    const existingIdentities = await listManagedIdentities(credential, subscriptionId, resourceGroup);
 
-    // Decide whether to use existing or create new
     let useExistingIdentity = false;
     let selectedIdentityName: string | null = null;
-    let location: string | undefined = undefined;
 
     if (existingIdentities.length > 0) {
-        const identityChoice = await vscode.window.showQuickPick(
-            [
-                { label: l10n.t("Create new managed identity"), description: "", value: "new" },
-                { label: l10n.t("Use existing managed identity"), description: "", value: "existing" },
-            ],
-            {
-                placeHolder: l10n.t("Choose managed identity option"),
-                title: l10n.t("OIDC Setup - Managed Identity"),
-            },
-        );
+        let identityChoice:
+            | {
+                  label: string;
+                  description: string;
+                  value: string;
+              }
+            | undefined;
 
-        if (!identityChoice) return null;
+        while (!identityChoice) {
+            identityChoice = await vscode.window.showQuickPick(
+                [
+                    { label: l10n.t("Create new managed identity"), description: "", value: "new" },
+                    { label: l10n.t("Use existing managed identity"), description: "", value: "existing" },
+                ],
+                {
+                    placeHolder: l10n.t("Choose managed identity option"),
+                    title: l10n.t("OIDC Setup - Managed Identity"),
+                },
+            );
+            if (!identityChoice) {
+                if ((await showWizardExitConfirmation(async () => null)) === undefined) return null;
+            }
+        }
 
         if (identityChoice.value === "existing") {
             useExistingIdentity = true;
@@ -273,46 +311,59 @@ async function promptForAzureConfig(appName: string): Promise<AzureConfig | null
                 description: identity.clientId,
             }));
 
-            const selectedIdentity = await vscode.window.showQuickPick(identityItems, {
-                placeHolder: l10n.t("Select managed identity"),
-                title: l10n.t("OIDC Setup - Select Identity"),
-            });
-
-            if (!selectedIdentity) return null;
+            let selectedIdentity: (typeof identityItems)[number] | undefined;
+            while (!selectedIdentity) {
+                selectedIdentity = await vscode.window.showQuickPick(identityItems, {
+                    placeHolder: l10n.t("Select managed identity"),
+                    title: l10n.t("OIDC Setup - Select Identity"),
+                });
+                if (!selectedIdentity) {
+                    if ((await showWizardExitConfirmation(async () => null)) === undefined) return null;
+                }
+            }
 
             selectedIdentityName = selectedIdentity.label;
         }
     }
 
-    // Get identity name if creating new
     let identityName: string;
+    let location: string;
+
     if (useExistingIdentity && selectedIdentityName) {
         identityName = selectedIdentityName;
-        location = "eastus"; // Dummy value, not used for existing identities
+        location = "eastus"; // not used for existing identities
     } else {
-        const newIdentityName = await vscode.window.showInputBox({
-            prompt: l10n.t("Enter managed identity name"),
-            value: `id-${appName}-github`,
-            title: l10n.t("OIDC Setup - Identity Name"),
-        });
-
-        if (!newIdentityName) return null;
-
+        let newIdentityName: string | undefined;
+        while (!newIdentityName) {
+            newIdentityName = await vscode.window.showInputBox({
+                prompt: l10n.t("Enter managed identity name"),
+                value: `id-${appName}-github`,
+                title: l10n.t("OIDC Setup - Identity Name"),
+                validateInput: (v) => (v.trim() ? undefined : l10n.t("Identity name cannot be empty")),
+            });
+            if (newIdentityName === undefined) {
+                if ((await showWizardExitConfirmation(async () => null)) === undefined) return null;
+            }
+        }
         identityName = newIdentityName;
 
-        // Get location only if creating new
-        const newLocation = await vscode.window.showInputBox({
-            prompt: l10n.t("Enter Azure region"),
-            value: "eastus",
-            title: l10n.t("OIDC Setup - Location"),
-        });
-
-        if (!newLocation) return null;
+        let newLocation: string | undefined;
+        while (!newLocation) {
+            newLocation = await vscode.window.showInputBox({
+                prompt: l10n.t("Enter Azure region"),
+                value: "eastus",
+                title: l10n.t("OIDC Setup - Location"),
+                validateInput: (v) => (v.trim() ? undefined : l10n.t("Location cannot be empty")),
+            });
+            if (newLocation === undefined) {
+                if ((await showWizardExitConfirmation(async () => null)) === undefined) return null;
+            }
+        }
         location = newLocation;
     }
 
     return {
-        subscriptionId: selectedSub.subscriptionId,
+        subscriptionId,
         resourceGroup,
         identityName,
         location,

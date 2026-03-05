@@ -10,6 +10,7 @@ import {
     isGitHubExtensionAvailable,
 } from "./gitHubIntegration";
 import { setupOIDCForGitHub } from "./oidcSetup";
+import { AzureContext } from "./azureSelections";
 
 // ─── Post-Generation Flow ─────────────────────────────────────────────────────
 //
@@ -33,13 +34,14 @@ export async function showPostGenerationOptions(
     workspaceFolder: vscode.WorkspaceFolder,
     appName: string,
     includeOIDC: boolean,
+    azureContext?: AzureContext,
 ): Promise<void> {
     const hasWorkflowFile = generatedFiles.some((file) => file.includes(".github/workflows/"));
     const showOIDC = includeOIDC && hasWorkflowFile;
 
     // Step 1 — OIDC (only when a workflow was generated)
     if (showOIDC) {
-        await promptOIDCSetup(workspaceFolder, appName);
+        await promptOIDCSetup(workspaceFolder, appName, azureContext);
     }
 
     // Step 2 — Stage & review
@@ -52,7 +54,11 @@ export async function showPostGenerationOptions(
  * Prompt the user to configure OIDC authentication.
  * The workflow won't deploy without it, so we surface this first.
  */
-async function promptOIDCSetup(workspaceFolder: vscode.WorkspaceFolder, appName: string): Promise<void> {
+async function promptOIDCSetup(
+    workspaceFolder: vscode.WorkspaceFolder,
+    appName: string,
+    azureContext?: AzureContext,
+): Promise<void> {
     const setup = l10n.t("Setup OIDC");
     const skip = l10n.t("Skip");
 
@@ -60,13 +66,12 @@ async function promptOIDCSetup(workspaceFolder: vscode.WorkspaceFolder, appName:
         l10n.t(
             "Your GitHub workflow requires OIDC authentication to deploy to Azure. Without it the workflow will fail.",
         ),
-        { modal: true },
         setup,
         skip,
     );
 
     if (selection === setup) {
-        await setupOIDCForGitHub(workspaceFolder, appName);
+        await setupOIDCForGitHub(workspaceFolder, appName, azureContext);
     }
     // "Skip" or dismissed — continue to the staging step either way.
 }

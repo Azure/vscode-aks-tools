@@ -5,7 +5,7 @@ import { logger } from "./logger";
 import { showWizardExitConfirmation } from "./wizardUtils";
 import * as l10n from "@vscode/l10n";
 
-const MAX_TOOL_CALLS = 20;
+const DEFAULT_MAX_TOOL_ROUNDS = 20;
 /**
  * Reads the configured model family and vendor from user/workspace settings.
  * Defaults are defined in package.json under aks.containerAssist.modelFamily / modelVendor.
@@ -111,7 +111,7 @@ export class LMClient {
             };
         }
 
-        const maxRounds = options.maxToolRounds ?? MAX_TOOL_CALLS;
+        const maxRounds = options.maxToolRounds ?? DEFAULT_MAX_TOOL_ROUNDS;
         try {
             const messages: vscode.LanguageModelChatMessage[] = [
                 vscode.LanguageModelChatMessage.User(systemPrompt),
@@ -262,7 +262,7 @@ export class LMClient {
                 selectedModel = await this.showModelSelectionQuickPick(allModels, preferences);
             } else {
                 selectedModel = preferredModels[0] ?? allModels[0];
-                if (selectedModel !== preferredModels[0] && preferredModels.length === 0) {
+                if (preferredModels.length === 0) {
                     logger.warn(
                         `Preferred model (${preferences.vendor}/${preferences.family}) not found, using first available`,
                     );
