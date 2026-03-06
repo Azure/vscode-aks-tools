@@ -260,7 +260,7 @@ async function promptForAzureConfig(appName: string, azureContext?: AzureContext
     while (!resourceGroup) {
         resourceGroup = await vscode.window.showInputBox({
             prompt: l10n.t("Enter resource group name for the managed identity (will be created if it doesn't exist)"),
-            value: azureContext?.clusterResourceGroup ?? `rg-${appName}-oidc`,
+            value: `rg-${appName}`,
             title: l10n.t("OIDC Setup - Resource Group"),
             validateInput: (v) => (v.trim() ? undefined : l10n.t("Resource group name cannot be empty")),
         });
