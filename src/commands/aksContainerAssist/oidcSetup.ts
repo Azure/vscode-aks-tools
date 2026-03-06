@@ -260,7 +260,7 @@ async function promptForAzureConfig(appName: string, azureContext?: AzureContext
     while (!resourceGroup) {
         resourceGroup = await vscode.window.showInputBox({
             prompt: l10n.t("Enter resource group name for the managed identity (will be created if it doesn't exist)"),
-            value: `rg-${appName}`,
+            value: `rg-${appName}-oidc`,
             title: l10n.t("OIDC Setup - Resource Group"),
             validateInput: (v) => (v.trim() ? undefined : l10n.t("Resource group name cannot be empty")),
         });
@@ -528,8 +528,8 @@ async function displayOIDCResults(
     const message = l10n.t(
         "Managed Identity configured. Add the identity details to your repository secrets to complete the pipeline setup.",
     );
-    const setSecrets = l10n.t("Set GitHub Actions secrets");
-    const copyAll = l10n.t("Copy GitHub Actions secrets and set manually");
+    const setSecrets = l10n.t("Set secrets");
+    const copyAll = l10n.t("Copy secrets and set manually");
     const viewInstructions = l10n.t("View Output");
 
     const secretsText = `AZURE_CLIENT_ID: ${result.clientId}
