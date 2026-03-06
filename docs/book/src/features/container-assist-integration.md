@@ -1,16 +1,35 @@
-# Container Assist Integration (Preview)
+# Deploying Apps to AKS with GitHub Actions and Container Assist (Alpha Preview)
+
+> **Please Note**
+> This is an **Alpha Preview** feature. Behavior, prompts, and generated output may change between releases.
+>
+> **AI Notice**
+> Container Assist uses AI models to analyze project context and generate deployment files. Always review generated files before use, and do not include secrets or sensitive data in source files used for generation.
 
 Container Assist is a feature-flagged workflow in the AKS VS Code extension that helps generate deployment assets for AKS directly from your project.
 
-## Why this was added
+## Problem this feature solves
 
-Container Assist reduces setup time by guiding you through:
+Deploying an application to AKS with a GitHub Actions pipeline usually requires multiple manual steps:
+
+- Creating and tuning a Dockerfile
+- Authoring Kubernetes manifests for deployment and service resources
+- Creating a CI/CD workflow for build, push, and deploy
+- Wiring Azure authentication and repository workflow setup
+
+This process is flexible, but often time-consuming and error-prone, especially when teams are setting up deployment automation for a new or existing project.
+
+## How this feature helps
+
+Container Assist reduces setup friction by guiding you through:
 
 - Repository analysis
 - Dockerfile generation
 - Kubernetes manifest generation
 - Optional GitHub workflow generation
 - Optional PR-ready Git staging flow
+
+This gives teams a review-first starting point so they can iterate quickly while keeping full control over the final deployment configuration.
 
 ## Feature flag
 
@@ -24,7 +43,7 @@ Enable this preview feature in VS Code settings:
 
 Default value: `false`
 
-This can also be achieve from the user setting UI of vscode as well.
+This can also be enabled from the VS Code Settings UI.
 
 ![Container Assist Flag from User Setting](../resources/container-assist/container-assist-user-settings-flag.png)
 
