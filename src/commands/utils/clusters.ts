@@ -615,7 +615,7 @@ export async function getClusterNamespacesWithTypes(
                         let type: "system" | "user" | "managed" | "unknown";
                         if (isSystemNamespace(name)) {
                             type = "system";
-                        } else if (isManagedNamespace(labels, annotations)) {
+                        } else if (isManagedNamespace(labels)) {
                             type = "managed";
                         } else {
                             type = "user";
@@ -644,30 +644,8 @@ function isSystemNamespace(name: string): boolean {
     return systemNamespaces.includes(name);
 }
 
-function isManagedNamespace(labels: { [key: string]: string }, annotations: { [key: string]: string }): boolean {
-    // Check for common managed service labels and annotations
-    const managedLabels = [
-        "app.kubernetes.io/managed-by",
-        "kubernetes.azure.com/managed-by",
-        "azure.workload.identity/use",
-        "managed-by",
-        "headlamp.dev/project-managed-by",
-    ];
-
-    const managedAnnotations = [
-        "kubernetes.azure.com/managed",
-        "azure.workload.identity/service-account-token-expiration",
-    ];
-
-    return (
-        managedLabels.some((label) => labels[label]) ||
-        managedAnnotations.some((annotation) => annotations[annotation]) ||
-        // Check for Azure-specific managed namespaces
-        labels["app.kubernetes.io/component"] === "azure-workload-identity" ||
-        labels["control-plane"] === "controller-manager" ||
-        // Check for AKS Desktop managed namespaces
-        labels["headlamp.dev/project-managed-by"] === "aks-desktop"
-    );
+function isManagedNamespace(labels: { [key: string]: string }): boolean {
+    return labels["kubernetes.azure.com/managedByArm"] === "true";
 }
 
 export async function createClusterNamespace(
