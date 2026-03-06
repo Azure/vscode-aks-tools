@@ -6,6 +6,9 @@
 > **AI Notice**
 > Container Assist uses AI models to analyze project context and generate deployment files. Always review generated files before use, and do not include secrets or sensitive data in source files used for generation.
 
+> **Technology Note**
+> This experience is built on [Azure/containerization-assist](https://github.com/Azure/containerization-assist), which combines AI generation with a specialized containerization toolchain and knowledge/policy guidance for Docker and Kubernetes workflows.
+
 Container Assist is a feature-flagged workflow in the AKS VS Code extension that helps generate deployment assets for AKS directly from your project.
 
 ## Problem this feature solves
@@ -30,6 +33,20 @@ Container Assist reduces setup friction by guiding you through:
 - Optional PR-ready Git staging flow
 
 This gives teams a review-first starting point so they can iterate quickly while keeping full control over the final deployment configuration.
+
+## Why this is different from generic AI code generation
+
+Container Assist is not a single free-form prompt that guesses deployment files from source code alone.
+
+It uses a structured, workflow-driven approach based on containerization-assist capabilities:
+
+- Repository-aware analysis first (`analyze-repo`) to detect language, framework, and module shape
+- Knowledge-enhanced planning for Dockerfile and Kubernetes outputs
+- Security and quality guidance in the tool flow (for example vulnerability and best-practice checks)
+- Policy-driven extensibility so organization standards can shape recommendations
+- Clear next-step/tool-chain guidance for staged execution from analysis to deployment verification
+
+For AKS migration and onboarding scenarios, this helps teams move from app code to deployable AKS artifacts with better consistency and less manual trial-and-error.
 
 ## Feature flag
 
