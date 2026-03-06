@@ -306,7 +306,7 @@ async function executeContainerAssistActions(
                 logger.warn("Skipping workflow generation: deployment artifacts missing on disk");
                 vscode.window.showErrorMessage(
                     l10n.t(
-                        "GitHub workflow generation was skipped because both Dockerfile and Kubernetes manifests are required but could not be found.",
+                        "Workflow generation requires a Dockerfile and Kubernetes manifests. Generate deployment files first, then try again.",
                     ),
                 );
                 return;

@@ -260,7 +260,7 @@ async function promptForAzureConfig(appName: string, azureContext?: AzureContext
     while (!resourceGroup) {
         resourceGroup = await vscode.window.showInputBox({
             prompt: l10n.t("Enter resource group name for the managed identity (will be created if it doesn't exist)"),
-            value: azureContext?.clusterResourceGroup ?? `rg-${appName}-oidc`,
+            value: `rg-${appName}-oidc`,
             title: l10n.t("OIDC Setup - Resource Group"),
             validateInput: (v) => (v.trim() ? undefined : l10n.t("Resource group name cannot be empty")),
         });
@@ -520,31 +520,44 @@ async function createFederatedCredential(
     });
 }
 
-async function displayOIDCResults(result: OIDCSetupResult, repoInfo: { owner: string; repo: string }): Promise<void> {
+async function displayOIDCResults(
+    result: OIDCSetupResult,
+    repoInfo: { owner: string; repo: string; branch: string; mainBranch?: string },
+): Promise<void> {
     // Show success information to user
-    const message = l10n.t("OIDC setup completed successfully! Your federated identity is ready for GitHub Actions.");
-    const copyAll = l10n.t("Copy GitHub Secrets");
-    const setSecrets = l10n.t("Set GitHub Secrets");
+    const message = l10n.t(
+        "Managed Identity configured. Add the identity details to your repository secrets to complete the pipeline setup.",
+    );
+    const setSecrets = l10n.t("Set secrets");
+    const copyAll = l10n.t("Copy secrets and set manually");
     const viewInstructions = l10n.t("View Output");
 
     const secretsText = `AZURE_CLIENT_ID: ${result.clientId}
 AZURE_TENANT_ID: ${result.tenantId}
 AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
 
-    // Show in output channel with detailed info
+    const federatedBranch = repoInfo.mainBranch ?? "main";
+    const federatedSubject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${federatedBranch}`;
 
-    const selection = await vscode.window.showInformationMessage(message, copyAll, setSecrets, viewInstructions);
+    const selection = await vscode.window.showInformationMessage(message, setSecrets, copyAll, viewInstructions);
 
-    if (selection === copyAll) {
-        await vscode.env.clipboard.writeText(secretsText);
-        vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
-    } else if (selection === setSecrets) {
+    if (selection === setSecrets) {
         await setGitHubActionsSecrets(repoInfo.owner, repoInfo.repo, {
             AZURE_CLIENT_ID: result.clientId,
             AZURE_TENANT_ID: result.tenantId,
             AZURE_SUBSCRIPTION_ID: result.subscriptionId,
         });
+    } else if (selection === copyAll) {
+        await vscode.env.clipboard.writeText(secretsText);
+        vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
     } else if (selection === viewInstructions) {
+        logger.info("--- Managed Identity / OIDC Setup Complete ---");
+        logger.info(`Identity:         ${result.identityName}`);
+        logger.info(`Resource group:   ${result.resourceGroup}`);
+        logger.info(`Subscription:     ${result.subscriptionId}`);
+        logger.info(`GitHub repo:      ${repoInfo.owner}/${repoInfo.repo}`);
+        logger.info(`Federated branch: ${federatedBranch} (subject: ${federatedSubject})`);
+        logger.info(`Required GitHub Actions secrets:\n${secretsText}`);
         logger.show();
     }
 }
@@ -745,7 +758,7 @@ export async function setGitHubActionsSecrets(
 
                 vscode.window.showWarningMessage(
                     l10n.t(
-                        "Set {0}/{1} secrets successfully. Failed: {2}",
+                        "{0}/{1} secrets were set. Could not set: {2}. Add the missing secrets manually.",
                         succeededCount,
                         entries.length,
                         failedSecrets.join(", "),
@@ -760,7 +773,7 @@ export async function setGitHubActionsSecrets(
         }
 
         vscode.window.showInformationMessage(
-            l10n.t("GitHub Actions secrets set successfully on {0}/{1}! Your workflow is ready to use.", owner, repo),
+            l10n.t("GitHub Actions secrets set successfully on {0}/{1}. Your pipeline is ready to run.", owner, repo),
         );
         return true;
     } catch (error) {
