@@ -119,7 +119,7 @@ async function promptStageAndReview(
 
     // Show a confirmation notification
     vscode.window.showInformationMessage(
-        l10n.t("Files staged for review. Commit when ready via Source Control or using git in the terminal."),
+        l10n.t("Files staged for review. Commit when ready via Source Control or using Git in the terminal."),
     );
 
     // Step 3 — Listen for the user's commit, then offer PR creation

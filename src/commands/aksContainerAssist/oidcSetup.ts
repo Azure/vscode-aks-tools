@@ -528,8 +528,8 @@ async function displayOIDCResults(
     const message = l10n.t(
         "Managed Identity configured. Add the identity details to your repository secrets to complete the pipeline setup.",
     );
-    const setSecrets = l10n.t("Set GH Secrets");
-    const copyAll = l10n.t("Copy GH Secrets and set manually");
+    const setSecrets = l10n.t("Set GitHub Actions secrets");
+    const copyAll = l10n.t("Copy GitHub Actions secrets and set manually");
     const viewInstructions = l10n.t("View Output");
 
     const secretsText = `AZURE_CLIENT_ID: ${result.clientId}
@@ -538,14 +538,6 @@ AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
 
     const federatedBranch = repoInfo.mainBranch ?? "main";
     const federatedSubject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${federatedBranch}`;
-
-    logger.info("--- Managed Identity / OIDC Setup Complete ---");
-    logger.info(`Identity:         ${result.identityName}`);
-    logger.info(`Resource group:   ${result.resourceGroup}`);
-    logger.info(`Subscription:     ${result.subscriptionId}`);
-    logger.info(`GitHub repo:      ${repoInfo.owner}/${repoInfo.repo}`);
-    logger.info(`Federated branch: ${federatedBranch} (subject: ${federatedSubject})`);
-    logger.info(`Required GitHub Actions secrets:\n${secretsText}`);
 
     const selection = await vscode.window.showInformationMessage(message, setSecrets, copyAll, viewInstructions);
 
@@ -559,6 +551,13 @@ AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
         await vscode.env.clipboard.writeText(secretsText);
         vscode.window.showInformationMessage(l10n.t("Secrets copied to clipboard!"));
     } else if (selection === viewInstructions) {
+        logger.info("--- Managed Identity / OIDC Setup Complete ---");
+        logger.info(`Identity:         ${result.identityName}`);
+        logger.info(`Resource group:   ${result.resourceGroup}`);
+        logger.info(`Subscription:     ${result.subscriptionId}`);
+        logger.info(`GitHub repo:      ${repoInfo.owner}/${repoInfo.repo}`);
+        logger.info(`Federated branch: ${federatedBranch} (subject: ${federatedSubject})`);
+        logger.info(`Required GitHub Actions secrets:\n${secretsText}`);
         logger.show();
     }
 }
@@ -759,7 +758,7 @@ export async function setGitHubActionsSecrets(
 
                 vscode.window.showWarningMessage(
                     l10n.t(
-                        "{0} of {1} secrets were set. Could not set: {2}. Add the missing secrets manually.",
+                        "{0}/{1} secrets were set. Could not set: {2}. Add the missing secrets manually.",
                         succeededCount,
                         entries.length,
                         failedSecrets.join(", "),
@@ -774,7 +773,7 @@ export async function setGitHubActionsSecrets(
         }
 
         vscode.window.showInformationMessage(
-            l10n.t("GitHub Actions secrets set on {0}/{1}. Your pipeline is ready to run.", owner, repo),
+            l10n.t("GitHub Actions secrets set successfully on {0}/{1}. Your pipeline is ready to run.", owner, repo),
         );
         return true;
     } catch (error) {
