@@ -72,5 +72,6 @@
   "Improve security of my cluster": "Improve security of my cluster",
   "Develop & Deploy": "Develop & Deploy",
   "Troubleshoot & Diagnose": "Troubleshoot & Diagnose",
-  "Manage Cluster": "Manage Cluster"
+  "Manage Cluster": "Manage Cluster",
+  "AKS Quick Actions": "AKS Quick Actions"
 }

@@ -70,6 +70,7 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import * as fs from "fs";
 import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
+import { aksQuickActions, initializeQuickActions } from "./commands/quickActions/aksQuickActions";
 import { runContainerAssist, runContainerAssistFromTree } from "./commands/aksContainerAssist/aksContainerAssist";
 import {
     setupOIDCForGitHub,
@@ -107,6 +108,7 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerUIExtensionVariables(uiExtensionVariables);
+        initializeQuickActions(context);
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectTenant", selectTenant);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
@@ -162,6 +164,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
         registerCommandWithTelemetry("aks.aksSetupMCPServerCommands", addMcpServerToUserSettings);
+        registerCommandWithTelemetry("aks.quickActions", aksQuickActions);
         registerCommandWithTelemetry("aks.runContainerAssist", runContainerAssist);
         registerCommandWithTelemetry("aks.runContainerAssistFromTree", runContainerAssistFromTree);
         registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {

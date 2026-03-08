@@ -418,6 +418,10 @@
                 "title": "AKS: Setup AKS MCP Server"
             },
             {
+                "command": "aks.quickActions",
+                "title": "%AKS Quick Actions%"
+            },
+            {
                 "command": "aks.runContainerAssist",
                 "title": "AKS: Deploy application to AKS (Preview)"
             },
@@ -489,6 +493,11 @@
                     "command": "aks.refreshSubscription",
                     "when": "viewItem == aks.subscription",
                     "group": "inline"
+                },
+                {
+                    "command": "aks.quickActions",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.simplifiedMenuStructure",
+                    "group": "6@1"
                 },
                 {
                     "submenu": "aks.developDeploySubMenu",
