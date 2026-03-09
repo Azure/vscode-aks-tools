@@ -919,7 +919,7 @@
         "copy-webpack-plugin": "^13.0.1",
         "eslint": "^9.39.2",
         "eslint-webpack-plugin": "^5.0.3",
-        "fast-check": "^4.5.3",
+        "fast-check": "^4.6.0",
         "glob": "^13.0.6",
         "globals": "^17.3.0",
         "husky": "^9.1.7",
