@@ -1,0 +1,170 @@
+trigger: none
+
+# The `resources` specify the location and version of the 1ES PT.
+resources:
+    repositories:
+        - repository: 1esPipelines
+          type: git
+          name: 1ESPipelineTemplates/1ESPipelineTemplates
+          ref: refs/tags/release
+
+parameters:
+    - name: nodeVersion
+      type: string
+      default: 22.x
+    - name: publishVersion
+      type: string
+      default: 0.0.1
+    - name: token
+      type: string
+      default: ""
+
+extends:
+    # The pipeline extends the 1ES PT which will inject different SDL and compliance tasks.
+    # For non-production pipelines, use "Unofficial" as defined below.
+    # For productions pipelines, use "Official".
+    template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
+    parameters:
+        # Update the pool with team's 1ES hosted pool.
+        pool:
+            name: staging-pool-amd64-mariner-2
+            image: 1es-azlinux-3-amd64-custom-disk
+            os: linux
+            hostArchitecture: amd64
+        sdl:
+            sourceAnalysisPool:
+                name: staging-pool-amd64-mariner-2
+                image: azcu-agent-amd64-windows-22-img
+                os: windows
+                hostArchitecture: amd64
+
+        stages:
+            - stage: Stage
+              jobs:
+                  - job: HostJob
+                    # If the pipeline publishes artifacts, use `templateContext` to define the artifacts.
+                    # This will enable 1ES PT to run SDL analysis tools on the artifacts and then upload them.
+                    templateContext:
+                        outputs:
+                            - output: pipelineArtifact
+                              targetPath: $(Pipeline.Workspace)/vscode-extension-signed
+                              artifactName: vscode-extension-signed
+                    steps:
+                        # =====================================================
+                        # INSTALL PREREQUISITES FIRST
+                        # =====================================================
+
+                        - task: NodeTool@0
+                          displayName: Install Node.js
+                          retryCountOnTaskFailure: 3
+                          inputs:
+                              versionSpec: ${{ parameters.nodeVersion }}
+
+                        # FIX: Install .NET SDK early (required for ESRP Code Signing)
+                        # Changed from "runtime" to "sdk" and added version specification
+                        - task: UseDotNet@2
+                          displayName: Install .NET SDK (required for ESRP signing)
+                          inputs:
+                              packageType: "sdk"
+                              version: "6.x" # Use 6.x or 8.x depending on ESRP requirements
+
+                        - checkout: self
+
+                        # =====================================================
+                        # BUILD AND PACKAGE
+                        # =====================================================
+
+                        - script: npm run install:all
+                          displayName: Install npm for project
+
+                        - script: npm run webpack
+                          displayName: Run webpack
+
+                        - script: |
+                              set -e
+                              echo "Generating VSIX package..."
+                              npx @vscode/vsce package
+
+                              VSIX_PATH=$(find . -type f -name "*.vsix" -print -quit)
+                              if [ -z "$VSIX_PATH" ]; then
+                                echo "❌ No .vsix file found!" >&2
+                                exit 1
+                              fi
+
+                              echo "✅ Found: $VSIX_PATH"
+                              mkdir -p "$(Pipeline.Workspace)/vscode-extension-signed"
+                              cp "$VSIX_PATH" "$(Pipeline.Workspace)/vscode-extension-signed/"
+                              echo "Copied to $(Pipeline.Workspace)/vscode-extension-signed/"
+                          displayName: "Package extension and copy VSIX"
+
+                        # =====================================================
+                        # MANIFEST GENERATION AND SIGNING
+                        # =====================================================
+
+                        - script: |
+                              set -e
+                              VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-signed/" -type f -name "*.vsix" -print -quit)
+                              echo "Generating manifest for: $VSIX_PATH"
+                              npx @vscode/vsce generate-manifest -i "$VSIX_PATH" -o "$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
+                          displayName: "Generate extension manifest"
+
+                        - script: cp "$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest" "$(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s"
+                          displayName: "Prepare manifest for signing"
+
+                        - task: EsrpCodeSigning@5
+                          displayName: "Sign extension manifest"
+                          inputs:
+                              ConnectedServiceName: "ESRP-AME-AZCU"
+                              UseMSIAuthentication: true
+                              AppRegistrationClientId: "70ebf75b-d46f-46da-90e6-1fa654251514"
+                              AppRegistrationTenantId: "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
+                              EsrpClientId: "150f8d2b-ad88-4a27-b782-c9bc3b028430"
+                              AuthAKVName: "upstreamci-ado"
+                              AuthSignCertName: "azcu-ersp-corp"
+                              FolderPath: "$(Pipeline.Workspace)/vscode-extension-signed"
+                              Pattern: "extension.signature.p7s"
+                              signConfigType: inlineSignParams
+                              inlineOperation: |
+                                  [
+                                    {
+                                      "keyCode": "CP-401405",
+                                      "operationSetCode": "VSCodePublisherSign",
+                                      "parameters" : [],
+                                      "toolName": "sign",
+                                      "toolVersion": "1.0"
+                                    }
+                                  ]
+                              SessionTimeout: 90
+                              MaxConcurrency: 25
+                              MaxRetryAttempts: 5
+                              PendingAnalysisWaitTimeoutMinutes: 5
+
+                        # =====================================================
+                        # PUBLISH
+                        # =====================================================
+
+                        - script: |
+                              set -e
+                              VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-signed/" -type f -name "*.vsix" -print -quit)
+                              MANIFEST_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
+                              SIGNATURE_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s"
+
+                              echo "Publishing VSIX: $VSIX_PATH"
+                              npx @vscode/vsce publish --pat "$TOKEN" --packagePath "$VSIX_PATH" --manifestPath "$MANIFEST_PATH" --signaturePath "$SIGNATURE_PATH"
+                          env:
+                              TOKEN: ${{ parameters.token }}
+                          displayName: "Publish VSIX to Marketplace"
+
+                        - task: GithubRelease@1
+                          displayName: "Create GitHub Release"
+                          inputs:
+                              gitHubConnection: Kubernetes (9)
+                              repositoryName: Azure/vscode-aks-tools
+                              action: create
+                              title: ${{ parameters.publishVersion }}
+                              tagSource: userSpecifiedTag
+                              tag: ${{ parameters.publishVersion }}
+                              assets: |
+                                  $(Pipeline.Workspace)/vscode-extension-signed/vscode-aks-tools-*.vsix
+                                  $(Pipeline.Workspace)/vscode-extension-signed/extension.manifest
+                                  $(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s
