@@ -17,10 +17,19 @@ export async function addMcpServerToUserSettings(): Promise<void> {
         return;
     }
 
+    // Build args, optionally including --enabled-components
+    const args: string[] = ["--transport", "stdio"];
+    const enabledComponents = vscode.workspace
+        .getConfiguration("aks.aksmcpserver")
+        .get<string>("enabledComponents", "");
+    if (enabledComponents.trim()) {
+        args.push("--enabled-components", enabledComponents.trim());
+    }
+
     // Add or overwrite the server entry
     const newServerConfig = {
         command: mcpServerPath.result,
-        args: ["--transport", "stdio"],
+        args,
     };
 
     current["AKS MCP"] = newServerConfig;
