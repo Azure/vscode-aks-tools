@@ -144,7 +144,7 @@ extends:
                   AppRegistrationTenantId: "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
                   EsrpClientId: "29dbf7b7-912b-4c2a-83a4-cc183215628b"
                   AuthAKVName: "upstreamci-ado"
-                  AuthSignCertName: "esrp-prss"
+                  AuthSignCertName: "azcu-ersp-corp"
                   FolderPath: $(Pipeline.Workspace)/vscode-extension-unsigned
                   Pattern: 'extension.signature.p7s'
                   signConfigType: inlineSignParams
@@ -176,7 +176,7 @@ extends:
                   AppRegistrationTenantId: "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
                   EsrpClientId: "29dbf7b7-912b-4c2a-83a4-cc183215628b"
                   AuthAKVName: "upstreamci-ado"
-                  AuthSignCertName: "esrp-prss"
+                  AuthSignCertName: "azcu-ersp-corp"
                   FolderPath: $(Pipeline.Workspace)/vscode-extension-unsigned
                   Pattern: "*.vsix"
                   UseMinimatch: true
