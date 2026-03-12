@@ -72,6 +72,7 @@ import * as fs from "fs";
 import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
 import { aksQuickActions, initializeQuickActions } from "./commands/quickActions/aksQuickActions";
 import { runContainerAssist, runContainerAssistFromTree } from "./commands/aksContainerAssist/aksContainerAssist";
+import { containerizationApp, migrateAndModernizeApp } from "./commands/aksContainerAssist/appModernizationBridge";
 import {
     setupOIDCForGitHub,
     setGitHubActionsSecrets,
@@ -167,6 +168,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.quickActions", aksQuickActions);
         registerCommandWithTelemetry("aks.runContainerAssist", runContainerAssist);
         registerCommandWithTelemetry("aks.runContainerAssistFromTree", runContainerAssistFromTree);
+        registerCommandWithTelemetry("aks.containerizationApp", containerizationApp);
+        registerCommandWithTelemetry("aks.migrateAndModernizeApp", migrateAndModernizeApp);
         registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {

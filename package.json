@@ -436,6 +436,14 @@
             {
                 "command": "aks.setGitHubActionsSecrets",
                 "title": "AKS: Set GitHub Actions Secrets (Preview)"
+            },
+            {
+                "command": "aks.migrateAndModernizeApp",
+                "title": "%Migrate and Modernize App%"
+            },
+            {
+                "command": "aks.containerizationApp",
+                "title": "%Containerization App%"
             }
         ],
         "menus": {
@@ -463,7 +471,7 @@
             ],
             "explorer/context": [
                 {
-                    "command": "aks.runContainerAssist",
+                    "submenu": "aks.migrateApplicationToAksSubMenu",
                     "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
                     "group": "5_cutcopypaste@50"
                 },
@@ -821,6 +829,16 @@
                     "command": "aks.aksReconcileCluster",
                     "group": "2_operations@3"
                 }
+            ],
+            "aks.migrateApplicationToAksSubMenu": [
+                {
+                    "command": "aks.migrateAndModernizeApp",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "aks.containerizationApp",
+                    "group": "navigation@2"
+                }
             ]
         },
         "submenus": [
@@ -883,6 +901,10 @@
             {
                 "id": "aks.manageClusterSubMenu",
                 "label": "%Manage Cluster%"
+            },
+            {
+                "id": "aks.migrateApplicationToAksSubMenu",
+                "label": "%Migrate Application to AKS%"
             }
         ]
     },

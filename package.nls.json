@@ -73,5 +73,8 @@
   "Develop & Deploy": "Develop & Deploy",
   "Troubleshoot & Diagnose": "Troubleshoot & Diagnose",
   "Manage Cluster": "Manage Cluster",
-  "AKS Quick Actions": "AKS Quick Actions"
+  "AKS Quick Actions": "AKS Quick Actions",
+  "Migrate Application to AKS": "Migrate Application to AKS",
+  "Migrate and Modernize App": "Migrate and Modernize App",
+  "Containerization App": "Containerization App"
 }
