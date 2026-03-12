@@ -114,3 +114,15 @@ jobs:
                   images: |
                       ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
                   namespace: ${{ env.NAMESPACE }}
+
+            # Annotates the deployed resources with metadata for traceability
+            - name: Annotate deployment
+              run: |
+                  kubectl annotate deployment --all -n ${{ env.NAMESPACE }} \
+                    aks-tools/repo="${{ github.repository }}" \
+                    aks-tools/pipeline="${{ github.workflow }}" \
+                    aks-tools/managed-identity-client-id="${{ secrets.AZURE_CLIENT_ID }}" \
+                    aks-tools/tenant-id="${{ secrets.AZURE_TENANT_ID }}" \
+                    --overwrite
+              env:
+                  KUBECONFIG: ${{ runner.temp }}/kubeconfig
