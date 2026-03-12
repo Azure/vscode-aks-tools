@@ -126,13 +126,13 @@ extends:
                   $vsixFile = Get-ChildItem "$(Pipeline.Workspace)/vscode-extension-unsigned/*.vsix" | Select-Object -First 1
                   Write-Host "Generating manifest for: $($vsixFile.FullName)"
                   npx @vscode/vsce@latest generate-manifest -i $vsixFile.FullName -o "$(Pipeline.Workspace)/vscode-extension-unsigned/extension.manifest"
-                displayName: 'Generate extension manifest'
+                displayName: "Generate extension manifest"
 
               # Prepare manifest for signing (copy to .p7s file that ESRP will sign)
               - pwsh: |
                   Copy-Item "$(Pipeline.Workspace)/vscode-extension-unsigned/extension.manifest" "$(Pipeline.Workspace)/vscode-extension-unsigned/extension.signature.p7s"
                   Write-Host "Prepared manifest for signing"
-                displayName: 'Prepare manifest for signing'
+                displayName: "Prepare manifest for signing"
 
               # Sign the extension manifest with ESRP (VSCodePublisherSign)
               - task: EsrpCodeSigning@5
@@ -146,7 +146,7 @@ extends:
                   AuthAKVName: "upstreamci-ado"
                   AuthSignCertName: "azcu-ersp-corp"
                   FolderPath: $(Pipeline.Workspace)/vscode-extension-unsigned
-                  Pattern: 'extension.signature.p7s'
+                  Pattern: "extension.signature.p7s"
                   signConfigType: inlineSignParams
                   inlineOperation: |
                     [
@@ -165,41 +165,42 @@ extends:
 
               # =====================================================
               # CODE SIGNING (VSIX OPC SIGNING)
+              # commenting to adhere strictly to a doc
               # =====================================================
 
-              - task: EsrpCodeSigning@5
-                displayName: Sign VSCode extension with ESRP
-                inputs:
-                  ConnectedServiceName: "ESRP-AME-AZCU"
-                  UseMSIAuthentication: true
-                  AppRegistrationClientId: "70ebf75b-d46f-46da-90e6-1fa654251514"
-                  AppRegistrationTenantId: "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
-                  EsrpClientId: "150f8d2b-ad88-4a27-b782-c9bc3b028430"
-                  AuthAKVName: "upstreamci-ado"
-                  AuthSignCertName: "azcu-ersp-corp"
-                  FolderPath: $(Pipeline.Workspace)/vscode-extension-unsigned
-                  Pattern: "*.vsix"
-                  UseMinimatch: true
-                  signConfigType: inlineSignParams
-                  inlineOperation: |
-                    [
-                        {
-                            "KeyCode" : "CP-233016",
-                            "OperationCode" : "OpcSign",
-                            "Parameters" : {
-                                "FileDigest" : "/fd SHA256"
-                            },
-                            "ToolName" : "sign",
-                            "ToolVersion" : "1.0"
-                        },
-                        {
-                            "KeyCode" : "CP-233016",
-                            "OperationCode" : "OpcVerify",
-                            "Parameters" : {},
-                            "ToolName" : "sign",
-                            "ToolVersion" : "1.0"
-                        }
-                    ]
+              # - task: EsrpCodeSigning@5
+              #   displayName: Sign VSCode extension with ESRP
+              #   inputs:
+              #     ConnectedServiceName: "ESRP-AME-AZCU"
+              #     UseMSIAuthentication: true
+              #     AppRegistrationClientId: "70ebf75b-d46f-46da-90e6-1fa654251514"
+              #     AppRegistrationTenantId: "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
+              #     EsrpClientId: "150f8d2b-ad88-4a27-b782-c9bc3b028430"
+              #     AuthAKVName: "upstreamci-ado"
+              #     AuthSignCertName: "azcu-ersp-corp"
+              #     FolderPath: $(Pipeline.Workspace)/vscode-extension-unsigned
+              #     Pattern: "*.vsix"
+              #     UseMinimatch: true
+              #     signConfigType: inlineSignParams
+              #     inlineOperation: |
+              #       [
+              #           {
+              #               "KeyCode" : "CP-233016",
+              #               "OperationCode" : "OpcSign",
+              #               "Parameters" : {
+              #                   "FileDigest" : "/fd SHA256"
+              #               },
+              #               "ToolName" : "sign",
+              #               "ToolVersion" : "1.0"
+              #           },
+              #           {
+              #               "KeyCode" : "CP-233016",
+              #               "OperationCode" : "OpcVerify",
+              #               "Parameters" : {},
+              #               "ToolName" : "sign",
+              #               "ToolVersion" : "1.0"
+              #           }
+              #       ]
 
               # =====================================================
               # PUBLISH
