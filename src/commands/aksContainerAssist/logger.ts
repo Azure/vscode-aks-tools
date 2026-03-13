@@ -59,7 +59,7 @@ class ContainerAssistLogger {
 
         this.getChannel().appendLine(`[DEBUG] ${this.timestamp()} ${message}`);
         if (data !== undefined) {
-            this.getChannel().appendLine(JSON.stringify(data, null, 2));
+            this.getChannel().appendLine(this.formatData(data));
         }
     }
 
