@@ -930,6 +930,11 @@ This allows gradual rollout, internal validation, and user feedback collection w
 <li>View its status</li>
 </ul>
 <p>Once started, the MCP server will appear in the <strong>Copilot Chat: Configure Tool</strong> dropdown as a custom system tool, ready to enhance contextual prompts based on your AKS environment. By default, all AKS MCP server tools are enabled. You can review the list of available tools and disable any that are not required for your specific scenario.</p>
+<h3 id="limiting-enabled-components"><a class="header" href="#limiting-enabled-components">Limiting Enabled Components</a></h3>
+<p>Some components require local CLI tools (e.g. <code>helm</code>, <code>cilium</code>, <code>hubble</code>). The default configuration enables <code>az_cli</code>, <code>monitor</code>, <code>fleet</code>, <code>network</code>, <code>compute</code>, <code>detectors</code>, <code>advisor</code>, <code>inspektorgadget</code>, and <code>kubectl</code> to ensure a comprehensive setup out of the box. You can change this by setting <code>aks.aksmcpserver.enabledComponents</code> in your VS Code user settings before running the setup command:</p>
+<pre><code class="language-json">&quot;aks.aksmcpserver.enabledComponents&quot;: &quot;az_cli,kubectl,monitor,network&quot;
+</code></pre>
+<p>Available components: <code>az_cli</code>, <code>monitor</code>, <code>fleet</code>, <code>network</code>, <code>compute</code>, <code>detectors</code>, <code>advisor</code>, <code>inspektorgadget</code>, <code>kubectl</code>, <code>helm</code>, <code>cilium</code>, <code>hubble</code>. Set to an empty string to enable all components.</p>
 <p><img src="features/../resources/aks-mcp-server-ghc-configure.png" alt="aks-mcp ghc configuration" /></p>
 <p><img src="features/../resources/aks-mcp-server-ghc-list.png" alt="aks-mcp ghc configuration" /></p>
 <ul>
