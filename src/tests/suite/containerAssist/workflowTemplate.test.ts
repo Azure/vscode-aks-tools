@@ -201,6 +201,69 @@ describe("Workflow Template Tests", () => {
             assert.ok(result.includes("action: deploy"), "Should specify deploy action");
         });
 
+        it("should annotate namespace with workload identity metadata", () => {
+            const result = renderWorkflowTemplate(validConfig);
+
+            assert.ok(result.includes("Annotate namespace"), "Should have annotate namespace step");
+            assert.ok(result.includes("kubectl annotate namespace"), "Should annotate the namespace");
+            assert.ok(
+                result.includes("aks-project/workload-identity-id="),
+                "Should set workload-identity-id on namespace",
+            );
+            assert.ok(
+                result.includes("aks-project/workload-identity-tenant="),
+                "Should set workload-identity-tenant on namespace",
+            );
+        });
+
+        it("should annotate deployments with aks-project traceability metadata", () => {
+            const result = renderWorkflowTemplate(validConfig);
+
+            assert.ok(result.includes("Annotate deployment"), "Should have annotate deployment step");
+            assert.ok(result.includes("kubectl annotate deployment --all"), "Should annotate all deployments");
+            assert.ok(result.includes("aks-project/pipeline-repo="), "Should set pipeline-repo annotation");
+            assert.ok(result.includes("aks-project/pipeline-workflow="), "Should set pipeline-workflow annotation");
+            assert.ok(
+                result.includes('aks-project/deployed-by="vscode"'),
+                "Should set deployed-by annotation to vscode",
+            );
+            assert.ok(result.includes("aks-project/pipeline-run-url="), "Should set pipeline-run-url annotation");
+            assert.ok(result.includes("github.run_id"), "Should include run ID in pipeline-run-url");
+        });
+
+        it("should not use legacy aks-tools annotation prefix", () => {
+            const result = renderWorkflowTemplate(validConfig);
+
+            assert.ok(!result.includes("aks-tools/repo"), "Should not use legacy aks-tools/repo");
+            assert.ok(!result.includes("aks-tools/pipeline"), "Should not use legacy aks-tools/pipeline");
+            assert.ok(
+                !result.includes("aks-tools/managed-identity-client-id"),
+                "Should not use legacy aks-tools/managed-identity-client-id",
+            );
+            assert.ok(!result.includes("aks-tools/tenant-id"), "Should not use legacy aks-tools/tenant-id");
+        });
+
+        it("should not place identity annotations on deployment", () => {
+            const result = renderWorkflowTemplate(validConfig);
+
+            // Identity annotations should only appear in the namespace annotation step, not deployment
+            const deployAnnotateIdx = result.indexOf("kubectl annotate deployment --all");
+            const nsAnnotateIdx = result.indexOf("kubectl annotate namespace");
+            assert.ok(nsAnnotateIdx !== -1, "Namespace annotation step should exist");
+            assert.ok(deployAnnotateIdx !== -1, "Deployment annotation step should exist");
+
+            // Workload identity keys must not appear after the deployment annotate command
+            const afterDeployAnnotate = result.slice(deployAnnotateIdx);
+            assert.ok(
+                !afterDeployAnnotate.includes("workload-identity-id"),
+                "workload-identity-id should not be in the deployment annotation block",
+            );
+            assert.ok(
+                !afterDeployAnnotate.includes("workload-identity-tenant"),
+                "workload-identity-tenant should not be in the deployment annotation block",
+            );
+        });
+
         it("should not include private cluster checks", () => {
             const result = renderWorkflowTemplate(validConfig);
 
