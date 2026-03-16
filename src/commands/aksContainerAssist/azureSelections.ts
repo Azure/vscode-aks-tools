@@ -5,7 +5,13 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
 import { getResources, DefinedResourceWithGroup } from "../utils/azureResources";
-import { getClusters, Cluster, getManagedCluster, getClusterNamespacesWithTypes } from "../utils/clusters";
+import {
+    getClusters,
+    Cluster,
+    getManagedCluster,
+    getClusterNamespacesWithTypes,
+    listManagedNamespacesByCluster,
+} from "../utils/clusters";
 import { extension } from "vscode-kubernetes-tools-api";
 import { getAuthorizationManagementClient } from "../utils/arm";
 import { getPrincipalRoleAssignmentsForAcr } from "../utils/roleAssignments";
@@ -153,11 +159,17 @@ export interface NamespaceSelection {
     isManaged: boolean;
 }
 
-export async function selectClusterNamespace(
+export interface NamespaceData {
+    kubectlNamespaces: Array<{ name: string; isManaged: boolean; labels?: Record<string, string> }> | undefined;
+    managedNames: string[];
+    accessRestricted: boolean;
+}
+
+export async function fetchClusterNamespaces(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     cluster: Cluster,
-): Promise<NamespaceSelection | undefined> {
+): Promise<NamespaceData | undefined> {
     const kubectl = await extension.kubectl.v1;
     if (!kubectl.available) {
         vscode.window.showErrorMessage(l10n.t("kubectl is not available. Please install kubectl extension."));
@@ -167,25 +179,77 @@ export async function selectClusterNamespace(
     const namespacesResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
         getClusterNamespacesWithTypes(sessionProvider, kubectl, subscriptionId, cluster.resourceGroup, cluster.name),
     );
-
     logger.debug(`Namespaces with types for cluster '${cluster.name}':`, namespacesResult);
 
-    if (!namespacesResult.succeeded) {
+    if (!namespacesResult.succeeded && !isNamespacesListForbidden(namespacesResult.error)) {
         vscode.window.showErrorMessage(
             l10n.t("Failed to retrieve namespaces from cluster: {0}", namespacesResult.error),
         );
         return undefined;
     }
 
-    // Filter out system namespaces - they should not be deployment targets
-    const nonSystemNamespaces = namespacesResult.result.filter((ns) => ns.type !== "system" || ns.name === "default");
-
-    if (nonSystemNamespaces.length === 0) {
-        vscode.window.showWarningMessage(l10n.t("No namespaces found in cluster."));
-        return undefined;
+    if (!namespacesResult.succeeded) {
+        logger.debug(
+            `Namespace list forbidden for cluster '${cluster.name}'. Falling back to ARM-managed namespaces only.`,
+        );
+        return fetchManagedNamespacesWithWarning(sessionProvider, subscriptionId, cluster);
     }
 
-    const namespaceItems = nonSystemNamespaces
+    const kubectlNamespaces = namespacesResult.result
+        .filter((ns) => ns.type !== "system" || ns.name === "default")
+        .map((ns) => ({ name: ns.name, isManaged: ns.type === "managed", labels: ns.labels }));
+
+    return { kubectlNamespaces, managedNames: [], accessRestricted: false };
+}
+
+async function fetchManagedNamespacesWithWarning(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+): Promise<NamespaceData> {
+    const armResult = await longRunning(l10n.t("Loading managed namespaces..."), () =>
+        listManagedNamespacesByCluster(sessionProvider, subscriptionId, cluster.resourceGroup, cluster.name),
+    );
+
+    if (!armResult.succeeded) {
+        logger.warn(`Failed to load managed namespaces for cluster '${cluster.name}': ${armResult.error}`);
+    }
+    const managedNames = armResult.succeeded ? armResult.result : [];
+    logger.debug(`Managed namespaces for cluster '${cluster.name}':`, managedNames);
+
+    const learnMoreLabel = l10n.t("Learn more");
+    const selection = await vscode.window.showWarningMessage(
+        l10n.t(
+            "You don't have permission to list all namespaces on cluster '{0}'. " +
+                "Only ARM-managed namespaces are shown if available. To see all namespaces, " +
+                "ask your admin to assign you the 'Azure Kubernetes Service RBAC Reader' role at the cluster scope.",
+            cluster.name,
+        ),
+        learnMoreLabel,
+    );
+    if (selection === learnMoreLabel) {
+        await vscode.env.openExternal(vscode.Uri.parse("https://learn.microsoft.com/azure/aks/manage-azure-rbac"));
+    }
+
+    return { kubectlNamespaces: undefined, managedNames, accessRestricted: true };
+}
+
+export async function selectClusterNamespace(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+    namespaceData?: NamespaceData,
+): Promise<NamespaceSelection | undefined> {
+    const data = namespaceData ?? (await fetchClusterNamespaces(sessionProvider, subscriptionId, cluster));
+    if (!data) return undefined;
+
+    const { kubectlNamespaces, managedNames, accessRestricted } = data;
+
+    const manualEntryLabel = l10n.t("Enter namespace ...");
+
+    const namespaceSource =
+        kubectlNamespaces ?? managedNames.map((name) => ({ name, isManaged: true, labels: undefined }));
+    const namespaceItems = namespaceSource
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((ns) => ({
             label: ns.name,
@@ -193,20 +257,74 @@ export async function selectClusterNamespace(
                 ns.labels?.["headlamp.dev/project-managed-by"] === "aks-desktop"
                     ? l10n.t("(AKS desktop Project: {0})", ns.name)
                     : undefined,
-            isManaged: ns.type === "managed",
+            isManaged: ns.isManaged,
         }));
 
-    const selected = await vscode.window.showQuickPick(namespaceItems, {
-        placeHolder: l10n.t("Select Kubernetes namespace"),
-        title: l10n.t("Namespace ({0} available)", nonSystemNamespaces.length),
+    namespaceItems.push({
+        label: manualEntryLabel,
+        description: accessRestricted
+            ? l10n.t("Enter a namespace name manually")
+            : l10n.t("Create a new namespace or enter an existing name"),
+        isManaged: false,
     });
 
-    // Show confirmation dialog if user cancelled
+    const title = accessRestricted
+        ? l10n.t("Namespace — showing managed namespaces only ({0} available)", managedNames.length)
+        : l10n.t("Namespace ({0} available)", namespaceSource.length);
+
+    const selected = await vscode.window.showQuickPick(namespaceItems, {
+        placeHolder: l10n.t("Select or enter a Kubernetes namespace"),
+        title,
+        ignoreFocusOut: true,
+    });
+
     if (!selected) {
-        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster));
+        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster, data));
     }
 
-    return { name: selected.label, isManaged: selected.isManaged };
+    if (selected.label !== manualEntryLabel) {
+        return { name: selected.label, isManaged: selected.isManaged };
+    }
+
+    const namespace = await vscode.window.showInputBox({
+        prompt: accessRestricted
+            ? l10n.t(
+                  "You do not have permission to list namespaces in the cluster. " +
+                      "Ask your admin to assign the 'Azure Kubernetes Service RBAC Reader' role " +
+                      "at the cluster scope to list all namespaces automatically.",
+              )
+            : l10n.t("Enter the namespace name to deploy to."),
+        placeHolder: "my-namespace",
+        title: l10n.t("Namespace"),
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            const v = value?.trim() || "";
+            if (!v) return l10n.t("Namespace is required");
+            if (!validateNamespaceName(v)) return l10n.t("Invalid namespace name (must be RFC 1123 compliant)");
+            return undefined;
+        },
+    });
+
+    if (!namespace) {
+        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster, data));
+    }
+
+    const trimmed = namespace.trim();
+    const isManaged = namespaceSource.some((ns) => ns.name === trimmed && ns.isManaged);
+    return { name: trimmed, isManaged };
+}
+
+function isNamespacesListForbidden(error: string): boolean {
+    return /Error from server \(Forbidden\)|cannot list resource "namespaces"|cannot list resource 'namespaces'/i.test(
+        error,
+    );
+}
+
+function validateNamespaceName(namespace: string): boolean {
+    // RFC 1123 label: lowercase alphanumeric, hyphens allowed in the middle, max 63 chars.
+    if (namespace.length > 63) return false;
+    const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+    return namespaceRegex.test(namespace);
 }
 
 export async function selectClusterAcr(
@@ -357,12 +475,10 @@ async function getClusterPrincipalId(
 
     // Fall back to service principal
     const spClientId = managedCluster.servicePrincipalProfile?.clientId;
-    if (spClientId) {
-        // Service principal found
-    } else {
+    if (!spClientId) {
         logger.warn(`Cluster '${cluster.name}' has no kubelet identity or service principal`);
     }
-    return spClientId ?? undefined;
+    return spClientId;
 }
 
 /**
@@ -432,12 +548,13 @@ async function collectAzureContextForCluster(
     hasWorkflow: boolean,
     projectRoot: string,
 ): Promise<AzureContext | undefined> {
-    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
-    if (!acr) return undefined;
-
-    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster);
+    const namespaceData = await fetchClusterNamespaces(sessionProvider, subscriptionId, cluster);
+    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster, namespaceData);
     if (!namespaceSelection) return undefined;
     logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
+
+    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
+    if (!acr) return undefined;
 
     const baseContext: AzureContext = {
         subscriptionId,
