@@ -34,6 +34,16 @@ From there, you can:
 
 Once started, the MCP server will appear in the **Copilot Chat: Configure Tool** dropdown as a custom system tool, ready to enhance contextual prompts based on your AKS environment. By default, all AKS MCP server tools are enabled. You can review the list of available tools and disable any that are not required for your specific scenario.
 
+### Limiting Enabled Components
+
+Some components require local CLI tools (e.g. `helm`, `cilium`, `hubble`). The default configuration enables `az_cli`, `monitor`, `fleet`, `network`, `compute`, `detectors`, `advisor`, `inspektorgadget`, and `kubectl` to ensure a comprehensive setup out of the box. You can change this by setting `aks.aksmcpserver.enabledComponents` in your VS Code user settings before running the setup command:
+
+```json
+"aks.aksmcpserver.enabledComponents": "az_cli,kubectl,monitor,network"
+```
+
+Available components: `az_cli`, `monitor`, `fleet`, `network`, `compute`, `detectors`, `advisor`, `inspektorgadget`, `kubectl`, `helm`, `cilium`, `hubble`. Set to an empty string to enable all components.
+
 ![aks-mcp ghc configuration](../resources/aks-mcp-server-ghc-configure.png)
 
 ![aks-mcp ghc configuration](../resources/aks-mcp-server-ghc-list.png)

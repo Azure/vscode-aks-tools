@@ -98,7 +98,6 @@
                         "type": "string"
                     }
                 },
-
                 "azure.kubelogin.releaseTag": {
                     "type": "string",
                     "default": "v0.0.31",
@@ -190,9 +189,15 @@
                 },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.11",
+                    "default": "v0.0.16",
                     "title": "AKS MCP Server repository release tag",
                     "description": "Release tag for the stable AKS MCP Server tool release."
+                },
+                "aks.aksmcpserver.enabledComponents": {
+                    "type": "string",
+                    "default": "az_cli,monitor,fleet,network,compute,detectors,advisor,inspektorgadget,kubectl",
+                    "title": "AKS MCP Server enabled components",
+                    "description": "Comma-separated list of enabled components (empty means all components enabled). Available: az_cli, monitor, fleet, network, compute, detectors, advisor, inspektorgadget, kubectl, helm, cilium, hubble. Some components require local CLI tools (e.g. helm, cilium, hubble)."
                 },
                 "aks.simplifiedMenuStructure": {
                     "type": "boolean",
@@ -238,7 +243,6 @@
                 "title": "%Select Tenant...%",
                 "category": "AKS"
             },
-
             {
                 "command": "aks.eraserTool",
                 "title": "%Run Eraser Image Cleanup%"
@@ -504,7 +508,6 @@
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "8@1"
                 },
-
                 {
                     "command": "aks.runContainerAssistFromTree",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure && config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1",
@@ -761,7 +764,6 @@
                     "submenu": "aks.detectorsSubMenu",
                     "group": "1_diagnostics@1"
                 },
-
                 {
                     "command": "aks.aksInspektorGadgetShow",
                     "group": "2_tools@2"
