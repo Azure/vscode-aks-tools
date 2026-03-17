@@ -207,8 +207,9 @@ async function fetchManagedNamespacesWithWarning(
     subscriptionId: string,
     cluster: Cluster,
 ): Promise<NamespaceData> {
-    const armResult = await longRunning(l10n.t("Loading managed namespaces..."), () =>
-        listManagedNamespacesByCluster(sessionProvider, subscriptionId, cluster.resourceGroup, cluster.name),
+    const armResult = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Window, title: l10n.t("Loading managed namespaces...") },
+        () => listManagedNamespacesByCluster(sessionProvider, subscriptionId, cluster.resourceGroup, cluster.name),
     );
 
     if (!armResult.succeeded) {
@@ -218,18 +219,21 @@ async function fetchManagedNamespacesWithWarning(
     logger.debug(`Managed namespaces for cluster '${cluster.name}':`, managedNames);
 
     const learnMoreLabel = l10n.t("Learn more");
-    const selection = await vscode.window.showWarningMessage(
-        l10n.t(
-            "You don't have permission to list all namespaces on cluster '{0}'. " +
-                "Only ARM-managed namespaces are shown if available. To see all namespaces, " +
-                "ask your admin to assign you the 'Azure Kubernetes Service RBAC Reader' role at the cluster scope.",
-            cluster.name,
-        ),
-        learnMoreLabel,
-    );
-    if (selection === learnMoreLabel) {
-        await vscode.env.openExternal(vscode.Uri.parse("https://learn.microsoft.com/azure/aks/manage-azure-rbac"));
-    }
+    vscode.window
+        .showWarningMessage(
+            l10n.t(
+                "You don't have permission to list all namespaces on cluster '{0}'. " +
+                    "Only ARM-managed namespaces are shown if available. To see all namespaces, " +
+                    "ask your admin to assign you the 'Azure Kubernetes Service RBAC Reader' role at the cluster scope.",
+                cluster.name,
+            ),
+            learnMoreLabel,
+        )
+        .then((selection) => {
+            if (selection === learnMoreLabel) {
+                vscode.env.openExternal(vscode.Uri.parse("https://learn.microsoft.com/azure/aks/manage-azure-rbac"));
+            }
+        });
 
     return { kubectlNamespaces: undefined, managedNames, accessRestricted: true };
 }
@@ -245,8 +249,6 @@ export async function selectClusterNamespace(
 
     const { kubectlNamespaces, managedNames, accessRestricted } = data;
 
-    const manualEntryLabel = l10n.t("Enter namespace ...");
-
     const namespaceSource =
         kubectlNamespaces ?? managedNames.map((name) => ({ name, isManaged: true, labels: undefined }));
     const namespaceItems = namespaceSource
@@ -260,20 +262,21 @@ export async function selectClusterNamespace(
             isManaged: ns.isManaged,
         }));
 
-    namespaceItems.push({
-        label: manualEntryLabel,
-        description: accessRestricted
-            ? l10n.t("Enter a namespace name manually")
-            : l10n.t("Create a new namespace or enter an existing name"),
-        isManaged: false,
-    });
+    const manualEntryLabel = l10n.t("Enter namespace name ...");
+    if (accessRestricted) {
+        namespaceItems.push({
+            label: manualEntryLabel,
+            description: l10n.t("Type the name of an existing namespace"),
+            isManaged: false,
+        });
+    }
 
     const title = accessRestricted
         ? l10n.t("Namespace — showing managed namespaces only ({0} available)", managedNames.length)
         : l10n.t("Namespace ({0} available)", namespaceSource.length);
 
     const selected = await vscode.window.showQuickPick(namespaceItems, {
-        placeHolder: l10n.t("Select or enter a Kubernetes namespace"),
+        placeHolder: l10n.t("Select a Kubernetes namespace"),
         title,
         ignoreFocusOut: true,
     });
@@ -287,19 +290,17 @@ export async function selectClusterNamespace(
     }
 
     const namespace = await vscode.window.showInputBox({
-        prompt: accessRestricted
-            ? l10n.t(
-                  "You do not have permission to list namespaces in the cluster. " +
-                      "Ask your admin to assign the 'Azure Kubernetes Service RBAC Reader' role " +
-                      "at the cluster scope to list all namespaces automatically.",
-              )
-            : l10n.t("Enter the namespace name to deploy to."),
+        prompt: l10n.t(
+            "You do not have permission to list namespaces in this cluster. " +
+                "Ask your admin to assign the 'Azure Kubernetes Service RBAC Reader' role " +
+                "at the cluster scope to list all namespaces automatically.",
+        ),
         placeHolder: "my-namespace",
         title: l10n.t("Namespace"),
         ignoreFocusOut: true,
         validateInput: (value) => {
             const v = value?.trim() || "";
-            if (!v) return l10n.t("Namespace is required");
+            if (!v) return l10n.t("Namespace name is required");
             if (!validateNamespaceName(v)) return l10n.t("Invalid namespace name (must be RFC 1123 compliant)");
             return undefined;
         },
@@ -310,6 +311,7 @@ export async function selectClusterNamespace(
     }
 
     const trimmed = namespace.trim();
+    // Check whether the typed name matches a known ARM-managed namespace.
     const isManaged = namespaceSource.some((ns) => ns.name === trimmed && ns.isManaged);
     return { name: trimmed, isManaged };
 }
