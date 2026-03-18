@@ -54,7 +54,7 @@
   "Create KAITO Workspace": "Create KAITO Workspace",
   "Manage KAITO Models": "Manage KAITO Models",
   "Install KAITO": "Install KAITO",
-  "Run Draft Validate for YAML": "Run Draft Validate for YAML",
+  "AKS: Run Deployment Safeguards YAML Validation": "AKS: Run Deployment Safeguards YAML Validation",
   "Test KAITO models": "Test KAITO models",
   "Create Fleet": "Create Fleet",
   "Show Fleet Properties": "Show Fleet Properties",

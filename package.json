@@ -399,7 +399,7 @@
             },
             {
                 "command": "aks.aksDraftValidate",
-                "title": "%Run Draft Validate for YAML%"
+                "title": "%AKS: Run Deployment Safeguards YAML Validation%"
             },
             {
                 "command": "aks.aksKaitoTest",
@@ -465,11 +465,13 @@
                 },
                 {
                     "command": "aks.aksDraftValidate",
-                    "when": "resourceExtname == .yaml || resourceExtname == .yml"
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "group": "5_cutcopypaste@50"
                 },
                 {
                     "command": "aks.aksDraftValidate",
-                    "when": "explorerResourceIsFolder"
+                    "when": "explorerResourceIsFolder",
+                    "group": "5_cutcopypaste@51"
                 }
             ],
             "view/item/context": [
@@ -740,6 +742,10 @@
                     "command": "aks.runContainerAssistFromTree",
                     "group": "1_developer@2",
                     "when": "config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.aksDraftValidate",
+                    "group": "1_developer@3"
                 },
                 {
                     "command": "aks.attachAcrToCluster",
