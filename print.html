@@ -746,6 +746,24 @@ This experience is built on <a href="https://github.com/Azure/containerization-a
 : Default model family used by Container Assist. Default: <code>gpt-5.2-codex</code>.</p>
 <p><code>aks.containerAssist.modelVendor</code>
 : Default model vendor used by Container Assist. Default: <code>copilot</code>.</p>
+<h2 id="deployment-annotations"><a class="header" href="#deployment-annotations">Deployment annotations</a></h2>
+<p>The generated workflow annotates resources in your cluster after each deployment. These annotations use the <code>aks-project/</code> prefix, which is a shared schema read by both this extension and aks-desktop.</p>
+<h3 id="namespace-annotations"><a class="header" href="#namespace-annotations">Namespace annotations</a></h3>
+<p>Applied once per deployment run to the target namespace via <code>kubectl annotate namespace</code>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Annotation</th><th>Value</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>aks-project/workload-identity-id</code></td><td><code>${{ secrets.AZURE_CLIENT_ID }}</code></td><td>Client ID of the managed identity used for workload identity federation. Stored on the namespace because identity config is per-namespace, not per-deployment.</td></tr>
+<tr><td><code>aks-project/workload-identity-tenant</code></td><td><code>${{ secrets.AZURE_TENANT_ID }}</code></td><td>Azure AD tenant ID associated with the managed identity.</td></tr>
+</tbody></table>
+</div>
+<h3 id="deployment-annotations-1"><a class="header" href="#deployment-annotations-1">Deployment annotations</a></h3>
+<p>Applied to all deployments in the namespace via <code>kubectl annotate deployment --all</code>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Annotation</th><th>Value</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>aks-project/pipeline-repo</code></td><td><code>${{ github.repository }}</code></td><td>The <code>owner/repo</code> of the GitHub repository that triggered the deployment.</td></tr>
+<tr><td><code>aks-project/pipeline-workflow</code></td><td><code>${{ github.workflow }}</code></td><td>Name of the GitHub Actions workflow.</td></tr>
+<tr><td><code>aks-project/deployed-by</code></td><td><code>vscode</code></td><td>Identifies the tool that generated and deployed this workflow. Recognized by aks-desktop for provenance display.</td></tr>
+<tr><td><code>aks-project/pipeline-run-url</code></td><td><code>${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}</code></td><td>Direct link to the Actions run that produced this deployment.</td></tr>
+</tbody></table>
+</div>
 <h2 id="screenshots"><a class="header" href="#screenshots">Screenshots</a></h2>
 <h3 id="menu-entry-points"><a class="header" href="#menu-entry-points">Menu entry points</a></h3>
 <p><img src="features/../resources/container-assist/container-assist-workspacemenu.png" alt="Container Assist from workspace explorer menu" /></p>
