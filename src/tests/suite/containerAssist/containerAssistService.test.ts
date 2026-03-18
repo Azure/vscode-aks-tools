@@ -1,4 +1,6 @@
 import * as assert from "assert";
+import * as os from "os";
+import * as path from "path";
 import * as vscode from "vscode";
 import * as sinon from "sinon";
 import { ContainerAssistService } from "../../../commands/aksContainerAssist/containerAssistService";
@@ -42,10 +44,11 @@ describe("ContainerAssistService", () => {
 
     describe("analyzeRepository", () => {
         it("returns error when SDK fails", async () => {
-            const result = await service.analyzeRepository("/test/path");
+            const nonExistentPath = path.join(os.tmpdir(), "nonexistent-test-path");
+
+            const result = await service.analyzeRepository(nonExistentPath);
 
             assert.strictEqual(result.succeeded, false);
-            // SDK returns error about knowledge base, not "Failed to" message
             assert.ok(result.error);
         });
     });
