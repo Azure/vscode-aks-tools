@@ -118,9 +118,11 @@ jobs:
             # Annotates the deployed resources with metadata for traceability
             - name: Annotate deployment
               run: |
-                  kubectl annotate deployment --all -n ${{ env.NAMESPACE }} \
-                    aks-project/pipeline-repo="${{ github.repository }}" \
-                    aks-project/pipeline-workflow="${{ github.workflow }}" \
-                    aks-project/deployed-by="vscode" \
-                    aks-project/pipeline-run-url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-                    --overwrite
+                  if kubectl get deployment -n ${{ env.NAMESPACE }} --no-headers 2>/dev/null | grep -q .; then
+                    kubectl annotate deployment --all -n ${{ env.NAMESPACE }} \
+                      aks-project/pipeline-repo="${{ github.repository }}" \
+                      aks-project/pipeline-workflow="${{ github.workflow }}" \
+                      aks-project/deployed-by="vscode" \
+                      aks-project/pipeline-run-url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                      --overwrite
+                  fi

@@ -290,5 +290,29 @@ describe("Workflow Template Tests", () => {
             assert.ok(result.includes("kubelogin convert-kubeconfig"), "Should convert kubeconfig with kubelogin");
             assert.ok(result.includes("managed namespace"), "Should indicate managed namespace in comments");
         });
+
+        it("should annotate namespace and deployment in managed namespace template", () => {
+            const managedConfig = { ...validConfig, isManagedNamespace: true };
+            const result = renderWorkflowTemplate(managedConfig);
+
+            assert.ok(result.includes("Annotate namespace"), "Managed template should have annotate namespace step");
+            assert.ok(result.includes("kubectl annotate namespace"), "Managed template should annotate the namespace");
+            assert.ok(result.includes("Annotate deployment"), "Managed template should have annotate deployment step");
+            assert.ok(
+                result.includes("kubectl annotate deployment --all"),
+                "Managed template should annotate all deployments",
+            );
+        });
+
+        it("should export KUBECONFIG to GITHUB_ENV in managed namespace template so all steps share it", () => {
+            const managedConfig = { ...validConfig, isManagedNamespace: true };
+            const result = renderWorkflowTemplate(managedConfig);
+
+            // KUBECONFIG must be persisted to $GITHUB_ENV so k8s-deploy and annotation steps all pick it up
+            assert.ok(
+                result.includes('echo "KUBECONFIG=') && result.includes(">> $GITHUB_ENV"),
+                "Should export KUBECONFIG to GITHUB_ENV in the Get K8s context step",
+            );
+        });
     });
 });

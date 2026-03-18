@@ -102,8 +102,8 @@ jobs:
                   kubelogin convert-kubeconfig \
                     -l azurecli \
                     --kubeconfig "${{ runner.temp }}/kubeconfig"
-              env:
-                  KUBECONFIG: ${{ runner.temp }}/kubeconfig
+
+                  echo "KUBECONFIG=${{ runner.temp }}/kubeconfig" >> $GITHUB_ENV
 
             # Deploys application based on given manifest file
             - name: Deploys application
@@ -122,17 +122,15 @@ jobs:
                     aks-project/workload-identity-id="${{ secrets.AZURE_CLIENT_ID }}" \
                     aks-project/workload-identity-tenant="${{ secrets.AZURE_TENANT_ID }}" \
                     --overwrite
-              env:
-                  KUBECONFIG: ${{ runner.temp }}/kubeconfig
 
             # Annotates the deployed resources with metadata for traceability
             - name: Annotate deployment
               run: |
-                  kubectl annotate deployment --all -n ${{ env.NAMESPACE }} \
-                    aks-project/pipeline-repo="${{ github.repository }}" \
-                    aks-project/pipeline-workflow="${{ github.workflow }}" \
-                    aks-project/deployed-by="vscode" \
-                    aks-project/pipeline-run-url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-                    --overwrite
-              env:
-                  KUBECONFIG: ${{ runner.temp }}/kubeconfig
+                  if kubectl get deployment -n ${{ env.NAMESPACE }} --no-headers 2>/dev/null | grep -q .; then
+                    kubectl annotate deployment --all -n ${{ env.NAMESPACE }} \
+                      aks-project/pipeline-repo="${{ github.repository }}" \
+                      aks-project/pipeline-workflow="${{ github.workflow }}" \
+                      aks-project/deployed-by="vscode" \
+                      aks-project/pipeline-run-url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                      --overwrite
+                  fi
