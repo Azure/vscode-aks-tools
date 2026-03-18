@@ -11,6 +11,7 @@ import {
     getManagedCluster,
     getClusterNamespacesWithTypes,
     listManagedNamespacesByCluster,
+    validateNamespaceName,
 } from "../utils/clusters";
 import { extension } from "vscode-kubernetes-tools-api";
 import { getAuthorizationManagementClient } from "../utils/arm";
@@ -22,6 +23,7 @@ import { longRunning } from "../utils/host";
 import { getPortalCreateUrl } from "../utils/env";
 import { getEnvironment } from "../../auth/azureAuth";
 import { showWizardExitConfirmation } from "./wizardUtils";
+import { NamespaceData, NamespaceSelection } from "./types";
 
 export type { Cluster } from "../utils/clusters";
 
@@ -154,17 +156,6 @@ export async function selectAksCluster(
     return selected.cluster;
 }
 
-export interface NamespaceSelection {
-    name: string;
-    isManaged: boolean;
-}
-
-export interface NamespaceData {
-    kubectlNamespaces: Array<{ name: string; isManaged: boolean; labels?: Record<string, string> }> | undefined;
-    managedNames: string[];
-    accessRestricted: boolean;
-}
-
 export async function fetchClusterNamespaces(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
@@ -219,7 +210,7 @@ async function fetchManagedNamespacesWithWarning(
     logger.debug(`Managed namespaces for cluster '${cluster.name}':`, managedNames);
 
     const learnMoreLabel = l10n.t("Learn more");
-    vscode.window
+    void vscode.window
         .showWarningMessage(
             l10n.t(
                 "You don't have permission to list all namespaces on cluster '{0}'. " +
@@ -231,7 +222,9 @@ async function fetchManagedNamespacesWithWarning(
         )
         .then((selection) => {
             if (selection === learnMoreLabel) {
-                vscode.env.openExternal(vscode.Uri.parse("https://learn.microsoft.com/azure/aks/manage-azure-rbac"));
+                void vscode.env.openExternal(
+                    vscode.Uri.parse("https://learn.microsoft.com/azure/aks/manage-azure-rbac"),
+                );
             }
         });
 
@@ -301,7 +294,11 @@ export async function selectClusterNamespace(
         validateInput: (value) => {
             const v = value?.trim() || "";
             if (!v) return l10n.t("Namespace name is required");
-            if (!validateNamespaceName(v)) return l10n.t("Invalid namespace name (must be RFC 1123 compliant)");
+            if (!validateNamespaceName(v)) {
+                return l10n.t(
+                    "Invalid namespace name. Names must be RFC 1123 compliant: lowercase alphanumeric characters or '-', start and end with an alphanumeric character, max 63 characters. See: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names",
+                );
+            }
             return undefined;
         },
     });
@@ -320,13 +317,6 @@ function isNamespacesListForbidden(error: string): boolean {
     return /Error from server \(Forbidden\)|cannot list resource "namespaces"|cannot list resource 'namespaces'/i.test(
         error,
     );
-}
-
-function validateNamespaceName(namespace: string): boolean {
-    // RFC 1123 label: lowercase alphanumeric, hyphens allowed in the middle, max 63 chars.
-    if (namespace.length > 63) return false;
-    const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-    return namespaceRegex.test(namespace);
 }
 
 export async function selectClusterAcr(

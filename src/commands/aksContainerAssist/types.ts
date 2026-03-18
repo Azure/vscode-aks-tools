@@ -45,3 +45,14 @@ export interface ModelQuickPickItem extends vscode.QuickPickItem {
     model: vscode.LanguageModelChat;
     isPreferred: boolean;
 }
+
+export interface NamespaceSelection {
+    name: string;
+    isManaged: boolean;
+}
+
+export interface NamespaceData {
+    kubectlNamespaces: Array<{ name: string; isManaged: boolean; labels?: Record<string, string> }> | undefined;
+    managedNames: string[];
+    accessRestricted: boolean;
+}

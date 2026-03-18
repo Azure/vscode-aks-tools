@@ -839,7 +839,8 @@ export async function filterPodImage(
 }
 
 //Must meet RFC 1123: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-function validateNamespaceName(namespace: string): boolean {
+export function validateNamespaceName(namespace: string): boolean {
+    if (namespace.length > 63) return false;
     const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
     return namespaceRegex.test(namespace);
 }
