@@ -15,7 +15,7 @@ import {
 } from "containerization-assist-mcp/sdk";
 
 import { LMClient } from "./lmClient";
-import { extractContent, parseManifestsFromLMResponse } from "./contentParser";
+import { extractContent, parseManifestsFromLMResponse, fixManifestImageReferences } from "./contentParser";
 import { checkExistingFiles, writeFile, ensureDirectory, getK8sManifestFolder } from "./fileOperations";
 import {
     DOCKERFILE_SYSTEM_PROMPT,
@@ -290,7 +290,8 @@ export class ContainerAssistService {
         }
 
         const manifests = parseManifestsFromLMResponse(response.result, appName);
-        return { succeeded: true, result: manifests };
+        const finalManifests = imageRepository ? fixManifestImageReferences(manifests, imageRepository) : manifests;
+        return { succeeded: true, result: finalManifests };
     }
 
     async generateDeploymentFiles(

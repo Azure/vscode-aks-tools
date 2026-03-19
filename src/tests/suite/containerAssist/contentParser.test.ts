@@ -2,6 +2,7 @@ import * as assert from "assert";
 import {
     cleanMarkdownFences,
     extractContent,
+    fixManifestImageReferences,
     parseManifestsFromLMResponse,
     parseYamlDocuments,
 } from "../../../commands/aksContainerAssist/contentParser";
@@ -106,6 +107,120 @@ kind: Deployment
             const result = parseManifestsFromLMResponse(input, "test-app");
 
             assert.strictEqual(result[0].filename, "deployment.yaml");
+        });
+    });
+
+    describe("fixManifestImageReferences", () => {
+        it("replaces <your-acr-name> placeholder", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: <your-acr-name>.azurecr.io/myapp:latest",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "realacr.azurecr.io/myapp");
+            assert.strictEqual(result[0].content, "image: realacr.azurecr.io/myapp:latest");
+        });
+
+        it("replaces wrong ACR name", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: otheracr.azurecr.io/myapp:v1",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "correctacr.azurecr.io/myapp");
+            assert.strictEqual(result[0].content, "image: correctacr.azurecr.io/myapp:v1");
+        });
+
+        it("leaves correct image unchanged", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: realacr.azurecr.io/myapp:latest",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "realacr.azurecr.io/myapp");
+            assert.strictEqual(result[0].content, "image: realacr.azurecr.io/myapp:latest");
+        });
+
+        it("replaces multiple occurrences", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: <acr>.azurecr.io/myapp:v1\n        image: <acr>.azurecr.io/myapp:v2",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "real.azurecr.io/myapp");
+            assert.ok(result[0].content.includes("real.azurecr.io/myapp:v1"));
+            assert.ok(result[0].content.includes("real.azurecr.io/myapp:v2"));
+        });
+
+        it("handles multi-level ACR path", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: <acr>.azurecr.io/team/myapp:v1",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "realacr.azurecr.io/myapp");
+            assert.strictEqual(result[0].content, "image: realacr.azurecr.io/myapp:v1");
+        });
+
+        it("does not replace unrelated sidecar images", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: <your-acr>.azurecr.io/myapp:v1\n        image: docker.io/envoyproxy/envoy:v1.28",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "realacr.azurecr.io/myapp");
+            assert.ok(result[0].content.includes("realacr.azurecr.io/myapp:v1"));
+            assert.ok(result[0].content.includes("docker.io/envoyproxy/envoy:v1.28"));
+        });
+
+        it("replaces ${} style placeholder", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: ${ACR_NAME}.azurecr.io/myapp:latest",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "realacr.azurecr.io/myapp");
+            assert.strictEqual(result[0].content, "image: realacr.azurecr.io/myapp:latest");
+        });
+
+        it("replaces {{}} style placeholder", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: {{acr_name}}.azurecr.io/myapp:latest",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "realacr.azurecr.io/myapp");
+            assert.strictEqual(result[0].content, "image: realacr.azurecr.io/myapp:latest");
+        });
+
+        it("is a no-op when imageRepository is not an azurecr.io reference", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: docker.io/myorg/myapp:latest",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "docker.io/myorg/myapp");
+            assert.strictEqual(result[0].content, "image: docker.io/myorg/myapp:latest");
+        });
+
+        it("handles image ref without tag", () => {
+            const manifests = [
+                {
+                    filename: "deployment.yaml",
+                    content: "image: <your-acr>.azurecr.io/myapp\n",
+                },
+            ];
+            const result = fixManifestImageReferences(manifests, "realacr.azurecr.io/myapp");
+            assert.ok(result[0].content.startsWith("image: realacr.azurecr.io/myapp"));
         });
     });
 
