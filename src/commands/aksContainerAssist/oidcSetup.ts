@@ -2,12 +2,14 @@ import * as vscode from "vscode";
 import * as l10n from "@vscode/l10n";
 import { ManagedServiceIdentityClient } from "@azure/arm-msi";
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
+import { ContainerServiceClient } from "@azure/arm-containerservice";
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { Octokit } from "@octokit/rest";
 import sodium from "libsodium-wrappers";
 import {
     createRoleAssignment,
     getScopeForAcr,
+    getScopeForCluster,
     getScopeForKubernetesNamespace,
     getScopeForManagedNamespace,
 } from "../utils/roleAssignments";
@@ -32,6 +34,7 @@ const AKS_CLUSTER_USER_ROLE_ID = "4abbcc35-e782-43d8-92c5-2d3f1bd2253f";
 const AKS_RBAC_WRITER_ROLE_ID = "a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb";
 const AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID = "289d8817-ee69-43f1-a0af-43a45505b488";
 const ACR_PUSH_ROLE_ID = "8311e382-0749-4cb8-b61a-304f252e45ec";
+const ACR_TASKS_CONTRIBUTOR_ROLE_ID = "fb382eab-e894-4461-af04-94435c366c3f";
 
 interface OIDCSetupResult {
     clientId: string;
@@ -109,36 +112,13 @@ export async function setupOIDCForGitHub(
 
                 progress.report({ message: l10n.t("Assigning role permissions...") });
 
-                await assignAksClusterUserRole(
+                await assignRolePermissions(
                     credential,
-                    azureConfig.subscriptionId,
-                    azureConfig.resourceGroup,
+                    azureConfig,
+                    azureContext,
                     identityResult.principalId,
+                    progress,
                 );
-
-                // For managed namespaces: assign K8s data plane + ACR push roles
-                // These are supplementary — failures are surfaced as warnings, not errors,
-                // because the core OIDC identity is already usable without them.
-                if (
-                    azureContext?.isManagedNamespace &&
-                    azureContext.clusterName &&
-                    azureContext.clusterResourceGroup &&
-                    azureContext.namespace &&
-                    azureContext.acrName &&
-                    azureContext.acrResourceGroup
-                ) {
-                    progress.report({ message: l10n.t("Assigning deployment roles...") });
-                    await assignDeploymentRoles(
-                        credential,
-                        azureConfig.subscriptionId,
-                        azureContext.clusterResourceGroup,
-                        azureContext.clusterName,
-                        azureContext.namespace,
-                        azureContext.acrResourceGroup,
-                        azureContext.acrName,
-                        identityResult.principalId,
-                    );
-                }
 
                 progress.report({ message: l10n.t("Configuring federated credentials...") });
 
@@ -506,6 +486,69 @@ async function getManagedIdentity(
     }
 }
 
+/**
+ * Assigns the correct roles based on namespace type.
+ * When invoked from pipeline generation we have cluster/ns context; otherwise we fall back
+ * to a resource-group scope assignment that keeps the standalone command working.
+ */
+async function assignRolePermissions(
+    credential: TokenCredential,
+    azureConfig: AzureConfig,
+    azureContext: AzureContext | undefined,
+    principalId: string,
+    progress: vscode.Progress<{ message?: string }>,
+): Promise<void> {
+    // TODO: When invoked without cluster context we cannot determine the correct
+    // scopes for role assignments. This path will be addressed in future work. (Need to ask for cluster/resource group)
+    if (!azureContext?.clusterName || !azureContext.clusterResourceGroup) {
+        return;
+    }
+
+    // Managed namespace — assign managed-ns deployment roles
+    if (
+        azureContext.isManagedNamespace &&
+        azureContext.namespace &&
+        azureContext.acrName &&
+        azureContext.acrResourceGroup
+    ) {
+        progress.report({ message: l10n.t("Assigning deployment roles...") });
+        await assignManagedNamespaceDeploymentRoles(
+            credential,
+            azureConfig.subscriptionId,
+            azureContext.clusterResourceGroup,
+            azureContext.clusterName,
+            azureContext.namespace,
+            azureContext.acrResourceGroup,
+            azureContext.acrName,
+            principalId,
+        );
+        return;
+    }
+
+    // User namespace — cluster user role + optional deployment roles
+    if (!azureContext.isManagedNamespace) {
+        await assignAksClusterUserRole(
+            credential,
+            azureConfig.subscriptionId,
+            azureContext.clusterResourceGroup,
+            principalId,
+        );
+
+        if (azureContext.acrName && azureContext.acrResourceGroup) {
+            progress.report({ message: l10n.t("Assigning deployment roles...") });
+            await assignUserNamespaceDeploymentRoles(
+                credential,
+                azureConfig.subscriptionId,
+                azureContext.clusterResourceGroup,
+                azureContext.clusterName,
+                azureContext.acrResourceGroup,
+                azureContext.acrName,
+                principalId,
+            );
+        }
+    }
+}
+
 async function assignAksClusterUserRole(
     credential: TokenCredential,
     subscriptionId: string,
@@ -529,7 +572,100 @@ async function assignAksClusterUserRole(
     }
 }
 
-async function assignDeploymentRoles(
+async function isAzureRbacEnabledForCluster(
+    credential: TokenCredential,
+    subscriptionId: string,
+    clusterResourceGroup: string,
+    clusterName: string,
+): Promise<boolean> {
+    try {
+        const aksClient = new ContainerServiceClient(credential, subscriptionId, {
+            endpoint: getEnvironment().resourceManagerEndpointUrl,
+        });
+        const cluster = await aksClient.managedClusters.get(clusterResourceGroup, clusterName);
+        const enabled =
+            (cluster as unknown as { aadProfile?: { enableAzureRBAC?: boolean; enableAzureRbac?: boolean } }).aadProfile
+                ?.enableAzureRBAC ??
+            (cluster as unknown as { aadProfile?: { enableAzureRBAC?: boolean; enableAzureRbac?: boolean } }).aadProfile
+                ?.enableAzureRbac;
+        return enabled === true;
+    } catch (error) {
+        logger.warn(
+            `Failed to determine if Azure RBAC is enabled for cluster '${clusterName}': ${error instanceof Error ? error.message : String(error)}. Skipping conditional role assignment.`,
+        );
+        return false;
+    }
+}
+
+async function assignUserNamespaceDeploymentRoles(
+    credential: TokenCredential,
+    subscriptionId: string,
+    clusterResourceGroup: string,
+    clusterName: string,
+    acrResourceGroup: string,
+    acrName: string,
+    principalId: string,
+): Promise<void> {
+    const authClient = new AuthorizationManagementClient(credential, subscriptionId);
+    const warnings: string[] = [];
+
+    const clusterScope = getScopeForCluster(subscriptionId, clusterResourceGroup, clusterName);
+    const acrScope = getScopeForAcr(subscriptionId, acrResourceGroup, acrName);
+
+    const [acrPushResult, acrTasksResult] = await Promise.all([
+        createRoleAssignment(authClient, subscriptionId, principalId, ACR_PUSH_ROLE_ID, acrScope, "ServicePrincipal"),
+        createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            ACR_TASKS_CONTRIBUTOR_ROLE_ID,
+            acrScope,
+            "ServicePrincipal",
+        ),
+    ]);
+
+    if (!acrPushResult.succeeded) {
+        logger.warn(`AcrPush assignment: ${acrPushResult.error}`);
+        warnings.push(l10n.t("AcrPush"));
+    }
+    if (!acrTasksResult.succeeded) {
+        logger.warn(`Container Registry Tasks Contributor assignment: ${acrTasksResult.error}`);
+        warnings.push(l10n.t("Container Registry Tasks Contributor"));
+    }
+
+    // Only assign AKS RBAC Writer at cluster scope when Azure RBAC is enabled on the cluster.
+    const azureRbacEnabled = await isAzureRbacEnabledForCluster(
+        credential,
+        subscriptionId,
+        clusterResourceGroup,
+        clusterName,
+    );
+    if (azureRbacEnabled) {
+        const rbacResult = await createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            AKS_RBAC_WRITER_ROLE_ID,
+            clusterScope,
+            "ServicePrincipal",
+        );
+        if (!rbacResult.succeeded) {
+            logger.warn(`AKS RBAC Writer assignment: ${rbacResult.error}`);
+            warnings.push(l10n.t("AKS RBAC Writer"));
+        }
+    }
+
+    if (warnings.length > 0) {
+        vscode.window.showWarningMessage(
+            l10n.t(
+                "Some deployment role assignments failed: {0}. You may need to assign them manually.",
+                warnings.join(", "),
+            ),
+        );
+    }
+}
+
+async function assignManagedNamespaceDeploymentRoles(
     credential: TokenCredential,
     subscriptionId: string,
     clusterResourceGroup: string,
@@ -550,7 +686,7 @@ async function assignDeploymentRoles(
     const acrScope = getScopeForAcr(subscriptionId, acrResourceGroup, acrName);
 
     // Assign all roles concurrently — they are independent
-    const [rbacResult, nsContribResult, acrResult] = await Promise.all([
+    const [rbacResult, nsContribResult, acrResult, acrTasksResult] = await Promise.all([
         // K8s data-plane access (deployments, configmaps, etc.)
         createRoleAssignment(
             authClient,
@@ -571,6 +707,15 @@ async function assignDeploymentRoles(
         ),
         // ACR push access for container images
         createRoleAssignment(authClient, subscriptionId, principalId, ACR_PUSH_ROLE_ID, acrScope, "ServicePrincipal"),
+        // ACR Tasks Contributor for az acr build
+        createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            ACR_TASKS_CONTRIBUTOR_ROLE_ID,
+            acrScope,
+            "ServicePrincipal",
+        ),
     ]);
 
     if (!rbacResult.succeeded) {
@@ -584,6 +729,10 @@ async function assignDeploymentRoles(
     if (!acrResult.succeeded) {
         logger.warn(`AcrPush assignment: ${acrResult.error}`);
         warnings.push(l10n.t("AcrPush"));
+    }
+    if (!acrTasksResult.succeeded) {
+        logger.warn(`Container Registry Tasks Contributor assignment: ${acrTasksResult.error}`);
+        warnings.push(l10n.t("Container Registry Tasks Contributor"));
     }
 
     if (warnings.length > 0) {
