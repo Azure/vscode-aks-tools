@@ -10,7 +10,6 @@ import {
     createRoleAssignment,
     getScopeForAcr,
     getScopeForCluster,
-    getScopeForKubernetesNamespace,
     getScopeForManagedNamespace,
 } from "../utils/roleAssignments";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
@@ -678,10 +677,6 @@ async function assignManagedNamespaceDeploymentRoles(
     const authClient = new AuthorizationManagementClient(credential, subscriptionId);
     const warnings: string[] = [];
 
-    // Two different scopes are needed for managed namespaces:
-    //   /namespaces/{ns}        — K8s data-plane RBAC (kubectl operations)
-    //   /managedNamespaces/{ns} — ARM operations (az aks namespace get-credentials)
-    const k8sNsScope = getScopeForKubernetesNamespace(subscriptionId, clusterResourceGroup, clusterName, namespace);
     const managedNsScope = getScopeForManagedNamespace(subscriptionId, clusterResourceGroup, clusterName, namespace);
     const acrScope = getScopeForAcr(subscriptionId, acrResourceGroup, acrName);
 
@@ -693,7 +688,7 @@ async function assignManagedNamespaceDeploymentRoles(
             subscriptionId,
             principalId,
             AKS_RBAC_WRITER_ROLE_ID,
-            k8sNsScope,
+            managedNsScope,
             "ServicePrincipal",
         ),
         // ARM access to fetch namespace-scoped kubeconfig
