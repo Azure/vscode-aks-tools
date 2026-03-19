@@ -53,7 +53,9 @@ Guidelines:
 - Generate secret.yaml ONLY if there are sensitive credentials referenced
 - DO NOT generate manifests that aren't needed for the application type
 
-Follow security best practices: include resource limits, security context, and appropriate labels.
+Follow security best practices:
+- Include resource limits, security context, and appropriate labels.
+- When an Image Repository is provided, you MUST use that EXACT value as the container image in deployment.yaml. Do NOT use placeholders like <your-acr-name>, <image>, or any other synthetic value.
 
 IMPORTANT: Generate EACH manifest file separately with its own <content filename="FILENAME"></content> markers.
 Do not include any explanations, markdown code fences, or text outside the content markers.
@@ -156,7 +158,9 @@ export function buildK8sManifestUserPrompt(
 
     const manifestGuidance = buildManifestGuidance(isWebApp, hasExternalDependencies, ports);
 
-    const imageLine = imageRepository ? `- Image Repository: ${imageRepository}` : undefined;
+    const imageLine = imageRepository
+        ? `- Image Repository: ${imageRepository} (use this EXACT value as the container image, no placeholders)`
+        : undefined;
 
     return `Generate Kubernetes manifests based on the following analysis and recommendations:
 

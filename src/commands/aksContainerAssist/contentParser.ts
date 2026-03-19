@@ -80,6 +80,29 @@ export function parseYamlDocuments(content: string, appName: string): ParsedMani
     return manifests;
 }
 
+/**
+ * Ensures container image references in K8s manifests use the correct imageRepository.
+ * Replaces LLM-generated placeholders (e.g. <your-acr-name>.azurecr.io/app) with the real value.
+ */
+export function fixManifestImageReferences(manifests: ParsedManifest[], imageRepository: string): ParsedManifest[] {
+    const segments = imageRepository.split("/");
+    const appSegment = segments[segments.length - 1];
+
+    // Match <placeholder>.azurecr.io/path or name.azurecr.io/path, capture the full path (supports multi-level)
+    const imagePattern =
+        /(?:<[^>]+>|\$\{[^}]+\}|\{\{[^}]+\}\}|[a-zA-Z0-9._-]+)\.azurecr\.io\/([a-zA-Z0-9._/-]+)(?=\s|"|'|>|\)|$|:)/g;
+
+    return manifests.map((m) => ({
+        ...m,
+        // Only replace when the path ends with the expected app segment,
+        // so we don't clobber unrelated image refs (e.g. sidecars).
+        content: m.content.replace(imagePattern, (match, capturedPath: string) => {
+            const lastSegment = capturedPath.split("/").pop();
+            return lastSegment === appSegment ? imageRepository : match;
+        }),
+    }));
+}
+
 function extractFilename(doc: string, appName: string, index: number): string {
     // Check for explicit filename comment
     const filenameMatch = doc.match(/^#\s*([\w-]+\.ya?ml)/i);

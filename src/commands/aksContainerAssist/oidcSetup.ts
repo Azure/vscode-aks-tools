@@ -5,6 +5,12 @@ import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { Octokit } from "@octokit/rest";
 import sodium from "libsodium-wrappers";
+import {
+    createRoleAssignment,
+    getScopeForAcr,
+    getScopeForKubernetesNamespace,
+    getScopeForManagedNamespace,
+} from "../utils/roleAssignments";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
 import { isReady } from "../../auth/types";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
@@ -14,12 +20,18 @@ import { succeeded } from "../utils/errorable";
 import { logger } from "./logger";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { randomUUID } from "crypto";
 import type { TokenCredential } from "@azure/identity";
 import { AzureContext } from "./azureSelections";
 import { showWizardExitConfirmation } from "./wizardUtils";
 
 const execFilePromise = promisify(execFile);
+
+// Azure built-in role definition IDs
+// https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+const AKS_CLUSTER_USER_ROLE_ID = "4abbcc35-e782-43d8-92c5-2d3f1bd2253f";
+const AKS_RBAC_WRITER_ROLE_ID = "a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb";
+const AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID = "289d8817-ee69-43f1-a0af-43a45505b488";
+const ACR_PUSH_ROLE_ID = "8311e382-0749-4cb8-b61a-304f252e45ec";
 
 interface OIDCSetupResult {
     clientId: string;
@@ -103,6 +115,30 @@ export async function setupOIDCForGitHub(
                     azureConfig.resourceGroup,
                     identityResult.principalId,
                 );
+
+                // For managed namespaces: assign K8s data plane + ACR push roles
+                // These are supplementary — failures are surfaced as warnings, not errors,
+                // because the core OIDC identity is already usable without them.
+                if (
+                    azureContext?.isManagedNamespace &&
+                    azureContext.clusterName &&
+                    azureContext.clusterResourceGroup &&
+                    azureContext.namespace &&
+                    azureContext.acrName &&
+                    azureContext.acrResourceGroup
+                ) {
+                    progress.report({ message: l10n.t("Assigning deployment roles...") });
+                    await assignDeploymentRoles(
+                        credential,
+                        azureConfig.subscriptionId,
+                        azureContext.clusterResourceGroup,
+                        azureContext.clusterName,
+                        azureContext.namespace,
+                        azureContext.acrResourceGroup,
+                        azureContext.acrName,
+                        identityResult.principalId,
+                    );
+                }
 
                 progress.report({ message: l10n.t("Configuring federated credentials...") });
 
@@ -477,25 +513,86 @@ async function assignAksClusterUserRole(
     principalId: string,
 ): Promise<void> {
     const authClient = new AuthorizationManagementClient(credential, subscriptionId);
-    // documentation official here https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
     const scope = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}`;
-    // Azure Kubernetes Service Cluster User Role
-    const aksClusterUserRoleId = `/subscriptions/${subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/4abbcc35-e782-43d8-92c5-2d3f1bd2253f`;
 
-    // Generate a GUID for the role assignment
-    const roleAssignmentName = randomUUID();
+    const result = await createRoleAssignment(
+        authClient,
+        subscriptionId,
+        principalId,
+        AKS_CLUSTER_USER_ROLE_ID,
+        scope,
+        "ServicePrincipal",
+    );
 
-    try {
-        await authClient.roleAssignments.create(scope, roleAssignmentName, {
-            roleDefinitionId: aksClusterUserRoleId,
-            principalId: principalId,
-            principalType: "ServicePrincipal",
-        });
-    } catch (error) {
-        // If role already exists, that's fine
-        if (error && typeof error === "object" && "code" in error && error.code !== "RoleAssignmentExists") {
-            throw error;
-        }
+    if (!result.succeeded) {
+        throw new Error(result.error);
+    }
+}
+
+async function assignDeploymentRoles(
+    credential: TokenCredential,
+    subscriptionId: string,
+    clusterResourceGroup: string,
+    clusterName: string,
+    namespace: string,
+    acrResourceGroup: string,
+    acrName: string,
+    principalId: string,
+): Promise<void> {
+    const authClient = new AuthorizationManagementClient(credential, subscriptionId);
+    const warnings: string[] = [];
+
+    // Two different scopes are needed for managed namespaces:
+    //   /namespaces/{ns}        — K8s data-plane RBAC (kubectl operations)
+    //   /managedNamespaces/{ns} — ARM operations (az aks namespace get-credentials)
+    const k8sNsScope = getScopeForKubernetesNamespace(subscriptionId, clusterResourceGroup, clusterName, namespace);
+    const managedNsScope = getScopeForManagedNamespace(subscriptionId, clusterResourceGroup, clusterName, namespace);
+    const acrScope = getScopeForAcr(subscriptionId, acrResourceGroup, acrName);
+
+    // Assign all roles concurrently — they are independent
+    const [rbacResult, nsContribResult, acrResult] = await Promise.all([
+        // K8s data-plane access (deployments, configmaps, etc.)
+        createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            AKS_RBAC_WRITER_ROLE_ID,
+            k8sNsScope,
+            "ServicePrincipal",
+        ),
+        // ARM access to fetch namespace-scoped kubeconfig
+        createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID,
+            managedNsScope,
+            "ServicePrincipal",
+        ),
+        // ACR push access for container images
+        createRoleAssignment(authClient, subscriptionId, principalId, ACR_PUSH_ROLE_ID, acrScope, "ServicePrincipal"),
+    ]);
+
+    if (!rbacResult.succeeded) {
+        logger.warn(`AKS RBAC Writer assignment: ${rbacResult.error}`);
+        warnings.push(l10n.t("AKS RBAC Writer"));
+    }
+    if (!nsContribResult.succeeded) {
+        logger.warn(`AKS Namespace Contributor assignment: ${nsContribResult.error}`);
+        warnings.push(l10n.t("AKS Namespace Contributor"));
+    }
+    if (!acrResult.succeeded) {
+        logger.warn(`AcrPush assignment: ${acrResult.error}`);
+        warnings.push(l10n.t("AcrPush"));
+    }
+
+    if (warnings.length > 0) {
+        vscode.window.showWarningMessage(
+            l10n.t(
+                "Some deployment role assignments failed: {0}. You may need to assign them manually.",
+                warnings.join(", "),
+            ),
+        );
     }
 }
 
