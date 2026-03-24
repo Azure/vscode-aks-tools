@@ -65,14 +65,14 @@ export async function getDetectorListData(
         return { succeeded: false, error: `No detectors found in AppLens response for ${categoryDetector.name}` };
     }
 
-    let results: Errorable<SingleDetectorARMResponse>[] = [];
     try {
         const promiseResults = await Promise.all(
             detectorIds.map((name) => getDetectorInfo(sessionProvider, clusterNode, name)),
         );
         // Line below is added to handle edge case of applens detector list with missing implementation,
         // due to internal server error it causes rest of list to fail.
-        results = promiseResults.filter((x) => x.succeeded);
+        const results = promiseResults.filter((x) => x.succeeded);
+        return combine(results);
     } catch (err) {
         // This would be unexpected even in the event of network failure, because the individual promises handle
         // their own errors.
@@ -81,8 +81,6 @@ export async function getDetectorListData(
             error: `Failed to retrieve detector data for ${categoryDetector.name}, with error ${err}`,
         };
     }
-
-    return combine(results);
 }
 
 export async function getDetectorInfo(

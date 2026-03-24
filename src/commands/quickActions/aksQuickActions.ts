@@ -74,12 +74,13 @@ export async function aksQuickActions(_context: IActionContext, target: unknown)
     const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
     const subscriptionNode = getAksClusterSubscriptionNode(target, cloudExplorer);
 
-    let items: QuickActionItem[] = [];
-    if (succeeded(clusterNode)) {
-        items = await getClusterQuickActionItems(target);
-    } else if (succeeded(subscriptionNode)) {
-        items = getSubscriptionQuickActionItems(target);
-    } else {
+    const items = succeeded(clusterNode)
+        ? await getClusterQuickActionItems(target)
+        : succeeded(subscriptionNode)
+          ? getSubscriptionQuickActionItems(target)
+          : undefined;
+
+    if (!items) {
         vscode.window.showInformationMessage(
             l10n.t("Quick Actions are available on AKS cluster and subscription nodes."),
         );

@@ -8,7 +8,7 @@
     "l10n": "./l10n",
     "icon": "resources/aks-tools.png",
     "engines": {
-        "vscode": "^1.108.1"
+        "vscode": "^1.110.0"
     },
     "capabilities": {
         "untrustedWorkspaces": {
@@ -909,7 +909,7 @@
         ]
     },
     "scripts": {
-        "install:all": "npm install && cd webview-ui && npm install",
+        "install:all": "npm install --legacy-peer-deps && cd webview-ui && npm install --legacy-peer-deps",
         "lint:all": "eslint -c .eslintrc.js --ext .ts ./src && cd webview-ui && npm run lint",
         "lint-fix:all": "eslint -c .eslintrc.js --ext .ts ./src --fix && cd webview-ui && npm run lint-fix",
         "prettier-format": "prettier --config .prettierrc . --write",
@@ -937,7 +937,7 @@
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.3.3",
-        "@eslint/js": "^9.37.0",
+        "@eslint/js": "^10.0.1",
         "@types/chai": "^5.2.3",
         "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
@@ -948,22 +948,22 @@
         "@types/sinon": "^21.0.0",
         "@types/tmp": "^0.2.6",
         "@types/uuid": "^11.0.0",
-        "@types/vscode": "^1.108.1",
-        "@typescript-eslint/eslint-plugin": "^8.57.1",
+        "@types/vscode": "^1.110.0",
+        "@typescript-eslint/eslint-plugin": "^8.57.2",
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
         "@vscode/test-electron": "^2.5.2",
         "@vscode/vsce": "^3.7.1",
         "chai": "^6.2.2",
-        "copy-webpack-plugin": "^13.0.1",
-        "eslint": "^9.39.2",
+        "copy-webpack-plugin": "^14.0.0",
+        "eslint": "^9.39.4",
         "eslint-webpack-plugin": "^5.0.3",
         "fast-check": "^4.6.0",
         "glob": "^13.0.6",
         "globals": "^17.3.0",
         "husky": "^9.1.7",
         "lint-staged": "^16.1.0",
-        "mocha": "^11.7.5",
+        "mocha": "^7.2.0",
         "node-loader": "^2.1.0",
         "prettier": "^3.8.1",
         "sinon": "^21.0.1",
