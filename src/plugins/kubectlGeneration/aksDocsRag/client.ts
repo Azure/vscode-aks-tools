@@ -43,7 +43,7 @@ export class AKSDocsRAGClient {
 
             this.authToken = token.result.accessToken;
         } catch (error) {
-            throw new Error(`Failed to fetch token: ${getErrorMessage(error)}`);
+            throw new Error(`Failed to fetch token: ${getErrorMessage(error)}`, { cause: error });
         }
     }
 
@@ -53,7 +53,7 @@ export class AKSDocsRAGClient {
                 await this.fetchToken();
             }
         } catch (error) {
-            throw new Error(`Failed to refresh token: ${getErrorMessage(error)}`);
+            throw new Error(`Failed to refresh token: ${getErrorMessage(error)}`, { cause: error });
         }
     }
 
@@ -61,7 +61,7 @@ export class AKSDocsRAGClient {
         await this.refreshToken();
         const { message } = config;
 
-        let rawResponse = undefined;
+        let rawResponse: Response;
         try {
             rawResponse = await fetch(aksDocsRAGEndpoint, {
                 method: "POST",
@@ -85,10 +85,6 @@ export class AKSDocsRAGClient {
                 succeeded: false,
                 error: `Unable to fetch data from AKS Docs RAG endpoint: ${getErrorMessage(err)}`,
             };
-        }
-
-        if (!rawResponse) {
-            return { succeeded: false, error: `Unable to fetch data from AKS Docs RAG endpoint` };
         }
 
         const statusCode = rawResponse?.status ?? 0; // Use a default value for statusCode

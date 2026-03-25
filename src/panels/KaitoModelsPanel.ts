@@ -259,7 +259,6 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 }
                 await longRunning(l10n.t(`Verifying available subscription quota for deployment...`), async () => {
                     const [gpuFamily, requiredCPUs] = this.parseGPU(gpu);
-                    void requiredCPUs;
                     const computeClient = getComputeManagementClient(this.sessionProvider, this.subscriptionId);
                     const containerServiceClient = getAksClient(this.sessionProvider, this.subscriptionId);
                     const cluster = await containerServiceClient.managedClusters.get(
@@ -267,8 +266,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                         this.clusterName,
                     );
                     const quotas = computeClient.usageOperations.list(cluster.location);
-                    let foundQuota = null;
-                    foundQuota = await this.findMatchingQuota(quotas, gpuFamily);
+                    const foundQuota = await this.findMatchingQuota(quotas, gpuFamily);
                     if (!foundQuota || !this.isQuotaSufficient(foundQuota, requiredCPUs)) {
                         this.promptForQuotaIncrease();
                     } else {
