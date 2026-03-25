@@ -963,7 +963,7 @@
         "globals": "^17.3.0",
         "husky": "^9.1.7",
         "lint-staged": "^16.1.0",
-        "mocha": "^7.2.0",
+        "mocha": "^11.7.5",
         "node-loader": "^2.1.0",
         "prettier": "^3.8.1",
         "sinon": "^21.0.1",
