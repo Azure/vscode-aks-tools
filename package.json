@@ -457,6 +457,21 @@
                 "command": "aks.draftArgoCDDeployment",
                 "title": "%Create Argo CD Deployment (GitOps)%",
                 "category": "AKS"
+            },
+            {
+                "command": "aks.argoCDInstall",
+                "title": "%Install Argo CD on Cluster%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.argoCDCheckStatus",
+                "title": "%Check Argo CD Status%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.argoCDApplyApp",
+                "title": "%Apply Argo CD Application to Cluster%",
+                "category": "AKS"
             }
         ],
         "menus": {
@@ -468,6 +483,18 @@
                 {
                     "command": "aks.draftArgoCDDeployment",
                     "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.argoCDInstall",
+                    "when": "never"
+                },
+                {
+                    "command": "aks.argoCDCheckStatus",
+                    "when": "never"
+                },
+                {
+                    "command": "aks.argoCDApplyApp",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml"
                 },
                 {
                     "command": "aks.draftWorkflow",
@@ -515,6 +542,18 @@
                     "command": "aks.aksDraftValidate",
                     "when": "explorerResourceIsFolder",
                     "group": "5_cutcopypaste@54"
+                },
+                {
+                    "command": "aks.argoCDApplyApp",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "group": "5_cutcopypaste@52"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "aks.argoCDApplyApp",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "group": "1_modification@100"
                 }
             ],
             "view/item/context": [
@@ -823,6 +862,14 @@
                     "command": "aks.draftWorkflow",
                     "group": "2_deploy@3",
                     "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.argoCDInstall",
+                    "group": "2_deploy@4"
+                },
+                {
+                    "command": "aks.argoCDCheckStatus",
+                    "group": "2_deploy@5"
                 },
                 {
                     "submenu": "aks.kaitoInstallSubMenu",
