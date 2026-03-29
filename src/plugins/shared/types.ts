@@ -35,4 +35,5 @@ export type CommandIdForPluginResponse =
     | "aks.aksDeployManifest"
     | "aks.aksOpenKubectlPanel"
     | "aks.aksCreateClusterFromCopilot"
-    | "aks.draftArgoCDDeployment";
+    | "aks.draftArgoCDDeployment"
+    | "aks.argoCDApplyApp";
