@@ -86,3 +86,24 @@ export const getKubectlCommandPluginErrorResponse = (
         messageForLanguageModel: messageForLanguageModel,
     };
 };
+
+// Argo CD deployment plugin
+export const getArgoCDDeploymentPluginResponse =
+    (): GitHubCopilotForAzureChatPluginResponse<MessageForLanguageModel> => {
+        const messageForLanguageModel = {
+            description:
+                'Argo CD follows the GitOps "Hollywood Principle" — your AKS cluster never pushes; ' +
+                "Argo CD continuously PULLS desired state from a dedicated Git config repository and reconciles it automatically. " +
+                "Use the button below to scaffold an annotated Argo CD Application manifest (application.yaml) in a separate GitOps config repository.",
+            descriptionInstructions:
+                "Explain the Hollywood/GitOps principle clearly: the cluster does NOT push, Argo CD pulls. " +
+                "Strongly advise the user to keep Argo CD manifests in a SEPARATE config repository from their application source code. " +
+                "Mention that the button will guide them through workspace detection and optional folder switching before scaffolding.",
+        };
+
+        return {
+            messageForLanguageModel,
+            commandID: "aks.draftArgoCDDeployment",
+            buttonLabel: "Create Argo CD Deployment",
+        };
+    };

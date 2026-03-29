@@ -451,7 +451,12 @@
             },
             {
                 "command": "aks.deployAppWithAutomatedPipelineFromTree",
-                "title": "%AKS: Deploy App with Automated Pipeline%"
+                "title": "%AKS: Deploy App with Automated Pipeline%",
+            },
+            {
+                "command": "aks.draftArgoCDDeployment",
+                "title": "%Create Argo CD Deployment (GitOps)%",
+                "category": "AKS"
             }
         ],
         "menus": {
@@ -459,6 +464,10 @@
                 {
                     "command": "aks.refreshSubscription",
                     "when": "never"
+                },
+                {
+                    "command": "aks.draftArgoCDDeployment",
+                    "when": "workspaceFolderCount >= 1"
                 },
                 {
                     "command": "aks.draftWorkflow",

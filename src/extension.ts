@@ -79,6 +79,9 @@ import {
     deployAppWithAutomatedPipelineFromTree,
 } from "./commands/aksContainerAssist/aksContainerAssist";
 import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModernizationBridge";
+    migrateAndModernizeApp,
+} from "./commands/aksContainerAssist/appModernizationBridge";
+import { draftArgoCDDeployment } from "./commands/aksArgoCD/argoCDDeployment";
 import {
     setupOIDCForGitHub,
     setGitHubActionsSecrets,
@@ -181,6 +184,7 @@ export async function activate(context: vscode.ExtensionContext) {
             deployAppWithAutomatedPipelineFromTree,
         );
         registerCommandWithTelemetry("aks.migrateAndModernizeApp", migrateAndModernizeApp);
+        registerCommandWithTelemetry("aks.draftArgoCDDeployment", draftArgoCDDeployment);
         registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
