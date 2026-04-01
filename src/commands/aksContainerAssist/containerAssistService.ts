@@ -253,7 +253,8 @@ export class ContainerAssistService {
 
             const manifestPaths: string[] = [];
             for (const manifest of manifestsContent.result) {
-                const manifestPath = path.join(k8sFolder, manifest.filename);
+                const basename = path.basename(manifest.filename);
+                const manifestPath = path.join(k8sFolder, basename);
                 await writeFile(manifestPath, manifest.content);
                 manifestPaths.push(manifestPath);
             }
@@ -296,7 +297,6 @@ export class ContainerAssistService {
 
     async generateDeploymentFiles(
         folderPath: string,
-        appName: string,
         acrLoginServer?: string,
         namespace?: string,
         signal?: AbortSignal,
@@ -305,7 +305,7 @@ export class ContainerAssistService {
     ): Promise<Errorable<DeploymentResult>> {
         const reportProgress = (message: string) => onProgress?.(message);
 
-        logger.debug("Deployment workflow params", { folderPath, appName, acrLoginServer, namespace });
+        logger.debug("Deployment workflow params", { folderPath, acrLoginServer, namespace });
 
         const existingFiles = await this.checkExistingFiles(folderPath);
 
@@ -344,7 +344,7 @@ export class ContainerAssistService {
             return analysisResult;
         }
 
-        const { modules, isMonorepo } = analysisResult.result;
+        const { modules } = analysisResult.result;
 
         if (modules.length === 0) {
             return {
@@ -354,6 +354,7 @@ export class ContainerAssistService {
         }
 
         const allGeneratedFiles: string[] = [];
+        const allManifestPaths: string[] = [];
 
         if (!skipDockerfile) {
             for (const module of modules) {
@@ -372,7 +373,7 @@ export class ContainerAssistService {
 
         if (!skipK8sManifests) {
             for (const module of modules) {
-                const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
+                const manifestAppName = module.name;
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
                 const manifestNamespace = namespace || "default";
                 const imageRepository = acrLoginServer ? `${acrLoginServer}/${manifestAppName}` : undefined;
@@ -390,15 +391,20 @@ export class ContainerAssistService {
                     return manifestsResult;
                 }
                 allGeneratedFiles.push(...manifestsResult.result);
+                allManifestPaths.push(...manifestsResult.result);
             }
         }
 
         logger.debug("Generated files", allGeneratedFiles);
 
+        const primaryModuleName = modules[0]?.name;
+
         return {
             succeeded: true,
             result: {
                 generatedFiles: allGeneratedFiles,
+                manifestPaths: allManifestPaths,
+                primaryModuleName,
             },
         };
     }

@@ -55,7 +55,7 @@ Guidelines:
 
 Follow security best practices:
 - Include resource limits, security context, and appropriate labels.
-- When an Image Repository is provided, you MUST use that EXACT value as the container image in deployment.yaml. Do NOT use placeholders like <your-acr-name>, <image>, or any other synthetic value.
+- When an Image Repository is provided, you MUST use that EXACT value as the container image in deployment.yaml. Do NOT use placeholders like <your-acr-name>, <image>, or any other synthetic value. Do NOT use a bare image name such as "app-name:1.0.0" — always include the full registry URL (e.g. myacr.azurecr.io/app-name).
 
 IMPORTANT: Generate EACH manifest file separately with its own <content filename="FILENAME"></content> markers.
 Do not include any explanations, markdown code fences, or text outside the content markers.
@@ -159,7 +159,7 @@ export function buildK8sManifestUserPrompt(
     const manifestGuidance = buildManifestGuidance(isWebApp, hasExternalDependencies, ports);
 
     const imageLine = imageRepository
-        ? `- Image Repository: ${imageRepository} (use this EXACT value as the container image, no placeholders)`
+        ? `- Image Repository: ${imageRepository} (use this EXACT full URL as the container image — including the registry hostname — no bare names, no placeholders)`
         : undefined;
 
     return `Generate Kubernetes manifests based on the following analysis and recommendations:

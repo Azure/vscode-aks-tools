@@ -42,13 +42,21 @@ export function parseManifestsFromLMResponse(content: string, appName: string): 
 }
 
 function parseContentWithFilenames(content: string): ParsedManifest[] {
+    // Reset lastIndex: the regex has the 'g' flag, so it persists state across calls.
+    CONTENT_WITH_FILENAME_REGEX.lastIndex = 0;
+
     const manifests: ParsedManifest[] = [];
     let match;
 
     while ((match = CONTENT_WITH_FILENAME_REGEX.exec(content)) !== null) {
-        const filename = match[1];
+        const rawFilename = match[1];
         const fileContent = match[2].trim();
-        if (filename && fileContent) {
+        if (rawFilename && fileContent) {
+            // Strip any leading directory prefix the LM may include
+            // (e.g. "k8s/deployment.yaml" → "deployment.yaml").
+            const stripped = rawFilename.replace(/^(?:\.\/)?(?:[^/]+\/)+/, "");
+            // Fall back to basename of rawFilename if stripped is empty (e.g. "k8s/").
+            const filename = stripped || rawFilename.split("/").filter(Boolean).pop() || rawFilename;
             manifests.push({ filename, content: fileContent });
         }
     }
@@ -57,7 +65,7 @@ function parseContentWithFilenames(content: string): ParsedManifest[] {
 }
 
 export function parseYamlDocuments(content: string, appName: string): ParsedManifest[] {
-    const documents = content.split(/^---$/m).filter((doc) => doc.trim());
+    const documents = content.split(/^---\s*$/m).filter((doc) => doc.trim());
     if (documents.length === 0) {
         return [];
     }
@@ -70,9 +78,11 @@ export function parseYamlDocuments(content: string, appName: string): ParsedMani
     });
 
     if (manifests.length === 1) {
-        const hasDeployment = manifests[0].filename.toLowerCase().includes("deployment");
-        const hasService = manifests[0].filename.toLowerCase().includes("service");
-        if (!hasDeployment && !hasService) {
+        const fn = manifests[0].filename.toLowerCase();
+        // Only rename fallback-named manifests (e.g. "appname-manifest-1.yaml"),
+        // not those derived from a YAML kind or explicit filename comment.
+        const isFallbackName = fn.includes("-manifest-");
+        if (isFallbackName) {
             manifests[0].filename = "deployment.yaml";
         }
     }
@@ -88,19 +98,35 @@ export function fixManifestImageReferences(manifests: ParsedManifest[], imageRep
     const segments = imageRepository.split("/");
     const appSegment = segments[segments.length - 1];
 
-    // Match <placeholder>.azurecr.io/path or name.azurecr.io/path, capture the full path (supports multi-level)
-    const imagePattern =
+    // Pattern 1: <placeholder>.azurecr.io/path or name.azurecr.io/path
+    const acrPattern =
         /(?:<[^>]+>|\$\{[^}]+\}|\{\{[^}]+\}\}|[a-zA-Z0-9._-]+)\.azurecr\.io\/([a-zA-Z0-9._/-]+)(?=\s|"|'|>|\)|$|:)/g;
 
-    return manifests.map((m) => ({
-        ...m,
-        // Only replace when the path ends with the expected app segment,
-        // so we don't clobber unrelated image refs (e.g. sidecars).
-        content: m.content.replace(imagePattern, (match, capturedPath: string) => {
+    // Pattern 2: bare image reference — "image-name:tag" or "image-name" without any slash
+    return manifests.map((m) => {
+        // Pass 1 — fix ACR-prefixed placeholders
+        let fixed = m.content.replace(acrPattern, (match, capturedPath: string) => {
             const lastSegment = capturedPath.split("/").pop();
             return lastSegment === appSegment ? imageRepository : match;
-        }),
-    }));
+        });
+
+        // Pass 2 — fix bare image references whose name matches the app segment.
+        // Only replace inside YAML "image:" lines to avoid touching unrelated fields.
+        fixed = fixed.replace(/^(\s*image:\s*)(.+)$/gm, (line, prefix, imagePart) => {
+            // Skip if it already looks like a full registry URL (contains a dot before the first slash)
+            if (/^[a-zA-Z0-9._-]+\.[a-zA-Z]{2,}\//.test(imagePart.trim())) {
+                return line;
+            }
+            // Extract the image name (strip tag)
+            const imageName = imagePart.trim().split(":")[0].split("/").pop() ?? "";
+            if (imageName === appSegment) {
+                return `${prefix}${imageRepository}`;
+            }
+            return line;
+        });
+
+        return { ...m, content: fixed };
+    });
 }
 
 function extractFilename(doc: string, appName: string, index: number): string {
