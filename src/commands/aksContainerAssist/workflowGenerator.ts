@@ -9,18 +9,62 @@ import * as path from "path";
 import * as l10n from "@vscode/l10n";
 import { Errorable } from "../utils/errorable";
 import { WorkflowConfig, renderWorkflowTemplate, validateWorkflowConfig } from "./workflowTemplate";
-import { writeWorkflowFile, workflowFileExists, fileExists, scanForK8sManifests } from "./fileOperations";
+import {
+    writeWorkflowFile,
+    workflowFileExists,
+    fileExists,
+    scanForK8sManifests,
+    scanForDockerfiles,
+} from "./fileOperations";
 import { logger } from "./logger";
 import type { AzureContext } from "./azureSelections";
 
-export async function generateGitHubWorkflow(
+export function generateGitHubWorkflow(
     workspaceFolder: vscode.WorkspaceFolder,
     projectRoot: string,
     azureContext: AzureContext,
     hasBothActions: boolean,
+    knownManifestPaths?: string[],
+    primaryModuleName?: string,
+): Promise<Errorable<string>> {
+    return Promise.resolve(
+        vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: l10n.t("Generating GitHub workflow file..."),
+                cancellable: false,
+            },
+            () =>
+                doGenerateGitHubWorkflow(
+                    workspaceFolder,
+                    projectRoot,
+                    azureContext,
+                    hasBothActions,
+                    knownManifestPaths,
+                    primaryModuleName,
+                ),
+        ),
+    );
+}
+
+async function doGenerateGitHubWorkflow(
+    workspaceFolder: vscode.WorkspaceFolder,
+    projectRoot: string,
+    azureContext: AzureContext,
+    hasBothActions: boolean,
+    knownManifestPaths?: string[],
+    primaryModuleName?: string,
 ): Promise<Errorable<string>> {
     try {
-        const config = await collectWorkflowConfiguration(workspaceFolder, projectRoot, azureContext, hasBothActions);
+        const workspaceRoot = workspaceFolder.uri.fsPath;
+        const config = await collectWorkflowConfiguration(
+            workspaceRoot,
+            projectRoot,
+            azureContext,
+            hasBothActions,
+            knownManifestPaths,
+            primaryModuleName,
+        );
         if (!config) {
             return { succeeded: false, error: "cancelled" };
         }
@@ -34,10 +78,10 @@ export async function generateGitHubWorkflow(
         }
 
         const workflowName = sanitizeWorkflowName(config.workflowName);
-        const exists = await workflowFileExists(projectRoot, workflowName);
+        const exists = await workflowFileExists(workspaceRoot, workflowName);
         if (exists) {
             const overwrite = await vscode.window.showWarningMessage(
-                l10n.t('Workflow file "{0}.yaml" already exists. Overwrite?', workflowName),
+                l10n.t('Workflow file "{0}.yml" already exists. Overwrite?', workflowName),
                 l10n.t("Overwrite"),
                 l10n.t("Cancel"),
             );
@@ -50,7 +94,11 @@ export async function generateGitHubWorkflow(
         const workflowContent = renderWorkflowTemplate(config);
         logger.debug("Workflow template rendered successfully");
 
-        const workflowPath = await writeWorkflowFile(projectRoot, workflowName, workflowContent);
+        const workflowPath = await writeWorkflowFile(workspaceRoot, workflowName, workflowContent);
+
+        vscode.window.showInformationMessage(
+            l10n.t("GitHub workflow written to: {0}", path.relative(workspaceRoot, workflowPath) || workflowPath),
+        );
 
         return { succeeded: true, result: workflowPath };
     } catch (error) {
@@ -61,10 +109,12 @@ export async function generateGitHubWorkflow(
 }
 
 async function collectWorkflowConfiguration(
-    _workspaceFolder: vscode.WorkspaceFolder,
+    workspaceRoot: string,
     projectRoot: string,
     azureContext: AzureContext,
     hasBothActions: boolean,
+    knownManifestPaths?: string[],
+    primaryModuleName?: string,
 ): Promise<WorkflowConfig | undefined> {
     const {
         clusterName,
@@ -80,25 +130,28 @@ async function collectWorkflowConfiguration(
         return undefined;
     }
 
-    // Smart defaults for remaining values
-    const appName = path.basename(projectRoot);
+    const appName = primaryModuleName ?? path.basename(projectRoot);
 
-    // Dockerfile path - auto-detect or prompt user
-    const detectedDockerfile = await detectDockerfilePath(projectRoot);
+    // Search recursively; prefer the shallowest match for auto-selection.
+    const detectedDockerfiles = await detectDockerfilePaths(projectRoot);
+    const detectedDockerfile = detectedDockerfiles.length > 0 ? detectedDockerfiles[0] : undefined;
+
     let dockerfilePath: string | undefined;
     if (hasBothActions && detectedDockerfile) {
         dockerfilePath = detectedDockerfile;
         logger.debug("Dockerfile auto-detected (skipping prompt — deployment just generated)", dockerfilePath);
     } else {
-        dockerfilePath = await promptForDockerfilePath(projectRoot, detectedDockerfile);
+        dockerfilePath = await promptForDockerfilePath(projectRoot, detectedDockerfiles);
     }
     if (!dockerfilePath) return undefined;
     logger.debug("Dockerfile path selected", dockerfilePath);
 
-    // Build context: auto-derive when deployment was just generated, otherwise prompt
+    // Build context: use the Dockerfile's directory when in a subdirectory, else ".".
+    // Auto-derive when both actions were selected; otherwise prompt.
     let buildContextPath: string | undefined;
-    const defaultBuildContext = dockerfilePath.includes("/") ? path.dirname(dockerfilePath) : ".";
-    if (hasBothActions && detectedDockerfile) {
+    const dockerfileDir = path.dirname(dockerfilePath);
+    const defaultBuildContext = dockerfileDir !== "." ? dockerfileDir : ".";
+    if (hasBothActions) {
         buildContextPath = defaultBuildContext;
         logger.debug("Build context auto-derived (skipping prompt — deployment just generated)", buildContextPath);
     } else {
@@ -107,9 +160,25 @@ async function collectWorkflowConfiguration(
     if (!buildContextPath) return undefined;
     logger.debug("Build context path selected", buildContextPath);
 
-    // Manifests: auto-select all when deployment was just generated, otherwise prompt
-    const detectedManifests = await scanForK8sManifests(projectRoot);
-    const relativeManifests = detectedManifests.map((p) => path.relative(projectRoot, p));
+    // Use known manifest paths from deployment (absolute) instead of re-scanning,
+    // so manifests in module subdirectories are always found.
+    let relativeManifests: string[];
+    if (hasBothActions && knownManifestPaths && knownManifestPaths.length > 0) {
+        relativeManifests = knownManifestPaths.map((p) => path.relative(workspaceRoot, p));
+        logger.debug(
+            `Using ${relativeManifests.length} known manifest path(s) from deployment generation`,
+            relativeManifests,
+        );
+    } else {
+        const detectedManifests = await scanForK8sManifests(workspaceRoot);
+        relativeManifests = detectedManifests.map((p) => path.relative(workspaceRoot, p));
+    }
+
+    const dockerfileRelToWorkspace = path.relative(workspaceRoot, path.resolve(projectRoot, dockerfilePath));
+    const buildContextRelToWorkspace =
+        buildContextPath === "."
+            ? path.relative(workspaceRoot, projectRoot) || "."
+            : path.relative(workspaceRoot, path.resolve(projectRoot, buildContextPath));
 
     let selectedManifests: string[] | undefined;
     if (hasBothActions && relativeManifests.length > 0) {
@@ -129,8 +198,8 @@ async function collectWorkflowConfiguration(
         workflowName,
         branchName: "main", // Default to main
         containerName: appName, // Use app name as container name
-        dockerFile: dockerfilePath,
-        buildContextPath,
+        dockerFile: dockerfileRelToWorkspace,
+        buildContextPath: buildContextRelToWorkspace,
         acrResourceGroup,
         azureContainerRegistry: acrName,
         clusterName,
@@ -142,38 +211,69 @@ async function collectWorkflowConfiguration(
 }
 
 /**
- * Detects Dockerfile path in the project
- * Returns "Dockerfile" if it exists at the root, otherwise undefined
+ * Searches for Dockerfiles within the project directory (up to 3 levels deep).
+ * Returns paths relative to projectRoot, shallowest first.
+ * Returns an empty array if none are found.
  */
-async function detectDockerfilePath(projectRoot: string): Promise<string | undefined> {
-    const dockerfilePath = path.join(projectRoot, "Dockerfile");
-    if (await fileExists(dockerfilePath)) {
-        return "Dockerfile";
-    }
-    return undefined;
+async function detectDockerfilePaths(projectRoot: string): Promise<string[]> {
+    const absolutePaths = await scanForDockerfiles(projectRoot);
+    return absolutePaths.map((p) => path.relative(projectRoot, p));
 }
 
 /**
- * Prompts user to enter or confirm Dockerfile path
+ * Prompts user to select or confirm a Dockerfile path.
+ * Shows a QuickPick when multiple Dockerfiles are detected; falls back to an
+ * input box when none are found (so the user can type a custom path).
  */
-async function promptForDockerfilePath(
-    projectRoot: string,
-    detectedPath: string | undefined,
-): Promise<string | undefined> {
-    const defaultPath = detectedPath || "Dockerfile";
-    const detectionNote = detectedPath ? l10n.t("✓ Found: {0}", detectedPath) : l10n.t("Not found - using default");
+async function promptForDockerfilePath(projectRoot: string, detectedPaths: string[]): Promise<string | undefined> {
+    if (detectedPaths.length === 1) {
+        // Single Dockerfile — present as pre-filled input box with validation
+        const result = await vscode.window.showInputBox({
+            prompt: l10n.t("Enter Dockerfile path (relative to project root)\n✓ Found: {0}", detectedPaths[0]),
+            placeHolder: "Dockerfile",
+            value: detectedPaths[0],
+            title: l10n.t("Dockerfile Location"),
+            ignoreFocusOut: true,
+            validateInput: async (value) => {
+                if (!value || value.trim() === "") {
+                    return l10n.t("Dockerfile path is required");
+                }
+                const fullPath = path.join(projectRoot, value);
+                if (!(await fileExists(fullPath))) {
+                    return l10n.t("⚠ Warning: Dockerfile not found at this path");
+                }
+                return undefined;
+            },
+        });
+        return result?.trim();
+    }
 
+    if (detectedPaths.length > 1) {
+        // Multiple Dockerfiles — let user pick from a QuickPick list
+        const items: vscode.QuickPickItem[] = detectedPaths.map((p) => ({
+            label: p,
+            description: p === "Dockerfile" ? l10n.t("(repo root)") : undefined,
+        }));
+
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: l10n.t("Multiple Dockerfiles found — select one to use"),
+            title: l10n.t("Dockerfile Location ({0} found)", detectedPaths.length),
+            ignoreFocusOut: true,
+        });
+        return selected?.label;
+    }
+
+    // No Dockerfile found — free-text input box
     const result = await vscode.window.showInputBox({
-        prompt: l10n.t("Enter Dockerfile path (relative to project root)\n{0}", detectionNote),
+        prompt: l10n.t("Enter Dockerfile path (relative to project root)\nNot found - using default"),
         placeHolder: "Dockerfile",
-        value: defaultPath,
+        value: "Dockerfile",
         title: l10n.t("Dockerfile Location"),
         ignoreFocusOut: true,
         validateInput: async (value) => {
             if (!value || value.trim() === "") {
                 return l10n.t("Dockerfile path is required");
             }
-            // Optional: Validate file exists
             const fullPath = path.join(projectRoot, value);
             if (!(await fileExists(fullPath))) {
                 return l10n.t("⚠ Warning: Dockerfile not found at this path");
@@ -181,7 +281,6 @@ async function promptForDockerfilePath(
             return undefined;
         },
     });
-
     return result?.trim();
 }
 
