@@ -19,14 +19,22 @@ import {
 import { logger } from "./logger";
 import type { AzureContext } from "./azureSelections";
 
-export function generateGitHubWorkflow(
-    workspaceFolder: vscode.WorkspaceFolder,
-    projectRoot: string,
-    azureContext: AzureContext,
-    hasBothActions: boolean,
-    knownManifestPaths?: string[],
-    primaryModuleName?: string,
-): Promise<Errorable<string>> {
+/** Parameters for workflow generation, replacing positional arguments. */
+export interface WorkflowGenerationOptions {
+    workspaceFolder: vscode.WorkspaceFolder;
+    projectRoot: string;
+    azureContext: AzureContext;
+    hasBothActions: boolean;
+    /** Output from deployment generation, used to skip prompts and reuse known paths. */
+    deploymentResult?: { manifestPaths?: string[]; primaryModuleName?: string };
+}
+
+/** Normalize a relative path to POSIX separators so GitHub Actions (Linux) can use it. */
+function toPosixPath(p: string): string {
+    return p.replace(/\\/g, "/");
+}
+
+export function generateGitHubWorkflow(options: WorkflowGenerationOptions): Promise<Errorable<string>> {
     return Promise.resolve(
         vscode.window.withProgress(
             {
@@ -34,27 +42,13 @@ export function generateGitHubWorkflow(
                 title: l10n.t("Generating GitHub workflow file..."),
                 cancellable: false,
             },
-            () =>
-                doGenerateGitHubWorkflow(
-                    workspaceFolder,
-                    projectRoot,
-                    azureContext,
-                    hasBothActions,
-                    knownManifestPaths,
-                    primaryModuleName,
-                ),
+            () => doGenerateGitHubWorkflow(options),
         ),
     );
 }
 
-async function doGenerateGitHubWorkflow(
-    workspaceFolder: vscode.WorkspaceFolder,
-    projectRoot: string,
-    azureContext: AzureContext,
-    hasBothActions: boolean,
-    knownManifestPaths?: string[],
-    primaryModuleName?: string,
-): Promise<Errorable<string>> {
+async function doGenerateGitHubWorkflow(options: WorkflowGenerationOptions): Promise<Errorable<string>> {
+    const { workspaceFolder, projectRoot, azureContext, hasBothActions, deploymentResult } = options;
     try {
         const workspaceRoot = workspaceFolder.uri.fsPath;
         const config = await collectWorkflowConfiguration(
@@ -62,8 +56,8 @@ async function doGenerateGitHubWorkflow(
             projectRoot,
             azureContext,
             hasBothActions,
-            knownManifestPaths,
-            primaryModuleName,
+            deploymentResult?.manifestPaths,
+            deploymentResult?.primaryModuleName,
         );
         if (!config) {
             return { succeeded: false, error: "cancelled" };
@@ -164,21 +158,23 @@ async function collectWorkflowConfiguration(
     // so manifests in module subdirectories are always found.
     let relativeManifests: string[];
     if (hasBothActions && knownManifestPaths && knownManifestPaths.length > 0) {
-        relativeManifests = knownManifestPaths.map((p) => path.relative(workspaceRoot, p));
+        relativeManifests = knownManifestPaths.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
         logger.debug(
             `Using ${relativeManifests.length} known manifest path(s) from deployment generation`,
             relativeManifests,
         );
     } else {
         const detectedManifests = await scanForK8sManifests(workspaceRoot);
-        relativeManifests = detectedManifests.map((p) => path.relative(workspaceRoot, p));
+        relativeManifests = detectedManifests.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
     }
 
-    const dockerfileRelToWorkspace = path.relative(workspaceRoot, path.resolve(projectRoot, dockerfilePath));
+    const dockerfileRelToWorkspace = toPosixPath(
+        path.relative(workspaceRoot, path.resolve(projectRoot, dockerfilePath)),
+    );
     const buildContextRelToWorkspace =
         buildContextPath === "."
-            ? path.relative(workspaceRoot, projectRoot) || "."
-            : path.relative(workspaceRoot, path.resolve(projectRoot, buildContextPath));
+            ? toPosixPath(path.relative(workspaceRoot, projectRoot)) || "."
+            : toPosixPath(path.relative(workspaceRoot, path.resolve(projectRoot, buildContextPath)));
 
     let selectedManifests: string[] | undefined;
     if (hasBothActions && relativeManifests.length > 0) {
@@ -238,9 +234,12 @@ async function promptForDockerfilePath(projectRoot: string, detectedPaths: strin
                 if (!value || value.trim() === "") {
                     return l10n.t("Dockerfile path is required");
                 }
+                if (value.startsWith("/") || value.includes("..")) {
+                    return l10n.t("Dockerfile path must be a relative path within the project");
+                }
                 const fullPath = path.join(projectRoot, value);
                 if (!(await fileExists(fullPath))) {
-                    return l10n.t("⚠ Warning: Dockerfile not found at this path");
+                    return l10n.t("Dockerfile not found at this path");
                 }
                 return undefined;
             },
@@ -274,9 +273,12 @@ async function promptForDockerfilePath(projectRoot: string, detectedPaths: strin
             if (!value || value.trim() === "") {
                 return l10n.t("Dockerfile path is required");
             }
+            if (value.startsWith("/") || value.includes("..")) {
+                return l10n.t("Dockerfile path must be a relative path within the project");
+            }
             const fullPath = path.join(projectRoot, value);
             if (!(await fileExists(fullPath))) {
-                return l10n.t("⚠ Warning: Dockerfile not found at this path");
+                return l10n.t("Dockerfile not found at this path");
             }
             return undefined;
         },

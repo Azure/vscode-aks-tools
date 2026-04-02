@@ -8,7 +8,7 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
-import { generateGitHubWorkflow } from "./workflowGenerator";
+import { generateGitHubWorkflow, WorkflowGenerationOptions } from "./workflowGenerator";
 
 import { collectAzureContext, collectAzureContextFromTree, AzureContext } from "./azureSelections";
 import { showPostGenerationOptions } from "./postGenerationFlow";
@@ -282,6 +282,8 @@ async function executeContainerAssistActions(
     const azureContext = await azureContextProvider(hasWorkflow);
     if (!azureContext) return;
 
+    const workflowOptions: WorkflowGenerationOptions = { workspaceFolder, projectRoot, azureContext, hasBothActions };
+
     // When both actions are selected, workflow generation depends on deployment artifacts.
     // Run deployment first, and only proceed to workflow generation if Dockerfile + manifests exist.
     if (hasBothActions) {
@@ -313,23 +315,16 @@ async function executeContainerAssistActions(
             }
         }
 
-        const knownManifestPaths = deploymentResult?.manifestPaths;
-        const primaryModuleName = deploymentResult?.primaryModuleName;
-
-        const workflowResult = await generateWorkflowFile(
-            workspaceFolder,
-            projectRoot,
-            true,
-            azureContext,
-            knownManifestPaths,
-            primaryModuleName,
-        );
+        const workflowResult = await generateWorkflowFile({
+            ...workflowOptions,
+            deploymentResult: deploymentResult ?? undefined,
+        });
 
         if (!workflowResult?.workflowPath) {
             return;
         }
 
-        const displayName = primaryModuleName ?? path.basename(projectRoot);
+        const displayName = deploymentResult?.primaryModuleName ?? path.basename(projectRoot);
         const allFiles = [...deploymentFiles, workflowResult.workflowPath];
         await showPostGenerationOptions(allFiles, workspaceFolder, displayName, true, azureContext);
         return;
@@ -368,7 +363,12 @@ async function processContainerAssistAction(
             return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions, azureContext);
 
         case ContainerAssistAction.GenerateWorkflow:
-            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions, azureContext);
+            return await generateWorkflowFile({
+                workspaceFolder,
+                projectRoot: targetPath,
+                azureContext,
+                hasBothActions,
+            });
 
         default:
             logger.warn(`Unknown action: ${action}`);
@@ -469,22 +469,9 @@ async function generateDeploymentFiles(
     return { deploymentFiles: generatedFiles };
 }
 
-async function generateWorkflowFile(
-    workspaceFolder: vscode.WorkspaceFolder,
-    targetPath: string,
-    hasBothActions: boolean,
-    azureContext: AzureContext,
-    knownManifestPaths?: string[],
-    primaryModuleName?: string,
-): Promise<ActionResult | undefined> {
-    const result = await generateGitHubWorkflow(
-        workspaceFolder,
-        targetPath,
-        azureContext,
-        hasBothActions,
-        knownManifestPaths,
-        primaryModuleName,
-    );
+async function generateWorkflowFile(options: WorkflowGenerationOptions): Promise<ActionResult | undefined> {
+    const { workspaceFolder, projectRoot, hasBothActions, deploymentResult } = options;
+    const result = await generateGitHubWorkflow(options);
 
     if (failed(result)) {
         if (result.error === "cancelled") {
@@ -503,8 +490,8 @@ async function generateWorkflowFile(
         return { workflowPath };
     }
 
-    const displayName = primaryModuleName ?? path.basename(targetPath);
-    await showPostGenerationOptions([workflowPath], workspaceFolder, displayName, true, azureContext);
+    const displayName = deploymentResult?.primaryModuleName ?? path.basename(projectRoot);
+    await showPostGenerationOptions([workflowPath], workspaceFolder, displayName, true, options.azureContext);
 
     return { workflowPath };
 }

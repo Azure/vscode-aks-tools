@@ -91,42 +91,26 @@ export function parseYamlDocuments(content: string, appName: string): ParsedMani
 }
 
 /**
- * Ensures container image references in K8s manifests use the correct imageRepository.
- * Replaces LLM-generated placeholders (e.g. <your-acr-name>.azurecr.io/app) with the real value.
+ * Ensures container image references in K8s manifests use the correct ACR imageRepository.
+ * Handles LLM-generated placeholders (e.g. <your-acr-name>.azurecr.io/app), wrong ACR names,
+ * and bare image names (e.g. my-app:1.0.0) by checking each "image:" line against the
+ * user-selected ACR repository.
  */
 export function fixManifestImageReferences(manifests: ParsedManifest[], imageRepository: string): ParsedManifest[] {
     const segments = imageRepository.split("/");
     const appSegment = segments[segments.length - 1];
 
-    // Pattern 1: <placeholder>.azurecr.io/path or name.azurecr.io/path
-    const acrPattern =
-        /(?:<[^>]+>|\$\{[^}]+\}|\{\{[^}]+\}\}|[a-zA-Z0-9._-]+)\.azurecr\.io\/([a-zA-Z0-9._/-]+)(?=\s|"|'|>|\)|$|:)/g;
-
-    // Pattern 2: bare image reference — "image-name:tag" or "image-name" without any slash
-    return manifests.map((m) => {
-        // Pass 1 — fix ACR-prefixed placeholders
-        let fixed = m.content.replace(acrPattern, (match, capturedPath: string) => {
-            const lastSegment = capturedPath.split("/").pop();
-            return lastSegment === appSegment ? imageRepository : match;
-        });
-
-        // Pass 2 — fix bare image references whose name matches the app segment.
-        // Only replace inside YAML "image:" lines to avoid touching unrelated fields.
-        fixed = fixed.replace(/^(\s*image:\s*)(.+)$/gm, (line, prefix, imagePart) => {
-            // Skip if it already looks like a full registry URL (contains a dot before the first slash)
-            if (/^[a-zA-Z0-9._-]+\.[a-zA-Z]{2,}\//.test(imagePart.trim())) {
-                return line;
-            }
-            // Extract the image name (strip tag)
-            const imageName = imagePart.trim().split(":")[0].split("/").pop() ?? "";
-            if (imageName === appSegment) {
-                return `${prefix}${imageRepository}`;
-            }
-            return line;
-        });
-
-        return { ...m, content: fixed };
-    });
+    return manifests.map((m) => ({
+        ...m,
+        content: m.content.replace(/^(\s*image:\s*)(.+)$/gm, (line, prefix, imagePart) => {
+            const trimmed = imagePart.trim();
+            // Already correct — starts with the expected ACR repo
+            if (trimmed.startsWith(imageRepository)) return line;
+            // Extract the base image name (rightmost path segment, without tag or digest)
+            const baseName = (trimmed.split("/").pop() ?? trimmed).split(":")[0].split("@")[0];
+            return baseName === appSegment ? `${prefix}${imageRepository}` : line;
+        }),
+    }));
 }
 
 function extractFilename(doc: string, appName: string, index: number): string {

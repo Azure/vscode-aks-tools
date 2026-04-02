@@ -18,7 +18,7 @@ export interface DeploymentResult {
     generatedFiles: string[];
     /** Absolute paths to the generated Kubernetes manifest files. */
     manifestPaths?: string[];
-    /** The primary module name from SDK analysis (path.basename of the detected module directory). */
+    /** The primary module name as reported by CA analysis. */
     primaryModuleName?: string;
 }
 
