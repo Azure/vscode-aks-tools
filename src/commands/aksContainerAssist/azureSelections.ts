@@ -15,7 +15,7 @@ import {
 } from "../utils/clusters";
 import { extension } from "vscode-kubernetes-tools-api";
 import { getAuthorizationManagementClient } from "../utils/arm";
-import { getPrincipalRoleAssignmentsForAcr } from "../utils/roleAssignments";
+import { getPrincipalRoleAssignmentsForAcr, createRoleAssignment, getScopeForAcr } from "../utils/roleAssignments";
 import { acrPullRoleDefinitionName } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { failed } from "../utils/errorable";
 import { logger } from "./logger";
@@ -367,6 +367,12 @@ export async function selectClusterAcr(
         return showWizardExitConfirmation(() => selectClusterAcr(sessionProvider, subscriptionId, cluster));
     }
 
+    // If the selected ACR is not yet attached, warn and offer to assign AcrPull automatically.
+    // (When showingAttachedOnly is true, every listed ACR already has AcrPull.)
+    if (!showingAttachedOnly) {
+        await ensureAcrPullForKubelet(sessionProvider, subscriptionId, cluster, selected.acr);
+    }
+
     return selected.acr;
 }
 
@@ -471,6 +477,97 @@ async function getClusterPrincipalId(
         logger.warn(`Cluster '${cluster.name}' has no kubelet identity or service principal`);
     }
     return spClientId;
+}
+
+/** Ensures the cluster's kubelet identity has AcrPull on the given ACR, prompting to assign it if not. */
+async function ensureAcrPullForKubelet(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+    acr: AzureResource,
+): Promise<void> {
+    const principalId = await getClusterPrincipalId(sessionProvider, subscriptionId, cluster);
+    if (!principalId) {
+        // Cannot determine identity — warn the user.
+        vscode.window.showWarningMessage(
+            l10n.t(
+                "Could not verify AcrPull role for cluster '{0}'. Ensure the AcrPull role is assigned to the cluster's agentpool (kubelet) identity on ACR '{1}' to avoid image-pull errors.",
+                cluster.name,
+                acr.name,
+            ),
+        );
+        return;
+    }
+
+    const authClient = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+    const roleAssignments = await getPrincipalRoleAssignmentsForAcr(
+        authClient,
+        principalId,
+        acr.resourceGroup,
+        acr.name,
+    );
+
+    if (failed(roleAssignments)) {
+        logger.warn(`Could not check AcrPull for ACR '${acr.name}': ${roleAssignments.error}`);
+        return;
+    }
+
+    const hasAcrPull = roleAssignments.result.some((ra) => {
+        const roleDefName = ra.roleDefinitionId?.split("/").pop();
+        return roleDefName === acrPullRoleDefinitionName;
+    });
+
+    if (hasAcrPull) {
+        logger.debug(`AcrPull already assigned to kubelet identity for ACR '${acr.name}'`);
+        return;
+    }
+
+    // AcrPull is missing — prompt the user.
+    const assignNow = l10n.t("Assign AcrPull Now");
+    const dismiss = l10n.t("Dismiss");
+    const choice = await vscode.window.showWarningMessage(
+        l10n.t(
+            "The AcrPull role is not assigned to the cluster '{0}' agentpool (kubelet) identity on ACR '{1}'. Without it, pods will fail to pull images. Assign the role now?",
+            cluster.name,
+            acr.name,
+        ),
+        assignNow,
+        dismiss,
+    );
+
+    if (choice !== assignNow) {
+        return;
+    }
+
+    await longRunning(l10n.t("Assigning AcrPull role to cluster agentpool identity..."), async () => {
+        const acrScope = getScopeForAcr(subscriptionId, acr.resourceGroup, acr.name);
+        const result = await createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            acrPullRoleDefinitionName,
+            acrScope,
+            "ServicePrincipal",
+        );
+
+        if (result.succeeded) {
+            vscode.window.showInformationMessage(
+                l10n.t(
+                    "AcrPull role successfully assigned to cluster '{0}' agentpool identity on ACR '{1}'.",
+                    cluster.name,
+                    acr.name,
+                ),
+            );
+        } else {
+            vscode.window.showErrorMessage(
+                l10n.t(
+                    "Failed to assign AcrPull role on ACR '{0}': {1}. You may need to assign it manually.",
+                    acr.name,
+                    result.error,
+                ),
+            );
+        }
+    });
 }
 
 /**

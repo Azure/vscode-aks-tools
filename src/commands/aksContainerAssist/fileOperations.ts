@@ -34,11 +34,12 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
     };
 
     try {
-        const dockerfilePath = path.join(folderPath, "Dockerfile");
-        if (await fileExists(dockerfilePath)) {
+        // Search recursively so Dockerfiles in subdirectories (e.g. src/web/Dockerfile) are found.
+        const dockerfilePaths = await scanForDockerfiles(folderPath);
+        if (dockerfilePaths.length > 0) {
             result.hasDockerfile = true;
-            result.dockerfilePath = dockerfilePath;
-            logger.debug("Found existing Dockerfile", dockerfilePath);
+            result.dockerfilePath = dockerfilePaths[0];
+            logger.debug("Found existing Dockerfile(s)", dockerfilePaths);
         }
 
         // Check for K8s manifests
@@ -55,6 +56,72 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
     }
 
     return result;
+}
+
+/**
+ * Searches recursively (up to maxDepth levels) for Dockerfiles under rootPath.
+ * Returns absolute paths sorted shallowest-first; excluded dirs are skipped.
+ */
+export async function scanForDockerfiles(rootPath: string, maxDepth: number = 3): Promise<string[]> {
+    const found: string[] = [];
+    await scanForDockerfilesRecursive(rootPath, found, maxDepth, 0);
+    // Sort shallowest first
+    found.sort((a, b) => {
+        const aDepth = a.split(path.sep).length;
+        const bDepth = b.split(path.sep).length;
+        return aDepth - bDepth;
+    });
+    return found;
+}
+
+const DOCKERFILE_EXCLUDED_DIRS = new Set([
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    "out",
+    "vendor",
+    ".vscode",
+    "coverage",
+    "target",
+    ".next",
+    ".nuxt",
+    "__pycache__",
+    "venv",
+    ".env",
+    "bin",
+    "obj",
+    ".terraform",
+]);
+
+async function scanForDockerfilesRecursive(
+    dirPath: string,
+    found: string[],
+    maxDepth: number,
+    currentDepth: number,
+): Promise<void> {
+    if (currentDepth > maxDepth) {
+        return;
+    }
+
+    try {
+        const dirStat = await vscode.workspace.fs.stat(vscode.Uri.file(dirPath));
+        if (dirStat.type !== vscode.FileType.Directory) {
+            return;
+        }
+
+        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+
+        for (const [name, type] of entries) {
+            if (type === vscode.FileType.File && name === "Dockerfile") {
+                found.push(path.join(dirPath, name));
+            } else if (type === vscode.FileType.Directory && !DOCKERFILE_EXCLUDED_DIRS.has(name)) {
+                await scanForDockerfilesRecursive(path.join(dirPath, name), found, maxDepth, currentDepth + 1);
+            }
+        }
+    } catch {
+        // Directory doesn't exist or can't be read — skip silently
+    }
 }
 
 /**
@@ -141,27 +208,6 @@ async function scanDirectoryRecursive(
         return;
     }
 
-    // Folders to exclude from recursive search
-    const excludedFolders = new Set([
-        "node_modules",
-        ".git",
-        "dist",
-        "build",
-        "out",
-        "vendor",
-        ".vscode",
-        "coverage",
-        "target",
-        ".next",
-        ".nuxt",
-        "__pycache__",
-        "venv",
-        ".env",
-        "bin",
-        "obj",
-        ".terraform",
-    ]);
-
     try {
         const dirStat = await vscode.workspace.fs.stat(vscode.Uri.file(dirPath));
         if (dirStat.type !== vscode.FileType.Directory) {
@@ -171,7 +217,7 @@ async function scanDirectoryRecursive(
         const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
 
         for (const [name, type] of entries) {
-            if (excludedFolders.has(name)) {
+            if (DOCKERFILE_EXCLUDED_DIRS.has(name)) {
                 continue;
             }
 
@@ -201,13 +247,11 @@ async function isKubernetesManifest(filePath: string): Promise<boolean> {
 
         // Must have both apiVersion and kind
         const hasApiVersion = /^apiVersion:\s*.+$/m.test(text);
-        const hasKind = /^kind:\s*([A-Z]\w*)$/m.test(text);
-
-        if (!hasApiVersion || !hasKind) {
+        if (!hasApiVersion) {
             return false;
         }
 
-        // Extract kind value for flexible validation
+        // Extract kind value — must be present and PascalCase
         const kindMatch = text.match(/^kind:\s*([A-Z]\w*)$/m);
         if (!kindMatch) {
             return false;

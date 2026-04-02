@@ -4,12 +4,20 @@
 > This is an **Alpha Preview** feature. Behavior, prompts, and generated output may change between releases.
 >
 > **AI Notice**
-> Container Assist uses AI models to analyze project context and generate deployment files. Always review generated files before use, and do not include secrets or sensitive data in source files used for generation.
+> Container Assist uses AI models to analyze project context and generate deployment files. Always review generated files before use, and do not include secrets or sensitive data in source files used for generation. See [AI Data Flow and Privacy](./container-assist-ai-data-flow.md) for details on what data is sent to AI models.
 
 > **Technology Note**
 > This experience is built on [Azure/containerization-assist](https://github.com/Azure/containerization-assist), which combines AI generation with a specialized containerization toolchain and knowledge/policy guidance for Docker and Kubernetes workflows.
 
 Container Assist is a feature-flagged workflow in the AKS VS Code extension that helps generate deployment assets for AKS directly from your project.
+
+## Detailed documentation
+
+For in-depth coverage of specific topics, see:
+
+- **[Azure Resources and Permissions](./container-assist-azure-resources.md)** -- Azure resources created, role assignments, and prerequisite permissions
+- **[AI Data Flow and Privacy](./container-assist-ai-data-flow.md)** -- What data is sent to AI models, blocked files, and security protections
+- **[GitHub Workflow and OIDC Setup](./container-assist-github-workflow.md)** -- Workflow template details, OIDC configuration, GitHub secrets, and post-generation flow
 
 ## Problem this feature solves
 
@@ -48,6 +56,68 @@ It uses a structured, workflow-driven approach based on containerization-assist 
 
 For AKS migration and onboarding scenarios, this helps teams move from app code to deployable AKS artifacts with better consistency and less manual trial-and-error.
 
+## Prerequisites
+
+Before using Container Assist, make sure the following are in place.
+
+### Required software
+
+| Requirement | Details |
+|---|---|
+| **VS Code** | Version **1.110.0** or later. |
+| **GitHub Copilot** | The [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) extension must be installed and you must be signed in. Container Assist uses the VS Code Language Model API, which is provided by GitHub Copilot. If no language model is available, the extension shows: *"No Language Model available. Please ensure GitHub Copilot is installed and signed in."* |
+| **Kubernetes Tools** | The [Kubernetes Tools](https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-kubernetes-tools) extension is a declared dependency and is installed automatically. It provides `kubectl` integration used by the AKS cluster tree. |
+
+
+### Required accounts
+
+| Account | Why |
+|---|---|
+| **Azure** | You must be signed in to Azure in VS Code. Container Assist creates and manages Azure resources (managed identities, role assignments, federated credentials) on your behalf. The **Contributor** role alone is not sufficient -- you also need role assignment permissions. See [Azure Account Permissions](./container-assist-azure-resources.md#prerequisites-azure-account-permissions) for details on which roles work. |
+| **GitHub** | You must be signed in to GitHub because GitHub Copilot (which provides the language models) requires it. Additionally, if you want to use OIDC setup (which sets GitHub repository secrets) or the pull request creation flow, you need at least write access to the target repository. If the repository belongs to a GitHub organization using SAML SSO, you must authorize your token for that organization before setting secrets. |
+
+### Azure resources that must already exist
+
+Container Assist does **not** create these for you -- they must be provisioned before you start:
+
+| Resource | Why |
+|---|---|
+| **Azure subscription** | All Azure operations require an active subscription. |
+| **AKS cluster** | The target Kubernetes cluster where your application will be deployed. |
+| **Azure Container Registry (ACR)** | Where container images are built and stored. You select an ACR during the wizard. |
+
+### Workspace requirements
+
+| Requirement | Details |
+|---|---|
+| **Open workspace folder** | You must have at least one folder open in VS Code. Container Assist analyzes files in the workspace root. |
+| **Recognized project type** | Your project must contain at least one indicator file for a supported language (see [Supported languages and project types](#supported-languages-and-project-types) below). |
+| **Git repository** *(optional)* | Required for the post-generation Git staging and PR creation flow. The workspace folder should be a Git repository with a GitHub remote if you want to use OIDC setup. |
+
+### Optional extensions
+
+| Extension | Purpose |
+|---|---|
+| **[GitHub Pull Requests](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-pull-request-github)** | If installed, Container Assist can create a pull request directly from VS Code after staging generated files. Without this extension, you can still commit and push manually. |
+
+## Supported languages and project types
+
+Container Assist uses the [containerization-assist SDK](https://github.com/Azure/containerization-assist) to detect your project's language and framework by scanning for specific files in your workspace. The following project types are supported:
+
+| Language / Platform | Indicator file(s) |
+|---|---|
+| **JavaScript / TypeScript (Node.js)** | `package.json` |
+| **Java (Maven)** | `pom.xml` |
+| **Java (Gradle)** | `build.gradle`, `build.gradle.kts` |
+| **Python** | `requirements.txt`, `pyproject.toml` |
+| **Go** | `go.mod` |
+| **Rust** | `Cargo.toml` |
+| **.NET (C#)** | `*.csproj` |
+
+The SDK also reads additional files for context when present (such as `Dockerfile`, `docker-compose.yml`, `application.properties`, `application.yml`), but these are not required for language detection.
+
+If your project type is not in the list above, the SDK classifies it as `other` and generation results may be less accurate.
+
 ## Feature flag
 
 Enable this preview feature in VS Code settings:
@@ -83,12 +153,27 @@ After launch, you can select one or both actions:
 - `Generate Deployment Files`
 - `Generate GitHub Workflow`
 
+### Azure context selection
+
+Before generation begins, you are guided through Azure resource selection:
+
+1. **Subscription** -- select your Azure subscription (skipped if launched from AKS cluster tree)
+2. **AKS cluster** -- select the target cluster (skipped if launched from AKS cluster tree)
+3. **Namespace** -- select or enter a Kubernetes namespace on the cluster
+4. **Azure Container Registry** -- select an ACR from your subscription. If the ACR is not already attached to the cluster, you are prompted to assign the AcrPull role. See [Azure Resources and Permissions](./container-assist-azure-resources.md) for details.
+
+### Deployment file generation
+
 If `Generate Deployment Files` is selected, the flow analyzes your project and generates:
 
 - `Dockerfile` at project root (or selected module path)
 - Kubernetes manifests under your configured manifests folder (default: `k8s`)
 
-If `Generate GitHub Workflow` is selected, workflow generation is configured for the selected AKS/Azure context.
+The analysis detects your project's language, framework, ports, dependencies, and entry points. If existing Dockerfiles or manifests are found, the extension detects them and can enhance rather than overwrite. See [AI Data Flow and Privacy](./container-assist-ai-data-flow.md) for how AI models are used during generation.
+
+### Workflow generation
+
+If `Generate GitHub Workflow` is selected, a GitHub Actions CI/CD workflow is configured for the selected AKS/Azure context. See [GitHub Workflow and OIDC Setup](./container-assist-github-workflow.md) for details on the generated workflow.
 
 If both actions are selected, deployment file generation runs first, then workflow generation.
 
@@ -97,7 +182,7 @@ If both actions are selected, deployment file generation runs first, then workfl
 When generated files are ready, the post-generation flow is designed for PR-friendly collaboration:
 
 1. OIDC setup prompt (when workflow is generated):
-   - `Setup OIDC`
+   - `Configure Pipeline with Managed Identity` -- creates Azure managed identity, federated credentials, role assignments, and sets GitHub secrets. See [GitHub Workflow and OIDC Setup](./container-assist-github-workflow.md#oidc-setup-process) for the full process and [Azure Resources and Permissions](./container-assist-azure-resources.md) for what is created.
    - `Skip`
 2. Review prompt:
    - `Stage & Review`
@@ -195,3 +280,68 @@ Applied to all deployments in the namespace via `kubectl annotate deployment --a
 ![Container Assist flow step 14](../resources/container-assist/container-assist-commands-14.png)
 
 ![Container Assist flow step 15](../resources/container-assist/container-assist-commands-15.png)
+
+## Troubleshooting
+
+### "No Language Model available"
+
+Container Assist requires a language model provided by GitHub Copilot. If you see this error:
+
+1. Install the [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) extension.
+2. Sign in with a GitHub account that has an active Copilot subscription.
+3. Try launching Container Assist again.
+
+If models are available but the preferred model (`gpt-5.2-codex` / `copilot` by default) is not found, the extension falls back to the first available model with a warning. You can change the preferred model via the `aks.containerAssist.modelFamily` and `aks.containerAssist.modelVendor` settings.
+
+### OIDC setup fails with "SAML SSO required"
+
+If your GitHub repository belongs to an organization that enforces SAML single sign-on, you must authorize your GitHub token for that organization before the extension can set repository secrets. When this happens, the extension shows an **Authorize Token** button that opens the SSO authorization page in your browser. Complete the authorization and retry.
+
+### Some role assignments failed
+
+During OIDC setup, role assignments are attempted individually. If some succeed and others fail, you see a warning listing the roles that could not be assigned. This can happen if:
+
+- Your Azure account lacks sufficient permissions (you need `Microsoft.Authorization/roleAssignments/write` on the target scope).
+- The target resource is locked or has a deny assignment.
+
+The warning tells you which roles to assign manually. See [Azure Resources and Permissions](./container-assist-azure-resources.md) for the full list of roles and their scopes.
+
+### Azure RBAC is not enabled on the cluster
+
+When Azure RBAC is disabled on the AKS cluster, the extension skips the **AKS RBAC Writer** role assignment for standard (user) namespaces. This is expected behavior -- the role only applies to clusters with Azure RBAC enabled. ACR-related roles (AcrPush, Container Registry Tasks Contributor) are still assigned regardless.
+
+For managed namespaces, AKS RBAC Writer is always assigned at namespace scope, regardless of the cluster-level Azure RBAC setting.
+
+### Project type not detected
+
+If Container Assist does not detect your project's language, ensure your workspace root contains one of the supported indicator files (see [Supported languages and project types](#supported-languages-and-project-types)). Projects classified as `other` may produce less accurate Dockerfile and manifest output.
+
+### "GitHub authentication failed"
+
+This error appears when the extension cannot obtain a GitHub token. Make sure:
+
+1. You have a GitHub account with access to the target repository.
+2. VS Code can authenticate with GitHub (the built-in GitHub Authentication provider should be available).
+3. You grant the requested `repo` scope when prompted.
+
+### Repository is archived or read-only
+
+OIDC setup cannot set secrets on archived GitHub repositories. If you see a message about the repository being archived, you need to unarchive it first in GitHub settings, or set the required secrets manually.
+
+### Partial secrets set
+
+If some GitHub secrets were set but others failed, the extension reports which secrets could not be written. You can set the missing secrets manually in your repository's **Settings > Secrets and variables > Actions** page. The required secrets are:
+
+- `AZURE_CLIENT_ID` -- client ID of the managed identity
+- `AZURE_TENANT_ID` -- Azure AD tenant ID
+- `AZURE_SUBSCRIPTION_ID` -- Azure subscription ID
+
+See [GitHub Workflow and OIDC Setup](./container-assist-github-workflow.md) for details on how these secrets are used in the workflow.
+
+### No Azure subscriptions found
+
+If the extension shows a warning about no subscriptions, verify that:
+
+1. You are signed in to Azure in VS Code.
+2. Your Azure account has at least one active subscription.
+3. The subscription filter in the Azure extension is not hiding your subscriptions.

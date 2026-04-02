@@ -8,7 +8,7 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
-import { generateGitHubWorkflow } from "./workflowGenerator";
+import { generateGitHubWorkflow, WorkflowGenerationOptions } from "./workflowGenerator";
 
 import { collectAzureContext, collectAzureContextFromTree, AzureContext } from "./azureSelections";
 import { showPostGenerationOptions } from "./postGenerationFlow";
@@ -282,6 +282,8 @@ async function executeContainerAssistActions(
     const azureContext = await azureContextProvider(hasWorkflow);
     if (!azureContext) return;
 
+    const workflowOptions: WorkflowGenerationOptions = { workspaceFolder, projectRoot, azureContext, hasBothActions };
+
     // When both actions are selected, workflow generation depends on deployment artifacts.
     // Run deployment first, and only proceed to workflow generation if Dockerfile + manifests exist.
     if (hasBothActions) {
@@ -313,21 +315,18 @@ async function executeContainerAssistActions(
             }
         }
 
-        const workflowResult = await processContainerAssistAction(
-            ContainerAssistAction.GenerateWorkflow,
-            containerAssistService,
-            workspaceFolder,
-            projectRoot,
-            true,
-            azureContext,
-        );
+        const workflowResult = await generateWorkflowFile({
+            ...workflowOptions,
+            deploymentResult: deploymentResult ?? undefined,
+        });
 
         if (!workflowResult?.workflowPath) {
             return;
         }
 
+        const displayName = deploymentResult?.primaryModuleName ?? path.basename(projectRoot);
         const allFiles = [...deploymentFiles, workflowResult.workflowPath];
-        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true, azureContext);
+        await showPostGenerationOptions(allFiles, workspaceFolder, displayName, true, azureContext);
         return;
     }
 
@@ -345,6 +344,10 @@ async function executeContainerAssistActions(
 interface ActionResult {
     deploymentFiles?: string[];
     workflowPath?: string;
+    /** Absolute paths to any generated Kubernetes manifests (populated by GenerateDeployment). */
+    manifestPaths?: string[];
+    /** Primary module name from SDK analysis (e.g. package.json "name"). */
+    primaryModuleName?: string;
 }
 
 async function processContainerAssistAction(
@@ -360,7 +363,12 @@ async function processContainerAssistAction(
             return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions, azureContext);
 
         case ContainerAssistAction.GenerateWorkflow:
-            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions, azureContext);
+            return await generateWorkflowFile({
+                workspaceFolder,
+                projectRoot: targetPath,
+                azureContext,
+                hasBothActions,
+            });
 
         default:
             logger.warn(`Unknown action: ${action}`);
@@ -376,7 +384,7 @@ async function generateDeploymentFiles(
     hasBothActions: boolean,
     azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
-    const appName = path.basename(targetPath);
+    const displayName = path.basename(targetPath);
     logger.debug("Target path", targetPath);
 
     const acrLoginServer = `${azureContext.acrName}.azurecr.io`;
@@ -394,11 +402,10 @@ async function generateDeploymentFiles(
             });
 
             try {
-                progress.report({ message: l10n.t("Analyzing project {0}...", appName) });
+                progress.report({ message: l10n.t("Analyzing project {0}...", displayName) });
 
                 const generationResult = await service.generateDeploymentFiles(
                     targetPath,
-                    appName,
                     acrLoginServer,
                     azureContext.namespace,
                     abortController.signal,
@@ -450,32 +457,21 @@ async function generateDeploymentFiles(
 
     // Defer post-generation options when both actions are selected
     if (hasBothActions) {
-        return { deploymentFiles: generatedFiles };
+        return {
+            deploymentFiles: generatedFiles,
+            manifestPaths: result.result.manifestPaths,
+            primaryModuleName: result.result.primaryModuleName,
+        };
     }
 
     // Show options only for deployment files
-    await showPostGenerationOptions(generatedFiles, _workspaceFolder, appName, false);
+    await showPostGenerationOptions(generatedFiles, _workspaceFolder, displayName, false);
     return { deploymentFiles: generatedFiles };
 }
 
-async function generateWorkflowFile(
-    workspaceFolder: vscode.WorkspaceFolder,
-    targetPath: string,
-    hasBothActions: boolean,
-    azureContext: AzureContext,
-): Promise<ActionResult | undefined> {
-    const result = hasBothActions
-        ? await vscode.window.withProgress(
-              {
-                  location: vscode.ProgressLocation.Notification,
-                  title: l10n.t("Generating GitHub workflow file..."),
-                  cancellable: false,
-              },
-              async () => {
-                  return await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
-              },
-          )
-        : await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
+async function generateWorkflowFile(options: WorkflowGenerationOptions): Promise<ActionResult | undefined> {
+    const { workspaceFolder, projectRoot, hasBothActions, deploymentResult } = options;
+    const result = await generateGitHubWorkflow(options);
 
     if (failed(result)) {
         if (result.error === "cancelled") {
@@ -494,7 +490,8 @@ async function generateWorkflowFile(
         return { workflowPath };
     }
 
-    await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true, azureContext);
+    const displayName = deploymentResult?.primaryModuleName ?? path.basename(projectRoot);
+    await showPostGenerationOptions([workflowPath], workspaceFolder, displayName, true, options.azureContext);
 
     return { workflowPath };
 }
