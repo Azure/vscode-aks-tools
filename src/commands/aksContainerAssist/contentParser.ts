@@ -42,13 +42,21 @@ export function parseManifestsFromLMResponse(content: string, appName: string): 
 }
 
 function parseContentWithFilenames(content: string): ParsedManifest[] {
+    // Reset lastIndex: the regex has the 'g' flag, so it persists state across calls.
+    CONTENT_WITH_FILENAME_REGEX.lastIndex = 0;
+
     const manifests: ParsedManifest[] = [];
     let match;
 
     while ((match = CONTENT_WITH_FILENAME_REGEX.exec(content)) !== null) {
-        const filename = match[1];
+        const rawFilename = match[1];
         const fileContent = match[2].trim();
-        if (filename && fileContent) {
+        if (rawFilename && fileContent) {
+            // Strip any leading directory prefix the LM may include
+            // (e.g. "k8s/deployment.yaml" → "deployment.yaml").
+            const stripped = rawFilename.replace(/^(?:\.\/)?(?:[^/]+\/)+/, "");
+            // Fall back to basename of rawFilename if stripped is empty (e.g. "k8s/").
+            const filename = stripped || rawFilename.split("/").filter(Boolean).pop() || rawFilename;
             manifests.push({ filename, content: fileContent });
         }
     }
@@ -57,7 +65,7 @@ function parseContentWithFilenames(content: string): ParsedManifest[] {
 }
 
 export function parseYamlDocuments(content: string, appName: string): ParsedManifest[] {
-    const documents = content.split(/^---$/m).filter((doc) => doc.trim());
+    const documents = content.split(/^---\s*$/m).filter((doc) => doc.trim());
     if (documents.length === 0) {
         return [];
     }
@@ -70,9 +78,11 @@ export function parseYamlDocuments(content: string, appName: string): ParsedMani
     });
 
     if (manifests.length === 1) {
-        const hasDeployment = manifests[0].filename.toLowerCase().includes("deployment");
-        const hasService = manifests[0].filename.toLowerCase().includes("service");
-        if (!hasDeployment && !hasService) {
+        const fn = manifests[0].filename.toLowerCase();
+        // Only rename fallback-named manifests (e.g. "appname-manifest-1.yaml"),
+        // not those derived from a YAML kind or explicit filename comment.
+        const isFallbackName = fn.includes("-manifest-");
+        if (isFallbackName) {
             manifests[0].filename = "deployment.yaml";
         }
     }
@@ -81,24 +91,24 @@ export function parseYamlDocuments(content: string, appName: string): ParsedMani
 }
 
 /**
- * Ensures container image references in K8s manifests use the correct imageRepository.
- * Replaces LLM-generated placeholders (e.g. <your-acr-name>.azurecr.io/app) with the real value.
+ * Ensures container image references in K8s manifests use the correct ACR imageRepository.
+ * Handles LLM-generated placeholders (e.g. <your-acr-name>.azurecr.io/app), wrong ACR names,
+ * and bare image names (e.g. my-app:1.0.0) by checking each "image:" line against the
+ * user-selected ACR repository.
  */
 export function fixManifestImageReferences(manifests: ParsedManifest[], imageRepository: string): ParsedManifest[] {
     const segments = imageRepository.split("/");
     const appSegment = segments[segments.length - 1];
 
-    // Match <placeholder>.azurecr.io/path or name.azurecr.io/path, capture the full path (supports multi-level)
-    const imagePattern =
-        /(?:<[^>]+>|\$\{[^}]+\}|\{\{[^}]+\}\}|[a-zA-Z0-9._-]+)\.azurecr\.io\/([a-zA-Z0-9._/-]+)(?=\s|"|'|>|\)|$|:)/g;
-
     return manifests.map((m) => ({
         ...m,
-        // Only replace when the path ends with the expected app segment,
-        // so we don't clobber unrelated image refs (e.g. sidecars).
-        content: m.content.replace(imagePattern, (match, capturedPath: string) => {
-            const lastSegment = capturedPath.split("/").pop();
-            return lastSegment === appSegment ? imageRepository : match;
+        content: m.content.replace(/^(\s*image:\s*)(.+)$/gm, (line, prefix, imagePart) => {
+            const trimmed = imagePart.trim();
+            // Already correct — starts with the expected ACR repo
+            if (trimmed.startsWith(imageRepository)) return line;
+            // Extract the base image name (rightmost path segment, without tag or digest)
+            const baseName = (trimmed.split("/").pop() ?? trimmed).split(":")[0].split("@")[0];
+            return baseName === appSegment ? `${prefix}${imageRepository}` : line;
         }),
     }));
 }

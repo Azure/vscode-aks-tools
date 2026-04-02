@@ -148,7 +148,7 @@ describe("ContainerAssistService", () => {
             });
             const infoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, true);
             if (result.succeeded) {
@@ -184,7 +184,7 @@ describe("ContainerAssistService", () => {
                 result: ["/test/path/k8s/deployment.yaml"],
             });
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, true);
             assert.ok(infoStub.calledOnce);
@@ -203,7 +203,7 @@ describe("ContainerAssistService", () => {
             });
             const analyzeStub = sandbox.stub(service, "analyzeRepository");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, false);
             assert.strictEqual(result.error, "No LM available");
@@ -228,7 +228,7 @@ describe("ContainerAssistService", () => {
             });
             const dockerfileStub = sandbox.stub(service, "generateDockerfile");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, false);
             assert.strictEqual(result.error, "Analysis failed");
@@ -261,7 +261,7 @@ describe("ContainerAssistService", () => {
             });
             const manifestsStub = sandbox.stub(service, "generateManifests");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, false);
             assert.strictEqual(result.error, "Dockerfile generation failed");

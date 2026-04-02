@@ -16,6 +16,10 @@ export interface ContainerAssistQuickPickItem extends vscode.QuickPickItem {
 
 export interface DeploymentResult {
     generatedFiles: string[];
+    /** Absolute paths to the generated Kubernetes manifest files. */
+    manifestPaths?: string[];
+    /** The primary module name as reported by CA analysis. */
+    primaryModuleName?: string;
 }
 
 export interface ModuleAnalysisResult {
