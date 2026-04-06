@@ -19,8 +19,12 @@
  */
 
 import * as vscode from "vscode";
+import * as path from "path";
+import * as fs from "fs";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
+import { getExtensionPath } from "../utils/host";
+import { failed } from "../utils/errorable";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -59,9 +63,13 @@ const DEPLOYMENT_MANIFEST_INDICATORS: string[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Argo CD Application YAML template
+// Argo CD Application YAML — loaded from resources/yaml/argocd-application.template.yaml
 // ---------------------------------------------------------------------------
 
+/**
+ * Reads the Argo CD Application template from disk and substitutes
+ * {{PLACEHOLDER}} tokens with the provided values.
+ */
 function buildArgoCDAppYaml(params: {
     appName: string;
     configRepoUrl: string;
@@ -70,101 +78,21 @@ function buildArgoCDAppYaml(params: {
     namespace: string;
     appPath: string;
 }): string {
-    return `# =============================================================================
-# Argo CD Application Manifest
-# =============================================================================
-#
-# ⚠️  IMPORTANT — Hollywood Principle / GitOps "Don't call us, we'll call you"
-#
-# This file belongs in a SEPARATE GitOps config repository, NOT in your
-# application source repository.
-#
-# Argo CD watches this config repo and PULLS changes automatically to your
-# AKS cluster.  It will detect drift between the live cluster state and what
-# is declared here, and reconcile automatically.
-#
-# Recommended GitOps config repo layout:
-#
-#   config-repo/
-#   └── apps/
-#       └── ${params.appName}/
-#           ├── application.yaml   ← this file
-#           ├── deployment.yaml    ← your Kubernetes workload manifests
-#           └── service.yaml
-#
-# Reference: https://argo-cd.readthedocs.io/en/stable/
-# =============================================================================
+    const extensionPath = getExtensionPath();
+    if (failed(extensionPath)) {
+        throw new Error(extensionPath.error);
+    }
 
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  # The name used inside Argo CD to identify this application.
-  name: ${params.appName}
+    const templatePath = path.join(extensionPath.result, "resources", "yaml", "argocd-application.template.yaml");
+    const template = fs.readFileSync(templatePath, "utf8");
 
-  # Argo CD system namespace — do NOT change unless you installed Argo CD
-  # in a custom namespace.
-  namespace: argocd
-
-  labels:
-    app.kubernetes.io/name: ${params.appName}
-    app.kubernetes.io/managed-by: argocd
-
-  annotations:
-    # URL of the *application source* repository (informational).
-    # Keep this separate from repoURL below which points to THIS config repo.
-    aks-extension/source-repo: "${params.sourceRepoUrl}"
-
-    # Link to Argo CD docs for reference.
-    aks-extension/docs: "https://argo-cd.readthedocs.io/en/stable/"
-
-spec:
-  # Argo CD project — "default" works for most setups.
-  # See: https://argo-cd.readthedocs.io/en/stable/user-guide/projects/
-  project: default
-
-  source:
-    # ✅ This is the URL of THIS GitOps config repository.
-    #    It is NOT the application source repository.
-    repoURL: ${params.configRepoUrl}
-
-    # Branch / tag / commit SHA to track.
-    targetRevision: HEAD
-
-    # Path inside this repo that contains the Kubernetes manifests for this app.
-    path: ${params.appPath}
-
-  destination:
-    # AKS cluster API server URL.
-    # Use "https://kubernetes.default.svc" when Argo CD runs inside the same cluster.
-    # For an external AKS cluster, use the API server URL from kubeconfig.
-    server: ${params.clusterServer}
-
-    # Kubernetes namespace to deploy resources into.
-    namespace: ${params.namespace}
-
-  syncPolicy:
-    automated:
-      # Remove resources from the cluster when they are deleted from Git.
-      prune: true
-
-      # Automatically bring the cluster back in sync when it drifts from Git.
-      selfHeal: true
-
-    syncOptions:
-      # Create the target namespace automatically if it does not exist.
-      - CreateNamespace=true
-
-      # Validate manifests against the Kubernetes API schema before applying.
-      - Validate=true
-
-    # Retry failed sync operations with exponential back-off.
-    retry:
-      limit: 3
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
-`;
+    return template
+        .replaceAll("{{APP_NAME}}", params.appName)
+        .replaceAll("{{CONFIG_REPO_URL}}", params.configRepoUrl)
+        .replaceAll("{{SOURCE_REPO_URL}}", params.sourceRepoUrl)
+        .replaceAll("{{CLUSTER_SERVER}}", params.clusterServer)
+        .replaceAll("{{NAMESPACE}}", params.namespace)
+        .replaceAll("{{APP_PATH}}", params.appPath);
 }
 
 // ---------------------------------------------------------------------------
@@ -611,6 +539,206 @@ async function promptRequired(
     });
 }
 
+/**
+ * Try to extract the `origin` remote URL from a local `.git/config` file.
+ * Returns the URL string or undefined if not found / not a git repo.
+ */
+function detectGitRemoteUrl(folderFsPath: string): string | undefined {
+    try {
+        const gitConfigPath = path.join(folderFsPath, ".git", "config");
+        const content = fs.readFileSync(gitConfigPath, "utf8");
+        // Match [remote "origin"] section and capture the url = ... line.
+        const match = content.match(/\[remote\s+"origin"\][^\\[]*url\s*=\s*(.+)/);
+        return match ? match[1].trim() : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// GitHub repo browser helpers
+// ---------------------------------------------------------------------------
+
+interface GitHubRepo {
+    full_name: string;
+    clone_url: string;
+    ssh_url: string;
+    private: boolean;
+    description: string | null;
+}
+
+/**
+ * Uses VS Code's built-in GitHub authentication provider to obtain an OAuth
+ * token, then fetches the authenticated user's repositories from the GitHub
+ * REST API (up to 100, sorted by most recently updated).
+ *
+ * Returns the chosen clone URL (HTTPS or SSH) or undefined if the user
+ * cancels at any step.
+ */
+async function browseGitHubRepos(title: string): Promise<string | undefined> {
+    // Request a GitHub session — prompts sign-in if needed.
+    let session: vscode.AuthenticationSession;
+    try {
+        session = await vscode.authentication.getSession("github", ["repo"], { createIfNone: true });
+    } catch {
+        vscode.window.showWarningMessage(
+            l10n.t("GitHub sign-in was cancelled or unavailable. Please enter the URL manually."),
+        );
+        return undefined;
+    }
+
+    // Fetch up to 100 repos from the GitHub API.
+    let repos: GitHubRepo[];
+    try {
+        const response = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated&type=all", {
+            headers: {
+                Authorization: `Bearer ${session.accessToken}`,
+                Accept: "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        });
+        if (!response.ok) {
+            throw new Error(`GitHub API returned ${response.status}`);
+        }
+        repos = (await response.json()) as GitHubRepo[];
+    } catch (e) {
+        vscode.window.showWarningMessage(
+            l10n.t("Failed to fetch GitHub repositories: {0}. Please enter the URL manually.", String(e)),
+        );
+        return undefined;
+    }
+
+    if (repos.length === 0) {
+        vscode.window.showInformationMessage(l10n.t("No repositories found for this GitHub account."));
+        return undefined;
+    }
+
+    // Let the user pick a repo.
+    const repoPick = await vscode.window.showQuickPick(
+        repos.map((r) => ({
+            label: r.full_name,
+            description: r.private ? l10n.t("private") : l10n.t("public"),
+            detail: r.description ?? undefined,
+            repo: r,
+        })),
+        {
+            title,
+            placeHolder: l10n.t("Select a GitHub repository"),
+            matchOnDescription: true,
+            matchOnDetail: true,
+            ignoreFocusOut: true,
+        },
+    );
+
+    if (!repoPick) return undefined;
+
+    // Ask for URL format.
+    const formatPick = await vscode.window.showQuickPick(
+        [
+            {
+                label: "HTTPS",
+                description: repoPick.repo.clone_url,
+                url: repoPick.repo.clone_url,
+            },
+            {
+                label: "SSH",
+                description: repoPick.repo.ssh_url,
+                url: repoPick.repo.ssh_url,
+            },
+        ],
+        {
+            title: l10n.t("Select URL format for {0}", repoPick.repo.full_name),
+            placeHolder: l10n.t("HTTPS is recommended for Argo CD; SSH requires a deploy key"),
+            ignoreFocusOut: true,
+        },
+    );
+
+    return formatPick?.url;
+}
+
+/**
+ * Prompts for a Git repository URL with three modes:
+ *  - "Enter URL"            — free-text input box
+ *  - "Browse local folder…" — folder picker that auto-detects the git remote
+ *  - "Browse GitHub repos…" — authenticates with GitHub and shows a repo list
+ *
+ * All three modes end in an editable input box so the user can confirm or
+ * adjust the value before accepting.
+ *
+ * @param prompt      Title shown above the QuickPick and input box.
+ * @param placeHolder Placeholder shown when the input is empty.
+ * @param required    Whether an empty value is rejected.
+ */
+async function promptRepoUrl(prompt: string, placeHolder: string, required: boolean): Promise<string | undefined> {
+    const ENTER_URL = l10n.t("$(link) Enter a URL");
+    const BROWSE_LOCAL = l10n.t("$(folder-opened) Browse local folder\u2026");
+    const BROWSE_GITHUB = l10n.t("$(github) Browse GitHub repos\u2026");
+
+    const mode = await vscode.window.showQuickPick(
+        [
+            {
+                label: ENTER_URL,
+                description: l10n.t("Type or paste a Git remote URL"),
+            },
+            {
+                label: BROWSE_LOCAL,
+                description: l10n.t("Pick a local repo folder — remote URL will be detected automatically"),
+            },
+            {
+                label: BROWSE_GITHUB,
+                description: l10n.t("Sign in to GitHub and choose from your repositories"),
+            },
+        ],
+        {
+            title: prompt,
+            placeHolder: l10n.t("How would you like to specify the repository?"),
+            ignoreFocusOut: true,
+        },
+    );
+
+    if (!mode) return undefined;
+
+    let detectedUrl: string | undefined;
+
+    if (mode.label === BROWSE_LOCAL) {
+        const picked = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: l10n.t("Select repository folder"),
+            title: prompt,
+        });
+        if (!picked || picked.length === 0) return undefined;
+
+        detectedUrl = detectGitRemoteUrl(picked[0].fsPath);
+
+        if (!detectedUrl) {
+            vscode.window.showWarningMessage(
+                l10n.t("No git remote 'origin' found in the selected folder. Please enter the URL manually."),
+            );
+        }
+    } else if (mode.label === BROWSE_GITHUB) {
+        // browseGitHubRepos already ends with the user choosing a URL format,
+        // so we skip the final input box for this path and return directly.
+        const chosenUrl = await browseGitHubRepos(prompt);
+        if (!chosenUrl) return undefined;
+        // Still drop through to the input box so the user can confirm/edit.
+        detectedUrl = chosenUrl;
+    }
+
+    // Final editable input box — pre-populated with the detected/chosen URL.
+    return vscode.window.showInputBox({
+        prompt,
+        placeHolder,
+        value: detectedUrl ?? "",
+        ignoreFocusOut: true,
+        validateInput: (v) => {
+            if (required && (!v || v.trim() === "")) return l10n.t("This field is required.");
+            return undefined;
+        },
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Main command handler
 // ---------------------------------------------------------------------------
@@ -753,19 +881,20 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     );
     if (!appName) return;
 
-    const configRepoUrl = await promptRequired(
-        l10n.t("GitOps config repository URL (this is the Git repo Argo CD will watch)"),
+    const configRepoUrl = await promptRepoUrl(
+        l10n.t("GitOps config repository (this is the Git repo Argo CD will watch)"),
         "https://github.com/my-org/my-app-config",
+        true,
     );
     if (!configRepoUrl) return;
 
     // Source repo is informational — allow empty.
     const sourceRepoUrl =
-        (await vscode.window.showInputBox({
-            prompt: l10n.t("Application source repository URL (optional — stored as an annotation for traceability)"),
-            placeHolder: "https://github.com/my-org/my-app",
-            ignoreFocusOut: true,
-        })) ?? "";
+        (await promptRepoUrl(
+            l10n.t("Application source repository (optional — stored as an annotation for traceability)"),
+            "https://github.com/my-org/my-app",
+            false,
+        )) ?? "";
 
     const clusterServer = await promptRequired(
         l10n.t("Target AKS cluster API server URL (use https://kubernetes.default.svc for in-cluster)"),

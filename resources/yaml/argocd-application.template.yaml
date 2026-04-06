@@ -1,0 +1,94 @@
+# =============================================================================
+# Argo CD Application Manifest
+# =============================================================================
+#
+# ⚠️  IMPORTANT — Hollywood Principle / GitOps "Don't call us, we'll call you"
+#
+# This file belongs in a SEPARATE GitOps config repository, NOT in your
+# application source repository.
+#
+# Argo CD watches this config repo and PULLS changes automatically to your
+# AKS cluster.  It will detect drift between the live cluster state and what
+# is declared here, and reconcile automatically.
+#
+# Recommended GitOps config repo layout:
+#
+#   config-repo/
+#   └── apps/
+#       └── {{APP_NAME}}/
+#           ├── application.yaml   ← this file
+#           ├── deployment.yaml    ← your Kubernetes workload manifests
+#           └── service.yaml
+#
+# Reference: https://argo-cd.readthedocs.io/en/stable/
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  # The name used inside Argo CD to identify this application.
+  name: {{APP_NAME}}
+
+  # Argo CD system namespace — do NOT change unless you installed Argo CD
+  # in a custom namespace.
+  namespace: argocd
+
+  labels:
+    app.kubernetes.io/name: {{APP_NAME}}
+    app.kubernetes.io/managed-by: argocd
+
+  annotations:
+    # URL of the *application source* repository (informational).
+    # Keep this separate from repoURL below which points to THIS config repo.
+    aks-extension/source-repo: "{{SOURCE_REPO_URL}}"
+
+    # Link to Argo CD docs for reference.
+    aks-extension/docs: "https://argo-cd.readthedocs.io/en/stable/"
+
+spec:
+  # Argo CD project — "default" works for most setups.
+  # See: https://argo-cd.readthedocs.io/en/stable/user-guide/projects/
+  project: default
+
+  source:
+    # ✅ This is the URL of THIS GitOps config repository.
+    #    It is NOT the application source repository.
+    repoURL: {{CONFIG_REPO_URL}}
+
+    # Branch / tag / commit SHA to track.
+    targetRevision: HEAD
+
+    # Path inside this repo that contains the Kubernetes manifests for this app.
+    path: {{APP_PATH}}
+
+  destination:
+    # AKS cluster API server URL.
+    # Use "https://kubernetes.default.svc" when Argo CD runs inside the same cluster.
+    # For an external AKS cluster, use the API server URL from kubeconfig.
+    server: {{CLUSTER_SERVER}}
+
+    # Kubernetes namespace to deploy resources into.
+    namespace: {{NAMESPACE}}
+
+  syncPolicy:
+    automated:
+      # Remove resources from the cluster when they are deleted from Git.
+      prune: true
+
+      # Automatically bring the cluster back in sync when it drifts from Git.
+      selfHeal: true
+
+    syncOptions:
+      # Create the target namespace automatically if it does not exist.
+      - CreateNamespace=true
+
+      # Validate manifests against the Kubernetes API schema before applying.
+      - Validate=true
+
+    # Retry failed sync operations with exponential back-off.
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

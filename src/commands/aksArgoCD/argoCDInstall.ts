@@ -39,11 +39,70 @@ const ARGOCD_NAMESPACE = "argocd";
 // Lazy-created output channel — shared between both commands.
 let argoCDOutputChannel: vscode.OutputChannel | undefined;
 
-function getOutputChannel(): vscode.OutputChannel {
+export function getOutputChannel(): vscode.OutputChannel {
     if (!argoCDOutputChannel) {
         argoCDOutputChannel = vscode.window.createOutputChannel("Argo CD");
     }
     return argoCDOutputChannel;
+}
+
+// ---------------------------------------------------------------------------
+// Shared core: run the actual Argo CD install steps (no cluster resolution,
+// no UX prompts — just the kubectl work).  Called both from argoCDInstall and
+// from argoCDApplyApp when the user asks to install inline.
+// Returns true if the install succeeded.
+// ---------------------------------------------------------------------------
+
+export async function performArgoCDInstall(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeconfigFile: string,
+    clusterName: string,
+    channel: vscode.OutputChannel,
+): Promise<boolean> {
+    channel.show(true);
+    channel.appendLine(`\n[Argo CD Install] Cluster: ${clusterName}`);
+    channel.appendLine(`[Argo CD Install] Step 1/2 — Ensuring namespace '${ARGOCD_NAMESPACE}' exists…`);
+
+    const createNsResult = await longRunning(l10n.t("Creating namespace '{0}'…", ARGOCD_NAMESPACE), () =>
+        invokeKubectlCommand(
+            kubectl,
+            kubeconfigFile,
+            `create namespace ${ARGOCD_NAMESPACE}`,
+            NonZeroExitCodeBehaviour.Succeed,
+        ),
+    );
+
+    if (failed(createNsResult)) {
+        channel.appendLine(`[Argo CD Install] ERROR: ${createNsResult.error}`);
+        vscode.window.showErrorMessage(
+            l10n.t("Failed to create namespace '{0}': {1}", ARGOCD_NAMESPACE, createNsResult.error),
+        );
+        return false;
+    }
+    channel.appendLine(`[Argo CD Install]   ${createNsResult.result.stdout.trim() || "namespace ready"}`);
+
+    channel.appendLine(`[Argo CD Install] Step 2/2 — Applying Argo CD manifests (server-side apply)…`);
+    channel.appendLine(`[Argo CD Install]   Source: ${ARGOCD_INSTALL_URL}`);
+
+    const applyResult = await longRunning(
+        l10n.t("Installing Argo CD on {0} (this may take a minute)…", clusterName),
+        () =>
+            invokeKubectlCommand(
+                kubectl,
+                kubeconfigFile,
+                `apply -n ${ARGOCD_NAMESPACE} --server-side --force-conflicts -f ${ARGOCD_INSTALL_URL}`,
+            ),
+    );
+
+    if (failed(applyResult)) {
+        channel.appendLine(`[Argo CD Install] ERROR: ${applyResult.error}`);
+        vscode.window.showErrorMessage(l10n.t("Argo CD installation failed: {0}", applyResult.error));
+        return false;
+    }
+
+    channel.appendLine(`[Argo CD Install]   Resources applied OK.`);
+    await showArgoCDStatus(kubectl, kubeconfigFile, clusterName, channel);
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +168,6 @@ export async function argoCDInstall(_context: IActionContext, target: unknown): 
 
     const { kubectl, clusterInfo } = resolved;
     const channel = getOutputChannel();
-    channel.show(true);
 
     await withOptionalTempFile(clusterInfo.kubeconfigYaml, "yaml", async (kubeconfigFile) => {
         // ------------------------------------------------------------------
@@ -159,57 +217,10 @@ export async function argoCDInstall(_context: IActionContext, target: unknown): 
         }
 
         // ------------------------------------------------------------------
-        // 3. Create the argocd namespace (idempotent — ignore error if exists).
+        // 3. Run the install using the shared helper.
         // ------------------------------------------------------------------
-        channel.appendLine(`\n[Argo CD Install] Cluster: ${clusterInfo.name}`);
-        channel.appendLine(`[Argo CD Install] Step 1/3 — Ensuring namespace '${ARGOCD_NAMESPACE}' exists…`);
-
-        const createNsResult = await longRunning(l10n.t("Creating namespace '{0}'…", ARGOCD_NAMESPACE), () =>
-            invokeKubectlCommand(
-                kubectl,
-                kubeconfigFile,
-                `create namespace ${ARGOCD_NAMESPACE}`,
-                NonZeroExitCodeBehaviour.Succeed, // namespace may already exist
-            ),
-        );
-
-        if (failed(createNsResult)) {
-            channel.appendLine(`[Argo CD Install] ERROR: ${createNsResult.error}`);
-            vscode.window.showErrorMessage(
-                l10n.t("Failed to create namespace '{0}': {1}", ARGOCD_NAMESPACE, createNsResult.error),
-            );
-            return;
-        }
-        channel.appendLine(`[Argo CD Install]   ${createNsResult.result.stdout.trim() || "namespace ready"}`);
-
-        // ------------------------------------------------------------------
-        // 4. Apply the official install manifests.
-        // ------------------------------------------------------------------
-        channel.appendLine(`[Argo CD Install] Step 2/3 — Applying Argo CD manifests (server-side apply)…`);
-        channel.appendLine(`[Argo CD Install]   Source: ${ARGOCD_INSTALL_URL}`);
-
-        const applyResult = await longRunning(
-            l10n.t("Installing Argo CD on {0} (this may take a minute)…", clusterInfo.name),
-            () =>
-                invokeKubectlCommand(
-                    kubectl,
-                    kubeconfigFile,
-                    `apply -n ${ARGOCD_NAMESPACE} --server-side --force-conflicts -f ${ARGOCD_INSTALL_URL}`,
-                ),
-        );
-
-        if (failed(applyResult)) {
-            channel.appendLine(`[Argo CD Install] ERROR: ${applyResult.error}`);
-            vscode.window.showErrorMessage(l10n.t("Argo CD installation failed: {0}", applyResult.error));
-            return;
-        }
-        channel.appendLine(`[Argo CD Install]   Resources applied OK.`);
-
-        // ------------------------------------------------------------------
-        // 5. Show pod status.
-        // ------------------------------------------------------------------
-        channel.appendLine(`[Argo CD Install] Step 3/3 — Waiting for pods to start (initial check)…`);
-        await showArgoCDStatus(kubectl, kubeconfigFile, clusterInfo.name, channel);
+        const ok = await performArgoCDInstall(kubectl, kubeconfigFile, clusterInfo.name, channel);
+        if (!ok) return;
 
         const PORT_FORWARD = l10n.t("Port-forward UI (localhost:8080)");
         const OPEN_DOCS = l10n.t("Open Getting Started Docs");
