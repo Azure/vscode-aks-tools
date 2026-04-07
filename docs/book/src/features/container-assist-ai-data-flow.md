@@ -10,39 +10,6 @@ Container Assist uses a two-phase architecture:
 
 2. **Phase 2 -- Cloud AI generation:** The SDK's analysis results are formatted into prompts and sent to a VS Code Language Model (via the `vscode.lm` API) to generate Dockerfiles and Kubernetes manifests. This phase involves cloud AI calls.
 
-```
-Your Project Files
-       │
-       ▼
-┌──────────────────────────────┐
-│  containerization-assist SDK │  ◄── LOCAL ONLY (no network)
-│  Reads: package.json,        │      Detects language, framework,
-│  go.mod, pom.xml, *.csproj,  │      ports, dependencies, entry
-│  Cargo.toml, Dockerfile...   │      points, build systems
-└──────────┬───────────────────┘
-           │ Analysis results (plans)
-           ▼
-┌──────────────────────────────┐
-│  Prompt Builder              │  ◄── LOCAL (formats plans into prompts)
-│  Builds system + user prompt │
-│  from analysis results       │
-└──────────┬───────────────────┘
-           │ Prompts + tool definitions
-           ▼
-┌──────────────────────────────┐
-│  VS Code Language Model API  │  ◄── CLOUD AI (GitHub Copilot)
-│  (vscode.lm)                 │
-│  Default: copilot/gpt-5.2-codex │
-│  AI may call tools to read   │
-│  additional project files    │
-└──────────┬───────────────────┘
-           │ Generated Dockerfile / manifests
-           ▼
-┌──────────────────────────────┐
-│  Content Parser              │  ◄── LOCAL (extracts content from AI response)
-│  Writes files to disk        │
-└──────────────────────────────┘
-```
 
 ## What AI Models Are Used
 
