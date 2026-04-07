@@ -967,7 +967,7 @@
         "node-loader": "^2.1.0",
         "prettier": "^3.8.1",
         "sinon": "^21.0.3",
-        "ts-loader": "^9.5.4",
+        "ts-loader": "^9.5.7",
         "typescript": "^5.9.3",
         "webpack": "^5.105.4",
         "webpack-cli": "^7.0.2"
