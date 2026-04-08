@@ -857,11 +857,17 @@ async function applyRepoSecret(
  *   - Repository access: only this repo (via repository_ids[] when available)
  *   - Permissions: Contents = Read-only, Metadata = Read-only
  *
- * After the user generates the token on GitHub and pastes it back, the token
- * is copied to the clipboard and a short note tells them where to paste it
- * inside the Argo CD UI (Settings → Repositories).
+ * After the user generates the token on GitHub and pastes it back, the repo
+ * is registered directly in Argo CD (argocd namespace repository Secret) so
+ * that Settings → Repositories already shows the connected repo with the
+ * supplied token — no manual paste required.
  */
-async function guideGitHubPatForRepo(repoUrl: string): Promise<void> {
+async function guideGitHubPatForRepo(
+    repoUrl: string,
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+    clusterName: string,
+): Promise<void> {
     if (!repoUrl) {
         vscode.window.showWarningMessage(l10n.t("No source repository URL found in the Application manifest."));
         return;
@@ -936,25 +942,13 @@ async function guideGitHubPatForRepo(repoUrl: string): Promise<void> {
         );
 
         if (autoToken) {
-            await vscode.env.clipboard.writeText(autoToken);
-            const COPY_AGAIN = l10n.t("Copy Again");
-            await vscode.window
-                .showInformationMessage(
-                    l10n.t(
-                        "Fine-grained PAT generated for '{0}/{1}' and copied to clipboard.\n\n" +
-                            "Permissions: Contents (read-only), Metadata (read-only) — this repo only.\n\n" +
-                            "In Argo CD: Settings \u2192 Repositories \u2192 Connect Repo \u2192 paste as the password.",
-                        owner,
-                        repoSlug,
-                    ),
-                    { modal: true },
-                    COPY_AGAIN,
-                )
-                .then((a) => {
-                    if (a === COPY_AGAIN) {
-                        void vscode.env.clipboard.writeText(autoToken);
-                    }
-                });
+            const ok = await applyRepoSecret(kubectl, kubeConfigFile, repoUrl.trim(), {
+                type: "git",
+                url: repoUrl.trim(),
+                username: "git",
+                password: autoToken,
+            });
+            if (ok) await offerOpenArgoCDUI(kubectl, kubeConfigFile, clusterName);
             return;
         }
     }
@@ -1000,13 +994,13 @@ async function guideGitHubPatForRepo(repoUrl: string): Promise<void> {
     });
     if (!token) return;
 
-    await vscode.env.clipboard.writeText(token.trim());
-    vscode.window.showInformationMessage(
-        l10n.t(
-            "Token copied to clipboard. In Argo CD: Settings \u2192 Repositories \u2192 Connect Repo \u2192 paste it as the password for '{0}'.",
-            repoUrl,
-        ),
-    );
+    const ok = await applyRepoSecret(kubectl, kubeConfigFile, repoUrl.trim(), {
+        type: "git",
+        url: repoUrl.trim(),
+        username: "git",
+        password: token.trim(),
+    });
+    if (ok) await offerOpenArgoCDUI(kubectl, kubeConfigFile, clusterName);
 }
 
 // ---------------------------------------------------------------------------
@@ -1191,7 +1185,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
             } else if (pick.id === "get_creds") {
                 await showArgoCDCredentials(kubectl, kubeConfigFile.filePath);
             } else if (pick.id === "github_pat") {
-                await guideGitHubPatForRepo(repoUrl);
+                await guideGitHubPatForRepo(repoUrl, kubectl, kubeConfigFile.filePath, clusterName);
             } else if (pick.id === "register_repo") {
                 await registerRepoCredentials(kubectl, kubeConfigFile.filePath, repoUrl, clusterName);
             } else if (pick.id === "open_docs") {
