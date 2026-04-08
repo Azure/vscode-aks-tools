@@ -5,11 +5,11 @@
  * VS Code Explorer or the active editor.  The command:
  *
  *  1. Reads the file and validates it is an `argoproj.io/v1alpha1 Application` manifest.
- *  2. Lets the user pick the target AKS cluster using the shared cluster selector
- *     (same UX as "Deploy Manifest").
- *  3. Checks whether Argo CD is already installed on the cluster.
- *  4. Runs `kubectl apply -n argocd -f <file>` against that cluster.
- *  5. Optionally opens the Argo CD docs for the "sync the application" next step.
+ *  2. Reads the active kubectl context (no Azure subscription or cluster picker needed).
+ *  3. Confirms the target cluster with the user (one click).
+ *  4. Checks whether Argo CD is already installed on the cluster.
+ *  5. Runs `kubectl apply -n argocd -f <file>` against that cluster.
+ *  6. Optionally opens the Argo CD docs for the "sync the application" next step.
  *
  * Reference: https://argo-cd.readthedocs.io/en/stable/getting_started/#6-create-an-application-from-a-git-repository
  */
@@ -20,15 +20,13 @@ import * as yaml from "js-yaml";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
 
-import { getReadySessionProvider } from "../../auth/azureAuth";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
 import { failed } from "../utils/errorable";
 import { longRunning } from "../utils/host";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
-import { selectClusterOptions } from "../../plugins/shared/clusterOptions/selectClusterOptions";
-import { ClusterPreference } from "../../plugins/shared/types";
 import { performArgoCDInstall, getOutputChannel } from "./argoCDInstall";
+import { generateGitHubRepoScopedPat, createGitHubDeployKey, generateSshDeployKeyPair } from "./argoCDDeployment";
 
 // ---------------------------------------------------------------------------
 // Type guard — validate that a parsed YAML doc is an Argo CD Application
@@ -93,6 +91,45 @@ function resolveFileUri(target: unknown): vscode.Uri | undefined {
     if (activeEditor) return activeEditor.document.uri;
 
     return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: resolve the current kubectl context + kubeconfig (no Azure auth needed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads the active kubectl context name and the corresponding kubeconfig YAML
+ * directly from the local kubeconfig without any Azure subscription lookup.
+ * Returns undefined (and shows an error) if kubectl has no current context.
+ */
+async function resolveCurrentKubectlContext(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+): Promise<{ contextName: string; kubeconfigYaml: string } | undefined> {
+    const ctxResult = await kubectl.api.invokeCommand("config current-context");
+    if (!ctxResult || ctxResult.code !== 0) {
+        vscode.window.showErrorMessage(
+            l10n.t(
+                "Could not determine the current kubectl context. Ensure kubectl is configured and a context is active.",
+            ),
+        );
+        return undefined;
+    }
+
+    const contextName = ctxResult.stdout.trim();
+    if (!contextName) {
+        vscode.window.showErrorMessage(
+            l10n.t("No active kubectl context found. Run 'kubectl config use-context <name>' to set one."),
+        );
+        return undefined;
+    }
+
+    const cfgResult = await kubectl.api.invokeCommand("config view --minify --flatten -o yaml");
+    if (!cfgResult || cfgResult.code !== 0) {
+        vscode.window.showErrorMessage(l10n.t("Could not read kubeconfig for context '{0}'.", contextName));
+        return undefined;
+    }
+
+    return { contextName, kubeconfigYaml: cfgResult.stdout };
 }
 
 // ---------------------------------------------------------------------------
@@ -310,6 +347,7 @@ async function registerRepoCredentials(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFile: string,
     defaultRepoUrl: string,
+    clusterName: string,
 ): Promise<void> {
     // 1. Confirm / enter the repository URL.
     const repoUrl = await vscode.window.showInputBox({
@@ -320,13 +358,178 @@ async function registerRepoCredentials(
     });
     if (!repoUrl) return;
 
-    // 2. Choose authentication type.
+    // 2. For GitHub URLs, silently probe repo visibility first (no sign-in prompt).
+    //    • Private repo detected  → auto-generate a 24h repo-scoped PAT and skip the picker.
+    //    • Public repo detected   → inform the user (no creds needed) and return.
+    //    • Session unavailable or API error → fall through to the manual auth picker below.
+    const isGitHubRepo = /github\.com/i.test(repoUrl.trim());
+    if (isGitHubRepo) {
+        const urlMatch = repoUrl.trim().match(/github\.com[\\/:]([^\\/]+)\/([^\\/.]+?)(?:\.git)?\s*$/i);
+        if (urlMatch) {
+            const [, owner, repoSlug] = urlMatch;
+
+            // Try to reuse an existing GitHub session without forcing a sign-in prompt.
+            let silentSession: vscode.AuthenticationSession | undefined;
+            try {
+                silentSession = await vscode.authentication.getSession("github", ["repo"], {
+                    createIfNone: false,
+                    silent: true,
+                });
+            } catch {
+                // No existing session — fall through to the manual picker.
+            }
+
+            if (silentSession) {
+                // Probe the GitHub API to determine visibility and get the repo ID.
+                let repoId: number | undefined;
+                let repoIsPrivate: boolean | undefined;
+                try {
+                    const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repoSlug}`, {
+                        headers: {
+                            Authorization: `Bearer ${silentSession.accessToken}`,
+                            Accept: "application/vnd.github+json",
+                            "X-GitHub-Api-Version": "2022-11-28",
+                        },
+                    });
+                    if (repoRes.ok) {
+                        const data = (await repoRes.json()) as { id: number; private: boolean };
+                        repoId = data.id;
+                        repoIsPrivate = data.private;
+                    }
+                } catch {
+                    // API failure — fall through to the manual picker.
+                }
+
+                if (repoIsPrivate === false) {
+                    // Public — Argo CD can pull without any credentials.
+                    vscode.window.showInformationMessage(
+                        l10n.t(
+                            "'{0}/{1}' is a public repository — Argo CD can pull from it without credentials.",
+                            owner,
+                            repoSlug,
+                        ),
+                    );
+                    return;
+                }
+
+                if (repoIsPrivate === true && repoId !== undefined) {
+                    // Argo CD matches the repository Secret's `url` field to the
+                    // application's `spec.source.repoURL` — they must use the same
+                    // scheme.  An SSH credential stored as `git@github.com:` will
+                    // NEVER be matched to an HTTPS `repoURL`, causing "Connection
+                    // Failed" even when the deploy key is perfectly valid.
+                    //
+                    // Rule: HTTPS repoURL → only ever try HTTPS credentials.
+                    //        SSH repoURL  → try SSH deploy key.
+                    const isHttpsUrl = /^https?:\/\//i.test(repoUrl.trim());
+
+                    if (isHttpsUrl) {
+                        // Try a fine-grained PAT (24h).  This requires a classic PAT
+                        // token scope that a VS Code OAuth token can't provide, so it
+                        // usually falls through to the manual picker.
+                        const patToken = await longRunning(
+                            l10n.t("Generating 24-hour repo-scoped GitHub PAT for '{0}/{1}'\u2026", owner, repoSlug),
+                            () => generateGitHubRepoScopedPat(silentSession!.accessToken, repoId!, repoSlug),
+                        );
+
+                        if (patToken) {
+                            const ok = await applyRepoSecret(kubectl, kubeConfigFile, repoUrl.trim(), {
+                                type: "git",
+                                url: repoUrl.trim(),
+                                username: "git",
+                                password: patToken,
+                            });
+                            if (ok) await offerOpenArgoCDUI(kubectl, kubeConfigFile, clusterName);
+                            return;
+                        }
+
+                        // PAT API unavailable (VS Code OAuth tokens cannot call
+                        // POST /user/personal-access-tokens — it requires a classic
+                        // PAT scope).  Guide the user to create one manually on
+                        // GitHub, collect the pasted token, and register it directly
+                        // into Argo CD without any further manual steps.
+                        const patFromUser = await guideAndCollectGitHubPat(owner, repoSlug);
+                        if (!patFromUser) return;
+
+                        const ok = await applyRepoSecret(kubectl, kubeConfigFile, repoUrl.trim(), {
+                            type: "git",
+                            url: repoUrl.trim(),
+                            username: "git",
+                            password: patFromUser.trim(),
+                        });
+                        if (ok) await offerOpenArgoCDUI(kubectl, kubeConfigFile, clusterName);
+                        return;
+                    } else {
+                        // SSH repoURL — generate a deploy key.
+                        const keyPair = generateSshDeployKeyPair();
+                        const deployKeyResult = await longRunning(
+                            l10n.t("Creating SSH deploy key for '{0}/{1}'\u2026", owner, repoSlug),
+                            () =>
+                                createGitHubDeployKey(
+                                    silentSession!.accessToken,
+                                    owner,
+                                    repoSlug,
+                                    keyPair.publicKeySsh,
+                                ),
+                        );
+
+                        if (deployKeyResult) {
+                            // Patch known-hosts first (argocd-repo-server must trust
+                            // GitHub's fingerprint or the SSH handshake is rejected).
+                            await ensureGitHubSshKnownHosts(kubectl, kubeConfigFile);
+                            const ok = await applyRepoSecret(kubectl, kubeConfigFile, repoUrl.trim(), {
+                                type: "git",
+                                url: repoUrl.trim(),
+                                sshPrivateKey: keyPair.privateKeyPem,
+                            });
+                            if (ok) {
+                                vscode.window.showInformationMessage(
+                                    l10n.t(
+                                        "Read-only SSH deploy key '{0}' registered on GitHub. To remove it later: https://github.com/{1}/{2}/settings/keys",
+                                        deployKeyResult.title,
+                                        owner,
+                                        repoSlug,
+                                    ),
+                                );
+                                await offerOpenArgoCDUI(kubectl, kubeConfigFile, clusterName);
+                            }
+                            return;
+                        }
+
+                        // Deploy key creation failed — guide to manual setup.
+                        const OPEN_GITHUB = l10n.t("Open GitHub");
+                        const fallbackAction = await vscode.window.showWarningMessage(
+                            l10n.t(
+                                "Could not auto-create a deploy key (the organisation may restrict this). Please add one manually in repository Settings \u2192 Deploy keys, then use the SSH option in the auth picker.",
+                            ),
+                            OPEN_GITHUB,
+                        );
+                        if (fallbackAction === OPEN_GITHUB) {
+                            await vscode.env.openExternal(
+                                vscode.Uri.parse(`https://github.com/${owner}/${repoSlug}/settings/keys/new`),
+                            );
+                        }
+                        return;
+                    }
+                }
+                // repoIsPrivate is still undefined (API returned non-OK) → fall through.
+            }
+        }
+    }
+
+    // 3. Manual auth picker — reached for non-GitHub URLs, when no silent session
+    //    is available, or when the GitHub API probe failed.
     const authType = await vscode.window.showQuickPick(
         [
             {
                 label: "$(lock) HTTPS",
                 description: l10n.t("Username + personal access token or password"),
                 id: "https",
+            },
+            {
+                label: "$(shield) Bearer token",
+                description: l10n.t("OAuth2 / JWT bearer token (GitLab, Azure DevOps, Gitea, Forgejo)"),
+                id: "bearer",
             },
             {
                 label: "$(key) SSH",
@@ -344,7 +547,7 @@ async function registerRepoCredentials(
     let secretStringData: Record<string, string>;
 
     if (authType.id === "https") {
-        // --- HTTPS: username + token ---
+        // --- HTTPS: username + personal access token / password ---
         const username = await vscode.window.showInputBox({
             prompt: l10n.t("Username (for GitHub PATs any value works, e.g. 'git' or 'token')"),
             value: "git",
@@ -365,6 +568,23 @@ async function registerRepoCredentials(
             url: repoUrl.trim(),
             username: username.trim() || "git",
             password: token,
+        };
+    } else if (authType.id === "bearer") {
+        // --- Bearer token (Authorization: Bearer <token>) ---
+        // Used by GitLab personal/project/group access tokens, Azure DevOps PATs,
+        // Gitea/Forgejo tokens, and any provider that speaks OAuth2 token introspection.
+        const bearerToken = await vscode.window.showInputBox({
+            prompt: l10n.t("Bearer token (will be sent as 'Authorization: Bearer <token>')"),
+            password: true,
+            ignoreFocusOut: true,
+            validateInput: (v) => (!v || !v.trim() ? l10n.t("Token is required.") : undefined),
+        });
+        if (!bearerToken) return;
+
+        secretStringData = {
+            type: "git",
+            url: repoUrl.trim(),
+            bearerToken: bearerToken.trim(),
         };
     } else {
         // --- SSH: private key file ---
@@ -397,9 +617,195 @@ async function registerRepoCredentials(
         };
     }
 
-    // 3. Build a valid Kubernetes Secret name from the repo URL.
+    // For SSH URLs targeting github.com, ensure the known-hosts ConfigMap is
+    // populated before registering the key — same as `argocd repo add` does.
+    if (/github\.com/i.test(repoUrl.trim()) && secretStringData.sshPrivateKey) {
+        await ensureGitHubSshKnownHosts(kubectl, kubeConfigFile);
+    }
+
+    const ok = await applyRepoSecret(kubectl, kubeConfigFile, repoUrl.trim(), secretStringData);
+    if (ok) await offerOpenArgoCDUI(kubectl, kubeConfigFile, clusterName);
+}
+
+/**
+ * When the GitHub PAT API is unavailable (VS Code OAuth tokens cannot call
+ * POST /user/personal-access-tokens), opens the GitHub fine-grained PAT
+ * creation page pre-filled with the correct token name, shows a modal with
+ * exact step-by-step instructions (expiry, repo scope, permissions), then
+ * presents a password input box to paste the generated token back.
+ *
+ * Returns the pasted token string, or undefined if the user cancels.
+ * The caller is responsible for registering the returned token with Argo CD.
+ */
+async function guideAndCollectGitHubPat(owner: string, repoSlug: string): Promise<string | undefined> {
+    const tokenName = `argocd-${repoSlug}-24h`
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/-{2,}/g, "-")
+        .replace(/-+$/g, "")
+        .slice(0, 40);
+
+    // GitHub's fine-grained PAT creation page accepts a `description` query
+    // parameter to pre-fill the token name field.
+    const patUrl = `https://github.com/settings/personal-access-tokens/new?description=${encodeURIComponent(tokenName)}`;
+
+    const OPEN_GITHUB = l10n.t("Open GitHub \u2192");
+    const userAction = await vscode.window.showInformationMessage(
+        l10n.t(
+            "Create a fine-grained GitHub PAT with these exact settings:\n\n" +
+                "  \u2022 Token name:  {0}  (pre-filled)\n" +
+                "  \u2022 Expiration:  Custom \u2192 1 day\n" +
+                "  \u2022 Repository access:  Only select \u2018{1}/{2}\u2019\n" +
+                "  \u2022 Permissions \u2192 Contents: Read-only\n" +
+                "  \u2022 Permissions \u2192 Metadata: Read-only\n\n" +
+                "Click \u2018Open GitHub \u2192\u2019, configure the options above, click \u2018Generate token\u2019, then paste the token into the next prompt.",
+            tokenName,
+            owner,
+            repoSlug,
+        ),
+        { modal: true },
+        OPEN_GITHUB,
+    );
+    if (userAction !== OPEN_GITHUB) return undefined;
+
+    await vscode.env.openExternal(vscode.Uri.parse(patUrl));
+
+    const pasted = await vscode.window.showInputBox({
+        prompt: l10n.t("Paste the generated GitHub PAT \u2014 it will be registered in Argo CD automatically"),
+        password: true,
+        placeHolder: "github_pat_\u2026",
+        ignoreFocusOut: true,
+        validateInput: (v) => (!v || !v.trim() ? l10n.t("Token is required.") : undefined),
+    });
+
+    return pasted?.trim() || undefined;
+}
+
+/**
+ * After a successful repo credential registration, offer to open the Argo CD UI
+ * directly at Settings → Repositories so the user can verify the connection status.
+ */
+async function offerOpenArgoCDUI(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+    clusterName: string,
+): Promise<void> {
+    const OPEN_UI = l10n.t("View in Argo CD (Settings → Repositories)");
+    const action = await vscode.window.showInformationMessage(
+        l10n.t("Open the Argo CD UI to verify the repository connection status under Settings → Repositories."),
+        OPEN_UI,
+    );
+    if (action === OPEN_UI) {
+        await openArgoCDUI(kubectl, kubeConfigFile, clusterName);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: ensure GitHub SSH host keys are present in argocd-ssh-known-hosts-cm
+// ---------------------------------------------------------------------------
+
+/**
+ * Mirrors what `argocd repo add --ssh-private-key-path` does automatically:
+ * fetches GitHub's current SSH public host keys from the GitHub meta API and
+ * patches the `argocd-ssh-known-hosts-cm` ConfigMap with any that are missing.
+ *
+ * Without this, Argo CD refuses to open the SSH connection ("unknown host"),
+ * so the repository shows "not connected" even when the deploy key is correct.
+ *
+ * Reference:
+ *   https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#ssh-known-host-public-keys
+ *   https://docs.github.com/en/rest/meta/meta#get-github-meta-information
+ */
+async function ensureGitHubSshKnownHosts(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+): Promise<void> {
+    // 1. Fetch GitHub's current SSH host keys.
+    let githubKeys: string[];
+    try {
+        const res = await fetch("https://api.github.com/meta", {
+            headers: { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const meta = (await res.json()) as { ssh_keys?: string[] };
+        githubKeys = (meta.ssh_keys ?? []).filter((k) => k.trim().length > 0);
+    } catch (e) {
+        vscode.window.showWarningMessage(
+            l10n.t(
+                "Could not fetch GitHub SSH host keys ({0}). Argo CD may show the repository as disconnected until you add them manually.",
+                String(e),
+            ),
+        );
+        return;
+    }
+
+    if (githubKeys.length === 0) return;
+
+    // 2. Read the current known-hosts ConfigMap.
+    const getResult = await invokeKubectlCommand(
+        kubectl,
+        kubeConfigFile,
+        `get cm argocd-ssh-known-hosts-cm -n argocd -o jsonpath="{.data.ssh_known_hosts}"`,
+        NonZeroExitCodeBehaviour.Succeed,
+    );
+
+    const existing = !failed(getResult) ? getResult.result.stdout.trim().replace(/^"|"$/g, "") : "";
+
+    // 3. Build the merged known-hosts block — add only missing entries.
+    const existingLines = new Set(
+        existing
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean),
+    );
+    const toAdd = githubKeys.map((k) => `github.com ${k.trim()}`).filter((line) => !existingLines.has(line));
+
+    if (toAdd.length === 0) return; // already up to date
+
+    const merged = `${[...existingLines, ...toAdd].join("\n")}\n`;
+
+    // 4. Patch the ConfigMap.  Use a JSON merge-patch via a temp file to avoid
+    //    shell quoting issues with the multi-line value.
+    const patchObj = { data: { ssh_known_hosts: merged } };
+    const patchFile = await createTempFile(JSON.stringify(patchObj), "json");
+    try {
+        const patchResult = await invokeKubectlCommand(
+            kubectl,
+            kubeConfigFile,
+            `patch cm argocd-ssh-known-hosts-cm -n argocd --type=merge --patch-file "${patchFile.filePath}"`,
+        );
+        if (failed(patchResult)) {
+            vscode.window.showWarningMessage(
+                l10n.t("Could not patch argocd-ssh-known-hosts-cm: {0}", patchResult.error),
+            );
+            return;
+        }
+    } finally {
+        patchFile.dispose();
+    }
+
+    // 5. Restart argocd-repo-server so it picks up the updated ConfigMap immediately.
+    //    Without this, the pod keeps using the copy it loaded at startup and SSH
+    //    connections fail with "unknown host" until the next pod restart.
+    await invokeKubectlCommand(
+        kubectl,
+        kubeConfigFile,
+        `rollout restart deployment/argocd-repo-server -n argocd`,
+        NonZeroExitCodeBehaviour.Succeed,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Helper: build + kubectl-apply an Argo CD repository Secret
+// ---------------------------------------------------------------------------
+
+async function applyRepoSecret(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+    repoUrl: string,
+    secretStringData: Record<string, string>,
+): Promise<boolean> {
+    // Build a valid Kubernetes Secret name from the repo URL.
     const secretName = `repo-${repoUrl
-        .trim()
         .replace(/^https?:\/\/|^git@|\.git$/g, "")
         .replace(/[^a-z0-9]/gi, "-")
         .toLowerCase()
@@ -407,7 +813,7 @@ async function registerRepoCredentials(
         .slice(0, 50)
         .replace(/-+$/g, "")}`;
 
-    // 4. Serialize the secret object via js-yaml to avoid YAML injection.
+    // Serialize the secret object via js-yaml to avoid YAML injection.
     const secretObj = {
         apiVersion: "v1",
         kind: "Secret",
@@ -420,7 +826,7 @@ async function registerRepoCredentials(
     };
     const secretYaml = yaml.dump(secretObj);
 
-    // 5. Apply via a temp file (never log credentials to channels).
+    // Apply via a temp file (never log credentials to output channels).
     const tmpFile = await createTempFile(secretYaml, "yaml");
     try {
         const result = await longRunning(l10n.t("Registering repository credentials with Argo CD…"), () =>
@@ -429,12 +835,11 @@ async function registerRepoCredentials(
 
         if (failed(result)) {
             vscode.window.showErrorMessage(l10n.t("Failed to register repository credentials: {0}", result.error));
-            return;
+            return false;
         }
 
-        vscode.window.showInformationMessage(
-            l10n.t("Repository '{0}' registered with Argo CD successfully.", repoUrl.trim()),
-        );
+        vscode.window.showInformationMessage(l10n.t("Repository '{0}' registered with Argo CD successfully.", repoUrl));
+        return true;
     } finally {
         tmpFile.dispose();
     }
@@ -463,35 +868,9 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
     const targetNamespace = doc.metadata?.namespace ?? "argocd";
 
     // ------------------------------------------------------------------
-    // 2. Get the Azure session.
-    // ------------------------------------------------------------------
-    const sessionResult = await getReadySessionProvider();
-    if (failed(sessionResult)) {
-        vscode.window.showErrorMessage(sessionResult.error);
-        return;
-    }
-
-    // ------------------------------------------------------------------
-    // 3. Pick the target AKS cluster (consistent with "Deploy Manifest" UX).
-    // ------------------------------------------------------------------
-    const clusterResult = await selectClusterOptions(sessionResult.result, undefined, "aks.argoCDApplyApp");
-    if (failed(clusterResult)) {
-        vscode.window.showErrorMessage(clusterResult.error);
-        return;
-    }
-
-    // User chose "Create new cluster" — stop and let them do that first.
-    if (clusterResult.result === true) {
-        vscode.window.showInformationMessage(
-            l10n.t("Please create an AKS cluster before applying the Argo CD Application."),
-        );
-        return;
-    }
-
-    const cluster = clusterResult.result as ClusterPreference;
-
-    // ------------------------------------------------------------------
-    // 4. Ensure kubectl is available.
+    // 2. Ensure kubectl is available and read the current cluster context.
+    //    No Azure subscription or cluster picker — Argo CD operates on
+    //    whichever cluster the user already has as their active context.
     // ------------------------------------------------------------------
     const kubectl = await k8s.extension.kubectl.v1;
     if (!kubectl.available) {
@@ -499,24 +878,38 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         return;
     }
 
+    const ctx = await resolveCurrentKubectlContext(kubectl);
+    if (!ctx) return;
+
+    const { contextName: clusterName, kubeconfigYaml } = ctx;
+
     // ------------------------------------------------------------------
-    // 5. Write kubeconfig to a temp file.
+    // 3. Inform the user which cluster will be used and confirm.
     // ------------------------------------------------------------------
-    const kubeConfigFile = await createTempFile(cluster.kubeConfigYAML, "yaml");
+    const APPLY = l10n.t("Apply");
+    const confirmed = await vscode.window.showInformationMessage(
+        l10n.t("Apply Argo CD Application '{0}' to the current cluster context '{1}'?", appName, clusterName),
+        { modal: true },
+        APPLY,
+    );
+    if (!confirmed) return;
+
+    // ------------------------------------------------------------------
+    // 4. Write kubeconfig to a temp file.
+    // ------------------------------------------------------------------
+    const kubeConfigFile = await createTempFile(kubeconfigYaml, "yaml");
 
     try {
         // ------------------------------------------------------------------
-        // 6. Verify Argo CD is installed (check for argocd namespace).
+        // 5. Verify Argo CD is installed (check for argocd namespace).
         // ------------------------------------------------------------------
-        const nsCheck = await longRunning(
-            l10n.t("Checking if Argo CD is installed on '{0}'…", cluster.clusterName),
-            () =>
-                invokeKubectlCommand(
-                    kubectl,
-                    kubeConfigFile.filePath,
-                    `get namespace argocd --ignore-not-found -o name`,
-                    NonZeroExitCodeBehaviour.Succeed,
-                ),
+        const nsCheck = await longRunning(l10n.t("Checking if Argo CD is installed on '{0}'…", clusterName), () =>
+            invokeKubectlCommand(
+                kubectl,
+                kubeConfigFile.filePath,
+                `get namespace argocd --ignore-not-found -o name`,
+                NonZeroExitCodeBehaviour.Succeed,
+            ),
         );
 
         const argoCDMissing = failed(nsCheck) || nsCheck.result.stdout.trim() === "";
@@ -526,8 +919,8 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
             const APPLY_ANYWAY = l10n.t("Apply Anyway");
             const choice = await vscode.window.showWarningMessage(
                 l10n.t(
-                    "Argo CD does not appear to be installed on cluster '{0}' (namespace 'argocd' not found).\n\nInstall it now, or apply the manifest anyway.",
-                    cluster.clusterName,
+                    "Argo CD is not installed on '{0}' (namespace 'argocd' not found). Install it now, or apply the manifest anyway.",
+                    clusterName,
                 ),
                 { modal: true },
                 INSTALL_NOW,
@@ -536,21 +929,16 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
             if (!choice) return;
             if (choice === INSTALL_NOW) {
                 const channel = getOutputChannel();
-                const installed = await performArgoCDInstall(
-                    kubectl,
-                    kubeConfigFile.filePath,
-                    cluster.clusterName,
-                    channel,
-                );
+                const installed = await performArgoCDInstall(kubectl, kubeConfigFile.filePath, clusterName, channel);
                 if (!installed) return;
             }
         }
 
         // ------------------------------------------------------------------
-        // 7. Apply the manifest to the cluster.
+        // 6. Apply the manifest to the cluster.
         // ------------------------------------------------------------------
         const applyResult = await longRunning(
-            l10n.t("Applying Argo CD Application '{0}' to cluster '{1}'…", appName, cluster.clusterName),
+            l10n.t("Applying Argo CD Application '{0}' to '{1}'…", appName, clusterName),
             () =>
                 invokeKubectlCommand(
                     kubectl,
@@ -574,9 +962,9 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         const OPEN_DOCS = l10n.t("Sync Guide");
         const followUp = await vscode.window.showInformationMessage(
             l10n.t(
-                "Argo CD Application '{0}' applied to cluster '{1}'.\n\n{2}\n\nArgo CD will begin syncing from the configured Git repository.",
+                "'{0}' applied to '{1}'.\n\n{2}\n\nArgo CD will begin syncing from the configured Git repository.",
                 appName,
-                cluster.clusterName,
+                clusterName,
                 output,
             ),
             OPEN_UI,
@@ -586,11 +974,16 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         );
 
         if (followUp === OPEN_UI) {
-            await openArgoCDUI(kubectl, kubeConfigFile.filePath, cluster.clusterName);
+            await openArgoCDUI(kubectl, kubeConfigFile.filePath, clusterName);
         } else if (followUp === GET_CREDS) {
             await showArgoCDCredentials(kubectl, kubeConfigFile.filePath);
         } else if (followUp === REGISTER_REPO) {
-            await registerRepoCredentials(kubectl, kubeConfigFile.filePath, doc.spec?.source?.repoURL ?? "");
+            await registerRepoCredentials(
+                kubectl,
+                kubeConfigFile.filePath,
+                doc.spec?.source?.repoURL ?? "",
+                clusterName,
+            );
         } else if (followUp === OPEN_DOCS) {
             await vscode.env.openExternal(
                 vscode.Uri.parse(

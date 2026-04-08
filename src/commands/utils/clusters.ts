@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as path from "path";
 import { dirSync } from "tmp";
-import { AuthenticationSession, QuickPickItem, authentication, window } from "vscode";
+import { AuthenticationSession, QuickPickItem, authentication } from "vscode";
 import * as vscode from "vscode";
 import {
     API,
@@ -867,7 +867,10 @@ export async function getClusters(
 ): Promise<Cluster[]> {
     const clusters = await getResources(sessionProvider, subscriptionId, "Microsoft.ContainerService/managedClusters");
     if (failed(clusters)) {
-        window.showErrorMessage(clusters.error);
+        // Silently skip subscriptions that cannot be listed (e.g. insufficient
+        // permissions or transient API errors).  If every subscription fails the
+        // caller's empty-array guard will surface a meaningful message instead
+        // of spamming one error popup per subscription.
         return [];
     }
 

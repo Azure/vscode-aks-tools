@@ -21,6 +21,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
+import { generateKeyPairSync } from "crypto";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
 import { getExtensionPath } from "../utils/host";
@@ -560,11 +561,238 @@ function detectGitRemoteUrl(folderFsPath: string): string | undefined {
 // ---------------------------------------------------------------------------
 
 interface GitHubRepo {
+    id: number;
+    name: string;
     full_name: string;
     clone_url: string;
     ssh_url: string;
     private: boolean;
     description: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// SSH deploy key helpers (used as the primary credential strategy)
+// ---------------------------------------------------------------------------
+
+interface SshDeployKeyPair {
+    /** PKCS8 PEM private key — stored in the Argo CD repository Secret. */
+    privateKeyPem: string;
+    /** OpenSSH authorized_keys format public key — registered on GitHub. */
+    publicKeySsh: string;
+}
+
+/**
+ * Generates an Ed25519 key pair suitable for use as a GitHub deploy key.
+ *
+ * Private key is returned in PKCS8 PEM format, which git/OpenSSH accepts
+ * as an identity file and which Argo CD stores in the repository Secret.
+ * Public key is returned in OpenSSH authorized_keys format for the GitHub API.
+ *
+ * Ed25519 SPKI DER layout (44 bytes):
+ *   SEQUENCE { AlgorithmIdentifier { OID(id-EdDSA) }, BIT_STRING(0x00 + 32 raw bytes) }
+ *   Offsets: [30 26] [30 05] [06 03 2B 65 70] [03 21] [00] <32 raw bytes at offset 12>
+ */
+export function generateSshDeployKeyPair(): SshDeployKeyPair {
+    const { privateKey, publicKey } = generateKeyPairSync("ed25519", {
+        privateKeyEncoding: { type: "pkcs8", format: "pem" },
+        publicKeyEncoding: { type: "spki", format: "der" },
+    });
+
+    // Extract the 32-byte raw public key from offset 12 of the 44-byte SPKI DER.
+    const rawPub = publicKey.slice(12);
+
+    // Build the SSH wire format: length-prefixed algo name + length-prefixed key bytes.
+    const algoBytes = Buffer.from("ssh-ed25519", "utf8");
+    const wire = Buffer.alloc(4 + algoBytes.length + 4 + rawPub.length);
+    let offset = 0;
+    wire.writeUInt32BE(algoBytes.length, offset);
+    offset += 4;
+    algoBytes.copy(wire, offset);
+    offset += algoBytes.length;
+    wire.writeUInt32BE(rawPub.length, offset);
+    offset += 4;
+    rawPub.copy(wire, offset);
+
+    return {
+        privateKeyPem: privateKey,
+        publicKeySsh: `ssh-ed25519 ${wire.toString("base64")} argocd-deploy-key`,
+    };
+}
+
+/**
+ * Registers a read-only SSH deploy key on the GitHub repository via the REST API.
+ * Requires an OAuth token with the `repo` scope.
+ *
+ * Returns the created key's ID and title, or `undefined` on failure.
+ *
+ * Reference: https://docs.github.com/en/rest/deploy-keys/deploy-keys#create-a-deploy-key
+ */
+export async function createGitHubDeployKey(
+    accessToken: string,
+    owner: string,
+    repoSlug: string,
+    publicKeySsh: string,
+): Promise<{ id: number; title: string } | undefined> {
+    const title = `argocd-deploy-key-${new Date().toISOString().slice(0, 10)}`;
+    try {
+        const response = await fetch(`https://api.github.com/repos/${owner}/${repoSlug}/keys`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                Accept: "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ title, key: publicKeySsh, read_only: true }),
+        });
+        if (!response.ok) return undefined;
+        const data = (await response.json()) as { id: number };
+        return { id: data.id, title };
+    } catch {
+        return undefined;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Fine-grained PAT helper (best-effort; requires classic token scope)
+// ---------------------------------------------------------------------------
+
+/**
+ * Attempts to create a fine-grained personal access token via the GitHub REST
+ * API.  This requires the authenticating token to be a **classic personal
+ * access token** with the `manage_user:personal_access_tokens` scope —
+ * a VS Code OAuth app token cannot satisfy this requirement, so this call
+ * will typically fail and `createGitHubDeployKey` is used as the fallback.
+ *
+ * Returns the raw token string on success, or `undefined` on failure.
+ *
+ * Reference: https://docs.github.com/en/rest/user/personal-access-tokens
+ */
+export async function generateGitHubRepoScopedPat(
+    accessToken: string,
+    repoId: number,
+    repoName: string,
+): Promise<string | undefined> {
+    // Sanitise the name to match GitHub's token-name constraints.
+    const tokenName = `argocd-${repoName}-24h`
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/-{2,}/g, "-")
+        .replace(/-+$/g, "")
+        .slice(0, 40);
+
+    try {
+        const response = await fetch("https://api.github.com/user/personal-access-tokens", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                Accept: "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                name: tokenName,
+                expiration: 1, // 1 day ≈ 24 hours
+                repository_ids: [repoId], // limit to this repo only
+                permissions: {
+                    contents: "read",
+                },
+            }),
+        });
+
+        if (!response.ok) {
+            return undefined;
+        }
+
+        const data = (await response.json()) as { token?: string };
+        return data.token ?? undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * When a private GitHub repository is selected with HTTPS transport, offers
+ * to auto-generate a 24-hour fine-grained PAT via the GitHub API.
+ *
+ * • On API success  — shows the token once in a modal with a "Copy" button.
+ * • On API failure  — guides the user to create one manually at
+ *   https://github.com/settings/personal-access-tokens/new and explains the
+ *   minimum required settings.
+ *
+ * The function is intentionally fire-and-forget from the caller: errors are
+ * surfaced as VS Code notifications and the main browse flow always continues.
+ */
+async function offerPrivateRepoPatGeneration(session: vscode.AuthenticationSession, repo: GitHubRepo): Promise<void> {
+    const GENERATE = l10n.t("Generate credentials");
+    const SKIP = l10n.t("Skip");
+
+    const choice = await vscode.window.showInformationMessage(
+        l10n.t(
+            "'{0}' is a private repository. Argo CD will need credentials to pull from it.\n\nWould you like to auto-generate read-only, repo-scoped credentials?",
+            repo.full_name,
+        ),
+        { modal: true },
+        GENERATE,
+        SKIP,
+    );
+
+    if (choice !== GENERATE) {
+        return;
+    }
+
+    // Strategy 1: fine-grained PAT (24h) — requires a classic PAT with
+    // manage_user:personal_access_tokens scope; a VS Code OAuth token won't work here.
+    const patToken = await generateGitHubRepoScopedPat(session.accessToken, repo.id, repo.name);
+
+    if (patToken) {
+        const COPY = l10n.t("Copy PAT");
+        const action = await vscode.window.showInformationMessage(
+            l10n.t(
+                "GitHub PAT generated for '{0}'.\n\nThis token expires in 24 hours and has read-only access to this repository only. It will not be shown again.\n\nUse it as the password when registering this repo with Argo CD:\n  argocd repo add {1} --username git --password <PAT>\n\nor via the 'Register Repo Credentials' action after applying the application.",
+                repo.full_name,
+                repo.clone_url,
+            ),
+            { modal: true },
+            COPY,
+        );
+        if (action === COPY) {
+            await vscode.env.clipboard.writeText(patToken);
+            vscode.window.showInformationMessage(l10n.t("GitHub PAT copied to clipboard."));
+        }
+        return;
+    }
+
+    // Strategy 2: Guide the user to create a fine-grained PAT manually on GitHub,
+    // then copy it to clipboard ready for 'Register Repo Credentials'.
+    const [owner] = repo.full_name.split("/");
+    const tokenName = `argocd-${repo.name}-24h`
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/-{2,}/g, "-")
+        .replace(/-+$/g, "")
+        .slice(0, 40);
+
+    const patUrl = `https://github.com/settings/personal-access-tokens/new?description=${encodeURIComponent(tokenName)}`;
+
+    const OPEN_GITHUB = l10n.t("Open GitHub \u2192");
+    const guided = await vscode.window.showInformationMessage(
+        l10n.t(
+            "Create a fine-grained GitHub PAT with these exact settings:\n\n" +
+                "  \u2022 Token name:  {0}  (pre-filled)\n" +
+                "  \u2022 Expiration:  Custom \u2192 1 day\n" +
+                "  \u2022 Repository access:  Only select \u2018{1}/{2}\u2019\n" +
+                "  \u2022 Permissions \u2192 Contents: Read-only\n" +
+                "  \u2022 Permissions \u2192 Metadata: Read-only\n\n" +
+                "After generating, use \u2018Register Repo Credentials\u2019 in the AKS extension to register it with Argo CD automatically.",
+            tokenName,
+            owner,
+            repo.name,
+        ),
+        { modal: true },
+        OPEN_GITHUB,
+    );
+    if (guided === OPEN_GITHUB) {
+        await vscode.env.openExternal(vscode.Uri.parse(patUrl));
+    }
 }
 
 /**
@@ -652,6 +880,12 @@ async function browseGitHubRepos(title: string): Promise<string | undefined> {
             ignoreFocusOut: true,
         },
     );
+
+    // If the repo is private and HTTPS was chosen, offer to auto-generate a
+    // 24-hour fine-grained PAT so the user has credentials ready for Argo CD.
+    if (repoPick.repo.private && formatPick?.label === "HTTPS") {
+        await offerPrivateRepoPatGeneration(session, repoPick.repo);
+    }
 
     return formatPick?.url;
 }
