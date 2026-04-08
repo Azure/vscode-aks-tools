@@ -846,6 +846,170 @@ async function applyRepoSecret(
 }
 
 // ---------------------------------------------------------------------------
+// Helper: guide the user to create a fine-grained GitHub PAT for the
+// specific private repo referenced in spec.source.repoURL, and copy it
+// to the clipboard so they can paste it straight into Argo CD.
+// ---------------------------------------------------------------------------
+
+/**
+ * Opens the GitHub fine-grained PAT creation page pre-filled with:
+ *   - Token name: argocd-<repo>
+ *   - Repository access: only this repo (via repository_ids[] when available)
+ *   - Permissions: Contents = Read-only, Metadata = Read-only
+ *
+ * After the user generates the token on GitHub and pastes it back, the token
+ * is copied to the clipboard and a short note tells them where to paste it
+ * inside the Argo CD UI (Settings → Repositories).
+ */
+async function guideGitHubPatForRepo(repoUrl: string): Promise<void> {
+    if (!repoUrl) {
+        vscode.window.showWarningMessage(l10n.t("No source repository URL found in the Application manifest."));
+        return;
+    }
+
+    // Accept HTTPS and SSH URLs, optional .git suffix, optional trailing slash.
+    const urlMatch = repoUrl.trim().match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?\/?\s*$/i);
+    if (!urlMatch) {
+        vscode.window.showWarningMessage(
+            l10n.t(
+                "'{0}' is not a recognized GitHub repository URL. Use 'Register Repo Credentials' for non-GitHub or SSH repos.",
+                repoUrl,
+            ),
+        );
+        return;
+    }
+    const [, owner, repoSlug] = urlMatch;
+
+    // Try to silently resolve the numeric repo ID (needed for programmatic PAT
+    // creation and to pre-select the repo on the GitHub PAT creation page).
+    let repoId: number | undefined;
+    let repoIsPrivate: boolean | undefined;
+    let sessionToken: string | undefined;
+    try {
+        const session = await vscode.authentication.getSession("github", ["repo"], {
+            createIfNone: false,
+            silent: true,
+        });
+        if (session) {
+            sessionToken = session.accessToken;
+            const res = await fetch(`https://api.github.com/repos/${owner}/${repoSlug}`, {
+                headers: {
+                    Authorization: `Bearer ${session.accessToken}`,
+                    Accept: "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            });
+            if (res.ok) {
+                const data = (await res.json()) as { id: number; private: boolean };
+                repoId = data.id;
+                repoIsPrivate = data.private;
+            }
+        }
+    } catch {
+        // No session or API error — proceed without the repo ID.
+    }
+
+    if (repoIsPrivate === false) {
+        vscode.window.showInformationMessage(
+            l10n.t(
+                "'{0}/{1}' is a public repository — Argo CD can pull from it without any credentials.",
+                owner,
+                repoSlug,
+            ),
+        );
+        return;
+    }
+
+    // ------------------------------------------------------------------
+    // Strategy 1: programmatic fine-grained PAT via GitHub REST API.
+    //
+    // POST /user/personal-access-tokens requires the caller's token to be a
+    // **classic PAT** with the `manage_user:personal_access_tokens` scope.
+    // A VS Code OAuth app token does NOT carry this scope, so this call will
+    // silently return undefined in most cases.  It does work for users who
+    // have already authenticated with a suitably scoped classic PAT.
+    // ------------------------------------------------------------------
+    if (sessionToken && repoId !== undefined) {
+        const autoToken = await longRunning(
+            l10n.t("Attempting to auto-generate a fine-grained PAT for '{0}/{1}'…", owner, repoSlug),
+            () => generateGitHubRepoScopedPat(sessionToken!, repoId!, repoSlug),
+        );
+
+        if (autoToken) {
+            await vscode.env.clipboard.writeText(autoToken);
+            const COPY_AGAIN = l10n.t("Copy Again");
+            await vscode.window
+                .showInformationMessage(
+                    l10n.t(
+                        "Fine-grained PAT generated for '{0}/{1}' and copied to clipboard.\n\n" +
+                            "Permissions: Contents (read-only), Metadata (read-only) — this repo only.\n\n" +
+                            "In Argo CD: Settings \u2192 Repositories \u2192 Connect Repo \u2192 paste as the password.",
+                        owner,
+                        repoSlug,
+                    ),
+                    { modal: true },
+                    COPY_AGAIN,
+                )
+                .then((a) => {
+                    if (a === COPY_AGAIN) {
+                        void vscode.env.clipboard.writeText(autoToken);
+                    }
+                });
+            return;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Strategy 2: guided manual flow — open the GitHub PAT creation page
+    // pre-filled with the correct settings, then collect the pasted token.
+    // ------------------------------------------------------------------
+    const tokenName = `argocd-${repoSlug}`
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/-{2,}/g, "-")
+        .replace(/-+$/g, "")
+        .slice(0, 40);
+
+    // GitHub accepts `description` and `repository_ids[]` as query params.
+    const params = new URLSearchParams({ description: tokenName });
+    if (repoId !== undefined) {
+        params.append("repository_ids[]", String(repoId));
+    }
+    const patUrl = `https://github.com/settings/personal-access-tokens/new?${params.toString()}`;
+
+    const OPEN_GITHUB = l10n.t("Open GitHub \u2192");
+    const repoNote = repoId !== undefined ? " (pre-selected)" : "";
+    const patInstructions =
+        `Create a fine-grained GitHub PAT so Argo CD can pull from '${owner}/${repoSlug}':\n\n` +
+        `  \u2022 Token name: ${tokenName}  (pre-filled)\n` +
+        `  \u2022 Expiration: 90 days (or custom)\n` +
+        `  \u2022 Repository access: Only select '${owner}/${repoSlug}'${repoNote}\n` +
+        `  \u2022 Permissions \u2192 Contents: Read-only\n` +
+        `  \u2022 Permissions \u2192 Metadata: Read-only\n\n` +
+        `Click 'Open GitHub \u2192', generate the token, then paste it into the next prompt.`;
+    const action = await vscode.window.showInformationMessage(patInstructions, { modal: true }, OPEN_GITHUB);
+    if (action !== OPEN_GITHUB) return;
+
+    await vscode.env.openExternal(vscode.Uri.parse(patUrl));
+
+    const token = await vscode.window.showInputBox({
+        prompt: l10n.t("Paste the generated GitHub PAT"),
+        password: true,
+        placeHolder: "github_pat_\u2026",
+        ignoreFocusOut: true,
+        validateInput: (v) => (!v?.trim() ? l10n.t("Token is required.") : undefined),
+    });
+    if (!token) return;
+
+    await vscode.env.clipboard.writeText(token.trim());
+    vscode.window.showInformationMessage(
+        l10n.t(
+            "Token copied to clipboard. In Argo CD: Settings \u2192 Repositories \u2192 Connect Repo \u2192 paste it as the password for '{0}'.",
+            repoUrl,
+        ),
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Command: Apply Argo CD Application to Cluster
 // ---------------------------------------------------------------------------
 
@@ -956,40 +1120,87 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
 
         const output = applyResult.result.stdout.trim();
 
-        const OPEN_UI = l10n.t("Open Argo CD UI");
-        const GET_CREDS = l10n.t("Get Credentials");
-        const REGISTER_REPO = l10n.t("Register Repo Credentials");
-        const OPEN_DOCS = l10n.t("Sync Guide");
-        const followUp = await vscode.window.showInformationMessage(
+        // Log kubectl output to the shared channel.
+        const postChannel = getOutputChannel();
+        postChannel.appendLine(`\n[Apply] ${appName} → ${clusterName}`);
+        postChannel.appendLine(output);
+
+        // Brief success toast (auto-dismisses).
+        vscode.window.showInformationMessage(
             l10n.t(
-                "'{0}' applied to '{1}'.\n\n{2}\n\nArgo CD will begin syncing from the configured Git repository.",
+                "✓ '{0}' applied to '{1}'. Use the action menu to open the UI or manage credentials.",
                 appName,
                 clusterName,
-                output,
             ),
-            OPEN_UI,
-            GET_CREDS,
-            REGISTER_REPO,
-            OPEN_DOCS,
         );
 
-        if (followUp === OPEN_UI) {
-            await openArgoCDUI(kubectl, kubeConfigFile.filePath, clusterName);
-        } else if (followUp === GET_CREDS) {
-            await showArgoCDCredentials(kubectl, kubeConfigFile.filePath);
-        } else if (followUp === REGISTER_REPO) {
-            await registerRepoCredentials(
-                kubectl,
-                kubeConfigFile.filePath,
-                doc.spec?.source?.repoURL ?? "",
-                clusterName,
-            );
-        } else if (followUp === OPEN_DOCS) {
-            await vscode.env.openExternal(
-                vscode.Uri.parse(
-                    "https://argo-cd.readthedocs.io/en/stable/getting_started/#7-sync-deploy-the-application",
-                ),
-            );
+        // ------------------------------------------------------------------
+        // Persistent follow-up menu — loops until the user presses Esc so
+        // all actions remain available even after performing one.
+        // ------------------------------------------------------------------
+        const repoUrl = doc.spec?.source?.repoURL ?? "";
+        const isGitHub = /github\.com/i.test(repoUrl);
+
+        interface ActionItem extends vscode.QuickPickItem {
+            id: string;
+        }
+        const actionItems: ActionItem[] = [
+            {
+                label: "$(browser) Open Argo CD UI",
+                description: l10n.t("Open the Argo CD dashboard in your browser"),
+                id: "open_ui",
+            },
+            {
+                label: "$(key) Get Argo CD Credentials",
+                description: l10n.t("View / copy the initial admin password"),
+                id: "get_creds",
+            },
+            ...(isGitHub
+                ? [
+                      {
+                          label: "$(github) Generate GitHub Token for Repo",
+                          description: l10n.t("Fine-grained PAT (Contents: read-only) for {0}", repoUrl),
+                          id: "github_pat",
+                      } as ActionItem,
+                  ]
+                : []),
+            {
+                label: "$(repo) Register Repo Credentials",
+                description: l10n.t("Register Git repo auth with Argo CD (HTTPS / SSH / Bearer)"),
+                id: "register_repo",
+            },
+            {
+                label: "$(book) Sync Guide",
+                description: l10n.t("Open Argo CD docs: sync the application"),
+                id: "open_docs",
+            },
+        ];
+
+        // Loop until the user presses Esc.
+        while (true) {
+            const pick = (await vscode.window.showQuickPick(actionItems, {
+                title: l10n.t("Argo CD — '{0}' on '{1}' (Esc to close)", appName, clusterName),
+                placeHolder: l10n.t("Select an action"),
+                ignoreFocusOut: false,
+            })) as ActionItem | undefined;
+
+            if (!pick) break;
+
+            if (pick.id === "open_ui") {
+                await openArgoCDUI(kubectl, kubeConfigFile.filePath, clusterName);
+            } else if (pick.id === "get_creds") {
+                await showArgoCDCredentials(kubectl, kubeConfigFile.filePath);
+            } else if (pick.id === "github_pat") {
+                await guideGitHubPatForRepo(repoUrl);
+            } else if (pick.id === "register_repo") {
+                await registerRepoCredentials(kubectl, kubeConfigFile.filePath, repoUrl, clusterName);
+            } else if (pick.id === "open_docs") {
+                await vscode.env.openExternal(
+                    vscode.Uri.parse(
+                        "https://argo-cd.readthedocs.io/en/stable/getting_started/#7-sync-deploy-the-application",
+                    ),
+                );
+            }
         }
     } finally {
         kubeConfigFile.dispose();
