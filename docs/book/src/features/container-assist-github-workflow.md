@@ -60,7 +60,7 @@ The following values are injected into the workflow template. All deployment-spe
 | 3. Set up kubelogin | `azure/use-kubelogin@v1` | Install kubelogin for non-interactive Azure AD authentication |
 | 4. Get K8s context | `azure/aks-set-context@v4` (user namespace) or `az aks namespace get-credentials` (managed namespace) | Fetch kubeconfig for the target cluster/namespace |
 | 5. Deploy application | `Azure/k8s-deploy@v5` | Apply Kubernetes manifests with the built image |
-| 6. Annotate namespace | `kubectl annotate namespace` | Set `aks-project/workload-identity-id` and `aks-project/workload-identity-tenant` |
+| 6. Annotate namespace | `kubectl annotate namespace` | Set `aks-project/workload-identity-id` and `aks-project/workload-identity-tenant`. Requires the **AKS RBAC Cluster Admin** role because annotating namespace requires patch access on the namespace resource, which is only covered by the Cluster Admin role. |
 | 7. Annotate deployment | `kubectl annotate deployment --all` | Set traceability annotations (see [Deployment Annotations](./container-assist-integration.md#deployment-annotations)) |
 
 ### GitHub Actions Permissions
@@ -145,6 +145,7 @@ The namespace type affects multiple aspects of the generated workflow and OIDC c
 | **Workflow template** | `aks-deploy.template.yaml` | `aks-deploy-managed-ns.template.yaml` |
 | **Kubeconfig method** | `azure/aks-set-context@v4` action | `az aks namespace get-credentials` CLI command + `kubelogin convert-kubeconfig` |
 | **Role scope for K8s access** | Cluster-level (conditional on Azure RBAC) | Namespace-level (always) |
+| **AKS RBAC Cluster Admin** | Assigned at cluster scope (conditional on Azure RBAC) | Not assigned |
 | **AKS Namespace Contributor** | Not assigned | Assigned (needed for namespace-scoped kubeconfig) |
 | **AKS Cluster User Role** | Assigned at resource group level | Not assigned |
 

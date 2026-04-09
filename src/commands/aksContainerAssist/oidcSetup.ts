@@ -31,6 +31,7 @@ const execFilePromise = promisify(execFile);
 // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 const AKS_CLUSTER_USER_ROLE_ID = "4abbcc35-e782-43d8-92c5-2d3f1bd2253f";
 const AKS_RBAC_WRITER_ROLE_ID = "a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb";
+const AKS_RBAC_CLUSTER_ADMIN_ROLE_ID = "b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b";
 const AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID = "289d8817-ee69-43f1-a0af-43a45505b488";
 const ACR_PUSH_ROLE_ID = "8311e382-0749-4cb8-b61a-304f252e45ec";
 const ACR_TASKS_CONTRIBUTOR_ROLE_ID = "fb382eab-e894-4461-af04-94435c366c3f";
@@ -632,7 +633,8 @@ async function assignUserNamespaceDeploymentRoles(
         warnings.push(l10n.t("Container Registry Tasks Contributor"));
     }
 
-    // Only assign AKS RBAC Writer at cluster scope when Azure RBAC is enabled on the cluster.
+    // Only assign AKS RBAC Writer and AKS RBAC Cluster Admin at cluster scope when Azure RBAC is enabled on the cluster.
+    // Cluster Admin is required for annotating namespace objects (cluster-scoped resources).
     const azureRbacEnabled = await isAzureRbacEnabledForCluster(
         credential,
         subscriptionId,
@@ -640,17 +642,31 @@ async function assignUserNamespaceDeploymentRoles(
         clusterName,
     );
     if (azureRbacEnabled) {
-        const rbacResult = await createRoleAssignment(
-            authClient,
-            subscriptionId,
-            principalId,
-            AKS_RBAC_WRITER_ROLE_ID,
-            clusterScope,
-            "ServicePrincipal",
-        );
-        if (!rbacResult.succeeded) {
-            logger.warn(`AKS RBAC Writer assignment: ${rbacResult.error}`);
+        const [rbacWriterResult, clusterAdminResult] = await Promise.all([
+            createRoleAssignment(
+                authClient,
+                subscriptionId,
+                principalId,
+                AKS_RBAC_WRITER_ROLE_ID,
+                clusterScope,
+                "ServicePrincipal",
+            ),
+            createRoleAssignment(
+                authClient,
+                subscriptionId,
+                principalId,
+                AKS_RBAC_CLUSTER_ADMIN_ROLE_ID,
+                clusterScope,
+                "ServicePrincipal",
+            ),
+        ]);
+        if (!rbacWriterResult.succeeded) {
+            logger.warn(`AKS RBAC Writer assignment: ${rbacWriterResult.error}`);
             warnings.push(l10n.t("AKS RBAC Writer"));
+        }
+        if (!clusterAdminResult.succeeded) {
+            logger.warn(`AKS RBAC Cluster Admin assignment: ${clusterAdminResult.error}`);
+            warnings.push(l10n.t("AKS RBAC Cluster Admin"));
         }
     }
 

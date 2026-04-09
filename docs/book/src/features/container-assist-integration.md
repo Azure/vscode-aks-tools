@@ -308,9 +308,9 @@ The warning tells you which roles to assign manually. See [Azure Resources and P
 
 ### Azure RBAC is not enabled on the cluster
 
-When Azure RBAC is disabled on the AKS cluster, the extension skips the **AKS RBAC Writer** role assignment for standard (user) namespaces. This is expected behavior -- the role only applies to clusters with Azure RBAC enabled. ACR-related roles (AcrPush, Container Registry Tasks Contributor) are still assigned regardless.
+When Azure RBAC is disabled on the AKS cluster, the extension skips the **AKS RBAC Writer** and **AKS RBAC Cluster Admin** role assignments for standard (user) namespaces. This is expected behavior -- these roles only apply to clusters with Azure RBAC enabled. ACR-related roles (AcrPush, Container Registry Tasks Contributor) are still assigned regardless. The Cluster Admin role is required for the namespace annotation step (`kubectl annotate namespace`), which needs gives patch access to the namespace.
 
-For managed namespaces, AKS RBAC Writer is always assigned at namespace scope, regardless of the cluster-level Azure RBAC setting.
+For managed namespaces, AKS RBAC Writer is always assigned at namespace scope, regardless of the cluster-level Azure RBAC setting. The Cluster Admin role is not assigned for managed namespaces.
 
 ### Project type not detected
 
