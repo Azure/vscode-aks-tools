@@ -1,0 +1,306 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Azure Resources and Permissions - Visual Studio Code AKS Tools</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Display Azure Kubernetes Services within VS Code">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../installation.html"><strong aria-hidden="true">2.</strong> Installation / Quick Start</a></li><li class="chapter-item expanded "><a href="../development.html"><strong aria-hidden="true">3.</strong> Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../development/development.html"><strong aria-hidden="true">3.1.</strong> Development</a></li><li class="chapter-item expanded "><a href="../development/webview-development.html"><strong aria-hidden="true">3.2.</strong> Webview Settings</a></li></ol></li><li class="chapter-item expanded "><a href="../features/features.html"><strong aria-hidden="true">4.</strong> Features</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../features/merge-save-kubeconfig.html"><strong aria-hidden="true">4.1.</strong> Add AKS clusters to kubeconfig</a></li><li class="chapter-item expanded "><a href="../features/aks-diagnostics.html"><strong aria-hidden="true">4.2.</strong> Perform AKS Diagnostics checks on your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/install-azureserviceoperator.html"><strong aria-hidden="true">4.3.</strong> Install Azure Service Operator on your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/create-gh-workflow.html"><strong aria-hidden="true">4.4.</strong> Create GitHub Workflow from your AKS cluster (deprecated)</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.5.</strong> Show AKS cluster overview in Azure Portal</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.6.</strong> Show AKS cluster properties</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.7.</strong> Create AKS cluster from Azure Portal</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.8.</strong> Stop and Start the AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/run-kubectl-command.html"><strong aria-hidden="true">4.9.</strong> Run Kubectl Commands from your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/manage-cluster-operations.html"><strong aria-hidden="true">4.10.</strong> Run Managed Cluster Operations from your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/k8s-api-health-points.html"><strong aria-hidden="true">4.11.</strong> Run Kubernetes API Health Endpoints</a></li><li class="chapter-item expanded "><a href="../features/inspektor-gadget.html"><strong aria-hidden="true">4.12.</strong> Deploy and Undeploy InspektorGadget</a></li><li class="chapter-item expanded "><a href="../features/inspektor-gadget.html"><strong aria-hidden="true">4.13.</strong> Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot</a></li><li class="chapter-item expanded "><a href="../features/tcp-dumps.html"><strong aria-hidden="true">4.14.</strong> Collect TCP Dump</a></li><li class="chapter-item expanded "><a href="../features/aks-compare-cluster.html"><strong aria-hidden="true">4.15.</strong> Compare AKS Cluster</a></li><li class="chapter-item expanded "><a href="../features/image-cleaner-eraser-tool.html"><strong aria-hidden="true">4.16.</strong> Run Image Cleaner Eraser Tool</a></li><li class="chapter-item expanded "><a href="../features/retina-capture.html"><strong aria-hidden="true">4.17.</strong> Run Retina Capture</a></li><li class="chapter-item expanded "><a href="../features/draft-integration.html"><strong aria-hidden="true">4.18.</strong> Run Draft Command</a></li><li class="chapter-item expanded "><a href="../features/container-assist-integration.html"><strong aria-hidden="true">4.19.</strong> Use Container Assist (Preview)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../features/container-assist-azure-resources.html" class="active"><strong aria-hidden="true">4.19.1.</strong> Azure Resources and Permissions</a></li><li class="chapter-item expanded "><a href="../features/container-assist-ai-data-flow.html"><strong aria-hidden="true">4.19.2.</strong> AI Data Flow and Privacy</a></li><li class="chapter-item expanded "><a href="../features/container-assist-github-workflow.html"><strong aria-hidden="true">4.19.3.</strong> GitHub Workflow and OIDC Setup</a></li></ol></li><li class="chapter-item expanded "><a href="../features/aks-plugins-github-copilot.html"><strong aria-hidden="true">4.20.</strong> AKS plugins for GitHub Copilot for Azure</a></li><li class="chapter-item expanded "><a href="../features/simplified-menu-structure.html"><strong aria-hidden="true">4.21.</strong> Use Simplified AKS Menu Structure (Feature Flag)</a></li><li class="chapter-item expanded "><a href="../features/kaito-install-deploy.html"><strong aria-hidden="true">4.22.</strong> Install and Deploy KAITO Models</a></li><li class="chapter-item expanded "><a href="../features/kaito-manage-test.html"><strong aria-hidden="true">4.23.</strong> Manage and Test KAITO Deployments</a></li><li class="chapter-item expanded "><a href="../features/aks-fleet-manager.html"><strong aria-hidden="true">4.24.</strong> Create AKS Fleet Manager from VS Code</a></li><li class="chapter-item expanded "><a href="../features/aks-mcp-server-integration.html"><strong aria-hidden="true">4.25.</strong> Setup AKS MCP Server from VS Code</a></li></ol></li><li class="chapter-item expanded "><a href="../release.html"><strong aria-hidden="true">5.</strong> Release</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../release/whats-new-1.7.0.html"><strong aria-hidden="true">5.1.</strong> What's New in 1.7.0</a></li><li class="chapter-item expanded "><a href="../release/releasing.html"><strong aria-hidden="true">5.2.</strong> Releasing Information</a></li></ol></li><li class="chapter-item expanded "><a href="../contributing.html"><strong aria-hidden="true">6.</strong> Contributing</a></li><li class="chapter-item expanded "><a href="../telemetery.html"><strong aria-hidden="true">7.</strong> Telemetery</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Visual Studio Code AKS Tools</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/Azure/vscode-aks-tools" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="azure-resources-and-permissions"><a class="header" href="#azure-resources-and-permissions">Azure Resources and Permissions</a></h1>
+<p>This page documents every Azure resource that Container Assist creates on your behalf, every role assignment it makes, and the Azure permissions you need to use the feature.</p>
+<h2 id="prerequisites-azure-account-permissions"><a class="header" href="#prerequisites-azure-account-permissions">Prerequisites: Azure Account Permissions</a></h2>
+<p>Container Assist operates across multiple resource groups and requires both resource management and role assignment permissions. This section explains which built-in roles work, which don’t, and why.</p>
+<h3 id="which-built-in-roles-work"><a class="header" href="#which-built-in-roles-work">Which built-in roles work?</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Role</th><th>Scope</th><th>Sufficient?</th><th>Why</th></tr></thead><tbody>
+<tr><td><strong>Owner</strong></td><td>Subscription</td><td><strong>Yes</strong></td><td>Has full resource management and role assignment permissions.</td></tr>
+<tr><td><strong>Contributor + User Access Administrator</strong></td><td>Subscription</td><td><strong>Yes</strong></td><td>Contributor handles resource creation; User Access Administrator handles role assignments.</td></tr>
+<tr><td><strong>Contributor</strong> (alone)</td><td>Subscription</td><td><strong>No</strong></td><td>Can create resource groups, managed identities, and federated credentials, but <strong>cannot assign RBAC roles</strong>. All 9 role assignments will fail.</td></tr>
+<tr><td><strong>Contributor</strong> (alone)</td><td>Resource group</td><td><strong>No</strong></td><td>Cannot list clusters/ACRs across the subscription, cannot create the OIDC resource group, and cannot assign roles.</td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p><strong>Why Contributor alone is not enough:</strong> The Contributor role explicitly excludes <code>Microsoft.Authorization/roleAssignments/write</code>. Container Assist assigns up to 9 RBAC roles across multiple resources (see <a href="#role-assignments">Role Assignments</a> below). Without role assignment permissions, the OIDC setup completes partially – the managed identity and federated credential are created, but the pipeline will fail at runtime because the identity lacks access to the cluster and ACR. The extension warns you which roles could not be assigned so you can request them from an admin.</p>
+</blockquote>
+<h3 id="why-subscription-level-access-is-needed"><a class="header" href="#why-subscription-level-access-is-needed">Why subscription-level access is needed</a></h3>
+<p>Container Assist touches up to 4 separate resource groups during a single run:</p>
+<div class="table-wrapper"><table><thead><tr><th>Resource group</th><th>What happens there</th></tr></thead><tbody>
+<tr><td><strong>OIDC identity RG</strong> (e.g. <code>rg-myapp-oidc</code>)</td><td>Created if it doesn’t exist. Managed identity and federated credential are created here.</td></tr>
+<tr><td><strong>AKS cluster RG</strong></td><td>AKS Cluster User Role and AKS RBAC Writer are assigned here. Cluster properties are read.</td></tr>
+<tr><td><strong>ACR RG</strong></td><td>AcrPull, AcrPush, and ACR Tasks Contributor are assigned here. May be a different RG than the cluster.</td></tr>
+<tr><td><strong>Node RG</strong> (MC_*)</td><td>Kubelet identity is read from the cluster object (no direct operations).</td></tr>
+</tbody></table>
+</div>
+<p>The extension also lists all AKS clusters and ACRs across the subscription during the selection wizard, which requires subscription-level read access (<code>Microsoft.Resources/subscriptions/resources/read</code>).</p>
+<p>If your account is scoped to a single resource group, the cluster/ACR listing fails before you can even start.</p>
+<h3 id="detailed-permission-breakdown"><a class="header" href="#detailed-permission-breakdown">Detailed permission breakdown</a></h3>
+<p>For least-privilege or custom role setups, here are the specific permissions required:</p>
+<div class="table-wrapper"><table><thead><tr><th>Permission</th><th>Why</th><th>When</th></tr></thead><tbody>
+<tr><td><code>Microsoft.Authorization/roleAssignments/write</code></td><td>Assign RBAC roles to managed identities and AKS kubelet identity</td><td>ACR attachment and OIDC setup</td></tr>
+<tr><td><code>Microsoft.ManagedIdentity/userAssignedIdentities/write</code></td><td>Create managed identities</td><td>OIDC setup (if creating new identity)</td></tr>
+<tr><td><code>Microsoft.ManagedIdentity/userAssignedIdentities/read</code></td><td>List/read existing managed identities</td><td>OIDC setup (if reusing identity)</td></tr>
+<tr><td><code>Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write</code></td><td>Create OIDC federated credentials</td><td>OIDC setup</td></tr>
+<tr><td><code>Microsoft.Resources/subscriptions/resourceGroups/write</code></td><td>Create resource groups</td><td>OIDC setup (if resource group does not exist)</td></tr>
+<tr><td><code>Microsoft.Resources/subscriptions/resources/read</code></td><td>List resources across the subscription</td><td>Cluster and ACR selection wizard</td></tr>
+<tr><td><code>Microsoft.ContainerService/managedClusters/read</code></td><td>Read AKS cluster properties</td><td>Cluster selection, Azure RBAC check</td></tr>
+<tr><td><code>Microsoft.ContainerRegistry/registries/read</code></td><td>List and read ACR registries</td><td>ACR selection</td></tr>
+<tr><td><code>Microsoft.ContainerService/managedClusters/listClusterUserCredential/action</code></td><td>List namespaces</td><td>Namespace selection</td></tr>
+</tbody></table>
+</div>
+<p>These permissions must be granted at <strong>subscription scope</strong> (or across all relevant resource groups) for the full workflow to succeed.</p>
+<h2 id="azure-resources-created"><a class="header" href="#azure-resources-created">Azure Resources Created</a></h2>
+<p>Container Assist may create the following Azure resources during the OIDC setup flow. These resources appear in your Azure subscription and may incur governance or cost implications.</p>
+<h3 id="resource-group"><a class="header" href="#resource-group">Resource Group</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Attribute</th><th>Value</th></tr></thead><tbody>
+<tr><td><strong>Resource type</strong></td><td><code>Microsoft.Resources/resourceGroups</code></td></tr>
+<tr><td><strong>When created</strong></td><td>During OIDC setup, if the specified resource group does not already exist</td></tr>
+<tr><td><strong>Default name</strong></td><td><code>rg-&lt;appName&gt;-oidc</code> (user-editable)</td></tr>
+<tr><td><strong>User consent</strong></td><td>Implicit – you enter the resource group name, but are not separately prompted to confirm creation</td></tr>
+</tbody></table>
+</div>
+<h3 id="user-assigned-managed-identity"><a class="header" href="#user-assigned-managed-identity">User-Assigned Managed Identity</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Attribute</th><th>Value</th></tr></thead><tbody>
+<tr><td><strong>Resource type</strong></td><td><code>Microsoft.ManagedIdentity/userAssignedIdentities</code></td></tr>
+<tr><td><strong>When created</strong></td><td>During OIDC setup, if you choose “Create new managed identity”</td></tr>
+<tr><td><strong>Default name</strong></td><td><code>id-&lt;appName&gt;-github</code> (user-editable)</td></tr>
+<tr><td><strong>Tags</strong></td><td><code>purpose: &quot;GitHub Actions OIDC&quot;</code>, <code>createdBy: &quot;AKS VS Code Extension&quot;</code></td></tr>
+<tr><td><strong>User consent</strong></td><td>You explicitly choose “Create new” vs. “Use existing” before creation</td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p><strong>Note:</strong> If you select “Use existing managed identity”, no new identity is created. The selected identity is reused.</p>
+</blockquote>
+<h3 id="federated-identity-credential"><a class="header" href="#federated-identity-credential">Federated Identity Credential</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Attribute</th><th>Value</th></tr></thead><tbody>
+<tr><td><strong>Resource type</strong></td><td>Federated Identity Credential on the managed identity</td></tr>
+<tr><td><strong>When created</strong></td><td>During OIDC setup, automatically after identity is created or selected</td></tr>
+<tr><td><strong>Credential name</strong></td><td><code>GitHubActions</code> (fixed)</td></tr>
+<tr><td><strong>Issuer</strong></td><td><code>https://token.actions.githubusercontent.com</code></td></tr>
+<tr><td><strong>Subject</strong></td><td><code>repo:&lt;owner&gt;/&lt;repo&gt;:ref:refs/heads/&lt;branch&gt;</code></td></tr>
+<tr><td><strong>Audiences</strong></td><td><code>api://AzureADTokenExchange</code></td></tr>
+<tr><td><strong>User consent</strong></td><td>Automatic – created as part of the OIDC setup progress after you initiate it</td></tr>
+</tbody></table>
+</div>
+<p>The subject uses your repository’s <code>owner/repo</code> from the git remote and the detected default branch (usually <code>main</code>).</p>
+<h2 id="role-assignments"><a class="header" href="#role-assignments">Role Assignments</a></h2>
+<p>Container Assist assigns Azure RBAC roles at two distinct stages: <strong>ACR selection</strong> (during the main wizard) and <strong>OIDC setup</strong> (when configuring the GitHub workflow pipeline). The principals and scopes differ between these stages.</p>
+<h3 id="stage-1-acr-selection-main-wizard"><a class="header" href="#stage-1-acr-selection-main-wizard">Stage 1: ACR Selection (Main Wizard)</a></h3>
+<p>When you select an Azure Container Registry that is not already attached to your AKS cluster, the extension offers to assign the <strong>AcrPull</strong> role:</p>
+<div class="table-wrapper"><table><thead><tr><th>Role</th><th>Role Definition ID</th><th>Scope</th><th>Principal</th><th>Consent</th></tr></thead><tbody>
+<tr><td><strong>AcrPull</strong></td><td><code>7f951dda-4ed3-4680-a7ca-43fe172d538d</code></td><td>ACR resource</td><td>AKS kubelet (agentpool) identity</td><td><strong>Prompted</strong> – you see a dialog with “Assign AcrPull Now” / “Dismiss”</td></tr>
+</tbody></table>
+</div>
+<p><strong>Why:</strong> This allows your AKS cluster to pull container images from the selected ACR at runtime. Without this, pod image pulls will fail with authentication errors.</p>
+<p><strong>Principal:</strong> The AKS cluster’s kubelet identity (from <code>identityProfile.kubeletidentity</code>). For service-principal-based clusters, the service principal is used instead.</p>
+<h3 id="stage-2-oidc-setup-github-workflow-pipeline"><a class="header" href="#stage-2-oidc-setup-github-workflow-pipeline">Stage 2: OIDC Setup (GitHub Workflow Pipeline)</a></h3>
+<p>When you run the OIDC setup to configure GitHub Actions authentication, role assignments are created for the <strong>OIDC managed identity</strong> (the identity that your GitHub Actions workflow uses to authenticate with Azure). The roles assigned depend on whether you are deploying to a <strong>user namespace</strong> or a <strong>managed namespace</strong>.</p>
+<h4 id="user-namespace-path"><a class="header" href="#user-namespace-path">User Namespace Path</a></h4>
+<p>For standard (non-managed) Kubernetes namespaces:</p>
+<div class="table-wrapper"><table><thead><tr><th>#</th><th>Role</th><th>Role Definition ID</th><th>Scope</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>1</td><td><strong>Azure Kubernetes Service Cluster User Role</strong></td><td><code>4abbcc35-e782-43d8-92c5-2d3f1bd2253f</code></td><td>Resource group containing the AKS cluster</td><td>Allows the workflow to get cluster credentials (kubeconfig)</td></tr>
+<tr><td>2</td><td><strong>AcrPush</strong></td><td><code>8311e382-0749-4cb8-b61a-304f252e45ec</code></td><td>ACR resource</td><td>Allows the workflow to push built container images to ACR</td></tr>
+<tr><td>3</td><td><strong>Container Registry Tasks Contributor</strong></td><td><code>fb382eab-e894-4461-af04-94435c366c3f</code></td><td>ACR resource</td><td>Allows the workflow to run <code>az acr build</code> (cloud-based image builds)</td></tr>
+<tr><td>4</td><td><strong>Azure Kubernetes Service RBAC Writer</strong></td><td><code>a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb</code></td><td>AKS cluster resource</td><td>Allows the workflow to deploy workloads to the cluster. <strong>Only assigned if Azure RBAC is enabled on the cluster.</strong></td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p><strong>Note on role #4:</strong> The AKS RBAC Writer role is only assigned when the cluster has Azure RBAC enabled (<code>aadProfile.enableAzureRBAC</code>). If the cluster uses Kubernetes-native RBAC instead, this role is skipped and you will need to create a Kubernetes <code>ClusterRoleBinding</code> or <code>RoleBinding</code> manually.</p>
+</blockquote>
+<h4 id="managed-namespace-path"><a class="header" href="#managed-namespace-path">Managed Namespace Path</a></h4>
+<p>For AKS managed namespaces, roles are scoped to the specific namespace rather than the entire cluster:</p>
+<div class="table-wrapper"><table><thead><tr><th>#</th><th>Role</th><th>Role Definition ID</th><th>Scope</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>1</td><td><strong>Azure Kubernetes Service RBAC Writer</strong></td><td><code>a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb</code></td><td>Managed namespace</td><td>Kubernetes data-plane access (create/update deployments, services, configmaps, etc.)</td></tr>
+<tr><td>2</td><td><strong>Azure Kubernetes Service Namespace Contributor</strong></td><td><code>289d8817-ee69-43f1-a0af-43a45505b488</code></td><td>Managed namespace</td><td>ARM-level access to fetch namespace-scoped kubeconfig</td></tr>
+<tr><td>3</td><td><strong>AcrPush</strong></td><td><code>8311e382-0749-4cb8-b61a-304f252e45ec</code></td><td>ACR resource</td><td>Push container images to ACR</td></tr>
+<tr><td>4</td><td><strong>Container Registry Tasks Contributor</strong></td><td><code>fb382eab-e894-4461-af04-94435c366c3f</code></td><td>ACR resource</td><td>Run <code>az acr build</code> for cloud-based image builds</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../features/container-assist-integration.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../features/container-assist-ai-data-flow.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../features/container-assist-integration.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../features/container-assist-ai-data-flow.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

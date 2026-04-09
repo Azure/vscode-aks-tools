@@ -1,0 +1,311 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>AI Data Flow and Privacy - Visual Studio Code AKS Tools</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Display Azure Kubernetes Services within VS Code">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../installation.html"><strong aria-hidden="true">2.</strong> Installation / Quick Start</a></li><li class="chapter-item expanded "><a href="../development.html"><strong aria-hidden="true">3.</strong> Development</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../development/development.html"><strong aria-hidden="true">3.1.</strong> Development</a></li><li class="chapter-item expanded "><a href="../development/webview-development.html"><strong aria-hidden="true">3.2.</strong> Webview Settings</a></li></ol></li><li class="chapter-item expanded "><a href="../features/features.html"><strong aria-hidden="true">4.</strong> Features</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../features/merge-save-kubeconfig.html"><strong aria-hidden="true">4.1.</strong> Add AKS clusters to kubeconfig</a></li><li class="chapter-item expanded "><a href="../features/aks-diagnostics.html"><strong aria-hidden="true">4.2.</strong> Perform AKS Diagnostics checks on your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/install-azureserviceoperator.html"><strong aria-hidden="true">4.3.</strong> Install Azure Service Operator on your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/create-gh-workflow.html"><strong aria-hidden="true">4.4.</strong> Create GitHub Workflow from your AKS cluster (deprecated)</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.5.</strong> Show AKS cluster overview in Azure Portal</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.6.</strong> Show AKS cluster properties</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.7.</strong> Create AKS cluster from Azure Portal</a></li><li class="chapter-item expanded "><a href="../features/show-properties-azureportal-start-stop.html"><strong aria-hidden="true">4.8.</strong> Stop and Start the AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/run-kubectl-command.html"><strong aria-hidden="true">4.9.</strong> Run Kubectl Commands from your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/manage-cluster-operations.html"><strong aria-hidden="true">4.10.</strong> Run Managed Cluster Operations from your AKS cluster</a></li><li class="chapter-item expanded "><a href="../features/k8s-api-health-points.html"><strong aria-hidden="true">4.11.</strong> Run Kubernetes API Health Endpoints</a></li><li class="chapter-item expanded "><a href="../features/inspektor-gadget.html"><strong aria-hidden="true">4.12.</strong> Deploy and Undeploy InspektorGadget</a></li><li class="chapter-item expanded "><a href="../features/inspektor-gadget.html"><strong aria-hidden="true">4.13.</strong> Enable Non-Interactive InspektorGadget Commands like Top, Profile and Snapshot</a></li><li class="chapter-item expanded "><a href="../features/tcp-dumps.html"><strong aria-hidden="true">4.14.</strong> Collect TCP Dump</a></li><li class="chapter-item expanded "><a href="../features/aks-compare-cluster.html"><strong aria-hidden="true">4.15.</strong> Compare AKS Cluster</a></li><li class="chapter-item expanded "><a href="../features/image-cleaner-eraser-tool.html"><strong aria-hidden="true">4.16.</strong> Run Image Cleaner Eraser Tool</a></li><li class="chapter-item expanded "><a href="../features/retina-capture.html"><strong aria-hidden="true">4.17.</strong> Run Retina Capture</a></li><li class="chapter-item expanded "><a href="../features/draft-integration.html"><strong aria-hidden="true">4.18.</strong> Run Draft Command</a></li><li class="chapter-item expanded "><a href="../features/container-assist-integration.html"><strong aria-hidden="true">4.19.</strong> Use Container Assist (Preview)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../features/container-assist-azure-resources.html"><strong aria-hidden="true">4.19.1.</strong> Azure Resources and Permissions</a></li><li class="chapter-item expanded "><a href="../features/container-assist-ai-data-flow.html" class="active"><strong aria-hidden="true">4.19.2.</strong> AI Data Flow and Privacy</a></li><li class="chapter-item expanded "><a href="../features/container-assist-github-workflow.html"><strong aria-hidden="true">4.19.3.</strong> GitHub Workflow and OIDC Setup</a></li></ol></li><li class="chapter-item expanded "><a href="../features/aks-plugins-github-copilot.html"><strong aria-hidden="true">4.20.</strong> AKS plugins for GitHub Copilot for Azure</a></li><li class="chapter-item expanded "><a href="../features/simplified-menu-structure.html"><strong aria-hidden="true">4.21.</strong> Use Simplified AKS Menu Structure (Feature Flag)</a></li><li class="chapter-item expanded "><a href="../features/kaito-install-deploy.html"><strong aria-hidden="true">4.22.</strong> Install and Deploy KAITO Models</a></li><li class="chapter-item expanded "><a href="../features/kaito-manage-test.html"><strong aria-hidden="true">4.23.</strong> Manage and Test KAITO Deployments</a></li><li class="chapter-item expanded "><a href="../features/aks-fleet-manager.html"><strong aria-hidden="true">4.24.</strong> Create AKS Fleet Manager from VS Code</a></li><li class="chapter-item expanded "><a href="../features/aks-mcp-server-integration.html"><strong aria-hidden="true">4.25.</strong> Setup AKS MCP Server from VS Code</a></li></ol></li><li class="chapter-item expanded "><a href="../release.html"><strong aria-hidden="true">5.</strong> Release</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../release/whats-new-1.7.0.html"><strong aria-hidden="true">5.1.</strong> What's New in 1.7.0</a></li><li class="chapter-item expanded "><a href="../release/releasing.html"><strong aria-hidden="true">5.2.</strong> Releasing Information</a></li></ol></li><li class="chapter-item expanded "><a href="../contributing.html"><strong aria-hidden="true">6.</strong> Contributing</a></li><li class="chapter-item expanded "><a href="../telemetery.html"><strong aria-hidden="true">7.</strong> Telemetery</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Visual Studio Code AKS Tools</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/Azure/vscode-aks-tools" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="ai-data-flow-and-privacy"><a class="header" href="#ai-data-flow-and-privacy">AI Data Flow and Privacy</a></h1>
+<p>This page documents how Container Assist uses AI models, what data from your project is sent to cloud AI services, what data stays local, and the security protections in place.</p>
+<h2 id="architecture-local-analysis--cloud-ai-generation"><a class="header" href="#architecture-local-analysis--cloud-ai-generation">Architecture: Local Analysis + Cloud AI Generation</a></h2>
+<p>Container Assist uses a two-phase architecture:</p>
+<ol>
+<li>
+<p><strong>Phase 1 – Local analysis (no network calls):</strong> The <code>containerization-assist-mcp/sdk</code> runs entirely on your machine. It scans your project filesystem to detect languages, frameworks, dependencies, ports, and entry points. No data leaves your machine during this phase.</p>
+</li>
+<li>
+<p><strong>Phase 2 – Cloud AI generation:</strong> The SDK’s analysis results are formatted into prompts and sent to a VS Code Language Model (via the <code>vscode.lm</code> API) to generate Dockerfiles and Kubernetes manifests. This phase involves cloud AI calls.</p>
+</li>
+</ol>
+<h2 id="what-ai-models-are-used"><a class="header" href="#what-ai-models-are-used">What AI Models Are Used</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>aks.containerAssist.modelFamily</code></td><td><code>gpt-5.2-codex</code></td><td>The model family to use</td></tr>
+<tr><td><code>aks.containerAssist.modelVendor</code></td><td><code>copilot</code></td><td>The model vendor (provider)</td></tr>
+</tbody></table>
+</div>
+<ul>
+<li>Container Assist uses the <strong>VS Code Language Model API</strong> (<code>vscode.lm</code>), which routes requests through GitHub Copilot’s infrastructure.</li>
+<li>On launch, you can choose “Use Default Model” or “Select Model…” to pick from any available VS Code language model.</li>
+<li>If the configured default model is not found, the first available model is used as a fallback.</li>
+</ul>
+<h2 id="what-data-is-sent-to-the-ai-model"><a class="header" href="#what-data-is-sent-to-the-ai-model">What Data Is Sent to the AI Model</a></h2>
+<h3 id="per-interaction-overview"><a class="header" href="#per-interaction-overview">Per-Interaction Overview</a></h3>
+<p>Container Assist makes <strong>two AI calls per module</strong> in your project:</p>
+<ol>
+<li><strong>Dockerfile generation</strong> – one AI call</li>
+<li><strong>Kubernetes manifest generation</strong> – one AI call</li>
+</ol>
+<p>Each call includes a system prompt, a user prompt, and tool definitions. The AI may then invoke tools to read additional files from your project (up to 20 rounds of tool calls per interaction).</p>
+<h3 id="system-prompts-static-hardcoded"><a class="header" href="#system-prompts-static-hardcoded">System Prompts (Static, Hardcoded)</a></h3>
+<p>The system prompts are fixed strings that describe the AI’s role and workflow. They do not contain any of your project data. They instruct the AI to:</p>
+<ul>
+<li>Act as an expert at creating Dockerfiles or Kubernetes manifests</li>
+<li>Use tools (<code>readProjectFile</code>, <code>listDirectory</code>) to verify project details before generating</li>
+<li>Output content in a specific <code>&lt;content&gt;</code> marker format</li>
+</ul>
+<h3 id="user-prompts-contain-project-data"><a class="header" href="#user-prompts-contain-project-data">User Prompts (Contain Project Data)</a></h3>
+<p>The user prompt is built from the local SDK analysis and includes:</p>
+<p><strong>For Dockerfile generation:</strong></p>
+<ul>
+<li>Detected programming language (e.g., “typescript”, “python”, “java”)</li>
+<li>Framework names and versions (e.g., “Express v4.18.0”)</li>
+<li>Entry point path (e.g., “src/index.ts”)</li>
+<li>Detected ports (e.g., “3000, 8080”)</li>
+<li>First 15 dependency names (e.g., “express, pg, redis, …”)</li>
+<li>SDK recommendations: build strategy, base image suggestions, security considerations, optimizations</li>
+<li>Existing Dockerfile content (if present), including analysis and enhancement guidance</li>
+<li>Language-specific verification hints (what config files to check)</li>
+</ul>
+<p><strong>For Kubernetes manifest generation:</strong></p>
+<ul>
+<li>All of the above, plus:</li>
+<li>Application name (e.g., “my-app”)</li>
+<li>Target Kubernetes namespace</li>
+<li>Full image repository URL (e.g., <code>myacr.azurecr.io/my-app</code>)</li>
+</ul>
+<h3 id="tool-calls-ai-reads-your-files"><a class="header" href="#tool-calls-ai-reads-your-files">Tool Calls (AI Reads Your Files)</a></h3>
+<p>During generation, the AI can invoke two tools to inspect your project:</p>
+<h4 id="readprojectfile"><a class="header" href="#readprojectfile"><code>readProjectFile</code></a></h4>
+<p>Reads a file from your project. The AI decides which files to read based on the analysis.</p>
+<ul>
+<li><strong>Input:</strong> Relative file path, optional line limit</li>
+<li><strong>Output:</strong> File content (up to 200 lines)</li>
+<li><strong>Typical files read:</strong> <code>package.json</code>, <code>tsconfig.json</code>, <code>pom.xml</code>, <code>Dockerfile</code>, <code>go.mod</code>, source entry points, configuration files</li>
+</ul>
+<h4 id="listdirectory"><a class="header" href="#listdirectory"><code>listDirectory</code></a></h4>
+<p>Lists files and subdirectories in your project.</p>
+<ul>
+<li><strong>Input:</strong> Relative directory path, optional max depth</li>
+<li><strong>Output:</strong> Tree listing of files and directories (up to 200 entries, max 3 levels deep)</li>
+<li><strong>Excluded from listings:</strong> <code>node_modules</code>, <code>.git</code>, <code>dist</code>, <code>build</code>, <code>target</code>, <code>bin</code>, <code>obj</code>, <code>__pycache__</code>, <code>venv</code>, <code>.next</code>, <code>.nuxt</code></li>
+</ul>
+<p>The AI can make up to <strong>20 rounds</strong> of tool calls per interaction. In each round, it may call multiple tools concurrently. After 20 rounds, a final request is sent without tools to force the AI to produce its output.</p>
+<h2 id="what-data-is-not-sent"><a class="header" href="#what-data-is-not-sent">What Data Is NOT Sent</a></h2>
+<h3 id="blocked-sensitive-files"><a class="header" href="#blocked-sensitive-files">Blocked Sensitive Files</a></h3>
+<p>The following files are <strong>blocked from being read</strong> by the AI, even if it requests them:</p>
+<div class="table-wrapper"><table><thead><tr><th>Pattern</th><th>Examples</th></tr></thead><tbody>
+<tr><td><code>.env</code>, <code>.env.local</code>, <code>.env.production</code>, <code>.env.staging</code></td><td>Environment variable files</td></tr>
+<tr><td><code>*.pem</code>, <code>*.key</code>, <code>*.pfx</code>, <code>*.p12</code></td><td>TLS/SSL certificates and private keys</td></tr>
+<tr><td><code>credentials*</code></td><td>Credential files (any extension)</td></tr>
+<tr><td><code>secret.*</code>, <code>secrets.*</code>, <code>.secrets</code></td><td>Secret configuration files</td></tr>
+<tr><td><code>id_rsa</code>, <code>id_ed25519</code></td><td>SSH private keys</td></tr>
+<tr><td><code>*.secret</code></td><td>Any file with <code>.secret</code> extension</td></tr>
+</tbody></table>
+</div>
+<p>If the AI requests a blocked file, the tool returns an error and the AI must proceed without that file’s content.</p>
+<h3 id="path-traversal-protection"><a class="header" href="#path-traversal-protection">Path Traversal Protection</a></h3>
+<p>All file access tools enforce strict path boundaries:</p>
+<ul>
+<li><strong><code>..</code> path segments</strong> are rejected (no escaping the project root)</li>
+<li><strong>Absolute paths</strong> are rejected</li>
+<li><strong>Windows drive paths</strong> and <strong>UNC paths</strong> are rejected</li>
+<li>The resolved path is verified to remain within the workspace root</li>
+</ul>
+<h3 id="what-stays-entirely-local"><a class="header" href="#what-stays-entirely-local">What Stays Entirely Local</a></h3>
+<p>The following data is processed locally and <strong>never sent to any AI model</strong>:</p>
+<ul>
+<li>Your Azure subscription, cluster, ACR, and namespace selections</li>
+<li>Managed identity details, role assignments, federated credentials</li>
+<li>GitHub repository secrets</li>
+<li>Git history and commit data</li>
+<li>The workflow YAML template (generated from a local template, not AI)</li>
+<li>File write operations (Dockerfile, manifests, workflow files)</li>
+</ul>
+<h2 id="summary-data-flow-by-destination"><a class="header" href="#summary-data-flow-by-destination">Summary: Data Flow by Destination</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Destination</th><th>Data</th></tr></thead><tbody>
+<tr><td><strong>Local only (no network)</strong></td><td>Full project filesystem scan, Azure resource operations, role assignments, GitHub secrets, workflow template rendering, file writes</td></tr>
+<tr><td><strong>VS Code Language Model API (cloud)</strong></td><td>SDK analysis summaries (language, framework, ports, dependencies, entry point), project file contents requested by AI tools, system prompts</td></tr>
+<tr><td><strong>Not sent (blocked)</strong></td><td><code>.env</code> files, private keys, certificates, credential files, SSH keys, secret files</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../features/container-assist-azure-resources.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../features/container-assist-github-workflow.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../features/container-assist-azure-resources.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../features/container-assist-github-workflow.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
