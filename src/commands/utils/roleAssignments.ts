@@ -56,6 +56,8 @@ export function getScopeForKubernetesNamespace(
 // For now, 'ServicePrincipal' and 'User' are the ones we're most likely to use here,
 // but we can add more as needed.
 export type PrincipalType = "ServicePrincipal" | "User";
+export const PRINCIPAL_TYPE_SERVICE_PRINCIPAL: PrincipalType = "ServicePrincipal";
+export const PRINCIPAL_TYPE_USER: PrincipalType = "User";
 
 export async function createRoleAssignment(
     client: AuthorizationManagementClient,

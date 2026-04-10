@@ -10,6 +10,7 @@ import {
     deleteRoleAssignment,
     getPrincipalRoleAssignmentsForAcr,
     getScopeForAcr,
+    PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
 } from "../commands/utils/roleAssignments";
 import { SelectionType, getSubscriptions } from "../commands/utils/subscriptions";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -180,7 +181,7 @@ export class AttachAcrToClusterDataProvider implements PanelDataProvider<"attach
             principalId.result,
             acrPullRoleDefinitionName,
             scope,
-            "ServicePrincipal",
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         );
 
         if (failed(roleAssignment)) {

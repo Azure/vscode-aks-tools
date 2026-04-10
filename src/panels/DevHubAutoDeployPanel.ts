@@ -344,7 +344,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             newServicePrincipal.result.appId,
             azureContributorRole,
             acrScope,
-            "ServicePrincipal",
+            roleAssignmentsUtil.PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         );
         if (failed(acrRoleCreation)) {
             console.error("Error creating role assignment:", acrRoleCreation.error);
@@ -360,7 +360,7 @@ export class AutomatedDeploymentsDataProvider implements PanelDataProvider<"auto
             newServicePrincipal.result.appId,
             azureContributorRole,
             clusterScope,
-            "ServicePrincipal",
+            roleAssignmentsUtil.PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         );
         if (failed(clusterRoleCreation)) {
             console.error("Error creating role assignment:", clusterRoleCreation.error);

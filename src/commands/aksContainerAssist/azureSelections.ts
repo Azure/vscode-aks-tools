@@ -15,7 +15,12 @@ import {
 } from "../utils/clusters";
 import { extension } from "vscode-kubernetes-tools-api";
 import { getAuthorizationManagementClient } from "../utils/arm";
-import { getPrincipalRoleAssignmentsForAcr, createRoleAssignment, getScopeForAcr } from "../utils/roleAssignments";
+import {
+    getPrincipalRoleAssignmentsForAcr,
+    createRoleAssignment,
+    getScopeForAcr,
+    PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
+} from "../utils/roleAssignments";
 import { acrPullRoleDefinitionName } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { failed } from "../utils/errorable";
 import { logger } from "./logger";
@@ -547,7 +552,7 @@ async function ensureAcrPullForKubelet(
             principalId,
             acrPullRoleDefinitionName,
             acrScope,
-            "ServicePrincipal",
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         );
 
         if (result.succeeded) {

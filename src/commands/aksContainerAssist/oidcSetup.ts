@@ -11,6 +11,7 @@ import {
     getScopeForAcr,
     getScopeForCluster,
     getScopeForManagedNamespace,
+    PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
 } from "../utils/roleAssignments";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
 import { isReady } from "../../auth/types";
@@ -564,7 +565,7 @@ async function assignAksClusterUserRole(
         principalId,
         AKS_CLUSTER_USER_ROLE_ID,
         scope,
-        "ServicePrincipal",
+        PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
     );
 
     if (!result.succeeded) {
@@ -613,14 +614,21 @@ async function assignUserNamespaceDeploymentRoles(
     const acrScope = getScopeForAcr(subscriptionId, acrResourceGroup, acrName);
 
     const [acrPushResult, acrTasksResult] = await Promise.all([
-        createRoleAssignment(authClient, subscriptionId, principalId, ACR_PUSH_ROLE_ID, acrScope, "ServicePrincipal"),
+        createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            ACR_PUSH_ROLE_ID,
+            acrScope,
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
+        ),
         createRoleAssignment(
             authClient,
             subscriptionId,
             principalId,
             ACR_TASKS_CONTRIBUTOR_ROLE_ID,
             acrScope,
-            "ServicePrincipal",
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         ),
     ]);
 
@@ -649,7 +657,7 @@ async function assignUserNamespaceDeploymentRoles(
                 principalId,
                 AKS_RBAC_WRITER_ROLE_ID,
                 clusterScope,
-                "ServicePrincipal",
+                PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
             ),
             createRoleAssignment(
                 authClient,
@@ -657,7 +665,7 @@ async function assignUserNamespaceDeploymentRoles(
                 principalId,
                 AKS_RBAC_CLUSTER_ADMIN_ROLE_ID,
                 clusterScope,
-                "ServicePrincipal",
+                PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
             ),
         ]);
         if (!rbacWriterResult.succeeded) {
@@ -705,7 +713,7 @@ async function assignManagedNamespaceDeploymentRoles(
             principalId,
             AKS_RBAC_WRITER_ROLE_ID,
             managedNsScope,
-            "ServicePrincipal",
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         ),
         // ARM access to fetch namespace-scoped kubeconfig
         createRoleAssignment(
@@ -714,10 +722,17 @@ async function assignManagedNamespaceDeploymentRoles(
             principalId,
             AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID,
             managedNsScope,
-            "ServicePrincipal",
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         ),
         // ACR push access for container images
-        createRoleAssignment(authClient, subscriptionId, principalId, ACR_PUSH_ROLE_ID, acrScope, "ServicePrincipal"),
+        createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            ACR_PUSH_ROLE_ID,
+            acrScope,
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
+        ),
         // ACR Tasks Contributor for az acr build
         createRoleAssignment(
             authClient,
@@ -725,7 +740,7 @@ async function assignManagedNamespaceDeploymentRoles(
             principalId,
             ACR_TASKS_CONTRIBUTOR_ROLE_ID,
             acrScope,
-            "ServicePrincipal",
+            PRINCIPAL_TYPE_SERVICE_PRINCIPAL,
         ),
     ]);
 
