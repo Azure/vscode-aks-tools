@@ -26,6 +26,7 @@ export interface InspektorGadgetConfig {
 export class InspektorGadgetPanel extends BasePanel<"gadget"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "gadget", {
+            deployFailed: null,
             getContainersResponse: null,
             getNamespacesResponse: null,
             getNodesResponse: null,
@@ -136,6 +137,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
         const version = await this.clusterOperations.deploy();
         if (failed(version)) {
             vscode.window.showErrorMessage(version.error);
+            webview.postDeployFailed(version.error);
             return;
         }
 
@@ -146,6 +148,7 @@ export class InspektorGadgetDataProvider implements PanelDataProvider<"gadget"> 
         const version = await this.clusterOperations.undeploy();
         if (failed(version)) {
             vscode.window.showErrorMessage(version.error);
+            webview.postDeployFailed(version.error);
             return;
         }
 

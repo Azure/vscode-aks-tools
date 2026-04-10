@@ -1,33 +1,19 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import styles from "./InspektorGadget.module.css";
-import { NamespaceResources, PodResources } from "./helpers/clusterResources";
-import { Lazy, isLoaded, isNotLoaded, map as lazyMap, orDefault } from "../utilities/lazy";
-import { Lookup, asLookup, exclude, intersection } from "../utilities/array";
+import { NamespaceResources } from "./helpers/clusterResources";
+import { isLoaded, isNotLoaded } from "../utilities/lazy";
 import { EventHandlers } from "../utilities/state";
 import { EventDef, vscode } from "./helpers/state";
 import { ProgressRing } from "../components/ProgressRing";
 
 type ChangeEvent = Event | FormEvent<HTMLElement>;
 
-type PodItemStatus = {
-    isExpanded: boolean;
-};
-
-type AllPodItemStatuses = Lookup<PodItemStatus>;
-
-type NamespaceItemStatus = {
-    isExpanded: boolean;
-    podStatuses: AllPodItemStatuses;
-};
-
-type AllNamespaceItemStatuses = Lookup<NamespaceItemStatus>;
-
-const resourceProperties = { namespace: "namespace", podName: "podName", container: "container" } as const;
+const resourceProperties = { namespace: "namespace", podName: "podName", containerName: "containerName" } as const;
 type SelectedNamespace = { [resourceProperties.namespace]: string };
 type SelectedPod = SelectedNamespace & { [resourceProperties.podName]: string };
-type SelectedContainer = SelectedPod & { [resourceProperties.container]: string };
+type SelectedContainer = SelectedPod & { [resourceProperties.containerName]: string };
 
 type SelectedResource = Record<string, never> | SelectedNamespace | SelectedPod | SelectedContainer;
 
@@ -39,171 +25,79 @@ function isNamespaceResource(selectedResource: SelectedResource): selectedResour
     return (
         resourceProperties.namespace in selectedResource &&
         !(resourceProperties.podName in selectedResource) &&
-        !(resourceProperties.container in selectedResource)
+        !(resourceProperties.containerName in selectedResource)
     );
 }
 
 function isPodResource(selectedResource: SelectedResource): selectedResource is SelectedPod {
-    return resourceProperties.podName in selectedResource && !(resourceProperties.container in selectedResource);
+    return resourceProperties.podName in selectedResource && !(resourceProperties.containerName in selectedResource);
 }
 
 function isContainerResource(selectedResource: SelectedResource): selectedResource is SelectedContainer {
-    return resourceProperties.container in selectedResource;
-}
-
-function lazyAsLookup<T>(lazyList: Lazy<T[]>, keyFn: (value: T) => string): Lookup<T> {
-    return orDefault(
-        lazyMap(lazyList, (items) => asLookup(items, keyFn)),
-        {},
-    );
-}
-
-function getUpdatedNamespaceItemStatus(status: NamespaceItemStatus, resource: NamespaceResources): NamespaceItemStatus {
-    const resources = lazyAsLookup(resource.children, (p) => p.name);
-    const pods = Object.keys(resources);
-    const podsWithStatus = Object.keys(status.podStatuses);
-    const existingStatuses = intersection(pods, podsWithStatus).map((p) => [p, status.podStatuses[p]]);
-    const newStatuses = exclude(pods, podsWithStatus).map((p) => [p, { isExpanded: false }]);
-    const podStatuses = Object.fromEntries(existingStatuses.concat(newStatuses));
-    return { ...status, podStatuses };
-}
-
-function getUpdatedStatus(
-    status: AllNamespaceItemStatuses,
-    clusterResources: NamespaceResources[],
-): AllNamespaceItemStatuses {
-    const resources = asLookup(clusterResources, (ns) => ns.name);
-    const namespaces = Object.keys(resources);
-    const namespacesWithStatus = Object.keys(status);
-    const existingStatuses = intersection(namespaces, namespacesWithStatus).map((ns) => [
-        ns,
-        getUpdatedNamespaceItemStatus(status[ns], resources[ns]),
-    ]);
-    const newStatuses = exclude(namespaces, namespacesWithStatus).map((ns) => [
-        ns,
-        getUpdatedNamespaceItemStatus({ isExpanded: false, podStatuses: {} }, resources[ns]),
-    ]);
-    return Object.fromEntries(existingStatuses.concat(newStatuses));
+    return resourceProperties.containerName in selectedResource;
 }
 
 export interface ResourceSelectorProps {
     id?: string;
     className?: string;
     resources: NamespaceResources[];
-    onSelectionChanged: (selection: { namespace?: string; podName?: string; container?: string }) => void;
+    onSelectionChanged: (selection: { namespace?: string; podName?: string; containerName?: string }) => void;
     userMessageHandlers: EventHandlers<EventDef>;
 }
 
+// Expansion state to track which namespaces and pods are expanded.
+type ExpandedState = {
+    namespaces: Record<string, boolean>;
+    pods: Record<string, boolean>; // keyed as "namespace/podName"
+};
+
 export function ResourceSelector(props: ResourceSelectorProps) {
-    const [status, setStatus] = useState<AllNamespaceItemStatuses>({});
+    const [expanded, setExpanded] = useState<ExpandedState>({ namespaces: {}, pods: {} });
     const [selectedResource, setSelectedResource] = useState<SelectedResource>({});
 
-    const updatedStatus = getUpdatedStatus(status, props.resources);
-    useEffect(() => {
-        setStatus(updatedStatus);
-    }, [props.resources, updatedStatus]);
-
-    return (
-        <ul
-            id={props.id}
-            className={props.className ? `${props.className} ${styles.hierarchyList}` : styles.hierarchyList}
-        >
-            <li>
-                <div className={styles.radioLine}>
-                    <input
-                        type="radio"
-                        onChange={handleNoResourceChange}
-                        checked={isNoResource(selectedResource)}
-                    ></input>
-                    <label className={styles.radioLabel}>All</label>
-                </div>
-            </li>
-            {renderNamespaceItems(props.resources, updatedStatus)}
-        </ul>
-    );
-
-    function renderNamespaceItems(items: NamespaceResources[], status: AllNamespaceItemStatuses) {
-        return items.map((item) => (
-            <li key={item.name}>
-                <FontAwesomeIcon
-                    className={styles.expander}
-                    onClick={() => toggleNamespaceExpanded(item.name)}
-                    icon={status[item.name].isExpanded ? faChevronDown : faChevronRight}
-                />
-                <div className={styles.radioLine}>
-                    <input
-                        type="radio"
-                        className={styles.selector}
-                        onChange={(e) => handleNamespaceChange(e, item.name)}
-                        checked={isNamespaceResource(selectedResource) && selectedResource.namespace === item.name}
-                    ></input>
-                    <label className={styles.radioLabel}>{item.name}</label>
-                </div>
-                {status[item.name].isExpanded && (
-                    <ul className={styles.hierarchyList}>
-                        {isLoaded(item.children) ? (
-                            renderPodItems(item.name, item.children.value, status[item.name].podStatuses)
-                        ) : (
-                            <ProgressRing />
-                        )}
-                    </ul>
-                )}
-            </li>
-        ));
+    function isNamespaceExpanded(ns: string): boolean {
+        return !!expanded.namespaces[ns];
     }
 
-    function renderPodItems(namespace: string, items: PodResources[], status: AllPodItemStatuses) {
-        return items.map((item) => (
-            <li key={item.name}>
-                <FontAwesomeIcon
-                    className={styles.expander}
-                    onClick={() => togglePodExpanded(namespace, item.name)}
-                    icon={status[item.name].isExpanded ? faChevronDown : faChevronRight}
-                />
-                <div className={styles.radioLine}>
-                    <input
-                        type="radio"
-                        onChange={(e) => handlePodChange(e, namespace, item.name)}
-                        checked={
-                            isPodResource(selectedResource) &&
-                            selectedResource.namespace === namespace &&
-                            selectedResource.podName === item.name
-                        }
-                    ></input>
-
-                    <label className={styles.radioLabel}>{item.name}</label>
-                </div>
-                {status[item.name].isExpanded && (
-                    <ul className={styles.hierarchyList}>
-                        {isLoaded(item.children) ? (
-                            renderContainerItems(namespace, item.name, item.children.value)
-                        ) : (
-                            <ProgressRing />
-                        )}
-                    </ul>
-                )}
-            </li>
-        ));
+    // Pods are keyed as "namespace/podName"
+    function isPodExpanded(ns: string, pod: string): boolean {
+        return !!expanded.pods[`${ns}/${pod}`];
     }
 
-    function renderContainerItems(namespace: string, podName: string, containerNames: string[]) {
-        return containerNames.map((c) => (
-            <li key={c}>
-                <div className={styles.radioLine}>
-                    <input
-                        type="radio"
-                        onChange={(e) => handleContainerChange(e, namespace, podName, c)}
-                        checked={
-                            isContainerResource(selectedResource) &&
-                            selectedResource.namespace === namespace &&
-                            selectedResource.podName === podName &&
-                            selectedResource.container === c
-                        }
-                    ></input>
-                    <label className={styles.radioLabel}>{c}</label>
-                </div>
-            </li>
-        ));
+    function toggleNamespaceExpanded(namespace: string) {
+        const wasExpanded = isNamespaceExpanded(namespace);
+        setExpanded((prev) => ({
+            ...prev,
+            namespaces: { ...prev.namespaces, [namespace]: !wasExpanded },
+        }));
+
+        if (!wasExpanded) {
+            const nsResource = props.resources.find((ns) => ns.name === namespace);
+            if (nsResource && isNotLoaded(nsResource.children)) {
+                props.userMessageHandlers.onSetPodsLoading({ namespace });
+                vscode.postGetPodsRequest({ namespace });
+            }
+        }
+    }
+
+    function togglePodExpanded(namespace: string, podName: string) {
+        const key = `${namespace}/${podName}`;
+        const wasExpanded = isPodExpanded(namespace, podName);
+        setExpanded((prev) => ({
+            ...prev,
+            pods: { ...prev.pods, [key]: !wasExpanded },
+        }));
+
+        if (!wasExpanded) {
+            const nsResource = props.resources.find((ns) => ns.name === namespace);
+            if (nsResource && isLoaded(nsResource.children)) {
+                const podResource = nsResource.children.value.find((p) => p.name === podName);
+                if (podResource && isNotLoaded(podResource.children)) {
+                    props.userMessageHandlers.onSetContainersLoading({ namespace, podName });
+                    vscode.postGetContainersRequest({ namespace, podName });
+                }
+            }
+        }
     }
 
     function handleNoResourceChange(e: ChangeEvent) {
@@ -227,44 +121,134 @@ export function ResourceSelector(props: ResourceSelectorProps) {
         }
     }
 
-    function handleContainerChange(e: ChangeEvent, namespace: string, podName: string, container: string) {
+    function handleContainerChange(e: ChangeEvent, namespace: string, podName: string, containerName: string) {
         if ((e.target as HTMLInputElement).checked) {
-            setSelectedResource({ namespace, podName, container });
-            props.onSelectionChanged({ namespace, podName, container });
+            setSelectedResource({ namespace, podName, containerName });
+            props.onSelectionChanged({ namespace, podName, containerName });
         }
     }
 
-    function toggleNamespaceExpanded(namespace: string) {
-        const namespaceItem = status[namespace];
-        const newNamespaceItem = { ...namespaceItem, isExpanded: !namespaceItem.isExpanded };
-        const newStatus = { ...status, [namespace]: newNamespaceItem };
-        setStatus(newStatus);
-
-        if (newNamespaceItem.isExpanded) {
-            const nsResources = asLookup(props.resources, (ns) => ns.name);
-            if (isNotLoaded(nsResources[namespace].children)) {
-                props.userMessageHandlers.onSetPodsLoading({ namespace });
-                vscode.postGetPodsRequest({ namespace });
-            }
-        }
-    }
-
-    function togglePodExpanded(namespace: string, podName: string) {
-        const namespaceItem = status[namespace];
-        const podItem = namespaceItem.podStatuses[podName];
-        const newPodItem = { ...podItem, isExpanded: !podItem.isExpanded };
-        const newPodStatuses = { ...namespaceItem.podStatuses, [podName]: newPodItem };
-        const newNamespaceItem = { ...namespaceItem, podStatuses: newPodStatuses };
-        const newStatus = { ...status, [namespace]: newNamespaceItem };
-        setStatus(newStatus);
-
-        if (newPodItem.isExpanded) {
-            const nsResources = asLookup(props.resources, (ns) => ns.name);
-            const podResources = lazyAsLookup(nsResources[namespace].children, (pod) => pod.name);
-            if (isNotLoaded(podResources[podName].children)) {
-                props.userMessageHandlers.onSetContainersLoading({ namespace, podName });
-                vscode.postGetContainersRequest({ namespace, podName });
-            }
-        }
-    }
+    return (
+        <ul
+            id={props.id}
+            className={props.className ? `${props.className} ${styles.hierarchyList}` : styles.hierarchyList}
+        >
+            <li>
+                <div className={styles.radioLine}>
+                    <input
+                        type="radio"
+                        onChange={handleNoResourceChange}
+                        checked={isNoResource(selectedResource)}
+                    ></input>
+                    <label className={styles.radioLabel}>All</label>
+                </div>
+            </li>
+            {props.resources.map((nsItem) => (
+                <li key={nsItem.name}>
+                    <FontAwesomeIcon
+                        className={styles.expander}
+                        onClick={() => toggleNamespaceExpanded(nsItem.name)}
+                        icon={isNamespaceExpanded(nsItem.name) ? faChevronDown : faChevronRight}
+                    />
+                    <div className={styles.radioLine}>
+                        <input
+                            type="radio"
+                            className={styles.selector}
+                            onChange={(e) => handleNamespaceChange(e, nsItem.name)}
+                            checked={
+                                isNamespaceResource(selectedResource) && selectedResource.namespace === nsItem.name
+                            }
+                        ></input>
+                        <label className={styles.radioLabel}>{nsItem.name}</label>
+                    </div>
+                    {isNamespaceExpanded(nsItem.name) && (
+                        <ul className={styles.hierarchyList}>
+                            {isLoaded(nsItem.children) ? (
+                                nsItem.children.value.length === 0 ? (
+                                    <li>
+                                        <label className={styles.radioLabel}>
+                                            <i>No pods</i>
+                                        </label>
+                                    </li>
+                                ) : (
+                                    nsItem.children.value.map((podItem) => (
+                                        <li key={podItem.name}>
+                                            <FontAwesomeIcon
+                                                className={styles.expander}
+                                                onClick={() => togglePodExpanded(nsItem.name, podItem.name)}
+                                                icon={
+                                                    isPodExpanded(nsItem.name, podItem.name)
+                                                        ? faChevronDown
+                                                        : faChevronRight
+                                                }
+                                            />
+                                            <div className={styles.radioLine}>
+                                                <input
+                                                    type="radio"
+                                                    onChange={(e) => handlePodChange(e, nsItem.name, podItem.name)}
+                                                    checked={
+                                                        isPodResource(selectedResource) &&
+                                                        selectedResource.namespace === nsItem.name &&
+                                                        selectedResource.podName === podItem.name
+                                                    }
+                                                ></input>
+                                                <label className={styles.radioLabel}>{podItem.name}</label>
+                                            </div>
+                                            {isPodExpanded(nsItem.name, podItem.name) && (
+                                                <ul className={styles.hierarchyList}>
+                                                    {isLoaded(podItem.children) ? (
+                                                        podItem.children.value.length === 0 ? (
+                                                            <li>
+                                                                <label className={styles.radioLabel}>
+                                                                    <i>No containers</i>
+                                                                </label>
+                                                            </li>
+                                                        ) : (
+                                                            podItem.children.value.map((containerName) => (
+                                                                <li key={containerName}>
+                                                                    <div className={styles.radioLine}>
+                                                                        <input
+                                                                            type="radio"
+                                                                            onChange={(e) =>
+                                                                                handleContainerChange(
+                                                                                    e,
+                                                                                    nsItem.name,
+                                                                                    podItem.name,
+                                                                                    containerName,
+                                                                                )
+                                                                            }
+                                                                            checked={
+                                                                                isContainerResource(selectedResource) &&
+                                                                                selectedResource.namespace ===
+                                                                                    nsItem.name &&
+                                                                                selectedResource.podName ===
+                                                                                    podItem.name &&
+                                                                                selectedResource.containerName ===
+                                                                                    containerName
+                                                                            }
+                                                                        ></input>
+                                                                        <label className={styles.radioLabel}>
+                                                                            {containerName}
+                                                                        </label>
+                                                                    </div>
+                                                                </li>
+                                                            ))
+                                                        )
+                                                    ) : (
+                                                        <ProgressRing />
+                                                    )}
+                                                </ul>
+                                            )}
+                                        </li>
+                                    ))
+                                )
+                            ) : (
+                                <ProgressRing />
+                            )}
+                        </ul>
+                    )}
+                </li>
+            ))}
+        </ul>
+    );
 }

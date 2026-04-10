@@ -68,6 +68,7 @@ export type ToVsCodeMsgDef = {
 
 export type ToWebViewMsgDef = {
     updateVersion: GadgetVersion;
+    deployFailed: string;
     runTraceResponse: {
         traceId: number;
         items: TraceOutputItem[];

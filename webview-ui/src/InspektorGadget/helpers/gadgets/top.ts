@@ -17,7 +17,6 @@ import {
     ItemProperty,
     SortDirection,
     ValueType,
-    getDerivedProperty,
     getLiteralProperties,
     getSortSpecifiers,
     toProperties,
@@ -29,24 +28,24 @@ type BlockIOTopKey =
     | (typeof mountNsKeys)[number]
     | "pid"
     | (typeof commandKeys)[number]
-    | "write"
+    | "rw"
     | "major"
     | "minor"
     | "bytes"
     | "us"
-    | "ops";
+    | "io";
 
 const blockIOTopKeyMetadata: ItemMetadata<BlockIOTopKey> = {
     ...k8sKeyMetadata,
     ...mountNsKeyMetadata,
     pid: { identifier: "pid", name: "PID" },
     ...commandKeyMetadata,
-    write: { identifier: "r/w", name: "R/W" },
+    rw: { identifier: "r/w", name: "R/W" },
     major: { identifier: "major", name: "Major" },
     minor: { identifier: "minor", name: "Minor" },
     bytes: { identifier: "bytes", name: "Bytes" },
     us: { identifier: "time", name: "Time" },
-    ops: { identifier: "ops", name: "Ops" },
+    io: { identifier: "ops", name: "Ops" },
 };
 const allBlockIOTopProperties: ItemProperty<BlockIOTopKey>[] = [...getLiteralProperties(blockIOTopKeyMetadata)];
 const defaultBlockIOTopProperties: ItemProperty<BlockIOTopKey>[] = toProperties(allBlockIOTopProperties, [
@@ -56,15 +55,15 @@ const defaultBlockIOTopProperties: ItemProperty<BlockIOTopKey>[] = toProperties(
     "k8s.containerName",
     "pid",
     "comm",
-    "write",
+    "rw",
     "major",
     "minor",
     "bytes",
     "us",
-    "ops",
+    "io",
 ]);
 const defaultBlockIOTopSort = getSortSpecifiers(allBlockIOTopProperties, [
-    { key: "ops", direction: SortDirection.Descending },
+    { key: "io", direction: SortDirection.Descending },
     { key: "bytes", direction: SortDirection.Descending },
     { key: "us", direction: SortDirection.Descending },
 ]);
@@ -148,10 +147,10 @@ type FileTopKey =
     | "pid"
     | (typeof commandKeys)[number]
     | "reads"
-    | "rbytes"
-    | "fileType"
-    | "filename"
-    | "wbytes"
+    | "rbytes_raw"
+    | "t"
+    | "file"
+    | "wbytes_raw"
     | "writes";
 
 const fileTopKeyMetadata: ItemMetadata<FileTopKey> = {
@@ -160,10 +159,10 @@ const fileTopKeyMetadata: ItemMetadata<FileTopKey> = {
     pid: { identifier: "pid", name: "PID" },
     ...commandKeyMetadata,
     reads: { identifier: "reads", name: "Reads" },
-    rbytes: { identifier: "rbytes", name: "RBytes" },
-    fileType: { identifier: "t", name: "T", valueType: ValueType.CharByte },
-    filename: { identifier: "file", name: "File" },
-    wbytes: { identifier: "wbytes", name: "WBytes" },
+    rbytes_raw: { identifier: "rbytes", name: "RBytes" },
+    t: { identifier: "t", name: "T", valueType: ValueType.CharByte },
+    file: { identifier: "file", name: "File" },
+    wbytes_raw: { identifier: "wbytes", name: "WBytes" },
     writes: { identifier: "writes", name: "Writes" },
 };
 const allFileTopProperties: ItemProperty<FileTopKey>[] = [...getLiteralProperties(fileTopKeyMetadata)];
@@ -176,16 +175,16 @@ const defaultFileTopProperties: ItemProperty<FileTopKey>[] = toProperties(allFil
     "comm",
     "reads",
     "writes",
-    "rbytes",
-    "wbytes",
-    "fileType",
-    "filename",
+    "rbytes_raw",
+    "wbytes_raw",
+    "t",
+    "file",
 ]);
 const defaultFileTopSort = getSortSpecifiers(allFileTopProperties, [
     { key: "reads", direction: SortDirection.Descending },
     { key: "writes", direction: SortDirection.Descending },
-    { key: "rbytes", direction: SortDirection.Descending },
-    { key: "wbytes", direction: SortDirection.Descending },
+    { key: "rbytes_raw", direction: SortDirection.Descending },
+    { key: "wbytes_raw", direction: SortDirection.Descending },
 ]);
 export const fileTopMetadata: GadgetMetadata<FileTopKey> = {
     name: "Top File",
@@ -201,27 +200,23 @@ type TcpTopKey =
     | (typeof mountNsKeys)[number]
     | "pid"
     | (typeof commandKeys)[number]
-    | "family"
     | (typeof networkEndpointKeys)[number]
-    | "sent"
-    | "received";
+    | "sent_raw"
+    | "received_raw";
 
 const tcpTopKeyMetadata: ItemMetadata<TcpTopKey> = {
     ...k8sKeyMetadata,
     ...mountNsKeyMetadata,
     pid: { identifier: "pid", name: "PID" },
     ...commandKeyMetadata,
-    family: { identifier: "ip", name: "IP" },
     ...networkEndpointKeyMetadata,
-    sent: { identifier: "sent", name: "Sent", valueType: ValueType.Bytes },
-    received: { identifier: "recv", name: "Recv", valueType: ValueType.Bytes },
+    sent_raw: { identifier: "sent", name: "Sent", valueType: ValueType.Bytes },
+    received_raw: { identifier: "recv", name: "Recv", valueType: ValueType.Bytes },
 };
-type DerivedTcpTopKey = "ip" | (typeof derivedNetworkEndpointKeys)[number];
+type DerivedTcpTopKey = (typeof derivedNetworkEndpointKeys)[number];
 
 const allTcpTopProperties: ItemProperty<TcpTopKey | DerivedTcpTopKey>[] = [
     ...getLiteralProperties(tcpTopKeyMetadata),
-    // https://github.com/inspektor-gadget/inspektor-gadget/blob/08056695b8cfc02698afcbd41add88acfac4d8cf/pkg/gadgets/top/tcp/types/types.go#L64-L69
-    getDerivedProperty("IP", "ip", (item) => (item.family === 2 ? 4 : 6)),
     ...derivedNetworkEndpointProperties,
 ];
 const defaultTcpTopProperties: ItemProperty<TcpTopKey | DerivedTcpTopKey>[] = toProperties(allTcpTopProperties, [
@@ -231,15 +226,14 @@ const defaultTcpTopProperties: ItemProperty<TcpTopKey | DerivedTcpTopKey>[] = to
     "k8s.containerName",
     "pid",
     "comm",
-    "ip",
     "src",
     "dst",
-    "sent",
-    "received",
+    "sent_raw",
+    "received_raw",
 ]);
 const defaultTcpTopSort = getSortSpecifiers(allTcpTopProperties, [
-    { key: "sent", direction: SortDirection.Descending },
-    { key: "received", direction: SortDirection.Descending },
+    { key: "sent_raw", direction: SortDirection.Descending },
+    { key: "received_raw", direction: SortDirection.Descending },
 ]);
 export const tcpTopMetadata: GadgetMetadata<TcpTopKey | DerivedTcpTopKey> = {
     name: "Top TCP",

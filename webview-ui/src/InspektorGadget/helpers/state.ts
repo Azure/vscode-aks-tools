@@ -64,6 +64,11 @@ export const stateUpdater: WebviewStateUpdater<"gadget", EventDef, InspektorGadg
     }),
     vscodeMessageHandler: {
         updateVersion: (state, args) => ({ ...state, overviewStatus: "", version: args }),
+        deployFailed: (state, args) => ({
+            ...state,
+            overviewStatus: `Deploy/undeploy failed: ${args}`,
+            version: { client: "", server: null },
+        }),
         runTraceResponse: (state, args) => ({
             ...state,
             allTraces: getUpdatedTraces(state.allTraces, args.traceId, args.items),
