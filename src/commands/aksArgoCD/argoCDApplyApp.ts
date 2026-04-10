@@ -23,6 +23,7 @@ import * as l10n from "@vscode/l10n";
 import { invokeKubectlCommand } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
 import { failed } from "../utils/errorable";
+import { getAuthenticatedKubeconfigYaml } from "../utils/clusters";
 import { longRunning } from "../utils/host";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
 import { performArgoCDInstall, getOutputChannel } from "./argoCDInstall";
@@ -129,7 +130,17 @@ async function resolveCurrentKubectlContext(
         return undefined;
     }
 
-    return { contextName, kubeconfigYaml: cfgResult.stdout };
+    // AKS AAD clusters have a kubelogin exec block that calls Azure CLI, which is not on
+    // the extension host PATH. Inject the VS Code-managed cached token instead.
+    const authenticatedConfig = await getAuthenticatedKubeconfigYaml(cfgResult.stdout);
+    if (failed(authenticatedConfig)) {
+        vscode.window.showErrorMessage(
+            l10n.t("Could not authenticate kubeconfig for context '{0}': {1}", contextName, authenticatedConfig.error),
+        );
+        return undefined;
+    }
+
+    return { contextName, kubeconfigYaml: authenticatedConfig.result };
 }
 
 // ---------------------------------------------------------------------------
@@ -1101,7 +1112,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
                 invokeKubectlCommand(
                     kubectl,
                     kubeConfigFile.filePath,
-                    `apply -n ${targetNamespace} -f "${fileUri.fsPath}"`,
+                    `apply -n ${targetNamespace} -f "${fileUri.fsPath}" --validate=false`,
                 ),
         );
 
