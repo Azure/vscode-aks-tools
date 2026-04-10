@@ -215,6 +215,60 @@ export async function getKubeconfigYaml(
         : getNonAadKubeconfig(client, resourceGroup, managedCluster.name);
 }
 
+/**
+ * Takes a raw kubeconfig YAML string (e.g. from `kubectl config view --minify --flatten`)
+ * and, if its exec credential block is an AKS kubelogin block, replaces the
+ * Azure CLI credential with a VS Code-managed cached token. This allows kubectl
+ * commands to work without requiring `az` or a system `kubelogin` on the PATH.
+ *
+ * If the kubeconfig has no exec block, or no AKS-specific `--server-id` argument,
+ * the original YAML is returned unchanged.
+ */
+export async function getAuthenticatedKubeconfigYaml(rawKubeconfigYaml: string): Promise<Errorable<string>> {
+    let kubeconfigObj: KubeConfig;
+    try {
+        kubeconfigObj = yaml.load(rawKubeconfigYaml) as KubeConfig;
+    } catch (e) {
+        return { succeeded: false, error: `Failed to parse kubeconfig YAML: ${e}` };
+    }
+
+    const execBlock = kubeconfigObj?.users?.[0]?.user?.exec;
+    if (!execBlock?.args?.includes("--server-id")) {
+        // Not an AKS AAD kubelogin config — return unchanged.
+        return { succeeded: true, result: rawKubeconfigYaml };
+    }
+
+    const execOptions = readExecOptions(execBlock.args);
+    if (!execOptions.serverId || !execOptions.tenantId) {
+        return { succeeded: true, result: rawKubeconfigYaml };
+    }
+
+    const scopes = [`${execOptions.serverId}/.default`, `VSCODE_TENANT:${execOptions.tenantId}`];
+    let session: AuthenticationSession;
+    try {
+        session = await authentication.getSession("microsoft", scopes, { createIfNone: true });
+    } catch (e) {
+        return {
+            succeeded: false,
+            error: `Failed to retrieve Microsoft authentication session for AKS: ${getErrorMessage(e)}`,
+        };
+    }
+
+    const tokenInfo = getTokenInfo(session);
+    if (failed(tokenInfo)) return tokenInfo;
+
+    const cacheDir = storeCachedAadToken(tokenInfo.result, execOptions);
+    if (failed(cacheDir)) return cacheDir;
+
+    const kubeloginPath = await getKubeloginBinaryPath();
+    if (failed(kubeloginPath)) return kubeloginPath;
+
+    execBlock.command = kubeloginPath.result;
+    execBlock.args = buildExecOptionsWithCache(execOptions, cacheDir.result);
+
+    return { succeeded: true, result: yaml.dump(kubeconfigObj) };
+}
+
 async function getNonAadKubeconfig(
     client: azcs.ContainerServiceClient,
     resourceGroup: string,

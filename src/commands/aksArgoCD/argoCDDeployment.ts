@@ -97,156 +97,6 @@ function buildArgoCDAppYaml(params: {
 }
 
 // ---------------------------------------------------------------------------
-// Kubernetes Deployment YAML template
-// ---------------------------------------------------------------------------
-
-function buildDeploymentYaml(params: {
-    appName: string;
-    namespace: string;
-    containerImage: string;
-    containerPort: number;
-}): string {
-    return `# =============================================================================
-# Kubernetes Deployment manifest
-# =============================================================================
-#
-# This file is managed by Argo CD (GitOps).
-#
-# ⚠️  Do NOT apply this file manually with kubectl unless you intentionally
-# want to create a temporary drift that Argo CD will immediately reconcile.
-#
-# Edit here → commit to this GitOps config repo → Argo CD detects the change
-# and rolls it out to the AKS cluster automatically.
-#
-# =============================================================================
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ${params.appName}
-  namespace: ${params.namespace}
-  labels:
-    app: ${params.appName}
-    app.kubernetes.io/name: ${params.appName}
-    app.kubernetes.io/managed-by: argocd
-spec:
-  # Number of pod replicas — increase for high availability.
-  replicas: 2
-
-  selector:
-    matchLabels:
-      app: ${params.appName}
-
-  template:
-    metadata:
-      labels:
-        app: ${params.appName}
-        app.kubernetes.io/name: ${params.appName}
-    spec:
-      # -----------------------------------------------------------------------
-      # Security context: run as non-root by default.
-      # Adjust or remove if your container requires root.
-      # -----------------------------------------------------------------------
-      securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
-
-      containers:
-        - name: ${params.appName}
-          # Replace this with your actual container image.
-          # Argo CD will roll out a new version whenever this tag changes in Git.
-          image: ${params.containerImage}
-          imagePullPolicy: Always
-
-          ports:
-            - name: http
-              containerPort: ${params.containerPort}
-              protocol: TCP
-
-          # Least-privilege container security settings.
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop:
-                - ALL
-
-          # ----------------------------------------------------------------
-          # Resource limits — tune to your workload.
-          # ----------------------------------------------------------------
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-
-          # ----------------------------------------------------------------
-          # Probes — adjust paths / commands to match your application.
-          # ----------------------------------------------------------------
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 5
-
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 15
-            periodSeconds: 10
-`;
-}
-
-// ---------------------------------------------------------------------------
-// Kubernetes Service YAML template
-// ---------------------------------------------------------------------------
-
-function buildServiceYaml(params: { appName: string; namespace: string; containerPort: number }): string {
-    return `# =============================================================================
-# Kubernetes Service manifest
-# =============================================================================
-#
-# This file is managed by Argo CD (GitOps).
-# Edit here → commit → Argo CD reconciles the change to the AKS cluster.
-#
-# =============================================================================
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: ${params.appName}
-  namespace: ${params.namespace}
-  labels:
-    app: ${params.appName}
-    app.kubernetes.io/name: ${params.appName}
-    app.kubernetes.io/managed-by: argocd
-spec:
-  # ClusterIP   — internal cluster traffic only (default, most secure).
-  # LoadBalancer — expose directly via Azure Load Balancer (public IP).
-  # NodePort    — expose on a node port (rarely used with AKS).
-  #
-  # Change to LoadBalancer if you need external access.
-  type: ClusterIP
-
-  selector:
-    app: ${params.appName}
-
-  ports:
-    - name: http
-      protocol: TCP
-      # External port clients connect to.
-      port: 80
-      # Must match containerPort in deployment.yaml.
-      targetPort: ${params.containerPort}
-`;
-}
-
-// ---------------------------------------------------------------------------
 // README template
 // ---------------------------------------------------------------------------
 
@@ -256,8 +106,6 @@ function buildReadmeMarkdown(params: {
     configRepoUrl: string;
     sourceRepoUrl: string;
     clusterServer: string;
-    containerImage: string;
-    containerPort: number;
     appPath: string;
 }): string {
     const sourceRepoLine = params.sourceRepoUrl
@@ -301,16 +149,19 @@ to match what is declared here.
 \`\`\`
 ${params.appPath}/
 ├── README.md            ← you are here
-├── application.yaml     ← Argo CD Application CR (tells Argo CD what to watch)
-├── deployment.yaml      ← Kubernetes Deployment (your workload)
-└── service.yaml         ← Kubernetes Service (network exposure)
+└── application.yaml     ← Argo CD Application CR (tells Argo CD what to watch)
 \`\`\`
 
 | File | Purpose |
 |------|---------|
 | \`application.yaml\` | Registers this app with Argo CD. Points at this config repo path. |
-| \`deployment.yaml\` | Describes your container workload, replicas, probes, resource limits. |
-| \`service.yaml\` | Exposes the workload inside (or outside) the cluster. |
+
+> **Where are \`Deployment\` and \`Service\` manifests?**
+> These manifests are **intentionally not scaffolded here**. They belong in your
+> **application source repository** alongside your application code. The \`spec.source\`
+> in \`application.yaml\` points Argo CD at the source repo path where those manifests live.
+> This preserves GitOps separation of concerns: the config repo tracks Argo CD
+> applications, while the app repo owns the workload manifests.
 
 ---
 
@@ -323,8 +174,6 @@ ${params.appPath}/
 | ${sourceRepoLine} |
 | Target cluster | \`${params.clusterServer}\` |
 | Target namespace | \`${params.namespace}\` |
-| Container image | \`${params.containerImage}\` |
-| Container port | \`${params.containerPort}\` |
 
 ---
 
@@ -417,8 +266,8 @@ Because Argo CD follows the Hollywood Principle, **you never \`kubectl apply\` d
 The workflow is always:
 
 \`\`\`
-1.  Edit a file in this repo  (e.g. bump the image tag in deployment.yaml)
-2.  git commit -m 'chore: bump ${params.appName} image to v1.2.3'
+1.  Edit a file in this repo  (e.g. update the sync policy in application.yaml)
+2.  git commit -m 'chore: update argo cd config for ${params.appName}'
 3.  git push
 4.  Argo CD detects the change (default poll: 3 min, or via webhook — see below)
 5.  Argo CD applies the diff to the AKS cluster automatically
@@ -1054,13 +903,13 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
 
     warningParts.push(
         "",
-        l10n.t("Recommended GitOps config repo layout (4 files will be scaffolded):"),
+        l10n.t("Recommended GitOps config repo layout (2 files will be scaffolded):"),
         l10n.t("  config-repo/"),
         l10n.t("  └── apps/<app-name>/"),
         l10n.t("      ├── README.md         ← install guide + how it all fits together"),
-        l10n.t("      ├── application.yaml  ← Argo CD Application CR"),
-        l10n.t("      ├── deployment.yaml   ← Kubernetes Deployment"),
-        l10n.t("      └── service.yaml      ← Kubernetes Service"),
+        l10n.t("      └── application.yaml  ← Argo CD Application CR"),
+        "",
+        l10n.t("Note: Deployment and Service manifests belong in the application source repository."),
         "",
         l10n.t("How would you like to proceed?"),
     );
@@ -1144,37 +993,14 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     );
     if (!namespace) return;
 
-    const containerImage = await promptRequired(
-        l10n.t("Container image for deployment.yaml (e.g. myregistry.azurecr.io/my-app:latest)"),
-        `myregistry.azurecr.io/${appName}:latest`,
-        `myregistry.azurecr.io/${appName}:latest`,
-    );
-    if (!containerImage) return;
-
-    const containerPortRaw = await promptRequired(
-        l10n.t("Container port your application listens on"),
-        "8080",
-        "8080",
-        (v) => {
-            const n = Number(v);
-            return Number.isInteger(n) && n > 0 && n <= 65535
-                ? undefined
-                : l10n.t("Enter a valid TCP port number (1–65535).");
-        },
-    );
-    if (!containerPortRaw) return;
-    const containerPort = Number(containerPortRaw);
-
     // -----------------------------------------------------------------------
-    // 6. Write all four GitOps config files.
+    // 6. Write the GitOps config files.
     // -----------------------------------------------------------------------
     const appPath = `apps/${appName}`;
     const appDirUri = vscode.Uri.joinPath(targetFolderUri, appPath);
 
     const readmeUri = vscode.Uri.joinPath(appDirUri, "README.md");
     const applicationYamlUri = vscode.Uri.joinPath(appDirUri, "application.yaml");
-    const deploymentYamlUri = vscode.Uri.joinPath(appDirUri, "deployment.yaml");
-    const serviceYamlUri = vscode.Uri.joinPath(appDirUri, "service.yaml");
 
     const applicationYaml = buildArgoCDAppYaml({
         appName,
@@ -1185,16 +1011,12 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
         appPath,
     });
 
-    const deploymentYaml = buildDeploymentYaml({ appName, namespace, containerImage, containerPort });
-    const serviceYaml = buildServiceYaml({ appName, namespace, containerPort });
     const readmeMarkdown = buildReadmeMarkdown({
         appName,
         namespace,
         configRepoUrl,
         sourceRepoUrl,
         clusterServer,
-        containerImage,
-        containerPort,
         appPath,
     });
 
@@ -1204,35 +1026,28 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
         await Promise.all([
             vscode.workspace.fs.writeFile(readmeUri, Buffer.from(readmeMarkdown, "utf8")),
             vscode.workspace.fs.writeFile(applicationYamlUri, Buffer.from(applicationYaml, "utf8")),
-            vscode.workspace.fs.writeFile(deploymentYamlUri, Buffer.from(deploymentYaml, "utf8")),
-            vscode.workspace.fs.writeFile(serviceYamlUri, Buffer.from(serviceYaml, "utf8")),
         ]);
 
-        // Open README.md first so the user sees the setup guide immediately;
-        // the YAML files are visible alongside it in the explorer tree.
+        // Open README.md first so the user sees the setup guide immediately.
         await vscode.window.showTextDocument(readmeUri);
 
         const VIEW_README = l10n.t("Open README.md");
-        const VIEW_DEPLOYMENT = l10n.t("Open deployment.yaml");
-        const VIEW_SERVICE = l10n.t("Open service.yaml");
+        const VIEW_APPLICATION = l10n.t("Open application.yaml");
 
         const followUp = await vscode.window.showInformationMessage(
             l10n.t(
-                "Argo CD config scaffolded at {0}/ — 4 files created: README.md, application.yaml, deployment.yaml, service.yaml.\n\nNext steps:\n  1. Review and customise each file.\n  2. git add {0}/ && git commit -m 'feat: argo cd config for {1}'\n  3. argocd app create -f {0}/application.yaml",
+                "Argo CD config scaffolded at {0}/ — 2 files created: README.md, application.yaml.\n\nNext steps:\n  1. Add your Deployment and Service manifests to the application source repository.\n  2. git add {0}/ && git commit -m 'feat: argo cd config for {1}'\n  3. argocd app create -f {0}/application.yaml",
                 appPath,
                 appName,
             ),
             VIEW_README,
-            VIEW_DEPLOYMENT,
-            VIEW_SERVICE,
+            VIEW_APPLICATION,
         );
 
         if (followUp === VIEW_README) {
             await vscode.window.showTextDocument(readmeUri);
-        } else if (followUp === VIEW_DEPLOYMENT) {
-            await vscode.window.showTextDocument(deploymentYamlUri);
-        } else if (followUp === VIEW_SERVICE) {
-            await vscode.window.showTextDocument(serviceYamlUri);
+        } else if (followUp === VIEW_APPLICATION) {
+            await vscode.window.showTextDocument(applicationYamlUri);
         }
     } catch (err) {
         vscode.window.showErrorMessage(l10n.t("Failed to create Argo CD config files: {0}", String(err)));
