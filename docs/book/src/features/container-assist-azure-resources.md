@@ -15,7 +15,7 @@ Container Assist operates across multiple resource groups and requires both reso
 | **Contributor** (alone) | Subscription | **No** | Can create resource groups, managed identities, and federated credentials, but **cannot assign RBAC roles**. All role assignments will fail. |
 | **Contributor** (alone) | Resource group | **No** | Cannot list clusters/ACRs across the subscription, cannot create the OIDC resource group, and cannot assign roles. |
 
-> **Why Contributor alone is not enough:** The Contributor role explicitly excludes `Microsoft.Authorization/roleAssignments/write`. Container Assist assigns up to 10 RBAC roles across multiple resources (see [Role Assignments](#role-assignments) below). Without role assignment permissions, the OIDC setup completes partially -- the managed identity and federated credential are created, but the pipeline will fail at runtime because the identity lacks access to the cluster and ACR. The extension warns you which roles could not be assigned so you can request them from an admin.
+> **Why Contributor alone is not enough:** The Contributor role explicitly excludes `Microsoft.Authorization/roleAssignments/write`. Container Assist assigns several RBAC roles across multiple resources (see [Role Assignments](#role-assignments) below). Without role assignment permissions, the OIDC setup completes partially -- the managed identity and federated credential are created, but the pipeline will fail at runtime because the identity lacks access to the cluster and ACR. The extension warns you which roles could not be assigned so you can request them from an admin.
 
 ### Why subscription-level access is needed
 
