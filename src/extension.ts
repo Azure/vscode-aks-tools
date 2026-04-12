@@ -83,7 +83,7 @@ import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModerni
 } from "./commands/aksContainerAssist/appModernizationBridge";
 import { draftArgoCDDeployment } from "./commands/aksArgoCD/argoCDDeployment";
 import { argoCDInstall, argoCDCheckStatus } from "./commands/aksArgoCD/argoCDInstall";
-import { argoCDApplyApp } from "./commands/aksArgoCD/argoCDApplyApp";
+import { argoCDApplyApp, argoCDPostApplyActions } from "./commands/aksArgoCD/argoCDApplyApp";
 import {
     setupOIDCForGitHub,
     setGitHubActionsSecrets,
@@ -190,6 +190,7 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.argoCDInstall", argoCDInstall);
         registerCommandWithTelemetry("aks.argoCDCheckStatus", argoCDCheckStatus);
         registerCommandWithTelemetry("aks.argoCDApplyApp", argoCDApplyApp);
+        registerCommandWithTelemetry("aks.argoCDPostApplyActions", argoCDPostApplyActions);
         registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {

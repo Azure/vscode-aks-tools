@@ -215,7 +215,27 @@ helm install argocd argo/argo-cd \\
 
 ---
 
-## 🔑 Step 2 — Access the Argo CD UI & CLI
+## 🔑 Step 2 — Access the Argo CD UI
+
+The login method depends on how Argo CD was installed:
+
+### Option A — Microsoft.ArgoCD extension (Azure k8s-extension) — Microsoft SSO
+
+If Argo CD was installed via the Azure k8s-extension (\`az k8s-extension create --extension-type Microsoft.ArgoCD\`
+with workload identity), the UI is protected by **Microsoft Entra ID**.
+No admin password is required — your browser will redirect to the standard
+Microsoft sign-in page automatically.
+
+\`\`\`bash
+# Port-forward to access the UI locally (if no LoadBalancer ingress is configured)
+kubectl -n argocd port-forward svc/argocd-server 8080:443
+# Open: https://localhost:8080  — sign in with your Microsoft account
+\`\`\`
+
+### Option B — OSS / self-managed install — admin password
+
+If Argo CD was installed manually (kubectl apply or Helm), retrieve the
+auto-generated initial admin password:
 
 \`\`\`bash
 # Get the initial admin password
@@ -228,6 +248,9 @@ kubectl -n argocd port-forward svc/argocd-server 8080:443
 # Log in via CLI
 argocd login localhost:8080 --username admin --insecure
 \`\`\`
+
+> **Tip**: The VS Code AKS extension auto-detects the auth mode and adjusts the
+> "Open Argo CD UI" action accordingly — no manual credential lookup needed.
 
 ---
 
