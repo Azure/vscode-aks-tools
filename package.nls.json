@@ -80,5 +80,6 @@
   "Create Argo CD Deployment (GitOps)": "Create Argo CD Deployment (GitOps)",
   "Install Argo CD on Cluster": "Install Argo CD on Cluster",
   "Check Argo CD Status": "Check Argo CD Status",
-  "Apply Argo CD Application to Cluster": "Apply Argo CD Application to Cluster"
+  "Apply Argo CD Application to Cluster": "Apply Argo CD Application to Cluster",
+  "ArgoCD UI and GH Token completion": "ArgoCD UI and GH Token completion"
 }

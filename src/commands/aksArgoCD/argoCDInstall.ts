@@ -332,6 +332,12 @@ async function showArgoCDStatus(
     channel.appendLine(
         `\n[Argo CD Status] Tip: port-forward the UI →  kubectl port-forward svc/argocd-server -n ${ARGOCD_NAMESPACE} 8080:443`,
     );
+    channel.appendLine(
+        `[Argo CD Status] Auth: if installed via 'az k8s-extension' with workload identity, sign in with your Microsoft account.`,
+    );
+    channel.appendLine(
+        `[Argo CD Status] Auth: if installed via kubectl/Helm, retrieve the initial admin password →  argocd admin initial-password -n ${ARGOCD_NAMESPACE}`,
+    );
 }
 
 // ---------------------------------------------------------------------------

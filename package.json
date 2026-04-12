@@ -472,6 +472,11 @@
                 "command": "aks.argoCDApplyApp",
                 "title": "%Apply Argo CD Application to Cluster%",
                 "category": "AKS"
+            },
+            {
+                "command": "aks.argoCDPostApplyActions",
+                "title": "%ArgoCD UI and GH Token completion%",
+                "category": "AKS"
             }
         ],
         "menus": {
