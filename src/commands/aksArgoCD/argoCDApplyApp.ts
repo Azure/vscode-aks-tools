@@ -35,7 +35,7 @@ import { performArgoCDInstall, getOutputChannel } from "./argoCDInstall";
 interface ArgoCDApplication {
     apiVersion: string;
     kind: string;
-    metadata?: { name?: string; namespace?: string };
+    metadata?: { name?: string; namespace?: string; annotations?: Record<string, string> };
     spec?: { source?: { repoURL?: string } };
 }
 
@@ -651,7 +651,10 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         // Post-apply: detect auth mode and probe repo visibility in parallel
         // so neither probe blocks the other.
         // ------------------------------------------------------------------
-        const repoUrl = doc.spec?.source?.repoURL ?? "";
+        // Prefer the explicit source-repo annotation (set by the deployment wizard)
+        // over spec.source.repoURL which points to the GitOps config repo.
+        const repoUrl =
+            doc.metadata?.annotations?.["aks-extension/source-repo"]?.trim() || doc.spec?.source?.repoURL || "";
         const isGitHub = /github\.com/i.test(repoUrl);
 
         const [authMode, repoVisibility] = await Promise.all([
@@ -698,8 +701,8 @@ export async function argoCDPostApplyActions(
     let kubectl: k8s.APIAvailable<k8s.KubectlV1>;
     let kubeConfigFilePath: string;
     let clusterName: string;
-    let appName: string;
-    let repoUrl: string;
+    let appName = "(current cluster)";
+    let repoUrl = "";
     let authMode: "sso" | "admin-password";
     let repoVisibility: "public" | "private" | "unknown";
     let ownedTempFile: Awaited<ReturnType<typeof createTempFile>> | undefined;
@@ -722,15 +725,28 @@ export async function argoCDPostApplyActions(
         ownedTempFile = await createTempFile(ctx.kubeconfigYaml, "yaml");
         kubeConfigFilePath = ownedTempFile.filePath;
         clusterName = ctx.contextName;
-        appName = "(current cluster)";
-        repoUrl = "";
 
-        const [detectedAuth, detectedRepo] = await Promise.all([
+        // Read repo URL from the currently active editor — the same file the
+        // user just ran "Apply Argo CD Application" on.
+        const activeUri = vscode.window.activeTextEditor?.document.uri;
+        if (activeUri) {
+            const activeDoc = await parseApplicationFile(activeUri);
+            if (activeDoc) {
+                repoUrl =
+                    activeDoc.metadata?.annotations?.["aks-extension/source-repo"]?.trim() ||
+                    activeDoc.spec?.source?.repoURL ||
+                    "";
+                appName = activeDoc.metadata?.name ?? "(current cluster)";
+            }
+        }
+
+        const isGitHub = /github\.com/i.test(repoUrl);
+        const [detectedAuth, detectedVisibility] = await Promise.all([
             detectArgoCDAuthMode(kubectl, kubeConfigFilePath),
-            Promise.resolve("unknown" as const),
+            isGitHub ? probeGitHubRepoVisibility(repoUrl) : Promise.resolve("unknown" as const),
         ]);
         authMode = detectedAuth;
-        repoVisibility = detectedRepo;
+        repoVisibility = detectedVisibility;
     } else {
         kubectl = kubectlArg as k8s.APIAvailable<k8s.KubectlV1>;
         kubeConfigFilePath = kubeConfigFileArg as string;

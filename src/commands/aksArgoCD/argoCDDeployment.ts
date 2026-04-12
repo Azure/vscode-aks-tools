@@ -1058,11 +1058,7 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
         const VIEW_APPLICATION = l10n.t("Open application.yaml");
 
         const followUp = await vscode.window.showInformationMessage(
-            l10n.t(
-                "Argo CD config scaffolded at {0}/ — 2 files created: README.md, application.yaml.\n\nNext steps:\n  1. Add your Deployment and Service manifests to the application source repository.\n  2. git add {0}/ && git commit -m 'feat: argo cd config for {1}'\n  3. argocd app create -f {0}/application.yaml",
-                appPath,
-                appName,
-            ),
+            l10n.t("✓ Argo CD config ready at {0}/ — README.md, application.yaml", appPath),
             VIEW_README,
             VIEW_APPLICATION,
         );
