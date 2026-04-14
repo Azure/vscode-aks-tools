@@ -80,13 +80,13 @@ export async function setupOIDCForGitHub(
         // Confirm before creating/updating the federated identity credential
         const federatedBranchPreview = repoInfo.mainBranch ?? "main";
         const federatedSubjectPreview = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${federatedBranchPreview}`;
-        const identityAction = azureConfig.isExistingIdentity
-            ? l10n.t("update existing managed identity")
-            : l10n.t("create a new managed identity");
+        const identityStatus = azureConfig.isExistingIdentity
+            ? l10n.t("Existing managed identity")
+            : l10n.t("New managed identity");
         const confirmMessage = l10n.t(
-            "A Federated Identity Credential will be {0} in your Azure subscription.\n\nDetails:\n• Identity: {1}\n• Resource group: {2}\n• Subject: {3}\n• Issuer: https://token.actions.githubusercontent.com\n\nProceed?",
-            identityAction,
+            "A Federated Identity Credential will be created or updated in your Azure subscription.\n\nDetails:\n• Managed identity: {0} ({1})\n• Resource group: {2}\n• Subject: {3}\n• Issuer: https://token.actions.githubusercontent.com\n\nProceed?",
             azureConfig.identityName,
+            identityStatus,
             azureConfig.resourceGroup,
             federatedSubjectPreview,
         );
