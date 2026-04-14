@@ -27,6 +27,9 @@ import { showWizardExitConfirmation } from "./wizardUtils";
 
 const execFilePromise = promisify(execFile);
 
+// GitHub OIDC issuer URL
+const GITHUB_OIDC_ISSUER = "https://token.actions.githubusercontent.com";
+
 // Azure built-in role definition IDs
 // https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 const AKS_CLUSTER_USER_ROLE_ID = "4abbcc35-e782-43d8-92c5-2d3f1bd2253f";
@@ -78,13 +81,18 @@ export async function setupOIDCForGitHub(
         }
 
         // Confirm before creating/updating the federated identity credential
-        const federatedBranchPreview = repoInfo.mainBranch ?? "main";
+        const federatedBranchPreview = repoInfo.mainBranch || "main";
         const federatedSubjectPreview = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${federatedBranchPreview}`;
         const identityStatus = azureConfig.isExistingIdentity
             ? l10n.t("Existing managed identity")
             : l10n.t("New managed identity");
         const confirmMessage = l10n.t(
-            "A Federated Identity Credential will be created or updated in your Azure subscription.\n\nDetails:\n• Managed identity: {0} ({1})\n• Resource group: {2}\n• Subject: {3}\n• Issuer: https://token.actions.githubusercontent.com\n\nProceed?",
+            "A Federated Identity Credential will be created or updated in your Azure subscription.\n\nDetails:\n• Managed identity: {0} ({1})\n• Resource group: {2}\n• Subject: {3}\n• Issuer: {4}\n\nProceed?",
+            azureConfig.identityName,
+            identityStatus,
+            azureConfig.resourceGroup,
+            federatedSubjectPreview,
+            GITHUB_OIDC_ISSUER,
             azureConfig.identityName,
             identityStatus,
             azureConfig.resourceGroup,
@@ -773,7 +781,7 @@ async function createFederatedCredential(
     const subject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${branch}`;
 
     await msiClient.federatedIdentityCredentials.createOrUpdate(resourceGroup, identityName, credentialName, {
-        issuer: "https://token.actions.githubusercontent.com",
+        issuer: GITHUB_OIDC_ISSUER,
         subject: subject,
         audiences: ["api://AzureADTokenExchange"],
     });
@@ -795,7 +803,7 @@ async function displayOIDCResults(
 AZURE_TENANT_ID: ${result.tenantId}
 AZURE_SUBSCRIPTION_ID: ${result.subscriptionId}`;
 
-    const federatedBranch = repoInfo.mainBranch ?? "main";
+    const federatedBranch = repoInfo.mainBranch || "main";
     const federatedSubject = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${federatedBranch}`;
 
     const selection = await vscode.window.showInformationMessage(message, setSecrets, copyAll, viewInstructions);
