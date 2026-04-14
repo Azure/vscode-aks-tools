@@ -26,6 +26,11 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
 import { getExtensionPath } from "../utils/host";
 import { failed } from "../utils/errorable";
+import { createTempFile } from "../utils/tempfile";
+import * as k8s from "vscode-kubernetes-tools-api";
+import { invokeKubectlCommand } from "../utils/kubectl";
+import { NonZeroExitCodeBehaviour } from "../utils/shell";
+import { resolveCurrentKubectlContext } from "./argoCDApplyApp";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -119,7 +124,7 @@ function buildReadmeMarkdown(params: {
 
 ---
 
-## 📌 The Hollywood Principle (GitOps)
+## 📌 The GitOps Principle (Hollywood Principle)
 
 Argo CD follows the **"Don't call us, we'll call you"** (Hollywood) principle of computer science.
 Your AKS cluster **never pushes** changes — Argo CD runs as a controller inside the cluster and
@@ -890,7 +895,7 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     // 3. Show the Hollywood-Principle guidance message (always shown).
     // -----------------------------------------------------------------------
     const warningParts: string[] = [
-        l10n.t("Argo CD — Hollywood Principle (GitOps)"),
+        l10n.t("Argo CD — GitOps (Hollywood Principle)"),
         "",
         l10n.t("Argo CD follows the \"Don't call us, we'll call you\" (Hollywood) principle."),
         l10n.t(
@@ -937,7 +942,7 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
         l10n.t("How would you like to proceed?"),
     );
 
-    const SCAFFOLD_HERE = l10n.t("Scaffold Here");
+    const SCAFFOLD_HERE = l10n.t("Continue to Create ArgoCD Pipeline");
     const OPEN_CONFIG_REPO = l10n.t("Open Config Repository…");
     const LEARN_MORE = l10n.t("Learn More");
 
@@ -977,7 +982,7 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     // 5. Collect parameters via input boxes.
     // -----------------------------------------------------------------------
     const appName = await promptRequired(
-        l10n.t("Application name (used as Argo CD app name and directory name)"),
+        l10n.t("ArgoCD Application (pipeline) name – this is the configuration name for the app deployment)"),
         "my-app",
         undefined,
         (v) =>
@@ -1002,18 +1007,75 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
             false,
         )) ?? "";
 
-    const clusterServer = await promptRequired(
-        l10n.t("Target AKS cluster API server URL (use https://kubernetes.default.svc for in-cluster)"),
-        "https://kubernetes.default.svc",
-        "https://kubernetes.default.svc",
-    );
-    if (!clusterServer) return;
+    // Default to in-cluster — works for the majority of AKS + Argo CD setups.
+    const clusterServer = "https://kubernetes.default.svc";
 
-    const namespace = await promptRequired(l10n.t("Target Kubernetes namespace"), "default", "default", (v) =>
-        /^[a-z0-9][a-z0-9-]*$/.test(v)
-            ? undefined
-            : l10n.t("Use lowercase letters, digits, and hyphens only (must start with a letter or digit)."),
-    );
+    // Fetch namespaces from the active cluster for the QuickPick.
+    // Falls back to a plain input box if kubectl is unavailable.
+    let namespace: string | undefined;
+    const kubectl = await k8s.extension.kubectl.v1;
+    if (kubectl.available) {
+        const ctx = await resolveCurrentKubectlContext(kubectl);
+        if (ctx) {
+            const tmpKubeconfig = await createTempFile(ctx.kubeconfigYaml, "yaml");
+            try {
+                const nsResult = await invokeKubectlCommand(
+                    kubectl,
+                    tmpKubeconfig.filePath,
+                    `get namespace -o json`,
+                    NonZeroExitCodeBehaviour.Succeed,
+                );
+                if (!failed(nsResult) && nsResult.result.stdout.trim()) {
+                    type RawNs = { metadata: { name: string; labels?: Record<string, string> } };
+                    let rawItems: RawNs[] = [];
+                    try {
+                        rawItems = (JSON.parse(nsResult.result.stdout) as { items: RawNs[] }).items ?? [];
+                    } catch {
+                        // fall through to fallback
+                    }
+                    const names = rawItems.map((ns) => ns.metadata.name);
+                    // Ensure "default" is always present and first.
+                    if (!names.includes("default")) {
+                        rawItems.unshift({ metadata: { name: "default", labels: {} } });
+                    }
+                    // Sort: "default" first, then alphabetical.
+                    rawItems.sort((a, b) => {
+                        if (a.metadata.name === "default") return -1;
+                        if (b.metadata.name === "default") return 1;
+                        return a.metadata.name.localeCompare(b.metadata.name);
+                    });
+                    const nsItems: vscode.QuickPickItem[] = rawItems.map((ns) => {
+                        const name = ns.metadata.name;
+                        const labels = ns.metadata.labels ?? {};
+                        let description: string | undefined;
+                        if (name === "default") {
+                            description = l10n.t("recommended default");
+                        } else if (labels["headlamp.dev/project-managed-by"] === "aks-desktop") {
+                            description = l10n.t("(AKS desktop Project: {0})", name);
+                        }
+                        return { label: name, description };
+                    });
+                    const picked = (await vscode.window.showQuickPick(nsItems, {
+                        title: l10n.t("Target Kubernetes namespace"),
+                        placeHolder: "default",
+                        ignoreFocusOut: true,
+                    })) as vscode.QuickPickItem | undefined;
+                    namespace = picked?.label;
+                }
+            } finally {
+                tmpKubeconfig.dispose();
+            }
+        }
+    }
+
+    // Fallback: plain input box when kubectl is unavailable or returned no namespaces.
+    if (namespace === undefined) {
+        namespace = await promptRequired(l10n.t("Target Kubernetes namespace"), "default", "default", (v) =>
+            /^[a-z0-9][a-z0-9-]*$/.test(v)
+                ? undefined
+                : l10n.t("Use lowercase letters, digits, and hyphens only (must start with a letter or digit)."),
+        );
+    }
     if (!namespace) return;
 
     // -----------------------------------------------------------------------
@@ -1051,23 +1113,15 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
             vscode.workspace.fs.writeFile(applicationYamlUri, Buffer.from(applicationYaml, "utf8")),
         ]);
 
-        // Open README.md first so the user sees the setup guide immediately.
-        await vscode.window.showTextDocument(readmeUri);
+        // Open README.md in the first column and application.yaml beside it.
+        // Opening application.yaml triggers the onDidOpenTextDocument listener
+        // which immediately offers "Apply to Cluster" as a bottom-right notification.
+        await vscode.window.showTextDocument(readmeUri, { viewColumn: vscode.ViewColumn.One });
+        await vscode.window.showTextDocument(applicationYamlUri, { viewColumn: vscode.ViewColumn.Two });
 
-        const VIEW_README = l10n.t("Open README.md");
-        const VIEW_APPLICATION = l10n.t("Open application.yaml");
-
-        const followUp = await vscode.window.showInformationMessage(
+        vscode.window.showInformationMessage(
             l10n.t("✓ Argo CD config ready at {0}/ — README.md, application.yaml", appPath),
-            VIEW_README,
-            VIEW_APPLICATION,
         );
-
-        if (followUp === VIEW_README) {
-            await vscode.window.showTextDocument(readmeUri);
-        } else if (followUp === VIEW_APPLICATION) {
-            await vscode.window.showTextDocument(applicationYamlUri);
-        }
     } catch (err) {
         vscode.window.showErrorMessage(l10n.t("Failed to create Argo CD config files: {0}", String(err)));
     }

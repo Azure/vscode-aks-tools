@@ -39,7 +39,7 @@ interface ArgoCDApplication {
     spec?: { source?: { repoURL?: string } };
 }
 
-function isArgoCDApplication(doc: unknown): doc is ArgoCDApplication {
+export function isArgoCDApplication(doc: unknown): doc is ArgoCDApplication {
     if (typeof doc !== "object" || doc === null) return false;
     const d = doc as Record<string, unknown>;
     return typeof d.apiVersion === "string" && d.apiVersion.startsWith("argoproj.io/") && d.kind === "Application";
@@ -102,7 +102,7 @@ function resolveFileUri(target: unknown): vscode.Uri | undefined {
  * directly from the local kubeconfig without any Azure subscription lookup.
  * Returns undefined (and shows an error) if kubectl has no current context.
  */
-async function resolveCurrentKubectlContext(
+export async function resolveCurrentKubectlContext(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
 ): Promise<{ contextName: string; kubeconfigYaml: string } | undefined> {
     const ctxResult = await kubectl.api.invokeCommand("config current-context");
@@ -574,8 +574,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
     // ------------------------------------------------------------------
     const APPLY = l10n.t("Apply");
     const confirmed = await vscode.window.showInformationMessage(
-        l10n.t("Apply Argo CD Application '{0}' to the current cluster context '{1}'?", appName, clusterName),
-        { modal: true },
+        l10n.t("Apply Argo CD Application '{0}' to cluster '{1}'?", appName, clusterName),
         APPLY,
     );
     if (!confirmed) return;
@@ -586,8 +585,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
     const kubeConfigFile = await createTempFile(kubeconfigYaml, "yaml");
 
     try {
-        // ------------------------------------------------------------------
-        // 5. Verify Argo CD is installed (check for argocd namespace).
+        // 6. Verify Argo CD is installed (check for argocd namespace).
         // ------------------------------------------------------------------
         const nsCheck = await longRunning(l10n.t("Checking if Argo CD is installed on '{0}'…", clusterName), () =>
             invokeKubectlCommand(
@@ -621,7 +619,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         }
 
         // ------------------------------------------------------------------
-        // 6. Apply the manifest to the cluster.
+        // 7. Apply the manifest to the cluster.
         // ------------------------------------------------------------------
         const applyResult = await longRunning(
             l10n.t("Applying Argo CD Application '{0}' to '{1}'…", appName, clusterName),
