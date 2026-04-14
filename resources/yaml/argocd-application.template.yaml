@@ -2,7 +2,7 @@
 # Argo CD Application Manifest
 # =============================================================================
 #
-# ⚠️  IMPORTANT — Hollywood Principle / GitOps "Don't call us, we'll call you"
+# ⚠️  IMPORTANT — GitOps Principle (Hollywood Principle) "Don't call us, we'll call you"
 #
 # This file belongs in a SEPARATE GitOps config repository, NOT in your
 # application source repository.

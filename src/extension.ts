@@ -83,7 +83,7 @@ import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModerni
 } from "./commands/aksContainerAssist/appModernizationBridge";
 import { draftArgoCDDeployment } from "./commands/aksArgoCD/argoCDDeployment";
 import { argoCDInstall, argoCDCheckStatus } from "./commands/aksArgoCD/argoCDInstall";
-import { argoCDApplyApp, argoCDPostApplyActions } from "./commands/aksArgoCD/argoCDApplyApp";
+import { argoCDApplyApp, argoCDPostApplyActions, isArgoCDApplication } from "./commands/aksArgoCD/argoCDApplyApp";
 import {
     setupOIDCForGitHub,
     setGitHubActionsSecrets,
@@ -191,6 +191,32 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.argoCDCheckStatus", argoCDCheckStatus);
         registerCommandWithTelemetry("aks.argoCDApplyApp", argoCDApplyApp);
         registerCommandWithTelemetry("aks.argoCDPostApplyActions", argoCDPostApplyActions);
+
+        // Notify when an Argo CD Application YAML is opened in the editor.
+        context.subscriptions.push(
+            vscode.workspace.onDidOpenTextDocument(async (document) => {
+                if (document.languageId !== "yaml" && document.languageId !== "yml") return;
+                let parsed: unknown;
+                try {
+                    const yaml = await import("js-yaml");
+                    parsed = yaml.load(document.getText());
+                } catch {
+                    return;
+                }
+                if (!isArgoCDApplication(parsed)) return;
+                const APPLY = l10n.t("Apply to Cluster");
+                const action = await vscode.window.showInformationMessage(
+                    l10n.t(
+                        "Argo CD Application '{0}' detected — apply it to the active cluster?",
+                        parsed.metadata?.name ?? document.fileName.split("/").pop() ?? "unknown",
+                    ),
+                    APPLY,
+                );
+                if (action === APPLY) {
+                    await vscode.commands.executeCommand("aks.argoCDApplyApp", document.uri);
+                }
+            }),
+        );
         registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
