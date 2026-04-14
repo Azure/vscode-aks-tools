@@ -77,6 +77,24 @@ export async function setupOIDCForGitHub(
             return;
         }
 
+        // Confirm before creating/updating the federated identity credential
+        const federatedBranchPreview = repoInfo.mainBranch ?? "main";
+        const federatedSubjectPreview = `repo:${repoInfo.owner}/${repoInfo.repo}:ref:refs/heads/${federatedBranchPreview}`;
+        const identityAction = azureConfig.isExistingIdentity
+            ? l10n.t("update existing managed identity")
+            : l10n.t("create a new managed identity");
+        const confirmMessage = l10n.t(
+            "A Federated Identity Credential will be {0} in your Azure subscription.\n\nDetails:\n• Identity: {1}\n• Resource group: {2}\n• Subject: {3}\n• Issuer: https://token.actions.githubusercontent.com\n\nProceed?",
+            identityAction,
+            azureConfig.identityName,
+            azureConfig.resourceGroup,
+            federatedSubjectPreview,
+        );
+        const confirmed = await vscode.window.showWarningMessage(confirmMessage, { modal: true }, l10n.t("Proceed"));
+        if (!confirmed) {
+            return;
+        }
+
         // Create managed identity and set up OIDC
         const result = await vscode.window.withProgress(
             {
