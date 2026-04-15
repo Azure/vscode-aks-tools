@@ -296,7 +296,22 @@ describe("Workflow Template Tests", () => {
             const result = renderWorkflowTemplate(managedConfig);
 
             assert.ok(result.includes("Annotate namespace"), "Managed template should have annotate namespace step");
-            assert.ok(result.includes("kubectl annotate namespace"), "Managed template should annotate the namespace");
+            assert.ok(
+                result.includes("az aks namespace update"),
+                "Managed template should update namespace annotations via az aks namespace update",
+            );
+            assert.ok(
+                result.includes("--annotations"),
+                "Managed template should pass annotations to az aks namespace update",
+            );
+            assert.ok(
+                result.includes("aks-project/workload-identity-id="),
+                "Managed template should set workload-identity-id on namespace",
+            );
+            assert.ok(
+                result.includes("aks-project/workload-identity-tenant="),
+                "Managed template should set workload-identity-tenant on namespace",
+            );
             assert.ok(result.includes("Annotate deployment"), "Managed template should have annotate deployment step");
             assert.ok(
                 result.includes("kubectl annotate deployment --all"),

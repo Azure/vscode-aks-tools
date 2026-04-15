@@ -118,10 +118,13 @@ jobs:
              # Annotates the namespace with workload identity metadata
             - name: Annotate namespace
               run: |
-                  kubectl annotate namespace ${{ env.NAMESPACE }} \
-                    aks-project/workload-identity-id="${{ secrets.AZURE_CLIENT_ID }}" \
-                    aks-project/workload-identity-tenant="${{ secrets.AZURE_TENANT_ID }}" \
-                    --overwrite
+                  az aks namespace update \
+                    --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} \
+                    --cluster-name ${{ env.CLUSTER_NAME }} \
+                    --name ${{ env.NAMESPACE }} \
+                    --annotations \
+                      aks-project/workload-identity-id="${{ secrets.AZURE_CLIENT_ID }}" \
+                      aks-project/workload-identity-tenant="${{ secrets.AZURE_TENANT_ID }}"
 
             # Annotates the deployed resources with metadata for traceability
             - name: Annotate deployment
