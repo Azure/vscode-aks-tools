@@ -201,18 +201,18 @@ describe("Workflow Template Tests", () => {
             assert.ok(result.includes("action: deploy"), "Should specify deploy action");
         });
 
-        it("should annotate namespace with workload identity metadata", () => {
+        it("should not annotate namespace with workload identity metadata for non-managed namespaces", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("Annotate namespace"), "Should have annotate namespace step");
-            assert.ok(result.includes("kubectl annotate namespace"), "Should annotate the namespace");
+            assert.ok(!result.includes("Annotate namespace"), "Should not have annotate namespace step");
+            assert.ok(!result.includes("kubectl annotate namespace"), "Should not annotate the namespace");
             assert.ok(
-                result.includes("aks-project/workload-identity-id="),
-                "Should set workload-identity-id on namespace",
+                !result.includes("aks-project/workload-identity-id="),
+                "Should not set workload-identity-id on namespace",
             );
             assert.ok(
-                result.includes("aks-project/workload-identity-tenant="),
-                "Should set workload-identity-tenant on namespace",
+                !result.includes("aks-project/workload-identity-tenant="),
+                "Should not set workload-identity-tenant on namespace",
             );
         });
 
@@ -246,10 +246,8 @@ describe("Workflow Template Tests", () => {
         it("should not place identity annotations on deployment", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            // Identity annotations should only appear in the namespace annotation step, not deployment
+            // Identity annotations are removed for non-managed template and must not appear in deployment annotation
             const deployAnnotateIdx = result.indexOf("kubectl annotate deployment --all");
-            const nsAnnotateIdx = result.indexOf("kubectl annotate namespace");
-            assert.ok(nsAnnotateIdx !== -1, "Namespace annotation step should exist");
             assert.ok(deployAnnotateIdx !== -1, "Deployment annotation step should exist");
 
             // Workload identity keys must not appear after the deployment annotate command
