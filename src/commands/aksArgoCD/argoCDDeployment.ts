@@ -895,15 +895,18 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     // 3. Show the Hollywood-Principle guidance message (always shown).
     // -----------------------------------------------------------------------
     const warningParts: string[] = [
-        l10n.t("Argo CD — GitOps (Hollywood Principle)"),
+        l10n.t("GitOps pipeline using ArgoCD (Hollywood Principle)"),
         "",
-        l10n.t("Argo CD follows the \"Don't call us, we'll call you\" (Hollywood) principle."),
         l10n.t(
-            "Your AKS cluster does NOT push changes — Argo CD continuously PULLS desired state from a Git repository and reconciles it automatically.",
+            "This will install an ArgoCD application configuration (pipeline) on your cluster. Argo will pull from your repository to get the K8s manifests and apply them — it will continually check for updates thereafter and apply.",
         ),
         "",
+        l10n.t("Note:"),
         l10n.t(
-            "This means your Argo CD Application manifest MUST live in a dedicated GitOps config repository, separate from your application source code.",
+            "• ArgoCD application configurations are not maintained with application code and MUST reside outside of the application in a dedicated GitOps config repository.",
+        ),
+        l10n.t(
+            "• You must have K8s application manifests in your repo. If you do not, run 'Migrate Application to AKS' and generate the manifests.",
         ),
     ];
 
