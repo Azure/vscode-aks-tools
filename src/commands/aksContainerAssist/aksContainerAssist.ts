@@ -253,7 +253,7 @@ async function showContainerAssistQuickPick(
     });
 
     if (!selected || selected.length === 0) {
-        return showWizardExitConfirmation(() => showContainerAssistQuickPick());
+        return showWizardExitConfirmation(() => showContainerAssistQuickPick(defaultActions));
     }
 
     return selected.map((item) => item.action);
