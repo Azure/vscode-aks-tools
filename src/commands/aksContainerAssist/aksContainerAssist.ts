@@ -17,7 +17,11 @@ import { selectLanguageModel } from "./lmClient";
 import { showWizardExitConfirmation } from "./wizardUtils";
 export { showWizardExitConfirmation } from "./wizardUtils";
 
-export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
+export async function runContainerAssist(
+    _context: IActionContext,
+    target: unknown,
+    defaultActions: ContainerAssistAction[] = [],
+): Promise<void> {
     try {
         logger.debug("Command target", target);
 
@@ -62,8 +66,12 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
 
         const projectRoot = await findProjectRoot(startPath, workspaceFolder.uri.fsPath);
 
-        await executeContainerAssistActions(containerAssistService, workspaceFolder, projectRoot, (hasWorkflow) =>
-            collectAzureContext(hasWorkflow, projectRoot),
+        await executeContainerAssistActions(
+            containerAssistService,
+            workspaceFolder,
+            projectRoot,
+            (hasWorkflow) => collectAzureContext(hasWorkflow, projectRoot),
+            defaultActions,
         );
     } catch (error) {
         logger.error("Unexpected error in Container Assist", error);
@@ -217,19 +225,24 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
     return startPath;
 }
 
-async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] | undefined> {
+async function showContainerAssistQuickPick(
+    defaultActions: ContainerAssistAction[] = [],
+): Promise<ContainerAssistAction[] | undefined> {
+    const deploymentPicked = defaultActions.includes(ContainerAssistAction.GenerateDeployment);
+    const workflowPicked = defaultActions.includes(ContainerAssistAction.GenerateWorkflow);
+
     const items: ContainerAssistQuickPickItem[] = [
         {
             label: l10n.t("$(file) Generate Deployment Files"),
             description: l10n.t("Analyze → Generate Dockerfile → Generate Kubernetes Manifests"),
             action: ContainerAssistAction.GenerateDeployment,
-            picked: false,
+            picked: deploymentPicked,
         },
         {
             label: l10n.t("$(github-action) Generate GitHub Workflow"),
             description: l10n.t("Create GitHub Actions workflow for CI/CD to AKS"),
             action: ContainerAssistAction.GenerateWorkflow,
-            picked: false,
+            picked: workflowPicked,
         },
     ];
 
@@ -256,8 +269,9 @@ async function executeContainerAssistActions(
     workspaceFolder: vscode.WorkspaceFolder,
     projectRoot: string,
     azureContextProvider: (hasWorkflow: boolean) => Promise<AzureContext | undefined>,
+    defaultActions: ContainerAssistAction[] = [],
 ): Promise<void> {
-    const selectedActions = await showContainerAssistQuickPick();
+    const selectedActions = await showContainerAssistQuickPick(defaultActions);
     if (!selectedActions || selectedActions.length === 0) {
         return;
     }
