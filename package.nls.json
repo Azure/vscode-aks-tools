@@ -74,9 +74,6 @@
   "Troubleshoot & Diagnose": "Troubleshoot & Diagnose",
   "Manage Cluster": "Manage Cluster",
   "AKS Quick Actions": "AKS Quick Actions",
-  "Migrate Application to AKS": "Migrate Application to AKS",
-  "Migrate and Modernize App": "Migrate and Modernize App",
-  "Containerization App": "Containerization App",
   "AKS: Migrate Application to AKS": "AKS: Migrate Application to AKS",
   "AKS: Generate Dockerfiles and K8s Manifests for App": "AKS: Generate Dockerfiles and K8s Manifests for App",
   "AKS: Deploy App with Automated Pipeline": "AKS: Deploy App with Automated Pipeline"

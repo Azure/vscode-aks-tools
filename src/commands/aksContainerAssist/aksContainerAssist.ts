@@ -86,7 +86,11 @@ export async function runContainerAssist(
  * Subscription and cluster are extracted from the tree node, so the user
  * is NOT prompted for those — only ACR, namespace, and workflow name are asked.
  */
-export async function runContainerAssistFromTree(_context: IActionContext, target: unknown): Promise<void> {
+export async function runContainerAssistFromTree(
+    _context: IActionContext,
+    target: unknown,
+    defaultActions: ContainerAssistAction[] = [],
+): Promise<void> {
     try {
         logger.debug("Container Assist from tree, target", target);
 
@@ -117,8 +121,13 @@ export async function runContainerAssistFromTree(_context: IActionContext, targe
         }
 
         // Step 4: Execute shared action selection & processing logic
-        await executeContainerAssistActions(containerAssistService, workspaceFolder, projectRoot, (hasWorkflow) =>
-            collectAzureContextFromTree(subscriptionId, clusterName, resourceGroupName, hasWorkflow, projectRoot),
+        await executeContainerAssistActions(
+            containerAssistService,
+            workspaceFolder,
+            projectRoot,
+            (hasWorkflow) =>
+                collectAzureContextFromTree(subscriptionId, clusterName, resourceGroupName, hasWorkflow, projectRoot),
+            defaultActions,
         );
     } catch (error) {
         logger.error("Unexpected error in Container Assist (from tree)", error);

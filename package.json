@@ -426,10 +426,6 @@
                 "title": "AKS: Deploy application to AKS (Preview)"
             },
             {
-                "command": "aks.runContainerAssistFromTree",
-                "title": "AKS: Run Container Assist (Preview)"
-            },
-            {
                 "command": "aks.setupOIDCForGitHub",
                 "title": "AKS: Setup OIDC for GitHub Actions (Preview)"
             },
@@ -442,11 +438,19 @@
                 "title": "%AKS: Migrate Application to AKS%"
             },
             {
-                "command": "aks.containerizationApp",
+                "command": "aks.containerizeApp",
+                "title": "%AKS: Generate Dockerfiles and K8s Manifests for App%"
+            },
+            {
+                "command": "aks.containerizeAppFromTree",
                 "title": "%AKS: Generate Dockerfiles and K8s Manifests for App%"
             },
             {
                 "command": "aks.deployAppWithAutomatedPipeline",
+                "title": "%AKS: Deploy App with Automated Pipeline%"
+            },
+            {
+                "command": "aks.deployAppWithAutomatedPipelineFromTree",
                 "title": "%AKS: Deploy App with Automated Pipeline%"
             }
         ],
@@ -469,7 +473,11 @@
                     "when": "workspaceFolderCount >= 1 && config.aks.containerAssistEnabledPreview"
                 },
                 {
-                    "command": "aks.runContainerAssistFromTree",
+                    "command": "aks.containerizeAppFromTree",
+                    "when": "never"
+                },
+                {
+                    "command": "aks.deployAppWithAutomatedPipelineFromTree",
                     "when": "never"
                 }
             ],
@@ -480,7 +488,7 @@
                     "group": "5_cutcopypaste@50"
                 },
                 {
-                    "command": "aks.containerizationApp",
+                    "command": "aks.containerizeApp",
                     "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
                     "group": "5_cutcopypaste@51"
                 },
@@ -542,9 +550,19 @@
                     "group": "8@1"
                 },
                 {
-                    "command": "aks.runContainerAssistFromTree",
+                    "command": "aks.migrateAndModernizeApp",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure && config.aks.containerAssistEnabledPreview",
+                    "group": "8_containerassist@1"
+                },
+                {
+                    "command": "aks.containerizeAppFromTree",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure && config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1",
-                    "group": "8@2"
+                    "group": "8_containerassist@2"
+                },
+                {
+                    "command": "aks.deployAppWithAutomatedPipelineFromTree",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure && config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1",
+                    "group": "8_containerassist@3"
                 },
                 {
                     "command": "aks.eraserTool",
@@ -770,13 +788,23 @@
                     "group": "1_developer@1"
                 },
                 {
-                    "command": "aks.runContainerAssistFromTree",
+                    "command": "aks.migrateAndModernizeApp",
                     "group": "1_developer@2",
+                    "when": "config.aks.containerAssistEnabledPreview"
+                },
+                {
+                    "command": "aks.containerizeAppFromTree",
+                    "group": "1_developer@3",
+                    "when": "config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.deployAppWithAutomatedPipelineFromTree",
+                    "group": "1_developer@4",
                     "when": "config.aks.containerAssistEnabledPreview && workspaceFolderCount >= 1"
                 },
                 {
                     "command": "aks.aksDraftValidate",
-                    "group": "1_developer@3"
+                    "group": "1_developer@5"
                 },
                 {
                     "command": "aks.attachAcrToCluster",
