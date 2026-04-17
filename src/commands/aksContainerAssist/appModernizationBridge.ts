@@ -2,12 +2,17 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
 import * as vscode from "vscode";
 import { runContainerAssist } from "./aksContainerAssist";
+import { ContainerAssistAction } from "./types";
 
 const appModernizationExtensionId = "vscjava.migrate-java-to-azure";
 const appModernizationViewCommand = "workbench.view.extension.azureJavaMigrationExplorer";
 
 export async function containerizationApp(_context: IActionContext, target: unknown): Promise<void> {
-    await runContainerAssist(_context, target);
+    await runContainerAssist(_context, target, [ContainerAssistAction.GenerateDeployment]);
+}
+
+export async function deployAppWithAutomatedPipeline(_context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssist(_context, target, [ContainerAssistAction.GenerateWorkflow]);
 }
 
 export async function migrateAndModernizeApp(): Promise<void> {
