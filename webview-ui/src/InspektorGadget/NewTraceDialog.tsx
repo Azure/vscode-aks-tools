@@ -105,9 +105,9 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
         const { namespace, podName, containerName, ...rest } = traceConfig.filters!;
         const newNamespace = extraProperties.noK8sResourceFiltering
             ? NamespaceSelection.Default
-            : !namespace
-              ? NamespaceSelection.All
-              : namespace;
+            : selection.namespace
+              ? selection.namespace
+              : NamespaceSelection.All;
         const filters = { ...rest, ...selection, namespace: newNamespace };
         setTraceConfig({ ...traceConfig, filters });
     }

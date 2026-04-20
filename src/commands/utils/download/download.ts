@@ -3,7 +3,8 @@ import { succeeded, Errorable, getErrorMessage } from "../errorable";
 import { Dictionary } from "../dictionary";
 import { sleep } from "../sleep";
 import { mkdir } from "fs/promises";
-import { WriteStream, createWriteStream } from "fs";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
 import fetch from "node-fetch";
 
 const DOWNLOAD_ONCE_STATUS: Dictionary<DownloadOperationStatus> = {};
@@ -16,7 +17,11 @@ enum DownloadOperationStatus {
 
 export async function to(sourceUrl: string, destinationFile: string): Promise<Errorable<null>> {
     try {
-        await download(sourceUrl, destinationFile);
+        const result = await download(sourceUrl, destinationFile);
+
+        if (!succeeded(result)) {
+            return result;
+        }
 
         return { succeeded: true, result: null };
     } catch (e) {
@@ -57,26 +62,15 @@ async function download(url: string, outputFilepath: string): Promise<Errorable<
         return { succeeded: false, error: `Unable to create directory ${directory}: ${getErrorMessage(e)}` };
     }
 
-    let fileStream: WriteStream;
-    try {
-        fileStream = createWriteStream(outputFilepath);
-    } catch (e) {
-        return { succeeded: false, error: `Unable to create file ${outputFilepath}: ${getErrorMessage(e)}` };
-    }
-
     try {
         const response = await fetch(url);
         if (response.body === null) {
             return { succeeded: false, error: `No body in response from ${url}` };
         }
 
-        for await (const chunk of response.body) {
-            fileStream.write(chunk);
-        }
+        await pipeline(response.body, createWriteStream(outputFilepath));
     } catch (e) {
         return { succeeded: false, error: `Error downloading from ${url} to ${outputFilepath}: ${getErrorMessage(e)}` };
-    } finally {
-        fileStream.end();
     }
 
     return { succeeded: true, result: undefined };
