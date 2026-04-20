@@ -167,9 +167,10 @@ async function detectArgoCDAuthMode(
     );
     if (failed(result)) return "admin-password";
     const oidcConfig = result.result.stdout.trim().replace(/^"|"$/g, "");
-    return oidcConfig.includes("microsoftonline.com") || oidcConfig.includes("useWorkloadIdentity")
-        ? "sso"
-        : "admin-password";
+    // Use a strict URL pattern to avoid incomplete substring matching (CodeQL: incomplete-url-substring-sanitization).
+    // This ensures the hostname is exactly "login.microsoftonline.com" and not a look-alike domain.
+    const isMicrosoftOidc = /https:\/\/login\.microsoftonline\.com\//.test(oidcConfig);
+    return isMicrosoftOidc || oidcConfig.includes("useWorkloadIdentity") ? "sso" : "admin-password";
 }
 
 // ---------------------------------------------------------------------------
