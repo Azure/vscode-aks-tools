@@ -15,9 +15,11 @@ import {
     fileExists,
     scanForK8sManifests,
     scanForDockerfiles,
+    getK8sManifestFolder,
 } from "./fileOperations";
 import { logger } from "./logger";
 import type { AzureContext } from "./azureSelections";
+import { ContainerAssistService } from "./containerAssistService";
 
 /** Parameters for workflow generation, replacing positional arguments. */
 export interface WorkflowGenerationOptions {
@@ -164,7 +166,7 @@ async function collectWorkflowConfiguration(
             relativeManifests,
         );
     } else {
-        const detectedManifests = await scanForK8sManifests(workspaceRoot);
+        const detectedManifests = await detectK8sManifests(workspaceRoot, projectRoot);
         relativeManifests = detectedManifests.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
     }
 
@@ -356,6 +358,41 @@ function formatManifestPathForYamlBlock(manifests: string[]): string {
     }
     return `|\n${manifests.map((manifest) => `        ${manifest}`).join("\n")}`;
 }
+
+/**
+ * Detects Kubernetes manifests by scanning each module's <modulePath>/<k8sFolder>
+ * (via analyzeRepo), matching where deployment generation writes them.
+ * Falls back to a workspace-root scan if no modules or manifests are found.
+ */
+async function detectK8sManifests(workspaceRoot: string, projectRoot: string): Promise<string[]> {
+    try {
+        const service = new ContainerAssistService();
+        const analysis = await service.analyzeRepository(projectRoot);
+        if (analysis.succeeded && analysis.result.modules.length > 0) {
+            const manifestFolder = getK8sManifestFolder();
+            const scanRoots = new Set<string>();
+            for (const module of analysis.result.modules) {
+                scanRoots.add(path.join(module.modulePath, manifestFolder));
+                scanRoots.add(module.modulePath);
+            }
+
+            const found = new Set<string>();
+            for (const root of scanRoots) {
+                const hits = await scanForK8sManifests(root);
+                hits.forEach((p) => found.add(p));
+            }
+
+            if (found.size > 0) {
+                return Array.from(found);
+            }
+        }
+    } catch (error) {
+        logger.error("Module-aware manifest detection failed; falling back to workspace-root scan", error);
+    }
+
+    return scanForK8sManifests(workspaceRoot);
+}
+
 /**
  * Sanitizes workflow name to be used as filename
  */
