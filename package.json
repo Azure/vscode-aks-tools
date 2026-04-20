@@ -455,28 +455,23 @@
             },
             {
                 "command": "aks.draftArgoCDDeployment",
-                "title": "%Create Argo CD Deployment (GitOps)%",
-                "category": "AKS"
+                "title": "%AKS: Create Argo CD GitOps Pipeline%"
             },
             {
                 "command": "aks.argoCDInstall",
-                "title": "%Install Argo CD on Cluster%",
-                "category": "AKS"
+                "title": "%AKS: Install Argo CD on Cluster%"
             },
             {
                 "command": "aks.argoCDCheckStatus",
-                "title": "%Check Argo CD Status%",
-                "category": "AKS"
+                "title": "%AKS: Check Argo CD Status%"
             },
             {
                 "command": "aks.argoCDApplyApp",
-                "title": "%Apply Argo CD Application to Cluster%",
-                "category": "AKS"
+                "title": "%AKS: Apply Argo CD Application to Cluster%"
             },
             {
                 "command": "aks.argoCDPostApplyActions",
-                "title": "%ArgoCD UI and GH Token completion%",
-                "category": "AKS"
+                "title": "%AKS: Argo CD Post-Deploy Actions%"
             }
         ],
         "menus": {
@@ -539,19 +534,24 @@
                     "group": "5_cutcopypaste@52"
                 },
                 {
-                    "command": "aks.aksDraftValidate",
-                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "command": "aks.draftArgoCDDeployment",
+                    "when": "explorerResourceIsFolder",
                     "group": "5_cutcopypaste@53"
                 },
                 {
                     "command": "aks.aksDraftValidate",
-                    "when": "explorerResourceIsFolder",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
                     "group": "5_cutcopypaste@54"
+                },
+                {
+                    "command": "aks.aksDraftValidate",
+                    "when": "explorerResourceIsFolder",
+                    "group": "5_cutcopypaste@55"
                 },
                 {
                     "command": "aks.argoCDApplyApp",
                     "when": "resourceExtname == .yaml || resourceExtname == .yml",
-                    "group": "5_cutcopypaste@52"
+                    "group": "5_cutcopypaste@56"
                 }
             ],
             "editor/context": [
