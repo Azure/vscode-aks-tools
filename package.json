@@ -958,7 +958,7 @@
         "copy-webpack-plugin": "^14.0.0",
         "eslint": "^10.2.0",
         "eslint-webpack-plugin": "^5.0.3",
-        "fast-check": "^4.6.0",
+        "fast-check": "^4.7.0",
         "glob": "^13.0.6",
         "globals": "^17.4.0",
         "husky": "^9.1.7",
