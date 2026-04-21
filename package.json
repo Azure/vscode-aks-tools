@@ -439,11 +439,15 @@
             },
             {
                 "command": "aks.migrateAndModernizeApp",
-                "title": "%Migrate and Modernize App%"
+                "title": "%AKS: Migrate Application to AKS%"
             },
             {
                 "command": "aks.containerizationApp",
-                "title": "%Containerization App%"
+                "title": "%AKS: Generate Dockerfiles and K8s Manifests for App%"
+            },
+            {
+                "command": "aks.deployAppWithAutomatedPipeline",
+                "title": "%AKS: Deploy App with Automated Pipeline%"
             }
         ],
         "menus": {
@@ -471,19 +475,29 @@
             ],
             "explorer/context": [
                 {
-                    "submenu": "aks.migrateApplicationToAksSubMenu",
+                    "command": "aks.migrateAndModernizeApp",
                     "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
                     "group": "5_cutcopypaste@50"
                 },
                 {
+                    "command": "aks.containerizationApp",
+                    "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
+                    "group": "5_cutcopypaste@51"
+                },
+                {
+                    "command": "aks.deployAppWithAutomatedPipeline",
+                    "when": "explorerResourceIsFolder && config.aks.containerAssistEnabledPreview",
+                    "group": "5_cutcopypaste@52"
+                },
+                {
                     "command": "aks.aksDraftValidate",
                     "when": "resourceExtname == .yaml || resourceExtname == .yml",
-                    "group": "5_cutcopypaste@50"
+                    "group": "5_cutcopypaste@53"
                 },
                 {
                     "command": "aks.aksDraftValidate",
                     "when": "explorerResourceIsFolder",
-                    "group": "5_cutcopypaste@51"
+                    "group": "5_cutcopypaste@54"
                 }
             ],
             "view/item/context": [
@@ -829,16 +843,6 @@
                     "command": "aks.aksReconcileCluster",
                     "group": "2_operations@3"
                 }
-            ],
-            "aks.migrateApplicationToAksSubMenu": [
-                {
-                    "command": "aks.migrateAndModernizeApp",
-                    "group": "navigation@1"
-                },
-                {
-                    "command": "aks.containerizationApp",
-                    "group": "navigation@2"
-                }
             ]
         },
         "submenus": [
@@ -901,10 +905,6 @@
             {
                 "id": "aks.manageClusterSubMenu",
                 "label": "%Manage Cluster%"
-            },
-            {
-                "id": "aks.migrateApplicationToAksSubMenu",
-                "label": "%Migrate Application to AKS%"
             }
         ]
     },
