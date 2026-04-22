@@ -34,6 +34,7 @@
   - [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
   - [Create AKS Fleet Manager from VS Code](./features/aks-fleet-manager.md)
   - [Setup AKS MCP Server from VS Code](./features/aks-mcp-server-integration.md)
+  - [Argo CD GitOps Integration](./features/argocd-gitops-integration.md)
 
 - [Release](./release.md)
   - [What's New in 1.7.0](./release/whats-new-1.7.0.md)
