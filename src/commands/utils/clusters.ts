@@ -918,24 +918,23 @@ export type Cluster = {
 export async function getClusters(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
-): Promise<Cluster[]> {
+): Promise<Errorable<Cluster[]>> {
     const clusters = await getResources(sessionProvider, subscriptionId, "Microsoft.ContainerService/managedClusters");
     if (failed(clusters)) {
-        // Silently skip subscriptions that cannot be listed (e.g. insufficient
-        // permissions or transient API errors).  If every subscription fails the
-        // caller's empty-array guard will surface a meaningful message instead
-        // of spamming one error popup per subscription.
-        return [];
+        return clusters;
     }
 
-    return clusters.result.map((cluster) => {
-        return {
-            name: cluster.name,
-            clusterId: cluster.id,
-            resourceGroup: cluster.resourceGroup,
-            subscriptionId: subscriptionId,
-        };
-    });
+    return {
+        succeeded: true,
+        result: clusters.result.map((cluster) => {
+            return {
+                name: cluster.name,
+                clusterId: cluster.id,
+                resourceGroup: cluster.resourceGroup,
+                subscriptionId: subscriptionId,
+            };
+        }),
+    };
 }
 
 export async function getClusterDiagnosticSettings(

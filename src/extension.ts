@@ -195,10 +195,13 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
             vscode.workspace.onDidOpenTextDocument(async (document) => {
                 if (document.languageId !== "yaml" && document.languageId !== "yml") return;
+                // Cheap substring pre-check to avoid parsing large YAML files unnecessarily.
+                const text = document.getText();
+                if (!text.includes("argoproj.io/") || !text.includes("Application")) return;
                 let parsed: unknown;
                 try {
                     const yaml = await import("js-yaml");
-                    parsed = yaml.load(document.getText());
+                    parsed = yaml.load(text);
                 } catch {
                     return;
                 }
@@ -207,7 +210,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 const action = await vscode.window.showInformationMessage(
                     l10n.t(
                         "Argo CD Application '{0}' detected — apply it to the active cluster?",
-                        parsed.metadata?.name ?? document.fileName.split("/").pop() ?? "unknown",
+                        parsed.metadata?.name ?? path.basename(document.fileName) ?? "unknown",
                     ),
                     APPLY,
                 );

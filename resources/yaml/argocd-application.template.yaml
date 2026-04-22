@@ -16,9 +16,12 @@
 #   config-repo/
 #   └── apps/
 #       └── {{APP_NAME}}/
-#           ├── application.yaml   ← this file
-#           ├── deployment.yaml    ← your Kubernetes workload manifests
-#           └── service.yaml
+#           └── application.yaml   ← this file (Argo CD Application CR)
+#
+# Kubernetes workload manifests (deployment.yaml, service.yaml, etc.)
+# live in the directory referenced by spec.source.path — either in this
+# config repo or in your application source repo, depending on your
+# GitOps layout.
 #
 # Reference: https://argo-cd.readthedocs.io/en/stable/
 # =============================================================================

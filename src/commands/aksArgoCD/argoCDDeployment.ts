@@ -164,9 +164,11 @@ ${params.appPath}/
 > **Where are \`Deployment\` and \`Service\` manifests?**
 > These manifests are **intentionally not scaffolded here**. They belong in your
 > **application source repository** alongside your application code. The \`spec.source\`
-> in \`application.yaml\` points Argo CD at the source repo path where those manifests live.
-> This preserves GitOps separation of concerns: the config repo tracks Argo CD
-> applications, while the app repo owns the workload manifests.
+> in \`application.yaml\` points Argo CD at **this config repo** path where the
+> Application CR lives. Update the \`spec.source.path\` to reference the directory
+> containing your Kubernetes workload manifests (deployment, service, etc.) —
+> these can live in this config repo or in a separate source repo depending on
+> your GitOps layout.
 
 ---
 
@@ -992,7 +994,7 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     // 5. Collect parameters via input boxes.
     // -----------------------------------------------------------------------
     const appName = await promptRequired(
-        l10n.t("ArgoCD Application (pipeline) name – this is the configuration name for the app deployment)"),
+        l10n.t("Argo CD Application (pipeline) name – this is the configuration name for the app deployment"),
         "my-app",
         undefined,
         (v) =>
