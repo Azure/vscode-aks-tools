@@ -26,7 +26,7 @@ import { failed } from "../utils/errorable";
 import { getAuthenticatedKubeconfigYaml } from "../utils/clusters";
 import { longRunning } from "../utils/host";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
-import { performArgoCDInstall, getOutputChannel } from "./argoCDInstall";
+import { getOutputChannel } from "./argoCDInstall";
 
 // ---------------------------------------------------------------------------
 // Type guard — validate that a parsed YAML doc is an Argo CD Application
@@ -571,22 +571,14 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
     const { contextName: clusterName, kubeconfigYaml } = ctx;
 
     // ------------------------------------------------------------------
-    // 3. Inform the user which cluster will be used and confirm.
-    // ------------------------------------------------------------------
-    const APPLY = l10n.t("Apply");
-    const confirmed = await vscode.window.showInformationMessage(
-        l10n.t("Apply Argo CD Application '{0}' to cluster '{1}'?", appName, clusterName),
-        APPLY,
-    );
-    if (!confirmed) return;
-
-    // ------------------------------------------------------------------
-    // 4. Write kubeconfig to a temp file.
+    // 3. Write kubeconfig to a temp file (needed for all kubectl calls).
     // ------------------------------------------------------------------
     const kubeConfigFile = await createTempFile(kubeconfigYaml, "yaml");
 
     try {
-        // 6. Verify Argo CD is installed (check for argocd namespace).
+        // ------------------------------------------------------------------
+        // 4. Verify Argo CD is installed (check for argocd namespace).
+        //    Do this early — no point continuing if Argo CD is not present.
         // ------------------------------------------------------------------
         const nsCheck = await longRunning(l10n.t("Checking if Argo CD is installed on '{0}'…", clusterName), () =>
             invokeKubectlCommand(
@@ -600,24 +592,102 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         const argoCDMissing = failed(nsCheck) || nsCheck.result.stdout.trim() === "";
 
         if (argoCDMissing) {
-            const INSTALL_NOW = l10n.t("Install Argo CD Now");
-            const APPLY_ANYWAY = l10n.t("Apply Anyway");
-            const choice = await vscode.window.showWarningMessage(
+            vscode.window.showWarningMessage(
                 l10n.t(
-                    "Argo CD is not installed on '{0}' (namespace 'argocd' not found). Install it now, or apply the manifest anyway.",
+                    "Argo CD is not installed on cluster '{0}' (namespace 'argocd' not found). Please install Argo CD on your cluster before using this functionality. See https://argo-cd.readthedocs.io/en/stable/getting_started/",
                     clusterName,
                 ),
-                { modal: true },
-                INSTALL_NOW,
-                APPLY_ANYWAY,
             );
-            if (!choice) return;
-            if (choice === INSTALL_NOW) {
-                const channel = getOutputChannel();
-                const installed = await performArgoCDInstall(kubectl, kubeConfigFile.filePath, clusterName, channel);
-                if (!installed) return;
+            return;
+        }
+
+        // ------------------------------------------------------------------
+        // 5. Pick the target namespace — show cluster namespaces with
+        //    AKS desktop labels if present, default to the YAML value.
+        // ------------------------------------------------------------------
+        let selectedNamespace: string | undefined = targetNamespace;
+
+        const nsListResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
+            invokeKubectlCommand(
+                kubectl,
+                kubeConfigFile.filePath,
+                `get namespace -o json`,
+                NonZeroExitCodeBehaviour.Succeed,
+            ),
+        );
+
+        if (!failed(nsListResult) && nsListResult.result.stdout.trim()) {
+            type RawNs = { metadata: { name: string; labels?: Record<string, string> } };
+            let rawItems: RawNs[] = [];
+            try {
+                rawItems = (JSON.parse(nsListResult.result.stdout) as { items: RawNs[] }).items ?? [];
+            } catch {
+                // fall through to use YAML default
+            }
+
+            // Filter out system namespaces, keep "default" and the YAML-specified namespace.
+            const systemNs = new Set(["kube-system", "kube-public", "kube-node-lease", "gatekeeper-system", "argocd"]);
+            rawItems = rawItems.filter(
+                (ns) =>
+                    ns.metadata.name === "default" ||
+                    ns.metadata.name === targetNamespace ||
+                    !systemNs.has(ns.metadata.name),
+            );
+
+            if (rawItems.length > 0) {
+                const names = rawItems.map((ns) => ns.metadata.name);
+                if (!names.includes("default")) {
+                    rawItems.unshift({ metadata: { name: "default", labels: {} } });
+                }
+
+                // Sort: YAML-specified namespace first, then "default", then alphabetical.
+                rawItems.sort((a, b) => {
+                    if (a.metadata.name === targetNamespace) return -1;
+                    if (b.metadata.name === targetNamespace) return 1;
+                    if (a.metadata.name === "default") return -1;
+                    if (b.metadata.name === "default") return 1;
+                    return a.metadata.name.localeCompare(b.metadata.name);
+                });
+
+                const nsItems: vscode.QuickPickItem[] = rawItems.map((ns) => {
+                    const name = ns.metadata.name;
+                    const labels = ns.metadata.labels ?? {};
+                    let description: string | undefined;
+                    if (labels["headlamp.dev/project-managed-by"] === "aks-desktop") {
+                        description = l10n.t("(AKS desktop Project: {0})", name);
+                    } else if (name === targetNamespace) {
+                        description = l10n.t("from YAML manifest");
+                    } else if (name === "default") {
+                        description = l10n.t("recommended default");
+                    }
+                    return { label: name, description };
+                });
+
+                const picked = await vscode.window.showQuickPick(nsItems, {
+                    title: l10n.t("Namespace ({0} available)", nsItems.length),
+                    placeHolder: l10n.t("Select a Kubernetes namespace"),
+                    ignoreFocusOut: true,
+                });
+
+                if (!picked) return;
+                selectedNamespace = picked.label;
             }
         }
+
+        // ------------------------------------------------------------------
+        // 6. Confirm the apply action.
+        // ------------------------------------------------------------------
+        const APPLY = l10n.t("Apply");
+        const confirmed = await vscode.window.showInformationMessage(
+            l10n.t(
+                "Apply Argo CD Application '{0}' to namespace '{1}' on cluster '{2}'?",
+                appName,
+                selectedNamespace,
+                clusterName,
+            ),
+            APPLY,
+        );
+        if (!confirmed) return;
 
         // ------------------------------------------------------------------
         // 7. Apply the manifest to the cluster.
@@ -628,7 +698,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
                 invokeKubectlCommand(
                     kubectl,
                     kubeConfigFile.filePath,
-                    `apply -n ${targetNamespace} -f "${fileUri.fsPath}" --validate=false`,
+                    `apply -n ${selectedNamespace} -f "${fileUri.fsPath}" --validate=false`,
                 ),
         );
 
