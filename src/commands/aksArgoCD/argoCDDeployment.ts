@@ -24,7 +24,7 @@ import * as fs from "fs";
 import { generateKeyPairSync } from "crypto";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
-import { getExtensionPath } from "../utils/host";
+import { getExtensionPath, longRunning } from "../utils/host";
 import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -355,6 +355,13 @@ argocd app history ${params.appName}
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Well-known Kubernetes system namespaces to filter out of the namespace picker. */
+const SYSTEM_NAMESPACES = new Set(["kube-system", "kube-public", "kube-node-lease", "gatekeeper-system", "argocd"]);
+
+function isSystemNamespace(name: string): boolean {
+    return SYSTEM_NAMESPACES.has(name);
+}
 
 /**
  * Returns true if any well-known application source file is found in the
@@ -1022,11 +1029,13 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
         if (ctx) {
             const tmpKubeconfig = await createTempFile(ctx.kubeconfigYaml, "yaml");
             try {
-                const nsResult = await invokeKubectlCommand(
-                    kubectl,
-                    tmpKubeconfig.filePath,
-                    `get namespace -o json`,
-                    NonZeroExitCodeBehaviour.Succeed,
+                const nsResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
+                    invokeKubectlCommand(
+                        kubectl,
+                        tmpKubeconfig.filePath,
+                        `get namespace -o json`,
+                        NonZeroExitCodeBehaviour.Succeed,
+                    ),
                 );
                 if (!failed(nsResult) && nsResult.result.stdout.trim()) {
                     type RawNs = { metadata: { name: string; labels?: Record<string, string> } };
@@ -1036,8 +1045,12 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
                     } catch {
                         // fall through to fallback
                     }
+                    // Filter out system namespaces, keep "default".
+                    rawItems = rawItems.filter(
+                        (ns) => ns.metadata.name === "default" || !isSystemNamespace(ns.metadata.name),
+                    );
                     const names = rawItems.map((ns) => ns.metadata.name);
-                    // Ensure "default" is always present and first.
+                    // Ensure "default" is always present.
                     if (!names.includes("default")) {
                         rawItems.unshift({ metadata: { name: "default", labels: {} } });
                     }
@@ -1051,18 +1064,18 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
                         const name = ns.metadata.name;
                         const labels = ns.metadata.labels ?? {};
                         let description: string | undefined;
-                        if (name === "default") {
-                            description = l10n.t("recommended default");
-                        } else if (labels["headlamp.dev/project-managed-by"] === "aks-desktop") {
+                        if (labels["headlamp.dev/project-managed-by"] === "aks-desktop") {
                             description = l10n.t("(AKS desktop Project: {0})", name);
+                        } else if (name === "default") {
+                            description = l10n.t("recommended default");
                         }
                         return { label: name, description };
                     });
-                    const picked = (await vscode.window.showQuickPick(nsItems, {
-                        title: l10n.t("Target Kubernetes namespace"),
-                        placeHolder: "default",
+                    const picked = await vscode.window.showQuickPick(nsItems, {
+                        title: l10n.t("Namespace ({0} available)", nsItems.length),
+                        placeHolder: l10n.t("Select a Kubernetes namespace"),
                         ignoreFocusOut: true,
-                    })) as vscode.QuickPickItem | undefined;
+                    });
                     namespace = picked?.label;
                 }
             } finally {

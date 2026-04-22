@@ -457,10 +457,7 @@
                 "command": "aks.draftArgoCDDeployment",
                 "title": "%AKS: Create Argo CD GitOps Pipeline%"
             },
-            {
-                "command": "aks.argoCDInstall",
-                "title": "%AKS: Install Argo CD on Cluster%"
-            },
+
             {
                 "command": "aks.argoCDCheckStatus",
                 "title": "%AKS: Check Argo CD Status%"
@@ -484,10 +481,7 @@
                     "command": "aks.draftArgoCDDeployment",
                     "when": "workspaceFolderCount >= 1"
                 },
-                {
-                    "command": "aks.argoCDInstall",
-                    "when": "never"
-                },
+
                 {
                     "command": "aks.argoCDCheckStatus",
                     "when": "never"
@@ -868,10 +862,7 @@
                     "group": "2_deploy@3",
                     "when": "workspaceFolderCount >= 1"
                 },
-                {
-                    "command": "aks.argoCDInstall",
-                    "group": "2_deploy@4"
-                },
+
                 {
                     "command": "aks.argoCDCheckStatus",
                     "group": "2_deploy@5"

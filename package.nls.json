@@ -78,7 +78,6 @@
   "AKS: Generate Dockerfiles and K8s Manifests for App": "AKS: Generate Dockerfiles and K8s Manifests for App",
   "AKS: Deploy App with Automated Pipeline": "AKS: Deploy App with Automated Pipeline",
   "AKS: Create Argo CD GitOps Pipeline": "AKS: Create Argo CD GitOps Pipeline",
-  "AKS: Install Argo CD on Cluster": "AKS: Install Argo CD on Cluster",
   "AKS: Check Argo CD Status": "AKS: Check Argo CD Status",
   "AKS: Apply Argo CD Application to Cluster": "AKS: Apply Argo CD Application to Cluster",
   "AKS: Argo CD Post-Deploy Actions": "AKS: Argo CD Post-Deploy Actions"
