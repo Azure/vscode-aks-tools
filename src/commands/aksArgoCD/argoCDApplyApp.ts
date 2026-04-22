@@ -298,10 +298,9 @@ async function openArgoCDUI(
 
             const credAction = await vscode.window.showInformationMessage(
                 l10n.t(
-                    "Argo CD UI: {0}\n\nUsername: {1}\nPassword: {2}\n\n(This is the initial admin password from argocd-initial-admin-secret.)",
+                    "Argo CD UI: {0}\n\nUsername: {1}\nPassword: ••••••••\n\n(Click 'Copy Password & Open' to copy the initial admin password to clipboard before opening.)",
                     uiUrl,
                     creds.username,
-                    creds.password,
                 ),
                 { modal: true },
                 COPY_AND_OPEN,
@@ -357,7 +356,7 @@ async function openArgoCDUI(
  *   "unknown" — no silent session, API error, or non-GitHub URL
  */
 async function probeGitHubRepoVisibility(repoUrl: string): Promise<"public" | "private" | "unknown"> {
-    const urlMatch = repoUrl.trim().match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?\/?\s*$/i);
+    const urlMatch = repoUrl.trim().match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?\s*$/i);
     if (!urlMatch) return "unknown";
     const [, owner, repoSlug] = urlMatch;
 
@@ -405,7 +404,7 @@ async function connectPrivateGitHubRepo(
     kubeConfigFile: string,
     repoUrl: string,
 ): Promise<void> {
-    const urlMatch = repoUrl.trim().match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?\/?\s*$/i);
+    const urlMatch = repoUrl.trim().match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?\s*$/i);
     if (!urlMatch) return;
     const [, owner, repoSlug] = urlMatch;
 
@@ -489,46 +488,51 @@ async function connectPrivateGitHubRepo(
     const username = githubUsername ?? "git";
     const httpsUrl = repoUrl.trim().startsWith("http") ? repoUrl.trim() : `https://github.com/${owner}/${repoSlug}.git`;
 
-    const secretYaml = [
-        "apiVersion: v1",
-        "kind: Secret",
-        "metadata:",
-        `  name: ${secretName}`,
-        "  namespace: argocd",
-        "  labels:",
-        "    argocd.argoproj.io/secret-type: repository",
-        "stringData:",
-        "  type: git",
-        `  url: ${httpsUrl}`,
-        `  username: ${username}`,
-        `  password: ${pat}`,
-    ].join("\n");
+    // Avoid writing the PAT to a temp file on disk.  Instead, use
+    // `kubectl create secret --from-literal` (in-memory only) and then
+    // label the resulting Secret so Argo CD auto-discovers it.
+    const result = await longRunning(l10n.t("Registering repository with Argo CD…"), async () => {
+        // Remove any existing secret first so `create` is idempotent.
+        await invokeKubectlCommand(
+            kubectl,
+            kubeConfigFile,
+            `delete secret ${secretName} -n argocd --ignore-not-found`,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
 
-    const tmpFile = await createTempFile(secretYaml, "yaml");
-    try {
-        const result = await longRunning(l10n.t("Registering repository with Argo CD…"), () =>
-            invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile,
-                `apply -f "${tmpFile.filePath}"`,
-                NonZeroExitCodeBehaviour.Succeed,
+        const createResult = await invokeKubectlCommand(
+            kubectl,
+            kubeConfigFile,
+            `create secret generic ${secretName} -n argocd` +
+                ` --from-literal=type=git` +
+                ` --from-literal=url=${httpsUrl}` +
+                ` --from-literal=username=${username}` +
+                ` --from-literal=password=${pat}`,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
+        if (failed(createResult) || createResult.result.code !== 0) return createResult;
+
+        // Label the secret so Argo CD picks it up automatically.
+        return invokeKubectlCommand(
+            kubectl,
+            kubeConfigFile,
+            `label secret ${secretName} -n argocd argocd.argoproj.io/secret-type=repository --overwrite`,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
+    });
+
+    if (failed(result) || result.result.code !== 0) {
+        const detail = failed(result) ? result.error : result.result.stderr;
+        vscode.window.showErrorMessage(l10n.t("Failed to register repository with Argo CD: {0}", detail));
+    } else {
+        vscode.window.showInformationMessage(
+            l10n.t(
+                "Repository '{0}/{1}' connected to Argo CD. " +
+                    "Refresh the Repositories page in the Argo CD UI to confirm.",
+                owner,
+                repoSlug,
             ),
         );
-        if (failed(result) || result.result.code !== 0) {
-            const detail = failed(result) ? result.error : result.result.stderr;
-            vscode.window.showErrorMessage(l10n.t("Failed to register repository with Argo CD: {0}", detail));
-        } else {
-            vscode.window.showInformationMessage(
-                l10n.t(
-                    "Repository '{0}/{1}' connected to Argo CD. " +
-                        "Refresh the Repositories page in the Argo CD UI to confirm.",
-                    owner,
-                    repoSlug,
-                ),
-            );
-        }
-    } finally {
-        tmpFile.dispose();
     }
 }
 
@@ -602,77 +606,10 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         }
 
         // ------------------------------------------------------------------
-        // 5. Pick the target namespace — show cluster namespaces with
-        //    AKS desktop labels if present, default to the YAML value.
+        // 5. The Application CR must be applied to the Argo CD namespace
+        //    (metadata.namespace in the YAML, defaults to "argocd").
+        //    Applying it elsewhere would make Argo CD ignore it.
         // ------------------------------------------------------------------
-        let selectedNamespace: string | undefined = targetNamespace;
-
-        const nsListResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
-            invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile.filePath,
-                `get namespace -o json`,
-                NonZeroExitCodeBehaviour.Succeed,
-            ),
-        );
-
-        if (!failed(nsListResult) && nsListResult.result.stdout.trim()) {
-            type RawNs = { metadata: { name: string; labels?: Record<string, string> } };
-            let rawItems: RawNs[] = [];
-            try {
-                rawItems = (JSON.parse(nsListResult.result.stdout) as { items: RawNs[] }).items ?? [];
-            } catch {
-                // fall through to use YAML default
-            }
-
-            // Filter out system namespaces, keep "default" and the YAML-specified namespace.
-            const systemNs = new Set(["kube-system", "kube-public", "kube-node-lease", "gatekeeper-system", "argocd"]);
-            rawItems = rawItems.filter(
-                (ns) =>
-                    ns.metadata.name === "default" ||
-                    ns.metadata.name === targetNamespace ||
-                    !systemNs.has(ns.metadata.name),
-            );
-
-            if (rawItems.length > 0) {
-                const names = rawItems.map((ns) => ns.metadata.name);
-                if (!names.includes("default")) {
-                    rawItems.unshift({ metadata: { name: "default", labels: {} } });
-                }
-
-                // Sort: YAML-specified namespace first, then "default", then alphabetical.
-                rawItems.sort((a, b) => {
-                    if (a.metadata.name === targetNamespace) return -1;
-                    if (b.metadata.name === targetNamespace) return 1;
-                    if (a.metadata.name === "default") return -1;
-                    if (b.metadata.name === "default") return 1;
-                    return a.metadata.name.localeCompare(b.metadata.name);
-                });
-
-                const nsItems: vscode.QuickPickItem[] = rawItems.map((ns) => {
-                    const name = ns.metadata.name;
-                    const labels = ns.metadata.labels ?? {};
-                    let description: string | undefined;
-                    if (labels["headlamp.dev/project-managed-by"] === "aks-desktop") {
-                        description = l10n.t("(AKS desktop Project: {0})", name);
-                    } else if (name === targetNamespace) {
-                        description = l10n.t("from YAML manifest");
-                    } else if (name === "default") {
-                        description = l10n.t("recommended default");
-                    }
-                    return { label: name, description };
-                });
-
-                const picked = await vscode.window.showQuickPick(nsItems, {
-                    title: l10n.t("Namespace ({0} available)", nsItems.length),
-                    placeHolder: l10n.t("Select a Kubernetes namespace"),
-                    ignoreFocusOut: true,
-                });
-
-                if (!picked) return;
-                selectedNamespace = picked.label;
-            }
-        }
 
         // ------------------------------------------------------------------
         // 6. Confirm the apply action.
@@ -682,7 +619,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
             l10n.t(
                 "Apply Argo CD Application '{0}' to namespace '{1}' on cluster '{2}'?",
                 appName,
-                selectedNamespace,
+                targetNamespace,
                 clusterName,
             ),
             APPLY,
@@ -698,7 +635,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
                 invokeKubectlCommand(
                     kubectl,
                     kubeConfigFile.filePath,
-                    `apply -n ${selectedNamespace} -f "${fileUri.fsPath}" --validate=false`,
+                    `apply -n ${targetNamespace} -f "${fileUri.fsPath}" --validate=false`,
                 ),
         );
 
@@ -720,10 +657,10 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         // Post-apply: detect auth mode and probe repo visibility in parallel
         // so neither probe blocks the other.
         // ------------------------------------------------------------------
-        // Prefer the explicit source-repo annotation (set by the deployment wizard)
-        // over spec.source.repoURL which points to the GitOps config repo.
-        const repoUrl =
-            doc.metadata?.annotations?.["aks-extension/source-repo"]?.trim() || doc.spec?.source?.repoURL || "";
+        // Use spec.source.repoURL — this is the config repo that Argo CD
+        // actually pulls from, so it is the correct target for credential
+        // wiring.  The aks-extension/source-repo annotation is informational.
+        const repoUrl = doc.spec?.source?.repoURL || "";
         const isGitHub = /github\.com/i.test(repoUrl);
 
         const [authMode, repoVisibility] = await Promise.all([
@@ -738,6 +675,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         // Persistent follow-up action menu.
         // ------------------------------------------------------------------
         await argoCDPostApplyActions(
+            undefined, // _context — not needed when called programmatically
             kubectl,
             kubeConfigFile.filePath,
             clusterName,
@@ -801,10 +739,7 @@ export async function argoCDPostApplyActions(
         if (activeUri) {
             const activeDoc = await parseApplicationFile(activeUri);
             if (activeDoc) {
-                repoUrl =
-                    activeDoc.metadata?.annotations?.["aks-extension/source-repo"]?.trim() ||
-                    activeDoc.spec?.source?.repoURL ||
-                    "";
+                repoUrl = activeDoc.spec?.source?.repoURL || "";
                 appName = activeDoc.metadata?.name ?? "(current cluster)";
             }
         }
