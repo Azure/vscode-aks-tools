@@ -606,13 +606,9 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         }
 
         // ------------------------------------------------------------------
-        // 5. The Application CR must be applied to the Argo CD namespace
+        // 5. Confirm the apply action.
+        //    The Application CR is always applied to the Argo CD namespace
         //    (metadata.namespace in the YAML, defaults to "argocd").
-        //    Applying it elsewhere would make Argo CD ignore it.
-        // ------------------------------------------------------------------
-
-        // ------------------------------------------------------------------
-        // 6. Confirm the apply action.
         // ------------------------------------------------------------------
         const APPLY = l10n.t("Apply");
         const confirmed = await vscode.window.showInformationMessage(
@@ -627,7 +623,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         if (!confirmed) return;
 
         // ------------------------------------------------------------------
-        // 7. Apply the manifest to the cluster.
+        // 6. Apply the manifest to the cluster.
         // ------------------------------------------------------------------
         const applyResult = await longRunning(
             l10n.t("Applying Argo CD Application '{0}' to '{1}'…", appName, clusterName),
