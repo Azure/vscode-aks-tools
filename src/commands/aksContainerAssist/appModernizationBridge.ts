@@ -1,27 +1,8 @@
-import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
 import * as vscode from "vscode";
-import { runContainerAssist, runContainerAssistFromTree } from "./aksContainerAssist";
-import { ContainerAssistAction } from "./types";
 
 const appModernizationExtensionId = "vscjava.migrate-java-to-azure";
 const appModernizationViewCommand = "workbench.view.extension.azureJavaMigrationExplorer";
-
-export async function containerizeApp(_context: IActionContext, target: unknown): Promise<void> {
-    await runContainerAssist(_context, target, [ContainerAssistAction.GenerateDeployment]);
-}
-
-export async function containerizeAppFromTree(_context: IActionContext, target: unknown): Promise<void> {
-    await runContainerAssistFromTree(_context, target, [ContainerAssistAction.GenerateDeployment]);
-}
-
-export async function deployAppWithAutomatedPipeline(_context: IActionContext, target: unknown): Promise<void> {
-    await runContainerAssist(_context, target, [ContainerAssistAction.GenerateWorkflow]);
-}
-
-export async function deployAppWithAutomatedPipelineFromTree(_context: IActionContext, target: unknown): Promise<void> {
-    await runContainerAssistFromTree(_context, target, [ContainerAssistAction.GenerateWorkflow]);
-}
 
 export async function migrateAndModernizeApp(): Promise<void> {
     const extension = vscode.extensions.getExtension(appModernizationExtensionId);

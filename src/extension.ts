@@ -71,14 +71,14 @@ import * as path from "path";
 import * as fs from "fs";
 import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
 import { aksQuickActions, initializeQuickActions } from "./commands/quickActions/aksQuickActions";
-import { runContainerAssist } from "./commands/aksContainerAssist/aksContainerAssist";
 import {
+    runContainerAssist,
     containerizeApp,
     containerizeAppFromTree,
     deployAppWithAutomatedPipeline,
     deployAppWithAutomatedPipelineFromTree,
-    migrateAndModernizeApp,
-} from "./commands/aksContainerAssist/appModernizationBridge";
+} from "./commands/aksContainerAssist/aksContainerAssist";
+import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModernizationBridge";
 import {
     setupOIDCForGitHub,
     setGitHubActionsSecrets,

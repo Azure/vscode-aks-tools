@@ -17,6 +17,22 @@ import { selectLanguageModel } from "./lmClient";
 import { showWizardExitConfirmation } from "./wizardUtils";
 export { showWizardExitConfirmation } from "./wizardUtils";
 
+export async function containerizeApp(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssist(context, target, [ContainerAssistAction.GenerateDeployment]);
+}
+
+export async function containerizeAppFromTree(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssistFromTree(context, target, [ContainerAssistAction.GenerateDeployment]);
+}
+
+export async function deployAppWithAutomatedPipeline(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssist(context, target, [ContainerAssistAction.GenerateWorkflow]);
+}
+
+export async function deployAppWithAutomatedPipelineFromTree(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssistFromTree(context, target, [ContainerAssistAction.GenerateWorkflow]);
+}
+
 export async function runContainerAssist(
     _context: IActionContext,
     target: unknown,
