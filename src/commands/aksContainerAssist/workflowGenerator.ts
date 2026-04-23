@@ -166,8 +166,13 @@ async function collectWorkflowConfiguration(
             relativeManifests,
         );
     } else {
-        const detectedManifests = await detectK8sManifests(workspaceRoot, projectRoot);
-        relativeManifests = detectedManifests.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
+        const detection = await detectK8sManifests(workspaceRoot, projectRoot);
+        if (!detection.succeeded) {
+            logger.error("Manifest detection failed", detection.error);
+            void vscode.window.showErrorMessage(l10n.t("Failed to detect Kubernetes manifests: {0}", detection.error));
+            return undefined;
+        }
+        relativeManifests = detection.result.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
     }
 
     const dockerfileRelToWorkspace = toPosixPath(
@@ -361,36 +366,27 @@ function formatManifestPathForYamlBlock(manifests: string[]): string {
 
 /**
  * Detects Kubernetes manifests by scanning each module's <modulePath>/<k8sFolder>
- * (via analyzeRepo), matching where deployment generation writes them.
- * Falls back to a workspace-root scan if no modules or manifests are found.
+ * (via analyzeRepository), matching where deployment generation writes them.
+ * When no modules are detected, scans the workspace root as the legitimate
+ * non-monorepo path. Repository analysis failures propagate (fail fast) so the
+ * caller can surface the real error instead of silently degrading.
  */
-async function detectK8sManifests(workspaceRoot: string, projectRoot: string): Promise<string[]> {
-    try {
-        const service = new ContainerAssistService();
-        const analysis = await service.analyzeRepository(projectRoot);
-        if (analysis.succeeded && analysis.result.modules.length > 0) {
-            const manifestFolder = getK8sManifestFolder();
-            const scanRoots = new Set<string>();
-            for (const module of analysis.result.modules) {
-                scanRoots.add(path.join(module.modulePath, manifestFolder));
-                scanRoots.add(module.modulePath);
-            }
-
-            const found = new Set<string>();
-            for (const root of scanRoots) {
-                const hits = await scanForK8sManifests(root);
-                hits.forEach((p) => found.add(p));
-            }
-
-            if (found.size > 0) {
-                return Array.from(found);
-            }
-        }
-    } catch (error) {
-        logger.error("Module-aware manifest detection failed; falling back to workspace-root scan", error);
+async function detectK8sManifests(workspaceRoot: string, projectRoot: string): Promise<Errorable<string[]>> {
+    const service = new ContainerAssistService();
+    const analysis = await service.analyzeRepository(projectRoot);
+    if (!analysis.succeeded) {
+        return { succeeded: false, error: `Repository analysis failed: ${analysis.error}` };
     }
 
-    return scanForK8sManifests(workspaceRoot);
+    if (analysis.result.modules.length === 0) {
+        const hits = await scanForK8sManifests(workspaceRoot);
+        return { succeeded: true, result: hits };
+    }
+
+    const manifestFolder = getK8sManifestFolder();
+    const scanRoots = Array.from(new Set(analysis.result.modules.map((m) => path.join(m.modulePath, manifestFolder))));
+    const results = await Promise.all(scanRoots.map((root) => scanForK8sManifests(root)));
+    return { succeeded: true, result: Array.from(new Set(results.flat())) };
 }
 
 /**
