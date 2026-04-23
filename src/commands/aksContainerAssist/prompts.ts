@@ -150,11 +150,11 @@ export function buildK8sManifestUserPrompt(
     const formattedPlan = formatGenerateK8sManifestsResult(plan);
 
     const ports = repoInfo?.ports || [];
-    const dependencies = repoInfo?.dependencies || [];
+    const dependencies = repoInfo?.frameworks || [];
     const frameworks = repoInfo?.frameworks?.map((f) => f.name) || [];
 
     const isWebApp = ports.length > 0 || frameworks.some((f) => WEB_FRAMEWORK_REGEX.test(f));
-    const hasExternalDependencies = dependencies.some((d) => EXTERNAL_DEPENDENCY_REGEX.test(d));
+    const hasExternalDependencies = dependencies.some((d) => EXTERNAL_DEPENDENCY_REGEX.test(d.name));
 
     const manifestGuidance = buildManifestGuidance(isWebApp, hasExternalDependencies, ports);
 
