@@ -13,7 +13,7 @@ export function DraftValidate(initialState: InitialState) {
 
     return (
         <>
-            <h2>Draft Validate</h2>
+            <h2>Run Deployment Safeguards</h2>
             <pre>{state.validationResults}</pre>
         </>
     );

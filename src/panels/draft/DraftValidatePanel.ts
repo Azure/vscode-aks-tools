@@ -30,7 +30,7 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
     }
 
     getTitle(): string {
-        return l10n.t(`Draft Validate in {0}`, this.workspaceFolder.name);
+        return l10n.t(`Run Deployment Safeguards in {0}`, this.workspaceFolder.name);
     }
 
     getInitialState(): InitialState {
