@@ -85,12 +85,43 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
             timeout,
         });
     }
-    useEffect(() => {
+
+    // Adjust state when props change (React-recommended pattern instead of useEffect + setState)
+    const [prevInitialResource, setPrevInitialResource] = useState<{ isShown: boolean; resource?: string }>({
+        isShown: props.isShown,
+        resource: props.initialGadgetResource,
+    });
+    if (prevInitialResource.isShown !== props.isShown || prevInitialResource.resource !== props.initialGadgetResource) {
+        setPrevInitialResource({ isShown: props.isShown, resource: props.initialGadgetResource });
         if (props.isShown && props.initialGadgetResource) {
-            onResourceChanged(props.initialGadgetResource);
+            const resource = props.initialGadgetResource;
+            const meta = configuredResources[resource] || null;
+            const extraProps = toExtraPropertyObject(meta?.extraProperties ?? GadgetExtraProperties.None);
+
+            const displayProperties = meta?.defaultProperties || [];
+            const sortSpecifiers = meta?.defaultSort || [];
+            const maxItemCount = extraProps.requiresMaxItemCount
+                ? traceConfig.maxItemCount || defaultMaxItemCount
+                : undefined;
+            const excludeThreads = extraProps.threadExclusionAllowed ? true : undefined;
+            const timeout = extraProps.requiresTimeout ? traceConfig.timeout || defaultTimeoutInSeconds : undefined;
+            const { namespace, podName, containerName, ...rest } = traceConfig.filters!;
+            const filters = extraProps.noK8sResourceFiltering
+                ? { ...rest, namespace: NamespaceSelection.Default }
+                : traceConfig.filters;
+
+            setTraceConfig({
+                ...traceConfig,
+                resource,
+                filters,
+                displayProperties,
+                sortSpecifiers,
+                excludeThreads,
+                maxItemCount,
+                timeout,
+            });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.isShown, props.initialGadgetResource]);
+    }
 
     function handleNodeChanged(node: string | null) {
         const filters = { ...traceConfig.filters, nodeName: node || undefined };
