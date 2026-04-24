@@ -85,12 +85,18 @@ export function NewTraceDialog(props: NewTraceDialogProps) {
             timeout,
         });
     }
-    useEffect(() => {
+
+    // Adjust state when props change (React-recommended pattern instead of useEffect + setState)
+    const [prevInitialResource, setPrevInitialResource] = useState<{ isShown: boolean; resource?: string }>({
+        isShown: props.isShown,
+        resource: props.initialGadgetResource,
+    });
+    if (prevInitialResource.isShown !== props.isShown || prevInitialResource.resource !== props.initialGadgetResource) {
+        setPrevInitialResource({ isShown: props.isShown, resource: props.initialGadgetResource });
         if (props.isShown && props.initialGadgetResource) {
             onResourceChanged(props.initialGadgetResource);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.isShown, props.initialGadgetResource]);
+    }
 
     function handleNodeChanged(node: string | null) {
         const filters = { ...traceConfig.filters, nodeName: node || undefined };

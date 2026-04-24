@@ -150,11 +150,11 @@ export function buildK8sManifestUserPrompt(
     const formattedPlan = formatGenerateK8sManifestsResult(plan);
 
     const ports = repoInfo?.ports || [];
-    const dependencies = repoInfo?.frameworks || [];
+    const dependencyNames = repoInfo?.frameworks?.map((f) => f.name) || [];
     const frameworks = repoInfo?.frameworks?.map((f) => f.name) || [];
 
     const isWebApp = ports.length > 0 || frameworks.some((f) => WEB_FRAMEWORK_REGEX.test(f));
-    const hasExternalDependencies = dependencies.some((d) => EXTERNAL_DEPENDENCY_REGEX.test(d.name));
+    const hasExternalDependencies = dependencyNames.some((d) => EXTERNAL_DEPENDENCY_REGEX.test(d));
 
     const manifestGuidance = buildManifestGuidance(isWebApp, hasExternalDependencies, ports);
 
@@ -173,7 +173,7 @@ Application Details:
 - Framework: ${frameworks.join(", ") || "none"}
 - Ports: ${ports.join(", ") || "none detected — use readProjectFile to check the Dockerfile or source code"}
 - Entry Point: ${repoInfo?.entryPoint || "unknown"}
-- Dependencies: ${dependencies.join(", ") || "none"}
+- Dependencies: ${dependencyNames.join(", ") || "none"}
 ${imageLine ? `${imageLine}` : ""}
 ${manifestGuidance}
 ${buildK8sVerificationHints(ports, repoInfo?.entryPoint)}
