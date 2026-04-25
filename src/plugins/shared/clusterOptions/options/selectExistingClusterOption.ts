@@ -20,9 +20,12 @@ export async function selectExistingClusterOption(
         return { succeeded: false, error: "No subscriptions found." };
     }
 
-    const clusters = (
-        await Promise.all(subscriptions.map((sub) => getClusters(sessionProvider, sub.subscriptionId)))
-    ).flat();
+    const clusterResults = await Promise.all(
+        subscriptions.map((sub) => getClusters(sessionProvider, sub.subscriptionId)),
+    );
+    const clusters = clusterResults
+        .filter((r): r is { succeeded: true; result: Cluster[] } => r.succeeded)
+        .flatMap((r) => r.result);
 
     if (clusters.length === 0) {
         handleNoClusterFound();

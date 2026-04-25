@@ -452,6 +452,23 @@
             {
                 "command": "aks.deployAppWithAutomatedPipelineFromTree",
                 "title": "%AKS: Deploy App with Automated Pipeline%"
+            },
+            {
+                "command": "aks.draftArgoCDDeployment",
+                "title": "%AKS: Create Argo CD GitOps Pipeline%"
+            },
+
+            {
+                "command": "aks.argoCDCheckStatus",
+                "title": "%AKS: Check Argo CD Status%"
+            },
+            {
+                "command": "aks.argoCDApplyApp",
+                "title": "%AKS: Apply Argo CD Application to Cluster%"
+            },
+            {
+                "command": "aks.argoCDPostApplyActions",
+                "title": "%AKS: Argo CD Post-Deploy Actions%"
             }
         ],
         "menus": {
@@ -459,6 +476,19 @@
                 {
                     "command": "aks.refreshSubscription",
                     "when": "never"
+                },
+                {
+                    "command": "aks.draftArgoCDDeployment",
+                    "when": "workspaceFolderCount >= 1"
+                },
+
+                {
+                    "command": "aks.argoCDCheckStatus",
+                    "when": "never"
+                },
+                {
+                    "command": "aks.argoCDApplyApp",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml"
                 },
                 {
                     "command": "aks.draftWorkflow",
@@ -498,14 +528,31 @@
                     "group": "5_cutcopypaste@52"
                 },
                 {
-                    "command": "aks.aksDraftValidate",
-                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "command": "aks.draftArgoCDDeployment",
+                    "when": "explorerResourceIsFolder",
                     "group": "5_cutcopypaste@53"
                 },
                 {
                     "command": "aks.aksDraftValidate",
-                    "when": "explorerResourceIsFolder",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
                     "group": "5_cutcopypaste@54"
+                },
+                {
+                    "command": "aks.aksDraftValidate",
+                    "when": "explorerResourceIsFolder",
+                    "group": "5_cutcopypaste@55"
+                },
+                {
+                    "command": "aks.argoCDApplyApp",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "group": "5_cutcopypaste@56"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "aks.argoCDApplyApp",
+                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "group": "1_modification@100"
                 }
             ],
             "view/item/context": [
@@ -814,6 +861,11 @@
                     "command": "aks.draftWorkflow",
                     "group": "2_deploy@3",
                     "when": "workspaceFolderCount >= 1"
+                },
+
+                {
+                    "command": "aks.argoCDCheckStatus",
+                    "group": "2_deploy@5"
                 },
                 {
                     "submenu": "aks.kaitoInstallSubMenu",

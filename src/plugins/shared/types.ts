@@ -34,4 +34,6 @@ export type GitHubCopilotForAzureChatPluginErrorResponse<T> = {
 export type CommandIdForPluginResponse =
     | "aks.aksDeployManifest"
     | "aks.aksOpenKubectlPanel"
-    | "aks.aksCreateClusterFromCopilot";
+    | "aks.aksCreateClusterFromCopilot"
+    | "aks.draftArgoCDDeployment"
+    | "aks.argoCDApplyApp";
