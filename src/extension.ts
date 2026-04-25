@@ -79,8 +79,6 @@ import {
     deployAppWithAutomatedPipelineFromTree,
 } from "./commands/aksContainerAssist/aksContainerAssist";
 import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModernizationBridge";
-    migrateAndModernizeApp,
-} from "./commands/aksContainerAssist/appModernizationBridge";
 import { draftArgoCDDeployment } from "./commands/aksArgoCD/argoCDDeployment";
 import { argoCDCheckStatus } from "./commands/aksArgoCD/argoCDInstall";
 import { argoCDApplyApp, argoCDPostApplyActions, isArgoCDApplication } from "./commands/aksArgoCD/argoCDApplyApp";
