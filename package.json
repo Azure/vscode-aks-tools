@@ -451,7 +451,7 @@
             },
             {
                 "command": "aks.deployAppWithAutomatedPipelineFromTree",
-                "title": "%AKS: Deploy App with Automated Pipeline%",
+                "title": "%AKS: Deploy App with Automated Pipeline%"
             },
             {
                 "command": "aks.draftArgoCDDeployment",
