@@ -193,6 +193,7 @@ export class ContainerAssistService {
         imageRepository?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
+        repositoryPath?: string,
     ): Promise<Errorable<string[]>> {
         const lmResult = await this.lmClient.ensureModel();
         if (failed(lmResult)) {
@@ -204,6 +205,7 @@ export class ContainerAssistService {
 
             const requestParams = {
                 manifestType: "kubernetes" as const,
+                repositoryPath: repositoryPath || modulePath,
                 modulePath,
                 name: appName,
                 namespace: targetNamespace,
@@ -385,6 +387,7 @@ export class ContainerAssistService {
                     imageRepository,
                     signal,
                     token,
+                    folderPath,
                 );
                 if (failed(manifestsResult)) {
                     logger.error(`Workflow failed at manifests step for module: ${module.name}`, manifestsResult.error);
