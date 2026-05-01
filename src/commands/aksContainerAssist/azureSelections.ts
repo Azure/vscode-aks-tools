@@ -120,7 +120,7 @@ export async function selectAksCluster(
         getClusters(sessionProvider, subscriptionId),
     );
 
-    if (!clustersResult || clustersResult.length === 0) {
+    if (failed(clustersResult) || clustersResult.result.length === 0) {
         const openPortal = l10n.t("Open in Portal");
         const selection = await vscode.window.showWarningMessage(
             l10n.t("No AKS clusters found in subscription."),
@@ -135,7 +135,8 @@ export async function selectAksCluster(
         return undefined;
     }
 
-    const clusterItems = clustersResult
+    const clusters = clustersResult.result;
+    const clusterItems = clusters
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((cluster) => ({
             label: cluster.name,
@@ -145,7 +146,7 @@ export async function selectAksCluster(
 
     const selected = await vscode.window.showQuickPick(clusterItems, {
         placeHolder: l10n.t("Select AKS cluster for deployment"),
-        title: l10n.t("AKS Cluster ({0} available)", clustersResult.length),
+        title: l10n.t("AKS Cluster ({0} available)", clusters.length),
     });
 
     // Show confirmation dialog if user cancelled
