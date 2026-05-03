@@ -39,8 +39,6 @@ export async function runContainerAssist(
     defaultActions: ContainerAssistAction[] = [],
 ): Promise<void> {
     try {
-        logger.debug("Command target", target);
-
         const targetUri = getTargetUri(target);
         if (!targetUri) {
             logger.warn("No valid target URI found");
@@ -49,7 +47,6 @@ export async function runContainerAssist(
             );
             return;
         }
-        logger.debug("Target URI", targetUri.fsPath);
 
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(targetUri);
         if (!workspaceFolder) {
@@ -57,7 +54,6 @@ export async function runContainerAssist(
             vscode.window.showErrorMessage(l10n.t("The selected item is not part of a workspace."));
             return;
         }
-        logger.debug("Workspace folder", workspaceFolder.uri.fsPath);
 
         const containerAssistService = new ContainerAssistService();
         const availabilityCheck = await containerAssistService.isAvailable();
@@ -72,7 +68,6 @@ export async function runContainerAssist(
             const stat = await fs.stat(startPath);
             if (stat.isFile()) {
                 startPath = path.dirname(startPath);
-                logger.debug("Target was a file, using parent directory", startPath);
             }
         } catch (error) {
             logger.error("Failed to stat target path", error);
@@ -108,8 +103,6 @@ export async function runContainerAssistFromTree(
     defaultActions: ContainerAssistAction[] = [],
 ): Promise<void> {
     try {
-        logger.debug("Container Assist from tree, target", target);
-
         // Step 1: Resolve the cluster tree node
         const cloudExplorer = await k8s.extension.cloudExplorer.v1;
         const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
@@ -119,7 +112,6 @@ export async function runContainerAssistFromTree(
         }
 
         const { subscriptionId, resourceGroupName, name: clusterName } = clusterNode.result;
-        logger.debug("Cluster from tree", { subscriptionId, resourceGroupName, clusterName });
 
         // Step 2: Determine workspace folder / project root
         const workspaceFolder = await pickWorkspaceFolder();
@@ -220,7 +212,6 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
                 const files = await fs.readdir(currentPath);
                 const foundExtension = extensionIndicators.find((ext) => files.some((f) => f.endsWith(ext)));
                 if (foundExtension) {
-                    logger.debug(`Found project root at: ${currentPath} (indicator: *${foundExtension})`);
                     return currentPath;
                 }
             } catch {
@@ -232,7 +223,6 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
         for (const indicator of fileIndicators) {
             try {
                 await fs.access(path.join(currentPath, indicator));
-                logger.debug(`Found project root at: ${currentPath} (indicator: ${indicator})`);
                 return currentPath;
             } catch {
                 // File doesn't exist, continue
@@ -246,7 +236,6 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
         currentPath = parentPath;
     }
 
-    logger.debug(`No project root found, using original path: ${startPath}`);
     return startPath;
 }
 
@@ -424,7 +413,6 @@ async function generateDeploymentFiles(
     azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
     const displayName = path.basename(targetPath);
-    logger.debug("Target path", targetPath);
 
     const acrLoginServer = `${azureContext.acrName}.azurecr.io`;
 
@@ -482,11 +470,9 @@ async function generateDeploymentFiles(
     }
 
     const generatedFiles = result.result.generatedFiles;
-    logger.debug("Generated files", generatedFiles);
 
     if (generatedFiles.length === 0) {
         if (hasBothActions) {
-            logger.debug("No new deployment files generated (files may already exist)");
             return { deploymentFiles: [] };
         }
         logger.warn("No files were generated");
@@ -514,7 +500,6 @@ async function generateWorkflowFile(options: WorkflowGenerationOptions): Promise
 
     if (failed(result)) {
         if (result.error === "cancelled") {
-            logger.debug("Workflow generation cancelled by user");
             return undefined;
         }
         logger.error("GitHub workflow generation failed", result.error);

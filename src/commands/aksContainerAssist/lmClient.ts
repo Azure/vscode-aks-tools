@@ -82,11 +82,9 @@ export class LMClient {
                 vscode.LanguageModelChatMessage.User(userPrompt),
             ];
 
-            logger.debug("Sending request to Language Model", { model: this.languageModel.name });
             const response = await this.languageModel.sendRequest(messages, {}, token);
             const content = await this.collectResponseText(response);
 
-            logger.debug("Language Model response received", { contentLength: content.length });
             return { succeeded: true, result: content };
         } catch (error) {
             logger.error("Language Model request failed", error);
@@ -118,12 +116,6 @@ export class LMClient {
                 vscode.LanguageModelChatMessage.User(userPrompt),
             ];
 
-            logger.debug("Sending request with tools to Language Model", {
-                model: this.languageModel.name,
-                tools: options.tools.map((t) => t.name),
-                maxRounds,
-            });
-
             for (let round = 0; round < maxRounds; round++) {
                 const response = await this.languageModel.sendRequest(messages, { tools: options.tools }, token);
                 const { textParts, toolCallParts } = await this.consumeStream(response);
@@ -131,7 +123,6 @@ export class LMClient {
                 // If no tool calls, we're done — return accumulated text
                 if (toolCallParts.length === 0) {
                     const content = textParts.map((p) => p.value).join("");
-                    logger.debug("Tool calling complete", { round: round + 1, contentLength: content.length });
                     return { succeeded: true, result: content };
                 }
 
@@ -153,7 +144,6 @@ export class LMClient {
             const finalContent = await this.collectResponseText(finalResponse);
 
             if (finalContent.length > 0) {
-                logger.debug("Final response after max rounds", { contentLength: finalContent.length });
                 return { succeeded: true, result: finalContent };
             }
 
@@ -208,12 +198,6 @@ export class LMClient {
     ): Promise<vscode.LanguageModelToolResultPart[]> {
         return Promise.all(
             toolCallParts.map(async (toolCall) => {
-                logger.debug("Invoking tool", {
-                    name: toolCall.name,
-                    callId: toolCall.callId,
-                    input: JSON.stringify(toolCall.input),
-                });
-
                 let resultText: string;
                 try {
                     resultText = await toolHandler(toolCall);
@@ -221,12 +205,6 @@ export class LMClient {
                     logger.error(`Tool handler error for "${toolCall.name}"`, toolError);
                     resultText = `Error executing tool "${toolCall.name}": ${String(toolError)}`;
                 }
-
-                logger.debug("Tool result", {
-                    name: toolCall.name,
-                    callId: toolCall.callId,
-                    resultLength: resultText.length,
-                });
 
                 return new vscode.LanguageModelToolResultPart(toolCall.callId, [
                     new vscode.LanguageModelTextPart(resultText),
@@ -250,8 +228,6 @@ export class LMClient {
                 logger.error("No Language Models found");
                 return { succeeded: false, error: errorMsg };
             }
-
-            logger.debug(`Found ${allModels.length} available models`);
 
             const preferences = getModelPreferencesFromConfig();
             const preferredModels = allModels.filter((m) => this.isPreferredModel(m, preferences));

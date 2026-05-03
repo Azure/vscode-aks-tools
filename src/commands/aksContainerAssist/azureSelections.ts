@@ -171,7 +171,6 @@ export async function fetchClusterNamespaces(
     const namespacesResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
         getClusterNamespacesWithTypes(sessionProvider, kubectl, subscriptionId, cluster.resourceGroup, cluster.name),
     );
-    logger.debug(`Namespaces with types for cluster '${cluster.name}':`, namespacesResult);
 
     if (!namespacesResult.succeeded && !isNamespacesListForbidden(namespacesResult.error)) {
         vscode.window.showErrorMessage(
@@ -181,9 +180,6 @@ export async function fetchClusterNamespaces(
     }
 
     if (!namespacesResult.succeeded) {
-        logger.debug(
-            `Namespace list forbidden for cluster '${cluster.name}'. Falling back to ARM-managed namespaces only.`,
-        );
         return fetchManagedNamespacesWithWarning(sessionProvider, subscriptionId, cluster);
     }
 
@@ -208,7 +204,6 @@ async function fetchManagedNamespacesWithWarning(
         logger.warn(`Failed to load managed namespaces for cluster '${cluster.name}': ${armResult.error}`);
     }
     const managedNames = armResult.succeeded ? armResult.result : [];
-    logger.debug(`Managed namespaces for cluster '${cluster.name}':`, managedNames);
 
     const learnMoreLabel = l10n.t("Learn more");
     void vscode.window
@@ -398,7 +393,6 @@ async function getAttachedAcrs(
     const attachedAcrs: DefinedResourceWithGroup[] = [];
 
     for (const acr of allAcrs) {
-        logger.debug(`Checking role assignments for ACR '${acr.name}' (RG: ${acr.resourceGroup})`);
         const roleAssignments = await getPrincipalRoleAssignmentsForAcr(
             authClient,
             principalId,
@@ -411,10 +405,6 @@ async function getAttachedAcrs(
             continue;
         }
 
-        logger.debug(
-            `ACR '${acr.name}': ${roleAssignments.result.length} role assignment(s) found for principal ${principalId}`,
-        );
-
         const hasAcrPull = roleAssignments.result.some((ra) => {
             if (!ra.roleDefinitionId) return false;
             const roleDefName = ra.roleDefinitionId.split("/").pop();
@@ -423,8 +413,6 @@ async function getAttachedAcrs(
 
         if (hasAcrPull) {
             attachedAcrs.push(acr);
-        } else {
-            logger.debug(`ACR '${acr.name}' is NOT attached to cluster '${cluster.name}' (no AcrPull role)`);
         }
     }
 
@@ -440,7 +428,6 @@ async function getClusterPrincipalId(
     subscriptionId: string,
     cluster: Cluster,
 ): Promise<string | undefined> {
-    logger.debug(`Fetching managed cluster details for '${cluster.name}' in resource group '${cluster.resourceGroup}'`);
     const managedClusterResult = await getManagedCluster(
         sessionProvider,
         subscriptionId,
@@ -454,7 +441,6 @@ async function getClusterPrincipalId(
     }
 
     const managedCluster = managedClusterResult.result;
-    logger.debug(`Cluster identity type: ${managedCluster.identity?.type ?? "none"}`);
 
     // Prefer kubelet identity (managed identity clusters)
     const hasManagedIdentity =
@@ -519,7 +505,6 @@ async function ensureAcrPullForKubelet(
     });
 
     if (hasAcrPull) {
-        logger.debug(`AcrPull already assigned to kubelet identity for ACR '${acr.name}'`);
         return;
     }
 
@@ -612,7 +597,6 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
         return showWizardExitConfirmation(() => promptForWorkflowName(appName));
     }
 
-    logger.debug("Workflow name selected", workflowName);
     return workflowName;
 }
 
@@ -641,7 +625,6 @@ async function collectAzureContextForCluster(
     const namespaceData = await fetchClusterNamespaces(sessionProvider, subscriptionId, cluster);
     const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster, namespaceData);
     if (!namespaceSelection) return undefined;
-    logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
 
     const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
     if (!acr) return undefined;
@@ -679,11 +662,9 @@ export async function collectAzureContext(
 
     const subscription = await selectAzureSubscription(sessionProvider);
     if (!subscription) return undefined;
-    logger.debug("Subscription selected", subscription.name);
 
     const cluster = await selectAksCluster(sessionProvider, subscription.id);
     if (!cluster) return undefined;
-    logger.debug("Cluster selected", cluster.name);
 
     return collectAzureContextForCluster(sessionProvider, subscription.id, cluster, hasWorkflow, projectRoot);
 }

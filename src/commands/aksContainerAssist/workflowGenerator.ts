@@ -88,7 +88,6 @@ async function doGenerateGitHubWorkflow(options: WorkflowGenerationOptions): Pro
 
         // Render template and write file
         const workflowContent = renderWorkflowTemplate(config);
-        logger.debug("Workflow template rendered successfully");
 
         const workflowPath = await writeWorkflowFile(workspaceRoot, workflowName, workflowContent);
 
@@ -135,12 +134,10 @@ async function collectWorkflowConfiguration(
     let dockerfilePath: string | undefined;
     if (hasBothActions && detectedDockerfile) {
         dockerfilePath = detectedDockerfile;
-        logger.debug("Dockerfile auto-detected (skipping prompt — deployment just generated)", dockerfilePath);
     } else {
         dockerfilePath = await promptForDockerfilePath(projectRoot, detectedDockerfiles);
     }
     if (!dockerfilePath) return undefined;
-    logger.debug("Dockerfile path selected", dockerfilePath);
 
     // Build context: use the Dockerfile's directory when in a subdirectory, else ".".
     // Auto-derive when both actions were selected; otherwise prompt.
@@ -149,22 +146,16 @@ async function collectWorkflowConfiguration(
     const defaultBuildContext = dockerfileDir !== "." ? dockerfileDir : ".";
     if (hasBothActions) {
         buildContextPath = defaultBuildContext;
-        logger.debug("Build context auto-derived (skipping prompt — deployment just generated)", buildContextPath);
     } else {
         buildContextPath = await promptForBuildContext(defaultBuildContext);
     }
     if (!buildContextPath) return undefined;
-    logger.debug("Build context path selected", buildContextPath);
 
     // Use known manifest paths from deployment (absolute) instead of re-scanning,
     // so manifests in module subdirectories are always found.
     let relativeManifests: string[];
     if (hasBothActions && knownManifestPaths && knownManifestPaths.length > 0) {
         relativeManifests = knownManifestPaths.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
-        logger.debug(
-            `Using ${relativeManifests.length} known manifest path(s) from deployment generation`,
-            relativeManifests,
-        );
     } else {
         const detection = await detectK8sManifests(workspaceRoot, projectRoot);
         if (!detection.succeeded) {
@@ -186,16 +177,11 @@ async function collectWorkflowConfiguration(
     let selectedManifests: string[] | undefined;
     if (hasBothActions && relativeManifests.length > 0) {
         selectedManifests = relativeManifests;
-        logger.debug(
-            `Auto-selected ${selectedManifests.length} manifest(s) (skipping prompt — deployment just generated)`,
-            selectedManifests,
-        );
     } else {
         selectedManifests = await promptForManifestSelection(relativeManifests);
     }
     if (!selectedManifests) return undefined;
     const manifestPath = formatManifestPathForYamlBlock(selectedManifests);
-    logger.debug("Manifest paths selected", selectedManifests);
 
     return {
         workflowName,
