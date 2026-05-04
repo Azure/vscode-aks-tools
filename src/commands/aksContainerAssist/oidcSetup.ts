@@ -72,8 +72,6 @@ export async function setupOIDCForGitHub(
             return;
         }
 
-        logger.debug("GitHub repository info", repoInfo);
-
         // Prompt user for Azure details
         const azureConfig = await promptForAzureConfig(appName, azureContext);
         if (!azureConfig) {
@@ -250,7 +248,6 @@ async function promptForAzureConfig(appName: string, azureContext?: AzureContext
 
     if (azureContext?.subscriptionId) {
         subscriptionId = azureContext.subscriptionId;
-        logger.debug("OIDC: using subscription from AzureContext", subscriptionId);
     } else {
         const subscriptionsResult = await getSubscriptions(sessionProvider, SelectionType.All);
         if (!succeeded(subscriptionsResult)) {
@@ -473,9 +470,8 @@ async function listManagedIdentities(
         }
 
         return result;
-    } catch (error) {
+    } catch {
         // If the resource group doesn't exist yet, return empty array
-        logger.debug("No existing managed identities found:", error);
         return [];
     }
 }
@@ -497,8 +493,6 @@ async function getManagedIdentity(
         if (!identity.clientId || !identity.tenantId || !identity.principalId) {
             throw new Error("Failed to retrieve managed identity: missing required properties");
         }
-
-        logger.debug(`Using existing managed identity: ${identityName}`);
 
         return {
             clientId: identity.clientId,

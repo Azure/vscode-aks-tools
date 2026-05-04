@@ -51,7 +51,6 @@ async function getGitAPI(): Promise<GitAPI | undefined> {
     }
 
     if (!gitExtension.isActive) {
-        logger.debug("Activating Git extension");
         await gitExtension.activate();
     }
 
@@ -79,7 +78,6 @@ export async function getGitRepository(workspaceUri: vscode.Uri): Promise<Reposi
         return undefined;
     }
 
-    logger.debug("Git repository found", repository.rootUri.fsPath);
     return repository;
 }
 
@@ -105,7 +103,6 @@ export async function stageFiles(repository: Repository, generatedFiles: string[
                         await vscode.workspace.fs.stat(vscode.Uri.file(file));
                         const relativePath = path.relative(repository.rootUri.fsPath, file);
                         filesToStage.push(relativePath);
-                        logger.debug(`File exists and will be staged: ${relativePath}`);
                     } catch (error) {
                         logger.warn(
                             `File does not exist, skipping: ${file} - ${error instanceof Error ? error.message : String(error)}`,
@@ -128,7 +125,6 @@ export async function stageFiles(repository: Repository, generatedFiles: string[
                     // Fallback: use git command directly
                     try {
                         const args = ["add", ...filesToStage];
-                        logger.debug(`Running: git ${args.join(" ")}`);
                         await execFilePromise("git", args, { cwd: repository.rootUri.fsPath });
                         logger.info(`Successfully staged ${filesToStage.length} files via git command`);
                     } catch (cmdError) {
@@ -226,7 +222,6 @@ export async function createPullRequest(generatedFiles: string[], appName: strin
         // Activate extension if needed
         if (!githubExtension.isActive) {
             await githubExtension.activate();
-            logger.debug("GitHub extension activated");
         }
 
         // Get configuration
@@ -245,15 +240,15 @@ export async function createPullRequest(generatedFiles: string[], appName: strin
             base: defaultBranch,
         };
 
-        logger.debug("Creating PR with options", options);
-
         // Try to invoke GitHub extension command
         // Note: The exact command signature may vary based on GitHub extension version
         try {
             await vscode.commands.executeCommand("pr.create", options);
         } catch (error) {
             // Fallback: try alternative command
-            logger.debug("First PR command failed, trying alternative", error);
+            logger.warn(
+                `First PR command failed, trying alternative: ${error instanceof Error ? error.message : String(error)}`,
+            );
             await vscode.commands.executeCommand("github.createPullRequest");
 
             // Show helpful message with suggested PR details
