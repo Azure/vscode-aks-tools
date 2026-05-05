@@ -203,6 +203,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Enable simplified menu structure with grouped commands by role (Develop & Deploy, Troubleshoot & Diagnose, Manage Cluster). Requires reload after changing."
+                },
+                "aks.argoCDEnabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable Argo CD GitOps integration commands (Create Argo CD GitOps Pipeline, Apply Argo CD Application, Check Argo CD Status, Post-Deploy Actions). Requires reload after changing."
                 }
             }
         },
@@ -479,16 +484,20 @@
                 },
                 {
                     "command": "aks.draftArgoCDDeployment",
-                    "when": "workspaceFolderCount >= 1"
+                    "when": "workspaceFolderCount >= 1 && config.aks.argoCDEnabled"
                 },
 
                 {
                     "command": "aks.argoCDCheckStatus",
-                    "when": "never"
+                    "when": "config.aks.argoCDEnabled"
                 },
                 {
                     "command": "aks.argoCDApplyApp",
-                    "when": "resourceExtname == .yaml || resourceExtname == .yml"
+                    "when": "(resourceExtname == .yaml || resourceExtname == .yml) && config.aks.argoCDEnabled"
+                },
+                {
+                    "command": "aks.argoCDPostApplyActions",
+                    "when": "config.aks.argoCDEnabled"
                 },
                 {
                     "command": "aks.draftWorkflow",
@@ -529,7 +538,7 @@
                 },
                 {
                     "command": "aks.draftArgoCDDeployment",
-                    "when": "explorerResourceIsFolder",
+                    "when": "explorerResourceIsFolder && config.aks.argoCDEnabled",
                     "group": "5_cutcopypaste@53"
                 },
                 {
@@ -544,14 +553,14 @@
                 },
                 {
                     "command": "aks.argoCDApplyApp",
-                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "when": "(resourceExtname == .yaml || resourceExtname == .yml) && config.aks.argoCDEnabled",
                     "group": "5_cutcopypaste@56"
                 }
             ],
             "editor/context": [
                 {
                     "command": "aks.argoCDApplyApp",
-                    "when": "resourceExtname == .yaml || resourceExtname == .yml",
+                    "when": "(resourceExtname == .yaml || resourceExtname == .yml) && config.aks.argoCDEnabled",
                     "group": "1_modification@100"
                 }
             ],
@@ -865,7 +874,8 @@
 
                 {
                     "command": "aks.argoCDCheckStatus",
-                    "group": "2_deploy@5"
+                    "group": "2_deploy@5",
+                    "when": "config.aks.argoCDEnabled"
                 },
                 {
                     "submenu": "aks.kaitoInstallSubMenu",
