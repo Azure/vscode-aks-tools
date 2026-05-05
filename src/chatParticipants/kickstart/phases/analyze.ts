@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { analyzeProject as analyzeProjectStep, tokenToAbortSignal } from "../steps/analyze";
+import { analyzeProject as analyzeProjectStep } from "../steps/analyze";
 import { checkExistingFiles } from "../../../commands/aksContainerAssist/fileOperations";
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { PhaseResult } from "../phaseRunner";

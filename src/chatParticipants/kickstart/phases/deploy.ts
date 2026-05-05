@@ -3,7 +3,7 @@ import * as path from "path";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { invokeKubectlCommand } from "../../../commands/utils/kubectl";
 import { getAuthenticatedKubeconfigYaml } from "../../../commands/utils/clusters";
-import { failed, getErrorMessage } from "../../../commands/utils/errorable";
+import { failed } from "../../../commands/utils/errorable";
 import { createTempFile } from "../../../commands/utils/tempfile";
 import { NonZeroExitCodeBehaviour } from "../../../commands/utils/shell";
 import { PhaseResult } from "../phaseRunner";
@@ -35,7 +35,7 @@ export async function deployPhase(
     config: ConfigData,
     image: ImageData,
     stream: vscode.ChatResponseStream,
-    token: vscode.CancellationToken,
+    _token: vscode.CancellationToken,
 ): Promise<PhaseResult & { deployment?: DeploymentData }> {
     try {
         const workspacePath = workspaceFolder.fsPath;
