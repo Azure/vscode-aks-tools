@@ -135,7 +135,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksBestPracticesDiagnostics", aksBestPracticesDiagnostics);
         registerCommandWithTelemetry("aks.aksIdentitySecurityDiagnostics", aksIdentitySecurityDiagnostics);
         registerCommandWithTelemetry("aks.attachAcrToCluster", attachAcrToCluster);
-        // Kickstart preview commands (opt-in via `aks.kickstartEnabledPreview`).
         registerKickstartCommands(context, registerCommandWithTelemetry);
         registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
         registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);
