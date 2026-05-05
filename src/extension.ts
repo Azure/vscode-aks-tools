@@ -192,6 +192,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // Notify when an Argo CD Application YAML is opened in the editor.
         context.subscriptions.push(
             vscode.workspace.onDidOpenTextDocument(async (document) => {
+                const argoCDEnabled = vscode.workspace.getConfiguration("aks").get<boolean>("argoCDEnabled", false);
+                if (!argoCDEnabled) return;
                 if (document.languageId !== "yaml" && document.languageId !== "yml") return;
                 // Cheap substring pre-check to avoid parsing large YAML files unnecessarily.
                 // Use the full apiVersion key to avoid CodeQL "Incomplete URL substring sanitization" false positive.
