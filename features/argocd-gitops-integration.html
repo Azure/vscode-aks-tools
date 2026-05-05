@@ -152,6 +152,15 @@
 Your cluster never pushes. Argo CD continuously pulls desired state from a dedicated Git config repository and reconciles it automatically.</p>
 </blockquote>
 <hr />
+<h2 id="feature-flag"><a class="header" href="#feature-flag">Feature Flag</a></h2>
+<p>All Argo CD commands are gated behind a feature flag and <strong>disabled by default</strong>. To enable:</p>
+<pre><code class="language-json">{
+  &quot;aks.argoCDEnabled&quot;: true
+}
+</code></pre>
+<p>Default value: <code>false</code></p>
+<p>After changing this setting, reload the VS Code window (<code>Developer: Reload Window</code>).</p>
+<hr />
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <ul>
 <li>An AKS cluster with Argo CD installed (via <code>kubectl</code>, Helm, or the <code>az k8s-extension</code> marketplace add-on).</li>

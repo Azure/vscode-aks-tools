@@ -172,6 +172,7 @@
 <li><a href="./features/kaito-install-deploy.html">Install and Deploy KAITO Models</a></li>
 <li><a href="./features/kaito-manage-test.html">Manage and Test KAITO Deployments</a></li>
 <li><a href="./features/simplified-menu-structure.html">Use Simplified AKS Menu Structure (Feature Flag)</a></li>
+<li><a href="./features/argocd-gitops-integration.html">Use Argo CD GitOps Integration (Feature Flag)</a></li>
 <li><a href="./features/aks-fleet-manager.html">Create AKS Fleet Manager from VS Code</a></li>
 <li><a href="./features/aks-mcp-server-integration.html">Setup AKS MCP Server from VS Code</a></li>
 </ul>
@@ -1487,6 +1488,15 @@ This allows gradual rollout, internal validation, and user feedback collection w
 <p><strong>GitOps “Hollywood Principle”</strong> — <em>Don’t call us, we’ll call you.</em>
 Your cluster never pushes. Argo CD continuously pulls desired state from a dedicated Git config repository and reconciles it automatically.</p>
 </blockquote>
+<hr />
+<h2 id="feature-flag-2"><a class="header" href="#feature-flag-2">Feature Flag</a></h2>
+<p>All Argo CD commands are gated behind a feature flag and <strong>disabled by default</strong>. To enable:</p>
+<pre><code class="language-json">{
+  &quot;aks.argoCDEnabled&quot;: true
+}
+</code></pre>
+<p>Default value: <code>false</code></p>
+<p>After changing this setting, reload the VS Code window (<code>Developer: Reload Window</code>).</p>
 <hr />
 <h2 id="prerequisites-1"><a class="header" href="#prerequisites-1">Prerequisites</a></h2>
 <ul>
