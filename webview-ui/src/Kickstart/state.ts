@@ -1,5 +1,17 @@
 import { getWebviewMessageContext } from "../utilities/vscode";
 import { Acr, Cluster, Subscription } from "../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
+import {
+    Phase,
+    AnalysisData,
+    ConfigData,
+    ArtifactsData,
+    ImageData,
+    DeploymentData,
+    VerificationData,
+    ErrorInfo,
+    CommandLogEntry,
+    ArmResource,
+} from "../../../src/webview-contract/webviewDefinitions/kickstart";
 
 export const vscode = getWebviewMessageContext<"kickstart">({
     getSubscriptionsRequest: null,
@@ -9,6 +21,7 @@ export const vscode = getWebviewMessageContext<"kickstart">({
     getPermissionStatusRequest: null,
     attachAcrRequest: null,
     startKickstartRequest: null,
+    openArtifactRequest: null,
 });
 
 export type PermissionsState = {
@@ -16,6 +29,19 @@ export type PermissionsState = {
     attached?: boolean;
     loading: boolean;
     error?: string;
+};
+
+export type DashboardData = {
+    currentPhase: Phase;
+    analysis?: AnalysisData;
+    config?: ConfigData;
+    artifacts?: ArtifactsData;
+    image?: ImageData;
+    deployment?: DeploymentData;
+    verification?: VerificationData;
+    lastError?: ErrorInfo;
+    auditLog?: CommandLogEntry[];
+    armResources?: ArmResource[];
 };
 
 export type KickstartState = {
@@ -32,4 +58,7 @@ export type KickstartState = {
     selectedAcr: Acr | null;
 
     permissions: PermissionsState;
+
+    // Dashboard state - populated when workflow starts
+    dashboard?: DashboardData;
 };

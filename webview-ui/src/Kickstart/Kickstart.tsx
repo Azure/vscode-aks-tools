@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { vscode, KickstartState } from "./state";
+import { vscode, KickstartState, DashboardData } from "./state";
 import { Subscription, Cluster, Acr } from "../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
+import { Phase } from "../../../src/webview-contract/webviewDefinitions/kickstart";
 import { Pickers } from "./Pickers";
 import { PermissionChecks } from "./PermissionChecks";
 import { ActionBar } from "./ActionBar";
+import { PhaseProgress } from "./PhaseProgress";
+import { ArtifactsPanel } from "./ArtifactsPanel";
+import { ArmResourcesPanel } from "./ArmResourcesPanel";
+import { AuditLog } from "./AuditLog";
 import * as l10n from "@vscode/l10n";
+import styles from "./Dashboard.module.css";
 
 export function Kickstart() {
     const [state, setState] = useState<KickstartState>({
@@ -101,6 +107,23 @@ export function Kickstart() {
                 }
             },
             startKickstartResponse: () => {},
+            stateChanged: (args: DashboardData) => {
+                setState((prev) => ({
+                    ...prev,
+                    dashboard: {
+                        currentPhase: args.currentPhase,
+                        analysis: args.analysis,
+                        config: args.config,
+                        artifacts: args.artifacts,
+                        image: args.image,
+                        deployment: args.deployment,
+                        verification: args.verification,
+                        lastError: args.lastError,
+                        auditLog: args.auditLog,
+                        armResources: args.armResources,
+                    },
+                }));
+            },
         };
 
         vscode.subscribeToMessages(handler);
@@ -209,34 +232,73 @@ export function Kickstart() {
         !state.permissions.loading,
     );
 
+    const isWorkflowActive = state.dashboard && state.dashboard.currentPhase > Phase.ANALYZE;
+    const showPickers = !isWorkflowActive;
+
     return (
         <div data-testid="kickstart-root">
             <h2>{l10n.t("Kickstart AKS Cluster")}</h2>
             <p>{l10n.t("Configure your AKS cluster with an ACR and kickstart resources.")}</p>
 
-            <Pickers
-                subscriptions={state.subscriptions}
-                selectedSub={state.selectedSub}
-                onSubChange={handleSubChange}
-                resourceGroups={state.resourceGroups}
-                selectedRg={state.selectedRg}
-                onRgChange={handleRgChange}
-                clusters={state.clusters}
-                selectedCluster={state.selectedCluster}
-                onClusterChange={handleClusterChange}
-                acrs={state.acrs}
-                selectedAcr={state.selectedAcr}
-                onAcrChange={handleAcrChange}
-            />
+            {showPickers && (
+                <>
+                    <Pickers
+                        subscriptions={state.subscriptions}
+                        selectedSub={state.selectedSub}
+                        onSubChange={handleSubChange}
+                        resourceGroups={state.resourceGroups}
+                        selectedRg={state.selectedRg}
+                        onRgChange={handleRgChange}
+                        clusters={state.clusters}
+                        selectedCluster={state.selectedCluster}
+                        onClusterChange={handleClusterChange}
+                        acrs={state.acrs}
+                        selectedAcr={state.selectedAcr}
+                        onAcrChange={handleAcrChange}
+                    />
 
-            <PermissionChecks
-                hasSelection={Boolean(state.selectedCluster && state.selectedAcr)}
-                permissions={state.permissions}
-                onAttach={handleAttach}
-                onRefresh={handleRefreshPermissions}
-            />
+                    <PermissionChecks
+                        hasSelection={Boolean(state.selectedCluster && state.selectedAcr)}
+                        permissions={state.permissions}
+                        onAttach={handleAttach}
+                        onRefresh={handleRefreshPermissions}
+                    />
 
-            <ActionBar canStart={canStart} onStart={handleStart} onCancel={handleCancel} />
+                    <ActionBar canStart={canStart} onStart={handleStart} onCancel={handleCancel} />
+                </>
+            )}
+
+            {state.dashboard && (
+                <div className={styles.dashboardContainer}>
+                    <PhaseProgress
+                        currentPhase={state.dashboard.currentPhase}
+                        hasError={Boolean(state.dashboard.lastError)}
+                    />
+
+                    {state.dashboard.lastError && (
+                        <div className={styles.errorBanner}>
+                            <div className={styles.errorBannerHeader}>
+                                <span>⚠️ {l10n.t("Error")}</span>
+                            </div>
+                            <div className={styles.errorBannerMessage}>{state.dashboard.lastError.message}</div>
+                            <div className={styles.errorBannerMeta}>
+                                <span>
+                                    {l10n.t("Phase")}: {Phase[state.dashboard.lastError.phase]}
+                                </span>
+                                <span>
+                                    {state.dashboard.lastError.retryable
+                                        ? l10n.t("Retryable")
+                                        : l10n.t("Non-retryable")}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    <ArtifactsPanel artifacts={state.dashboard.artifacts} />
+                    <ArmResourcesPanel armResources={state.dashboard.armResources} />
+                    <AuditLog auditLog={state.dashboard.auditLog} />
+                </div>
+            )}
         </div>
     );
 }
