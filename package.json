@@ -271,6 +271,12 @@
                 "enablement": "config.aks.kickstartEnabledPreview"
             },
             {
+                "command": "aks.kickstart.configureAndStart",
+                "title": "Configure & Start Kickstart",
+                "category": "Azure Kubernetes Service",
+                "enablement": "config.aks.kickstartEnabledPreview"
+            },
+            {
                 "command": "aks.kickstart.useSample",
                 "title": "Use a sample",
                 "category": "Azure Kubernetes Service",

@@ -35,6 +35,21 @@
             "preLaunchTask": "test-compile"
         },
         {
+            "name": "Extension (Kickstart)",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "env": {
+            },
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ],
+            "preLaunchTask": "kickstart-dev"
+        },
+        {
             "name": "Webview UI",
             "type": "msedge",
             "request": "launch",

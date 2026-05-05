@@ -141,6 +141,11 @@ export async function activate(context: vscode.ExtensionContext) {
         if (vscode.workspace.getConfiguration("aks").get("kickstartEnabledPreview")) {
             registerCommandWithTelemetry("aks.kickstartContainerization", aksKickstart);
             registerCommandWithTelemetry("aks.kickstart.buildAndPush", buildAndPush);
+            registerCommandWithTelemetry("aks.kickstart.configureAndStart", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart /start",
+                });
+            });
             registerCommandWithTelemetry("aks.kickstart.useWorkspace", async () => {
                 const result = await useWorkspace();
                 if (result.succeeded) {

@@ -7,8 +7,20 @@
             "label": "webpack-dev",
             "type": "npm",
             "script": "webpack-dev",
-            "problemMatcher": "$ts-webpack-watch",
             "isBackground": true,
+            "problemMatcher": {
+                "owner": "webpack",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "ERROR in (.+)",
+                    "file": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*webpack.*compiling.*",
+                    "endsPattern": "^.*webpack.*compiled.*"
+                }
+            }
         },
         {
             "label": "webpack",
@@ -19,6 +31,16 @@
             "label": "test-compile",
             "type": "npm",
             "script": "test-compile"
+        },
+        {
+            "label": "build:webview",
+            "type": "npm",
+            "script": "build:webview"
+        },
+        {
+            "label": "kickstart-dev",
+            "dependsOn": ["build:webview", "webpack-dev"],
+            "dependsOrder": "sequence"
         },
         {
             "label": "dev:webview",

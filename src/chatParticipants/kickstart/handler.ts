@@ -19,7 +19,7 @@ export async function defaultHandler(
                 stream.markdown(
                     "## Welcome to AKS Kickstart\n\nI can help you containerize your application and deploy it to Azure Kubernetes Service.",
                 );
-                stream.button({ command: "aks.kickstartContainerization", title: "Open Kickstart panel" });
+                stream.button({ command: "aks.kickstart.configureAndStart", title: "Configure & Start" });
                 stream.button({ command: "aks.kickstart.useWorkspace", title: "Use current workspace" });
                 stream.button({ command: "aks.kickstart.useSample", title: "Use a sample" });
                 break;

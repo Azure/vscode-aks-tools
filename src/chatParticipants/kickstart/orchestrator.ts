@@ -8,6 +8,7 @@ import { analyzeProject } from "./steps/analyze";
 import { generateDockerfileStep } from "./steps/dockerfile";
 import { generateManifestsStep } from "./steps/manifests";
 import { generateGithubActionsStep } from "./steps/githubActions";
+import { configureKickstart } from "../../commands/aksKickstart/configure";
 
 export interface KickstartOptions {
     projectPath: string;
@@ -16,6 +17,9 @@ export interface KickstartOptions {
     acrLoginServer?: string;
     clusterName?: string;
     resourceGroup?: string;
+    isAutomatic?: boolean;
+    canGetKubeconfig?: boolean;
+    hasAcrPull?: boolean;
 }
 
 export interface KickstartResult {
@@ -49,6 +53,36 @@ export async function handleStart(
     }
 
     const projectPath = projectPathResult.result;
+
+    if (!options?.clusterKey) {
+        stream.progress("Configuring cluster and registry...");
+        const configResult = await configureKickstart();
+        if (failed(configResult)) {
+            if (configResult.error === "Cancelled.") {
+                reportKickstartTelemetry("start.cancelled");
+                return { metadata: { command: "start", cancelled: true } };
+            }
+            stream.markdown(`**Error:** ${configResult.error}`);
+            reportKickstartTelemetry("start.error", { error: "configure_failed" });
+            return { metadata: { command: "start", error: configResult.error } };
+        }
+
+        options = {
+            ...options,
+            projectPath,
+            clusterKey: configResult.result.clusterKey,
+            acrKey: configResult.result.acrKey,
+            acrLoginServer: configResult.result.acrLoginServer,
+            clusterName: configResult.result.clusterName,
+            resourceGroup: configResult.result.resourceGroup,
+            isAutomatic: configResult.result.isAutomatic,
+            canGetKubeconfig: configResult.result.canGetKubeconfig,
+            hasAcrPull: configResult.result.hasAcrPull,
+        };
+    }
+
+    renderPreflightChecks(stream, options);
+
     const lmClient = new LMClient();
     const modelResult = await lmClient.ensureModel();
     if (failed(modelResult)) {
@@ -145,6 +179,43 @@ export async function handleSample(
     );
     stream.button({ command: "aks.kickstart.useSample", title: "Use a sample" });
     return { metadata: { command: "sample" } };
+}
+
+function renderPreflightChecks(stream: vscode.ChatResponseStream, options?: Partial<KickstartOptions>): void {
+    if (!options) return;
+
+    const lines: string[] = ["### Pre-flight Checks\n"];
+
+    if (options.isAutomatic !== undefined) {
+        const skuLabel = options.isAutomatic ? "AKS Automatic" : "AKS Standard";
+        const icon = options.isAutomatic ? "⚠️" : "✅";
+        lines.push(`${icon} **Cluster SKU:** ${skuLabel}`);
+        if (options.isAutomatic) {
+            lines.push(
+                "  > AKS Automatic manages node pools, scaling, and upgrades. Some Kickstart features may behave differently.",
+            );
+        }
+    }
+
+    if (options.canGetKubeconfig !== undefined) {
+        const icon = options.canGetKubeconfig ? "✅" : "❌";
+        lines.push(`${icon} **Kubeconfig access:** ${options.canGetKubeconfig ? "Available" : "Denied"}`);
+        if (!options.canGetKubeconfig) {
+            lines.push(
+                "  > You do not have permission to get kubeconfig credentials for this cluster. Ensure you have the **Azure Kubernetes Service Cluster User Role**.",
+            );
+        }
+    }
+
+    if (options.hasAcrPull !== undefined) {
+        const icon = options.hasAcrPull ? "✅" : "⚠️";
+        lines.push(`${icon} **ACR Pull permission:** ${options.hasAcrPull ? "Configured" : "Not configured"}`);
+        if (!options.hasAcrPull) {
+            lines.push("  > The cluster does not have AcrPull on this registry. You can attach it below.");
+        }
+    }
+
+    stream.markdown(lines.join("\n"));
 }
 
 function isCancelled(token: vscode.CancellationToken, stream: vscode.ChatResponseStream): boolean {
