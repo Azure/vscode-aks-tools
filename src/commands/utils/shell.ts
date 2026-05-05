@@ -21,13 +21,40 @@ export enum NonZeroExitCodeBehaviour {
     Fail,
 }
 
+export type CommandLogger = (entry: {
+    command: string;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    durationMs: number;
+}) => void;
+
+let _commandLogger: CommandLogger | undefined;
+
+export function setCommandLogger(logger: CommandLogger | undefined): void {
+    _commandLogger = logger;
+}
+
 /**
  * Used to invoke a binary executable.
  * NOTE: This is for tools other than `kubectl`, which is invoked using the vscode-kubernetes-tools extension's API.
  */
 export async function exec(cmd: string, options?: ShellOptions): Promise<Errorable<ShellResult>> {
+    const startTime = Date.now();
     try {
         const result = await execCore(cmd, options || {});
+        const durationMs = Date.now() - startTime;
+
+        if (_commandLogger) {
+            _commandLogger({
+                command: cmd,
+                exitCode: result.code,
+                stdout: result.stdout.substring(0, 500),
+                stderr: result.stderr.substring(0, 500),
+                durationMs,
+            });
+        }
+
         const exitCodeBehaviour = options?.exitCodeBehaviour ?? NonZeroExitCodeBehaviour.Fail;
         const succeeded = result.code === 0 || exitCodeBehaviour === NonZeroExitCodeBehaviour.Succeed;
         if (succeeded) {
@@ -39,6 +66,16 @@ export async function exec(cmd: string, options?: ShellOptions): Promise<Errorab
             };
         }
     } catch (ex) {
+        const durationMs = Date.now() - startTime;
+        if (_commandLogger) {
+            _commandLogger({
+                command: cmd,
+                exitCode: -1,
+                stdout: "",
+                stderr: getErrorMessage(ex).substring(0, 500),
+                durationMs,
+            });
+        }
         return { succeeded: false, error: getErrorMessage(ex) };
     }
 }

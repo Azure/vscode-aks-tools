@@ -43,6 +43,8 @@ export interface PanelDataProvider<TContent extends ContentId> {
  * Common base class for VS Code Webview panels.
  */
 export abstract class BasePanel<TContent extends ContentId> {
+    protected currentWebview?: ToWebviewMessageSink<TContent>;
+
     protected constructor(
         readonly extensionUri: Uri,
         readonly contentId: TContent,
@@ -52,16 +54,13 @@ export abstract class BasePanel<TContent extends ContentId> {
     show(dataProvider: PanelDataProvider<TContent>, ...disposables: Disposable[]) {
         const panelOptions = {
             enableScripts: true,
-            // Restrict the webview to only load resources from the `webview-ui/dist` directory
             localResourceRoots: [Uri.joinPath(this.extensionUri, "webview-ui/dist")],
-            // persist the state of the webview across restarts
             retainContextWhenHidden: true,
         };
 
         const title = dataProvider.getTitle();
 
         const panel = window.createWebviewPanel(viewType, title, ViewColumn.One, panelOptions);
-        // Set up messaging between VSCode and the webview.
         const telemetryDefinition = dataProvider.getTelemetryDefinition();
         const messageContext = getMessageContext(
             panel.webview,
@@ -70,13 +69,15 @@ export abstract class BasePanel<TContent extends ContentId> {
             telemetryDefinition,
             disposables,
         );
+
+        this.currentWebview = messageContext;
+
         const messageHandler = dataProvider.getMessageHandler(messageContext);
         messageContext.subscribeToMessages(messageHandler);
 
-        // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
-        // the panel or when the panel is closed programmatically)
         panel.onDidDispose(
             () => {
+                this.currentWebview = undefined;
                 panel.dispose();
                 disposables.forEach((d) => d.dispose());
             },
@@ -84,7 +85,6 @@ export abstract class BasePanel<TContent extends ContentId> {
             disposables,
         );
 
-        // Set the HTML content for the webview panel
         const initialState = dataProvider.getInitialState();
         panel.webview.html = this.getWebviewContent(panel.webview, this.extensionUri, title, initialState);
     }

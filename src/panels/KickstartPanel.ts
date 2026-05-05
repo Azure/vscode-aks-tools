@@ -1,4 +1,4 @@
-import { l10n, Uri, commands, window } from "vscode";
+import { l10n, Uri, commands, window, workspace, ExtensionContext } from "vscode";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAuthorizationManagementClient } from "../commands/utils/arm";
 import { acrResourceType, clusterResourceType, getResources } from "../commands/utils/azureResources";
@@ -18,8 +18,13 @@ import {
 import { Subscription, acrPullRoleDefinitionName } from "../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
+import { KickstartState } from "../chatParticipants/kickstart/state";
+import { getReadySessionProvider } from "../auth/azureAuth";
 
 export class KickstartPanel extends BasePanel<"kickstart"> {
+    static currentPanel: KickstartPanel | undefined;
+    static extensionUri: Uri | undefined;
+
     constructor(extensionUri: Uri) {
         super(extensionUri, "kickstart", {
             getSubscriptionsResponse: null,
@@ -29,7 +34,45 @@ export class KickstartPanel extends BasePanel<"kickstart"> {
             getPermissionStatusResponse: null,
             attachAcrResponse: null,
             startKickstartResponse: null,
+            stateChanged: null,
         });
+    }
+
+    static async showIfNotOpen(context: ExtensionContext): Promise<void> {
+        if (KickstartPanel.currentPanel?.currentWebview) {
+            return;
+        }
+
+        const sessionProvider = await getReadySessionProvider();
+        if (failed(sessionProvider)) {
+            return;
+        }
+
+        if (!KickstartPanel.extensionUri) {
+            KickstartPanel.extensionUri = context.extensionUri;
+        }
+
+        const panel = new KickstartPanel(KickstartPanel.extensionUri);
+        const dataProvider = new KickstartPanelDataProvider(sessionProvider.result);
+        panel.show(dataProvider);
+        KickstartPanel.currentPanel = panel;
+    }
+
+    static pushState(state: KickstartState): void {
+        if (KickstartPanel.currentPanel && KickstartPanel.currentPanel.currentWebview) {
+            KickstartPanel.currentPanel.currentWebview.postStateChanged({
+                currentPhase: state.currentPhase,
+                analysis: state.analysis,
+                config: state.config,
+                artifacts: state.artifacts,
+                image: state.image,
+                deployment: state.deployment,
+                verification: state.verification,
+                lastError: state.lastError,
+                auditLog: state.auditLog,
+                armResources: state.armResources,
+            });
+        }
     }
 }
 
@@ -56,6 +99,7 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
             getPermissionStatusRequest: false,
             attachAcrRequest: false,
             startKickstartRequest: false,
+            openArtifactRequest: false,
         };
     }
 
@@ -70,6 +114,7 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
                 this.handleGetPermissionStatusRequest(args.clusterKey, args.acrKey, webview),
             attachAcrRequest: (args) => this.handleAttachAcrRequest(args.clusterKey, args.acrKey, webview),
             startKickstartRequest: (args) => this.handleStartKickstartRequest(args.clusterKey, args.acrKey, webview),
+            openArtifactRequest: (args) => this.handleOpenArtifactRequest(args.filename, args.content),
         };
     }
 
@@ -216,5 +261,20 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
     ) {
         await commands.executeCommand("workbench.action.chat.open", { query: "@kickstart /start" });
         webview.postStartKickstartResponse(undefined);
+    }
+
+    private async handleOpenArtifactRequest(filename: string, content: string) {
+        const doc = await workspace.openTextDocument({ content, language: this.getLanguageId(filename) });
+        await window.showTextDocument(doc, { preview: true });
+    }
+
+    private getLanguageId(filename: string): string {
+        if (filename.endsWith(".yaml") || filename.endsWith(".yml")) {
+            return "yaml";
+        }
+        if (filename === "Dockerfile") {
+            return "dockerfile";
+        }
+        return "plaintext";
     }
 }

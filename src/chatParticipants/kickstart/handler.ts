@@ -5,6 +5,7 @@ import { validatePrereqs, executePhase, classifyError } from "./phaseRunner";
 import { renderProgress, renderStateSummary, phaseName } from "./progress";
 import { reportKickstartTelemetry } from "./telemetry";
 import { getAssetContext } from "../../assets";
+import { KickstartPanel } from "../../panels/KickstartPanel";
 
 export async function defaultHandler(
     request: vscode.ChatRequest,
@@ -34,6 +35,8 @@ export async function defaultHandler(
             return { metadata: { command: request.command ?? "welcome" } };
         }
 
+        await KickstartPanel.showIfNotOpen(extensionContext);
+
         const workspaceFolder = workspaceFolders[0].uri.fsPath;
         let state = loadState(extensionContext, workspaceFolder) ?? createInitialState(workspaceFolder);
         const intent = detectIntent(request.prompt ?? "", request.command, state);
@@ -52,6 +55,7 @@ export async function defaultHandler(
         if (intent.action === "reset") {
             state = createInitialState(workspaceFolder);
             await saveState(extensionContext, workspaceFolder, state);
+            KickstartPanel.pushState(state);
             stream.markdown("✨ **Starting fresh!**\n\nLet's analyze your project...");
             reportKickstartTelemetry("reset.completed");
             return { metadata: { command: "reset" } };
@@ -85,6 +89,7 @@ export async function defaultHandler(
                     retryable: result.retryable ?? false,
                 };
                 await saveState(extensionContext, workspaceFolder, state);
+                KickstartPanel.pushState(state);
                 reportKickstartTelemetry(`phase-${intent.phase}.failed`);
                 return { metadata: { command: `phase-${intent.phase}`, error: result.error } };
             }
@@ -113,6 +118,7 @@ export async function defaultHandler(
             }
             state.lastError = undefined;
             await saveState(extensionContext, workspaceFolder, state);
+            KickstartPanel.pushState(state);
 
             stream.markdown(renderProgress(state.currentPhase));
 

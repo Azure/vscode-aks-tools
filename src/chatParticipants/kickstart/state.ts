@@ -92,6 +92,29 @@ export interface ErrorInfo {
 }
 
 /**
+ * Command audit log entry
+ */
+export interface CommandLogEntry {
+    command: string;
+    timestamp: number;
+    exitCode?: number;
+    stdout?: string; // truncated to 500 chars
+    stderr?: string; // truncated to 500 chars
+    phase: Phase;
+    durationMs?: number;
+}
+
+/**
+ * ARM resource tracking
+ */
+export interface ArmResource {
+    type: string; // e.g. "Microsoft.ContainerRegistry/registries"
+    name: string; // e.g. "myacr"
+    resourceGroup: string;
+    action: "used" | "created" | "modified";
+}
+
+/**
  * Complete kickstart state for a workspace
  */
 export interface KickstartState {
@@ -104,6 +127,8 @@ export interface KickstartState {
     deployment?: DeploymentData;
     verification?: VerificationData;
     lastError?: ErrorInfo;
+    auditLog?: CommandLogEntry[];
+    armResources?: ArmResource[];
 }
 
 /**
