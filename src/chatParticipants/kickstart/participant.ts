@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { KICKSTART_PARTICIPANT_ID } from "./config";
 import { defaultHandler } from "./handler";
+import { Phase } from "./state";
 
 export function registerKickstartParticipant(context: vscode.ExtensionContext): void {
     const participant = vscode.chat.createChatParticipant(KICKSTART_PARTICIPANT_ID, defaultHandler);
@@ -8,10 +9,16 @@ export function registerKickstartParticipant(context: vscode.ExtensionContext): 
     participant.followupProvider = {
         provideFollowups(result: vscode.ChatResult): vscode.ChatFollowup[] {
             const meta = result.metadata as
-                | { command?: string; artifactCount?: number; cancelled?: boolean; error?: string }
+                | {
+                      command?: string;
+                      artifactCount?: number;
+                      cancelled?: boolean;
+                      error?: string;
+                  }
                 | undefined;
             const command = meta?.command;
 
+            // Handle welcome/no workspace state
             if (!command || command === "welcome") {
                 return [
                     { prompt: "/start", label: "Start with current workspace" },
@@ -19,23 +26,62 @@ export function registerKickstartParticipant(context: vscode.ExtensionContext): 
                 ];
             }
 
-            if (command === "start" && meta?.artifactCount && meta.artifactCount > 0) {
+            // Handle errors - offer retry and status check
+            if (meta?.error) {
                 return [
-                    {
-                        prompt: "Build & push to ACR",
-                        command: "aks.kickstart.buildAndPush",
-                        label: "Build & push to ACR",
-                    },
-                    { prompt: "Deploy to AKS", command: "aks.kickstart.deploy", label: "Deploy to AKS" },
+                    { prompt: "retry", label: "Retry" },
+                    { prompt: "status", label: "Check status" },
                 ];
             }
 
+            // Handle cancellation - offer to try again
             if (meta?.cancelled) {
-                return [{ prompt: "/start", label: "Try again" }];
+                return [{ prompt: "analyze my project", label: "Try again" }];
             }
 
-            if (meta?.error) {
-                return [{ prompt: "@kickstart help", label: "Get help" }];
+            // Handle reset - suggest analyzing
+            if (command === "reset") {
+                return [{ prompt: "analyze my project", label: "Analyze project" }];
+            }
+
+            // Handle status - no automatic followups after status check
+            if (command === "status") {
+                return [];
+            }
+
+            // Handle phase completions with phase-aware suggestions
+            const phaseMatch = command?.match(/^phase-(\d+)$/);
+            if (phaseMatch) {
+                const phaseNum = parseInt(phaseMatch[1], 10);
+
+                switch (phaseNum) {
+                    case Phase.ANALYZE:
+                        return [{ prompt: "configure Azure resources", label: "Configure Azure resources" }];
+
+                    case Phase.CONFIGURE:
+                        return [{ prompt: "generate deployment files", label: "Generate deployment files" }];
+
+                    case Phase.PREPARE:
+                        return [{ prompt: "build and push image", label: "Build & push image" }];
+
+                    case Phase.BUILD:
+                        return [{ prompt: "deploy to AKS", label: "Deploy to AKS" }];
+
+                    case Phase.DEPLOY:
+                        return [{ prompt: "verify deployment", label: "Verify deployment" }];
+
+                    case Phase.VERIFY:
+                        return [
+                            { prompt: "check status", label: "Check status" },
+                            { prompt: "start over", label: "Start over" },
+                        ];
+
+                    case Phase.COMPLETE:
+                        return [
+                            { prompt: "check status", label: "Check status" },
+                            { prompt: "start over", label: "Start over" },
+                        ];
+                }
             }
 
             return [];
