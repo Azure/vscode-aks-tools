@@ -1,5 +1,20 @@
 import * as vscode from "vscode";
-import { Phase, KickstartState } from "./state";
+import {
+    Phase,
+    KickstartState,
+    AnalysisData,
+    ConfigData,
+    ArtifactsData,
+    ImageData,
+    DeploymentData,
+    VerificationData,
+} from "./state";
+import { analyzePhase } from "./phases/analyze";
+import { configurePhase } from "./phases/configure";
+import { preparePhase } from "./phases/prepare";
+import { buildPhase } from "./phases/build";
+import { deployPhase } from "./phases/deploy";
+import { verifyPhase } from "./phases/verify";
 
 /**
  * Result of executing a phase
@@ -228,8 +243,9 @@ export function classifyError(error: unknown): ErrorClassification {
 /**
  * Executes a phase of the kickstart workflow.
  *
- * **Note:** This is currently a stub implementation. Phase execution logic will be
- * implemented in phases T5-T10. Each phase handler will be added to the switch statement.
+ * Dispatches to the appropriate phase handler based on the phase type.
+ * Each phase has specific entry and exit validation, updates the state,
+ * and returns PhaseResult with optional phase-specific data.
  *
  * @param phase The phase to execute
  * @param state The current kickstart state
@@ -239,34 +255,75 @@ export function classifyError(error: unknown): ErrorClassification {
  */
 export async function executePhase(
     phase: Phase,
-    _state: KickstartState,
-    _stream: vscode.ChatResponseStream,
-    _token: vscode.CancellationToken,
-): Promise<PhaseResult> {
+    state: KickstartState,
+    stream: vscode.ChatResponseStream,
+    token: vscode.CancellationToken,
+): Promise<
+    PhaseResult & {
+        analysis?: AnalysisData;
+        config?: ConfigData;
+        artifacts?: ArtifactsData;
+        image?: ImageData;
+        deployment?: DeploymentData;
+        verification?: VerificationData;
+    }
+> {
     try {
-        // TODO: Phase implementations will be added in T5-T10
-        // Each phase will have its own implementation with specific logic
+        const workspaceFolder = vscode.Uri.file(state.workspaceFolder);
+
         switch (phase) {
             case Phase.ANALYZE:
-                return { ok: false, error: "Phase execution not yet implemented" };
+                return await analyzePhase(workspaceFolder, stream, token);
 
             case Phase.CONFIGURE:
-                return { ok: false, error: "Phase execution not yet implemented" };
+                return await configurePhase(stream, token);
 
             case Phase.PREPARE:
-                return { ok: false, error: "Phase execution not yet implemented" };
+                if (!state.analysis || !state.config) {
+                    return {
+                        ok: false,
+                        error: "Missing prerequisites for PREPARE phase.",
+                        retryable: false,
+                    };
+                }
+                return await preparePhase(workspaceFolder, state.analysis, state.config, stream, token);
 
             case Phase.BUILD:
-                return { ok: false, error: "Phase execution not yet implemented" };
+                if (!state.artifacts || !state.config) {
+                    return {
+                        ok: false,
+                        error: "Missing prerequisites for BUILD phase.",
+                        retryable: false,
+                    };
+                }
+                return await buildPhase(workspaceFolder, state.artifacts, state.config, stream, token);
 
             case Phase.DEPLOY:
-                return { ok: false, error: "Phase execution not yet implemented" };
+                if (!state.artifacts || !state.config || !state.image) {
+                    return {
+                        ok: false,
+                        error: "Missing prerequisites for DEPLOY phase.",
+                        retryable: false,
+                    };
+                }
+                return await deployPhase(workspaceFolder, state.artifacts, state.config, state.image, stream, token);
 
             case Phase.VERIFY:
-                return { ok: false, error: "Phase execution not yet implemented" };
+                if (!state.deployment || !state.config) {
+                    return {
+                        ok: false,
+                        error: "Missing prerequisites for VERIFY phase.",
+                        retryable: false,
+                    };
+                }
+                return await verifyPhase(workspaceFolder, state.deployment, state.config, stream, token);
 
             case Phase.COMPLETE:
-                return { ok: false, error: "Phase execution not yet implemented" };
+                return {
+                    ok: false,
+                    error: "Phase execution not yet implemented",
+                    retryable: false,
+                };
 
             default:
                 return { ok: false, error: `Unknown phase: ${phase}` };
