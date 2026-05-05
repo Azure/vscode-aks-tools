@@ -17,6 +17,7 @@ import { getKaitoModelScenarios } from "./kaitoModelTests";
 import { getKaitoManageScenarios } from "./kaitoManageTests";
 import { getKaitoTestScenarios } from "./kaitoTestTests";
 import { getKubectlScenarios } from "./kubectlTests";
+import { getKickstartScenarios } from "./kickstartTests";
 import { getRetinaCaptureScenarios } from "./retinaCaptureTests";
 import { getTCPDumpScenarios } from "./tcpDumpTests";
 import { TestScenarioSelector } from "./TestScenarioSelector/TestScenarioSelector";
@@ -58,9 +59,8 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoTest: getKaitoTestScenarios(),
     automatedDeployments: getAutomatedDeploymentScenarios(),
     createFleet: getCreateFleetScenarios(),
-    // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
-    // TODO: Replace with the actual scenarios when available.
     fleetProperties: [],
+    kickstart: getKickstartScenarios(),
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);

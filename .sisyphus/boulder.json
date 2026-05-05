@@ -1,0 +1,104 @@
+{
+  "active_plan": "/home/azureuser/vscode-aks-tools/.sisyphus/plans/kickstart-chat-and-ui.md",
+  "started_at": "2026-05-04T22:54:52.967Z",
+  "session_ids": [
+    "ses_20b3f63f1ffe1Y3J4NwPG7T2bG",
+    "ses_20aa8b66dffe1TqAKJzi8WZflh",
+    "ses_20aa87e72ffeZiZgcVHpl9SoRi",
+    "ses_20aa874cbfferVYISGWxp4dYnV",
+    "ses_20aa4c7e7ffebtSrcf0BA2Msbl",
+    "ses_20aa4a4ccffeWHGKQFyZl2D7AM",
+    "ses_20aa47260ffe7n9M7hVCQk77yR",
+    "ses_20a9b9785ffeRjjRE6K3Oju213",
+    "ses_20a9b59d3ffeCFZru3Avj5l1r3",
+    "ses_20a9b58f8ffe4kEMWjFbXWNCts"
+  ],
+  "session_origins": {
+    "ses_20b3f63f1ffe1Y3J4NwPG7T2bG": "direct",
+    "ses_20aa8b66dffe1TqAKJzi8WZflh": "appended",
+    "ses_20aa87e72ffeZiZgcVHpl9SoRi": "appended",
+    "ses_20aa874cbfferVYISGWxp4dYnV": "appended",
+    "ses_20aa4c7e7ffebtSrcf0BA2Msbl": "appended",
+    "ses_20aa4a4ccffeWHGKQFyZl2D7AM": "appended",
+    "ses_20aa47260ffe7n9M7hVCQk77yR": "appended",
+    "ses_20a9b9785ffeRjjRE6K3Oju213": "appended",
+    "ses_20a9b59d3ffeCFZru3Avj5l1r3": "appended",
+    "ses_20a9b58f8ffe4kEMWjFbXWNCts": "appended"
+  },
+  "plan_name": "kickstart-chat-and-ui",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Add `aks.kickstartEnabledPreview` config + package.json contributions skeleton",
+      "session_id": "ses_20acb5038ffet9ouKGBBVGuxQO",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-04T22:57:01.523Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "Webview contract `src/webview-contract/webviewDefinitions/kickstart.ts`",
+      "session_id": "ses_20ac29499ffe839YR2ocI09yc2",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-04T23:06:17.742Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "`KickstartPanel` + `KickstartPanelDataProvider` (extension side)",
+      "session_id": "ses_20abdf76effeZAa1sMAygxhp8l",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-04T23:16:17.046Z"
+    },
+    "todo:13": {
+      "task_key": "todo:13",
+      "task_label": "13",
+      "task_title": "Chat handler skeleton `src/chatParticipants/kickstart/handler.ts`",
+      "session_id": "ses_20ab54d2effe5UrLv86reH8agA",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-04T23:20:50.991Z"
+    },
+    "todo:15": {
+      "task_key": "todo:15",
+      "task_label": "15",
+      "task_title": "Generation orchestrator `src/chatParticipants/kickstart/orchestrator.ts`",
+      "session_id": "ses_20ab1e5d9ffeNlkPYomMZptFQm",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-05-04T23:25:57.494Z"
+    },
+    "todo:21": {
+      "task_key": "todo:21",
+      "task_label": "21",
+      "task_title": "Save-all command `aks.kickstart.saveAll`",
+      "session_id": "ses_20aaea952ffeEUVKNnDB397dBY",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-04T23:28:52.442Z"
+    },
+    "todo:22": {
+      "task_key": "todo:22",
+      "task_label": "22",
+      "task_title": "Followup provider `provideKickstartFollowups`",
+      "session_id": "ses_20aaada05ffeW6ODb3lTPyg2U3",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-04T23:32:48.983Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_20a98362cffeX25jY2M6sKBH8a",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-05-04T23:52:50.538Z"
+    }
+  }
+}

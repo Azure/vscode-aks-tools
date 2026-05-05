@@ -13,6 +13,12 @@ import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSe
 import { registerUriHandler } from "./uriHandler";
 import { selectSubscriptions, selectTenant, signInToAzure } from "./commands/aksAccount/aksAccount";
 import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrToCluster";
+import { aksKickstart } from "./commands/aksKickstart/kickstart";
+import { buildAndPush } from "./commands/aksKickstart/buildAndPush";
+import { useWorkspace, useSample } from "./commands/aksKickstart/repoSource";
+import { saveFile } from "./commands/aksKickstart/saveFile";
+import { saveAll } from "./commands/aksKickstart/saveAll";
+import { deploy } from "./commands/aksKickstart/deploy";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
 import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
@@ -87,6 +93,7 @@ import {
     setGitHubActionsSecrets,
     getGitHubRepoInfo,
 } from "./commands/aksContainerAssist/oidcSetup";
+import { registerKickstartParticipant } from "./chatParticipants/kickstart/participant";
 
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
@@ -102,6 +109,10 @@ export async function activate(context: vscode.ExtensionContext) {
     setAssetContext(context);
 
     registerUriHandler(context);
+
+    if (vscode.workspace.getConfiguration("aks").get<boolean>("kickstartEnabledPreview")) {
+        registerKickstartParticipant(context);
+    }
 
     // Create and register the Azure session provider before accessing it.
     activateAzureSessionProvider(context);
@@ -127,6 +138,27 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksBestPracticesDiagnostics", aksBestPracticesDiagnostics);
         registerCommandWithTelemetry("aks.aksIdentitySecurityDiagnostics", aksIdentitySecurityDiagnostics);
         registerCommandWithTelemetry("aks.attachAcrToCluster", attachAcrToCluster);
+        if (vscode.workspace.getConfiguration("aks").get("kickstartEnabledPreview")) {
+            registerCommandWithTelemetry("aks.kickstartContainerization", aksKickstart);
+            registerCommandWithTelemetry("aks.kickstart.buildAndPush", buildAndPush);
+            registerCommandWithTelemetry("aks.kickstart.useWorkspace", async () => {
+                const result = await useWorkspace();
+                if (result.succeeded) {
+                    await vscode.commands.executeCommand("workbench.action.chat.open", {
+                        query: "@kickstart /start",
+                    });
+                }
+            });
+            registerCommandWithTelemetry("aks.kickstart.useSample", async () => {
+                const result = await useSample(new vscode.CancellationTokenSource().token);
+                if (!result.succeeded && result.error !== "Cancelled.") {
+                    vscode.window.showErrorMessage(result.error);
+                }
+            });
+            registerCommandWithTelemetry("aks.kickstart.saveFile", saveFile);
+            registerCommandWithTelemetry("aks.kickstart.saveAll", saveAll);
+            registerCommandWithTelemetry("aks.kickstart.deploy", deploy);
+        }
         registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
         registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);
         registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);
