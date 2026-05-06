@@ -1,25 +1,81 @@
 import * as vscode from "vscode";
-import { analyzeProject as analyzeProjectStep } from "../steps/analyze";
+import { analyzeProject as analyzeProjectStep, ModuleAnalysis } from "../steps/analyze";
 import { checkExistingFiles } from "../../../commands/aksContainerAssist/fileOperations";
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { PhaseResult } from "../phaseRunner";
 import { AnalysisData } from "../state";
 
-/**
- * Analyzes the project structure, language, framework, and existing artifacts.
- *
- * This phase:
- * 1. Uses the MCP SDK to analyze the repository structure
- * 2. Detects the primary language, framework, and entry point
- * 3. Scans for existing Dockerfile, K8s manifests, and GitHub workflows
- * 4. Streams a summary of findings to the user
- * 5. Validates that language and entry point were detected
- *
- * @param workspaceFolder The workspace folder URI
- * @param stream The chat response stream for progress updates
- * @param token Cancellation token to stop execution
- * @returns PhaseResult with AnalysisData on success
- */
+async function getDirectoryTree(workspacePath: string, maxDepth: number = 3): Promise<string> {
+    const uri = vscode.Uri.file(workspacePath);
+    const lines: string[] = [];
+
+    async function walk(dir: vscode.Uri, prefix: string, depth: number) {
+        if (depth > maxDepth) return;
+        const entries = await vscode.workspace.fs.readDirectory(dir);
+        const filtered = entries.filter(
+            ([name]) => !name.startsWith(".") && name !== "node_modules" && name !== "__pycache__" && name !== "venv",
+        );
+        for (const [name, type] of filtered) {
+            lines.push(`${prefix}${name}${type === vscode.FileType.Directory ? "/" : ""}`);
+            if (type === vscode.FileType.Directory) {
+                await walk(vscode.Uri.joinPath(dir, name), `${prefix}  `, depth + 1);
+            }
+        }
+    }
+
+    await walk(uri, "", 0);
+    return lines.slice(0, 200).join("\n");
+}
+
+async function analyzeWithLM(
+    workspacePath: string,
+    lmClient: LMClient,
+    stream: vscode.ChatResponseStream,
+    token: vscode.CancellationToken,
+): Promise<ModuleAnalysis[]> {
+    const modelResult = await lmClient.ensureModel();
+    if (!modelResult.succeeded) return [];
+
+    stream.markdown("🤖 Using Copilot to identify project modules...\n\n");
+
+    const tree = await getDirectoryTree(workspacePath);
+
+    const systemPrompt =
+        "You are a project structure analyzer. Given a directory tree, identify deployable service modules. " +
+        "Respond ONLY with valid JSON — no markdown, no explanation. " +
+        'Return an array of objects with: name, modulePath (relative), language ("python"|"javascript"|"typescript"|"java"|"go"|"dotnet"|"rust"|"other"), ' +
+        "framework (optional), entryPoint (optional, e.g. app.py, main.go), port (optional number).";
+
+    const userPrompt =
+        `Analyze this directory tree and identify all deployable service modules:\n\n${tree}\n\n` +
+        "Look for: package.json, requirements.txt, go.mod, pom.xml, Cargo.toml, *.csproj, Dockerfile, or any main entry point files. " +
+        "Each directory with its own dependency file is a separate module.";
+
+    const response = await lmClient.sendRequest(systemPrompt, userPrompt, token);
+    if (!response.succeeded) return [];
+
+    try {
+        const text = response.result
+            .replace(/```json?\s*/g, "")
+            .replace(/```\s*/g, "")
+            .trim();
+        const parsed = JSON.parse(text);
+        const modules: ModuleAnalysis[] = (Array.isArray(parsed) ? parsed : [parsed]).map(
+            (m: Record<string, unknown>) => ({
+                name: String(m.name ?? ""),
+                modulePath: String(m.modulePath ?? ""),
+                language: String(m.language ?? "other"),
+                framework: m.framework ? String(m.framework) : undefined,
+                entryPoint: m.entryPoint ? String(m.entryPoint) : undefined,
+                port: typeof m.port === "number" ? m.port : undefined,
+            }),
+        );
+        return modules.filter((m) => m.name && m.language);
+    } catch {
+        return [];
+    }
+}
+
 export async function analyzePhase(
     workspaceFolder: vscode.Uri,
     stream: vscode.ChatResponseStream,
@@ -33,15 +89,28 @@ export async function analyzePhase(
         const lmClient = new LMClient();
         const analysisResult = await analyzeProjectStep(workspacePath, lmClient, token);
 
-        if (!analysisResult.succeeded) {
-            return {
-                ok: false,
-                error: `Failed to analyze project: ${analysisResult.error}`,
-                retryable: true,
-            };
+        let modules: ModuleAnalysis[];
+        let isMonorepo: boolean;
+
+        if (analysisResult.succeeded && analysisResult.result.modules.length > 0) {
+            modules = analysisResult.result.modules;
+            isMonorepo = analysisResult.result.isMonorepo;
+        } else {
+            stream.markdown("⚠️ Standard detection didn't find modules. Falling back to AI analysis...\n\n");
+            modules = await analyzeWithLM(workspacePath, lmClient, stream, token);
+            isMonorepo = modules.length > 1;
+
+            if (modules.length === 0) {
+                return {
+                    ok: false,
+                    error:
+                        "Could not detect any project modules. Please ensure the repository contains " +
+                        "recognizable project files (package.json, requirements.txt, go.mod, pom.xml, etc.).",
+                    retryable: true,
+                };
+            }
         }
 
-        const { modules, isMonorepo } = analysisResult.result;
         const existingFiles = await checkExistingFiles(workspacePath);
         const primaryModule = modules[0];
 
@@ -87,29 +156,19 @@ export async function analyzePhase(
             }
         }
 
-        stream.markdown("\n### Next Steps\n\n");
-
         if (isMonorepo && modules.length > 1) {
-            stream.markdown(
-                `You have a monorepo with ${modules.length} modules. We'll help you containerize and deploy them to AKS.\n\n`,
-            );
+            stream.markdown("\n### Detected Modules\n\n");
+            for (const mod of modules) {
+                stream.markdown(
+                    `- **${mod.name}** (${mod.language}${mod.framework ? ` / ${mod.framework}` : ""}) — \`${mod.modulePath}\`\n`,
+                );
+            }
         }
 
-        if (!existingFiles.hasDockerfile) {
-            stream.markdown("- We'll generate a **Dockerfile** optimized for your project\n");
-        } else {
-            stream.markdown("- Found existing **Dockerfile** - we can use or optimize it\n");
-        }
-
-        if (!existingFiles.hasK8sManifests) {
-            stream.markdown("- We'll generate **Kubernetes manifests** for deployment\n");
-        } else {
-            stream.markdown("- Found existing **Kubernetes manifests** - we can use or update them\n");
-        }
-
+        stream.markdown("\n### Next Steps\n\n");
         stream.markdown("- Configure your Azure container registry and AKS cluster\n");
-        stream.markdown("- Build and push your container image\n");
-        stream.markdown("- Deploy to your AKS cluster\n");
+        stream.markdown("- Generate deployment artifacts (Dockerfile + K8s manifests)\n");
+        stream.markdown("- Build, push, and deploy\n");
 
         const analysis: AnalysisData = {
             language: primaryModule.language,
@@ -120,7 +179,7 @@ export async function analyzePhase(
             modules: modules,
             hasDockerfile: existingFiles.hasDockerfile,
             hasK8sManifests: existingFiles.hasK8sManifests,
-            hasGitHubWorkflow: false, // TODO: Implement GitHub workflow detection
+            hasGitHubWorkflow: false,
         };
 
         return {
