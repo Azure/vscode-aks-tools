@@ -50,6 +50,11 @@ export function registerKickstartParticipant(context: vscode.ExtensionContext): 
                 return [];
             }
 
+            // Handle create - suggest continuing with configure
+            if (command === "create") {
+                return [{ prompt: "configure Azure resources", label: "I created my cluster, continue" }];
+            }
+
             // Handle phase completions with phase-aware suggestions
             const phaseMatch = command?.match(/^phase-(\d+)$/);
             if (phaseMatch) {

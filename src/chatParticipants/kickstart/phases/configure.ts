@@ -46,6 +46,17 @@ export async function configurePhase(
                 };
             }
 
+            if (
+                configResult.error.includes("No AKS clusters") ||
+                configResult.error.includes("No container registries")
+            ) {
+                return {
+                    ok: false,
+                    error: `${configResult.error}\n\nTip: Say **create cluster** to set up a new AKS cluster, or select a different subscription.`,
+                    retryable: true,
+                };
+            }
+
             return {
                 ok: false,
                 error: configResult.error,

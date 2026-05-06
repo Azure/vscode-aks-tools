@@ -97,7 +97,6 @@ export type ToVsCodeMsgDef = {
     getPermissionStatusRequest: { clusterKey: ClusterKey; acrKey: AcrKey };
     attachAcrRequest: { clusterKey: ClusterKey; acrKey: AcrKey };
     startKickstartRequest: { clusterKey: ClusterKey; acrKey: AcrKey };
-    quickStartRequest: { type: "sample" | "existing" | "new" };
     openArtifactRequest: { filename: string; content: string };
 };
 

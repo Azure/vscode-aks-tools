@@ -127,6 +127,7 @@ export async function verifyPhase(
 
         try {
             stream.markdown("### Pod Status\n\n");
+            stream.progress("Checking pod status...");
 
             // Step 3: Check pod status in default namespace
             const namespace = "default";

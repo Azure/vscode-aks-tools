@@ -5,7 +5,7 @@ import { Phase, KickstartState } from "./state";
  */
 export interface Intent {
     phase?: Phase;
-    action: "run" | "status" | "reset" | "skip";
+    action: "run" | "status" | "reset" | "skip" | "create";
 }
 
 /**
@@ -40,6 +40,19 @@ export function detectIntent(prompt: string, command: string | undefined, state:
 
     // Priority 2: Keyword matching (case-insensitive)
     const lowerPrompt = prompt.toLowerCase();
+
+    // Create cluster keywords
+    if (
+        lowerPrompt.includes("create cluster") ||
+        lowerPrompt.includes("create a cluster") ||
+        lowerPrompt.includes("new cluster") ||
+        lowerPrompt.includes("create aks") ||
+        lowerPrompt.includes("provision cluster") ||
+        lowerPrompt.includes("i don't have a cluster") ||
+        lowerPrompt.includes("no cluster")
+    ) {
+        return { action: "create" };
+    }
 
     // Status/progress keywords
     if (lowerPrompt.includes("status") || lowerPrompt.includes("where am i") || lowerPrompt.includes("progress")) {

@@ -134,6 +134,7 @@ export async function deployPhase(
 
             // Apply manifests to the cluster
             stream.markdown(`### Applying manifests to **${config.clusterName}**\n\n`);
+            stream.progress("Applying manifests to cluster...");
 
             const applyResult = await invokeKubectlCommand(
                 kubectl,

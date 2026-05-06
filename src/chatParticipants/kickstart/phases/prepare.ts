@@ -61,6 +61,7 @@ export async function preparePhase(
 
         // Step 1: Generate Dockerfile
         stream.markdown("### Generating Dockerfile\n\n");
+        stream.progress("Generating Dockerfile...");
 
         const dockerfileResult = await generateDockerfileStep(analysisResult, lmClient, stream, token, workspacePath);
 
@@ -76,6 +77,7 @@ export async function preparePhase(
 
         // Step 2: Generate Kubernetes manifests
         stream.markdown("### Generating Kubernetes Manifests\n\n");
+        stream.progress("Generating Kubernetes manifests...");
 
         const manifestsResult = await generateManifestsStep(
             analysisResult,

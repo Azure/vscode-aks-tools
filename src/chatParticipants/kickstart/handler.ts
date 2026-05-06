@@ -94,6 +94,23 @@ export async function defaultHandler(
             return { metadata: { command: "reset" } };
         }
 
+        if (intent.action === "create") {
+            stream.markdown(
+                "## Create an AKS Cluster\n\n" +
+                    "I can help you create a new AKS cluster. You have two options:\n\n" +
+                    "**AKS Automatic** (recommended for kickstart) — Azure manages node pools, scaling, and upgrades automatically. " +
+                    "Great for getting started quickly.\n\n" +
+                    "**AKS Standard** — Full control over node pools, scaling policies, and configuration.\n\n",
+            );
+            stream.button({ command: "aks.createCluster", title: "🆕 Create cluster (guided wizard)" });
+            stream.button({ command: "aks.aksCreateClusterFromCopilot", title: "🤖 Create with Copilot" });
+            stream.markdown(
+                "\n\nAfter creating your cluster, come back and say **configure** to continue the kickstart flow.",
+            );
+            reportKickstartTelemetry("create-cluster.offered");
+            return { metadata: { command: "create" } };
+        }
+
         if (intent.action === "run" && intent.phase !== undefined) {
             const prereqCheck = validatePrereqs(intent.phase, state);
             if (!prereqCheck.ok) {
@@ -108,7 +125,7 @@ export async function defaultHandler(
             }
 
             stream.progress(`Running ${phaseName(intent.phase)} phase...`);
-            const result = await executePhase(intent.phase, state, stream, token);
+            const result = await executePhase(intent.phase, state, stream, token, request);
 
             if (!result.ok) {
                 const classification = classifyError(result.error);

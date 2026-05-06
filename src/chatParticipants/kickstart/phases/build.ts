@@ -92,7 +92,7 @@ export async function buildPhase(
 
         // Execute az acr build command
         stream.markdown("### Building image...\n\n");
-        stream.markdown("Starting build with Azure Container Registry...\n\n");
+        stream.progress("Building container image...");
 
         // Use az acr build to build and push in one step
         // The command: az acr build --registry <acr-name> --image <image-name>:<tag> <build-context>

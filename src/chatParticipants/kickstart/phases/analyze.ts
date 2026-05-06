@@ -29,14 +29,11 @@ async function getDirectoryTree(workspacePath: string, maxDepth: number = 3): Pr
 
 async function analyzeWithLM(
     workspacePath: string,
-    lmClient: LMClient,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
+    model: vscode.LanguageModelChat,
 ): Promise<ModuleAnalysis[]> {
-    const modelResult = await lmClient.ensureModel();
-    if (!modelResult.succeeded) return [];
-
-    stream.markdown("🤖 Using Copilot to identify project modules...\n\n");
+    stream.progress("Analyzing project with AI...");
 
     const tree = await getDirectoryTree(workspacePath);
 
@@ -51,11 +48,24 @@ async function analyzeWithLM(
         "Look for: package.json, requirements.txt, go.mod, pom.xml, Cargo.toml, *.csproj, Dockerfile, or any main entry point files. " +
         "Each directory with its own dependency file is a separate module.";
 
-    const response = await lmClient.sendRequest(systemPrompt, userPrompt, token);
-    if (!response.succeeded) return [];
+    const messages = [
+        vscode.LanguageModelChatMessage.User(systemPrompt),
+        vscode.LanguageModelChatMessage.User(userPrompt),
+    ];
+
+    const chatResponse = await model.sendRequest(messages, {}, token);
+
+    let responseText = "";
+    for await (const fragment of chatResponse.text) {
+        responseText += fragment;
+    }
+
+    stream.markdown("🤖 AI analysis complete.\n\n");
+
+    stream.markdown("🤖 AI analysis complete.\n\n");
 
     try {
-        const text = response.result
+        const text = responseText
             .replace(/```json?\s*/g, "")
             .replace(/```\s*/g, "")
             .trim();
@@ -80,11 +90,15 @@ export async function analyzePhase(
     workspaceFolder: vscode.Uri,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
+    request: vscode.ChatRequest,
 ): Promise<PhaseResult & { analysis?: AnalysisData }> {
     try {
         const workspacePath = workspaceFolder.fsPath;
+        const chatModel = request.model;
 
         stream.markdown("📊 **Analyzing project structure**\n\n");
+
+        stream.progress("Scanning project files...");
 
         const lmClient = new LMClient();
         const analysisResult = await analyzeProjectStep(workspacePath, lmClient, token);
@@ -97,7 +111,7 @@ export async function analyzePhase(
             isMonorepo = analysisResult.result.isMonorepo;
         } else {
             stream.markdown("⚠️ Standard detection didn't find modules. Falling back to AI analysis...\n\n");
-            modules = await analyzeWithLM(workspacePath, lmClient, stream, token);
+            modules = await analyzeWithLM(workspacePath, stream, token, chatModel);
             isMonorepo = modules.length > 1;
 
             if (modules.length === 0) {

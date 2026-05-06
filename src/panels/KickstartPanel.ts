@@ -107,7 +107,6 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
             getPermissionStatusRequest: false,
             attachAcrRequest: false,
             startKickstartRequest: false,
-            quickStartRequest: false,
             openArtifactRequest: false,
         };
     }
@@ -139,7 +138,6 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
             startKickstartRequest: (args) => {
                 if (this.sessionProvider) this.handleStartKickstartRequest(args.clusterKey, args.acrKey, webview);
             },
-            quickStartRequest: (args) => this.handleQuickStartRequest(args.type),
             openArtifactRequest: (args) => this.handleOpenArtifactRequest(args.filename, args.content),
         };
     }
@@ -287,16 +285,6 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
     ) {
         await commands.executeCommand("workbench.action.chat.open", { query: "@kickstart /start" });
         webview.postStartKickstartResponse(undefined);
-    }
-
-    private async handleQuickStartRequest(type: "sample" | "existing" | "new") {
-        const commandMap = {
-            sample: "aks.kickstart.useSample",
-            existing: "aks.kickstart.useWorkspace",
-            new: "aks.kickstart.createNew",
-        };
-
-        await commands.executeCommand(commandMap[type]);
     }
 
     private async handleOpenArtifactRequest(filename: string, content: string) {

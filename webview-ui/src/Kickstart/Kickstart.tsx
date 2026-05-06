@@ -63,10 +63,6 @@ export function Kickstart() {
         vscode.subscribeToMessages(handler);
     }, []);
 
-    const handleQuickStart = (type: "sample" | "existing" | "new") => {
-        vscode.postQuickStartRequest({ type });
-    };
-
     const hasActiveSession = state.dashboard && state.dashboard.currentPhase > Phase.ANALYZE;
 
     return (
@@ -74,13 +70,9 @@ export function Kickstart() {
             <h2>🚀 {l10n.t("AKS Kickstart")}</h2>
 
             {!hasActiveSession ? (
-                <div className={styles.quickStartSection}>
-                    <h3>{l10n.t("Get Started")}</h3>
-                    <div className={styles.quickStartButtons}>
-                        <button onClick={() => handleQuickStart("sample")}>📦 {l10n.t("Use sample repo")}</button>
-                        <button onClick={() => handleQuickStart("existing")}>📂 {l10n.t("Use existing repo")}</button>
-                        <button onClick={() => handleQuickStart("new")}>✨ {l10n.t("Create something new")}</button>
-                    </div>
+                <div className={styles.waitingSection}>
+                    <p>{l10n.t("Waiting for kickstart session...")}</p>
+                    <p className={styles.waitingHint}>{l10n.t("Type @kickstart in the chat to get started.")}</p>
                 </div>
             ) : (
                 <div className={styles.sessionCard}>

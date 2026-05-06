@@ -20,7 +20,6 @@ export const vscode = getWebviewMessageContext<"kickstart">({
     getPermissionStatusRequest: null,
     attachAcrRequest: null,
     startKickstartRequest: null,
-    quickStartRequest: null,
     openArtifactRequest: null,
 });
 

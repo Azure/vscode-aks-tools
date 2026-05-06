@@ -250,6 +250,7 @@ export function classifyError(error: unknown): ErrorClassification {
  * @param state The current kickstart state
  * @param stream The chat response stream for progress updates
  * @param token Cancellation token to stop execution
+ * @param request The chat request object with model and toolInvocationToken
  * @returns PhaseResult indicating success/failure and whether retry is possible
  */
 export async function executePhase(
@@ -257,6 +258,7 @@ export async function executePhase(
     state: KickstartState,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
+    request: vscode.ChatRequest,
 ): Promise<
     PhaseResult & {
         analysis?: AnalysisData;
@@ -272,7 +274,7 @@ export async function executePhase(
 
         switch (phase) {
             case Phase.ANALYZE:
-                return await analyzePhase(workspaceFolder, stream, token);
+                return await analyzePhase(workspaceFolder, stream, token, request);
 
             case Phase.CONFIGURE:
                 return await configurePhase(stream, token);
