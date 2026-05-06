@@ -24,7 +24,10 @@ export async function analyzeProject(
     token: vscode.CancellationToken,
 ): Promise<Errorable<AnalysisResult>> {
     try {
-        const result = await analyzeRepo({ repositoryPath: projectPath }, { signal: tokenToAbortSignal(token) });
+        const result = await analyzeRepo(
+            { repositoryPath: projectPath, depth: 5 },
+            { signal: tokenToAbortSignal(token) },
+        );
 
         if (!result.ok) {
             return { succeeded: false, error: formatErrorForLLM(result.error, result.guidance) };
