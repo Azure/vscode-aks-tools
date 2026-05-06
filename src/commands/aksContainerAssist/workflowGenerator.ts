@@ -166,13 +166,13 @@ async function collectWorkflowConfiguration(
         relativeManifests = detection.result.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
     }
 
-    const dockerfileRelToWorkspace = toPosixPath(
-        path.relative(workspaceRoot, path.resolve(projectRoot, dockerfilePath)),
-    );
-    const buildContextRelToWorkspace =
-        buildContextPath === "."
-            ? toPosixPath(path.relative(workspaceRoot, projectRoot)) || "."
-            : toPosixPath(path.relative(workspaceRoot, path.resolve(projectRoot, buildContextPath)));
+    // Resolve build context to an absolute path, then make it workspace-relative for the YAML.
+    const buildContextAbsolute = buildContextPath === "." ? projectRoot : path.resolve(projectRoot, buildContextPath);
+    const buildContextRelToWorkspace = toPosixPath(path.relative(workspaceRoot, buildContextAbsolute)) || ".";
+
+    // DOCKER_FILE in `az acr build -f` is relative to the build context, not the repo root.
+    const dockerfileAbsolute = path.resolve(projectRoot, dockerfilePath);
+    const dockerfileRelToBuildContext = toPosixPath(path.relative(buildContextAbsolute, dockerfileAbsolute));
 
     let selectedManifests: string[] | undefined;
     if (hasBothActions && relativeManifests.length > 0) {
@@ -187,7 +187,7 @@ async function collectWorkflowConfiguration(
         workflowName,
         branchName: "main", // Default to main
         containerName: appName, // Use app name as container name
-        dockerFile: dockerfileRelToWorkspace,
+        dockerFile: dockerfileRelToBuildContext,
         buildContextPath: buildContextRelToWorkspace,
         acrResourceGroup,
         azureContainerRegistry: acrName,
