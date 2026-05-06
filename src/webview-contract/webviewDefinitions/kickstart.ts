@@ -34,12 +34,22 @@ export interface ArmResource {
     action: "used" | "created" | "modified";
 }
 
+export interface ModuleInfo {
+    name?: string;
+    modulePath?: string;
+    language?: string;
+    framework?: string;
+    port?: number;
+    entryPoint?: string;
+}
+
 export interface AnalysisData {
     language: string;
     framework?: string;
     ports: number[];
     entryPoint?: string;
     isMonorepo: boolean;
+    modules: ModuleInfo[];
     hasDockerfile: boolean;
     hasK8sManifests: boolean;
     hasGitHubWorkflow: boolean;

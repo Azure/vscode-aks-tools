@@ -33,7 +33,7 @@ async function analyzeWithLM(
     token: vscode.CancellationToken,
     model: vscode.LanguageModelChat,
 ): Promise<ModuleAnalysis[]> {
-    stream.progress("Analyzing project with AI...");
+    stream.progress("Analyzing project structure...");
 
     const tree = await getDirectoryTree(workspacePath);
 
@@ -59,10 +59,6 @@ async function analyzeWithLM(
     for await (const fragment of chatResponse.text) {
         responseText += fragment;
     }
-
-    stream.markdown("🤖 AI analysis complete.\n\n");
-
-    stream.markdown("🤖 AI analysis complete.\n\n");
 
     try {
         const text = responseText
@@ -97,7 +93,6 @@ export async function analyzePhase(
         const chatModel = request.model;
 
         stream.markdown("📊 **Analyzing project structure**\n\n");
-
         stream.progress("Scanning project files...");
 
         const lmClient = new LMClient();
@@ -110,7 +105,6 @@ export async function analyzePhase(
             modules = analysisResult.result.modules;
             isMonorepo = analysisResult.result.isMonorepo;
         } else {
-            stream.markdown("⚠️ Standard detection didn't find modules. Falling back to AI analysis...\n\n");
             modules = await analyzeWithLM(workspacePath, stream, token, chatModel);
             isMonorepo = modules.length > 1;
 
