@@ -8,6 +8,14 @@ import { failed, Errorable } from "../utils/errorable";
 import { ClusterKey, AcrKey } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { checkKickstartPermissions } from "../utils/kickstartPermissions";
 
+const LAST_USED_KEY = "kickstart.lastUsed";
+
+interface LastUsedSelections {
+    subscriptionId?: string;
+    clusterName?: string;
+    acrName?: string;
+}
+
 export interface KickstartConfiguration {
     subscriptionId: string;
     clusterKey: ClusterKey;
@@ -25,11 +33,15 @@ export interface KickstartConfiguration {
  * then performs pre-flight checks (SKU detection, kubeconfig access, ACR permissions).
  * Designed to be invoked from a chat button command.
  */
-export async function configureKickstart(): Promise<Errorable<KickstartConfiguration>> {
+export async function configureKickstart(
+    context?: vscode.ExtensionContext,
+): Promise<Errorable<KickstartConfiguration>> {
     const sessionProvider = await getReadySessionProvider();
     if (failed(sessionProvider)) {
         return { succeeded: false, error: "Azure sign-in is required." };
     }
+
+    const lastUsed: LastUsedSelections = context?.workspaceState.get(LAST_USED_KEY) ?? {};
 
     const subsResult = await getSubscriptions(sessionProvider.result, SelectionType.AllIfNoFilters);
     if (failed(subsResult)) {
@@ -39,10 +51,18 @@ export async function configureKickstart(): Promise<Errorable<KickstartConfigura
         return { succeeded: false, error: "No Azure subscriptions found." };
     }
 
-    const subPick = await vscode.window.showQuickPick(
-        subsResult.result.map((s) => ({ label: s.displayName, description: s.subscriptionId, sub: s })),
-        { placeHolder: "Select an Azure subscription", ignoreFocusOut: true },
-    );
+    const subItems = subsResult.result.map((s) => ({ label: s.displayName, description: s.subscriptionId, sub: s }));
+    const lastSubIndex = subItems.findIndex((i) => i.sub.subscriptionId === lastUsed.subscriptionId);
+    if (lastSubIndex > 0) {
+        const [item] = subItems.splice(lastSubIndex, 1);
+        item.description = `${item.description} (last used)`;
+        subItems.unshift(item);
+    }
+
+    const subPick = await vscode.window.showQuickPick(subItems, {
+        placeHolder: "Select an Azure subscription",
+        ignoreFocusOut: true,
+    });
     if (!subPick) {
         return { succeeded: false, error: "Cancelled." };
     }
@@ -56,14 +76,22 @@ export async function configureKickstart(): Promise<Errorable<KickstartConfigura
         return { succeeded: false, error: "No AKS clusters found in this subscription." };
     }
 
-    const clusterPick = await vscode.window.showQuickPick(
-        clustersResult.result.map((c) => ({
-            label: c.name,
-            description: c.resourceGroup,
-            resource: c,
-        })),
-        { placeHolder: "Select an AKS cluster", ignoreFocusOut: true },
-    );
+    const clusterItems = clustersResult.result.map((c) => ({
+        label: c.name,
+        description: c.resourceGroup,
+        resource: c,
+    }));
+    const lastClusterIndex = clusterItems.findIndex((i) => i.resource.name === lastUsed.clusterName);
+    if (lastClusterIndex > 0) {
+        const [item] = clusterItems.splice(lastClusterIndex, 1);
+        item.description = `${item.description} (last used)`;
+        clusterItems.unshift(item);
+    }
+
+    const clusterPick = await vscode.window.showQuickPick(clusterItems, {
+        placeHolder: "Select an AKS cluster",
+        ignoreFocusOut: true,
+    });
     if (!clusterPick) {
         return { succeeded: false, error: "Cancelled." };
     }
@@ -82,14 +110,22 @@ export async function configureKickstart(): Promise<Errorable<KickstartConfigura
         return { succeeded: false, error: "No container registries found in this subscription." };
     }
 
-    const acrPick = await vscode.window.showQuickPick(
-        acrsResult.result.map((a) => ({
-            label: a.name,
-            description: a.resourceGroup,
-            resource: a,
-        })),
-        { placeHolder: "Select a container registry", ignoreFocusOut: true },
-    );
+    const acrItems = acrsResult.result.map((a) => ({
+        label: a.name,
+        description: a.resourceGroup,
+        resource: a,
+    }));
+    const lastAcrIndex = acrItems.findIndex((i) => i.resource.name === lastUsed.acrName);
+    if (lastAcrIndex > 0) {
+        const [item] = acrItems.splice(lastAcrIndex, 1);
+        item.description = `${item.description} (last used)`;
+        acrItems.unshift(item);
+    }
+
+    const acrPick = await vscode.window.showQuickPick(acrItems, {
+        placeHolder: "Select a container registry",
+        ignoreFocusOut: true,
+    });
     if (!acrPick) {
         return { succeeded: false, error: "Cancelled." };
     }
@@ -110,6 +146,14 @@ export async function configureKickstart(): Promise<Errorable<KickstartConfigura
     const isAutomatic = !failed(skuResult) && skuResult.result;
     const canGetKubeconfig = !failed(kubeconfigResult) && kubeconfigResult.result;
     const hasAcrPull = !failed(permissionsResult) && permissionsResult.result.hasAcrPull;
+
+    if (context) {
+        await context.workspaceState.update(LAST_USED_KEY, {
+            subscriptionId: subscriptionId,
+            clusterName: clusterPick.resource.name,
+            acrName: acrPick.resource.name,
+        });
+    }
 
     return {
         succeeded: true,

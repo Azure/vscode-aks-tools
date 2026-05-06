@@ -27,11 +27,20 @@ export async function defaultHandler(
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
             stream.markdown(
-                "## Welcome to AKS Kickstart\n\nI can help you containerize your application and deploy it to Azure Kubernetes Service.",
+                "## 🚀 AKS Kickstart\n\n" +
+                    "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
+                    "**Here's what I do:**\n" +
+                    "1. 🔍 **Analyze** your project (language, framework, entry point)\n" +
+                    "2. ⚙️ **Configure** your Azure target (AKS cluster + container registry)\n" +
+                    "3. 📦 **Prepare** deployment artifacts (Dockerfile + K8s manifests)\n" +
+                    "4. 🔨 **Build** and push your container image\n" +
+                    "5. 🚀 **Deploy** to your AKS cluster\n" +
+                    "6. ✅ **Verify** everything is running\n\n" +
+                    "**Choose how to get started:**",
             );
-            stream.button({ command: "aks.kickstart.configureAndStart", title: "Configure & Start" });
-            stream.button({ command: "aks.kickstart.useWorkspace", title: "Use current workspace" });
-            stream.button({ command: "aks.kickstart.useSample", title: "Use a sample" });
+            stream.button({ command: "aks.kickstart.useSample", title: "📦 Use sample repo" });
+            stream.button({ command: "aks.kickstart.useWorkspace", title: "📂 Use existing repo" });
+            stream.button({ command: "aks.kickstart.createNew", title: "✨ Create something new" });
             return { metadata: { command: request.command ?? "welcome" } };
         }
 
@@ -135,11 +144,20 @@ export async function defaultHandler(
         }
 
         stream.markdown(
-            "## Welcome to AKS Kickstart\n\nI can help you containerize your application and deploy it to Azure Kubernetes Service.",
+            "## 🚀 AKS Kickstart\n\n" +
+                "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
+                "**Here's what I do:**\n" +
+                "1. 🔍 **Analyze** your project (language, framework, entry point)\n" +
+                "2. ⚙️ **Configure** your Azure target (AKS cluster + container registry)\n" +
+                "3. 📦 **Prepare** deployment artifacts (Dockerfile + K8s manifests)\n" +
+                "4. 🔨 **Build** and push your container image\n" +
+                "5. 🚀 **Deploy** to your AKS cluster\n" +
+                "6. ✅ **Verify** everything is running\n\n" +
+                "**Choose how to get started:**",
         );
-        stream.button({ command: "aks.kickstart.configureAndStart", title: "Configure & Start" });
-        stream.button({ command: "aks.kickstart.useWorkspace", title: "Use current workspace" });
-        stream.button({ command: "aks.kickstart.useSample", title: "Use a sample" });
+        stream.button({ command: "aks.kickstart.useSample", title: "📦 Use sample repo" });
+        stream.button({ command: "aks.kickstart.useWorkspace", title: "📂 Use existing repo" });
+        stream.button({ command: "aks.kickstart.createNew", title: "✨ Create something new" });
         reportKickstartTelemetry("welcome.completed");
         return { metadata: { command: "welcome" } };
     } catch (e) {

@@ -1,5 +1,4 @@
 import { getWebviewMessageContext } from "../utilities/vscode";
-import { Acr, Cluster, Subscription } from "../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import {
     Phase,
     AnalysisData,
@@ -21,15 +20,9 @@ export const vscode = getWebviewMessageContext<"kickstart">({
     getPermissionStatusRequest: null,
     attachAcrRequest: null,
     startKickstartRequest: null,
+    quickStartRequest: null,
     openArtifactRequest: null,
 });
-
-export type PermissionsState = {
-    hasAcrPull?: boolean;
-    attached?: boolean;
-    loading: boolean;
-    error?: string;
-};
 
 export type DashboardData = {
     currentPhase: Phase;
@@ -45,20 +38,6 @@ export type DashboardData = {
 };
 
 export type KickstartState = {
-    subscriptions: Subscription[];
-    selectedSub: Subscription | null;
-
-    resourceGroups: string[];
-    selectedRg: string | null;
-
-    clusters: Cluster[];
-    selectedCluster: Cluster | null;
-
-    acrs: Acr[];
-    selectedAcr: Acr | null;
-
-    permissions: PermissionsState;
-
     // Dashboard state - populated when workflow starts
     dashboard?: DashboardData;
 };

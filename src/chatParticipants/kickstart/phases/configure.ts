@@ -3,6 +3,7 @@ import { configureKickstart } from "../../../commands/aksKickstart/configure";
 import { failed } from "../../../commands/utils/errorable";
 import { PhaseResult } from "../phaseRunner";
 import { ConfigData } from "../state";
+import { getAssetContext } from "../../../assets";
 
 /**
  * Configures the cluster and container registry for the kickstart workflow.
@@ -33,7 +34,8 @@ export async function configurePhase(
 
         stream.markdown("🔧 **Configuring Azure resources**\n\n");
 
-        const configResult = await configureKickstart();
+        const extensionContext = getAssetContext();
+        const configResult = await configureKickstart(extensionContext ?? undefined);
 
         if (failed(configResult)) {
             if (configResult.error === "Cancelled.") {

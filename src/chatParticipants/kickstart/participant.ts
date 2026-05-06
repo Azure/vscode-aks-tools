@@ -21,8 +21,9 @@ export function registerKickstartParticipant(context: vscode.ExtensionContext): 
             // Handle welcome/no workspace state
             if (!command || command === "welcome") {
                 return [
-                    { prompt: "/start", label: "Start with current workspace" },
-                    { prompt: "/sample", label: "Try a sample" },
+                    { prompt: "/sample", label: "📦 Use sample repo" },
+                    { prompt: "/start", label: "📂 Use existing repo" },
+                    { prompt: "create something new", label: "✨ Create something new" },
                 ];
             }
 

@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { vscode, KickstartState, DashboardData } from "./state";
-import { Subscription, Cluster, Acr } from "../../../src/webview-contract/webviewDefinitions/attachAcrToCluster";
 import { Phase } from "../../../src/webview-contract/webviewDefinitions/kickstart";
-import { Pickers } from "./Pickers";
-import { PermissionChecks } from "./PermissionChecks";
-import { ActionBar } from "./ActionBar";
 import { PhaseProgress } from "./PhaseProgress";
 import { ArtifactsPanel } from "./ArtifactsPanel";
 import { ArmResourcesPanel } from "./ArmResourcesPanel";
@@ -12,100 +8,38 @@ import { AuditLog } from "./AuditLog";
 import * as l10n from "@vscode/l10n";
 import styles from "./Dashboard.module.css";
 
-export function Kickstart() {
-    const [state, setState] = useState<KickstartState>({
-        subscriptions: [],
-        selectedSub: null,
-        resourceGroups: [],
-        selectedRg: null,
-        clusters: [],
-        selectedCluster: null,
-        acrs: [],
-        selectedAcr: null,
-        permissions: { loading: false },
-    });
-
-    function refreshPermissions(cluster: Cluster | null, acr: Acr | null) {
-        if (cluster && acr) {
-            setState((prev) => ({ ...prev, permissions: { loading: true } }));
-            vscode.postGetPermissionStatusRequest({
-                clusterKey: {
-                    subscriptionId: cluster.subscriptionId,
-                    resourceGroup: cluster.resourceGroup,
-                    clusterName: cluster.clusterName,
-                },
-                acrKey: { subscriptionId: acr.subscriptionId, resourceGroup: acr.resourceGroup, acrName: acr.acrName },
-            });
-        } else {
-            setState((prev) => ({ ...prev, permissions: { loading: false } }));
-        }
+function getPhaseDisplayName(phase: Phase): string {
+    switch (phase) {
+        case Phase.ANALYZE:
+            return l10n.t("Analyze");
+        case Phase.CONFIGURE:
+            return l10n.t("Configure");
+        case Phase.PREPARE:
+            return l10n.t("Prepare");
+        case Phase.BUILD:
+            return l10n.t("Build");
+        case Phase.DEPLOY:
+            return l10n.t("Deploy");
+        case Phase.VERIFY:
+            return l10n.t("Verify");
+        case Phase.COMPLETE:
+            return l10n.t("Complete");
+        default:
+            return l10n.t("Unknown");
     }
+}
+
+export function Kickstart() {
+    const [state, setState] = useState<KickstartState>({});
 
     useEffect(() => {
         const handler = {
-            getSubscriptionsResponse: (args: { subscriptions: Subscription[] }) => {
-                setState((prev) => ({ ...prev, subscriptions: args.subscriptions }));
-            },
-            getResourceGroupsResponse: (args: { subscriptionId: string; resourceGroups: string[] }) => {
-                setState((prev) => ({ ...prev, resourceGroups: args.resourceGroups }));
-            },
-            getClustersResponse: (args: { key: { subscriptionId: string }; clusters: Cluster[] }) => {
-                setState((prev) => ({ ...prev, clusters: args.clusters }));
-            },
-            getAcrsResponse: (args: { key: { subscriptionId: string }; acrs: Acr[] }) => {
-                setState((prev) => ({ ...prev, acrs: args.acrs }));
-            },
-            getPermissionStatusResponse: (args: {
-                hasAcrPull: boolean;
-                attached: boolean;
-                loading?: boolean;
-                error?: string;
-            }) => {
-                setState((prev) => ({
-                    ...prev,
-                    permissions: {
-                        hasAcrPull: args.hasAcrPull,
-                        attached: args.attached,
-                        loading: args.loading || false,
-                        error: args.error,
-                    },
-                }));
-            },
-            attachAcrResponse: (args: { succeeded: boolean; error?: string }) => {
-                setState((prev) => ({
-                    ...prev,
-                    permissions: {
-                        ...prev.permissions,
-                        loading: false,
-                        error: args.error || (args.succeeded ? undefined : l10n.t("Failed to attach ACR")),
-                    },
-                }));
-                if (args.succeeded) {
-                    setState((prev) => {
-                        if (prev.selectedCluster && prev.selectedAcr) {
-                            vscode.postGetPermissionStatusRequest({
-                                clusterKey: {
-                                    subscriptionId: prev.selectedCluster.subscriptionId,
-                                    resourceGroup: prev.selectedCluster.resourceGroup,
-                                    clusterName: prev.selectedCluster.clusterName,
-                                },
-                                acrKey: {
-                                    subscriptionId: prev.selectedAcr.subscriptionId,
-                                    resourceGroup: prev.selectedAcr.resourceGroup,
-                                    acrName: prev.selectedAcr.acrName,
-                                },
-                            });
-                        }
-                        return {
-                            ...prev,
-                            permissions: {
-                                ...prev.permissions,
-                                loading: Boolean(prev.selectedCluster && prev.selectedAcr),
-                            },
-                        };
-                    });
-                }
-            },
+            getSubscriptionsResponse: () => {},
+            getResourceGroupsResponse: () => {},
+            getClustersResponse: () => {},
+            getAcrsResponse: () => {},
+            getPermissionStatusResponse: () => {},
+            attachAcrResponse: () => {},
             startKickstartResponse: () => {},
             stateChanged: (args: DashboardData) => {
                 setState((prev) => ({
@@ -129,143 +63,49 @@ export function Kickstart() {
         vscode.subscribeToMessages(handler);
     }, []);
 
-    useEffect(() => {
-        vscode.postGetSubscriptionsRequest();
-    }, []);
-
-    const handleSubChange = (sub: Subscription | null) => {
-        setState((prev) => ({
-            ...prev,
-            selectedSub: sub,
-            selectedRg: null,
-            selectedCluster: null,
-            selectedAcr: null,
-            permissions: { loading: false },
-        }));
-
-        if (sub) {
-            vscode.postGetResourceGroupsRequest({ subscriptionId: sub.subscriptionId });
-            vscode.postGetClustersRequest({ subscriptionId: sub.subscriptionId });
-            vscode.postGetAcrsRequest({ subscriptionId: sub.subscriptionId });
-        }
+    const handleQuickStart = (type: "sample" | "existing" | "new") => {
+        vscode.postQuickStartRequest({ type });
     };
 
-    const handleRgChange = (rg: string | null) => {
-        setState((prev) => ({
-            ...prev,
-            selectedRg: rg,
-            selectedCluster: null,
-            selectedAcr: null,
-            permissions: { loading: false },
-        }));
-
-        if (state.selectedSub) {
-            vscode.postGetClustersRequest({
-                subscriptionId: state.selectedSub.subscriptionId,
-                resourceGroup: rg || undefined,
-            });
-            vscode.postGetAcrsRequest({
-                subscriptionId: state.selectedSub.subscriptionId,
-                resourceGroup: rg || undefined,
-            });
-        }
-    };
-
-    const handleClusterChange = (cluster: Cluster | null) => {
-        setState((prev) => ({ ...prev, selectedCluster: cluster }));
-        refreshPermissions(cluster, state.selectedAcr);
-    };
-
-    const handleAcrChange = (acr: Acr | null) => {
-        setState((prev) => ({ ...prev, selectedAcr: acr }));
-        refreshPermissions(state.selectedCluster, acr);
-    };
-
-    const handleAttach = () => {
-        if (state.selectedCluster && state.selectedAcr) {
-            setState((prev) => ({ ...prev, permissions: { ...prev.permissions, loading: true } }));
-            vscode.postAttachAcrRequest({
-                clusterKey: {
-                    subscriptionId: state.selectedCluster.subscriptionId,
-                    resourceGroup: state.selectedCluster.resourceGroup,
-                    clusterName: state.selectedCluster.clusterName,
-                },
-                acrKey: {
-                    subscriptionId: state.selectedAcr.subscriptionId,
-                    resourceGroup: state.selectedAcr.resourceGroup,
-                    acrName: state.selectedAcr.acrName,
-                },
-            });
-        }
-    };
-
-    const handleRefreshPermissions = () => {
-        refreshPermissions(state.selectedCluster, state.selectedAcr);
-    };
-
-    const handleStart = () => {
-        if (state.selectedCluster && state.selectedAcr) {
-            vscode.postStartKickstartRequest({
-                clusterKey: {
-                    subscriptionId: state.selectedCluster.subscriptionId,
-                    resourceGroup: state.selectedCluster.resourceGroup,
-                    clusterName: state.selectedCluster.clusterName,
-                },
-                acrKey: {
-                    subscriptionId: state.selectedAcr.subscriptionId,
-                    resourceGroup: state.selectedAcr.resourceGroup,
-                    acrName: state.selectedAcr.acrName,
-                },
-            });
-        }
-    };
-
-    const handleCancel = () => {
-        window.acquireVsCodeApi?.();
-    };
-
-    const canStart = Boolean(
-        state.selectedCluster &&
-        state.selectedAcr &&
-        state.permissions.hasAcrPull &&
-        state.permissions.attached &&
-        !state.permissions.loading,
-    );
-
-    const isWorkflowActive = state.dashboard && state.dashboard.currentPhase > Phase.ANALYZE;
-    const showPickers = !isWorkflowActive;
+    const hasActiveSession = state.dashboard && state.dashboard.currentPhase > Phase.ANALYZE;
 
     return (
         <div data-testid="kickstart-root">
-            <h2>{l10n.t("Kickstart AKS Cluster")}</h2>
-            <p>{l10n.t("Configure your AKS cluster with an ACR and kickstart resources.")}</p>
+            <h2>🚀 {l10n.t("AKS Kickstart")}</h2>
 
-            {showPickers && (
-                <>
-                    <Pickers
-                        subscriptions={state.subscriptions}
-                        selectedSub={state.selectedSub}
-                        onSubChange={handleSubChange}
-                        resourceGroups={state.resourceGroups}
-                        selectedRg={state.selectedRg}
-                        onRgChange={handleRgChange}
-                        clusters={state.clusters}
-                        selectedCluster={state.selectedCluster}
-                        onClusterChange={handleClusterChange}
-                        acrs={state.acrs}
-                        selectedAcr={state.selectedAcr}
-                        onAcrChange={handleAcrChange}
-                    />
-
-                    <PermissionChecks
-                        hasSelection={Boolean(state.selectedCluster && state.selectedAcr)}
-                        permissions={state.permissions}
-                        onAttach={handleAttach}
-                        onRefresh={handleRefreshPermissions}
-                    />
-
-                    <ActionBar canStart={canStart} onStart={handleStart} onCancel={handleCancel} />
-                </>
+            {!hasActiveSession ? (
+                <div className={styles.quickStartSection}>
+                    <h3>{l10n.t("Get Started")}</h3>
+                    <div className={styles.quickStartButtons}>
+                        <button onClick={() => handleQuickStart("sample")}>📦 {l10n.t("Use sample repo")}</button>
+                        <button onClick={() => handleQuickStart("existing")}>📂 {l10n.t("Use existing repo")}</button>
+                        <button onClick={() => handleQuickStart("new")}>✨ {l10n.t("Create something new")}</button>
+                    </div>
+                </div>
+            ) : (
+                <div className={styles.sessionCard}>
+                    <h3>{l10n.t("Current Session")}</h3>
+                    <div className={styles.sessionMeta}>
+                        <span>
+                            {l10n.t("Phase")}: {getPhaseDisplayName(state.dashboard!.currentPhase)}
+                        </span>
+                        {state.dashboard!.config && (
+                            <>
+                                <span>
+                                    {l10n.t("Cluster")}: {state.dashboard!.config.clusterName}
+                                </span>
+                                <span>
+                                    {l10n.t("Registry")}: {state.dashboard!.config.acrName}
+                                </span>
+                            </>
+                        )}
+                        {state.dashboard!.image && (
+                            <span>
+                                {l10n.t("Image")}: {state.dashboard!.image.repository}:{state.dashboard!.image.tag}
+                            </span>
+                        )}
+                    </div>
+                </div>
             )}
 
             {state.dashboard && (
@@ -283,7 +123,7 @@ export function Kickstart() {
                             <div className={styles.errorBannerMessage}>{state.dashboard.lastError.message}</div>
                             <div className={styles.errorBannerMeta}>
                                 <span>
-                                    {l10n.t("Phase")}: {Phase[state.dashboard.lastError.phase]}
+                                    {l10n.t("Phase")}: {getPhaseDisplayName(state.dashboard.lastError.phase)}
                                 </span>
                                 <span>
                                     {state.dashboard.lastError.retryable

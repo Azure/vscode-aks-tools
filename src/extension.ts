@@ -141,11 +141,6 @@ export async function activate(context: vscode.ExtensionContext) {
         if (vscode.workspace.getConfiguration("aks").get("kickstartEnabledPreview")) {
             registerCommandWithTelemetry("aks.kickstartContainerization", aksKickstart);
             registerCommandWithTelemetry("aks.kickstart.buildAndPush", buildAndPush);
-            registerCommandWithTelemetry("aks.kickstart.configureAndStart", async () => {
-                await vscode.commands.executeCommand("workbench.action.chat.open", {
-                    query: "@kickstart /start",
-                });
-            });
             registerCommandWithTelemetry("aks.kickstart.useWorkspace", async () => {
                 const result = await useWorkspace();
                 if (result.succeeded) {
@@ -158,6 +153,17 @@ export async function activate(context: vscode.ExtensionContext) {
                 const result = await useSample(new vscode.CancellationTokenSource().token);
                 if (!result.succeeded && result.error !== "Cancelled.") {
                     vscode.window.showErrorMessage(result.error);
+                }
+            });
+            registerCommandWithTelemetry("aks.kickstart.createNew", async () => {
+                const folderUri = await vscode.window.showOpenDialog({
+                    canSelectFiles: false,
+                    canSelectFolders: true,
+                    canSelectMany: false,
+                    openLabel: "Select project folder",
+                });
+                if (folderUri && folderUri.length > 0) {
+                    await vscode.commands.executeCommand("vscode.openFolder", folderUri[0], { forceNewWindow: false });
                 }
             });
             registerCommandWithTelemetry("aks.kickstart.saveFile", saveFile);

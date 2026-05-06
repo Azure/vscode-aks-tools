@@ -57,12 +57,6 @@ export function AuditLog({ auditLog }: AuditLogProps) {
         return `${(durationMs / 1000).toFixed(2)}s`;
     };
 
-    const truncateOutput = (output: string, maxLines: number = 3): string => {
-        const lines = output.split("\n");
-        if (lines.length <= maxLines) return output;
-        return lines.slice(0, maxLines).join("\n") + "\n...";
-    };
-
     return (
         <div className={styles.panel}>
             <div className={styles.panelHeader} onClick={() => setIsExpanded(!isExpanded)}>
