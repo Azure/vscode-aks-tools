@@ -212,7 +212,7 @@ function adaptManifestForAutomatic(content: string, filename: string): string {
         if (!adapted.includes("ingressClassName:")) {
             adapted = adapted.replace(
                 /^(\s*metadata:[\s\S]*?name:.*\n)/m,
-                (match) => match + "  ingressClassName: webapprouting\n",
+                (match) => `${match}  ingressClassName: webapprouting\n`,
             );
         }
     }

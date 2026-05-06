@@ -43,17 +43,15 @@ export class KickstartPanel extends BasePanel<"kickstart"> {
             return;
         }
 
-        const sessionProvider = await getReadySessionProvider();
-        if (failed(sessionProvider)) {
-            return;
-        }
-
         if (!KickstartPanel.extensionUri) {
             KickstartPanel.extensionUri = context.extensionUri;
         }
 
+        const sessionProvider = await getReadySessionProvider();
+        const provider = failed(sessionProvider) ? undefined : sessionProvider.result;
+
         const panel = new KickstartPanel(KickstartPanel.extensionUri);
-        const dataProvider = new KickstartPanelDataProvider(sessionProvider.result);
+        const dataProvider = new KickstartPanelDataProvider(provider);
         panel.show(dataProvider);
         KickstartPanel.currentPanel = panel;
     }
@@ -77,10 +75,20 @@ export class KickstartPanel extends BasePanel<"kickstart"> {
 }
 
 export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"> {
-    constructor(
-        readonly sessionProvider: ReadyAzureSessionProvider,
-        readonly initialClusterId?: string,
-    ) {}
+    readonly sessionProvider: ReadyAzureSessionProvider | undefined;
+    readonly initialClusterId: string | undefined;
+
+    constructor(sessionProvider?: ReadyAzureSessionProvider, initialClusterId?: string) {
+        this.sessionProvider = sessionProvider;
+        this.initialClusterId = initialClusterId;
+    }
+
+    private requireAuth(): ReadyAzureSessionProvider {
+        if (!this.sessionProvider) {
+            throw new Error("Azure authentication required");
+        }
+        return this.sessionProvider;
+    }
 
     getTitle(): string {
         return l10n.t("Kickstart Containerization");
@@ -106,22 +114,38 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         return {
-            getSubscriptionsRequest: () => this.handleGetSubscriptionsRequest(webview),
-            getResourceGroupsRequest: (args) => this.handleGetResourceGroupsRequest(args.subscriptionId, webview),
-            getClustersRequest: (args) =>
-                this.handleGetClustersRequest(args.subscriptionId, args.resourceGroup, webview),
-            getAcrsRequest: (args) => this.handleGetAcrsRequest(args.subscriptionId, args.resourceGroup, webview),
-            getPermissionStatusRequest: (args) =>
-                this.handleGetPermissionStatusRequest(args.clusterKey, args.acrKey, webview),
-            attachAcrRequest: (args) => this.handleAttachAcrRequest(args.clusterKey, args.acrKey, webview),
-            startKickstartRequest: (args) => this.handleStartKickstartRequest(args.clusterKey, args.acrKey, webview),
+            getSubscriptionsRequest: () => {
+                if (this.sessionProvider) this.handleGetSubscriptionsRequest(webview);
+            },
+            getResourceGroupsRequest: (args) => {
+                if (this.sessionProvider) this.handleGetResourceGroupsRequest(args.subscriptionId, webview);
+            },
+            getClustersRequest: (args) => {
+                if (this.sessionProvider) {
+                    this.handleGetClustersRequest(args.subscriptionId, args.resourceGroup, webview);
+                }
+            },
+            getAcrsRequest: (args) => {
+                if (this.sessionProvider) this.handleGetAcrsRequest(args.subscriptionId, args.resourceGroup, webview);
+            },
+            getPermissionStatusRequest: (args) => {
+                if (this.sessionProvider) {
+                    this.handleGetPermissionStatusRequest(args.clusterKey, args.acrKey, webview);
+                }
+            },
+            attachAcrRequest: (args) => {
+                if (this.sessionProvider) this.handleAttachAcrRequest(args.clusterKey, args.acrKey, webview);
+            },
+            startKickstartRequest: (args) => {
+                if (this.sessionProvider) this.handleStartKickstartRequest(args.clusterKey, args.acrKey, webview);
+            },
             quickStartRequest: (args) => this.handleQuickStartRequest(args.type),
             openArtifactRequest: (args) => this.handleOpenArtifactRequest(args.filename, args.content),
         };
     }
 
     private async handleGetSubscriptionsRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const azureSubscriptionsResult = await getSubscriptions(this.sessionProvider, SelectionType.AllIfNoFilters);
+        const azureSubscriptionsResult = await getSubscriptions(this.requireAuth(), SelectionType.AllIfNoFilters);
         if (failed(azureSubscriptionsResult)) {
             window.showErrorMessage(azureSubscriptionsResult.error);
             webview.postGetSubscriptionsResponse({ subscriptions: [] });
@@ -137,7 +161,7 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
     }
 
     private async handleGetResourceGroupsRequest(subscriptionId: string, webview: MessageSink<ToWebViewMsgDef>) {
-        const clustersResult = await getResources(this.sessionProvider, subscriptionId, clusterResourceType);
+        const clustersResult = await getResources(this.requireAuth(), subscriptionId, clusterResourceType);
         if (failed(clustersResult)) {
             window.showErrorMessage(clustersResult.error);
             webview.postGetResourceGroupsResponse({ subscriptionId, resourceGroups: [] });
@@ -157,7 +181,7 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         const key = { subscriptionId };
-        const clustersResult = await getResources(this.sessionProvider, subscriptionId, clusterResourceType);
+        const clustersResult = await getResources(this.requireAuth(), subscriptionId, clusterResourceType);
         if (failed(clustersResult)) {
             window.showErrorMessage(clustersResult.error);
             webview.postGetClustersResponse({ key, clusters: [] });
@@ -182,7 +206,7 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
         const key = { subscriptionId };
-        const acrsResult = await getResources(this.sessionProvider, subscriptionId, acrResourceType);
+        const acrsResult = await getResources(this.requireAuth(), subscriptionId, acrResourceType);
         if (failed(acrsResult)) {
             window.showErrorMessage(acrsResult.error);
             webview.postGetAcrsResponse({ key, acrs: [] });
@@ -206,7 +230,7 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
         acrKey: AcrKey,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
-        const result = await checkKickstartPermissions(this.sessionProvider, clusterKey, acrKey);
+        const result = await checkKickstartPermissions(this.requireAuth(), clusterKey, acrKey);
         if (failed(result)) {
             window.showErrorMessage(getErrorMessage(result));
             webview.postGetPermissionStatusResponse({
@@ -228,14 +252,14 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
         acrKey: AcrKey,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
-        const principalId = await getClusterPrincipalId(this.sessionProvider, clusterKey);
+        const principalId = await getClusterPrincipalId(this.requireAuth(), clusterKey);
         if (failed(principalId)) {
             window.showErrorMessage(getErrorMessage(principalId));
             webview.postAttachAcrResponse({ succeeded: false, error: getErrorMessage(principalId) });
             return;
         }
 
-        const client = getAuthorizationManagementClient(this.sessionProvider, acrKey.subscriptionId);
+        const client = getAuthorizationManagementClient(this.requireAuth(), acrKey.subscriptionId);
         const scope = getScopeForAcr(acrKey.subscriptionId, acrKey.resourceGroup, acrKey.acrName);
 
         const roleAssignment = await createRoleAssignment(

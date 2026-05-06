@@ -318,7 +318,7 @@ export async function verifyPhase(
             // Clean up temp kubeconfig file
             try {
                 await vscode.workspace.fs.delete(vscode.Uri.file(kubeConfigFile.filePath));
-            } catch (e) {
+            } catch {
                 // Ignore cleanup errors
             }
         }

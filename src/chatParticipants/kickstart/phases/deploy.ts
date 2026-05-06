@@ -35,9 +35,13 @@ export async function deployPhase(
     config: ConfigData,
     image: ImageData,
     stream: vscode.ChatResponseStream,
-    _token: vscode.CancellationToken,
+    token: vscode.CancellationToken,
 ): Promise<PhaseResult & { deployment?: DeploymentData }> {
     try {
+        if (token.isCancellationRequested) {
+            return { ok: false, error: "Deployment cancelled.", retryable: false };
+        }
+
         const workspacePath = workspaceFolder.fsPath;
 
         // Entry validation

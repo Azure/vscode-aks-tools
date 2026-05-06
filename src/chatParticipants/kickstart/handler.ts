@@ -48,7 +48,31 @@ export async function defaultHandler(
 
         const workspaceFolder = workspaceFolders[0].uri.fsPath;
         let state = loadState(extensionContext, workspaceFolder) ?? createInitialState(workspaceFolder);
-        const intent = detectIntent(request.prompt ?? "", request.command, state);
+
+        const prompt = request.prompt ?? "";
+        const isEmptyPrompt = prompt.trim().length === 0 && !request.command;
+
+        if (isEmptyPrompt && state.currentPhase === Phase.ANALYZE && !state.analysis) {
+            stream.markdown(
+                "## 🚀 AKS Kickstart\n\n" +
+                    "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
+                    "**Here's what I do:**\n" +
+                    "1. 🔍 **Analyze** your project (language, framework, entry point)\n" +
+                    "2. ⚙️ **Configure** your Azure target (AKS cluster + container registry)\n" +
+                    "3. 📦 **Prepare** deployment artifacts (Dockerfile + K8s manifests)\n" +
+                    "4. 🔨 **Build** and push your container image\n" +
+                    "5. 🚀 **Deploy** to your AKS cluster\n" +
+                    "6. ✅ **Verify** everything is running\n\n" +
+                    "**Choose how to get started:**",
+            );
+            stream.button({ command: "aks.kickstart.useSample", title: "📦 Use sample repo" });
+            stream.button({ command: "aks.kickstart.useWorkspace", title: "📂 Use existing repo" });
+            stream.button({ command: "aks.kickstart.createNew", title: "✨ Create something new" });
+            reportKickstartTelemetry("welcome.completed");
+            return { metadata: { command: "welcome" } };
+        }
+
+        const intent = detectIntent(prompt, request.command, state);
 
         reportKickstartTelemetry(
             intent.action === "run" && intent.phase ? `phase-${intent.phase}.invoked` : `${intent.action}.invoked`,

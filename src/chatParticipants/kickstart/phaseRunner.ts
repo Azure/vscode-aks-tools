@@ -159,8 +159,7 @@ export function validatePrereqs(phase: Phase, state: KickstartState): PrereqResu
  * @returns ErrorClassification with title, detail, retryable flag, and optional fix command
  */
 export function classifyError(error: unknown): ErrorClassification {
-    // Extract error message from Error, string, or unknown
-    let message = "";
+    let message: string;
     if (error instanceof Error) {
         message = error.message;
     } else if (typeof error === "string") {

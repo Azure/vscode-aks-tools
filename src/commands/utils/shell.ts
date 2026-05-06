@@ -29,10 +29,10 @@ export type CommandLogger = (entry: {
     durationMs: number;
 }) => void;
 
-let _commandLogger: CommandLogger | undefined;
+let activeCommandLogger: CommandLogger | undefined;
 
 export function setCommandLogger(logger: CommandLogger | undefined): void {
-    _commandLogger = logger;
+    activeCommandLogger = logger;
 }
 
 /**
@@ -45,8 +45,8 @@ export async function exec(cmd: string, options?: ShellOptions): Promise<Errorab
         const result = await execCore(cmd, options || {});
         const durationMs = Date.now() - startTime;
 
-        if (_commandLogger) {
-            _commandLogger({
+        if (activeCommandLogger) {
+            activeCommandLogger({
                 command: cmd,
                 exitCode: result.code,
                 stdout: result.stdout.substring(0, 500),
@@ -67,8 +67,8 @@ export async function exec(cmd: string, options?: ShellOptions): Promise<Errorab
         }
     } catch (ex) {
         const durationMs = Date.now() - startTime;
-        if (_commandLogger) {
-            _commandLogger({
+        if (activeCommandLogger) {
+            activeCommandLogger({
                 command: cmd,
                 exitCode: -1,
                 stdout: "",
