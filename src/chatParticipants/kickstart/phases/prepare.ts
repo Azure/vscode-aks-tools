@@ -3,6 +3,7 @@ import { generateDockerfileStep } from "../steps/dockerfile";
 import { generateManifestsStep } from "../steps/manifests";
 import { AnalysisResult } from "../steps/analyze";
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
+import { failed } from "../../../commands/utils/errorable";
 import { PhaseResult } from "../phaseRunner";
 import { AnalysisData, ConfigData, ArtifactsData, Manifest } from "../state";
 
@@ -52,6 +53,14 @@ export async function preparePhase(
         }
 
         const lmClient = new LMClient();
+        const modelResult = await lmClient.ensureModel();
+        if (failed(modelResult)) {
+            return {
+                ok: false,
+                error: "GitHub Copilot language model is required for artifact generation. Please ensure Copilot is installed and signed in.",
+                retryable: true,
+            };
+        }
 
         // Convert AnalysisData to AnalysisResult format for the step functions
         const analysisResult: AnalysisResult = {
