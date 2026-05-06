@@ -25,14 +25,48 @@ export async function configurePhase(
 ): Promise<PhaseResult & { config?: ConfigData }> {
     try {
         if (token.isCancellationRequested) {
-            return {
-                ok: false,
-                error: "Configuration cancelled.",
-                retryable: false,
-            };
+            return { ok: false, error: "Configuration cancelled.", retryable: false };
         }
 
         stream.markdown("🔧 **Configuring Azure resources**\n\n");
+        stream.progress("Waiting for cluster choice...");
+
+        const clusterChoice = await vscode.window.showQuickPick(
+            [
+                {
+                    label: "$(cloud) Use existing cluster",
+                    description: "Select from your Azure subscriptions",
+                    value: "existing" as const,
+                },
+                {
+                    label: "$(add) Create a new AKS Automatic cluster",
+                    description: "Recommended — Azure manages scaling, upgrades, and node pools",
+                    value: "create" as const,
+                },
+            ],
+            { placeHolder: "How would you like to set up your AKS cluster?", ignoreFocusOut: true },
+        );
+
+        if (!clusterChoice) {
+            return { ok: false, error: "Configuration cancelled.", retryable: false };
+        }
+
+        if (clusterChoice.value === "create") {
+            stream.markdown(
+                "### Create a New Cluster\n\n" +
+                    "Opening the cluster creation wizard. After your cluster is ready, " +
+                    "say **configure** to continue.\n\n",
+            );
+            stream.button({ command: "aks.createCluster", title: "🆕 Create cluster (guided wizard)" });
+            stream.button({ command: "aks.aksCreateClusterFromCopilot", title: "🤖 Create with Copilot" });
+            return {
+                ok: false,
+                error: "Cluster creation in progress. Say 'configure' when your cluster is ready.",
+                retryable: true,
+            };
+        }
+
+        stream.progress("Loading Azure subscriptions...");
 
         const extensionContext = getAssetContext();
         const configResult = await configureKickstart(extensionContext ?? undefined);
