@@ -2,32 +2,13 @@ import { useEffect, useState } from "react";
 import { vscode, KickstartState, DashboardData } from "./state";
 import { Phase } from "../../../src/webview-contract/webviewDefinitions/kickstart";
 import { PhaseProgress } from "./PhaseProgress";
+import { StatusChecks } from "./StatusChecks";
+import { ModulesPanel } from "./ModulesPanel";
 import { ArtifactsPanel } from "./ArtifactsPanel";
 import { ArmResourcesPanel } from "./ArmResourcesPanel";
 import { AuditLog } from "./AuditLog";
 import * as l10n from "@vscode/l10n";
 import styles from "./Dashboard.module.css";
-
-function getPhaseDisplayName(phase: Phase): string {
-    switch (phase) {
-        case Phase.ANALYZE:
-            return l10n.t("Analyze");
-        case Phase.CONFIGURE:
-            return l10n.t("Configure");
-        case Phase.PREPARE:
-            return l10n.t("Prepare");
-        case Phase.BUILD:
-            return l10n.t("Build");
-        case Phase.DEPLOY:
-            return l10n.t("Deploy");
-        case Phase.VERIFY:
-            return l10n.t("Verify");
-        case Phase.COMPLETE:
-            return l10n.t("Complete");
-        default:
-            return l10n.t("Unknown");
-    }
-}
 
 export function Kickstart() {
     const [state, setState] = useState<KickstartState>({});
@@ -78,9 +59,6 @@ export function Kickstart() {
                 <div className={styles.sessionCard}>
                     <h3>{l10n.t("Current Session")}</h3>
                     <div className={styles.sessionMeta}>
-                        <span>
-                            {l10n.t("Phase")}: {getPhaseDisplayName(state.dashboard!.currentPhase)}
-                        </span>
                         {state.dashboard!.config && (
                             <>
                                 <span>
@@ -88,6 +66,10 @@ export function Kickstart() {
                                 </span>
                                 <span>
                                     {l10n.t("Registry")}: {state.dashboard!.config.acrName}
+                                </span>
+                                <span>
+                                    {l10n.t("SKU")}:{" "}
+                                    {state.dashboard!.config.clusterSku === "Automatic" ? "AKS Automatic" : "Standard"}
                                 </span>
                             </>
                         )}
@@ -107,6 +89,15 @@ export function Kickstart() {
                         hasError={Boolean(state.dashboard.lastError)}
                     />
 
+                    <StatusChecks
+                        config={state.dashboard.config}
+                        analysis={state.dashboard.analysis}
+                        artifacts={state.dashboard.artifacts}
+                        image={state.dashboard.image}
+                        deployment={state.dashboard.deployment}
+                        verification={state.dashboard.verification}
+                    />
+
                     {state.dashboard.lastError && (
                         <div className={styles.errorBanner}>
                             <div className={styles.errorBannerHeader}>
@@ -114,9 +105,6 @@ export function Kickstart() {
                             </div>
                             <div className={styles.errorBannerMessage}>{state.dashboard.lastError.message}</div>
                             <div className={styles.errorBannerMeta}>
-                                <span>
-                                    {l10n.t("Phase")}: {getPhaseDisplayName(state.dashboard.lastError.phase)}
-                                </span>
                                 <span>
                                     {state.dashboard.lastError.retryable
                                         ? l10n.t("Retryable")
@@ -126,6 +114,7 @@ export function Kickstart() {
                         </div>
                     )}
 
+                    <ModulesPanel modules={state.dashboard.analysis?.modules} />
                     <ArtifactsPanel artifacts={state.dashboard.artifacts} />
                     <ArmResourcesPanel armResources={state.dashboard.armResources} />
                     <AuditLog auditLog={state.dashboard.auditLog} />
