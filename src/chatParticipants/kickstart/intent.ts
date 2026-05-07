@@ -64,6 +64,10 @@ export function detectIntent(prompt: string, command: string | undefined, state:
         return { action: "reset" };
     }
 
+    if (lowerPrompt.includes("resume") || lowerPrompt.includes("continue") || lowerPrompt.includes("retry")) {
+        return { action: "run", phase: state.currentPhase };
+    }
+
     // Phase-specific keywords
     if (lowerPrompt.includes("analyze") || lowerPrompt.includes("scan")) {
         return { action: "run", phase: Phase.ANALYZE };

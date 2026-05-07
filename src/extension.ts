@@ -18,7 +18,6 @@ import { buildAndPush } from "./commands/aksKickstart/buildAndPush";
 import { useWorkspace, useSample } from "./commands/aksKickstart/repoSource";
 import { saveFile } from "./commands/aksKickstart/saveFile";
 import { saveAll } from "./commands/aksKickstart/saveAll";
-import { deploy } from "./commands/aksKickstart/deploy";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
 import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
@@ -141,9 +140,33 @@ export async function activate(context: vscode.ExtensionContext) {
         if (vscode.workspace.getConfiguration("aks").get("kickstartEnabledPreview")) {
             registerCommandWithTelemetry("aks.kickstartContainerization", aksKickstart);
             registerCommandWithTelemetry("aks.kickstart.buildAndPush", buildAndPush);
+            registerCommandWithTelemetry("aks.kickstart.openChat", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart",
+                });
+            });
+            const hasShownWelcome = context.globalState.get<boolean>("kickstart.welcomeShown");
+            if (!hasShownWelcome) {
+                vscode.commands.executeCommand(
+                    "workbench.action.openWalkthrough",
+                    "ms-kubernetes-tools.vscode-aks-tools#kickstartwalkthrough",
+                );
+                context.globalState.update("kickstart.welcomeShown", true);
+            }
             registerCommandWithTelemetry("aks.kickstart.useWorkspace", async () => {
                 const result = await useWorkspace();
                 if (result.succeeded) {
+                    context.globalState.update("kickstart.pendingSamplePath", undefined);
+                    const folders = vscode.workspace.workspaceFolders;
+                    if (folders && folders.length > 0) {
+                        const { loadState, createInitialState, saveState } =
+                            await import("./chatParticipants/kickstart/state");
+                        const wsFolder = folders[0].uri.fsPath;
+                        const state = loadState(context, wsFolder) ?? createInitialState(wsFolder);
+                        state.projectPath = result.result;
+                        state.projectSource = "workspace";
+                        await saveState(context, wsFolder, state);
+                    }
                     await vscode.commands.executeCommand("workbench.action.chat.open", {
                         query: "@kickstart /start",
                     });
@@ -151,7 +174,12 @@ export async function activate(context: vscode.ExtensionContext) {
             });
             registerCommandWithTelemetry("aks.kickstart.useSample", async () => {
                 const result = await useSample(new vscode.CancellationTokenSource().token);
-                if (!result.succeeded && result.error !== "Cancelled.") {
+                if (result.succeeded) {
+                    context.globalState.update("kickstart.pendingSamplePath", result.result);
+                    await vscode.commands.executeCommand("workbench.action.chat.open", {
+                        query: "@kickstart /start",
+                    });
+                } else if (result.error !== "Cancelled.") {
                     vscode.window.showErrorMessage(result.error);
                 }
             });
@@ -166,9 +194,53 @@ export async function activate(context: vscode.ExtensionContext) {
                     await vscode.commands.executeCommand("vscode.openFolder", folderUri[0], { forceNewWindow: false });
                 }
             });
+            registerCommandWithTelemetry("aks.kickstart.resume", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart resume",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.newSession", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart start over",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.analyze", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart analyze",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.configure", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart configure",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.prepare", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart generate",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.build", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart build",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.verify", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart verify",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.retry", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart retry",
+                });
+            });
             registerCommandWithTelemetry("aks.kickstart.saveFile", saveFile);
             registerCommandWithTelemetry("aks.kickstart.saveAll", saveAll);
-            registerCommandWithTelemetry("aks.kickstart.deploy", deploy);
+            registerCommandWithTelemetry("aks.kickstart.deploy", async () => {
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart deploy",
+                });
+            });
         }
         registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
         registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);

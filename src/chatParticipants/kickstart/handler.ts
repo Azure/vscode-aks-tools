@@ -47,12 +47,38 @@ export async function defaultHandler(
         await KickstartPanel.showIfNotOpen(extensionContext);
 
         const workspaceFolder = workspaceFolders[0].uri.fsPath;
-        let state = loadState(extensionContext, workspaceFolder) ?? createInitialState(workspaceFolder);
+        const pendingSamplePath = extensionContext.globalState.get<string>("kickstart.pendingSamplePath");
+        if (pendingSamplePath) {
+            extensionContext.globalState.update("kickstart.pendingSamplePath", undefined);
+            const state = createInitialState(workspaceFolder);
+            state.projectPath = pendingSamplePath;
+            state.projectSource = "sample";
+            await saveState(extensionContext, workspaceFolder, state);
+            KickstartPanel.pushState(state);
+        }
+
+        const existingState = loadState(extensionContext, workspaceFolder);
+        let state = existingState ?? createInitialState(workspaceFolder);
 
         const prompt = request.prompt ?? "";
         const isEmptyPrompt = prompt.trim().length === 0 && !request.command;
+        const isStartCommand = request.command === "/start";
+        const hasExistingProgress =
+            existingState && (existingState.currentPhase > Phase.ANALYZE || existingState.analysis);
 
-        if (isEmptyPrompt && state.currentPhase === Phase.ANALYZE && !state.analysis) {
+        if ((isEmptyPrompt || isStartCommand) && hasExistingProgress) {
+            stream.markdown("## 🚀 AKS Kickstart\n\n");
+            stream.markdown(renderProgress(state.currentPhase));
+            stream.markdown("\n\n");
+            stream.markdown(renderStateSummary(state));
+            stream.markdown("\n\n**You have an existing session.** What would you like to do?\n");
+            stream.button({ command: "aks.kickstart.resume", title: `▶️ Resume (${phaseName(state.currentPhase)})` });
+            stream.button({ command: "aks.kickstart.newSession", title: "✨ Start new session" });
+            reportKickstartTelemetry("resume-prompt.shown");
+            return { metadata: { command: "resume-prompt" } };
+        }
+
+        if (isEmptyPrompt && !hasExistingProgress) {
             stream.markdown(
                 "## 🚀 AKS Kickstart\n\n" +
                     "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
@@ -112,14 +138,22 @@ export async function defaultHandler(
         }
 
         if (intent.action === "run" && intent.phase !== undefined) {
+            if (!state.projectPath) {
+                state.projectPath = workspaceFolder;
+                state.projectSource = "workspace";
+            }
+
             const prereqCheck = validatePrereqs(intent.phase, state);
             if (!prereqCheck.ok) {
                 const missing = prereqCheck.missing?.join(", ") ?? "unknown prerequisites";
-                const suggestedPhase =
-                    prereqCheck.suggestedPhase !== undefined ? phaseName(prereqCheck.suggestedPhase) : "previous phase";
-                stream.markdown(
-                    `**Missing prerequisites for ${phaseName(intent.phase)}:**\n\n${missing}\n\n**Suggested:** Complete the ${suggestedPhase} first.`,
-                );
+                stream.markdown(`**Missing prerequisites for ${phaseName(intent.phase)}:**\n\n${missing}\n`);
+                if (prereqCheck.suggestedPhase !== undefined) {
+                    const suggested = phaseName(prereqCheck.suggestedPhase);
+                    stream.button({
+                        command: `aks.kickstart.${suggested.toLowerCase()}`,
+                        title: `Run ${suggested}`,
+                    });
+                }
                 reportKickstartTelemetry(`phase-${intent.phase}.prereq-failed`);
                 return { metadata: { command: `phase-${intent.phase}`, error: `Missing prerequisites: ${missing}` } };
             }
@@ -129,9 +163,12 @@ export async function defaultHandler(
 
             if (!result.ok) {
                 const classification = classifyError(result.error);
-                stream.markdown(`**${classification.title}**\n\n${classification.detail}`);
+                stream.markdown(`**${classification.title}**\n\n${classification.detail}\n`);
+                if (classification.fixCommand) {
+                    stream.button({ command: classification.fixCommand.id, title: classification.fixCommand.label });
+                }
                 if (classification.retryable) {
-                    stream.markdown("You can retry this phase by saying: retry");
+                    stream.button({ command: "aks.kickstart.retry", title: "🔄 Retry" });
                 }
                 state.lastError = {
                     phase: intent.phase,
