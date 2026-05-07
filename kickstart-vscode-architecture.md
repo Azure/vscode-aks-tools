@@ -92,8 +92,8 @@ interface KickstartState {
     verification?: VerificationData; // pod health + service endpoint
 
     lastError?: ErrorInfo;         // phase, message, retryable
-    auditLog?: CommandLogEntry[];  // command history with stdout/stderr
-    armResources?: ArmResource[];  // Azure resources used/created/modified
+    auditLog?: CommandLogEntry[];  // ⚠️ DEFINED BUT NOT YET POPULATED — see Observability section
+    armResources?: ArmResource[];  // ⚠️ DEFINED BUT NOT YET POPULATED — see Observability section
 }
 ```
 
@@ -140,6 +140,53 @@ Each phase has **entry prerequisites** validated by `validatePrereqs()`:
 | BUILD | `state.artifacts.savedToDisk === true` |
 | DEPLOY | `state.image` |
 | VERIFY | `state.deployment` |
+
+### Phase Traversal — How the Handler Drives Advancement
+
+The handler (`handler.ts`) is the single entry point for every `@kickstart` chat message. It implements a state machine:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          handler.ts                                  │
+│                                                                      │
+│  1. loadState() or create initial                                    │
+│  2. Check for pendingSamplePath (globalState) → set projectPath      │
+│  3. Determine intent:                                                │
+│     ├── empty prompt + existing session → "Resume or Start new?"     │
+│     ├── empty prompt + no session → Welcome screen                   │
+│     ├── keyword/command → detectIntent() → { action, phase }         │
+│  4. If action == "run":                                              │
+│     ├── Set projectPath if missing (defaults to workspace)           │
+│     ├── validatePrereqs(phase, state)                                │
+│     │   ├── FAIL → show missing prereqs + button to run suggested    │
+│     │   └── PASS ↓                                                   │
+│     ├── executePhase(phase, state, stream, token, request)           │
+│     │   ├── phaseRunner dispatches to correct phase function         │
+│     │   ├── Phase uses state.projectPath for filesystem operations   │
+│     │   └── Returns PhaseResult + phase-specific data                │
+│     ├── On success:                                                  │
+│     │   ├── Merge result data into state (analysis/config/etc)       │
+│     │   ├── Advance state.currentPhase = phase + 1                   │
+│     │   ├── saveState() → persist to workspaceState                  │
+│     │   ├── KickstartPanel.pushState() → update webview              │
+│     │   └── Show "Next" button (or "Save all" if artifacts unsaved)  │
+│     └── On failure:                                                  │
+│         ├── state.lastError = { phase, message, retryable }          │
+│         ├── saveState() + pushState()                                │
+│         ├── Show error + "Retry" button                              │
+│         └── Show fixCommand button if available (e.g. "Run az login")│
+│  5. If action == "reset" → clearState, start fresh                   │
+│  6. If action == "status" → show progress + summary                  │
+│  7. If action == "create" → show cluster creation options             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Phase advancement is always forward.** `state.currentPhase` only increases (phase + 1 on success). The user can jump to any phase explicitly ("@kickstart configure") but the handler validates prerequisites first. Jumping backward is supported via `jumpToPhase()` which clears all downstream state.
+
+**The "Next" button is phase-aware:**
+- After PREPARE: shows "💾 Save all files" if `artifacts.savedToDisk === false`, otherwise "Next: Build"
+- After VERIFY (COMPLETE): shows "🌐 Open app" + "☁️ Open in Azure Portal" links
+- All other phases: shows "Next: {phase}" button
 
 ### Phase Details
 
@@ -323,6 +370,95 @@ Kubeconfig authentication for AKS uses a custom exec plugin flow:
 1. Get raw kubeconfig via `listClusterUserCredentials`
 2. `getAuthenticatedKubeconfigYaml()` rewrites the exec block to use extension-managed kubelogin + cached MSAL token
 3. Write to temp file → pass to kubectl
+
+---
+
+## Terminal Command Execution
+
+Kickstart uses VS Code's **built-in `runInTerminal` tool** to execute shell commands visibly in the chat UI. This replaced the earlier pattern of hidden `child_process.exec()` calls.
+
+### How It Works
+
+```
+Phase (build.ts / deploy.ts)
+    │
+    ▼
+terminalTool.ts: runInTerminal(command, cwd, token, toolInvocationToken)
+    │
+    ▼
+vscode.lm.invokeTool("runInTerminal", {
+    input: { command, cwd },
+    toolInvocationToken    ← links execution to the chat conversation
+}, token)
+    │
+    ▼
+VS Code built-in terminal tool
+    ├── Opens integrated terminal
+    ├── Runs command via shell integration
+    ├── Streams output into chat UI (collapsible)
+    ├── Auto-collapses on success
+    └── Auto-expands on failure
+```
+
+### Command Visibility
+
+| Phase | Command | Execution Method | Visible to User |
+|---|---|---|---|
+| Build | `az acr build --registry ...` | `runInTerminal` | ✅ Visible in chat |
+| Build | `az acr repository show-tags ...` | `runInTerminal` | ✅ Visible in chat |
+| Deploy | `kubectl apply -f ...` | `runInTerminal` | ✅ Visible in chat |
+| Deploy | `kubectl get all -A` | `runInTerminal` | ✅ Visible in chat |
+| Deploy | `kubectl config view` | `kubectl.api.invokeCommand` | ❌ Hidden (data-gathering) |
+| Verify | `kubectl get pods -o json` | `kubectl.api.invokeCommand` | ❌ Hidden (JSON parsing) |
+| Verify | `kubectl get svc -o json` | `kubectl.api.invokeCommand` | ❌ Hidden (JSON parsing) |
+| Verify | `kubectl logs ...` | `kubectl.api.invokeCommand` | ❌ Hidden (parsed for error detection) |
+
+Commands that need structured output (JSON parsing, error pattern matching) stay hidden via the kubectl extension API. User-facing commands that produce human-readable output use the terminal tool.
+
+---
+
+## Observability: Audit Log & ARM Resource Tracking
+
+### Current Status: ⚠️ Defined but Not Yet Populated
+
+The state model defines `auditLog: CommandLogEntry[]` and `armResources: ArmResource[]`. The webview has React components (`AuditLog.tsx`, `ArmResourcesPanel.tsx`) that render these. `KickstartPanel.pushState()` forwards them to the webview. **However, no code currently writes to either field.**
+
+### CommandLogEntry (audit log)
+
+```typescript
+interface CommandLogEntry {
+    command: string;      // e.g. "az acr build --registry myacr ..."
+    timestamp: number;
+    exitCode?: number;
+    stdout?: string;      // truncated to 500 chars
+    stderr?: string;      // truncated to 500 chars
+    phase: Phase;
+    durationMs?: number;
+}
+```
+
+**To implement:** Wrap `runInTerminal()` to record entries. After each terminal command, create a `CommandLogEntry` and append to `state.auditLog`, then `saveState()` + `pushState()`.
+
+### ArmResource (Azure resource tracking)
+
+```typescript
+interface ArmResource {
+    type: string;         // e.g. "Microsoft.ContainerRegistry/registries"
+    name: string;         // e.g. "myacr"
+    resourceGroup: string;
+    action: "used" | "created" | "modified";
+}
+```
+
+**To implement:** After configure phase selects resources, record them as "used". After attach-ACR creates a role assignment, record as "modified". Track in `state.armResources`.
+
+### shell.ts Command Logger (not connected)
+
+`shell.ts` defines `setCommandLogger()` and `activeCommandLogger` — a global hook for `exec()` calls. This is **not connected** to kickstart because:
+1. Kickstart phases use `runInTerminal` (VS Code LM tool), not `shell.exec()`
+2. `setCommandLogger()` is never called anywhere in the codebase
+
+This mechanism is vestigial for kickstart but may be used by other parts of the extension.
 
 ---
 
@@ -542,26 +678,28 @@ src/
 │   ├── phaseRunner.test.ts    # Phase validation tests
 │   ├── progress.ts            # Phase progress bar rendering
 │   ├── telemetry.ts           # Telemetry helper
-│   ├── orchestrator.ts        # Legacy linear orchestrator (deprecated)
+│   ├── terminalTool.ts        # runInTerminal wrapper (vscode.lm.invokeTool)
 │   ├── gitExtension.ts        # Git clone wrapper (vscode.git API)
+│   ├── gitExtension.test.ts   # Git clone tests
+│   ├── orchestrator.ts        # ⚠️ DEAD CODE — legacy linear orchestrator, not imported anywhere
 │   ├── phases/
 │   │   ├── analyze.ts         # Project analysis (SDK + LM fallback)
 │   │   ├── configure.ts       # Azure resource selection + pre-flight + cost
 │   │   ├── prepare.ts         # Artifact generation (SDK plans → Copilot)
-│   │   ├── build.ts           # az acr build + verify
-│   │   ├── deploy.ts          # kubectl apply + resource listing
-│   │   └── verify.ts          # Pod/service/log health checks
+│   │   ├── build.ts           # az acr build via runInTerminal
+│   │   ├── deploy.ts          # kubectl apply via runInTerminal
+│   │   └── verify.ts          # Pod/service/log health checks (kubectl API)
 │   └── steps/
-│       ├── analyze.ts         # analyzeRepo SDK wrapper
-│       ├── dockerfile.ts      # Dockerfile generation step (SDK + LMClient)
-│       ├── manifests.ts       # Manifest generation step (SDK + LMClient)
-│       └── githubActions.ts   # GitHub Actions workflow generation
+│       ├── analyze.ts         # analyzeRepo SDK wrapper (used by phases/analyze.ts)
+│       ├── dockerfile.ts      # Dockerfile generation step (used by phases/prepare.ts)
+│       ├── manifests.ts       # Manifest generation step (used by phases/prepare.ts)
+│       └── githubActions.ts   # ⚠️ DEAD CODE — only imported by orchestrator.ts
 │
 ├── commands/aksKickstart/
 │   ├── configure.ts           # QuickPick configuration flow
 │   ├── repoSource.ts          # useWorkspace() + useSample() (temp dir clone)
-│   ├── buildAndPush.ts        # Terminal-based az acr build
-│   ├── deploy.ts              # kubectl apply wrapper
+│   ├── buildAndPush.ts        # Terminal-based az acr build (registered command)
+│   ├── deploy.ts              # ⚠️ DEAD CODE — not imported or registered anywhere
 │   ├── saveFile.ts            # Single file save with path traversal check
 │   └── saveAll.ts             # Batch file save with overwrite confirmation
 │
@@ -577,12 +715,12 @@ src/
 │   ├── subscriptions.ts       # Subscription listing
 │   ├── azureResources.ts      # Resource listing by type
 │   ├── clusters.ts            # Cluster operations + kubeconfig auth
-│   ├── kubectl.ts             # kubectl command wrappers
+│   ├── kubectl.ts             # kubectl command wrappers (used by verify phase)
 │   ├── identities.ts          # Cluster principal ID resolution
 │   ├── roleAssignments.ts     # Role assignment CRUD
 │   ├── acrRoleHelpers.ts      # AcrPull permission check
 │   ├── kickstartPermissions.ts # Composite permission check
-│   └── shell.ts               # Shell exec wrapper
+│   └── shell.ts               # Shell exec wrapper (not used by kickstart phases)
 │
 ├── panels/
 │   ├── BasePanel.ts           # Webview panel base class
@@ -603,7 +741,7 @@ webview-ui/src/Kickstart/
 ├── StatusChecks.tsx           # Pass/fail check list
 ├── ModulesPanel.tsx           # Detected apps table
 ├── ArtifactsPanel.tsx         # Generated files list
-├── ArmResourcesPanel.tsx      # Azure resources table
-├── AuditLog.tsx               # Command history log
+├── ArmResourcesPanel.tsx      # Azure resources table (⚠️ renders but never receives data)
+├── AuditLog.tsx               # Command history log (⚠️ renders but never receives data)
 └── Dashboard.module.css       # All dashboard styles
 ```
