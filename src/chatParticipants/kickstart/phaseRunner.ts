@@ -270,7 +270,7 @@ export async function executePhase(
     }
 > {
     try {
-        const workspaceFolder = vscode.Uri.file(state.workspaceFolder);
+        const workspaceFolder = vscode.Uri.file(state.projectPath ?? state.workspaceFolder);
 
         switch (phase) {
             case Phase.ANALYZE:

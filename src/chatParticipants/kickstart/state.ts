@@ -120,6 +120,8 @@ export interface ArmResource {
 export interface KickstartState {
     currentPhase: Phase;
     workspaceFolder: string;
+    projectPath?: string;
+    projectSource?: "workspace" | "sample" | "custom";
     analysis?: AnalysisData;
     config?: ConfigData;
     artifacts?: ArtifactsData;
