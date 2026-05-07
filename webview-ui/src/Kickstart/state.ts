@@ -21,6 +21,9 @@ export const vscode = getWebviewMessageContext<"kickstart">({
     attachAcrRequest: null,
     startKickstartRequest: null,
     openArtifactRequest: null,
+    acceptFileRequest: null,
+    rejectFileRequest: null,
+    acceptAllRequest: null,
 });
 
 export type DashboardData = {

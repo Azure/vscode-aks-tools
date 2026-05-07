@@ -66,15 +66,18 @@ export interface ConfigData {
     hasAcrPull: boolean;
 }
 
-export interface Manifest {
+export type StagedFileStatus = "staged" | "accepted" | "rejected";
+
+export interface StagedFile {
     filename: string;
     content: string;
+    stagedPath: string;
+    status: StagedFileStatus;
+    generatedAt: number;
 }
 
 export interface ArtifactsData {
-    dockerfile?: string;
-    manifests?: Manifest[];
-    workflowYaml?: string;
+    stagedFiles: StagedFile[];
     savedToDisk: boolean;
 }
 
@@ -107,7 +110,10 @@ export type ToVsCodeMsgDef = {
     getPermissionStatusRequest: { clusterKey: ClusterKey; acrKey: AcrKey };
     attachAcrRequest: { clusterKey: ClusterKey; acrKey: AcrKey };
     startKickstartRequest: { clusterKey: ClusterKey; acrKey: AcrKey };
-    openArtifactRequest: { filename: string; content: string };
+    openArtifactRequest: { filename: string; stagedPath: string };
+    acceptFileRequest: { filename: string };
+    rejectFileRequest: { filename: string };
+    acceptAllRequest: void;
 };
 
 export type ToWebViewMsgDef = {

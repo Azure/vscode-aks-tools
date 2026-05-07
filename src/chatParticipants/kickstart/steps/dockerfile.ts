@@ -6,6 +6,10 @@ import { extractContent } from "../../../commands/aksContainerAssist/contentPars
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { Errorable, failed } from "../../../commands/utils/errorable";
 import { AnalysisResult, ModuleAnalysis, tokenToAbortSignal } from "./analyze";
+import { StagedFileManager } from "../stagedFileManager";
+import { StagedFile } from "../state";
+
+export type OnFileStaged = (file: StagedFile, allStaged: StagedFile[]) => void;
 
 export async function generateDockerfileStep(
     analysis: AnalysisResult,
@@ -13,10 +17,14 @@ export async function generateDockerfileStep(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     projectPath: string,
-): Promise<Errorable<{ dockerfile: string; dockerignore?: string }>> {
+    stagedFileManager: StagedFileManager,
+    currentStaged: StagedFile[],
+    onFileStaged: OnFileStaged,
+): Promise<Errorable<{ dockerfile: string }>> {
     const modules = modulesOrProject(analysis, projectPath);
     let dockerfile = "";
     let lastError: string | undefined;
+    const staged = [...currentStaged];
 
     for (const module of modules) {
         if (token.isCancellationRequested) {
@@ -58,12 +66,11 @@ export async function generateDockerfileStep(
             }
 
             dockerfile = extractContent(response.result, "dockerfile");
-            stream.markdown(`**Dockerfile**\n\`\`\`dockerfile\n${dockerfile}\n\`\`\``);
-            stream.button({
-                command: "aks.kickstart.saveFile",
-                title: "Save Dockerfile",
-                arguments: [{ filename: "Dockerfile", content: dockerfile, projectPath }],
-            });
+
+            // Stage the file in the temp dir and notify
+            const stagedFile = await stagedFileManager.stage("Dockerfile", dockerfile);
+            staged.push(stagedFile);
+            onFileStaged(stagedFile, staged);
         } catch (error) {
             lastError = String(error);
             stream.markdown(`**Dockerfile error:** ${lastError}`);

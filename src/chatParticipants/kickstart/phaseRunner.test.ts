@@ -184,7 +184,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18\nRUN npm install",
+                        stagedFiles: [],
                         savedToDisk: false,
                     },
                 };
@@ -221,13 +221,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18\nRUN npm install",
-                        manifests: [
-                            {
-                                filename: "deployment.yaml",
-                                content: "apiVersion: v1\nkind: Deployment",
-                            },
-                        ],
+                        stagedFiles: [],
                         savedToDisk: true,
                     },
                 };
@@ -265,7 +259,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18",
+                        stagedFiles: [],
                         savedToDisk: true,
                     },
                 };
@@ -302,7 +296,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18",
+                        stagedFiles: [],
                         savedToDisk: true,
                     },
                     image: {
@@ -344,7 +338,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18",
+                        stagedFiles: [],
                         savedToDisk: true,
                     },
                     image: {
@@ -386,7 +380,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18",
+                        stagedFiles: [],
                         savedToDisk: true,
                     },
                     image: {
@@ -432,7 +426,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18",
+                        stagedFiles: [],
                         savedToDisk: true,
                     },
                     image: {
@@ -477,7 +471,7 @@ describe("phaseRunner", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM node:18",
+                        stagedFiles: [],
                         savedToDisk: true,
                     },
                     image: {

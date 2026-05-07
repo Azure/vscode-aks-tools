@@ -68,7 +68,7 @@ function buildChecks(props: StatusChecksProps): StatusCheck[] {
     if (artifacts) {
         checks.push({
             label: l10n.t("Artifacts generated"),
-            passed: Boolean(artifacts.dockerfile || (artifacts.manifests && artifacts.manifests.length > 0)),
+            passed: artifacts.stagedFiles.length > 0,
         });
         checks.push({
             label: l10n.t("Artifacts saved to disk"),

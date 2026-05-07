@@ -202,6 +202,13 @@
 }
 
 /* Artifacts Panel */
+.artifactHint {
+    font-size: 0.8rem;
+    color: var(--vscode-descriptionForeground);
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+}
+
 .artifactItem {
     margin-bottom: 1rem;
     border: 1px solid var(--vscode-widget-border);
@@ -263,6 +270,117 @@
 
 .artifactOpenButton:hover {
     background: var(--vscode-button-secondaryHoverBackground);
+}
+
+/* Per-file action buttons (accept/reject) */
+.artifactActions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.artifactActionButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.15s ease;
+}
+
+.artifactAcceptButton {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-charts-green);
+}
+
+.artifactAcceptButton:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.artifactRejectButton {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-charts-red);
+}
+
+.artifactRejectButton:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.artifactSavedIndicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: var(--vscode-charts-green);
+    font-size: 12px;
+}
+
+/* Staged file status badge */
+.stagedFileBadge {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 2px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stagedFileBadge_staged {
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
+
+.stagedFileBadge_accepted {
+    background: var(--vscode-charts-green);
+    color: var(--vscode-editor-background);
+}
+
+.stagedFileBadge_rejected {
+    background: var(--vscode-descriptionForeground);
+    color: var(--vscode-editor-background);
+    opacity: 0.7;
+}
+
+/* Accept All footer */
+.artifactFooter {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.5rem 0;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--vscode-widget-border);
+    gap: 0.5rem;
+}
+
+.acceptAllButton {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.75rem;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.15s ease;
+}
+
+.acceptAllButton:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+.savedToDiskLabel {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--vscode-charts-green);
 }
 
 .artifactCodeBlock {

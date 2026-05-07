@@ -53,17 +53,27 @@ export interface ConfigData {
 }
 
 /**
- * Artifact data containing generated files
+ * Status of a single staged file
  */
-export interface Manifest {
-    filename: string;
+export type StagedFileStatus = "staged" | "accepted" | "rejected";
+
+/**
+ * A generated file that lives in the session temp directory, waiting to be
+ * accepted into the project.
+ */
+export interface StagedFile {
+    filename: string; // relative path, e.g. "Dockerfile" or "k8s/deployment.yaml"
     content: string;
+    stagedPath: string; // absolute path inside the session temp dir
+    status: StagedFileStatus;
+    generatedAt: number;
 }
 
+/**
+ * Artifact data containing generated files tracked as staged files
+ */
 export interface ArtifactsData {
-    dockerfile?: string;
-    manifests?: Manifest[];
-    workflowYaml?: string;
+    stagedFiles: StagedFile[];
     savedToDisk: boolean;
 }
 

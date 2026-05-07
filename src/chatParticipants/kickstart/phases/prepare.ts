@@ -5,7 +5,8 @@ import { AnalysisResult } from "../steps/analyze";
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { failed } from "../../../commands/utils/errorable";
 import { PhaseResult } from "../phaseRunner";
-import { AnalysisData, ConfigData, ArtifactsData, Manifest } from "../state";
+import { AnalysisData, ConfigData, ArtifactsData, StagedFile } from "../state";
+import { StagedFileManager } from "../stagedFileManager";
 
 /**
  * Generates Dockerfile and Kubernetes manifests with AKS Automatic awareness.
@@ -25,6 +26,8 @@ import { AnalysisData, ConfigData, ArtifactsData, Manifest } from "../state";
  * @param config Cluster and registry configuration from CONFIGURE phase
  * @param stream The chat response stream for progress updates
  * @param token Cancellation token to stop execution
+ * @param stagedFileManager Manages temp-dir staging of generated files
+ * @param onFileStaged Called after each file is staged so the webview updates progressively
  * @returns PhaseResult with ArtifactsData on success
  */
 export async function preparePhase(
@@ -33,6 +36,8 @@ export async function preparePhase(
     config: ConfigData,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
+    stagedFileManager: StagedFileManager,
+    onFileStaged: (file: StagedFile, allStaged: StagedFile[]) => void,
 ): Promise<PhaseResult & { artifacts?: ArtifactsData }> {
     try {
         const workspacePath = workspaceFolder.fsPath;
@@ -69,10 +74,24 @@ export async function preparePhase(
         };
 
         // Step 1: Generate Dockerfile
-        stream.markdown("### Generating Dockerfile\n\n");
+        stream.markdown("**Generating Dockerfile...**\n\n");
         stream.progress("Generating Dockerfile...");
 
-        const dockerfileResult = await generateDockerfileStep(analysisResult, lmClient, stream, token, workspacePath);
+        const stagedSoFar: StagedFile[] = [];
+        const dockerfileResult = await generateDockerfileStep(
+            analysisResult,
+            lmClient,
+            stream,
+            token,
+            workspacePath,
+            stagedFileManager,
+            stagedSoFar,
+            (file, allStaged) => {
+                stagedSoFar.length = 0;
+                stagedSoFar.push(...allStaged);
+                onFileStaged(file, allStaged);
+            },
+        );
 
         if (!dockerfileResult.succeeded) {
             return {
@@ -82,10 +101,8 @@ export async function preparePhase(
             };
         }
 
-        const dockerfile = dockerfileResult.result.dockerfile;
-
         // Step 2: Generate Kubernetes manifests
-        stream.markdown("### Generating Kubernetes Manifests\n\n");
+        stream.markdown("**Generating Kubernetes manifests...**\n\n");
         stream.progress("Generating Kubernetes manifests...");
 
         const manifestsResult = await generateManifestsStep(
@@ -95,6 +112,13 @@ export async function preparePhase(
             stream,
             token,
             workspacePath,
+            stagedFileManager,
+            stagedSoFar,
+            (file, allStaged) => {
+                stagedSoFar.length = 0;
+                stagedSoFar.push(...allStaged);
+                onFileStaged(file, allStaged);
+            },
             {
                 acrLoginServer: config.acrLoginServer,
                 clusterName: config.clusterName,
@@ -109,29 +133,42 @@ export async function preparePhase(
             };
         }
 
-        // Step 3: Process manifests with AKS Automatic awareness
-        const manifests: Manifest[] = [];
+        // Step 3: Apply AKS Automatic-specific content adaptations to already-staged manifests
+        // Re-stage adapted versions so the temp files reflect the final content.
         const manifestFiles = manifestsResult.result.files;
+        const adaptedStaged: StagedFile[] = [];
 
-        for (const [filename, content] of Object.entries(manifestFiles)) {
-            let processedContent = content;
+        for (const sf of stagedSoFar) {
+            // Only process k8s manifests (not the Dockerfile)
+            if (!sf.filename.startsWith("k8s/")) {
+                adaptedStaged.push(sf);
+                continue;
+            }
+            // Extract just the base filename for the AKS Automatic checks
+            const baseFilename = sf.filename.replace(/^k8s\//, "");
+            const rawContent = manifestFiles[baseFilename] ?? sf.content;
+            const processedContent =
+                config.clusterSku === "Automatic" ? adaptManifestForAutomatic(rawContent, baseFilename) : rawContent;
 
-            // Apply AKS Automatic-specific adaptations
-            if (config.clusterSku === "Automatic") {
-                processedContent = adaptManifestForAutomatic(processedContent, filename);
+            if (!processedContent.trim()) {
+                // HPA/autoscaler filtered out — remove from staged set
+                continue;
             }
 
-            // Skip empty manifests (e.g., HPA for Automatic clusters)
-            if (processedContent.trim()) {
-                manifests.push({
-                    filename,
-                    content: processedContent,
-                });
+            if (processedContent !== sf.content) {
+                // Content changed — re-stage so the temp file is up to date
+                const updated = await stagedFileManager.stage(sf.filename, processedContent);
+                adaptedStaged.push(updated);
+            } else {
+                adaptedStaged.push(sf);
             }
         }
 
         // Step 4: Validate that we have required artifacts
-        if (!dockerfile || manifests.length === 0) {
+        const hasDockerfile = adaptedStaged.some((s) => s.filename === "Dockerfile");
+        const manifestStaged = adaptedStaged.filter((s) => s.filename.startsWith("k8s/"));
+
+        if (!hasDockerfile || manifestStaged.length === 0) {
             return {
                 ok: false,
                 error: "Failed to generate required artifacts (Dockerfile or Kubernetes manifests).",
@@ -139,9 +176,8 @@ export async function preparePhase(
             };
         }
 
-        // Ensure we have at least Deployment and Service
-        const hasDeployment = manifests.some((m) => m.content.includes("kind: Deployment"));
-        const hasService = manifests.some((m) => m.content.includes("kind: Service"));
+        const hasDeployment = manifestStaged.some((m) => m.content.includes("kind: Deployment"));
+        const hasService = manifestStaged.some((m) => m.content.includes("kind: Service"));
 
         if (!hasDeployment || !hasService) {
             return {
@@ -151,27 +187,36 @@ export async function preparePhase(
             };
         }
 
-        // Step 5: Show next steps
-        stream.markdown("### Summary\n\n");
-        stream.markdown("✅ Artifacts generated:\n");
-        stream.markdown("```\n");
-        stream.markdown("📄 Dockerfile\n");
-        for (const m of manifests) {
-            stream.markdown(`📁 k8s/${m.filename}\n`);
+        // Step 5: Show generated files as a native file tree in chat
+        const fileTree: vscode.ChatResponseFileTree[] = [];
+        const k8sChildren: vscode.ChatResponseFileTree[] = [];
+
+        for (const sf of adaptedStaged) {
+            if (sf.filename.startsWith("k8s/")) {
+                k8sChildren.push({ name: sf.filename.replace("k8s/", "") });
+            } else {
+                fileTree.push({ name: sf.filename });
+            }
         }
-        stream.markdown("```\n\n");
-        stream.markdown("Review the files above, then save them to proceed to build.\n");
+        if (k8sChildren.length > 0) {
+            fileTree.push({ name: "k8s", children: k8sChildren });
+        }
+
+        stream.markdown("\n✅ **Files generated** — review in the panel, then click **Save to project**:\n\n");
+        // Use the staging root as the filetree base so clicking a file opens the staged copy
+        stream.filetree(fileTree, stagedFileManager.stagingRoot);
+
+        // Reference chips — each stagedPath is a VS Code storage URI the user can open
+        for (const sf of adaptedStaged) {
+            stream.reference(vscode.Uri.parse(sf.stagedPath));
+        }
 
         const artifacts: ArtifactsData = {
-            dockerfile,
-            manifests,
+            stagedFiles: adaptedStaged,
             savedToDisk: false,
         };
 
-        return {
-            ok: true,
-            artifacts,
-        };
+        return { ok: true, artifacts };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {

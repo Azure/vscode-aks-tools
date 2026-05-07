@@ -8,6 +8,7 @@ import {
     ImageData,
     DeploymentData,
     VerificationData,
+    StagedFile,
 } from "./state";
 import { analyzePhase } from "./phases/analyze";
 import { configurePhase } from "./phases/configure";
@@ -15,6 +16,7 @@ import { preparePhase } from "./phases/prepare";
 import { buildPhase } from "./phases/build";
 import { deployPhase } from "./phases/deploy";
 import { verifyPhase } from "./phases/verify";
+import { StagedFileManager } from "./stagedFileManager";
 
 /**
  * Result of executing a phase
@@ -251,6 +253,7 @@ export function classifyError(error: unknown): ErrorClassification {
  * @param stream The chat response stream for progress updates
  * @param token Cancellation token to stop execution
  * @param request The chat request object with model and toolInvocationToken
+ * @param onFileStaged Optional callback invoked each time a file is staged during PREPARE
  * @returns PhaseResult indicating success/failure and whether retry is possible
  */
 export async function executePhase(
@@ -259,6 +262,8 @@ export async function executePhase(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     request: vscode.ChatRequest,
+    onFileStaged?: (file: StagedFile, allStaged: StagedFile[]) => void,
+    storageUri?: vscode.Uri,
 ): Promise<
     PhaseResult & {
         analysis?: AnalysisData;
@@ -287,7 +292,15 @@ export async function executePhase(
                         retryable: false,
                     };
                 }
-                return await preparePhase(workspaceFolder, state.analysis, state.config, stream, token);
+                return await preparePhase(
+                    workspaceFolder,
+                    state.analysis,
+                    state.config,
+                    stream,
+                    token,
+                    new StagedFileManager(storageUri ?? vscode.Uri.file(state.workspaceFolder)),
+                    onFileStaged ?? (() => {}),
+                );
 
             case Phase.BUILD:
                 if (!state.artifacts || !state.config) {

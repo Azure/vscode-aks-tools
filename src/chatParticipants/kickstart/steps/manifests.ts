@@ -9,6 +9,9 @@ import {
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { Errorable, failed } from "../../../commands/utils/errorable";
 import { AnalysisResult, ModuleAnalysis, tokenToAbortSignal } from "./analyze";
+import { StagedFileManager } from "../stagedFileManager";
+import { StagedFile } from "../state";
+import { OnFileStaged } from "./dockerfile";
 
 export async function generateManifestsStep(
     analysis: AnalysisResult,
@@ -17,11 +20,15 @@ export async function generateManifestsStep(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     projectPath: string,
+    stagedFileManager: StagedFileManager,
+    currentStaged: StagedFile[],
+    onFileStaged: OnFileStaged,
     options?: { acrLoginServer?: string; clusterName?: string },
 ): Promise<Errorable<{ files: Record<string, string> }>> {
     const modules = modulesOrProject(analysis, projectPath);
     const files: Record<string, string> = {};
     let lastError: string | undefined;
+    const staged = [...currentStaged];
 
     for (const module of modules) {
         if (token.isCancellationRequested) {
@@ -74,13 +81,13 @@ export async function generateManifestsStep(
                 : parsed;
 
             for (const manifest of manifests) {
+                const stageFilename = `k8s/${manifest.filename}`;
                 files[manifest.filename] = manifest.content;
-                stream.markdown(`**${manifest.filename}**\n\`\`\`yaml\n${manifest.content}\n\`\`\``);
-                stream.button({
-                    command: "aks.kickstart.saveFile",
-                    title: `Save ${manifest.filename}`,
-                    arguments: [{ filename: `k8s/${manifest.filename}`, content: manifest.content, projectPath }],
-                });
+
+                // Stage the file and notify
+                const stagedFile = await stagedFileManager.stage(stageFilename, manifest.content);
+                staged.push(stagedFile);
+                onFileStaged(stagedFile, staged);
             }
         } catch (error) {
             lastError = String(error);

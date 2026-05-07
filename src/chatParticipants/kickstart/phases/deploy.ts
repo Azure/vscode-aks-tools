@@ -48,7 +48,7 @@ export async function deployPhase(
         stream.markdown("🚀 **Deploying to AKS**\n\n");
 
         // Check manifests are saved
-        if (!artifacts.savedToDisk || !artifacts.manifests || artifacts.manifests.length === 0) {
+        if (!artifacts.savedToDisk || artifacts.stagedFiles.length === 0) {
             return {
                 ok: false,
                 error: "Manifests have not been saved to disk. Please save the generated manifests before deploying.",
@@ -176,7 +176,9 @@ export async function deployPhase(
             }
 
             // Build list of applied manifests for tracking
-            const appliedManifests = artifacts.manifests?.map((m) => m.filename) || [];
+            const appliedManifests = artifacts.stagedFiles
+                .filter((f) => f.filename.startsWith("k8s/"))
+                .map((f) => f.filename);
 
             // Create deployment data
             const deployment: DeploymentData = {

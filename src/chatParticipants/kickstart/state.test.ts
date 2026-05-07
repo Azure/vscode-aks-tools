@@ -153,7 +153,7 @@ describe("kickstart state", () => {
                         canGetKubeconfig: true,
                         hasAcrPull: true,
                     },
-                    artifacts: { savedToDisk: false },
+                    artifacts: { stagedFiles: [], savedToDisk: false },
                     image: { repository: "acr.azurecr.io/app", tag: "v1" },
                     deployment: { appliedManifests: ["manifest.yaml"], timestamp: Date.now() },
                 };
@@ -190,11 +190,7 @@ describe("kickstart state", () => {
                         canGetKubeconfig: true,
                         hasAcrPull: true,
                     },
-                    artifacts: {
-                        dockerfile: "FROM node:18",
-                        manifests: [{ filename: "deployment.yaml", content: "apiVersion: v1" }],
-                        savedToDisk: true,
-                    },
+                    artifacts: { stagedFiles: [], savedToDisk: true },
                     image: { repository: "acr.azurecr.io/app", tag: "v1" },
                     deployment: { appliedManifests: ["manifest.yaml"], timestamp: Date.now() },
                 };
@@ -232,11 +228,7 @@ describe("kickstart state", () => {
                         canGetKubeconfig: true,
                         hasAcrPull: true,
                     },
-                    artifacts: {
-                        dockerfile: "FROM node:18",
-                        manifests: [{ filename: "deployment.yaml", content: "apiVersion: v1" }],
-                        savedToDisk: true,
-                    },
+                    artifacts: { stagedFiles: [], savedToDisk: true },
                     image: { repository: "acr.azurecr.io/app", tag: "v1" },
                     deployment: { appliedManifests: ["manifest.yaml"], timestamp: Date.now() },
                     verification: { podsReady: true, serviceEndpoint: "http://localhost" },
@@ -276,11 +268,7 @@ describe("kickstart state", () => {
                         canGetKubeconfig: true,
                         hasAcrPull: true,
                     },
-                    artifacts: {
-                        dockerfile: "FROM node:18",
-                        manifests: [{ filename: "deployment.yaml", content: "apiVersion: v1" }],
-                        savedToDisk: true,
-                    },
+                    artifacts: { stagedFiles: [], savedToDisk: true },
                     image: { repository: "acr.azurecr.io/app", tag: "v1" },
                     deployment: { appliedManifests: ["manifest.yaml"], timestamp: Date.now() },
                     verification: { podsReady: true, serviceEndpoint: "http://localhost" },
@@ -320,11 +308,7 @@ describe("kickstart state", () => {
                         canGetKubeconfig: true,
                         hasAcrPull: true,
                     },
-                    artifacts: {
-                        dockerfile: "FROM node:18",
-                        manifests: [{ filename: "deployment.yaml", content: "apiVersion: v1" }],
-                        savedToDisk: true,
-                    },
+                    artifacts: { stagedFiles: [], savedToDisk: true },
                     image: { repository: "acr.azurecr.io/app", tag: "v1" },
                     deployment: { appliedManifests: ["manifest.yaml"], timestamp: Date.now() },
                     verification: { podsReady: true, serviceEndpoint: "http://localhost" },
@@ -389,8 +373,15 @@ describe("kickstart state", () => {
                         hasAcrPull: true,
                     },
                     artifacts: {
-                        dockerfile: "FROM python:3.11",
-                        manifests: [{ filename: "deployment.yaml", content: "apiVersion: v1" }],
+                        stagedFiles: [
+                            {
+                                filename: "Dockerfile",
+                                content: "FROM python:3.11",
+                                stagedPath: "/tmp/Dockerfile",
+                                status: "accepted" as const,
+                                generatedAt: 0,
+                            },
+                        ],
                         savedToDisk: true,
                     },
                 };
@@ -402,7 +393,7 @@ describe("kickstart state", () => {
                 assert.ok(newState.artifacts);
                 assert.strictEqual(newState.analysis.language, "python");
                 assert.strictEqual(newState.config.clusterName, "cluster-1");
-                assert.strictEqual(newState.artifacts.dockerfile, "FROM python:3.11");
+                assert.strictEqual(newState.artifacts.stagedFiles[0].content, "FROM python:3.11");
             });
         });
 

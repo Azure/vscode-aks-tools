@@ -16,8 +16,7 @@ import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrTo
 import { aksKickstart } from "./commands/aksKickstart/kickstart";
 import { buildAndPush } from "./commands/aksKickstart/buildAndPush";
 import { useWorkspace, useSample } from "./commands/aksKickstart/repoSource";
-import { saveFile } from "./commands/aksKickstart/saveFile";
-import { saveAll } from "./commands/aksKickstart/saveAll";
+import { KickstartPanel } from "./panels/KickstartPanel";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
 import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
@@ -93,7 +92,6 @@ import {
     getGitHubRepoInfo,
 } from "./commands/aksContainerAssist/oidcSetup";
 import { registerKickstartParticipant } from "./chatParticipants/kickstart/participant";
-import { KickstartPanel } from "./panels/KickstartPanel";
 
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
@@ -253,8 +251,9 @@ export async function activate(context: vscode.ExtensionContext) {
                     query: "@kickstart retry",
                 });
             });
-            registerCommandWithTelemetry("aks.kickstart.saveFile", saveFile);
-            registerCommandWithTelemetry("aks.kickstart.saveAll", saveAll);
+            registerCommandWithTelemetry("aks.kickstart.acceptAll", async () => {
+                await KickstartPanel.triggerAcceptAll();
+            });
             registerCommandWithTelemetry("aks.kickstart.deploy", async () => {
                 await vscode.commands.executeCommand("workbench.action.chat.open", {
                     query: "@kickstart deploy",

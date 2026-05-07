@@ -303,14 +303,8 @@
                 "enablement": "config.aks.kickstartEnabledPreview"
             },
             {
-                "command": "aks.kickstart.saveFile",
-                "title": "Save Kickstart File",
-                "category": "Azure Kubernetes Service",
-                "enablement": "config.aks.kickstartEnabledPreview"
-            },
-            {
-                "command": "aks.kickstart.saveAll",
-                "title": "Save All Kickstart Files",
+                "command": "aks.kickstart.acceptAll",
+                "title": "Save All Kickstart Files to Project",
                 "category": "Azure Kubernetes Service",
                 "enablement": "config.aks.kickstartEnabledPreview"
             },

@@ -9,6 +9,8 @@ import { generateDockerfileStep } from "./steps/dockerfile";
 import { generateManifestsStep } from "./steps/manifests";
 import { generateGithubActionsStep } from "./steps/githubActions";
 import { configureKickstart } from "../../commands/aksKickstart/configure";
+import { StagedFileManager } from "./stagedFileManager";
+import { StagedFile } from "./state";
 
 export interface KickstartOptions {
     projectPath: string;
@@ -37,6 +39,7 @@ export async function handleStart(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     options?: Partial<KickstartOptions>,
+    storageUri?: vscode.Uri,
 ): Promise<KickstartResult> {
     if (isCancelled(token, stream)) {
         reportKickstartTelemetry("start.cancelled");
@@ -109,7 +112,23 @@ export async function handleStart(
         return { metadata: { command: "start", cancelled: true } };
     }
     stream.progress("Generating Dockerfile...");
-    const dockerfileResult = await generateDockerfileStep(analysis.result, lmClient, stream, token, projectPath);
+    const stagedManager = new StagedFileManager(storageUri ?? vscode.Uri.file(projectPath));
+    const stagedSoFar: StagedFile[] = [];
+    const noopOnFileStaged = (_file: StagedFile, allStaged: StagedFile[]) => {
+        stagedSoFar.length = 0;
+        stagedSoFar.push(...allStaged);
+    };
+
+    const dockerfileResult = await generateDockerfileStep(
+        analysis.result,
+        lmClient,
+        stream,
+        token,
+        projectPath,
+        stagedManager,
+        stagedSoFar,
+        noopOnFileStaged,
+    );
     if (failed(dockerfileResult)) {
         stream.markdown(`**Error:** ${dockerfileResult.error}`);
         reportKickstartTelemetry("start.error", { error: "dockerfile_failed" });
@@ -128,6 +147,9 @@ export async function handleStart(
         stream,
         token,
         projectPath,
+        stagedManager,
+        stagedSoFar,
+        noopOnFileStaged,
         options,
     );
     if (failed(manifestsResult)) {
@@ -147,6 +169,9 @@ export async function handleStart(
         stream,
         token,
         projectPath,
+        stagedManager,
+        stagedSoFar,
+        noopOnFileStaged,
         options,
     );
     if (failed(githubActionsResult)) {
@@ -155,7 +180,28 @@ export async function handleStart(
         return { metadata: { command: "start", projectPath, error: githubActionsResult.error } };
     }
 
-    stream.button({ command: "aks.kickstart.saveAll", title: "Save all files" });
+    stream.markdown("\n✅ **Files generated** — review in the panel, then click **Save to project**:\n\n");
+
+    // Build file tree for native chat rendering
+    const fileTree: vscode.ChatResponseFileTree[] = [];
+    const k8sChildren: vscode.ChatResponseFileTree[] = [];
+    for (const sf of stagedSoFar) {
+        if (sf.filename.startsWith("k8s/")) {
+            k8sChildren.push({ name: sf.filename.replace("k8s/", "") });
+        } else {
+            fileTree.push({ name: sf.filename });
+        }
+    }
+    if (k8sChildren.length > 0) {
+        fileTree.push({ name: "k8s", children: k8sChildren });
+    }
+    // Use the staging root as the filetree base so clicking a file opens the staged copy
+    stream.filetree(fileTree, stagedManager.stagingRoot);
+    for (const sf of stagedSoFar) {
+        stream.reference(vscode.Uri.parse(sf.stagedPath));
+    }
+
+    stream.button({ command: "aks.kickstart.acceptAll", title: "Save to project" });
     if (options?.clusterKey) {
         const { subscriptionId, resourceGroup, clusterName } = options.clusterKey;
         const portalUrl = `https://portal.azure.com/#@/resource/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${clusterName}/overview`;

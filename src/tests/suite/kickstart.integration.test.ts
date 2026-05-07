@@ -89,16 +89,28 @@ describe("Kickstart Integration Tests", () => {
      */
     function createMockArtifacts() {
         return {
-            dockerfile:
-                'FROM node:18-alpine\nWORKDIR /app\nCOPY . .\nRUN npm install\nEXPOSE 3000\nCMD ["npm", "start"]',
-            manifests: [
+            stagedFiles: [
                 {
-                    filename: "deployment.yaml",
-                    content: "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-app",
+                    filename: "Dockerfile",
+                    content:
+                        'FROM node:18-alpine\nWORKDIR /app\nCOPY . .\nRUN npm install\nEXPOSE 3000\nCMD ["npm", "start"]',
+                    stagedPath: "vscode-userdata:/kickstart-staging/Dockerfile",
+                    status: "accepted" as const,
+                    generatedAt: Date.now(),
                 },
                 {
-                    filename: "service.yaml",
+                    filename: "k8s/deployment.yaml",
+                    content: "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test-app",
+                    stagedPath: "vscode-userdata:/kickstart-staging/k8s/deployment.yaml",
+                    status: "accepted" as const,
+                    generatedAt: Date.now(),
+                },
+                {
+                    filename: "k8s/service.yaml",
                     content: "apiVersion: v1\nkind: Service\nmetadata:\n  name: test-app",
+                    stagedPath: "vscode-userdata:/kickstart-staging/k8s/service.yaml",
+                    status: "accepted" as const,
+                    generatedAt: Date.now(),
                 },
             ],
             savedToDisk: true,

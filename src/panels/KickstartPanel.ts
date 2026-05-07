@@ -18,12 +18,14 @@ import {
 import { Subscription, acrPullRoleDefinitionName } from "../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { KickstartState } from "../chatParticipants/kickstart/state";
+import { KickstartState, loadState, saveState } from "../chatParticipants/kickstart/state";
 import { getReadySessionProvider } from "../auth/azureAuth";
 
 export class KickstartPanel extends BasePanel<"kickstart"> {
     static currentPanel: KickstartPanel | undefined;
     static extensionUri: Uri | undefined;
+    static currentState: KickstartState | undefined;
+    static extensionContext: ExtensionContext | undefined;
 
     constructor(extensionUri: Uri) {
         super(extensionUri, "kickstart", {
@@ -46,6 +48,7 @@ export class KickstartPanel extends BasePanel<"kickstart"> {
         if (!KickstartPanel.extensionUri) {
             KickstartPanel.extensionUri = context.extensionUri;
         }
+        KickstartPanel.extensionContext = context;
 
         const sessionProvider = await getReadySessionProvider();
         const provider = failed(sessionProvider) ? undefined : sessionProvider.result;
@@ -57,6 +60,7 @@ export class KickstartPanel extends BasePanel<"kickstart"> {
     }
 
     static pushState(state: KickstartState): void {
+        KickstartPanel.currentState = state;
         if (KickstartPanel.currentPanel && KickstartPanel.currentPanel.currentWebview) {
             KickstartPanel.currentPanel.currentWebview.postStateChanged({
                 currentPhase: state.currentPhase,
@@ -71,6 +75,38 @@ export class KickstartPanel extends BasePanel<"kickstart"> {
                 armResources: state.armResources,
             });
         }
+    }
+
+    static async triggerAcceptAll(): Promise<void> {
+        const ctx = KickstartPanel.extensionContext;
+        const workspaceFolders = workspace.workspaceFolders;
+        if (!ctx || !workspaceFolders?.length) return;
+
+        // Use in-memory state, or fall back to persisted state if the panel was never opened
+        const workspaceFolder = workspaceFolders[0].uri.fsPath;
+        const state = KickstartPanel.currentState ?? loadState(ctx, workspaceFolder);
+        if (!state) return;
+
+        const stagedFiles = state.artifacts?.stagedFiles ?? [];
+
+        // Write each file to the workspace using VS Code's fs API (works on Desktop and Web)
+        const workspaceRoot = workspaceFolders[0].uri;
+        for (const f of stagedFiles) {
+            if (f.status === "rejected") continue;
+            const dest = Uri.joinPath(workspaceRoot, f.filename);
+            await workspace.fs.writeFile(dest, Buffer.from(f.content, "utf8"));
+        }
+
+        const updated = stagedFiles.map((f) => (f.status !== "rejected" ? { ...f, status: "accepted" as const } : f));
+        const newState: KickstartState = {
+            ...state,
+            artifacts: { stagedFiles: updated, savedToDisk: true },
+        };
+        KickstartPanel.currentState = newState;
+        await saveState(ctx, workspaceFolder, newState);
+        KickstartPanel.pushState(newState);
+        const count = updated.filter((f) => f.status === "accepted").length;
+        window.showInformationMessage(`Saved ${count} file(s) to project.`);
     }
 }
 
@@ -108,6 +144,9 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
             attachAcrRequest: false,
             startKickstartRequest: false,
             openArtifactRequest: false,
+            acceptFileRequest: false,
+            rejectFileRequest: false,
+            acceptAllRequest: false,
         };
     }
 
@@ -138,7 +177,10 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
             startKickstartRequest: (args) => {
                 if (this.sessionProvider) this.handleStartKickstartRequest(args.clusterKey, args.acrKey, webview);
             },
-            openArtifactRequest: (args) => this.handleOpenArtifactRequest(args.filename, args.content),
+            openArtifactRequest: (args) => this.handleOpenArtifactRequest(args.filename, args.stagedPath),
+            acceptFileRequest: (args) => this.handleAcceptFileRequest(args.filename),
+            rejectFileRequest: (args) => this.handleRejectFileRequest(args.filename),
+            acceptAllRequest: () => this.handleAcceptAllRequest(),
         };
     }
 
@@ -287,18 +329,50 @@ export class KickstartPanelDataProvider implements PanelDataProvider<"kickstart"
         webview.postStartKickstartResponse(undefined);
     }
 
-    private async handleOpenArtifactRequest(filename: string, content: string) {
-        const doc = await workspace.openTextDocument({ content, language: this.getLanguageId(filename) });
+    private async handleOpenArtifactRequest(_filename: string, stagedPath: string) {
+        // stagedPath is a VS Code storage URI — works on Desktop and VS Code for the Web
+        const uri = Uri.parse(stagedPath);
+        const doc = await workspace.openTextDocument(uri);
         await window.showTextDocument(doc, { preview: true });
     }
 
-    private getLanguageId(filename: string): string {
-        if (filename.endsWith(".yaml") || filename.endsWith(".yml")) {
-            return "yaml";
-        }
-        if (filename === "Dockerfile") {
-            return "dockerfile";
-        }
-        return "plaintext";
+    private async handleAcceptFileRequest(filename: string) {
+        const ctx = KickstartPanel.extensionContext;
+        const workspaceFolders = workspace.workspaceFolders;
+        if (!KickstartPanel.currentState || !ctx || !workspaceFolders?.length) return;
+
+        const stagedFiles = KickstartPanel.currentState.artifacts?.stagedFiles ?? [];
+        const file = stagedFiles.find((f) => f.filename === filename);
+        if (!file || file.status === "rejected") return;
+
+        // Write the single file to the workspace
+        const dest = Uri.joinPath(workspaceFolders[0].uri, file.filename);
+        await workspace.fs.writeFile(dest, Buffer.from(file.content, "utf8"));
+
+        const updated = stagedFiles.map((f) => (f.filename === filename ? { ...f, status: "accepted" as const } : f));
+        const allSaved = updated.every((f) => f.status === "accepted" || f.status === "rejected");
+        const newState: KickstartState = {
+            ...KickstartPanel.currentState,
+            artifacts: { stagedFiles: updated, savedToDisk: allSaved },
+        };
+        KickstartPanel.currentState = newState;
+        await saveState(ctx, workspaceFolders[0].uri.fsPath, newState);
+        KickstartPanel.pushState(newState);
+        window.showInformationMessage(`Saved ${filename} to project.`);
+    }
+
+    private handleRejectFileRequest(filename: string) {
+        if (!KickstartPanel.currentState) return;
+        const stagedFiles = KickstartPanel.currentState.artifacts?.stagedFiles ?? [];
+        const updated = stagedFiles.map((f) => (f.filename === filename ? { ...f, status: "rejected" as const } : f));
+        KickstartPanel.currentState = {
+            ...KickstartPanel.currentState,
+            artifacts: { stagedFiles: updated, savedToDisk: false },
+        };
+        KickstartPanel.pushState(KickstartPanel.currentState);
+    }
+
+    private async handleAcceptAllRequest() {
+        await KickstartPanel.triggerAcceptAll();
     }
 }

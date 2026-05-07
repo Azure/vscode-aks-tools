@@ -159,7 +159,26 @@ export async function defaultHandler(
             }
 
             stream.progress(`Running ${phaseName(intent.phase)} phase...`);
-            const result = await executePhase(intent.phase, state, stream, token, request);
+
+            // For PREPARE, push state to the webview after each file is staged
+            // so the user can see files appearing in the panel as generation progresses.
+            const result = await executePhase(
+                intent.phase,
+                state,
+                stream,
+                token,
+                request,
+                (_, allStaged) => {
+                    KickstartPanel.pushState({
+                        ...state,
+                        artifacts: {
+                            stagedFiles: allStaged,
+                            savedToDisk: false,
+                        },
+                    });
+                },
+                extensionContext.storageUri,
+            );
 
             if (!result.ok) {
                 const classification = classifyError(result.error);
@@ -222,9 +241,9 @@ export async function defaultHandler(
                 }
             } else if (state.currentPhase === Phase.BUILD && state.artifacts && !state.artifacts.savedToDisk) {
                 stream.markdown(
-                    `\n✅ **${phaseName(intent.phase)} complete!**\n\nSave your generated files before building.\n`,
+                    `\n✅ **${phaseName(intent.phase)} complete!**\n\nYour files are staged and ready — save them to your project workspace before building.\n`,
                 );
-                stream.button({ command: "aks.kickstart.saveAll", title: "💾 Save all files" });
+                stream.button({ command: "aks.kickstart.acceptAll", title: "💾 Save to project" });
             } else if (state.currentPhase <= Phase.VERIFY) {
                 const nextPhase = phaseName(state.currentPhase);
                 stream.markdown(`\n✅ **${phaseName(intent.phase)} complete!**\n\nReady for the next step?`);

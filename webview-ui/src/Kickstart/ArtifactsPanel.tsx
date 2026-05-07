@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { ArtifactsData } from "../../../src/webview-contract/webviewDefinitions/kickstart";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faChevronRight, faFileCode, faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
+import {
+    faChevronDown,
+    faChevronRight,
+    faFileCode,
+    faExternalLinkAlt,
+    faFolderOpen,
+    faSave,
+    faCheck,
+} from "@fortawesome/free-solid-svg-icons";
 import * as l10n from "@vscode/l10n";
 import { vscode } from "./state";
 import styles from "./Dashboard.module.css";
@@ -10,39 +18,15 @@ export type ArtifactsPanelProps = {
     artifacts?: ArtifactsData;
 };
 
-type ArtifactFile = {
-    filename: string;
-    content: string;
-    language: string;
-};
-
 export function ArtifactsPanel({ artifacts }: ArtifactsPanelProps) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
 
-    if (!artifacts) {
+    if (!artifacts || artifacts.stagedFiles.length === 0) {
         return null;
     }
 
-    const files: ArtifactFile[] = [];
-
-    if (artifacts.dockerfile) {
-        files.push({ filename: "Dockerfile", content: artifacts.dockerfile, language: "dockerfile" });
-    }
-
-    if (artifacts.manifests) {
-        artifacts.manifests.forEach((manifest) => {
-            files.push({ filename: manifest.filename, content: manifest.content, language: "yaml" });
-        });
-    }
-
-    if (artifacts.workflowYaml) {
-        files.push({ filename: ".github/workflows/deploy.yml", content: artifacts.workflowYaml, language: "yaml" });
-    }
-
-    if (files.length === 0) {
-        return null;
-    }
+    const { stagedFiles, savedToDisk } = artifacts;
 
     const toggleFileExpanded = (filename: string) => {
         setExpandedFiles((prev) => {
@@ -56,8 +40,16 @@ export function ArtifactsPanel({ artifacts }: ArtifactsPanelProps) {
         });
     };
 
-    const handleOpenInEditor = (filename: string, content: string) => {
-        vscode.postOpenArtifactRequest({ filename, content });
+    const handleOpenInEditor = (filename: string, stagedPath: string) => {
+        vscode.postOpenArtifactRequest({ filename, stagedPath });
+    };
+
+    const handleSaveFile = (filename: string) => {
+        vscode.postAcceptFileRequest({ filename });
+    };
+
+    const handleSaveToProject = () => {
+        vscode.postAcceptAllRequest(undefined);
     };
 
     return (
@@ -68,13 +60,21 @@ export function ArtifactsPanel({ artifacts }: ArtifactsPanelProps) {
                     className={styles.panelToggleIcon}
                 />
                 <FontAwesomeIcon icon={faFileCode} className={styles.panelIcon} />
-                <h3 className={styles.panelTitle}>{l10n.t("Generated Artifacts")}</h3>
-                <span className={styles.panelCount}>{files.length}</span>
+                <h3 className={styles.panelTitle}>{l10n.t("Generated Files")}</h3>
+                <span className={styles.panelCount}>{stagedFiles.length}</span>
             </div>
 
             {isExpanded && (
                 <div className={styles.panelContent}>
-                    {files.map((file) => {
+                    {!savedToDisk && (
+                        <p className={styles.artifactHint}>
+                            {l10n.t(
+                                "Files are previewed in a temporary location. Click a file to review it, then save to your project.",
+                            )}
+                        </p>
+                    )}
+
+                    {stagedFiles.map((file) => {
                         const isFileExpanded = expandedFiles.has(file.filename);
 
                         return (
@@ -90,14 +90,33 @@ export function ArtifactsPanel({ artifacts }: ArtifactsPanelProps) {
                                         />
                                         <span className={styles.artifactFilename}>{file.filename}</span>
                                     </button>
-                                    <button
-                                        className={styles.artifactOpenButton}
-                                        onClick={() => handleOpenInEditor(file.filename, file.content)}
-                                        title={l10n.t("Open in Editor")}
-                                    >
-                                        <FontAwesomeIcon icon={faExternalLinkAlt} />
-                                        <span>{l10n.t("Open in Editor")}</span>
-                                    </button>
+
+                                    <div className={styles.artifactActions}>
+                                        <button
+                                            className={styles.artifactOpenButton}
+                                            onClick={() => handleOpenInEditor(file.filename, file.stagedPath)}
+                                            title={l10n.t("Open in Editor")}
+                                        >
+                                            <FontAwesomeIcon icon={faExternalLinkAlt} />
+                                        </button>
+                                        {!savedToDisk &&
+                                            (file.status === "accepted" ? (
+                                                <span
+                                                    className={styles.artifactSavedIndicator}
+                                                    title={l10n.t("Saved to project")}
+                                                >
+                                                    <FontAwesomeIcon icon={faCheck} />
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    className={styles.artifactAcceptButton}
+                                                    onClick={() => handleSaveFile(file.filename)}
+                                                    title={l10n.t("Save this file to project")}
+                                                >
+                                                    <FontAwesomeIcon icon={faSave} />
+                                                </button>
+                                            ))}
+                                    </div>
                                 </div>
 
                                 {isFileExpanded && (
@@ -110,6 +129,23 @@ export function ArtifactsPanel({ artifacts }: ArtifactsPanelProps) {
                             </div>
                         );
                     })}
+
+                    {!savedToDisk && (
+                        <div className={styles.artifactFooter}>
+                            <button className={styles.acceptAllButton} onClick={handleSaveToProject}>
+                                <FontAwesomeIcon icon={faFolderOpen} />
+                                <span>{l10n.t("Save to project")}</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {savedToDisk && (
+                        <div className={styles.artifactFooter}>
+                            <span className={styles.savedToDiskLabel}>
+                                ✅ {l10n.t("Saved to project")} ({stagedFiles.length} {l10n.t("files")})
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
