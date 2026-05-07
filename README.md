@@ -7,6 +7,7 @@
 * [Development](https://azure.github.io/vscode-aks-tools/development/development.html)
 * [Installation](https://azure.github.io/vscode-aks-tools/installation.html#installation)
 * [Feature List](https://azure.github.io/vscode-aks-tools/features/features.html)
+* [Kickstart Deployment Flow](docs/kickstart-phase-flow.md)
 
 ## Telemetry
 
