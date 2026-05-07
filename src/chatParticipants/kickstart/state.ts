@@ -2,7 +2,16 @@ import * as vscode from "vscode";
 import { ModuleAnalysis } from "./steps/analyze";
 
 /**
- * Phase enum representing the stages of the kickstart workflow
+ * Phase enum representing the stages of the kickstart workflow.
+ *
+ * Phases execute sequentially, each building on data from prior phases:
+ * - ANALYZE (0): Project inspection - detects language, framework, ports
+ * - CONFIGURE (1): Azure resource selection - cluster, registry, pre-flight checks
+ * - PREPARE (2): Artifact generation - Dockerfile and Kubernetes manifests
+ * - BUILD (3): Container image build and push to ACR
+ * - DEPLOY (4): Apply manifests to AKS cluster via kubectl
+ * - VERIFY (5): Check pod health and retrieve service endpoint
+ * - COMPLETE (6): Final state after successful verification
  */
 export enum Phase {
     ANALYZE = 0,
