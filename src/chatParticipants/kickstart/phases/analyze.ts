@@ -171,12 +171,12 @@ export async function analyzePhase(
                     `- **${mod.name}** (${mod.language}${mod.framework ? ` / ${mod.framework}` : ""}) — \`${mod.modulePath}\`\n`,
                 );
             }
+            stream.markdown("\nAll modules will be containerized. You can re-run analyze to change this.\n");
         }
 
-        stream.markdown("\n### Next Steps\n\n");
-        stream.markdown("- Configure your Azure container registry and AKS cluster\n");
-        stream.markdown("- Generate deployment artifacts (Dockerfile + K8s manifests)\n");
-        stream.markdown("- Build, push, and deploy\n");
+        if (primaryModule.port) {
+            stream.markdown(`\nExposing port **${primaryModule.port}** (detected from project).\n`);
+        }
 
         const analysis: AnalysisData = {
             language: primaryModule.language,

@@ -209,12 +209,26 @@ export async function defaultHandler(
 
             stream.markdown(renderProgress(state.currentPhase));
 
-            if (state.currentPhase <= Phase.VERIFY) {
+            if (state.currentPhase === Phase.COMPLETE) {
+                stream.markdown("\n🎉 **All done!** Your application is ready on AKS.");
+                if (state.verification?.serviceEndpoint) {
+                    const ep = state.verification.serviceEndpoint;
+                    const appUrl = ep.startsWith("http") ? ep : `http://${ep}`;
+                    stream.anchor(vscode.Uri.parse(appUrl), "🌐 Open app");
+                }
+                if (state.config) {
+                    const portalUrl = `https://portal.azure.com/#@/resource/subscriptions/${state.config.subscriptionId}/resourceGroups/${state.config.resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${state.config.clusterName}/overview`;
+                    stream.anchor(vscode.Uri.parse(portalUrl), "☁️ Open in Azure Portal");
+                }
+            } else if (state.currentPhase === Phase.BUILD && state.artifacts && !state.artifacts.savedToDisk) {
+                stream.markdown(
+                    `\n✅ **${phaseName(intent.phase)} complete!**\n\nSave your generated files before building.\n`,
+                );
+                stream.button({ command: "aks.kickstart.saveAll", title: "💾 Save all files" });
+            } else if (state.currentPhase <= Phase.VERIFY) {
                 const nextPhase = phaseName(state.currentPhase);
                 stream.markdown(`\n✅ **${phaseName(intent.phase)} complete!**\n\nReady for the next step?`);
                 stream.button({ command: `aks.kickstart.${nextPhase.toLowerCase()}`, title: `Next: ${nextPhase}` });
-            } else if (state.currentPhase === Phase.COMPLETE) {
-                stream.markdown("\n🎉 **All done!** Your application is ready on AKS.");
             }
 
             reportKickstartTelemetry(`phase-${intent.phase}.completed`);
