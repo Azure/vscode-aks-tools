@@ -79,6 +79,25 @@
                         }
                     }
                 ]
+            },
+            {
+                "id": "kickstartwalkthrough",
+                "title": "Kickstart: Containerize & Deploy to AKS",
+                "description": "Go from source code to a running app on AKS in minutes.",
+                "when": "config.aks.kickstartEnabledPreview",
+                "steps": [
+                    {
+                        "id": "openKickstart",
+                        "title": "Start Kickstart",
+                        "description": "Analyze your project, generate a Dockerfile and Kubernetes manifests, build, and deploy — all from the chat panel.\n\n[Start Kickstart](command:aks.kickstart.openChat)",
+                        "media": {
+                            "markdown": "./docs/book/src/features/kickstart.md"
+                        },
+                        "completionEvents": [
+                            "onCommand:aks.kickstart.openChat"
+                        ]
+                    }
+                ]
             }
         ],
         "configuration": {
