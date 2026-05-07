@@ -297,7 +297,7 @@ export async function executePhase(
                         retryable: false,
                     };
                 }
-                return await buildPhase(workspaceFolder, state.artifacts, state.config, stream, token);
+                return await buildPhase(workspaceFolder, state.artifacts, state.config, stream, token, request);
 
             case Phase.DEPLOY:
                 if (!state.artifacts || !state.config || !state.image) {
@@ -307,7 +307,15 @@ export async function executePhase(
                         retryable: false,
                     };
                 }
-                return await deployPhase(workspaceFolder, state.artifacts, state.config, state.image, stream, token);
+                return await deployPhase(
+                    workspaceFolder,
+                    state.artifacts,
+                    state.config,
+                    state.image,
+                    stream,
+                    token,
+                    request,
+                );
 
             case Phase.VERIFY:
                 if (!state.deployment || !state.config) {

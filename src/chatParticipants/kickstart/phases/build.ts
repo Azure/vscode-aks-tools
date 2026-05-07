@@ -1,10 +1,9 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { exec, NonZeroExitCodeBehaviour } from "../../../commands/utils/shell";
 import { scanForDockerfiles } from "../../../commands/aksContainerAssist/fileOperations";
-import { failed } from "../../../commands/utils/errorable";
 import { PhaseResult } from "../phaseRunner";
 import { ArtifactsData, ConfigData, ImageData } from "../state";
+import { runInTerminal } from "../terminalTool";
 
 /**
  * Builds and pushes a container image to Azure Container Registry (ACR).
@@ -31,6 +30,7 @@ export async function buildPhase(
     config: ConfigData,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
+    request: vscode.ChatRequest,
 ): Promise<PhaseResult & { image?: ImageData }> {
     try {
         const workspacePath = workspaceFolder.fsPath;
@@ -90,57 +90,33 @@ export async function buildPhase(
             };
         }
 
-        // Execute az acr build command
         stream.markdown("### Building image...\n\n");
         stream.progress("Building container image...");
 
-        // Use az acr build to build and push in one step
-        // The command: az acr build --registry <acr-name> --image <image-name>:<tag> <build-context>
-        const buildCommand = `az acr build --registry ${config.acrName} --image ${imageName}:${imageTag} "${workspacePath}"`;
+        const buildCommand = `az acr build --registry ${config.acrName} --image ${imageName}:${imageTag} .`;
 
-        const buildResult = await exec(buildCommand, {
-            workingDir: workspacePath,
-            exitCodeBehaviour: NonZeroExitCodeBehaviour.Succeed, // Handle non-zero exit ourselves
-        });
+        const buildResult = await runInTerminal(buildCommand, workspacePath, token, request.toolInvocationToken);
 
-        if (failed(buildResult) || buildResult.result.code !== 0) {
-            const errorOutput = failed(buildResult)
-                ? buildResult.error
-                : buildResult.result.stderr || buildResult.result.stdout;
+        if (!buildResult.succeeded) {
             return {
                 ok: false,
-                error: `Container build failed: ${errorOutput}`,
+                error: `Container build failed: ${buildResult.error}`,
                 retryable: true,
             };
         }
 
-        // Stream build output to user
-        const buildOutput = buildResult.result.stdout.trim();
-        if (buildOutput) {
-            stream.markdown("```\n");
-            stream.markdown(buildOutput);
-            stream.markdown("\n```\n\n");
-        }
-
-        // Exit validation: Verify image was pushed to ACR
         stream.markdown("### Verifying image in registry...\n\n");
 
         const verifyCommand = `az acr repository show-tags --name ${config.acrName} --repository ${imageName} --orderby time_desc --output json`;
-        const verifyResult = await exec(verifyCommand, {
-            exitCodeBehaviour: NonZeroExitCodeBehaviour.Succeed,
-        });
+        const verifyResult = await runInTerminal(verifyCommand, workspacePath, token, request.toolInvocationToken);
 
-        if (failed(verifyResult) || verifyResult.result.code !== 0) {
-            // If verification fails, we still consider the build successful
-            // since az acr build returned 0. The image should be there.
+        if (!verifyResult.succeeded) {
             stream.markdown(
                 "⚠️ Could not verify image tag, but build command succeeded. The image should be available in the registry.\n\n",
             );
         } else {
-            // Parse the tags response
             try {
-                const tagsOutput = verifyResult.result.stdout.trim();
-                const tags = JSON.parse(tagsOutput);
+                const tags = JSON.parse(verifyResult.result);
                 if (Array.isArray(tags) && tags.includes(imageTag)) {
                     stream.markdown(`✅ Image verified in registry: **${imageName}:${imageTag}**\n\n`);
                 } else {

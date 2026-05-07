@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { invokeKubectlCommand } from "../../../commands/utils/kubectl";
 import { getAuthenticatedKubeconfigYaml } from "../../../commands/utils/clusters";
 import { failed } from "../../../commands/utils/errorable";
 import { createTempFile } from "../../../commands/utils/tempfile";
-import { NonZeroExitCodeBehaviour } from "../../../commands/utils/shell";
 import { PhaseResult } from "../phaseRunner";
 import { ArtifactsData, ConfigData, ImageData, DeploymentData } from "../state";
+import { runInTerminal } from "../terminalTool";
 
 /**
  * Deploys Kubernetes manifests to the AKS cluster.
@@ -36,6 +35,7 @@ export async function deployPhase(
     image: ImageData,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
+    request: vscode.ChatRequest,
 ): Promise<PhaseResult & { deployment?: DeploymentData }> {
     try {
         if (token.isCancellationRequested) {
@@ -132,18 +132,13 @@ export async function deployPhase(
                 );
             }
 
-            // Apply manifests to the cluster
             stream.markdown(`### Applying manifests to **${config.clusterName}**\n\n`);
             stream.progress("Applying manifests to cluster...");
 
-            const applyResult = await invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile.filePath,
-                `apply -f "${manifestsDir}" --record`,
-                NonZeroExitCodeBehaviour.Succeed,
-            );
+            const applyCommand = `kubectl apply -f "${manifestsDir}" --kubeconfig="${kubeConfigFile.filePath}"`;
+            const applyResult = await runInTerminal(applyCommand, workspacePath, token, request.toolInvocationToken);
 
-            if (failed(applyResult)) {
+            if (!applyResult.succeeded) {
                 return {
                     ok: false,
                     error: `Failed to apply manifests: ${applyResult.error}`,
@@ -151,36 +146,13 @@ export async function deployPhase(
                 };
             }
 
-            if (applyResult.result.code !== 0) {
-                const errorMsg = applyResult.result.stderr || applyResult.result.stdout;
-                return {
-                    ok: false,
-                    error: `kubectl apply failed: ${errorMsg}`,
-                    retryable: true,
-                };
-            }
-
-            // Get the apply output to show to user
-            const applyOutput = applyResult.result.stdout.trim();
-            if (applyOutput) {
-                stream.markdown(`\`\`\`\n${applyOutput}\n\`\`\`\n\n`);
-            }
-
-            // List applied resources
             stream.markdown("### Applied Resources\n\n");
 
-            const listResult = await invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile.filePath,
-                `get all -A`,
-                NonZeroExitCodeBehaviour.Succeed,
-            );
+            const listCommand = `kubectl get all -A --kubeconfig="${kubeConfigFile.filePath}"`;
+            const listResult = await runInTerminal(listCommand, workspacePath, token, request.toolInvocationToken);
 
-            if (!failed(listResult) && listResult.result.code === 0) {
-                const resourceList = listResult.result.stdout.trim();
-                if (resourceList) {
-                    stream.markdown(`\`\`\`\n${resourceList}\n\`\`\`\n\n`);
-                }
+            if (listResult.succeeded && listResult.result.trim()) {
+                stream.markdown(`\`\`\`\n${listResult.result.trim()}\n\`\`\`\n\n`);
             }
 
             // Stream cluster portal link
