@@ -184,15 +184,33 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
             });
             registerCommandWithTelemetry("aks.kickstart.createNew", async () => {
-                const folderUri = await vscode.window.showOpenDialog({
-                    canSelectFiles: false,
-                    canSelectFolders: true,
-                    canSelectMany: false,
-                    openLabel: "Select project folder",
+                const track = await vscode.window.showQuickPick(
+                    [
+                        {
+                            label: "🌐 Web App or API",
+                            description: "Express, FastAPI, .NET, Go, Spring Boot, Django",
+                            value: "web",
+                        },
+                        { label: "🤖 AI Agent", description: "LangChain, RAG, Semantic Kernel", value: "agent" },
+                    ],
+                    { placeHolder: "What do you want to build?", title: "Kickstart: Choose a Track" },
+                );
+                if (!track) return;
+
+                const frameworks =
+                    track.value === "web"
+                        ? ["Next.js", "Express.js", "Python FastAPI", ".NET", "Go", "Spring Boot", "Django", "Rust"]
+                        : ["LangChain Agent", "RAG App", "Semantic Kernel"];
+
+                const framework = await vscode.window.showQuickPick(
+                    frameworks.map((f) => ({ label: f })),
+                    { placeHolder: "Pick a framework", title: "Kickstart: Framework" },
+                );
+                if (!framework) return;
+
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: `@kickstart I want to build a ${framework.label} ${track.value === "agent" ? "AI agent" : "web app"}`,
                 });
-                if (folderUri && folderUri.length > 0) {
-                    await vscode.commands.executeCommand("vscode.openFolder", folderUri[0], { forceNewWindow: false });
-                }
             });
             registerCommandWithTelemetry("aks.kickstart.resume", async () => {
                 await vscode.commands.executeCommand("workbench.action.chat.open", {
