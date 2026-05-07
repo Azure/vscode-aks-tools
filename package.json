@@ -28,7 +28,8 @@
         "kubernetes-extension-cloud-provider"
     ],
     "activationEvents": [
-        "onView:kubernetes.cloudExplorer"
+        "onView:kubernetes.cloudExplorer",
+        "onCommand:aks.kickstart.launchExperience"
     ],
     "main": "./dist/extension",
     "contributes": {
@@ -316,6 +317,12 @@
             {
                 "command": "aks.kickstart.deploy",
                 "title": "Deploy to AKS",
+                "category": "Azure Kubernetes Service",
+                "enablement": "config.aks.kickstartEnabledPreview"
+            },
+            {
+                "command": "aks.kickstart.launchExperience",
+                "title": "Launch Kickstart Experience",
                 "category": "Azure Kubernetes Service",
                 "enablement": "config.aks.kickstartEnabledPreview"
             },

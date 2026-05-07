@@ -93,6 +93,7 @@ import {
     getGitHubRepoInfo,
 } from "./commands/aksContainerAssist/oidcSetup";
 import { registerKickstartParticipant } from "./chatParticipants/kickstart/participant";
+import { KickstartPanel } from "./panels/KickstartPanel";
 
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
@@ -257,6 +258,14 @@ export async function activate(context: vscode.ExtensionContext) {
             registerCommandWithTelemetry("aks.kickstart.deploy", async () => {
                 await vscode.commands.executeCommand("workbench.action.chat.open", {
                     query: "@kickstart deploy",
+                });
+            });
+            registerCommandWithTelemetry("aks.kickstart.launchExperience", async () => {
+                await vscode.commands.executeCommand("workbench.action.closeSidebar");
+                await vscode.commands.executeCommand("workbench.action.closePanel");
+                await KickstartPanel.showIfNotOpen(context);
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: "@kickstart",
                 });
             });
         }
