@@ -129,15 +129,20 @@ export async function configurePhase(
 
         stream.markdown("### Configuration Summary\n\n");
 
-        let summaryTable = "| Resource | Value |\n";
-        summaryTable += "|----------|-------|\n";
-        summaryTable += `| **Subscription** | ${kickstartConfig.subscriptionId} |\n`;
-        summaryTable += `| **Resource Group** | ${config.resourceGroup} |\n`;
-        summaryTable += `| **Cluster** | ${config.clusterName} |\n`;
-        summaryTable += `| **Registry** | ${config.acrName} |\n`;
-        summaryTable += `| **Login Server** | ${config.acrLoginServer} |\n`;
+        let summaryTable = "| Component | Resource | Detail |\n";
+        summaryTable += "|-----------|----------|--------|\n";
+        summaryTable += `| Compute | ${config.clusterName} | ${config.clusterSku === "Automatic" ? "AKS Automatic" : "AKS Standard"} |\n`;
+        summaryTable += `| Registry | ${config.acrName} | ${config.acrLoginServer} |\n`;
+        summaryTable += `| Resource Group | ${config.resourceGroup} | ${kickstartConfig.subscriptionId} |\n`;
 
         stream.markdown(summaryTable);
+
+        if (config.clusterSku === "Automatic") {
+            stream.markdown(
+                "\n> 💡 **AKS Automatic** — Azure manages node pools, scaling, and upgrades. " +
+                    "Generated manifests will omit resource limits and use managed ingress.\n",
+            );
+        }
 
         stream.markdown("\n### Pre-flight Checks\n\n");
 
@@ -170,6 +175,8 @@ export async function configurePhase(
             );
         }
 
+        await renderCostEstimate(stream, config);
+
         return {
             ok: true,
             config,
@@ -182,4 +189,48 @@ export async function configurePhase(
             retryable: true,
         };
     }
+}
+
+async function fetchAzurePrice(serviceName: string, skuName: string, region: string): Promise<number | undefined> {
+    const filter = `serviceName eq '${serviceName}' and armSkuName eq '${skuName}' and armRegionName eq '${region}' and priceType eq 'Consumption'`;
+    const url = `https://prices.azure.com/api/retail/prices?$filter=${encodeURIComponent(filter)}&$top=1`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) return undefined;
+        const data = (await response.json()) as { Items?: { retailPrice?: number }[] };
+        return data.Items?.[0]?.retailPrice;
+    } catch {
+        return undefined;
+    }
+}
+
+async function renderCostEstimate(stream: vscode.ChatResponseStream, config: ConfigData): Promise<void> {
+    stream.markdown("\n### Estimated Monthly Cost\n\n");
+
+    const acrSkuPrices: Record<string, number> = { Basic: 5, Standard: 20, Premium: 50 };
+    const acrEstimate = acrSkuPrices.Basic;
+
+    let aksEstimate: string;
+    if (config.clusterSku === "Automatic") {
+        aksEstimate = "~$70+ (base fee + per-node)";
+    } else {
+        const hourlyPrice = await fetchAzurePrice("Azure Kubernetes Service", "Standard_D4s_v3", "eastus");
+        if (hourlyPrice) {
+            aksEstimate = `~$${Math.round(hourlyPrice * 730)}/mo (Standard_D4s_v3)`;
+        } else {
+            aksEstimate = "~$140 (typical Standard_D4s_v3)";
+        }
+    }
+
+    let table = "| Resource | SKU | Est. Monthly |\n";
+    table += "|----------|-----|-------------|\n";
+    table += `| AKS cluster | ${config.clusterSku === "Automatic" ? "Automatic" : "Standard"} | ${aksEstimate} |\n`;
+    table += `| Container Registry | Basic | ~$${acrEstimate} |\n`;
+
+    stream.markdown(table);
+    stream.markdown("\n*Estimates based on Azure Retail Prices. Actual costs depend on usage.*\n");
+    stream.anchor(
+        vscode.Uri.parse("https://azure.microsoft.com/en-us/pricing/calculator/"),
+        "Azure Pricing Calculator",
+    );
 }

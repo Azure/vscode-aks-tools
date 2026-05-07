@@ -153,15 +153,14 @@ export async function preparePhase(
 
         // Step 5: Show next steps
         stream.markdown("### Summary\n\n");
-        stream.markdown("✅ Artifacts generated successfully:\n");
-        stream.markdown("- Dockerfile\n");
-        stream.markdown(`- ${manifests.length} Kubernetes manifest(s)\n\n`);
-
-        stream.markdown("### Next Steps\n\n");
-        stream.markdown("1. Review the generated files\n");
-        stream.markdown("2. Click the **Save** buttons to write files to your workspace\n");
-        stream.markdown("3. Make any desired customizations to the files\n");
-        stream.markdown("4. Proceed to the **Build** phase to build and push the container image\n");
+        stream.markdown("✅ Artifacts generated:\n");
+        stream.markdown("```\n");
+        stream.markdown("📄 Dockerfile\n");
+        for (const m of manifests) {
+            stream.markdown(`📁 k8s/${m.filename}\n`);
+        }
+        stream.markdown("```\n\n");
+        stream.markdown("Review the files above, then save them to proceed to build.\n");
 
         const artifacts: ArtifactsData = {
             dockerfile,
