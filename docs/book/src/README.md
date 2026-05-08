@@ -29,7 +29,7 @@ Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS
 * [Use Simplified AKS Menu Structure (Feature Flag)](./features/simplified-menu-structure.md)
 * [Use Argo CD GitOps Integration (Feature Flag)](./features/argocd-gitops-integration.md)
 * [Create AKS Fleet Manager from VS Code](./features/aks-fleet-manager.md)
-* [Setup AKS MCP Server from VS Code](./features/aks-mcp-server-integration.md)
+* [AKS MCP Server](./features/aks-mcp-server-integration.md)
 
 ## Development and Release
 

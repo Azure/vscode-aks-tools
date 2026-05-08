@@ -3,12 +3,12 @@ import { failed } from "../utils/errorable";
 import { getAKSMCPServerBinaryPath } from "../utils/helper/mcpServerDownloadHelper";
 
 // Registers the AKS MCP server with VS Code. Works in remote setups (WSL,
-// Remote-SSH, Dev Containers); Directly writing to user `mcp.servers`
-// doesn't allow for these remote scenarios.
+// Remote-SSH, Dev Containers). Writing directly to user `mcp.servers`
+// doesn't work for these remote scenarios.
 export function registerAksMcpServerProvider(context: vscode.ExtensionContext): void {
     // Provider for the AKS MCP server (identified by "AKS MCP").
     const provider: vscode.McpServerDefinitionProvider<vscode.McpStdioServerDefinition> = {
-        // Binary path left empty, resolveMcpServerDefinition sets it further below.
+        // Binary path is left empty; resolveMcpServerDefinition populates it below.
         provideMcpServerDefinitions: () => [
             new vscode.McpStdioServerDefinition("AKS MCP", "", ["--transport", "stdio", ...getEnabledComponentsArgs()]),
         ],
