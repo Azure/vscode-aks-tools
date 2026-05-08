@@ -3,7 +3,7 @@ export type GadgetCategory = (typeof gadgetCategories)[number];
 
 export const gadgetProfileResources = ["block-io", "cpu", "tcprtt"] as const;
 export const gadgetSnapshotResources = ["process", "socket"] as const;
-export const gadgetTopResources = ["block-io", "ebpf", "file", "tcp"] as const;
+export const gadgetTopResources = ["block-io", "file", "tcp"] as const;
 export const gadgetTraceResources = [
     "bind",
     "capabilities",
@@ -11,13 +11,11 @@ export const gadgetTraceResources = [
     "exec",
     "fsslower",
     "mount",
-    "network",
     "oomkill",
     "open",
     "signal",
     "sni",
     "tcp",
-    "tcpconnect",
     "tcpdrop",
     "tcpretrans",
 ] as const;

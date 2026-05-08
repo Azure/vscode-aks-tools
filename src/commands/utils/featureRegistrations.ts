@@ -33,6 +33,7 @@ export async function createFeatureRegistrationsWithRetry(
     } catch (error) {
         throw new Error(
             `Failed to initiate registration for feature ${featureName} in ${resourceProviderNamespace}: ${error}`,
+            { cause: error },
         );
     }
     while (retries < MAX_RETRIES) {

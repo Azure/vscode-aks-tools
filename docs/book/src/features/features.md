@@ -2,6 +2,34 @@
 
 Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.  
 
+## Release spotlight
+
+This release adds two feature-flagged experiences:
+
+- [Container Assist Integration (Preview)](./container-assist-integration.md)
+- [Simplified AKS Menu Structure (Feature Flag)](./simplified-menu-structure.md)
+
+These can be enabled independently:
+
+```json
+{
+	"aks.containerAssistEnabledPreview": true,
+	"aks.simplifiedMenuStructure": true
+}
+```
+
+Container Assist release screenshots:
+
+![Container Assist menu in AKS cluster context menu](../resources/container-assist/container-assist-commands-1.png)
+
+![Container Assist workspace menu entry](../resources/container-assist/container-assist-workspacemenu.png)
+
+Menu simplification release screenshots:
+
+![Classic AKS cluster context menu](../resources/new-menu-structure/simplified-menu-1.png)
+
+![Simplified AKS cluster context menu](../resources/new-menu-structure/simplified-menu-2.png)
+
 ![Cloud explorer extension menu](../resources/right-click-menu.png)
 
 ![Cloud explorer extension menu](../resources/right-click-menu-workflow.png)

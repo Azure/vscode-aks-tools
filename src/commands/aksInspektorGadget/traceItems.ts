@@ -5,7 +5,59 @@ import { isArray, isObject } from "../utils/runtimeTypes";
 
 // The keys of values which should be serialized as JSON, rather than flattened or spread into separate
 // objects (see `asFlatItems`).
-const jsonKeys = ["userStack", "kernelStack", "addresses", "args"];
+const jsonKeys = ["user_stack", "kern_stack", "addresses", "args"];
+
+/**
+ * Helper to normalize image-based gadget JSON output to match the flat field structure implemented
+ * by the webview. Image-based gadgets now nest process info under "proc", credentials under
+ * "proc.creds", and parent process info under "proc.parent". This function hoists those
+ * fields to the top level so that our existing field definitions continue to work.
+ */
+function normalizeItem(item: Record<string, unknown>): Record<string, unknown> {
+    const result = { ...item };
+
+    // Hoist process fields from proc.* to the top level
+    if (isObject(result.proc)) {
+        const proc = result.proc as Record<string, unknown>;
+        const hoistKeys = ["comm", "pid", "tid", "mntns_id"];
+        for (const key of hoistKeys) {
+            if (key in proc && !(key in result)) {
+                result[key] = proc[key];
+            }
+        }
+
+        // Hoist uid / gid from proc.creds.*
+        if (isObject(proc.creds)) {
+            const creds = proc.creds as Record<string, unknown>;
+            for (const key of ["uid", "gid"]) {
+                if (key in creds && !(key in result)) {
+                    result[key] = creds[key];
+                }
+            }
+        }
+
+        // Hoist parent pid as ppid
+        if (isObject(proc.parent)) {
+            const parent = proc.parent as Record<string, unknown>;
+            if ("pid" in parent && !("ppid" in result)) {
+                result.ppid = parent.pid;
+            }
+        }
+
+        delete result.proc;
+    }
+
+    // v0.51 moved the numeric timestamp to timestamp_raw; use it as timestamp.
+    if ("timestamp_raw" in result) {
+        result.timestamp = result.timestamp_raw;
+        delete result.timestamp_raw;
+    }
+
+    // Remove runtime node (not used by our UI)
+    delete result.runtime;
+
+    return result;
+}
 
 /**
  * Takes IG output and converts it to an array of (unflattened) objects.
@@ -36,7 +88,8 @@ export function parseOutputLine(line: string): Errorable<object[]> {
  * @returns An array of objects that contain no nested objects or arrays for consumption by the webview presentation layer.
  */
 export function asFlatItems(item: object): TraceOutputItem[] {
-    const allObjectEntries = Object.entries(item).reduce(addFlatEntries, [[]]);
+    const normalized = normalizeItem(item as Record<string, unknown>);
+    const allObjectEntries = Object.entries(normalized).reduce(addFlatEntries, [[]]);
     return allObjectEntries.map((objectEntries) => Object.fromEntries(objectEntries) as TraceOutputItem);
 }
 

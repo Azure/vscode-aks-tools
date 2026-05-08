@@ -102,12 +102,11 @@ export async function getClusterList(
     const clusterListResult = await longRunning(
         `Getting AKS Cluster list for ${subscriptionName}`,
         async (): Promise<Errorable<AksClusterAndFleet[]>> => {
-            let clusterList: AksClusterAndFleet[] = [];
             const aksClusters = await getClusterAndFleetResourcesFromGraphAPI(sessionProvider, subscriptionId);
             if (failed(aksClusters)) {
                 return { succeeded: false, error: aksClusters.error };
             }
-            clusterList = aksClusters.result.filter(
+            const clusterList = aksClusters.result.filter(
                 // only keep clusters for the cluster filter (remove fleets from the list)
                 (r) => r.type.toLowerCase() === clusterResourceType.toLowerCase(),
             );

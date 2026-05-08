@@ -16,6 +16,10 @@ export interface ContainerAssistQuickPickItem extends vscode.QuickPickItem {
 
 export interface DeploymentResult {
     generatedFiles: string[];
+    /** Absolute paths to the generated Kubernetes manifest files. */
+    manifestPaths?: string[];
+    /** The primary module name as reported by CA analysis. */
+    primaryModuleName?: string;
 }
 
 export interface ModuleAnalysisResult {
@@ -44,4 +48,15 @@ export interface ExistingFilesCheckResult {
 export interface ModelQuickPickItem extends vscode.QuickPickItem {
     model: vscode.LanguageModelChat;
     isPreferred: boolean;
+}
+
+export interface NamespaceSelection {
+    name: string;
+    isManaged: boolean;
+}
+
+export interface NamespaceData {
+    kubectlNamespaces: Array<{ name: string; isManaged: boolean; labels?: Record<string, string> }> | undefined;
+    managedNames: string[];
+    accessRestricted: boolean;
 }

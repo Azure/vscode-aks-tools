@@ -53,7 +53,9 @@ Guidelines:
 - Generate secret.yaml ONLY if there are sensitive credentials referenced
 - DO NOT generate manifests that aren't needed for the application type
 
-Follow security best practices: include resource limits, security context, and appropriate labels.
+Follow security best practices:
+- Include resource limits, security context, and appropriate labels.
+- When an Image Repository is provided, you MUST use that EXACT value as the container image in deployment.yaml. Do NOT use placeholders like <your-acr-name>, <image>, or any other synthetic value. Do NOT use a bare image name such as "app-name:1.0.0" — always include the full registry URL (e.g. myacr.azurecr.io/app-name).
 
 IMPORTANT: Generate EACH manifest file separately with its own <content filename="FILENAME"></content> markers.
 Do not include any explanations, markdown code fences, or text outside the content markers.
@@ -148,15 +150,17 @@ export function buildK8sManifestUserPrompt(
     const formattedPlan = formatGenerateK8sManifestsResult(plan);
 
     const ports = repoInfo?.ports || [];
-    const dependencies = repoInfo?.dependencies || [];
+    const dependencyNames = repoInfo?.frameworks?.map((f) => f.name) || [];
     const frameworks = repoInfo?.frameworks?.map((f) => f.name) || [];
 
     const isWebApp = ports.length > 0 || frameworks.some((f) => WEB_FRAMEWORK_REGEX.test(f));
-    const hasExternalDependencies = dependencies.some((d) => EXTERNAL_DEPENDENCY_REGEX.test(d));
+    const hasExternalDependencies = dependencyNames.some((d) => EXTERNAL_DEPENDENCY_REGEX.test(d));
 
     const manifestGuidance = buildManifestGuidance(isWebApp, hasExternalDependencies, ports);
 
-    const imageLine = imageRepository ? `- Image Repository: ${imageRepository}` : undefined;
+    const imageLine = imageRepository
+        ? `- Image Repository: ${imageRepository} (use this EXACT full URL as the container image — including the registry hostname — no bare names, no placeholders)`
+        : undefined;
 
     return `Generate Kubernetes manifests based on the following analysis and recommendations:
 
@@ -169,7 +173,7 @@ Application Details:
 - Framework: ${frameworks.join(", ") || "none"}
 - Ports: ${ports.join(", ") || "none detected — use readProjectFile to check the Dockerfile or source code"}
 - Entry Point: ${repoInfo?.entryPoint || "unknown"}
-- Dependencies: ${dependencies.join(", ") || "none"}
+- Dependencies: ${dependencyNames.join(", ") || "none"}
 ${imageLine ? `${imageLine}` : ""}
 ${manifestGuidance}
 ${buildK8sVerificationHints(ports, repoInfo?.entryPoint)}

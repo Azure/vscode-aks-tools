@@ -15,7 +15,7 @@ import {
 } from "containerization-assist-mcp/sdk";
 
 import { LMClient } from "./lmClient";
-import { extractContent, parseManifestsFromLMResponse } from "./contentParser";
+import { extractContent, parseManifestsFromLMResponse, fixManifestImageReferences } from "./contentParser";
 import { checkExistingFiles, writeFile, ensureDirectory, getK8sManifestFolder } from "./fileOperations";
 import {
     DOCKERFILE_SYSTEM_PROMPT,
@@ -44,7 +44,6 @@ export class ContainerAssistService {
         try {
             const config = vscode.workspace.getConfiguration("aks");
             const isEnabled = config.get<boolean>("containerAssistEnabledPreview", false);
-            logger.debug("containerAssistEnabledPreview setting", isEnabled);
 
             if (!isEnabled) {
                 const errorMsg = l10n.t(
@@ -70,7 +69,6 @@ export class ContainerAssistService {
     async analyzeRepository(folderPath: string, signal?: AbortSignal): Promise<Errorable<AnalyzeRepositoryResult>> {
         try {
             const requestParams = { repositoryPath: folderPath };
-            logger.debug("analyzeRepo request", requestParams);
             logger.toolRequest("analyzeRepo", requestParams);
 
             const result = await analyzeRepo(requestParams, { signal });
@@ -82,7 +80,6 @@ export class ContainerAssistService {
             }
 
             const analysis: RepositoryAnalysis = result.value;
-            logger.debug("analyzeRepo response", analysis);
             logger.toolResponse("analyzeRepo", analysis);
 
             const modules: ModuleAnalysisResult[] = (analysis.modules || []).map((module) => ({
@@ -97,10 +94,6 @@ export class ContainerAssistService {
             }));
 
             const isMonorepo = analysis.isMonorepo ?? modules.length > 1;
-
-            if (modules.length > 0) {
-                logger.debug(`Analyzed ${modules.length} modules`, modules);
-            }
 
             return {
                 succeeded: true,
@@ -130,7 +123,6 @@ export class ContainerAssistService {
                 framework: moduleInfo.framework,
                 detectedDependencies: moduleInfo.dependencies,
             };
-            logger.debug("generateDockerfile request", requestParams);
             logger.toolRequest("generateDockerfile", requestParams);
 
             const result = await sdkGenerateDockerfile(requestParams, { signal });
@@ -142,7 +134,6 @@ export class ContainerAssistService {
             }
 
             const plan: DockerfilePlan = result.value;
-            logger.debug("generateDockerfile response", plan);
             logger.toolResponse("generateDockerfile", plan);
 
             const dockerfileContent = await this.generateDockerfileWithLM(plan, modulePath, token);
@@ -193,6 +184,7 @@ export class ContainerAssistService {
         imageRepository?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
+        repositoryPath?: string,
     ): Promise<Errorable<string[]>> {
         const lmResult = await this.lmClient.ensureModel();
         if (failed(lmResult)) {
@@ -204,6 +196,7 @@ export class ContainerAssistService {
 
             const requestParams = {
                 manifestType: "kubernetes" as const,
+                repositoryPath: repositoryPath || modulePath,
                 modulePath,
                 name: appName,
                 namespace: targetNamespace,
@@ -221,7 +214,6 @@ export class ContainerAssistService {
                 detectedDependencies: moduleInfo.dependencies,
                 entryPoint: moduleInfo.entryPoint,
             };
-            logger.debug("generateK8sManifests request", requestParams);
             logger.toolRequest("generateK8sManifests", requestParams);
 
             const result = await sdkGenerateK8sManifests(requestParams, { signal });
@@ -233,7 +225,6 @@ export class ContainerAssistService {
             }
 
             const plan: ManifestPlan = result.value;
-            logger.debug("generateK8sManifests response", plan);
             logger.toolResponse("generateK8sManifests", plan);
 
             const manifestsContent = await this.generateManifestsWithLM(
@@ -253,12 +244,11 @@ export class ContainerAssistService {
 
             const manifestPaths: string[] = [];
             for (const manifest of manifestsContent.result) {
-                const manifestPath = path.join(k8sFolder, manifest.filename);
+                const basename = path.basename(manifest.filename);
+                const manifestPath = path.join(k8sFolder, basename);
                 await writeFile(manifestPath, manifest.content);
                 manifestPaths.push(manifestPath);
             }
-
-            logger.debug("Generated manifest paths", manifestPaths);
 
             return { succeeded: true, result: manifestPaths };
         } catch (error) {
@@ -290,12 +280,12 @@ export class ContainerAssistService {
         }
 
         const manifests = parseManifestsFromLMResponse(response.result, appName);
-        return { succeeded: true, result: manifests };
+        const finalManifests = imageRepository ? fixManifestImageReferences(manifests, imageRepository) : manifests;
+        return { succeeded: true, result: finalManifests };
     }
 
     async generateDeploymentFiles(
         folderPath: string,
-        appName: string,
         acrLoginServer?: string,
         namespace?: string,
         signal?: AbortSignal,
@@ -303,8 +293,6 @@ export class ContainerAssistService {
         onProgress?: (message: string) => void,
     ): Promise<Errorable<DeploymentResult>> {
         const reportProgress = (message: string) => onProgress?.(message);
-
-        logger.debug("Deployment workflow params", { folderPath, appName, acrLoginServer, namespace });
 
         const existingFiles = await this.checkExistingFiles(folderPath);
 
@@ -343,7 +331,7 @@ export class ContainerAssistService {
             return analysisResult;
         }
 
-        const { modules, isMonorepo } = analysisResult.result;
+        const { modules } = analysisResult.result;
 
         if (modules.length === 0) {
             return {
@@ -353,6 +341,7 @@ export class ContainerAssistService {
         }
 
         const allGeneratedFiles: string[] = [];
+        const allManifestPaths: string[] = [];
 
         if (!skipDockerfile) {
             for (const module of modules) {
@@ -371,7 +360,7 @@ export class ContainerAssistService {
 
         if (!skipK8sManifests) {
             for (const module of modules) {
-                const manifestAppName = isMonorepo ? `${appName}-${module.name}` : appName;
+                const manifestAppName = module.name;
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
                 const manifestNamespace = namespace || "default";
                 const imageRepository = acrLoginServer ? `${acrLoginServer}/${manifestAppName}` : undefined;
@@ -383,21 +372,25 @@ export class ContainerAssistService {
                     imageRepository,
                     signal,
                     token,
+                    folderPath,
                 );
                 if (failed(manifestsResult)) {
                     logger.error(`Workflow failed at manifests step for module: ${module.name}`, manifestsResult.error);
                     return manifestsResult;
                 }
                 allGeneratedFiles.push(...manifestsResult.result);
+                allManifestPaths.push(...manifestsResult.result);
             }
         }
 
-        logger.debug("Generated files", allGeneratedFiles);
+        const primaryModuleName = modules[0]?.name;
 
         return {
             succeeded: true,
             result: {
                 generatedFiles: allGeneratedFiles,
+                manifestPaths: allManifestPaths,
+                primaryModuleName,
             },
         };
     }

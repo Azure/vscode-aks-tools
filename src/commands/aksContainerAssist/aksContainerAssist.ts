@@ -8,7 +8,7 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import { promises as fs } from "fs";
 import { logger } from "./logger";
-import { generateGitHubWorkflow } from "./workflowGenerator";
+import { generateGitHubWorkflow, WorkflowGenerationOptions } from "./workflowGenerator";
 
 import { collectAzureContext, collectAzureContextFromTree, AzureContext } from "./azureSelections";
 import { showPostGenerationOptions } from "./postGenerationFlow";
@@ -17,10 +17,28 @@ import { selectLanguageModel } from "./lmClient";
 import { showWizardExitConfirmation } from "./wizardUtils";
 export { showWizardExitConfirmation } from "./wizardUtils";
 
-export async function runContainerAssist(_context: IActionContext, target: unknown): Promise<void> {
-    try {
-        logger.debug("Command target", target);
+export async function containerizeApp(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssist(context, target, [ContainerAssistAction.GenerateDeployment]);
+}
 
+export async function containerizeAppFromTree(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssistFromTree(context, target, [ContainerAssistAction.GenerateDeployment]);
+}
+
+export async function deployAppWithAutomatedPipeline(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssist(context, target, [ContainerAssistAction.GenerateWorkflow]);
+}
+
+export async function deployAppWithAutomatedPipelineFromTree(context: IActionContext, target: unknown): Promise<void> {
+    await runContainerAssistFromTree(context, target, [ContainerAssistAction.GenerateWorkflow]);
+}
+
+export async function runContainerAssist(
+    _context: IActionContext,
+    target: unknown,
+    defaultActions: ContainerAssistAction[] = [],
+): Promise<void> {
+    try {
         const targetUri = getTargetUri(target);
         if (!targetUri) {
             logger.warn("No valid target URI found");
@@ -29,7 +47,6 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             );
             return;
         }
-        logger.debug("Target URI", targetUri.fsPath);
 
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(targetUri);
         if (!workspaceFolder) {
@@ -37,7 +54,6 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             vscode.window.showErrorMessage(l10n.t("The selected item is not part of a workspace."));
             return;
         }
-        logger.debug("Workspace folder", workspaceFolder.uri.fsPath);
 
         const containerAssistService = new ContainerAssistService();
         const availabilityCheck = await containerAssistService.isAvailable();
@@ -52,7 +68,6 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
             const stat = await fs.stat(startPath);
             if (stat.isFile()) {
                 startPath = path.dirname(startPath);
-                logger.debug("Target was a file, using parent directory", startPath);
             }
         } catch (error) {
             logger.error("Failed to stat target path", error);
@@ -62,8 +77,12 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
 
         const projectRoot = await findProjectRoot(startPath, workspaceFolder.uri.fsPath);
 
-        await executeContainerAssistActions(containerAssistService, workspaceFolder, projectRoot, (hasWorkflow) =>
-            collectAzureContext(hasWorkflow, projectRoot),
+        await executeContainerAssistActions(
+            containerAssistService,
+            workspaceFolder,
+            projectRoot,
+            (hasWorkflow) => collectAzureContext(hasWorkflow, projectRoot),
+            defaultActions,
         );
     } catch (error) {
         logger.error("Unexpected error in Container Assist", error);
@@ -78,10 +97,12 @@ export async function runContainerAssist(_context: IActionContext, target: unkno
  * Subscription and cluster are extracted from the tree node, so the user
  * is NOT prompted for those — only ACR, namespace, and workflow name are asked.
  */
-export async function runContainerAssistFromTree(_context: IActionContext, target: unknown): Promise<void> {
+export async function runContainerAssistFromTree(
+    _context: IActionContext,
+    target: unknown,
+    defaultActions: ContainerAssistAction[] = [],
+): Promise<void> {
     try {
-        logger.debug("Container Assist from tree, target", target);
-
         // Step 1: Resolve the cluster tree node
         const cloudExplorer = await k8s.extension.cloudExplorer.v1;
         const clusterNode = getAksClusterTreeNode(target, cloudExplorer);
@@ -91,7 +112,6 @@ export async function runContainerAssistFromTree(_context: IActionContext, targe
         }
 
         const { subscriptionId, resourceGroupName, name: clusterName } = clusterNode.result;
-        logger.debug("Cluster from tree", { subscriptionId, resourceGroupName, clusterName });
 
         // Step 2: Determine workspace folder / project root
         const workspaceFolder = await pickWorkspaceFolder();
@@ -109,8 +129,13 @@ export async function runContainerAssistFromTree(_context: IActionContext, targe
         }
 
         // Step 4: Execute shared action selection & processing logic
-        await executeContainerAssistActions(containerAssistService, workspaceFolder, projectRoot, (hasWorkflow) =>
-            collectAzureContextFromTree(subscriptionId, clusterName, resourceGroupName, hasWorkflow, projectRoot),
+        await executeContainerAssistActions(
+            containerAssistService,
+            workspaceFolder,
+            projectRoot,
+            (hasWorkflow) =>
+                collectAzureContextFromTree(subscriptionId, clusterName, resourceGroupName, hasWorkflow, projectRoot),
+            defaultActions,
         );
     } catch (error) {
         logger.error("Unexpected error in Container Assist (from tree)", error);
@@ -187,7 +212,6 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
                 const files = await fs.readdir(currentPath);
                 const foundExtension = extensionIndicators.find((ext) => files.some((f) => f.endsWith(ext)));
                 if (foundExtension) {
-                    logger.debug(`Found project root at: ${currentPath} (indicator: *${foundExtension})`);
                     return currentPath;
                 }
             } catch {
@@ -199,7 +223,6 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
         for (const indicator of fileIndicators) {
             try {
                 await fs.access(path.join(currentPath, indicator));
-                logger.debug(`Found project root at: ${currentPath} (indicator: ${indicator})`);
                 return currentPath;
             } catch {
                 // File doesn't exist, continue
@@ -213,23 +236,27 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
         currentPath = parentPath;
     }
 
-    logger.debug(`No project root found, using original path: ${startPath}`);
     return startPath;
 }
 
-async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] | undefined> {
+async function showContainerAssistQuickPick(
+    defaultActions: ContainerAssistAction[] = [],
+): Promise<ContainerAssistAction[] | undefined> {
+    const deploymentPicked = defaultActions.includes(ContainerAssistAction.GenerateDeployment);
+    const workflowPicked = defaultActions.includes(ContainerAssistAction.GenerateWorkflow);
+
     const items: ContainerAssistQuickPickItem[] = [
         {
             label: l10n.t("$(file) Generate Deployment Files"),
             description: l10n.t("Analyze → Generate Dockerfile → Generate Kubernetes Manifests"),
             action: ContainerAssistAction.GenerateDeployment,
-            picked: false,
+            picked: deploymentPicked,
         },
         {
             label: l10n.t("$(github-action) Generate GitHub Workflow"),
             description: l10n.t("Create GitHub Actions workflow for CI/CD to AKS"),
             action: ContainerAssistAction.GenerateWorkflow,
-            picked: false,
+            picked: workflowPicked,
         },
     ];
 
@@ -240,7 +267,7 @@ async function showContainerAssistQuickPick(): Promise<ContainerAssistAction[] |
     });
 
     if (!selected || selected.length === 0) {
-        return showWizardExitConfirmation(() => showContainerAssistQuickPick());
+        return showWizardExitConfirmation(() => showContainerAssistQuickPick(defaultActions));
     }
 
     return selected.map((item) => item.action);
@@ -256,8 +283,9 @@ async function executeContainerAssistActions(
     workspaceFolder: vscode.WorkspaceFolder,
     projectRoot: string,
     azureContextProvider: (hasWorkflow: boolean) => Promise<AzureContext | undefined>,
+    defaultActions: ContainerAssistAction[] = [],
 ): Promise<void> {
-    const selectedActions = await showContainerAssistQuickPick();
+    const selectedActions = await showContainerAssistQuickPick(defaultActions);
     if (!selectedActions || selectedActions.length === 0) {
         return;
     }
@@ -281,6 +309,8 @@ async function executeContainerAssistActions(
 
     const azureContext = await azureContextProvider(hasWorkflow);
     if (!azureContext) return;
+
+    const workflowOptions: WorkflowGenerationOptions = { workspaceFolder, projectRoot, azureContext, hasBothActions };
 
     // When both actions are selected, workflow generation depends on deployment artifacts.
     // Run deployment first, and only proceed to workflow generation if Dockerfile + manifests exist.
@@ -313,21 +343,18 @@ async function executeContainerAssistActions(
             }
         }
 
-        const workflowResult = await processContainerAssistAction(
-            ContainerAssistAction.GenerateWorkflow,
-            containerAssistService,
-            workspaceFolder,
-            projectRoot,
-            true,
-            azureContext,
-        );
+        const workflowResult = await generateWorkflowFile({
+            ...workflowOptions,
+            deploymentResult: deploymentResult ?? undefined,
+        });
 
         if (!workflowResult?.workflowPath) {
             return;
         }
 
+        const displayName = deploymentResult?.primaryModuleName ?? path.basename(projectRoot);
         const allFiles = [...deploymentFiles, workflowResult.workflowPath];
-        await showPostGenerationOptions(allFiles, workspaceFolder, path.basename(projectRoot), true, azureContext);
+        await showPostGenerationOptions(allFiles, workspaceFolder, displayName, true, azureContext);
         return;
     }
 
@@ -345,6 +372,10 @@ async function executeContainerAssistActions(
 interface ActionResult {
     deploymentFiles?: string[];
     workflowPath?: string;
+    /** Absolute paths to any generated Kubernetes manifests (populated by GenerateDeployment). */
+    manifestPaths?: string[];
+    /** Primary module name from SDK analysis (e.g. package.json "name"). */
+    primaryModuleName?: string;
 }
 
 async function processContainerAssistAction(
@@ -360,7 +391,12 @@ async function processContainerAssistAction(
             return await generateDeploymentFiles(service, workspaceFolder, targetPath, hasBothActions, azureContext);
 
         case ContainerAssistAction.GenerateWorkflow:
-            return await generateWorkflowFile(workspaceFolder, targetPath, hasBothActions, azureContext);
+            return await generateWorkflowFile({
+                workspaceFolder,
+                projectRoot: targetPath,
+                azureContext,
+                hasBothActions,
+            });
 
         default:
             logger.warn(`Unknown action: ${action}`);
@@ -376,8 +412,7 @@ async function generateDeploymentFiles(
     hasBothActions: boolean,
     azureContext: AzureContext,
 ): Promise<ActionResult | undefined> {
-    const appName = path.basename(targetPath);
-    logger.debug("Target path", targetPath);
+    const displayName = path.basename(targetPath);
 
     const acrLoginServer = `${azureContext.acrName}.azurecr.io`;
 
@@ -394,11 +429,10 @@ async function generateDeploymentFiles(
             });
 
             try {
-                progress.report({ message: l10n.t("Analyzing project {0}...", appName) });
+                progress.report({ message: l10n.t("Analyzing project {0}...", displayName) });
 
                 const generationResult = await service.generateDeploymentFiles(
                     targetPath,
-                    appName,
                     acrLoginServer,
                     azureContext.namespace,
                     abortController.signal,
@@ -436,11 +470,9 @@ async function generateDeploymentFiles(
     }
 
     const generatedFiles = result.result.generatedFiles;
-    logger.debug("Generated files", generatedFiles);
 
     if (generatedFiles.length === 0) {
         if (hasBothActions) {
-            logger.debug("No new deployment files generated (files may already exist)");
             return { deploymentFiles: [] };
         }
         logger.warn("No files were generated");
@@ -450,36 +482,24 @@ async function generateDeploymentFiles(
 
     // Defer post-generation options when both actions are selected
     if (hasBothActions) {
-        return { deploymentFiles: generatedFiles };
+        return {
+            deploymentFiles: generatedFiles,
+            manifestPaths: result.result.manifestPaths,
+            primaryModuleName: result.result.primaryModuleName,
+        };
     }
 
     // Show options only for deployment files
-    await showPostGenerationOptions(generatedFiles, _workspaceFolder, appName, false);
+    await showPostGenerationOptions(generatedFiles, _workspaceFolder, displayName, false);
     return { deploymentFiles: generatedFiles };
 }
 
-async function generateWorkflowFile(
-    workspaceFolder: vscode.WorkspaceFolder,
-    targetPath: string,
-    hasBothActions: boolean,
-    azureContext: AzureContext,
-): Promise<ActionResult | undefined> {
-    const result = hasBothActions
-        ? await vscode.window.withProgress(
-              {
-                  location: vscode.ProgressLocation.Notification,
-                  title: l10n.t("Generating GitHub workflow file..."),
-                  cancellable: false,
-              },
-              async () => {
-                  return await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
-              },
-          )
-        : await generateGitHubWorkflow(workspaceFolder, targetPath, azureContext, hasBothActions);
+async function generateWorkflowFile(options: WorkflowGenerationOptions): Promise<ActionResult | undefined> {
+    const { workspaceFolder, projectRoot, hasBothActions, deploymentResult } = options;
+    const result = await generateGitHubWorkflow(options);
 
     if (failed(result)) {
         if (result.error === "cancelled") {
-            logger.debug("Workflow generation cancelled by user");
             return undefined;
         }
         logger.error("GitHub workflow generation failed", result.error);
@@ -494,7 +514,8 @@ async function generateWorkflowFile(
         return { workflowPath };
     }
 
-    await showPostGenerationOptions([workflowPath], workspaceFolder, path.basename(targetPath), true, azureContext);
+    const displayName = deploymentResult?.primaryModuleName ?? path.basename(projectRoot);
+    await showPostGenerationOptions([workflowPath], workspaceFolder, displayName, true, options.azureContext);
 
     return { workflowPath };
 }

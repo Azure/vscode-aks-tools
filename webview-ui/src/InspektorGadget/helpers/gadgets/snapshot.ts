@@ -75,20 +75,18 @@ export const processSnapshotMetadata: GadgetMetadata<ProcessSnapshotKey> = {
 type SocketSnapshotKey =
     | (typeof k8sKeys)[number]
     | (typeof eventKeys)[number]
-    | "netnsid"
-    | "protocol"
+    | "netns_id"
     | (typeof networkEndpointKeys)[number]
-    | "status"
-    | "inodeNumber";
+    | "state"
+    | "ino";
 
 const socketSnapshotKeyMetadata: ItemMetadata<SocketSnapshotKey> = {
     ...k8sKeyMetadata,
     ...eventKeyMetadata,
-    netnsid: { identifier: "netns", name: "NetNS" },
-    protocol: { identifier: "protocol", name: "Protocol" },
+    netns_id: { identifier: "netns", name: "NetNS" },
     ...networkEndpointKeyMetadata,
-    status: { identifier: "status", name: "Status" },
-    inodeNumber: { identifier: "inode", name: "Inode" },
+    state: { identifier: "status", name: "Status" },
+    ino: { identifier: "inode", name: "Inode" },
 };
 type DerivedSocketSnapshotKey = (typeof derivedNetworkEndpointKeys)[number];
 
@@ -98,17 +96,16 @@ const allSocketSnapshotProperties: ItemProperty<SocketSnapshotKey | DerivedSocke
 ];
 const defaultSocketSnapshotProperties: ItemProperty<SocketSnapshotKey | DerivedSocketSnapshotKey>[] = toProperties(
     allSocketSnapshotProperties,
-    ["k8s.node", "k8s.namespace", "k8s.podName", "protocol", "src", "dst", "status"],
+    ["k8s.node", "k8s.namespace", "k8s.podName", "src", "dst", "state"],
 );
 const defaultSocketSnapshotSort = getSortSpecifiers(allSocketSnapshotProperties, [
     { key: "k8s.node", direction: SortDirection.Ascending },
     { key: "k8s.namespace", direction: SortDirection.Ascending },
     { key: "k8s.podName", direction: SortDirection.Ascending },
-    { key: "protocol", direction: SortDirection.Ascending },
-    { key: "status", direction: SortDirection.Ascending },
+    { key: "state", direction: SortDirection.Ascending },
     { key: "src", direction: SortDirection.Ascending },
     { key: "dst", direction: SortDirection.Ascending },
-    { key: "inodeNumber", direction: SortDirection.Ascending },
+    { key: "ino", direction: SortDirection.Ascending },
 ]);
 export const socketSnapshotMetadata: GadgetMetadata<SocketSnapshotKey | DerivedSocketSnapshotKey> = {
     name: "Sockets",

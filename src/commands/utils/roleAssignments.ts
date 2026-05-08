@@ -33,6 +33,25 @@ export function getScopeForCluster(subscriptionId: string, resourceGroup: string
     return `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${clusterName}`;
 }
 
+export function getScopeForManagedNamespace(
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    namespaceName: string,
+): string {
+    return `${getScopeForCluster(subscriptionId, resourceGroup, clusterName)}/managedNamespaces/${namespaceName}`;
+}
+
+export function getScopeForKubernetesNamespace(
+    subscriptionId: string,
+    resourceGroup: string,
+    clusterName: string,
+    namespaceName: string,
+): string {
+    // Kubernetes data-plane RBAC uses /namespaces/ (not /managedNamespaces/ which is for ARM operations)
+    return `${getScopeForCluster(subscriptionId, resourceGroup, clusterName)}/namespaces/${namespaceName}`;
+}
+
 // There are several permitted principal types, see: https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/create?view=rest-authorization-2022-04-01&tabs=HTTP#principaltype
 // For now, 'ServicePrincipal' and 'User' are the ones we're most likely to use here,
 // but we can add more as needed.
@@ -63,6 +82,10 @@ export async function createRoleAssignment(
         );
         return { succeeded: true, result: roleAssignment };
     } catch (e) {
+        // Role assignment already exists — treat as idempotent success
+        if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "RoleAssignmentExists") {
+            return { succeeded: true, result: {} as RoleAssignment };
+        }
         return { succeeded: false, error: getErrorMessage(e) };
     }
 }

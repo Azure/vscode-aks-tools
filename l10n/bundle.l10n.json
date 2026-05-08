@@ -419,7 +419,7 @@
   "Attach ACR to Cluster": "Attach ACR to Cluster",
   "Draft GitHub Workflow in {0}": "Draft GitHub Workflow in {0}",
   "GitHub repository {0}/{1} not found.": "GitHub repository {0}/{1} not found.",
-  "Draft Validate in {0}": "Draft Validate in {0}",
+  "Run Deployment Safeguards in {0}": "Run Deployment Safeguards in {0}",
   "Draft Dockerfile in {0}": "Draft Dockerfile in {0}",
   "Draft Deployment in {0}": "Draft Deployment in {0}",
   "IMPORTANT: Please be sure to remove any private information before submitting.": "IMPORTANT: Please be sure to remove any private information before submitting.",

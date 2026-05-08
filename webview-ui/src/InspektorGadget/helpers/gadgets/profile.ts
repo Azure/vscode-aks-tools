@@ -15,16 +15,16 @@ type CpuProfileKey =
     | (typeof k8sKeys)[number]
     | (typeof commandKeys)[number]
     | "pid"
-    | "userStack"
-    | "kernelStack"
-    | "count";
+    | "user_stack"
+    | "kern_stack"
+    | "samples";
 const cpuProfileKeyMetadata: ItemMetadata<CpuProfileKey> = {
     ...k8sKeyMetadata,
     ...commandKeyMetadata,
     pid: { identifier: "pid", name: "PID" },
-    userStack: { identifier: "userStack", name: "User Stack" },
-    kernelStack: { identifier: "kernelStack", name: "Kernel Stack" },
-    count: { identifier: "gid", name: "GID" },
+    user_stack: { identifier: "userStack", name: "User Stack" },
+    kern_stack: { identifier: "kernelStack", name: "Kernel Stack" },
+    samples: { identifier: "count", name: "Count" },
 };
 type DerivedCpuProfileKey = "stack";
 const allCpuProfileProperties: ItemProperty<CpuProfileKey | DerivedCpuProfileKey>[] = [
@@ -34,8 +34,8 @@ const allCpuProfileProperties: ItemProperty<CpuProfileKey | DerivedCpuProfileKey
         "stack",
         (item) => {
             const kernelStack =
-                item.kernelStack && typeof item.kernelStack === "string" ? JSON.parse(item.kernelStack) : [];
-            const userStack = item.userStack && typeof item.userStack === "string" ? JSON.parse(item.userStack) : [];
+                item.kern_stack && typeof item.kern_stack === "string" ? JSON.parse(item.kern_stack) : [];
+            const userStack = item.user_stack && typeof item.user_stack === "string" ? JSON.parse(item.user_stack) : [];
             return [...kernelStack, ...userStack].join("\n");
         },
         ValueType.StackTrace,
@@ -43,7 +43,7 @@ const allCpuProfileProperties: ItemProperty<CpuProfileKey | DerivedCpuProfileKey
 ];
 const defaultCpuProfileProperties: ItemProperty<CpuProfileKey | DerivedCpuProfileKey>[] = toProperties(
     allCpuProfileProperties,
-    ["k8s.node", "k8s.namespace", "k8s.podName", "k8s.containerName", "comm", "pid", "count", "stack"],
+    ["k8s.node", "k8s.namespace", "k8s.podName", "k8s.containerName", "comm", "pid", "samples", "stack"],
 );
 export const cpuProfileMetadata: GadgetMetadata<CpuProfileKey | DerivedCpuProfileKey> = {
     name: "CPU",

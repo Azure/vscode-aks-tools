@@ -61,7 +61,6 @@ describe("setGitHubActionsSecrets", () => {
         // Logger — silence all output
         sandbox.stub(logger.logger, "info");
         sandbox.stub(logger.logger, "error");
-        sandbox.stub(logger.logger, "debug");
         sandbox.stub(logger.logger, "warn");
         sandbox.stub(logger.logger, "show");
 

@@ -1,4 +1,6 @@
 import * as assert from "assert";
+import * as os from "os";
+import * as path from "path";
 import * as vscode from "vscode";
 import * as sinon from "sinon";
 import { ContainerAssistService } from "../../../commands/aksContainerAssist/containerAssistService";
@@ -42,10 +44,11 @@ describe("ContainerAssistService", () => {
 
     describe("analyzeRepository", () => {
         it("returns error when SDK fails", async () => {
-            const result = await service.analyzeRepository("/test/path");
+            const nonExistentPath = path.join(os.tmpdir(), "nonexistent-test-path");
+
+            const result = await service.analyzeRepository(nonExistentPath);
 
             assert.strictEqual(result.succeeded, false);
-            // SDK returns error about knowledge base, not "Failed to" message
             assert.ok(result.error);
         });
     });
@@ -145,7 +148,7 @@ describe("ContainerAssistService", () => {
             });
             const infoStub = sandbox.stub(vscode.window, "showInformationMessage");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, true);
             if (result.succeeded) {
@@ -181,7 +184,7 @@ describe("ContainerAssistService", () => {
                 result: ["/test/path/k8s/deployment.yaml"],
             });
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, true);
             assert.ok(infoStub.calledOnce);
@@ -200,7 +203,7 @@ describe("ContainerAssistService", () => {
             });
             const analyzeStub = sandbox.stub(service, "analyzeRepository");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, false);
             assert.strictEqual(result.error, "No LM available");
@@ -225,7 +228,7 @@ describe("ContainerAssistService", () => {
             });
             const dockerfileStub = sandbox.stub(service, "generateDockerfile");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, false);
             assert.strictEqual(result.error, "Analysis failed");
@@ -258,7 +261,7 @@ describe("ContainerAssistService", () => {
             });
             const manifestsStub = sandbox.stub(service, "generateManifests");
 
-            const result = await service.generateDeploymentFiles("/test/path", "test-app");
+            const result = await service.generateDeploymentFiles("/test/path");
 
             assert.strictEqual(result.succeeded, false);
             assert.strictEqual(result.error, "Dockerfile generation failed");

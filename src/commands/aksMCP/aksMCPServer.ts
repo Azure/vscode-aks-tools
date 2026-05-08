@@ -10,7 +10,7 @@ export function registerAksMcpServerProvider(context: vscode.ExtensionContext): 
     const provider: vscode.McpServerDefinitionProvider<vscode.McpStdioServerDefinition> = {
         // Binary path left empty, resolveMcpServerDefinition sets it further below.
         provideMcpServerDefinitions: () => [
-            new vscode.McpStdioServerDefinition("AKS MCP", "", ["--transport", "stdio"]),
+            new vscode.McpStdioServerDefinition("AKS MCP", "", ["--transport", "stdio", ...getEnabledComponentsArgs()]),
         ],
         // Downloads binary then points the server at it.
         resolveMcpServerDefinition: async (server) => {
@@ -19,9 +19,15 @@ export function registerAksMcpServerProvider(context: vscode.ExtensionContext): 
                 throw new Error(`Failed to download AKS MCP server: ${binary.error}`);
             }
             server.command = binary.result;
+            server.args = ["--transport", "stdio", ...getEnabledComponentsArgs()];
             return server;
         },
     };
 
     context.subscriptions.push(vscode.lm.registerMcpServerDefinitionProvider("aks-mcp", provider));
+}
+
+function getEnabledComponentsArgs(): string[] {
+    const v = vscode.workspace.getConfiguration("aks.aksmcpserver").get<string>("enabledComponents", "").trim();
+    return v ? ["--enabled-components", v] : [];
 }

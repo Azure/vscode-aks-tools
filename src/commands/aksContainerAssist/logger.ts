@@ -53,16 +53,6 @@ class ContainerAssistLogger {
         }
     }
 
-    debug(message: string, data?: unknown): void {
-        const config = vscode.workspace.getConfiguration("aks");
-        if (!config.get<boolean>("containerAssistDebugLogging", false)) return;
-
-        this.getChannel().appendLine(`[DEBUG] ${this.timestamp()} ${message}`);
-        if (data !== undefined) {
-            this.getChannel().appendLine(JSON.stringify(data, null, 2));
-        }
-    }
-
     toolRequest(toolName: string, payload: unknown): void {
         const config = vscode.workspace.getConfiguration("aks");
         if (!config.get<boolean>("containerAssistDebugLogging", false)) return;

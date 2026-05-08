@@ -6,7 +6,7 @@ import {
 import { ProcessThreadKey } from "./gadgets/common";
 import { cpuProfileMetadata } from "./gadgets/profile";
 import { processSnapshotMetadata, socketSnapshotMetadata } from "./gadgets/snapshot";
-import { blockIOTopMetadata, ebpfTopMetadata, fileTopMetadata, tcpTopMetadata } from "./gadgets/top";
+import { blockIOTopMetadata, fileTopMetadata, tcpTopMetadata } from "./gadgets/top";
 import { dnsTraceMetadata, execTraceMetadata, tcpTraceMetadata } from "./gadgets/trace";
 import {
     DataItem,
@@ -65,7 +65,6 @@ const snapshotGadgetResources: ConfiguredGadgetResources<GadgetSnapshotResource>
 const topGadgetResources: ConfiguredGadgetResources<GadgetTopResource> = {
     tcp: tcpTopMetadata,
     "block-io": blockIOTopMetadata,
-    ebpf: ebpfTopMetadata,
     file: fileTopMetadata,
 };
 

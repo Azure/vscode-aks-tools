@@ -153,13 +153,11 @@ class SubscriptionTreeItem extends AzExtParentTreeItem implements SubscriptionTr
     }
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        let clusterResources: DefinedResourceWithGroup[] = [];
-        let fleetResources: DefinedResourceWithGroup[] = [];
-        ({ clusterResources, fleetResources } = await this.fetchClustersAndFleets());
+        const { clusterResources: fetchedClusterResources, fleetResources } = await this.fetchClustersAndFleets();
         const { fleetToMembersMap, clusterToMemberMap } = await this.mapFleetAndClusterMembers(fleetResources);
 
         // remove clusters that are members of fleets
-        clusterResources = clusterResources.filter((r) => !clusterToMemberMap.has(r.id.toLowerCase()));
+        const clusterResources = fetchedClusterResources.filter((r) => !clusterToMemberMap.has(r.id.toLowerCase()));
 
         // create tree nodes for filtered clusters and fleets
         const filteredClusters = getFilteredClusters();

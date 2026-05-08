@@ -5,10 +5,17 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
 import { getResources, DefinedResourceWithGroup } from "../utils/azureResources";
-import { getClusters, Cluster, getManagedCluster, getClusterNamespacesWithTypes } from "../utils/clusters";
+import {
+    getClusters,
+    Cluster,
+    getManagedCluster,
+    getClusterNamespacesWithTypes,
+    listManagedNamespacesByCluster,
+    validateNamespaceName,
+} from "../utils/clusters";
 import { extension } from "vscode-kubernetes-tools-api";
 import { getAuthorizationManagementClient } from "../utils/arm";
-import { getPrincipalRoleAssignmentsForAcr } from "../utils/roleAssignments";
+import { getPrincipalRoleAssignmentsForAcr, createRoleAssignment, getScopeForAcr } from "../utils/roleAssignments";
 import { acrPullRoleDefinitionName } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { failed } from "../utils/errorable";
 import { logger } from "./logger";
@@ -16,6 +23,7 @@ import { longRunning } from "../utils/host";
 import { getPortalCreateUrl } from "../utils/env";
 import { getEnvironment } from "../../auth/azureAuth";
 import { showWizardExitConfirmation } from "./wizardUtils";
+import { NamespaceData, NamespaceSelection } from "./types";
 
 export type { Cluster } from "../utils/clusters";
 
@@ -112,7 +120,7 @@ export async function selectAksCluster(
         getClusters(sessionProvider, subscriptionId),
     );
 
-    if (!clustersResult || clustersResult.length === 0) {
+    if (failed(clustersResult) || clustersResult.result.length === 0) {
         const openPortal = l10n.t("Open in Portal");
         const selection = await vscode.window.showWarningMessage(
             l10n.t("No AKS clusters found in subscription."),
@@ -127,7 +135,8 @@ export async function selectAksCluster(
         return undefined;
     }
 
-    const clusterItems = clustersResult
+    const clusters = clustersResult.result;
+    const clusterItems = clusters
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((cluster) => ({
             label: cluster.name,
@@ -137,7 +146,7 @@ export async function selectAksCluster(
 
     const selected = await vscode.window.showQuickPick(clusterItems, {
         placeHolder: l10n.t("Select AKS cluster for deployment"),
-        title: l10n.t("AKS Cluster ({0} available)", clustersResult.length),
+        title: l10n.t("AKS Cluster ({0} available)", clusters.length),
     });
 
     // Show confirmation dialog if user cancelled
@@ -148,16 +157,11 @@ export async function selectAksCluster(
     return selected.cluster;
 }
 
-export interface NamespaceSelection {
-    name: string;
-    isManaged: boolean;
-}
-
-export async function selectClusterNamespace(
+export async function fetchClusterNamespaces(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     cluster: Cluster,
-): Promise<NamespaceSelection | undefined> {
+): Promise<NamespaceData | undefined> {
     const kubectl = await extension.kubectl.v1;
     if (!kubectl.available) {
         vscode.window.showErrorMessage(l10n.t("kubectl is not available. Please install kubectl extension."));
@@ -168,24 +172,75 @@ export async function selectClusterNamespace(
         getClusterNamespacesWithTypes(sessionProvider, kubectl, subscriptionId, cluster.resourceGroup, cluster.name),
     );
 
-    logger.debug(`Namespaces with types for cluster '${cluster.name}':`, namespacesResult);
-
-    if (!namespacesResult.succeeded) {
+    if (!namespacesResult.succeeded && !isNamespacesListForbidden(namespacesResult.error)) {
         vscode.window.showErrorMessage(
             l10n.t("Failed to retrieve namespaces from cluster: {0}", namespacesResult.error),
         );
         return undefined;
     }
 
-    // Filter out system namespaces - they should not be deployment targets
-    const nonSystemNamespaces = namespacesResult.result.filter((ns) => ns.type !== "system" || ns.name === "default");
-
-    if (nonSystemNamespaces.length === 0) {
-        vscode.window.showWarningMessage(l10n.t("No namespaces found in cluster."));
-        return undefined;
+    if (!namespacesResult.succeeded) {
+        return fetchManagedNamespacesWithWarning(sessionProvider, subscriptionId, cluster);
     }
 
-    const namespaceItems = nonSystemNamespaces
+    const kubectlNamespaces = namespacesResult.result
+        .filter((ns) => ns.type !== "system" || ns.name === "default")
+        .map((ns) => ({ name: ns.name, isManaged: ns.type === "managed", labels: ns.labels }));
+
+    return { kubectlNamespaces, managedNames: [], accessRestricted: false };
+}
+
+async function fetchManagedNamespacesWithWarning(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+): Promise<NamespaceData> {
+    const armResult = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Window, title: l10n.t("Loading managed namespaces...") },
+        () => listManagedNamespacesByCluster(sessionProvider, subscriptionId, cluster.resourceGroup, cluster.name),
+    );
+
+    if (!armResult.succeeded) {
+        logger.warn(`Failed to load managed namespaces for cluster '${cluster.name}': ${armResult.error}`);
+    }
+    const managedNames = armResult.succeeded ? armResult.result : [];
+
+    const learnMoreLabel = l10n.t("Learn more");
+    void vscode.window
+        .showWarningMessage(
+            l10n.t(
+                "You don't have permission to list all namespaces on cluster '{0}'. " +
+                    "Only ARM-managed namespaces are shown if available. To see all namespaces, " +
+                    "ask your admin to assign you the 'Azure Kubernetes Service RBAC Reader' role at the cluster scope.",
+                cluster.name,
+            ),
+            learnMoreLabel,
+        )
+        .then((selection) => {
+            if (selection === learnMoreLabel) {
+                void vscode.env.openExternal(
+                    vscode.Uri.parse("https://learn.microsoft.com/azure/aks/manage-azure-rbac"),
+                );
+            }
+        });
+
+    return { kubectlNamespaces: undefined, managedNames, accessRestricted: true };
+}
+
+export async function selectClusterNamespace(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+    namespaceData?: NamespaceData,
+): Promise<NamespaceSelection | undefined> {
+    const data = namespaceData ?? (await fetchClusterNamespaces(sessionProvider, subscriptionId, cluster));
+    if (!data) return undefined;
+
+    const { kubectlNamespaces, managedNames, accessRestricted } = data;
+
+    const namespaceSource =
+        kubectlNamespaces ?? managedNames.map((name) => ({ name, isManaged: true, labels: undefined }));
+    const namespaceItems = namespaceSource
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((ns) => ({
             label: ns.name,
@@ -193,20 +248,71 @@ export async function selectClusterNamespace(
                 ns.labels?.["headlamp.dev/project-managed-by"] === "aks-desktop"
                     ? l10n.t("(AKS desktop Project: {0})", ns.name)
                     : undefined,
-            isManaged: ns.type === "managed",
+            isManaged: ns.isManaged,
         }));
 
-    const selected = await vscode.window.showQuickPick(namespaceItems, {
-        placeHolder: l10n.t("Select Kubernetes namespace"),
-        title: l10n.t("Namespace ({0} available)", nonSystemNamespaces.length),
-    });
-
-    // Show confirmation dialog if user cancelled
-    if (!selected) {
-        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster));
+    const manualEntryLabel = l10n.t("Enter namespace name ...");
+    if (accessRestricted) {
+        namespaceItems.push({
+            label: manualEntryLabel,
+            description: l10n.t("Type the name of an existing namespace"),
+            isManaged: false,
+        });
     }
 
-    return { name: selected.label, isManaged: selected.isManaged };
+    const title = accessRestricted
+        ? l10n.t("Namespace — showing managed namespaces only ({0} available)", managedNames.length)
+        : l10n.t("Namespace ({0} available)", namespaceSource.length);
+
+    const selected = await vscode.window.showQuickPick(namespaceItems, {
+        placeHolder: l10n.t("Select a Kubernetes namespace"),
+        title,
+        ignoreFocusOut: true,
+    });
+
+    if (!selected) {
+        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster, data));
+    }
+
+    if (selected.label !== manualEntryLabel) {
+        return { name: selected.label, isManaged: selected.isManaged };
+    }
+
+    const namespace = await vscode.window.showInputBox({
+        prompt: l10n.t(
+            "You do not have permission to list namespaces in this cluster. " +
+                "Ask your admin to assign the 'Azure Kubernetes Service RBAC Reader' role " +
+                "at the cluster scope to list all namespaces automatically.",
+        ),
+        placeHolder: "my-namespace",
+        title: l10n.t("Namespace"),
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            const v = value?.trim() || "";
+            if (!v) return l10n.t("Namespace name is required");
+            if (!validateNamespaceName(v)) {
+                return l10n.t(
+                    "Invalid namespace name. Names must be RFC 1123 compliant: lowercase alphanumeric characters or '-', start and end with an alphanumeric character, max 63 characters. See: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names",
+                );
+            }
+            return undefined;
+        },
+    });
+
+    if (!namespace) {
+        return showWizardExitConfirmation(() => selectClusterNamespace(sessionProvider, subscriptionId, cluster, data));
+    }
+
+    const trimmed = namespace.trim();
+    // Check whether the typed name matches a known ARM-managed namespace.
+    const isManaged = namespaceSource.some((ns) => ns.name === trimmed && ns.isManaged);
+    return { name: trimmed, isManaged };
+}
+
+function isNamespacesListForbidden(error: string): boolean {
+    return /Error from server \(Forbidden\)|cannot list resource "namespaces"|cannot list resource 'namespaces'/i.test(
+        error,
+    );
 }
 
 export async function selectClusterAcr(
@@ -257,6 +363,12 @@ export async function selectClusterAcr(
         return showWizardExitConfirmation(() => selectClusterAcr(sessionProvider, subscriptionId, cluster));
     }
 
+    // If the selected ACR is not yet attached, warn and offer to assign AcrPull automatically.
+    // (When showingAttachedOnly is true, every listed ACR already has AcrPull.)
+    if (!showingAttachedOnly) {
+        await ensureAcrPullForKubelet(sessionProvider, subscriptionId, cluster, selected.acr);
+    }
+
     return selected.acr;
 }
 
@@ -281,7 +393,6 @@ async function getAttachedAcrs(
     const attachedAcrs: DefinedResourceWithGroup[] = [];
 
     for (const acr of allAcrs) {
-        logger.debug(`Checking role assignments for ACR '${acr.name}' (RG: ${acr.resourceGroup})`);
         const roleAssignments = await getPrincipalRoleAssignmentsForAcr(
             authClient,
             principalId,
@@ -294,10 +405,6 @@ async function getAttachedAcrs(
             continue;
         }
 
-        logger.debug(
-            `ACR '${acr.name}': ${roleAssignments.result.length} role assignment(s) found for principal ${principalId}`,
-        );
-
         const hasAcrPull = roleAssignments.result.some((ra) => {
             if (!ra.roleDefinitionId) return false;
             const roleDefName = ra.roleDefinitionId.split("/").pop();
@@ -306,8 +413,6 @@ async function getAttachedAcrs(
 
         if (hasAcrPull) {
             attachedAcrs.push(acr);
-        } else {
-            logger.debug(`ACR '${acr.name}' is NOT attached to cluster '${cluster.name}' (no AcrPull role)`);
         }
     }
 
@@ -323,7 +428,6 @@ async function getClusterPrincipalId(
     subscriptionId: string,
     cluster: Cluster,
 ): Promise<string | undefined> {
-    logger.debug(`Fetching managed cluster details for '${cluster.name}' in resource group '${cluster.resourceGroup}'`);
     const managedClusterResult = await getManagedCluster(
         sessionProvider,
         subscriptionId,
@@ -337,7 +441,6 @@ async function getClusterPrincipalId(
     }
 
     const managedCluster = managedClusterResult.result;
-    logger.debug(`Cluster identity type: ${managedCluster.identity?.type ?? "none"}`);
 
     // Prefer kubelet identity (managed identity clusters)
     const hasManagedIdentity =
@@ -357,12 +460,100 @@ async function getClusterPrincipalId(
 
     // Fall back to service principal
     const spClientId = managedCluster.servicePrincipalProfile?.clientId;
-    if (spClientId) {
-        // Service principal found
-    } else {
+    if (!spClientId) {
         logger.warn(`Cluster '${cluster.name}' has no kubelet identity or service principal`);
     }
-    return spClientId ?? undefined;
+    return spClientId;
+}
+
+/** Ensures the cluster's kubelet identity has AcrPull on the given ACR, prompting to assign it if not. */
+async function ensureAcrPullForKubelet(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+    acr: AzureResource,
+): Promise<void> {
+    const principalId = await getClusterPrincipalId(sessionProvider, subscriptionId, cluster);
+    if (!principalId) {
+        // Cannot determine identity — warn the user.
+        vscode.window.showWarningMessage(
+            l10n.t(
+                "Could not verify AcrPull role for cluster '{0}'. Ensure the AcrPull role is assigned to the cluster's agentpool (kubelet) identity on ACR '{1}' to avoid image-pull errors.",
+                cluster.name,
+                acr.name,
+            ),
+        );
+        return;
+    }
+
+    const authClient = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+    const roleAssignments = await getPrincipalRoleAssignmentsForAcr(
+        authClient,
+        principalId,
+        acr.resourceGroup,
+        acr.name,
+    );
+
+    if (failed(roleAssignments)) {
+        logger.warn(`Could not check AcrPull for ACR '${acr.name}': ${roleAssignments.error}`);
+        return;
+    }
+
+    const hasAcrPull = roleAssignments.result.some((ra) => {
+        const roleDefName = ra.roleDefinitionId?.split("/").pop();
+        return roleDefName === acrPullRoleDefinitionName;
+    });
+
+    if (hasAcrPull) {
+        return;
+    }
+
+    // AcrPull is missing — prompt the user.
+    const assignNow = l10n.t("Assign AcrPull Now");
+    const dismiss = l10n.t("Dismiss");
+    const choice = await vscode.window.showWarningMessage(
+        l10n.t(
+            "The AcrPull role is not assigned to the cluster '{0}' agentpool (kubelet) identity on ACR '{1}'. Without it, pods will fail to pull images. Assign the role now?",
+            cluster.name,
+            acr.name,
+        ),
+        assignNow,
+        dismiss,
+    );
+
+    if (choice !== assignNow) {
+        return;
+    }
+
+    await longRunning(l10n.t("Assigning AcrPull role to cluster agentpool identity..."), async () => {
+        const acrScope = getScopeForAcr(subscriptionId, acr.resourceGroup, acr.name);
+        const result = await createRoleAssignment(
+            authClient,
+            subscriptionId,
+            principalId,
+            acrPullRoleDefinitionName,
+            acrScope,
+            "ServicePrincipal",
+        );
+
+        if (result.succeeded) {
+            vscode.window.showInformationMessage(
+                l10n.t(
+                    "AcrPull role successfully assigned to cluster '{0}' agentpool identity on ACR '{1}'.",
+                    cluster.name,
+                    acr.name,
+                ),
+            );
+        } else {
+            vscode.window.showErrorMessage(
+                l10n.t(
+                    "Failed to assign AcrPull role on ACR '{0}': {1}. You may need to assign it manually.",
+                    acr.name,
+                    result.error,
+                ),
+            );
+        }
+    });
 }
 
 /**
@@ -406,7 +597,6 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
         return showWizardExitConfirmation(() => promptForWorkflowName(appName));
     }
 
-    logger.debug("Workflow name selected", workflowName);
     return workflowName;
 }
 
@@ -432,12 +622,12 @@ async function collectAzureContextForCluster(
     hasWorkflow: boolean,
     projectRoot: string,
 ): Promise<AzureContext | undefined> {
+    const namespaceData = await fetchClusterNamespaces(sessionProvider, subscriptionId, cluster);
+    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster, namespaceData);
+    if (!namespaceSelection) return undefined;
+
     const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
     if (!acr) return undefined;
-
-    const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster);
-    if (!namespaceSelection) return undefined;
-    logger.debug(`Namespace selected: ${namespaceSelection.name} (isManaged: ${namespaceSelection.isManaged})`);
 
     const baseContext: AzureContext = {
         subscriptionId,
@@ -472,11 +662,9 @@ export async function collectAzureContext(
 
     const subscription = await selectAzureSubscription(sessionProvider);
     if (!subscription) return undefined;
-    logger.debug("Subscription selected", subscription.name);
 
     const cluster = await selectAksCluster(sessionProvider, subscription.id);
     if (!cluster) return undefined;
-    logger.debug("Cluster selected", cluster.name);
 
     return collectAzureContextForCluster(sessionProvider, subscription.id, cluster, hasWorkflow, projectRoot);
 }

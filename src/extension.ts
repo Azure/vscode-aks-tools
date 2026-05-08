@@ -70,7 +70,18 @@ import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import * as fs from "fs";
 import { registerAksMcpServerProvider } from "./commands/aksMCP/aksMCPServer";
-import { runContainerAssist, runContainerAssistFromTree } from "./commands/aksContainerAssist/aksContainerAssist";
+import { aksQuickActions, initializeQuickActions } from "./commands/quickActions/aksQuickActions";
+import {
+    runContainerAssist,
+    containerizeApp,
+    containerizeAppFromTree,
+    deployAppWithAutomatedPipeline,
+    deployAppWithAutomatedPipelineFromTree,
+} from "./commands/aksContainerAssist/aksContainerAssist";
+import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModernizationBridge";
+import { draftArgoCDDeployment } from "./commands/aksArgoCD/argoCDDeployment";
+import { argoCDCheckStatus } from "./commands/aksArgoCD/argoCDInstall";
+import { argoCDApplyApp, argoCDPostApplyActions, isArgoCDApplication } from "./commands/aksArgoCD/argoCDApplyApp";
 import {
     setupOIDCForGitHub,
     setGitHubActionsSecrets,
@@ -109,6 +120,7 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(uiExtensionVariables.outputChannel);
 
         registerUIExtensionVariables(uiExtensionVariables);
+        initializeQuickActions(context);
         registerCommandWithTelemetry("aks.signInToAzure", signInToAzure);
         registerCommandWithTelemetry("aks.selectTenant", selectTenant);
         registerCommandWithTelemetry("aks.selectSubscriptions", selectSubscriptions);
@@ -163,8 +175,52 @@ export async function activate(context: vscode.ExtensionContext) {
         //registerCommandWithTelemetry("aks.aksAutomatedDeployments", aksAutomatedDeployments);
         registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
+        registerCommandWithTelemetry("aks.quickActions", aksQuickActions);
         registerCommandWithTelemetry("aks.runContainerAssist", runContainerAssist);
-        registerCommandWithTelemetry("aks.runContainerAssistFromTree", runContainerAssistFromTree);
+        registerCommandWithTelemetry("aks.containerizeApp", containerizeApp);
+        registerCommandWithTelemetry("aks.containerizeAppFromTree", containerizeAppFromTree);
+        registerCommandWithTelemetry("aks.deployAppWithAutomatedPipeline", deployAppWithAutomatedPipeline);
+        registerCommandWithTelemetry(
+            "aks.deployAppWithAutomatedPipelineFromTree",
+            deployAppWithAutomatedPipelineFromTree,
+        );
+        registerCommandWithTelemetry("aks.migrateAndModernizeApp", migrateAndModernizeApp);
+        registerCommandWithTelemetry("aks.draftArgoCDDeployment", draftArgoCDDeployment);
+        registerCommandWithTelemetry("aks.argoCDCheckStatus", argoCDCheckStatus);
+        registerCommandWithTelemetry("aks.argoCDApplyApp", argoCDApplyApp);
+        registerCommandWithTelemetry("aks.argoCDPostApplyActions", argoCDPostApplyActions);
+
+        // Notify when an Argo CD Application YAML is opened in the editor.
+        context.subscriptions.push(
+            vscode.workspace.onDidOpenTextDocument(async (document) => {
+                const argoCDEnabled = vscode.workspace.getConfiguration("aks").get<boolean>("argoCDEnabled", false);
+                if (!argoCDEnabled) return;
+                if (document.languageId !== "yaml" && document.languageId !== "yml") return;
+                // Cheap substring pre-check to avoid parsing large YAML files unnecessarily.
+                // Use the full apiVersion key to avoid CodeQL "Incomplete URL substring sanitization" false positive.
+                const text = document.getText();
+                if (!text.includes("apiVersion: argoproj.io/") || !text.includes("kind: Application")) return;
+                let parsed: unknown;
+                try {
+                    const yaml = await import("js-yaml");
+                    parsed = yaml.load(text);
+                } catch {
+                    return;
+                }
+                if (!isArgoCDApplication(parsed)) return;
+                const APPLY = l10n.t("Apply to Cluster");
+                const action = await vscode.window.showInformationMessage(
+                    l10n.t(
+                        "Argo CD Application '{0}' detected — apply it to the active cluster?",
+                        parsed.metadata?.name ?? path.basename(document.fileName) ?? "unknown",
+                    ),
+                    APPLY,
+                );
+                if (action === APPLY) {
+                    await vscode.commands.executeCommand("aks.argoCDApplyApp", document.uri);
+                }
+            }),
+        );
         registerCommandWithTelemetry("aks.setupOIDCForGitHub", async () => {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {

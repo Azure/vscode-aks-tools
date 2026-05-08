@@ -4,6 +4,7 @@ import { invokeKubectlCommand, streamKubectlOutput } from "../utils/kubectl";
 import { KubernetesClusterInfo } from "../utils/clusters";
 import { OutputStream } from "../utils/commands";
 import { asFlatItems, parseOutputLine } from "./traceItems";
+import { getKubectlGadgetConfig } from "../utils/config";
 import {
     GadgetArguments,
     GadgetVersion,
@@ -81,7 +82,10 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     private getKubectlArgs(args: GadgetArguments): string[] {
-        const pluginCommand = ["gadget", args.gadgetCategory, args.gadgetResource, "--output", "json"];
+        const config = getKubectlGadgetConfig();
+        const tag = failed(config) ? "latest" : config.result.releaseTag;
+        const gadgetImageName = `${args.gadgetCategory}_${args.gadgetResource.replace(/-/g, "")}:${tag}`;
+        const pluginCommand = ["gadget", "run", gadgetImageName, "-o", "json"];
         const nodeNameFilter = args.filters.nodeName ? ["--node", args.filters.nodeName] : [];
         const namespaceFilter =
             args.filters.namespace === NamespaceSelection.Default
@@ -100,8 +104,7 @@ export class KubectlClusterOperations implements ClusterOperations {
               ]
             : [];
         const sort = args.sortString ? ["--sort", args.sortString] : [];
-        const limit = args.maxRows ? ["--max-rows", args.maxRows.toString()] : [];
-        const interval = args.interval ? ["--interval", args.interval.toString()] : [];
+        const limit = args.maxRows ? ["--max-entries", args.maxRows.toString()] : [];
         const timeout = args.timeout ? ["--timeout", args.timeout.toString()] : [];
         return [
             ...pluginCommand,
@@ -112,7 +115,6 @@ export class KubectlClusterOperations implements ClusterOperations {
             ...labelFilter,
             ...sort,
             ...limit,
-            ...interval,
             ...timeout,
         ];
     }
@@ -132,12 +134,22 @@ export class KubectlClusterOperations implements ClusterOperations {
     async getPods(namespace: string): Promise<Errorable<string[]>> {
         const command = `get pod -n ${namespace} --no-headers -o custom-columns=":metadata.name"`;
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        return errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
+        return errmap(commandResult, (sr) =>
+            sr.stdout
+                .trim()
+                .split("\n")
+                .filter((s) => s.length > 0),
+        );
     }
 
     async getContainers(namespace: string, podName: string): Promise<Errorable<string[]>> {
         const command = `get pod -n ${namespace} ${podName} -o jsonpath={.spec.containers[*].name}`;
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        return errmap(commandResult, (sr) => sr.stdout.trim().split(" "));
+        return errmap(commandResult, (sr) =>
+            sr.stdout
+                .trim()
+                .split(" ")
+                .filter((s) => s.length > 0),
+        );
     }
 }

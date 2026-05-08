@@ -26,10 +26,10 @@ export const eventKeyMetadata: ItemMetadata<EventKey> = {
 };
 
 // Mount namespace
-export const mountNsKeys = ["mountnsid"] as const;
+export const mountNsKeys = ["mntns_id"] as const;
 export type MountNsKey = (typeof mountNsKeys)[number];
 export const mountNsKeyMetadata: ItemMetadata<MountNsKey> = {
-    mountnsid: { identifier: "mntns", name: "MountNsID" },
+    mntns_id: { identifier: "mntns", name: "MountNsID" },
 };
 
 // Network endpoints
