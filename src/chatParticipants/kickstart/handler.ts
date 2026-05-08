@@ -241,8 +241,9 @@ export async function defaultHandler(
                 }
             } else if (state.currentPhase === Phase.BUILD && state.artifacts && !state.artifacts.savedToDisk) {
                 stream.markdown(
-                    `\n✅ **${phaseName(intent.phase)} complete!**\n\nYour files are staged and ready — save them to your project workspace before building.\n`,
+                    `\n✅ **${phaseName(intent.phase)} complete!**\n\nYour files are staged and ready. You can build now, or save them to your workspace first.\n`,
                 );
+                stream.button({ command: "aks.kickstart.build", title: "Next: Build" });
                 stream.button({ command: "aks.kickstart.acceptAll", title: "💾 Save to project" });
             } else if (state.currentPhase <= Phase.VERIFY) {
                 const nextPhase = phaseName(state.currentPhase);

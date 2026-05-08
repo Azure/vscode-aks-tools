@@ -92,16 +92,12 @@ export function validatePrereqs(phase: Phase, state: KickstartState): PrereqResu
         return { ok: true };
     }
 
-    // BUILD requires PREPARE to have completed and artifacts saved
+    // BUILD requires PREPARE to have completed (artifacts in memory or saved to disk)
     if (phase === Phase.BUILD) {
-        const missing: string[] = [];
-        if (!state.artifacts || !state.artifacts.savedToDisk) {
-            missing.push("Generated artifacts saved to disk");
-        }
-        if (missing.length > 0) {
+        if (!state.artifacts) {
             return {
                 ok: false,
-                missing,
+                missing: ["Deployment artifacts (run Prepare first)"],
                 suggestedPhase: Phase.PREPARE,
             };
         }
@@ -310,7 +306,15 @@ export async function executePhase(
                         retryable: false,
                     };
                 }
-                return await buildPhase(workspaceFolder, state.artifacts, state.config, stream, token, request);
+                return await buildPhase(
+                    workspaceFolder,
+                    state.artifacts,
+                    state.config,
+                    stream,
+                    token,
+                    request,
+                    storageUri,
+                );
 
             case Phase.DEPLOY:
                 if (!state.artifacts || !state.config || !state.image) {

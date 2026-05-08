@@ -3,6 +3,7 @@ import * as path from "path";
 import { scanForDockerfiles } from "../../../commands/aksContainerAssist/fileOperations";
 import { PhaseResult } from "../phaseRunner";
 import { ArtifactsData, ConfigData, ImageData } from "../state";
+import { StagedFileManager } from "../stagedFileManager";
 import { runInTerminal } from "../terminalTool";
 
 /**
@@ -31,32 +32,43 @@ export async function buildPhase(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     request: vscode.ChatRequest,
+    storageUri?: vscode.Uri,
 ): Promise<PhaseResult & { image?: ImageData }> {
     try {
         const workspacePath = workspaceFolder.fsPath;
 
         stream.markdown("🐳 **Building and pushing container image**\n\n");
 
-        // Entry validation: Check artifacts are saved to disk
-        if (!artifacts.savedToDisk) {
-            return {
-                ok: false,
-                error: "Artifacts have not been saved to disk. Please save the generated Dockerfile and manifests before building.",
-                retryable: false,
-            };
+        // Resolve the build context directory.
+        // If the user has already saved artifacts to disk, build from the workspace.
+        // Otherwise build from the extension's staging directory, which was already
+        // written during the Prepare phase (no re-write needed).
+        let buildContextPath: string;
+
+        if (artifacts.savedToDisk) {
+            buildContextPath = workspacePath;
+        } else {
+            if (!storageUri) {
+                return {
+                    ok: false,
+                    error: "No staged artifacts found. Please run the Prepare phase first.",
+                    retryable: false,
+                };
+            }
+            const stagingRoot = new StagedFileManager(storageUri).stagingRoot;
+            buildContextPath = stagingRoot.fsPath;
+            stream.markdown("ℹ️ Building from staged files (artifacts not yet saved to workspace).\n\n");
         }
 
-        // Check that Dockerfile exists on disk
-        const dockerfiles = await scanForDockerfiles(workspacePath);
+        // Check that Dockerfile exists in the build context
+        const dockerfiles = await scanForDockerfiles(buildContextPath);
         if (dockerfiles.length === 0) {
             return {
                 ok: false,
-                error: "Dockerfile not found in workspace. Please save the Dockerfile before building.",
+                error: "Dockerfile not found. Please run the Prepare phase to generate one.",
                 retryable: false,
             };
         }
-
-        const dockerfilePath = dockerfiles[0];
 
         // Validate ACR configuration
         if (!config.acrName || !config.acrLoginServer) {
@@ -79,7 +91,7 @@ export async function buildPhase(
         stream.markdown(`- **Image Name:** ${imageName}\n`);
         stream.markdown(`- **Image Tag:** ${imageTag}\n`);
         stream.markdown(`- **Full URI:** ${fullImageUri}\n`);
-        stream.markdown(`- **Dockerfile:** ${dockerfilePath}\n\n`);
+        stream.markdown(`- **Dockerfile:** ${dockerfiles[0]}\n\n`);
 
         // Check if token is cancelled before starting build
         if (token.isCancellationRequested) {
@@ -95,7 +107,7 @@ export async function buildPhase(
 
         const buildCommand = `az acr build --registry ${config.acrName} --image ${imageName}:${imageTag} .`;
 
-        const buildResult = await runInTerminal(buildCommand, workspacePath, token, request.toolInvocationToken);
+        const buildResult = await runInTerminal(buildCommand, buildContextPath, token, request.toolInvocationToken);
 
         if (!buildResult.succeeded) {
             return {
@@ -108,7 +120,7 @@ export async function buildPhase(
         stream.markdown("### Verifying image in registry...\n\n");
 
         const verifyCommand = `az acr repository show-tags --name ${config.acrName} --repository ${imageName} --orderby time_desc --output json`;
-        const verifyResult = await runInTerminal(verifyCommand, workspacePath, token, request.toolInvocationToken);
+        const verifyResult = await runInTerminal(verifyCommand, buildContextPath, token, request.toolInvocationToken);
 
         if (!verifyResult.succeeded) {
             stream.markdown(
