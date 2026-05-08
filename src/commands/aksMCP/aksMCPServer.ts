@@ -2,36 +2,26 @@ import * as vscode from "vscode";
 import { failed } from "../utils/errorable";
 import { getAKSMCPServerBinaryPath } from "../utils/helper/mcpServerDownloadHelper";
 
-export async function addMcpServerToUserSettings(): Promise<void> {
-    const config = vscode.workspace.getConfiguration();
-
-    // Read current "mcp.servers" or initialize it
-    const current = config.get<{ [key: string]: unknown }>("mcp.servers") || {};
-
-    // This extension controls the version of mcp-server used, so that:
-    // 1. We don't need to rely on the user having previously downloaded it, and
-    // 2. This workflow doesn't get broken by mcp-server behaviour changes between versions
-    const mcpServerPath = await getAKSMCPServerBinaryPath();
-    if (failed(mcpServerPath)) {
-        vscode.window.showErrorMessage(`Failed to download MCP server: ${mcpServerPath.error}`);
-        return;
-    }
-
-    // Add or overwrite the server entry
-    const newServerConfig = {
-        command: mcpServerPath.result,
-        args: ["--transport", "stdio"],
+// Registers the AKS MCP server with VS Code. Works in remote setups (WSL,
+// Remote-SSH, Dev Containers); Directly writing to user `mcp.servers`
+// doesn't allow for these remote scenarios.
+export function registerAksMcpServerProvider(context: vscode.ExtensionContext): void {
+    // Provider for the AKS MCP server (identified by "AKS MCP").
+    const provider: vscode.McpServerDefinitionProvider<vscode.McpStdioServerDefinition> = {
+        // Binary path left empty, resolveMcpServerDefinition sets it further below.
+        provideMcpServerDefinitions: () => [
+            new vscode.McpStdioServerDefinition("AKS MCP", "", ["--transport", "stdio"]),
+        ],
+        // Downloads binary then points the server at it.
+        resolveMcpServerDefinition: async (server) => {
+            const binary = await getAKSMCPServerBinaryPath();
+            if (failed(binary)) {
+                throw new Error(`Failed to download AKS MCP server: ${binary.error}`);
+            }
+            server.command = binary.result;
+            return server;
+        },
     };
 
-    current["AKS MCP"] = newServerConfig;
-
-    // Save it back to user settings.json
-    await config.update(
-        "mcp.servers",
-        current,
-        vscode.ConfigurationTarget.Global, // Use Global to persist in user settings.json
-    );
-
-    // Notify the user that the server has been configured
-    vscode.window.showInformationMessage("AKS MCP server has been configured successfully.");
+    context.subscriptions.push(vscode.lm.registerMcpServerDefinitionProvider("aks-mcp", provider));
 }
