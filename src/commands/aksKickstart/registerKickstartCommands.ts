@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { CommandCallback } from "@microsoft/vscode-azext-utils";
 import { aksKickstart } from "./kickstart";
 import { buildAndPush } from "./buildAndPush";
-import { useWorkspace, useSample, KICKSTART_TEMP_ROOT } from "./repoSource";
+import { useWorkspace, useSample } from "./repoSource";
 import { KickstartPanel } from "../../panels/KickstartPanel";
 
 type RegisterCommand = (command: string, callback: CommandCallback) => void;
@@ -48,22 +48,9 @@ export function registerKickstartCommands(
     });
 
     registerCommandWithTelemetry("aks.kickstart.useSample", async () => {
-        // In vscode.dev/azure the workspace already has a folder (azure-XXX on Cloud Shell).
-        // Clone the sample into that folder so it lands on the Cloud Shell filesystem.
-        // On desktop with no open workspace, fall back to the temp root and then add
-        // the cloned folder as a workspace folder so the handler can proceed.
-        const existingFolders = vscode.workspace.workspaceFolders;
-        const parentPath =
-            existingFolders && existingFolders.length > 0 ? existingFolders[0].uri.fsPath : KICKSTART_TEMP_ROOT;
-
-        const result = await useSample(new vscode.CancellationTokenSource().token, parentPath);
+        const result = await useSample(new vscode.CancellationTokenSource().token);
         if (result.succeeded) {
             context.globalState.update("kickstart.pendingSamplePath", result.result);
-            // If there was no open workspace, add the cloned folder so the extension
-            // has a workspace root and the handler can pick up pendingSamplePath.
-            if (!existingFolders || existingFolders.length === 0) {
-                vscode.workspace.updateWorkspaceFolders(0, 0, { uri: vscode.Uri.file(result.result) });
-            }
             await openChat("@kickstart /start");
         } else if (result.error !== "Cancelled.") {
             vscode.window.showErrorMessage(result.error);
