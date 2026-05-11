@@ -32,7 +32,12 @@ The VS Code commands below work with either install path. Pick whichever fits yo
 | **Azure-managed Argo CD extension** (recommended for production) | AKS or Azure Arc-enabled clusters that need Entra ID SSO, Workload Identity Federation to ACR / Azure DevOps, Azure Linux–hardened images, and opt-in automatic patch releases | `az k8s-extension create --extension-type Microsoft.ArgoCD …` — see the [Microsoft Learn tutorial](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd) |
 | **Upstream Argo CD** (manifests / Helm) | Dev clusters, custom builds, strict OSS parity, or non-Azure clusters | [Argo CD getting started](https://argo-cd.readthedocs.io/en/stable/getting_started/) |
 
-The extension auto-detects the managed install at runtime (via the `app.kubernetes.io/managed-by=Microsoft.ArgoCD` pod label and the `argocd-cm` OIDC config) and adapts its post-apply menu accordingly — for example, hinting at Workload Identity Federation when an applied `Application` references an ACR or Azure DevOps source, and preferring SSO sign-in over the OSS admin-password flow.
+The extension uses two independent runtime probes:
+
+- **Install-method detection** — the `app.kubernetes.io/managed-by=Microsoft.ArgoCD` pod label in the `argocd` namespace. Resolves to `managed`, `upstream`, or `unknown` (e.g. RBAC forbidden, transient kubectl failure). The post-apply menu only surfaces the Azure **Workload Identity** hint when this resolves to `managed` (or when SSO is independently detected, see below).
+- **Auth-mode detection** — the `argocd-cm` ConfigMap's `oidc.config` entry. When it references `login.microsoftonline.com`, the UI sign-in is treated as Entra ID **SSO** and the OSS admin-password flow is skipped.
+
+These signals are orthogonal: a managed install can be configured without SSO, and — in principle — an upstream install can be wired to Entra ID by hand. The extension treats them as separate hints rather than collapsing them into one flag.
 
 > **Public preview, Mar 2026.** The Azure-managed extension is in public preview on AKS and Azure Arc-enabled Kubernetes — see the [announcement blog](https://techcommunity.microsoft.com/blog/azurearcblog/announcing-public-preview-of-argo-cd-extension-on-aks-and-azure-arc-enabled-kube/4504497).
 
@@ -99,10 +104,12 @@ The integration provides four commands, all prefixed with **AKS:**
 
 ### Configure Workload Identity for Azure (recommended)
 
-Shown only when `spec.source.repoURL` of the applied Application points at an Azure source:
+Shown only when **both** conditions hold:
 
-- **ACR** hosts: `*.azurecr.io` (OCI Helm chart / manifest sources).
-- **Azure DevOps** hosts: `dev.azure.com/*` and legacy `*.visualstudio.com`.
+1. `spec.source.repoURL` of the applied Application points at an Azure source:
+   - **ACR** hosts: `*.azurecr.io` (OCI Helm chart / manifest sources).
+   - **Azure DevOps** hosts: `dev.azure.com/*`, legacy `*.visualstudio.com`, and the SSH variants `ssh.dev.azure.com` / `vs-ssh.visualstudio.com`.
+2. The cluster is running the Azure-managed Argo CD extension (managed-by label detected) **or** Entra ID SSO is already configured on the `argocd-cm` ConfigMap.
 
 The action opens the [Microsoft Learn tutorial](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd) showing how to federate Argo CD's service account to your Azure identity, removing the need to store long-lived PATs or SSH keys as Kubernetes Secrets. Workload Identity Federation is the recommended credential path when running the Azure-managed Argo CD extension.
 
@@ -129,7 +136,7 @@ For **Azure DevOps** or **ACR** sources, prefer the *Configure Workload Identity
 2. Select **AKS: Check Argo CD Status**.
 3. The **Argo CD** output channel shows:
    - Whether the `argocd` namespace exists.
-   - Whether the **Azure-managed `Microsoft.ArgoCD` extension** is detected (via the `app.kubernetes.io/managed-by` pod label).
+   - Whether the **Azure-managed `Microsoft.ArgoCD` extension** is detected (via the `app.kubernetes.io/managed-by` pod label). Reported as `managed`, `upstream`, or `could not determine` when the label query fails (for example, due to RBAC).
    - Pod status (`kubectl get pods -n argocd -o wide`).
    - Service status (`kubectl get svc -n argocd`).
    - Tips for port-forwarding and authentication (SSO vs. initial admin password).

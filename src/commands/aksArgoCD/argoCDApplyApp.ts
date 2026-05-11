@@ -26,7 +26,7 @@ import { failed } from "../utils/errorable";
 import { getAuthenticatedKubeconfigYaml } from "../utils/clusters";
 import { longRunning } from "../utils/host";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
-import { getOutputChannel } from "./argoCDInstall";
+import { getOutputChannel, detectManagedArgoCDExtension, ArgoCDInstallMethod } from "./argoCDInstall";
 
 // ---------------------------------------------------------------------------
 // Type guard — validate that a parsed YAML doc is an Argo CD Application
@@ -376,10 +376,11 @@ export function classifyAzureRepoHost(repoUrl: string): AzureRepoHost {
     if (!url) return "other";
     // ACR — Azure Container Registry (OCI Helm/manifest sources).
     if (/(^|\/\/|@)[a-z0-9-]+\.azurecr\.io(\/|$|:)/.test(url)) return "acr";
-    // Azure DevOps Git — both modern and legacy hostnames.
-    if (/(^|\/\/|@)(dev\.azure\.com|[a-z0-9-]+\.visualstudio\.com)(\/|$|:)/.test(url)) {
-        return "azure-devops";
-    }
+    // Azure DevOps Git — covers HTTPS and SSH host variants:
+    //   HTTPS: https://dev.azure.com/<org>/...    or  https://<org>.visualstudio.com/...
+    //   SSH:   git@ssh.dev.azure.com:v3/<org>/... or  <org>@vs-ssh.visualstudio.com:v3/...
+    if (/(^|\/\/|@)(ssh\.)?dev\.azure\.com(\/|$|:)/.test(url)) return "azure-devops";
+    if (/(^|\/\/|@)(vs-ssh\.)?[a-z0-9-]+\.visualstudio\.com(\/|$|:)/.test(url)) return "azure-devops";
     return "other";
 }
 
@@ -687,9 +688,10 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         const repoUrl = doc.spec?.source?.repoURL || "";
         const isGitHub = /github\.com/i.test(repoUrl);
 
-        const [authMode, repoVisibility] = await Promise.all([
+        const [authMode, repoVisibility, installMethod] = await Promise.all([
             detectArgoCDAuthMode(kubectl, kubeConfigFile.filePath),
             isGitHub ? probeGitHubRepoVisibility(repoUrl) : Promise.resolve("unknown" as const),
+            detectManagedArgoCDExtension(kubectl, kubeConfigFile.filePath),
         ]);
 
         // Brief success toast.
@@ -707,6 +709,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
             repoUrl,
             authMode,
             repoVisibility,
+            installMethod,
         );
     } finally {
         kubeConfigFile.dispose();
@@ -726,6 +729,7 @@ export async function argoCDPostApplyActions(
     repoUrlArg?: unknown,
     authModeArg?: unknown,
     repoVisibilityArg?: unknown,
+    installMethodArg?: unknown,
 ): Promise<void> {
     // When called from the command palette we have no pre-resolved context,
     // so resolve kubectl + cluster fresh from the active kubeconfig.
@@ -736,6 +740,7 @@ export async function argoCDPostApplyActions(
     let repoUrl = "";
     let authMode: "sso" | "admin-password";
     let repoVisibility: "public" | "private" | "unknown";
+    let installMethod: ArgoCDInstallMethod;
     let ownedTempFile: Awaited<ReturnType<typeof createTempFile>> | undefined;
 
     // If called programmatically (from argoCDApplyApp) all args are provided.
@@ -769,12 +774,14 @@ export async function argoCDPostApplyActions(
         }
 
         const isGitHub = /github\.com/i.test(repoUrl);
-        const [detectedAuth, detectedVisibility] = await Promise.all([
+        const [detectedAuth, detectedVisibility, detectedInstallMethod] = await Promise.all([
             detectArgoCDAuthMode(kubectl, kubeConfigFilePath),
             isGitHub ? probeGitHubRepoVisibility(repoUrl) : Promise.resolve("unknown" as const),
+            detectManagedArgoCDExtension(kubectl, kubeConfigFilePath),
         ]);
         authMode = detectedAuth;
         repoVisibility = detectedVisibility;
+        installMethod = detectedInstallMethod;
     } else {
         kubectl = kubectlArg as k8s.APIAvailable<k8s.KubectlV1>;
         kubeConfigFilePath = kubeConfigFileArg as string;
@@ -783,6 +790,7 @@ export async function argoCDPostApplyActions(
         repoUrl = repoUrlArg as string;
         authMode = authModeArg as "sso" | "admin-password";
         repoVisibility = repoVisibilityArg as "public" | "private" | "unknown";
+        installMethod = (installMethodArg as ArgoCDInstallMethod | undefined) ?? "unknown";
     }
 
     try {
@@ -790,6 +798,12 @@ export async function argoCDPostApplyActions(
             id: string;
         }
         const azureHost = classifyAzureRepoHost(repoUrl);
+        // Only surface the Workload Identity hint when we have positive
+        // signal that the cluster is running the Azure-managed Argo CD
+        // extension (managed-by label) or has Entra ID SSO configured.
+        // Otherwise the linked Learn flow would not apply to the user's
+        // install path.
+        const showWifHint = azureHost !== "other" && (installMethod === "managed" || authMode === "sso");
         const actionItems: ActionItem[] = [
             {
                 label: "$(browser) Open Argo CD UI",
@@ -799,7 +813,7 @@ export async function argoCDPostApplyActions(
                         : l10n.t("Open the Argo CD dashboard in your browser"),
                 id: "open_ui",
             },
-            ...(azureHost !== "other"
+            ...(showWifHint
                 ? [
                       {
                           label:
