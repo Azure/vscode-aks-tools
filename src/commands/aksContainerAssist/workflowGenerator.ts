@@ -147,7 +147,7 @@ async function collectWorkflowConfiguration(
     if (hasBothActions) {
         buildContextPath = defaultBuildContext;
     } else {
-        buildContextPath = await promptForBuildContext(defaultBuildContext);
+        buildContextPath = await promptForBuildContext(defaultBuildContext, dockerfilePath, projectRoot);
     }
     if (!buildContextPath) return undefined;
 
@@ -166,13 +166,13 @@ async function collectWorkflowConfiguration(
         relativeManifests = detection.result.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
     }
 
-    const dockerfileRelToWorkspace = toPosixPath(
-        path.relative(workspaceRoot, path.resolve(projectRoot, dockerfilePath)),
-    );
-    const buildContextRelToWorkspace =
-        buildContextPath === "."
-            ? toPosixPath(path.relative(workspaceRoot, projectRoot)) || "."
-            : toPosixPath(path.relative(workspaceRoot, path.resolve(projectRoot, buildContextPath)));
+    // Resolve build context to an absolute path, then make it workspace-relative for the YAML.
+    const dockerfileAbsolute = path.resolve(projectRoot, dockerfilePath);
+    const buildContextAbsolute = buildContextPath === "." ? projectRoot : path.resolve(projectRoot, buildContextPath);
+    const buildContextRelToWorkspace = toPosixPath(path.relative(workspaceRoot, buildContextAbsolute)) || ".";
+
+    // DOCKER_FILE in `az acr build -f` is relative to the build context, not the repo root.
+    const dockerfileRelToBuildContext = toPosixPath(path.relative(buildContextAbsolute, dockerfileAbsolute));
 
     let selectedManifests: string[] | undefined;
     if (hasBothActions && relativeManifests.length > 0) {
@@ -187,7 +187,7 @@ async function collectWorkflowConfiguration(
         workflowName,
         branchName: "main", // Default to main
         containerName: appName, // Use app name as container name
-        dockerFile: dockerfileRelToWorkspace,
+        dockerFile: dockerfileRelToBuildContext,
         buildContextPath: buildContextRelToWorkspace,
         acrResourceGroup,
         azureContainerRegistry: acrName,
@@ -282,7 +282,12 @@ async function promptForDockerfilePath(projectRoot: string, detectedPaths: strin
 /**
  * Prompts user to enter build context path
  */
-async function promptForBuildContext(defaultContext: string): Promise<string | undefined> {
+async function promptForBuildContext(
+    defaultContext: string,
+    dockerfilePath: string,
+    projectRoot: string,
+): Promise<string | undefined> {
+    const dockerfileAbsolute = path.resolve(projectRoot, dockerfilePath);
     const result = await vscode.window.showInputBox({
         prompt: l10n.t("Enter build context path (directory containing source code)"),
         placeHolder: ".",
@@ -296,6 +301,11 @@ async function promptForBuildContext(defaultContext: string): Promise<string | u
             // Validate it's a valid relative path
             if (value.startsWith("/") || value.includes("..")) {
                 return l10n.t("Build context must be a relative path within the project");
+            }
+            // `az acr build -f` requires the Dockerfile to be within the build context.
+            const contextAbsolute = value === "." ? projectRoot : path.resolve(projectRoot, value);
+            if (toPosixPath(path.relative(contextAbsolute, dockerfileAbsolute)).startsWith("..")) {
+                return l10n.t("Build context must contain the Dockerfile");
             }
             return undefined;
         },
