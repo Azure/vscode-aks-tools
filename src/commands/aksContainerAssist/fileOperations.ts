@@ -88,15 +88,17 @@ const SCAN_MAX_DEPTH = 3;
  * Returns absolute paths sorted shallowest-first; excluded dirs are skipped.
  */
 export async function scanForDockerfiles(rootPath: string): Promise<string[]> {
-    const found: string[] = [];
-    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, (filePath, name) => {
-        if (name === "Dockerfile") {
-            found.push(filePath);
+    const dockerfiles: string[] = [];
+
+    const isDockerfile = (_filePath: string, fileName: string): boolean => fileName === "Dockerfile";
+
+    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, (filePath, fileName) => {
+        if (isDockerfile(filePath, fileName)) {
+            dockerfiles.push(filePath);
         }
     });
-    // Sort shallowest first
-    found.sort((a, b) => a.split(path.sep).length - b.split(path.sep).length);
-    return found;
+
+    return dockerfiles.sort((left, right) => left.split(path.sep).length - right.split(path.sep).length);
 }
 
 /**
@@ -106,13 +108,19 @@ export async function scanForDockerfiles(rootPath: string): Promise<string[]> {
  */
 export async function scanForK8sManifests(rootPath: string): Promise<string[]> {
     const manifests: string[] = [];
-    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, async (filePath, name) => {
-        if (name.endsWith(".yaml") || name.endsWith(".yml")) {
-            if (await isKubernetesManifest(filePath)) {
-                manifests.push(filePath);
-            }
+
+    const isYamlFile = (fileName: string): boolean => fileName.endsWith(".yaml") || fileName.endsWith(".yml");
+
+    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, async (filePath, fileName) => {
+        if (!isYamlFile(fileName)) {
+            return;
+        }
+
+        if (await isKubernetesManifest(filePath)) {
+            manifests.push(filePath);
         }
     });
+
     return manifests;
 }
 
