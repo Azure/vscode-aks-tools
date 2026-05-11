@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { Phase, createInitialState, loadState, saveState } from "./state";
+import { KICKSTART_PARTICIPANT_ID } from "./config";
 import { detectIntent } from "./intent";
 import { validatePrereqs, executePhase, classifyError } from "./phaseRunner";
 import { renderProgress, renderStateSummary, phaseName } from "./progress";
@@ -7,9 +8,19 @@ import { reportKickstartTelemetry } from "./telemetry";
 import { getAssetContext } from "../../assets";
 import { KickstartPanel } from "../../panels/KickstartPanel";
 
+/**
+ * Returns true if this is the first kickstart turn in this chat thread
+ * (i.e. no prior kickstart response exists in history).
+ */
+function isNewThread(context: vscode.ChatContext): boolean {
+    return !context.history.some(
+        (turn) => turn instanceof vscode.ChatResponseTurn && turn.participant === KICKSTART_PARTICIPANT_ID,
+    );
+}
+
 export async function defaultHandler(
     request: vscode.ChatRequest,
-    _context: vscode.ChatContext,
+    context: vscode.ChatContext,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
 ): Promise<vscode.ChatResult> {
@@ -59,19 +70,20 @@ export async function defaultHandler(
 
         const existingState = loadState(extensionContext, workspaceFolder);
         let state = existingState ?? createInitialState(workspaceFolder);
+        const hasExistingProgress =
+            !!existingState && (existingState.currentPhase > Phase.ANALYZE || !!existingState.analysis);
 
         const prompt = request.prompt ?? "";
         const isEmptyPrompt = prompt.trim().length === 0 && !request.command;
-        const isStartCommand = request.command === "/start";
-        const hasExistingProgress =
-            existingState && (existingState.currentPhase > Phase.ANALYZE || existingState.analysis);
 
-        if ((isEmptyPrompt || isStartCommand) && hasExistingProgress) {
+        // In a new chat thread, always pause and surface any existing workspace
+        // session before acting — regardless of what the user typed.
+        if (isNewThread(context) && hasExistingProgress) {
             stream.markdown("## 🚀 AKS Kickstart\n\n");
             stream.markdown(renderProgress(state.currentPhase));
             stream.markdown("\n\n");
             stream.markdown(renderStateSummary(state));
-            stream.markdown("\n\n**You have an existing session.** What would you like to do?\n");
+            stream.markdown("\n\n**You have an existing session for this workspace.** What would you like to do?\n");
             stream.button({ command: "aks.kickstart.resume", title: `▶️ Resume (${phaseName(state.currentPhase)})` });
             stream.button({ command: "aks.kickstart.newSession", title: "✨ Start new session" });
             reportKickstartTelemetry("resume-prompt.shown");
