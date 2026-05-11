@@ -355,6 +355,34 @@ async function openArgoCDUI(
  *   "private" — repo exists and is private (credentials required)
  *   "unknown" — no silent session, API error, or non-GitHub URL
  */
+
+// ---------------------------------------------------------------------------
+// Helper: classify the Git/OCI repo host so the post-apply menu can hint at
+// Workload Identity Federation for Azure sources.
+//
+// The Azure-managed Argo CD extension (public preview, Mar 2026) supports
+// federated identity to ACR and Azure DevOps, which removes the need to
+// store long-lived PATs/SSH keys as Kubernetes Secrets.  When the repoURL
+// of an applied Application points at an Azure source, we surface that path
+// instead of (or alongside) the classic PAT flow.
+//
+// Reference: https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd
+// ---------------------------------------------------------------------------
+
+export type AzureRepoHost = "acr" | "azure-devops" | "other";
+
+export function classifyAzureRepoHost(repoUrl: string): AzureRepoHost {
+    const url = repoUrl.trim().toLowerCase();
+    if (!url) return "other";
+    // ACR — Azure Container Registry (OCI Helm/manifest sources).
+    if (/(^|\/\/|@)[a-z0-9-]+\.azurecr\.io(\/|$|:)/.test(url)) return "acr";
+    // Azure DevOps Git — both modern and legacy hostnames.
+    if (/(^|\/\/|@)(dev\.azure\.com|[a-z0-9-]+\.visualstudio\.com)(\/|$|:)/.test(url)) {
+        return "azure-devops";
+    }
+    return "other";
+}
+
 async function probeGitHubRepoVisibility(repoUrl: string): Promise<"public" | "private" | "unknown"> {
     const urlMatch = repoUrl.trim().match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?\s*$/i);
     if (!urlMatch) return "unknown";
@@ -761,6 +789,7 @@ export async function argoCDPostApplyActions(
         interface ActionItem extends vscode.QuickPickItem {
             id: string;
         }
+        const azureHost = classifyAzureRepoHost(repoUrl);
         const actionItems: ActionItem[] = [
             {
                 label: "$(browser) Open Argo CD UI",
@@ -770,6 +799,20 @@ export async function argoCDPostApplyActions(
                         : l10n.t("Open the Argo CD dashboard in your browser"),
                 id: "open_ui",
             },
+            ...(azureHost !== "other"
+                ? [
+                      {
+                          label:
+                              azureHost === "acr"
+                                  ? "$(azure) Configure Workload Identity for ACR"
+                                  : "$(azure) Configure Workload Identity for Azure DevOps",
+                          description: l10n.t(
+                              "Open Microsoft Learn — federate Argo CD to Azure without long-lived secrets",
+                          ),
+                          id: "azure_wif",
+                      } as ActionItem,
+                  ]
+                : []),
             ...(repoVisibility === "private"
                 ? [
                       {
@@ -805,6 +848,12 @@ export async function argoCDPostApplyActions(
 
             if (pick.id === "open_ui") {
                 await openArgoCDUI(kubectl, kubeConfigFilePath, clusterName);
+            } else if (pick.id === "azure_wif") {
+                await vscode.env.openExternal(
+                    vscode.Uri.parse(
+                        "https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd",
+                    ),
+                );
             } else if (pick.id === "connect_repo") {
                 await connectPrivateGitHubRepo(kubectl, kubeConfigFilePath, repoUrl);
             } else if (pick.id === "open_docs") {

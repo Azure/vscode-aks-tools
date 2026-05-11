@@ -81,6 +81,35 @@ export function getOutputChannel(): vscode.OutputChannel {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: detect whether Argo CD was installed via the Azure-managed
+// `Microsoft.ArgoCD` k8s-extension (public preview, Mar 2026).
+//
+// The managed extension stamps every workload pod with a `managed-by` label
+// referencing the extension type.  We treat the presence of that label on
+// any pod in the argocd namespace as a positive signal.  When detected, the
+// UX prefers Entra ID SSO and Workload Identity Federation flows over the
+// classic admin-password + PAT/SSH paths.
+//
+// Reference: https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd
+// ---------------------------------------------------------------------------
+
+export async function detectManagedArgoCDExtension(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+): Promise<boolean> {
+    const result = await invokeKubectlCommand(
+        kubectl,
+        kubeConfigFile,
+        `get pods -n ${ARGOCD_NAMESPACE} ` +
+            `-l app.kubernetes.io/managed-by=Microsoft.ArgoCD ` +
+            `--ignore-not-found -o name`,
+        NonZeroExitCodeBehaviour.Succeed,
+    );
+    if (failed(result)) return false;
+    return result.result.stdout.trim() !== "";
+}
+
+// ---------------------------------------------------------------------------
 // Command: Check Argo CD Status
 // ---------------------------------------------------------------------------
 
@@ -131,6 +160,14 @@ async function showArgoCDStatus(
         );
         return;
     }
+
+    // Detect installation method (Azure-managed extension vs upstream OSS).
+    const isManagedExtension = await detectManagedArgoCDExtension(kubectl, kubeconfigFile);
+    channel.appendLine(
+        isManagedExtension
+            ? `[Argo CD Status] Install: Azure-managed extension (Microsoft.ArgoCD) detected.`
+            : `[Argo CD Status] Install: upstream Argo CD (no Microsoft.ArgoCD managed-by label found).`,
+    );
 
     // Pods.
     const podsResult = await longRunning(l10n.t("Fetching Argo CD pod status from {0}…", clusterName), () =>

@@ -23,9 +23,24 @@ After changing this setting, reload the VS Code window (`Developer: Reload Windo
 
 ---
 
+## Installation options
+
+The VS Code commands below work with either install path. Pick whichever fits your environment.
+
+| Option | Best for | How to install |
+|---|---|---|
+| **Azure-managed Argo CD extension** (recommended for production) | AKS or Azure Arc-enabled clusters that need Entra ID SSO, Workload Identity Federation to ACR / Azure DevOps, Azure Linux–hardened images, and opt-in automatic patch releases | `az k8s-extension create --extension-type Microsoft.ArgoCD …` — see the [Microsoft Learn tutorial](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd) |
+| **Upstream Argo CD** (manifests / Helm) | Dev clusters, custom builds, strict OSS parity, or non-Azure clusters | [Argo CD getting started](https://argo-cd.readthedocs.io/en/stable/getting_started/) |
+
+The extension auto-detects the managed install at runtime (via the `app.kubernetes.io/managed-by=Microsoft.ArgoCD` pod label and the `argocd-cm` OIDC config) and adapts its post-apply menu accordingly — for example, hinting at Workload Identity Federation when an applied `Application` references an ACR or Azure DevOps source, and preferring SSO sign-in over the OSS admin-password flow.
+
+> **Public preview, Mar 2026.** The Azure-managed extension is in public preview on AKS and Azure Arc-enabled Kubernetes — see the [announcement blog](https://techcommunity.microsoft.com/blog/azurearcblog/announcing-public-preview-of-argo-cd-extension-on-aks-and-azure-arc-enabled-kube/4504497).
+
+---
+
 ## Prerequisites
 
-- An AKS cluster with Argo CD installed (via `kubectl`, Helm, or the `az k8s-extension` marketplace add-on).
+- A Kubernetes cluster with Argo CD installed via **either** of the [Installation options](#installation-options) above.
 - `kubectl` available on your PATH (the extension uses the active kubectl context).
 - A **separate GitOps config repository** — Argo CD manifests should live apart from your application source code.
 
@@ -40,7 +55,7 @@ The integration provides four commands, all prefixed with **AKS:**
 | **AKS: Create Argo CD GitOps Pipeline** | Command Palette, Explorer folder context menu | Scaffold an annotated Argo CD Application manifest in a config repo |
 | **AKS: Apply Argo CD Application to Cluster** | Explorer YAML file context menu, Editor context menu | Apply an Application YAML to the active cluster |
 | **AKS: Check Argo CD Status** | AKS cluster tree right-click menu | Show Argo CD pod and service health in an output channel |
-| **AKS: Argo CD Post-Deploy Actions** | Shown after a successful apply | Open UI, get credentials, register repo credentials, or view sync guide |
+| **AKS: Argo CD Post-Deploy Actions** | Shown after a successful apply, or from the Command Palette | Open UI (SSO-aware), configure Azure Workload Identity (when source is ACR / Azure DevOps), connect a private GitHub repo, or open the Argo CD sync guide |
 
 ---
 
@@ -78,24 +93,29 @@ The integration provides four commands, all prefixed with **AKS:**
 
 ### Open Argo CD UI
 
+- If Argo CD is installed via the **Azure-managed extension** with Entra ID OIDC configured, the dialog prompts you to sign in with your Microsoft account — no admin password is fetched.
 - If the `argocd-server` Service has a **LoadBalancer** with an external IP, the extension opens `https://<address>` directly.
 - If the Service is **ClusterIP** (common for local setups), the extension starts a `kubectl port-forward` in an integrated terminal and shows an **Open Browser** button once the tunnel is ready.
 
-### Get Credentials
+### Configure Workload Identity for Azure (recommended)
 
-- Fetches the initial admin password from the `argocd-initial-admin-secret` Secret.
-- Displays `Username: admin | Password: ••••••••` (masked).
-- Offers **Copy Password** and **Reveal Password** buttons.
-- If the secret has been rotated or deleted, shows an informational message.
+Shown only when `spec.source.repoURL` of the applied Application points at an Azure source:
 
-### Register Repo Credentials (Private Repos)
+- **ACR** hosts: `*.azurecr.io` (OCI Helm chart / manifest sources).
+- **Azure DevOps** hosts: `dev.azure.com/*` and legacy `*.visualstudio.com`.
 
-- Pre-populates `spec.source.repoURL` from the applied Application YAML.
-- Choose an auth type:
-  - **HTTPS** — enter username + PAT/password (input is masked; credentials are never logged).
-  - **SSH** — pick a private key file.
-- Creates a labelled Kubernetes Secret (`argocd.argoproj.io/secret-type: repository`) directly via `kubectl` — credentials never touch disk as temp files.
-- Argo CD picks up the Secret automatically without a restart.
+The action opens the [Microsoft Learn tutorial](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd) showing how to federate Argo CD's service account to your Azure identity, removing the need to store long-lived PATs or SSH keys as Kubernetes Secrets. Workload Identity Federation is the recommended credential path when running the Azure-managed Argo CD extension.
+
+### Connect Private Repository (GitHub)
+
+Shown only when the applied Application's `spec.source.repoURL` is a **private GitHub** repository:
+
+- Pre-populates owner/repo from the YAML and (when a silent VS Code GitHub session exists) resolves the numeric repo ID.
+- Opens the GitHub fine-grained PAT creation page with the token name and repository pre-filled.
+- Prompts for the PAT in a masked input (never logged, never written to disk).
+- Creates a labelled Kubernetes Secret (`argocd.argoproj.io/secret-type: repository`) via `kubectl create secret --from-literal` so Argo CD auto-discovers it without a restart.
+
+For **Azure DevOps** or **ACR** sources, prefer the *Configure Workload Identity* action above instead of creating a PAT secret.
 
 ### Sync Guide
 
@@ -109,9 +129,10 @@ The integration provides four commands, all prefixed with **AKS:**
 2. Select **AKS: Check Argo CD Status**.
 3. The **Argo CD** output channel shows:
    - Whether the `argocd` namespace exists.
+   - Whether the **Azure-managed `Microsoft.ArgoCD` extension** is detected (via the `app.kubernetes.io/managed-by` pod label).
    - Pod status (`kubectl get pods -n argocd -o wide`).
    - Service status (`kubectl get svc -n argocd`).
-   - Tips for port-forwarding and authentication.
+   - Tips for port-forwarding and authentication (SSO vs. initial admin password).
 
 ---
 
@@ -126,11 +147,21 @@ The skill explains the GitOps principle and offers a button to launch the scaffo
 
 ---
 
+## Production topologies
+
+The scaffolded `Application` manifests work unchanged with the upstream-parity features of the Azure-managed extension:
+
+- **High availability (HA)** — chosen at install time via the managed extension or upstream Helm chart; no change required to the generated YAML.
+- **Hub-and-spoke / multi-cluster** — the *Create Argo CD GitOps Pipeline* command prompts for a target cluster API server URL, which becomes `spec.destination.server` and can point at a remote spoke cluster from a central hub.
+- **`ApplicationSet`** — the scaffolder currently emits a single `Application`. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), hand-author an `ApplicationSet` alongside the generated `application.yaml`; the *Apply Argo CD Application to Cluster* command accepts any `argoproj.io/v1alpha1` resource.
+
+---
+
 ## Security Notes
 
-- **PAT / passwords** are never written to disk or logged to output channels. Repo credential Secrets are created via `kubectl create secret --from-literal`.
-- **Admin password** is masked in all UI modals; only accessible via explicit Copy or Reveal actions.
-- **SSH keys** are read from a user-selected file and passed directly to the Secret — never cached.
+- **PATs and passwords** are never written to disk or logged to output channels. Repo credential Secrets are created via `kubectl create secret --from-literal` (in-memory only).
+- **Workload Identity Federation** is preferred over PATs for ACR and Azure DevOps sources when running the Azure-managed extension — no long-lived credentials are stored on the cluster.
+- **Entra ID SSO** replaces the OSS `argocd-initial-admin-secret` flow when the managed extension is configured with OIDC; the extension auto-detects this and skips the password prompt.
 
 ---
 
@@ -138,8 +169,19 @@ The skill explains the GitOps principle and offers a button to launch the scaffo
 
 | Problem | Solution |
 |---------|----------|
-| "Argo CD is not installed on cluster" | Install Argo CD first: [Getting Started guide](https://argo-cd.readthedocs.io/en/stable/getting_started/) |
+| "Argo CD is not installed on cluster" | Install Argo CD first — see [Installation options](#installation-options) |
+| `az k8s-extension create` fails with `Microsoft.ArgoCD not found` | Register the `Microsoft.KubernetesConfiguration` resource provider and confirm region availability per the [Microsoft Learn tutorial](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd) |
 | `kubectl` not found | Ensure `kubectl` is on your PATH and the correct context is active |
 | Port-forward fails | Check that no other process is using port 8080, or that the `argocd-server` Service exists |
+| Admin-password Secret missing | Expected when the managed extension is configured with Entra ID SSO — sign in through the browser instead of entering a password |
+| Want to avoid PATs for ACR or Azure DevOps | Configure **Workload Identity Federation** via the managed extension instead of using *Connect Private Repository* |
 | Repo not syncing after credential registration | Verify the repo URL matches `spec.source.repoURL` exactly (including `.git` suffix if used) |
 | Application CR not visible in Argo CD UI | Ensure the YAML has `namespace: argocd` in `metadata` — the Application CR must be in the Argo CD namespace |
+
+---
+
+## Further reading
+
+- [Announcing public preview of the Argo CD extension on AKS and Azure Arc-enabled Kubernetes clusters](https://techcommunity.microsoft.com/blog/azurearcblog/announcing-public-preview-of-argo-cd-extension-on-aks-and-azure-arc-enabled-kube/4504497) — Azure Arc Blog, Mar 2026.
+- [Microsoft Learn: Use GitOps with Argo CD on Azure Arc-enabled Kubernetes](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd).
+- [Argo CD upstream documentation](https://argo-cd.readthedocs.io/en/stable/).
