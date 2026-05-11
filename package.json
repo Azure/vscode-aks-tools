@@ -28,8 +28,7 @@
         "kubernetes-extension-cloud-provider"
     ],
     "activationEvents": [
-        "onView:kubernetes.cloudExplorer",
-        "onCommand:aks.kickstart.launchExperience"
+        "onView:kubernetes.cloudExplorer"
     ],
     "main": "./dist/extension",
     "contributes": {
