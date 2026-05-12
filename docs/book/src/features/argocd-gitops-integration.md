@@ -111,7 +111,15 @@ Shown only when **both** conditions hold:
    - **Azure DevOps** hosts: `dev.azure.com/*`, legacy `*.visualstudio.com`, and the SSH variants `ssh.dev.azure.com` / `vs-ssh.visualstudio.com`.
 2. The cluster is running the Azure-managed Argo CD extension (managed-by label detected) **or** Entra ID SSO is already configured on the `argocd-cm` ConfigMap.
 
-The action opens the [Microsoft Learn tutorial](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd) showing how to federate Argo CD's service account to your Azure identity, removing the need to store long-lived PATs or SSH keys as Kubernetes Secrets. Workload Identity Federation is the recommended credential path when running the Azure-managed Argo CD extension.
+The action behaves differently depending on which install path was detected:
+
+- **Managed extension detected** — runs a guided WIF bootstrap helper directly inside VS Code:
+  1. Auto-detects the Argo CD `ServiceAccount` (`argocd-repo-server` by default) and the cluster's OIDC issuer URL, and prints the federated-credential **subject claim** (`system:serviceaccount:argocd:<sa>`) and **audience** (`api://AzureADTokenExchange`) to the Argo CD output channel — with one-click clipboard copy.
+  2. Opens the Azure Portal directly on **Managed Identities** (or **App registrations**) so you can paste those values into a new federated credential.
+  3. Prints the final wiring steps: the `AcrPull` / `Reader` role assignment and the `azure.workload.identity/client-id` ServiceAccount annotation, plus the `kubectl rollout restart` command. The Microsoft Learn tutorial remains available as a fallback link.
+- **SSO-only (no managed-by label)** — opens the [Microsoft Learn tutorial](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd) directly, since the in-cluster annotations the bootstrap helper relies on may not match an upstream install.
+
+Workload Identity Federation is the recommended credential path when running the Azure-managed Argo CD extension — no long-lived PATs or SSH keys are stored as Kubernetes Secrets.
 
 ### Connect Private Repository (GitHub)
 

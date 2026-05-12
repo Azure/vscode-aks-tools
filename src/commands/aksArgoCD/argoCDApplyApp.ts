@@ -27,6 +27,7 @@ import { getAuthenticatedKubeconfigYaml } from "../utils/clusters";
 import { longRunning } from "../utils/host";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
 import { getOutputChannel, detectManagedArgoCDExtension, ArgoCDInstallMethod } from "./argoCDInstall";
+import { runWifBootstrap } from "./argoCDWifBootstrap";
 
 // ---------------------------------------------------------------------------
 // Type guard — validate that a parsed YAML doc is an Argo CD Application
@@ -863,11 +864,19 @@ export async function argoCDPostApplyActions(
             if (pick.id === "open_ui") {
                 await openArgoCDUI(kubectl, kubeConfigFilePath, clusterName);
             } else if (pick.id === "azure_wif") {
-                await vscode.env.openExternal(
-                    vscode.Uri.parse(
-                        "https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd",
-                    ),
-                );
+                // When the Azure-managed extension is detected, run the
+                // guided WIF bootstrap helper.  Otherwise fall back to the
+                // generic Microsoft Learn tutorial (covers manual /
+                // upstream installs configured against Entra ID by hand).
+                if (installMethod === "managed") {
+                    await runWifBootstrap(kubectl, kubeConfigFilePath, azureHost);
+                } else {
+                    await vscode.env.openExternal(
+                        vscode.Uri.parse(
+                            "https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd",
+                        ),
+                    );
+                }
             } else if (pick.id === "connect_repo") {
                 await connectPrivateGitHubRepo(kubectl, kubeConfigFilePath, repoUrl);
             } else if (pick.id === "open_docs") {
