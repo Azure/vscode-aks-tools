@@ -1033,7 +1033,7 @@
         "@types/js-yaml": "^4.0.9",
         "@types/libsodium-wrappers": "^0.8.2",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^25.6.0",
+        "@types/node": "^25.7.0",
         "@types/semver": "^7.7.1",
         "@types/sinon": "^21.0.1",
         "@types/tmp": "^0.2.6",
