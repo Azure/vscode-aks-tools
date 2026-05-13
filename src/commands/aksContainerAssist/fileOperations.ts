@@ -38,7 +38,7 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
         const dockerfilePaths = await scanForDockerfiles(folderPath);
         if (dockerfilePaths.length > 0) {
             result.hasDockerfile = true;
-            result.dockerfilePath = dockerfilePaths[0];
+            result.dockerfilePaths = dockerfilePaths;
         }
 
         // Check for K8s manifests

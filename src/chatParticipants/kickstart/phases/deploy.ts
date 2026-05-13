@@ -119,8 +119,21 @@ export async function deployPhase(
         const kubeConfigFile = await createTempFile(kubeconfigYaml, "yaml");
 
         try {
-            // Determine manifests directory
-            const manifestsDir = path.join(workspacePath, "k8s");
+            // Determine manifest directories. Monorepo modules have manifests under
+            // "<module>/k8s/"; single-module projects have them at the workspace root "k8s/".
+            const isManifestFilename = (filename: string): boolean => /(^|\/)k8s\//.test(filename);
+            const manifestDirsRel = new Set<string>();
+            for (const sf of artifacts.stagedFiles) {
+                if (!isManifestFilename(sf.filename)) continue;
+                const idx = sf.filename.lastIndexOf("k8s/");
+                const dirRel = idx > 0 ? `${sf.filename.substring(0, idx)}k8s` : "k8s";
+                manifestDirsRel.add(dirRel);
+            }
+            if (manifestDirsRel.size === 0) {
+                // Fall back to default location (backward compat with non-staged flows)
+                manifestDirsRel.add("k8s");
+            }
+            const manifestDirs = [...manifestDirsRel].map((d) => path.join(workspacePath, d));
 
             // Skip namespace creation for AKS Automatic (it manages namespaces automatically)
             if (config.clusterSku === "Automatic") {
@@ -133,9 +146,17 @@ export async function deployPhase(
             }
 
             stream.markdown(`### Applying manifests to **${config.clusterName}**\n\n`);
+            if (manifestDirs.length > 1) {
+                stream.markdown(`Applying manifests from ${manifestDirs.length} module directories:\n`);
+                for (const d of manifestDirs) {
+                    stream.markdown(`- \`${d}\`\n`);
+                }
+                stream.markdown("\n");
+            }
             stream.progress("Applying manifests to cluster...");
 
-            const applyCommand = `kubectl apply -f "${manifestsDir}" --kubeconfig="${kubeConfigFile.filePath}"`;
+            const fFlags = manifestDirs.map((d) => `-f "${d}"`).join(" ");
+            const applyCommand = `kubectl apply ${fFlags} --kubeconfig="${kubeConfigFile.filePath}"`;
             const applyResult = await runInTerminal(applyCommand, workspacePath, token, request.toolInvocationToken);
 
             if (!applyResult.succeeded) {
@@ -177,7 +198,7 @@ export async function deployPhase(
 
             // Build list of applied manifests for tracking
             const appliedManifests = artifacts.stagedFiles
-                .filter((f) => f.filename.startsWith("k8s/"))
+                .filter((f) => isManifestFilename(f.filename))
                 .map((f) => f.filename);
 
             // Create deployment data

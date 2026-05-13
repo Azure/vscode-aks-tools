@@ -36,6 +36,10 @@ export interface AnalysisData {
     hasDockerfile: boolean;
     hasK8sManifests: boolean;
     hasGitHubWorkflow: boolean;
+    /** Absolute paths of existing Dockerfiles detected in the workspace. */
+    existingDockerfilePaths?: string[];
+    /** Absolute paths of existing K8s manifests detected in the workspace. */
+    existingK8sManifestPaths?: string[];
 }
 
 /**

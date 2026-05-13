@@ -140,12 +140,12 @@ export async function preparePhase(
 
         for (const sf of stagedSoFar) {
             // Only process k8s manifests (not the Dockerfile)
-            if (!sf.filename.startsWith("k8s/")) {
+            if (!isManifestFilename(sf.filename)) {
                 adaptedStaged.push(sf);
                 continue;
             }
             // Extract just the base filename for the AKS Automatic checks
-            const baseFilename = sf.filename.replace(/^k8s\//, "");
+            const baseFilename = manifestBaseFilename(sf.filename);
             const rawContent = manifestFiles[baseFilename] ?? sf.content;
             const processedContent =
                 config.clusterSku === "Automatic" ? adaptManifestForAutomatic(rawContent, baseFilename) : rawContent;
@@ -165,8 +165,8 @@ export async function preparePhase(
         }
 
         // Step 4: Validate that we have required artifacts
-        const hasDockerfile = adaptedStaged.some((s) => s.filename === "Dockerfile");
-        const manifestStaged = adaptedStaged.filter((s) => s.filename.startsWith("k8s/"));
+        const hasDockerfile = adaptedStaged.some((s) => isDockerfileFilename(s.filename));
+        const manifestStaged = adaptedStaged.filter((s) => isManifestFilename(s.filename));
 
         if (!hasDockerfile || manifestStaged.length === 0) {
             return {
@@ -188,19 +188,7 @@ export async function preparePhase(
         }
 
         // Step 5: Show generated files as a native file tree in chat
-        const fileTree: vscode.ChatResponseFileTree[] = [];
-        const k8sChildren: vscode.ChatResponseFileTree[] = [];
-
-        for (const sf of adaptedStaged) {
-            if (sf.filename.startsWith("k8s/")) {
-                k8sChildren.push({ name: sf.filename.replace("k8s/", "") });
-            } else {
-                fileTree.push({ name: sf.filename });
-            }
-        }
-        if (k8sChildren.length > 0) {
-            fileTree.push({ name: "k8s", children: k8sChildren });
-        }
+        const fileTree = buildNestedFileTree(adaptedStaged.map((s) => s.filename));
 
         stream.markdown("\n✅ **Files generated** — review in the panel, then click **Save to project**:\n\n");
         // Use the staging root as the filetree base so clicking a file opens the staged copy
@@ -276,4 +264,46 @@ function adaptManifestForAutomatic(content: string, filename: string): string {
     adapted = adapted.replace(/^\s*resources:\s*\n(?=\s*(?:name:|image:|ports:|env:|$))/gm, "");
 
     return adapted;
+}
+
+/**
+ * Filename match helpers — staged filenames may be flat (single module / root)
+ * or module-prefixed (monorepo): e.g. "Dockerfile", "src/api/Dockerfile",
+ * "k8s/deployment.yaml", or "src/api/k8s/deployment.yaml".
+ */
+function isDockerfileFilename(filename: string): boolean {
+    return filename === "Dockerfile" || filename.endsWith("/Dockerfile");
+}
+
+function isManifestFilename(filename: string): boolean {
+    return /(^|\/)k8s\//.test(filename);
+}
+
+function manifestBaseFilename(filename: string): string {
+    const idx = filename.lastIndexOf("k8s/");
+    return idx >= 0 ? filename.substring(idx + "k8s/".length) : filename;
+}
+
+/**
+ * Builds a nested ChatResponseFileTree from "/"-separated filenames.
+ */
+function buildNestedFileTree(filenames: string[]): vscode.ChatResponseFileTree[] {
+    type Node = { name: string; children?: Node[] };
+    const root: Node = { name: "", children: [] };
+    for (const fn of filenames) {
+        const parts = fn.split("/").filter((p) => p.length > 0);
+        let curr: Node = root;
+        for (let i = 0; i < parts.length; i++) {
+            const name = parts[i];
+            const isLast = i === parts.length - 1;
+            curr.children = curr.children ?? [];
+            let next = curr.children.find((c) => c.name === name);
+            if (!next) {
+                next = isLast ? { name } : { name, children: [] };
+                curr.children.push(next);
+            }
+            curr = next;
+        }
+    }
+    return (root.children ?? []) as vscode.ChatResponseFileTree[];
 }

@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import { generateDockerfile as sdkGenerateDockerfile, formatErrorForLLM } from "containerization-assist-mcp/sdk";
 import { DOCKERFILE_SYSTEM_PROMPT, buildDockerfileUserPrompt } from "../../../commands/aksContainerAssist/prompts";
@@ -10,6 +11,19 @@ import { StagedFileManager } from "../stagedFileManager";
 import { StagedFile } from "../state";
 
 export type OnFileStaged = (file: StagedFile, allStaged: StagedFile[]) => void;
+
+/**
+ * Returns the staging path prefix for files belonging to `module`.
+ * Returns "" for a root-level module (single module or module at project root),
+ * or "<rel>/" (forward-slash separated, workspace-relative) otherwise.
+ * Used so monorepo modules don't clobber each other's Dockerfile / k8s manifests.
+ */
+export function moduleStagePrefix(module: ModuleAnalysis, projectPath: string): string {
+    if (!module.modulePath) return "";
+    const rel = path.isAbsolute(module.modulePath) ? path.relative(projectPath, module.modulePath) : module.modulePath;
+    if (!rel || rel === "." || rel.startsWith("..")) return "";
+    return `${rel.split(path.sep).join("/")}/`;
+}
 
 export async function generateDockerfileStep(
     analysis: AnalysisResult,
@@ -35,7 +49,7 @@ export async function generateDockerfileStep(
             const planResult = await sdkGenerateDockerfile(
                 {
                     repositoryPath: projectPath,
-                    modulePath: module.modulePath ?? projectPath,
+                    modulePath: path.resolve(projectPath, module.modulePath ?? projectPath),
                     language: module.language,
                     framework: module.framework,
                     detectedDependencies: module.dependencies,
@@ -67,8 +81,9 @@ export async function generateDockerfileStep(
 
             dockerfile = extractContent(response.result, "dockerfile");
 
-            // Stage the file in the temp dir and notify
-            const stagedFile = await stagedFileManager.stage("Dockerfile", dockerfile);
+            // Stage per-module so monorepo modules don't clobber each other.
+            const stagedFilename = `${moduleStagePrefix(module, projectPath)}Dockerfile`;
+            const stagedFile = await stagedFileManager.stage(stagedFilename, dockerfile);
             staged.push(stagedFile);
             onFileStaged(stagedFile, staged);
         } catch (error) {
