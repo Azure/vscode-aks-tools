@@ -1,7 +1,8 @@
+import * as path from "path";
 import * as vscode from "vscode";
-import { generateDockerfileStep } from "../steps/dockerfile";
-import { generateManifestsStep } from "../steps/manifests";
-import { AnalysisResult } from "../steps/analyze";
+import { generateDockerfileStep, DockerfileEnhancementInput } from "../steps/dockerfile";
+import { generateManifestsStep, ExistingManifestInput } from "../steps/manifests";
+import { AnalysisResult, ModuleAnalysis } from "../steps/analyze";
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { failed } from "../../../commands/utils/errorable";
 import { PhaseResult } from "../phaseRunner";
@@ -73,6 +74,33 @@ export async function preparePhase(
             isMonorepo: analysis.isMonorepo,
         };
 
+        // Read existing artifacts (if any), grouped per module, so each module gets enhanced
+        // from its own existing files rather than mixed across modules.
+        const existingDockerfileByModule = await readExistingDockerfilesByModule(analysis, workspacePath);
+        const existingManifestsByModule = await readExistingManifestsByModule(analysis, workspacePath);
+
+        const enhancedDockerfileSources: string[] = [];
+        for (const input of existingDockerfileByModule.values()) {
+            enhancedDockerfileSources.push(input.sourcePath ?? "Dockerfile");
+        }
+        const enhancedManifestSources: string[] = [];
+        for (const list of existingManifestsByModule.values()) {
+            for (const m of list) enhancedManifestSources.push(m.filename);
+        }
+
+        if (enhancedDockerfileSources.length > 0) {
+            const list = enhancedDockerfileSources.map((s) => `\`${s}\``).join(", ");
+            stream.markdown(
+                `\n\uD83D\uDD04 **Enhancing ${enhancedDockerfileSources.length} existing Dockerfile(s)**: ${list} will be preserved and improved rather than replaced.\n\n`,
+            );
+        }
+        if (enhancedManifestSources.length > 0) {
+            const list = enhancedManifestSources.map((m) => `\`${m}\``).join(", ");
+            stream.markdown(
+                `\uD83D\uDD04 **Enhancing ${enhancedManifestSources.length} existing Kubernetes manifest(s)**: ${list} will be preserved and improved.\n\n`,
+            );
+        }
+
         // Step 1: Generate Dockerfile
         stream.markdown("**Generating Dockerfile...**\n\n");
         stream.progress("Generating Dockerfile...");
@@ -91,6 +119,7 @@ export async function preparePhase(
                 stagedSoFar.push(...allStaged);
                 onFileStaged(file, allStaged);
             },
+            existingDockerfileByModule.size > 0 ? existingDockerfileByModule : undefined,
         );
 
         if (!dockerfileResult.succeeded) {
@@ -122,6 +151,7 @@ export async function preparePhase(
             {
                 acrLoginServer: config.acrLoginServer,
                 clusterName: config.clusterName,
+                existingManifestsByModule: existingManifestsByModule.size > 0 ? existingManifestsByModule : undefined,
             },
         );
 
@@ -306,4 +336,107 @@ function buildNestedFileTree(filenames: string[]): vscode.ChatResponseFileTree[]
         }
     }
     return (root.children ?? []) as vscode.ChatResponseFileTree[];
+}
+
+/**
+ * Returns the workspace-relative posix path of a module's source directory,
+ * or "" for a root module. Mirrors `moduleStagePrefix` without the trailing slash.
+ */
+function moduleRelPosix(module: ModuleAnalysis, workspacePath: string): string {
+    if (!module.modulePath) return "";
+    const rel = path.isAbsolute(module.modulePath)
+        ? path.relative(workspacePath, module.modulePath)
+        : module.modulePath;
+    if (!rel || rel === "." || rel.startsWith("..")) return "";
+    return rel.split(path.sep).join("/");
+}
+
+/**
+ * Picks the module whose source directory is the longest prefix of `relDir`.
+ * Falls back to the first module if no prefix matches (defensive — keeps the
+ * enhancement from being silently dropped when paths look unfamiliar).
+ */
+function pickModuleForRelDir(
+    relDir: string,
+    modules: ModuleAnalysis[],
+    workspacePath: string,
+): ModuleAnalysis | undefined {
+    if (modules.length === 0) return undefined;
+    const normRelDir = relDir.split(path.sep).join("/");
+    let best: { module: ModuleAnalysis; len: number } | undefined;
+    for (const mod of modules) {
+        const modRel = moduleRelPosix(mod, workspacePath);
+        if (modRel === "") {
+            // Root module always matches; prefer more specific matches if any.
+            if (!best) best = { module: mod, len: 0 };
+            continue;
+        }
+        if (normRelDir === modRel || normRelDir.startsWith(`${modRel}/`)) {
+            if (!best || modRel.length > best.len) {
+                best = { module: mod, len: modRel.length };
+            }
+        }
+    }
+    return best?.module;
+}
+
+/**
+ * Reads existing Dockerfiles and groups them per module so each module's
+ * generation can be enhanced from its own existing file.
+ */
+async function readExistingDockerfilesByModule(
+    analysis: AnalysisData,
+    workspacePath: string,
+): Promise<Map<string, DockerfileEnhancementInput>> {
+    const result = new Map<string, DockerfileEnhancementInput>();
+    const paths = analysis.existingDockerfilePaths ?? [];
+    if (paths.length === 0) return result;
+    for (const absPath of paths) {
+        try {
+            const bytes = await vscode.workspace.fs.readFile(vscode.Uri.file(absPath));
+            const content = Buffer.from(bytes).toString("utf-8");
+            if (!content.trim()) continue;
+            const relPath = path.relative(workspacePath, absPath);
+            const relDir = path.dirname(relPath);
+            const module = pickModuleForRelDir(relDir, analysis.modules, workspacePath);
+            if (!module) continue;
+            const key = module.modulePath ?? "";
+            if (result.has(key)) continue; // first match wins
+            result.set(key, { content, sourcePath: relPath || "Dockerfile" });
+        } catch {
+            // Skip unreadable files silently
+        }
+    }
+    return result;
+}
+
+/**
+ * Reads existing K8s manifests and groups them per module so each module's
+ * manifest generation only sees its own existing files.
+ */
+async function readExistingManifestsByModule(
+    analysis: AnalysisData,
+    workspacePath: string,
+): Promise<Map<string, ExistingManifestInput[]>> {
+    const result = new Map<string, ExistingManifestInput[]>();
+    const paths = analysis.existingK8sManifestPaths ?? [];
+    if (paths.length === 0) return result;
+    for (const absPath of paths) {
+        try {
+            const bytes = await vscode.workspace.fs.readFile(vscode.Uri.file(absPath));
+            const content = Buffer.from(bytes).toString("utf-8");
+            if (!content.trim()) continue;
+            const relPath = path.relative(workspacePath, absPath) || path.basename(absPath);
+            const relDir = path.dirname(relPath);
+            const module = pickModuleForRelDir(relDir, analysis.modules, workspacePath);
+            if (!module) continue;
+            const key = module.modulePath ?? "";
+            const list = result.get(key) ?? [];
+            list.push({ filename: relPath, content });
+            result.set(key, list);
+        } catch {
+            // Skip unreadable files silently
+        }
+    }
+    return result;
 }

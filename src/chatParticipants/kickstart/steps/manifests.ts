@@ -14,6 +14,11 @@ import { StagedFileManager } from "../stagedFileManager";
 import { StagedFile } from "../state";
 import { OnFileStaged, moduleStagePrefix } from "./dockerfile";
 
+export interface ExistingManifestInput {
+    filename: string;
+    content: string;
+}
+
 export async function generateManifestsStep(
     analysis: AnalysisResult,
     _dockerfileResult: Errorable<{ dockerfile: string }>,
@@ -24,7 +29,11 @@ export async function generateManifestsStep(
     stagedFileManager: StagedFileManager,
     currentStaged: StagedFile[],
     onFileStaged: OnFileStaged,
-    options?: { acrLoginServer?: string; clusterName?: string },
+    options?: {
+        acrLoginServer?: string;
+        clusterName?: string;
+        existingManifestsByModule?: Map<string, ExistingManifestInput[]>;
+    },
 ): Promise<Errorable<{ files: Record<string, string> }>> {
     const modules = modulesOrProject(analysis, projectPath);
     const files: Record<string, string> = {};
@@ -55,6 +64,7 @@ export async function generateManifestsStep(
             }
 
             const appName = module.name ?? "app";
+            const existingManifestsForModule = options?.existingManifestsByModule?.get(module.modulePath ?? "");
             const response = await lmClient.sendRequestWithTools(
                 K8S_MANIFEST_SYSTEM_PROMPT,
                 buildK8sManifestUserPrompt(
@@ -62,6 +72,7 @@ export async function generateManifestsStep(
                     appName,
                     "default",
                     options?.acrLoginServer ?? "<your-registry>",
+                    existingManifestsForModule,
                 ),
                 {
                     tools: PROJECT_TOOLS,

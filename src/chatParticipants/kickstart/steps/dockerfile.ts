@@ -12,6 +12,11 @@ import { StagedFile } from "../state";
 
 export type OnFileStaged = (file: StagedFile, allStaged: StagedFile[]) => void;
 
+export interface DockerfileEnhancementInput {
+    content: string;
+    sourcePath?: string;
+}
+
 /**
  * Returns the staging path prefix for files belonging to `module`.
  * Returns "" for a root-level module (single module or module at project root),
@@ -34,6 +39,7 @@ export async function generateDockerfileStep(
     stagedFileManager: StagedFileManager,
     currentStaged: StagedFile[],
     onFileStaged: OnFileStaged,
+    existingDockerfileByModule?: Map<string, DockerfileEnhancementInput>,
 ): Promise<Errorable<{ dockerfile: string }>> {
     const modules = modulesOrProject(analysis, projectPath);
     let dockerfile = "";
@@ -63,9 +69,10 @@ export async function generateDockerfileStep(
                 continue;
             }
 
+            const existingDockerfile = existingDockerfileByModule?.get(module.modulePath ?? "");
             const response = await lmClient.sendRequestWithTools(
                 DOCKERFILE_SYSTEM_PROMPT,
-                buildDockerfileUserPrompt(planResult.value),
+                buildDockerfileUserPrompt(planResult.value, existingDockerfile),
                 {
                     tools: PROJECT_TOOLS,
                     toolHandler: (call) => handleToolCall(call, projectPath),

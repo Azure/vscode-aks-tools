@@ -22,6 +22,13 @@ WORKFLOW:
 3. If the analysis says "unknown" for entry point or other critical fields, use listDirectory and readProjectFile to find the correct values.
 4. Generate the Dockerfile based on ACTUAL project files, not assumptions.
 
+ENHANCEMENT MODE:
+If the user message contains an "Existing Dockerfile to enhance" section, you MUST treat this as an enhancement task:
+- Preserve the user's intent: base image family, build stages, custom RUN steps, COPY paths, ARG/ENV vars, labels, and entrypoint.
+- Improve only what the guidance explicitly calls out: missing multi-stage build, non-root user, missing HEALTHCHECK, pinned versions, smaller base image of the SAME family, .dockerignore-friendly COPY order.
+- Do NOT silently change the base image family (e.g. alpine→debian) or rename the entrypoint binary unless the existing one is clearly broken.
+- Return the COMPLETE enhanced Dockerfile (not a diff).
+
 IMPORTANT: Your final response must contain ONLY the Dockerfile content wrapped in <content></content> markers.
 Do not include any explanations, markdown code fences, or text outside the content markers.
 
@@ -57,6 +64,13 @@ Follow security best practices:
 - Include resource limits, security context, and appropriate labels.
 - When an Image Repository is provided, you MUST use that EXACT value as the container image in deployment.yaml. Do NOT use placeholders like <your-acr-name>, <image>, or any other synthetic value. Do NOT use a bare image name such as "app-name:1.0.0" — always include the full registry URL (e.g. myacr.azurecr.io/app-name).
 
+ENHANCEMENT MODE:
+If the user message contains an "Existing Kubernetes manifests to enhance" section, you MUST treat this as an enhancement task:
+- Preserve user-authored fields: metadata.labels, metadata.annotations, env vars, envFrom, volumes, volumeMounts, ConfigMap/Secret references, custom probes, serviceAccountName, nodeSelector, tolerations, affinity, replicas.
+- Improve only: missing securityContext, missing resources, missing health probes when a port exists, outdated apiVersion, placeholder image references (replace with the provided Image Repository), missing labels required by AKS best practices.
+- Return a <content> block for EACH existing manifest you modify, using the SAME filename as the existing file. Add new manifests (e.g. service.yaml) only if clearly missing for the application type.
+- Do NOT delete existing manifests.
+
 IMPORTANT: Generate EACH manifest file separately with its own <content filename="FILENAME"></content> markers.
 Do not include any explanations, markdown code fences, or text outside the content markers.
 
@@ -72,7 +86,15 @@ kind: Service
 # ... rest of service
 </content>`;
 
-export function buildDockerfileUserPrompt(plan: DockerfilePlan): string {
+export interface DockerfileEnhancementOverride {
+    content: string;
+    sourcePath?: string;
+}
+
+export function buildDockerfileUserPrompt(
+    plan: DockerfilePlan,
+    enhancementOverride?: DockerfileEnhancementOverride,
+): string {
     const repoInfo = plan.repositoryInfo;
     const formattedPlan = formatGenerateDockerfileResult(plan);
 
@@ -134,10 +156,18 @@ Repository Info:
     if (plan.existingDockerfile) {
         const guidance = plan.existingDockerfile.guidance;
         prompt += `\n\nExisting Dockerfile to enhance:\n${plan.existingDockerfile.content}\n\nEnhancement guidance:\n- Preserve: ${guidance.preserve.join(", ")}\n- Improve: ${guidance.improve.join(", ")}\n- Add missing: ${guidance.addMissing.join(", ")}`;
+    } else if (enhancementOverride) {
+        const sourceHint = enhancementOverride.sourcePath ? ` (from ${enhancementOverride.sourcePath})` : "";
+        prompt += `\n\nExisting Dockerfile to enhance${sourceHint}:\n${enhancementOverride.content}\n\nEnhancement guidance:\n- Preserve: base image family, build stages, custom RUN/COPY/ENV/ARG/LABEL directives, entrypoint, exposed ports.\n- Improve: pin image tags if floating, add non-root USER if missing, add HEALTHCHECK if missing, ensure multi-stage build for compiled languages, reorder COPY for better layer caching.\n- Add missing: .dockerignore-friendly COPY order, security best practices, build-time arg defaults.`;
     }
 
     prompt += "\n\nGenerate the complete Dockerfile now. Remember to wrap the output in <content></content> markers:";
     return prompt;
+}
+
+export interface ExistingManifest {
+    filename: string;
+    content: string;
 }
 
 export function buildK8sManifestUserPrompt(
@@ -145,6 +175,7 @@ export function buildK8sManifestUserPrompt(
     appName: string,
     namespace: string,
     imageRepository?: string,
+    existingManifests?: ExistingManifest[],
 ): string {
     const repoInfo = plan.repositoryInfo;
     const formattedPlan = formatGenerateK8sManifestsResult(plan);
@@ -162,6 +193,8 @@ export function buildK8sManifestUserPrompt(
         ? `- Image Repository: ${imageRepository} (use this EXACT full URL as the container image — including the registry hostname — no bare names, no placeholders)`
         : undefined;
 
+    const existingBlock = buildExistingManifestsBlock(existingManifests);
+
     return `Generate Kubernetes manifests based on the following analysis and recommendations:
 
 ${formattedPlan}
@@ -176,9 +209,26 @@ Application Details:
 - Dependencies: ${dependencyNames.join(", ") || "none"}
 ${imageLine ? `${imageLine}` : ""}
 ${manifestGuidance}
-${buildK8sVerificationHints(ports, repoInfo?.entryPoint)}
+${buildK8sVerificationHints(ports, repoInfo?.entryPoint)}${existingBlock}
 Generate ONLY the manifests that are appropriate for this application.
 Each manifest should be in a separate <content filename="..."></content> block:`;
+}
+
+function buildExistingManifestsBlock(existing?: ExistingManifest[]): string {
+    if (!existing || existing.length === 0) {
+        return "";
+    }
+
+    const formatted = existing.map((m) => `\n=== ${m.filename} ===\n${m.content}`).join("\n");
+
+    return (
+        `\n\nExisting Kubernetes manifests to enhance (return each one in a <content filename="..."> block using the SAME filename):` +
+        `${formatted}` +
+        `\n\nEnhancement guidance:\n` +
+        `- Preserve: metadata.labels, metadata.annotations, env, envFrom, volumes, volumeMounts, ConfigMap/Secret references, custom probes, serviceAccountName, nodeSelector, tolerations, affinity, replicas.\n` +
+        `- Improve: missing securityContext, missing resources block, missing health probes (when a port is exposed), outdated apiVersion, placeholder image references (replace with the Image Repository above).\n` +
+        `- Do NOT delete existing manifests. Only ADD a new manifest (e.g. service.yaml) if it is clearly required for the application type and is missing from the list above.`
+    );
 }
 
 function buildManifestGuidance(isWebApp: boolean, hasExternalDependencies: boolean, ports: number[]): string {
