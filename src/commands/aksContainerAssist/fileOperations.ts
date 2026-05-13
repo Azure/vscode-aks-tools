@@ -55,23 +55,8 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
     return result;
 }
 
-/**
- * Searches recursively (up to maxDepth levels) for Dockerfiles under rootPath.
- * Returns absolute paths sorted shallowest-first; excluded dirs are skipped.
- */
-export async function scanForDockerfiles(rootPath: string, maxDepth: number = 3): Promise<string[]> {
-    const found: string[] = [];
-    await scanForDockerfilesRecursive(rootPath, found, maxDepth, 0);
-    // Sort shallowest first
-    found.sort((a, b) => {
-        const aDepth = a.split(path.sep).length;
-        const bDepth = b.split(path.sep).length;
-        return aDepth - bDepth;
-    });
-    return found;
-}
-
-const DOCKERFILE_EXCLUDED_DIRS = new Set([
+/** Directories to skip during recursive scans (build artifacts, dependencies, etc.) */
+const EXCLUDED_DIRS = new Set([
     "node_modules",
     ".git",
     "dist",
@@ -89,139 +74,83 @@ const DOCKERFILE_EXCLUDED_DIRS = new Set([
     "bin",
     "obj",
     ".terraform",
+    ".gradle",
+    ".idea",
+    ".settings",
+    ".mvn",
 ]);
 
-async function scanForDockerfilesRecursive(
-    dirPath: string,
-    found: string[],
-    maxDepth: number,
-    currentDepth: number,
-): Promise<void> {
-    if (currentDepth > maxDepth) {
-        return;
-    }
+/** Maximum directory depth for Dockerfile and manifest scanning. */
+const SCAN_MAX_DEPTH = 3;
 
-    try {
-        const dirStat = await vscode.workspace.fs.stat(vscode.Uri.file(dirPath));
-        if (dirStat.type !== vscode.FileType.Directory) {
-            return;
+/**
+ * Searches recursively (up to 3 levels deep) for Dockerfiles under rootPath.
+ * Returns absolute paths sorted shallowest-first; excluded dirs are skipped.
+ */
+export async function scanForDockerfiles(rootPath: string): Promise<string[]> {
+    const dockerfiles: string[] = [];
+
+    const isDockerfile = (_filePath: string, fileName: string): boolean => fileName === "Dockerfile";
+
+    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, (filePath, fileName) => {
+        if (isDockerfile(filePath, fileName)) {
+            dockerfiles.push(filePath);
         }
+    });
 
-        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
-
-        for (const [name, type] of entries) {
-            if (type === vscode.FileType.File && name === "Dockerfile") {
-                found.push(path.join(dirPath, name));
-            } else if (type === vscode.FileType.Directory && !DOCKERFILE_EXCLUDED_DIRS.has(name)) {
-                await scanForDockerfilesRecursive(path.join(dirPath, name), found, maxDepth, currentDepth + 1);
-            }
-        }
-    } catch {
-        // Directory doesn't exist or can't be read — skip silently
-    }
+    return dockerfiles.sort((left, right) => left.split(path.sep).length - right.split(path.sep).length);
 }
 
 /**
- * Unified scanner for K8s manifests with single-pass directory traversal
- * Searches common locations first, then falls back to shallow recursive scan
+ * Scans for K8s manifests up to 3 levels deep under rootPath.
+ * Validates each .yaml/.yml file has apiVersion + kind to avoid false positives.
+ * Returns absolute paths.
  */
 export async function scanForK8sManifests(rootPath: string): Promise<string[]> {
-    const manifestSet = new Set<string>();
+    const manifests: string[] = [];
 
-    // Common K8s manifest folders (checked first for performance)
-    const priorityFolders = [
-        getK8sManifestFolder(), // User-configured or default "k8s"
-        "manifests",
-        "kubernetes",
-        "deploy",
-        "deployment",
-        ".kube",
-        "charts",
-        "config",
-        "infra",
-        "infrastructure",
-    ];
+    const isYamlFile = (fileName: string): boolean => fileName.endsWith(".yaml") || fileName.endsWith(".yml");
 
-    // Check priority folders
-    for (const folder of priorityFolders) {
-        const folderPath = path.join(rootPath, folder);
-        await scanDirectory(folderPath, manifestSet);
-    }
-
-    // Check root directory for loose manifests
-    await scanDirectory(rootPath, manifestSet);
-
-    // If nothing found, do shallow recursive search (max 2 levels)
-    if (manifestSet.size === 0) {
-        await scanDirectoryRecursive(rootPath, manifestSet, 2, 0);
-    }
-
-    return Array.from(manifestSet);
-}
-
-/**
- * Scans a single directory for K8s manifests (non-recursive)
- */
-async function scanDirectory(dirPath: string, manifestSet: Set<string>): Promise<void> {
-    try {
-        const dirStat = await vscode.workspace.fs.stat(vscode.Uri.file(dirPath));
-        if (dirStat.type !== vscode.FileType.Directory) {
+    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, async (filePath, fileName) => {
+        if (!isYamlFile(fileName)) {
             return;
         }
 
-        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+        if (await isKubernetesManifest(filePath)) {
+            manifests.push(filePath);
+        }
+    });
 
-        const fileChecks = entries
-            .filter(
-                ([name, type]) => type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml")),
-            )
-            .map(async ([name]) => {
-                const fullPath = path.join(dirPath, name);
-                if (await isKubernetesManifest(fullPath)) {
-                    manifestSet.add(fullPath);
-                }
-            });
-
-        await Promise.all(fileChecks);
-    } catch {
-        // Directory doesn't exist or can't be read - skip silently
-    }
+    return manifests;
 }
 
 /**
- * Recursively scans directories for K8s manifests up to specified depth
+ * Generic depth-limited directory walker. Calls `onFile` for each file found.
+ * Skips excluded directories. The callback can be async.
+ * Handles symlinks via bitwise FileType checks.
  */
-async function scanDirectoryRecursive(
+async function walkDirectory(
     dirPath: string,
-    manifestSet: Set<string>,
     maxDepth: number,
     currentDepth: number,
+    onFile: (filePath: string, name: string) => void | Promise<void>,
 ): Promise<void> {
     if (currentDepth > maxDepth) {
         return;
     }
 
     try {
-        const dirStat = await vscode.workspace.fs.stat(vscode.Uri.file(dirPath));
-        if (dirStat.type !== vscode.FileType.Directory) {
-            return;
-        }
-
         const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
 
         for (const [name, type] of entries) {
-            if (DOCKERFILE_EXCLUDED_DIRS.has(name)) {
-                continue;
-            }
-
             const fullPath = path.join(dirPath, name);
+            const isFile = (type & vscode.FileType.File) !== 0;
+            const isDir = (type & vscode.FileType.Directory) !== 0;
 
-            if (type === vscode.FileType.File && (name.endsWith(".yaml") || name.endsWith(".yml"))) {
-                if (await isKubernetesManifest(fullPath)) {
-                    manifestSet.add(fullPath);
-                }
-            } else if (type === vscode.FileType.Directory) {
-                await scanDirectoryRecursive(fullPath, manifestSet, maxDepth, currentDepth + 1);
+            if (isFile) {
+                await onFile(fullPath, name);
+            } else if (isDir && !EXCLUDED_DIRS.has(name)) {
+                await walkDirectory(fullPath, maxDepth, currentDepth + 1, onFile);
             }
         }
     } catch {
@@ -230,7 +159,8 @@ async function scanDirectoryRecursive(
 }
 
 /**
- * Validates if a YAML file is a Kubernetes manifest
+ * Validates if a YAML file is a Kubernetes manifest.
+ * Handles both LF and CRLF line endings.
  */
 async function isKubernetesManifest(filePath: string): Promise<boolean> {
     try {
@@ -238,20 +168,19 @@ async function isKubernetesManifest(filePath: string): Promise<boolean> {
         const previewSize = Math.min(content.length, 1024);
         const text = Buffer.from(content.slice(0, previewSize)).toString("utf-8");
 
-        // Must have both apiVersion and kind
+        // Must have both apiVersion and kind (\r? handles CRLF)
         const hasApiVersion = /^apiVersion:\s*.+$/m.test(text);
         if (!hasApiVersion) {
             return false;
         }
 
         // Extract kind value — must be present and PascalCase
-        const kindMatch = text.match(/^kind:\s*([A-Z]\w*)$/m);
+        const kindMatch = text.match(/^kind:\s*([A-Z]\w*)\r?$/m);
         if (!kindMatch) {
             return false;
         }
 
-        const kind = kindMatch[1].trim();
-
+        const kind = kindMatch[1];
         return /^[A-Z][a-zA-Z0-9]*$/.test(kind);
     } catch {
         return false;

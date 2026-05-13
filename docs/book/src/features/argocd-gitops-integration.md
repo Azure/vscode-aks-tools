@@ -7,6 +7,22 @@ The Argo CD integration brings a complete GitOps workflow to AKS clusters direct
 
 ---
 
+## Feature Flag
+
+All Argo CD commands are gated behind a feature flag and **disabled by default**. To enable:
+
+```json
+{
+  "aks.argoCDEnabled": true
+}
+```
+
+Default value: `false`
+
+After changing this setting, reload the VS Code window (`Developer: Reload Window`).
+
+---
+
 ## Prerequisites
 
 - An AKS cluster with Argo CD installed (via `kubectl`, Helm, or the `az k8s-extension` marketplace add-on).
