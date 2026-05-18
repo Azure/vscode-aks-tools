@@ -1,19 +1,11 @@
 import * as vscode from "vscode";
 import { CommandCallback } from "@microsoft/vscode-azext-utils";
-import { aksKickstart } from "./kickstart";
 import { buildAndPush } from "./buildAndPush";
-import { useWorkspace, useSample } from "./repoSource";
-import { KickstartPanel } from "../../panels/KickstartPanel";
+import { useWorkspace, useSample, KICKSTART_TEMP_ROOT } from "./repoSource";
+import { triggerAcceptAll } from "./acceptAll";
 
 type RegisterCommand = (command: string, callback: CommandCallback) => void;
 
-/**
- * Registers all Kickstart-related commands. This is gated by the
- * `aks.kickstartEnabledPreview` configuration flag (opt-in preview feature).
- *
- * Keeping this in its own module isolates the preview surface from
- * `extension.ts` and makes the feature easy to enable/disable as a unit.
- */
 export function registerKickstartCommands(
     context: vscode.ExtensionContext,
     registerCommandWithTelemetry: RegisterCommand,
@@ -22,7 +14,13 @@ export function registerKickstartCommands(
         return;
     }
 
-    registerCommandWithTelemetry("aks.kickstartContainerization", aksKickstart);
+    registerCommandWithTelemetry("aks.kickstart.launchExperience", async () => {
+        await vscode.commands.executeCommand("workbench.action.closePanel");
+        await vscode.commands.executeCommand("workbench.action.closeSidebar");
+        await vscode.commands.executeCommand("workbench.action.chat.open", { query: "@kickstart" });
+        await vscode.commands.executeCommand("workbench.action.maximizeAuxiliaryBar");
+    });
+
     registerCommandWithTelemetry("aks.kickstart.buildAndPush", buildAndPush);
 
     registerCommandWithTelemetry("aks.kickstart.openChat", () => openChat());
@@ -48,9 +46,16 @@ export function registerKickstartCommands(
     });
 
     registerCommandWithTelemetry("aks.kickstart.useSample", async () => {
-        const result = await useSample(new vscode.CancellationTokenSource().token);
+        const existingFolders = vscode.workspace.workspaceFolders;
+        const parentPath =
+            existingFolders && existingFolders.length > 0 ? existingFolders[0].uri.fsPath : KICKSTART_TEMP_ROOT;
+
+        const result = await useSample(new vscode.CancellationTokenSource().token, parentPath);
         if (result.succeeded) {
             context.globalState.update("kickstart.pendingSamplePath", result.result);
+            if (!existingFolders || existingFolders.length === 0) {
+                vscode.workspace.updateWorkspaceFolders(0, 0, { uri: vscode.Uri.file(result.result) });
+            }
             await openChat("@kickstart /start");
         } else if (result.error !== "Cancelled.") {
             vscode.window.showErrorMessage(result.error);
@@ -59,7 +64,6 @@ export function registerKickstartCommands(
 
     registerCommandWithTelemetry("aks.kickstart.createNew", () => createNewProjectQuickPick());
 
-    // Simple chat-forwarding commands.
     const chatCommands: Array<[string, string]> = [
         ["aks.kickstart.resume", "@kickstart resume"],
         ["aks.kickstart.newSession", "@kickstart start over"],
@@ -76,14 +80,7 @@ export function registerKickstartCommands(
     }
 
     registerCommandWithTelemetry("aks.kickstart.acceptAll", async () => {
-        await KickstartPanel.triggerAcceptAll();
-    });
-
-    registerCommandWithTelemetry("aks.kickstart.launchExperience", async () => {
-        await vscode.commands.executeCommand("workbench.action.closeSidebar");
-        await vscode.commands.executeCommand("workbench.action.closePanel");
-        await KickstartPanel.showIfNotOpen(context);
-        await openChat();
+        await triggerAcceptAll(context);
     });
 }
 
