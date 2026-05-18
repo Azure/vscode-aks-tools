@@ -41,7 +41,8 @@ export interface AnalyzeRepositoryResult {
 export interface ExistingFilesCheckResult {
     hasDockerfile: boolean;
     hasK8sManifests: boolean;
-    dockerfilePath?: string;
+    /** Absolute paths to all detected Dockerfiles, sorted shallowest-first. */
+    dockerfilePaths?: string[];
     k8sManifestPaths?: string[];
 }
 

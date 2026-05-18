@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import { generateK8sManifests as sdkGenerateK8sManifests, formatErrorForLLM } from "containerization-assist-mcp/sdk";
 import { K8S_MANIFEST_SYSTEM_PROMPT, buildK8sManifestUserPrompt } from "../../../commands/aksContainerAssist/prompts";
@@ -11,7 +12,12 @@ import { Errorable, failed } from "../../../commands/utils/errorable";
 import { AnalysisResult, ModuleAnalysis, tokenToAbortSignal } from "./analyze";
 import { StagedFileManager } from "../stagedFileManager";
 import { StagedFile } from "../state";
-import { OnFileStaged } from "./dockerfile";
+import { OnFileStaged, moduleStagePrefix } from "./dockerfile";
+
+export interface ExistingManifestInput {
+    filename: string;
+    content: string;
+}
 
 export async function generateManifestsStep(
     analysis: AnalysisResult,
@@ -23,7 +29,11 @@ export async function generateManifestsStep(
     stagedFileManager: StagedFileManager,
     currentStaged: StagedFile[],
     onFileStaged: OnFileStaged,
-    options?: { acrLoginServer?: string; clusterName?: string },
+    options?: {
+        acrLoginServer?: string;
+        clusterName?: string;
+        existingManifestsByModule?: Map<string, ExistingManifestInput[]>;
+    },
 ): Promise<Errorable<{ files: Record<string, string> }>> {
     const modules = modulesOrProject(analysis, projectPath);
     const files: Record<string, string> = {};
@@ -40,7 +50,7 @@ export async function generateManifestsStep(
                 {
                     manifestType: "kubernetes",
                     repositoryPath: projectPath,
-                    modulePath: module.modulePath ?? projectPath,
+                    modulePath: path.resolve(projectPath, module.modulePath ?? projectPath),
                     language: module.language,
                     framework: module.framework,
                 },
@@ -54,6 +64,7 @@ export async function generateManifestsStep(
             }
 
             const appName = module.name ?? "app";
+            const existingManifestsForModule = options?.existingManifestsByModule?.get(module.modulePath ?? "");
             const response = await lmClient.sendRequestWithTools(
                 K8S_MANIFEST_SYSTEM_PROMPT,
                 buildK8sManifestUserPrompt(
@@ -61,6 +72,7 @@ export async function generateManifestsStep(
                     appName,
                     "default",
                     options?.acrLoginServer ?? "<your-registry>",
+                    existingManifestsForModule,
                 ),
                 {
                     tools: PROJECT_TOOLS,
@@ -81,7 +93,9 @@ export async function generateManifestsStep(
                 : parsed;
 
             for (const manifest of manifests) {
-                const stageFilename = `k8s/${manifest.filename}`;
+                // Stage per-module so monorepo modules don't clobber each other.
+                const prefix = moduleStagePrefix(module, projectPath);
+                const stageFilename = `${prefix}k8s/${manifest.filename}`;
                 files[manifest.filename] = manifest.content;
 
                 // Stage the file and notify

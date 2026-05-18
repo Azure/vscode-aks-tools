@@ -182,19 +182,8 @@ export async function handleStart(
 
     stream.markdown("\n✅ **Files generated** — review in the panel, then click **Save to project**:\n\n");
 
-    // Build file tree for native chat rendering
-    const fileTree: vscode.ChatResponseFileTree[] = [];
-    const k8sChildren: vscode.ChatResponseFileTree[] = [];
-    for (const sf of stagedSoFar) {
-        if (sf.filename.startsWith("k8s/")) {
-            k8sChildren.push({ name: sf.filename.replace("k8s/", "") });
-        } else {
-            fileTree.push({ name: sf.filename });
-        }
-    }
-    if (k8sChildren.length > 0) {
-        fileTree.push({ name: "k8s", children: k8sChildren });
-    }
+    // Build file tree for native chat rendering (supports nested per-module paths).
+    const fileTree = buildNestedFileTree(stagedSoFar.map((sf) => sf.filename));
     // Use the staging root as the filetree base so clicking a file opens the staged copy
     stream.filetree(fileTree, stagedManager.stagingRoot);
     for (const sf of stagedSoFar) {
@@ -271,4 +260,30 @@ function isCancelled(token: vscode.CancellationToken, stream: vscode.ChatRespons
 
     stream.markdown("Cancelled.");
     return true;
+}
+
+/**
+ * Builds a nested ChatResponseFileTree from "/"-separated filenames.
+ * Staged filenames may be flat (e.g. "Dockerfile") or per-module
+ * (e.g. "src/api/Dockerfile", "src/api/k8s/deployment.yaml").
+ */
+function buildNestedFileTree(filenames: string[]): vscode.ChatResponseFileTree[] {
+    type Node = { name: string; children?: Node[] };
+    const root: Node = { name: "", children: [] };
+    for (const fn of filenames) {
+        const parts = fn.split("/").filter((p) => p.length > 0);
+        let curr: Node = root;
+        for (let i = 0; i < parts.length; i++) {
+            const name = parts[i];
+            const isLast = i === parts.length - 1;
+            curr.children = curr.children ?? [];
+            let next = curr.children.find((c) => c.name === name);
+            if (!next) {
+                next = isLast ? { name } : { name, children: [] };
+                curr.children.push(next);
+            }
+            curr = next;
+        }
+    }
+    return (root.children ?? []) as vscode.ChatResponseFileTree[];
 }

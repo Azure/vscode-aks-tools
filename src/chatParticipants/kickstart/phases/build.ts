@@ -3,7 +3,6 @@ import * as path from "path";
 import { scanForDockerfiles } from "../../../commands/aksContainerAssist/fileOperations";
 import { PhaseResult } from "../phaseRunner";
 import { ArtifactsData, ConfigData, ImageData } from "../state";
-import { StagedFileManager } from "../stagedFileManager";
 import { runInTerminal } from "../terminalTool";
 
 /**
@@ -39,14 +38,51 @@ export async function buildPhase(
 
         stream.markdown("🐳 **Building and pushing container image**\n\n");
 
-        // Resolve the build context directory.
-        // If the user has already saved artifacts to disk, build from the workspace.
-        // Otherwise build from the extension's staging directory, which was already
-        // written during the Prepare phase (no re-write needed).
-        let buildContextPath: string;
+        // The build context is always the workspace directory so that the Dockerfile
+        // can reference source files (e.g. .mvn/, pom.xml, src/) that live there.
+        // When artifacts have not yet been saved to disk, the generated Dockerfile
+        // lives in the staging directory, so we pass its path via --file.
+        const buildContextPath = workspacePath;
+
+        // Collect Dockerfile build targets. Monorepos have one Dockerfile per module
+        // (staged as "<modulePath>/Dockerfile"); single-module projects have one
+        // at the root (staged as "Dockerfile").
+        interface BuildTarget {
+            dockerfilePath: string;
+            dockerfileFlag: string;
+            imageName: string;
+        }
+
+        const workspaceFolderName = path.basename(workspacePath);
+        const sanitize = (s: string): string =>
+            s
+                .toLowerCase()
+                .replace(/[^a-z0-9-]+/g, "-")
+                .replace(/^-+|-+$/g, "");
+        const baseImageName = sanitize(workspaceFolderName) || "app";
+
+        const targets: BuildTarget[] = [];
 
         if (artifacts.savedToDisk) {
-            buildContextPath = workspacePath;
+            // Dockerfiles are already in the workspace – let az acr build find them.
+            const dockerfiles = await scanForDockerfiles(workspacePath);
+            if (dockerfiles.length === 0) {
+                return {
+                    ok: false,
+                    error: "Dockerfile not found. Please run the Prepare phase to generate one.",
+                    retryable: false,
+                };
+            }
+            for (const df of dockerfiles) {
+                const relDir = path.relative(workspacePath, path.dirname(df));
+                const isRoot = !relDir || relDir === ".";
+                const suffix = isRoot ? "" : `-${sanitize(relDir.split(path.sep).join("-"))}`;
+                targets.push({
+                    dockerfilePath: df,
+                    dockerfileFlag: isRoot ? "" : `--file "${df}"`,
+                    imageName: `${baseImageName}${suffix}`,
+                });
+            }
         } else {
             if (!storageUri) {
                 return {
@@ -55,19 +91,30 @@ export async function buildPhase(
                     retryable: false,
                 };
             }
-            const stagingRoot = new StagedFileManager(storageUri).stagingRoot;
-            buildContextPath = stagingRoot.fsPath;
-            stream.markdown("ℹ️ Building from staged files (artifacts not yet saved to workspace).\n\n");
-        }
-
-        // Check that Dockerfile exists in the build context
-        const dockerfiles = await scanForDockerfiles(buildContextPath);
-        if (dockerfiles.length === 0) {
-            return {
-                ok: false,
-                error: "Dockerfile not found. Please run the Prepare phase to generate one.",
-                retryable: false,
-            };
+            const stagedDockerfiles = artifacts.stagedFiles.filter(
+                (f) => f.filename === "Dockerfile" || f.filename.endsWith("/Dockerfile"),
+            );
+            if (stagedDockerfiles.length === 0) {
+                return {
+                    ok: false,
+                    error: "Dockerfile not found. Please run the Prepare phase to generate one.",
+                    retryable: false,
+                };
+            }
+            for (const sf of stagedDockerfiles) {
+                const fsPath = vscode.Uri.parse(sf.stagedPath).fsPath;
+                const isRoot = sf.filename === "Dockerfile";
+                const relDir = isRoot ? "" : sf.filename.substring(0, sf.filename.length - "/Dockerfile".length);
+                const suffix = relDir ? `-${sanitize(relDir.replace(/\//g, "-"))}` : "";
+                targets.push({
+                    dockerfilePath: fsPath,
+                    dockerfileFlag: `--file "${fsPath}"`,
+                    imageName: `${baseImageName}${suffix}`,
+                });
+            }
+            stream.markdown(
+                `ℹ️ Building from staged Dockerfile${targets.length > 1 ? "s" : ""} with workspace source code.\n\n`,
+            );
         }
 
         // Validate ACR configuration
@@ -79,19 +126,25 @@ export async function buildPhase(
             };
         }
 
-        // Determine image name from workspace folder
-        const workspaceFolderName = path.basename(workspacePath);
-        const imageName = workspaceFolderName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
         const imageTag = "latest";
-        const fullImageUri = `${config.acrLoginServer}/${imageName}:${imageTag}`;
 
-        // Show build preview
-        stream.markdown("### Build Configuration\n\n");
-        stream.markdown(`- **ACR:** ${config.acrName} (${config.acrLoginServer})\n`);
-        stream.markdown(`- **Image Name:** ${imageName}\n`);
-        stream.markdown(`- **Image Tag:** ${imageTag}\n`);
-        stream.markdown(`- **Full URI:** ${fullImageUri}\n`);
-        stream.markdown(`- **Dockerfile:** ${dockerfiles[0]}\n\n`);
+        if (targets.length > 1) {
+            stream.markdown(`### Build Plan (${targets.length} images)\n\n`);
+            for (const t of targets) {
+                stream.markdown(
+                    `- **${config.acrLoginServer}/${t.imageName}:${imageTag}** — \`${t.dockerfilePath}\`\n`,
+                );
+            }
+            stream.markdown("\n");
+        } else {
+            const t = targets[0];
+            stream.markdown("### Build Configuration\n\n");
+            stream.markdown(`- **ACR:** ${config.acrName} (${config.acrLoginServer})\n`);
+            stream.markdown(`- **Image Name:** ${t.imageName}\n`);
+            stream.markdown(`- **Image Tag:** ${imageTag}\n`);
+            stream.markdown(`- **Full URI:** ${config.acrLoginServer}/${t.imageName}:${imageTag}\n`);
+            stream.markdown(`- **Dockerfile:** ${t.dockerfilePath}\n\n`);
+        }
 
         // Check if token is cancelled before starting build
         if (token.isCancellationRequested) {
@@ -102,58 +155,86 @@ export async function buildPhase(
             };
         }
 
-        stream.markdown("### Building image...\n\n");
-        stream.progress("Building container image...");
+        let lastImageName = "";
+        for (const target of targets) {
+            if (token.isCancellationRequested) {
+                return { ok: false, error: "Build cancelled by user.", retryable: true };
+            }
 
-        const buildCommand = `az acr build --registry ${config.acrName} --image ${imageName}:${imageTag} .`;
+            stream.markdown(`### Building image \`${target.imageName}:${imageTag}\`...\n\n`);
+            stream.progress(`Building ${target.imageName}...`);
 
-        const buildResult = await runInTerminal(buildCommand, buildContextPath, token, request.toolInvocationToken);
+            const buildCommand =
+                `az acr build --registry ${config.acrName} --image ${target.imageName}:${imageTag} --subscription ${config.subscriptionId} ${target.dockerfileFlag} .`.trimEnd();
 
-        if (!buildResult.succeeded) {
-            return {
-                ok: false,
-                error: `Container build failed: ${buildResult.error}`,
-                retryable: true,
-            };
-        }
+            const buildResult = await runInTerminal(buildCommand, buildContextPath, token, request.toolInvocationToken);
 
-        stream.markdown("### Verifying image in registry...\n\n");
+            if (!buildResult.succeeded) {
+                return {
+                    ok: false,
+                    error: `Container build failed for ${target.imageName}: ${buildResult.error}`,
+                    retryable: true,
+                };
+            }
 
-        const verifyCommand = `az acr repository show-tags --name ${config.acrName} --repository ${imageName} --orderby time_desc --output json`;
-        const verifyResult = await runInTerminal(verifyCommand, buildContextPath, token, request.toolInvocationToken);
+            stream.markdown(`### Verifying image \`${target.imageName}\` in registry...\n\n`);
 
-        if (!verifyResult.succeeded) {
-            stream.markdown(
-                "⚠️ Could not verify image tag, but build command succeeded. The image should be available in the registry.\n\n",
+            const verifyCommand = `az acr repository show-tags --name ${config.acrName} --repository ${target.imageName} --subscription ${config.subscriptionId} --orderby time_desc --output json`;
+            const verifyResult = await runInTerminal(
+                verifyCommand,
+                buildContextPath,
+                token,
+                request.toolInvocationToken,
             );
-        } else {
-            try {
-                const tags = JSON.parse(verifyResult.result);
-                if (Array.isArray(tags) && tags.includes(imageTag)) {
-                    stream.markdown(`✅ Image verified in registry: **${imageName}:${imageTag}**\n\n`);
-                } else {
+
+            if (!verifyResult.succeeded) {
+                stream.markdown(
+                    `⚠️ Could not verify image \`${target.imageName}\`, but build command succeeded. The image should be available in the registry.\n\n`,
+                );
+            } else {
+                try {
+                    const tags = JSON.parse(verifyResult.result);
+                    if (Array.isArray(tags) && tags.includes(imageTag)) {
+                        stream.markdown(`✅ Image verified in registry: **${target.imageName}:${imageTag}**\n\n`);
+                    } else {
+                        stream.markdown(
+                            `⚠️ Tag '${imageTag}' not found in recent tags for **${target.imageName}**. The image may take a moment to appear.\n\n`,
+                        );
+                    }
+                } catch {
                     stream.markdown(
-                        `⚠️ Tag '${imageTag}' not found in recent tags. The image may take a moment to appear in the registry.\n\n`,
+                        `ℹ️ Image **${target.imageName}** build completed. Tag verification parsing skipped.\n\n`,
                     );
                 }
-            } catch {
-                stream.markdown("ℹ️ Image build completed. Tag verification parsing skipped.\n\n");
             }
+
+            lastImageName = target.imageName;
         }
 
         // Build successful
         stream.markdown("### Summary\n\n");
-        stream.markdown(`✅ **Build and push complete!**\n`);
-        stream.markdown(`- **Repository:** ${config.acrLoginServer}/${imageName}\n`);
-        stream.markdown(`- **Tag:** ${imageTag}\n`);
-        stream.markdown(`- **Full Reference:** ${fullImageUri}\n\n`);
+        if (targets.length > 1) {
+            stream.markdown(`✅ **Built and pushed ${targets.length} images:**\n`);
+            for (const t of targets) {
+                stream.markdown(`- ${config.acrLoginServer}/${t.imageName}:${imageTag}\n`);
+            }
+            stream.markdown("\n");
+        } else {
+            const t = targets[0];
+            stream.markdown(`✅ **Build and push complete!**\n`);
+            stream.markdown(`- **Repository:** ${config.acrLoginServer}/${t.imageName}\n`);
+            stream.markdown(`- **Tag:** ${imageTag}\n`);
+            stream.markdown(`- **Full Reference:** ${config.acrLoginServer}/${t.imageName}:${imageTag}\n\n`);
+        }
 
         stream.markdown("### Next Steps\n\n");
-        stream.markdown("1. Your container image is now available in Azure Container Registry\n");
+        stream.markdown("1. Your container image(s) are now available in Azure Container Registry\n");
         stream.markdown("2. Proceed to the **Deploy** phase to apply Kubernetes manifests to your cluster\n");
 
+        // Return ImageData for the last-built image (singular for backward compat).
+        // Monorepo deploy/verify currently treats this as the primary image.
         const image: ImageData = {
-            repository: `${config.acrLoginServer}/${imageName}`,
+            repository: `${config.acrLoginServer}/${lastImageName}`,
             tag: imageTag,
         };
 

@@ -152,8 +152,15 @@ export async function analyzePhase(
         if (existingFiles.hasDockerfile || existingFiles.hasK8sManifests) {
             stream.markdown("\n### Existing Artifacts Detected\n\n");
 
-            if (existingFiles.hasDockerfile) {
-                stream.markdown(`- **Dockerfile**: \`${existingFiles.dockerfilePath}\`\n`);
+            if (existingFiles.hasDockerfile && existingFiles.dockerfilePaths) {
+                if (existingFiles.dockerfilePaths.length === 1) {
+                    stream.markdown(`- **Dockerfile**: \`${existingFiles.dockerfilePaths[0]}\`\n`);
+                } else {
+                    stream.markdown(`- **Dockerfiles** (${existingFiles.dockerfilePaths.length}):\n`);
+                    for (const dfPath of existingFiles.dockerfilePaths) {
+                        stream.markdown(`  - \`${dfPath}\`\n`);
+                    }
+                }
             }
 
             if (existingFiles.hasK8sManifests && existingFiles.k8sManifestPaths) {
@@ -188,6 +195,8 @@ export async function analyzePhase(
             hasDockerfile: existingFiles.hasDockerfile,
             hasK8sManifests: existingFiles.hasK8sManifests,
             hasGitHubWorkflow: false,
+            existingDockerfilePaths: existingFiles.dockerfilePaths,
+            existingK8sManifestPaths: existingFiles.k8sManifestPaths,
         };
 
         return {

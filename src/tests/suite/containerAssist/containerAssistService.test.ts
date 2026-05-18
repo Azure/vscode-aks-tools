@@ -143,7 +143,7 @@ describe("ContainerAssistService", () => {
             sandbox.stub(service, "checkExistingFiles").resolves({
                 hasDockerfile: true,
                 hasK8sManifests: true,
-                dockerfilePath: "/test/path/Dockerfile",
+                dockerfilePaths: ["/test/path/Dockerfile"],
                 k8sManifestPaths: ["/test/path/k8s/deployment.yaml"],
             });
             const infoStub = sandbox.stub(vscode.window, "showInformationMessage");
@@ -161,7 +161,7 @@ describe("ContainerAssistService", () => {
             sandbox.stub(service, "checkExistingFiles").resolves({
                 hasDockerfile: true,
                 hasK8sManifests: false,
-                dockerfilePath: "/test/path/Dockerfile",
+                dockerfilePaths: ["/test/path/Dockerfile"],
             });
             const infoStub = sandbox.stub(vscode.window, "showInformationMessage");
             const mockModel = {
