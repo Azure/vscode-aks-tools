@@ -9,7 +9,7 @@ import { StagedFile } from "./state";
  * the Web (vscode.dev/azure — backed by IndexedDB there).
  *
  * Files are only written to the user's actual workspace when they click
- * "Save to project" (via KickstartPanel.triggerAcceptAll → workspace.fs).
+ * "Save to project" (via triggerAcceptAll → workspace.fs).
  */
 export class StagedFileManager {
     readonly stagingRoot: vscode.Uri;

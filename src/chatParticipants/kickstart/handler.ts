@@ -6,7 +6,6 @@ import { validatePrereqs, executePhase, classifyError } from "./phaseRunner";
 import { renderProgress, renderStateSummary, phaseName } from "./progress";
 import { reportKickstartTelemetry } from "./telemetry";
 import { getAssetContext } from "../../assets";
-import { KickstartPanel } from "../../panels/KickstartPanel";
 
 /**
  * Returns true if this is the first kickstart turn in this chat thread
@@ -55,8 +54,6 @@ export async function defaultHandler(
             return { metadata: { command: request.command ?? "welcome" } };
         }
 
-        await KickstartPanel.showIfNotOpen(extensionContext);
-
         const workspaceFolder = workspaceFolders[0].uri.fsPath;
         const pendingSamplePath = extensionContext.globalState.get<string>("kickstart.pendingSamplePath");
         if (pendingSamplePath) {
@@ -65,7 +62,6 @@ export async function defaultHandler(
             state.projectPath = pendingSamplePath;
             state.projectSource = "sample";
             await saveState(extensionContext, workspaceFolder, state);
-            KickstartPanel.pushState(state);
         }
 
         const existingState = loadState(extensionContext, workspaceFolder);
@@ -126,7 +122,6 @@ export async function defaultHandler(
         if (intent.action === "reset") {
             state = createInitialState(workspaceFolder);
             await saveState(extensionContext, workspaceFolder, state);
-            KickstartPanel.pushState(state);
             stream.markdown("✨ **Starting fresh!**\n\nLet's analyze your project...");
             reportKickstartTelemetry("reset.completed");
             return { metadata: { command: "reset" } };
@@ -172,23 +167,13 @@ export async function defaultHandler(
 
             stream.progress(`Running ${phaseName(intent.phase)} phase...`);
 
-            // For PREPARE, push state to the webview after each file is staged
-            // so the user can see files appearing in the panel as generation progresses.
             const result = await executePhase(
                 intent.phase,
                 state,
                 stream,
                 token,
                 request,
-                (_, allStaged) => {
-                    KickstartPanel.pushState({
-                        ...state,
-                        artifacts: {
-                            stagedFiles: allStaged,
-                            savedToDisk: false,
-                        },
-                    });
-                },
+                () => {},
                 extensionContext.storageUri,
             );
 
@@ -207,7 +192,6 @@ export async function defaultHandler(
                     retryable: result.retryable ?? false,
                 };
                 await saveState(extensionContext, workspaceFolder, state);
-                KickstartPanel.pushState(state);
                 reportKickstartTelemetry(`phase-${intent.phase}.failed`);
                 return { metadata: { command: `phase-${intent.phase}`, error: result.error } };
             }
@@ -236,7 +220,6 @@ export async function defaultHandler(
             }
             state.lastError = undefined;
             await saveState(extensionContext, workspaceFolder, state);
-            KickstartPanel.pushState(state);
 
             stream.markdown(renderProgress(state.currentPhase));
 
