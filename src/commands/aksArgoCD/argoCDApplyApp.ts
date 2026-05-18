@@ -26,7 +26,8 @@ import { failed } from "../utils/errorable";
 import { getAuthenticatedKubeconfigYaml } from "../utils/clusters";
 import { longRunning } from "../utils/host";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
-import { getOutputChannel } from "./argoCDInstall";
+import { getOutputChannel, detectManagedArgoCDExtension, ArgoCDInstallMethod } from "./argoCDInstall";
+import { runWifBootstrap } from "./argoCDWifBootstrap";
 
 // ---------------------------------------------------------------------------
 // Type guard — validate that a parsed YAML doc is an Argo CD Application
@@ -355,6 +356,35 @@ async function openArgoCDUI(
  *   "private" — repo exists and is private (credentials required)
  *   "unknown" — no silent session, API error, or non-GitHub URL
  */
+
+// ---------------------------------------------------------------------------
+// Helper: classify the Git/OCI repo host so the post-apply menu can hint at
+// Workload Identity Federation for Azure sources.
+//
+// The Azure-managed Argo CD extension (public preview, Mar 2026) supports
+// federated identity to ACR and Azure DevOps, which removes the need to
+// store long-lived PATs/SSH keys as Kubernetes Secrets.  When the repoURL
+// of an applied Application points at an Azure source, we surface that path
+// instead of (or alongside) the classic PAT flow.
+//
+// Reference: https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd
+// ---------------------------------------------------------------------------
+
+export type AzureRepoHost = "acr" | "azure-devops" | "other";
+
+export function classifyAzureRepoHost(repoUrl: string): AzureRepoHost {
+    const url = repoUrl.trim().toLowerCase();
+    if (!url) return "other";
+    // ACR — Azure Container Registry (OCI Helm/manifest sources).
+    if (/(^|\/\/|@)[a-z0-9-]+\.azurecr\.io(\/|$|:)/.test(url)) return "acr";
+    // Azure DevOps Git — covers HTTPS and SSH host variants:
+    //   HTTPS: https://dev.azure.com/<org>/...    or  https://<org>.visualstudio.com/...
+    //   SSH:   git@ssh.dev.azure.com:v3/<org>/... or  <org>@vs-ssh.visualstudio.com:v3/...
+    if (/(^|\/\/|@)(ssh\.)?dev\.azure\.com(\/|$|:)/.test(url)) return "azure-devops";
+    if (/(^|\/\/|@)(vs-ssh\.)?[a-z0-9-]+\.visualstudio\.com(\/|$|:)/.test(url)) return "azure-devops";
+    return "other";
+}
+
 async function probeGitHubRepoVisibility(repoUrl: string): Promise<"public" | "private" | "unknown"> {
     const urlMatch = repoUrl.trim().match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?\s*$/i);
     if (!urlMatch) return "unknown";
@@ -659,9 +689,10 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         const repoUrl = doc.spec?.source?.repoURL || "";
         const isGitHub = /github\.com/i.test(repoUrl);
 
-        const [authMode, repoVisibility] = await Promise.all([
+        const [authMode, repoVisibility, installMethod] = await Promise.all([
             detectArgoCDAuthMode(kubectl, kubeConfigFile.filePath),
             isGitHub ? probeGitHubRepoVisibility(repoUrl) : Promise.resolve("unknown" as const),
+            detectManagedArgoCDExtension(kubectl, kubeConfigFile.filePath),
         ]);
 
         // Brief success toast.
@@ -679,6 +710,7 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
             repoUrl,
             authMode,
             repoVisibility,
+            installMethod,
         );
     } finally {
         kubeConfigFile.dispose();
@@ -698,6 +730,7 @@ export async function argoCDPostApplyActions(
     repoUrlArg?: unknown,
     authModeArg?: unknown,
     repoVisibilityArg?: unknown,
+    installMethodArg?: unknown,
 ): Promise<void> {
     // When called from the command palette we have no pre-resolved context,
     // so resolve kubectl + cluster fresh from the active kubeconfig.
@@ -708,6 +741,7 @@ export async function argoCDPostApplyActions(
     let repoUrl = "";
     let authMode: "sso" | "admin-password";
     let repoVisibility: "public" | "private" | "unknown";
+    let installMethod: ArgoCDInstallMethod;
     let ownedTempFile: Awaited<ReturnType<typeof createTempFile>> | undefined;
 
     // If called programmatically (from argoCDApplyApp) all args are provided.
@@ -741,12 +775,14 @@ export async function argoCDPostApplyActions(
         }
 
         const isGitHub = /github\.com/i.test(repoUrl);
-        const [detectedAuth, detectedVisibility] = await Promise.all([
+        const [detectedAuth, detectedVisibility, detectedInstallMethod] = await Promise.all([
             detectArgoCDAuthMode(kubectl, kubeConfigFilePath),
             isGitHub ? probeGitHubRepoVisibility(repoUrl) : Promise.resolve("unknown" as const),
+            detectManagedArgoCDExtension(kubectl, kubeConfigFilePath),
         ]);
         authMode = detectedAuth;
         repoVisibility = detectedVisibility;
+        installMethod = detectedInstallMethod;
     } else {
         kubectl = kubectlArg as k8s.APIAvailable<k8s.KubectlV1>;
         kubeConfigFilePath = kubeConfigFileArg as string;
@@ -755,12 +791,20 @@ export async function argoCDPostApplyActions(
         repoUrl = repoUrlArg as string;
         authMode = authModeArg as "sso" | "admin-password";
         repoVisibility = repoVisibilityArg as "public" | "private" | "unknown";
+        installMethod = (installMethodArg as ArgoCDInstallMethod | undefined) ?? "unknown";
     }
 
     try {
         interface ActionItem extends vscode.QuickPickItem {
             id: string;
         }
+        const azureHost = classifyAzureRepoHost(repoUrl);
+        // Only surface the Workload Identity hint when we have positive
+        // signal that the cluster is running the Azure-managed Argo CD
+        // extension (managed-by label) or has Entra ID SSO configured.
+        // Otherwise the linked Learn flow would not apply to the user's
+        // install path.
+        const showWifHint = azureHost !== "other" && (installMethod === "managed" || authMode === "sso");
         const actionItems: ActionItem[] = [
             {
                 label: "$(browser) Open Argo CD UI",
@@ -770,6 +814,20 @@ export async function argoCDPostApplyActions(
                         : l10n.t("Open the Argo CD dashboard in your browser"),
                 id: "open_ui",
             },
+            ...(showWifHint
+                ? [
+                      {
+                          label:
+                              azureHost === "acr"
+                                  ? "$(azure) Configure Workload Identity for ACR"
+                                  : "$(azure) Configure Workload Identity for Azure DevOps",
+                          description: l10n.t(
+                              "Open Microsoft Learn — federate Argo CD to Azure without long-lived secrets",
+                          ),
+                          id: "azure_wif",
+                      } as ActionItem,
+                  ]
+                : []),
             ...(repoVisibility === "private"
                 ? [
                       {
@@ -805,6 +863,20 @@ export async function argoCDPostApplyActions(
 
             if (pick.id === "open_ui") {
                 await openArgoCDUI(kubectl, kubeConfigFilePath, clusterName);
+            } else if (pick.id === "azure_wif") {
+                // When the Azure-managed extension is detected, run the
+                // guided WIF bootstrap helper.  Otherwise fall back to the
+                // generic Microsoft Learn tutorial (covers manual /
+                // upstream installs configured against Entra ID by hand).
+                if (installMethod === "managed") {
+                    await runWifBootstrap(kubectl, kubeConfigFilePath, azureHost);
+                } else {
+                    await vscode.env.openExternal(
+                        vscode.Uri.parse(
+                            "https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd",
+                        ),
+                    );
+                }
             } else if (pick.id === "connect_repo") {
                 await connectPrivateGitHubRepo(kubectl, kubeConfigFilePath, repoUrl);
             } else if (pick.id === "open_docs") {
