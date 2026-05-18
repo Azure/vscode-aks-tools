@@ -95,12 +95,12 @@
                     {
                         "id": "openKickstart",
                         "title": "Start Kickstart",
-                        "description": "Analyze your project, generate a Dockerfile and Kubernetes manifests, build, and deploy — all from the chat panel.\n\n[Start Kickstart](command:aks.kickstart.openChat)",
+                        "description": "Analyze your project, generate a Dockerfile and Kubernetes manifests, build, and deploy — all from the chat panel.\n\n[Launch Kickstart](command:aks.kickstart.launchExperience)",
                         "media": {
                             "markdown": "./docs/book/src/features/kickstart.md"
                         },
                         "completionEvents": [
-                            "onCommand:aks.kickstart.openChat"
+                            "onCommand:aks.kickstart.launchExperience"
                         ]
                     }
                 ]
@@ -283,44 +283,8 @@
                 }
             },
             {
-                "command": "aks.kickstartContainerization",
-                "title": "Kickstart Containerization",
-                "category": "Azure Kubernetes Service",
-                "enablement": "config.aks.kickstartEnabledPreview"
-            },
-            {
-                "command": "aks.kickstart.useWorkspace",
-                "title": "Use current workspace",
-                "category": "Azure Kubernetes Service",
-                "enablement": "config.aks.kickstartEnabledPreview"
-            },
-            {
-                "command": "aks.kickstart.buildAndPush",
-                "title": "Build & Push to ACR",
-                "category": "Azure Kubernetes Service",
-                "enablement": "config.aks.kickstartEnabledPreview"
-            },
-            {
-                "command": "aks.kickstart.useSample",
-                "title": "Use a sample",
-                "category": "Azure Kubernetes Service",
-                "enablement": "config.aks.kickstartEnabledPreview"
-            },
-            {
-                "command": "aks.kickstart.acceptAll",
-                "title": "Save All Kickstart Files to Project",
-                "category": "Azure Kubernetes Service",
-                "enablement": "config.aks.kickstartEnabledPreview"
-            },
-            {
-                "command": "aks.kickstart.deploy",
-                "title": "Deploy to AKS",
-                "category": "Azure Kubernetes Service",
-                "enablement": "config.aks.kickstartEnabledPreview"
-            },
-            {
                 "command": "aks.kickstart.launchExperience",
-                "title": "Launch Kickstart Experience",
+                "title": "Launch Kickstart",
                 "category": "Azure Kubernetes Service",
                 "enablement": "config.aks.kickstartEnabledPreview"
             },
@@ -720,7 +684,7 @@
                     "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)"
                 },
                 {
-                    "command": "aks.kickstartContainerization",
+                    "command": "aks.kickstart.launchExperience",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.kickstartEnabledPreview",
                     "group": "7@3"
                 },
