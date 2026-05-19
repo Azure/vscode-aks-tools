@@ -1035,7 +1035,7 @@
         "@types/sinon": "^21.0.1",
         "@types/tmp": "^0.2.6",
         "@types/uuid": "^11.0.0",
-        "@types/vscode": "^1.110.0",
+        "@types/vscode": "^1.120.0",
         "@typescript-eslint/eslint-plugin": "^8.59.3",
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
