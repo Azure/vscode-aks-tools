@@ -69,7 +69,7 @@ import aksFleetProperties from "./commands/aksFleetProperties/askFleetProperties
 import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import * as fs from "fs";
-import { addMcpServerToUserSettings } from "./commands/aksMCP/aksMCPServer";
+import { registerAksMcpServerProvider } from "./commands/aksMCP/aksMCPServer";
 import { aksQuickActions, initializeQuickActions } from "./commands/quickActions/aksQuickActions";
 import {
     runContainerAssist,
@@ -102,6 +102,8 @@ export async function activate(context: vscode.ExtensionContext) {
     setAssetContext(context);
 
     registerUriHandler(context);
+
+    registerAksMcpServerProvider(context);
 
     // Create and register the Azure session provider before accessing it.
     activateAzureSessionProvider(context);
@@ -173,7 +175,6 @@ export async function activate(context: vscode.ExtensionContext) {
         //registerCommandWithTelemetry("aks.aksAutomatedDeployments", aksAutomatedDeployments);
         registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
-        registerCommandWithTelemetry("aks.aksSetupMCPServerCommands", addMcpServerToUserSettings);
         registerCommandWithTelemetry("aks.quickActions", aksQuickActions);
         registerCommandWithTelemetry("aks.runContainerAssist", runContainerAssist);
         registerCommandWithTelemetry("aks.containerizeApp", containerizeApp);
