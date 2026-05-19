@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as fs from "fs/promises";
 import { ExistingFilesCheckResult } from "./types";
 import { logger } from "./logger";
 
@@ -127,7 +128,7 @@ export async function scanForK8sManifests(rootPath: string): Promise<string[]> {
 /**
  * Generic depth-limited directory walker. Calls `onFile` for each file found.
  * Skips excluded directories. The callback can be async.
- * Handles symlinks via bitwise FileType checks.
+ * Uses Node.js fs/promises for reliable performance across all environments.
  */
 async function walkDirectory(
     dirPath: string,
@@ -140,16 +141,14 @@ async function walkDirectory(
     }
 
     try {
-        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+        const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
-        for (const [name, type] of entries) {
-            const fullPath = path.join(dirPath, name);
-            const isFile = (type & vscode.FileType.File) !== 0;
-            const isDir = (type & vscode.FileType.Directory) !== 0;
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
 
-            if (isFile) {
-                await onFile(fullPath, name);
-            } else if (isDir && !EXCLUDED_DIRS.has(name)) {
+            if (entry.isFile()) {
+                await onFile(fullPath, entry.name);
+            } else if (entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name)) {
                 await walkDirectory(fullPath, maxDepth, currentDepth + 1, onFile);
             }
         }
@@ -161,12 +160,19 @@ async function walkDirectory(
 /**
  * Validates if a YAML file is a Kubernetes manifest.
  * Handles both LF and CRLF line endings.
+ * Uses Node.js fs/promises for reliable performance across all environments.
  */
 async function isKubernetesManifest(filePath: string): Promise<boolean> {
     try {
-        const content = await vscode.workspace.fs.readFile(vscode.Uri.file(filePath));
-        const previewSize = Math.min(content.length, 1024);
-        const text = Buffer.from(content.slice(0, previewSize)).toString("utf-8");
+        const handle = await fs.open(filePath, "r");
+        let text: string;
+        try {
+            const buffer = Buffer.alloc(1024);
+            const { bytesRead } = await handle.read(buffer, 0, 1024, 0);
+            text = buffer.slice(0, bytesRead).toString("utf-8");
+        } finally {
+            await handle.close();
+        }
 
         // Must have both apiVersion and kind (\r? handles CRLF)
         const hasApiVersion = /^apiVersion:\s*.+$/m.test(text);

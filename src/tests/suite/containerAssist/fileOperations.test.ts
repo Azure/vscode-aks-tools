@@ -119,7 +119,7 @@ describe("fileOperations", () => {
             assert.strictEqual(result.length, 1);
             assert.ok(result[0].includes(path.join("a", "b", "c", "Dockerfile")));
             assert.ok(!result[0].includes(path.join("c", "d", "Dockerfile")));
-        }).timeout(10_000);
+        });
 
         it("skips Java/IDE excluded directories", async () => {
             const dir = path.join(dockerDir, "java-excluded");
@@ -270,6 +270,6 @@ describe("fileOperations", () => {
             const result = await scanForK8sManifests(dir);
 
             assert.strictEqual(result.length, 1);
-        }).timeout(10_000);
+        });
     });
 });
