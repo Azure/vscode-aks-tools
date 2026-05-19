@@ -82,6 +82,10 @@ export function registerKickstartCommands(
     registerCommandWithTelemetry("aks.kickstart.acceptAll", async () => {
         await triggerAcceptAll(context);
     });
+
+    registerCommandWithTelemetry("aks.kickstart.handoffToPR", async () => {
+        await openChat("@kickstart create a pull request");
+    });
 }
 
 export function isKickstartEnabled(): boolean {

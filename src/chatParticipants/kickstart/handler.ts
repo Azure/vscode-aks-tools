@@ -170,6 +170,52 @@ export async function defaultHandler(
             return { metadata: { command: "create" } };
         }
 
+        if (intent.action === "handoff") {
+            const files = state.artifacts?.stagedFiles?.map((f) => f.filename) ?? [];
+            if (files.length === 0) {
+                stream.markdown(
+                    "**No artifacts to commit.** Run `@kickstart prepare` first to generate Dockerfile and Kubernetes manifests, then save them to your project.",
+                );
+                reportKickstartTelemetry("handoff.no-artifacts");
+                return { metadata: { command: "handoff", error: "no artifacts" } };
+            }
+
+            if (!state.artifacts?.savedToDisk) {
+                stream.markdown(
+                    "**Artifacts not saved yet.** Click **Save to project** first, then run **Create pull request**.",
+                );
+                stream.button({ command: "aks.kickstart.acceptAll", title: "💾 Save to project" });
+                reportKickstartTelemetry("handoff.not-saved");
+                return { metadata: { command: "handoff", error: "not saved" } };
+            }
+
+            stream.progress("Creating GitHub pull request...");
+            const { handoffToPullRequest } = await import("./handoff");
+            const result = await handoffToPullRequest({
+                workspacePath: state.projectPath ?? workspaceFolder,
+                files,
+                token,
+                toolInvocationToken: request.toolInvocationToken,
+            });
+
+            if (!result.succeeded) {
+                stream.markdown(`**Pull request creation failed:**\n\n${result.error}`);
+                reportKickstartTelemetry("handoff.failed");
+                return { metadata: { command: "handoff", error: result.error } };
+            }
+
+            const { pullRequest, branch, repo } = result.result;
+            stream.markdown(
+                `✅ **Pull request created!**\n\n` +
+                    `**Repo:** ${repo.owner}/${repo.repo}\n` +
+                    `**Branch:** \`${branch}\`\n` +
+                    `**PR #${pullRequest.prNumber}**\n\n`,
+            );
+            stream.anchor(vscode.Uri.parse(pullRequest.htmlUrl), `🔗 Open PR #${pullRequest.prNumber}`);
+            reportKickstartTelemetry("handoff.completed");
+            return { metadata: { command: "handoff", prUrl: pullRequest.htmlUrl } };
+        }
+
         if (intent.action === "run" && intent.phase !== undefined) {
             if (!state.projectPath) {
                 state.projectPath = workspaceFolder;
@@ -259,6 +305,13 @@ export async function defaultHandler(
                 if (state.config) {
                     const portalUrl = `https://portal.azure.com/#@/resource/subscriptions/${state.config.subscriptionId}/resourceGroups/${state.config.resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${state.config.clusterName}/overview`;
                     stream.anchor(vscode.Uri.parse(portalUrl), "☁️ Open in Azure Portal");
+                }
+                if (state.artifacts?.savedToDisk) {
+                    stream.markdown("\n\n**Want to commit these changes?**\n");
+                    stream.button({
+                        command: "aks.kickstart.handoffToPR",
+                        title: "🚀 Create pull request",
+                    });
                 }
             } else if (state.currentPhase === Phase.BUILD && state.artifacts && !state.artifacts.savedToDisk) {
                 stream.markdown(
