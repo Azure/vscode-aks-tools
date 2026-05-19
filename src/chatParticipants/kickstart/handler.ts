@@ -7,6 +7,7 @@ import { renderProgress, renderStateSummary, phaseName } from "./progress";
 import { reportKickstartTelemetry } from "./telemetry";
 import { getAssetContext } from "../../assets";
 import { runGuardrails, getDefaultGuardrails } from "./guardrails";
+import { LMClient } from "../../commands/aksContainerAssist/lmClient";
 
 /**
  * Returns true if this is the first kickstart turn in this chat thread
@@ -125,10 +126,16 @@ export async function defaultHandler(
             return { metadata: { command: "welcome" } };
         }
 
-        const intent = detectIntent(prompt, request.command, state);
+        const lmClient = new LMClient();
+        await lmClient.ensureModel();
+        const { intent, source: intentSource } = await detectIntent(prompt, request.command, state, {
+            lmClient,
+            token,
+        });
 
         reportKickstartTelemetry(
             intent.action === "run" && intent.phase ? `phase-${intent.phase}.invoked` : `${intent.action}.invoked`,
+            { intentSource },
         );
 
         if (intent.action === "status") {
