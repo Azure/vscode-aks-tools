@@ -206,8 +206,9 @@ export function validateMultiContainerWorkflowConfig(config: MultiContainerWorkf
     if (!config.azureContainerRegistry || config.azureContainerRegistry.trim() === "") {
         errors.push("Azure Container Registry name is required");
     }
-    if (!config.acrResourceGroup || config.acrResourceGroup.trim() === "")
+    if (!config.acrResourceGroup || config.acrResourceGroup.trim() === "") {
         errors.push("ACR resource group is required");
+    }
     if (!config.clusterName || config.clusterName.trim() === "") errors.push("Cluster name is required");
     if (!config.clusterResourceGroup || config.clusterResourceGroup.trim() === "") {
         errors.push("Cluster resource group is required");
