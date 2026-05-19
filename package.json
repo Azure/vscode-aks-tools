@@ -1179,7 +1179,7 @@
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@microsoft/vscode-azext-utils": "^4.0.7",
         "@octokit/rest": "^22.0.1",
-        "@vscode/extension-telemetry": "^1.5.1",
+        "@vscode/extension-telemetry": "^1.5.2",
         "@vscode/l10n": "^0.0.18",
         "containerization-assist-mcp": "^1.4.0",
         "decompress": "^4.2.1",
