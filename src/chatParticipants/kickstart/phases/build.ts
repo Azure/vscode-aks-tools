@@ -38,11 +38,13 @@ export async function buildPhase(
 
         stream.markdown("🐳 **Building and pushing container image**\n\n");
 
-        // The build context is always the workspace directory so that the Dockerfile
-        // can reference source files (e.g. .mvn/, pom.xml, src/) that live there.
-        // When artifacts have not yet been saved to disk, the generated Dockerfile
-        // lives in the staging directory, so we pass its path via --file.
-        const buildContextPath = workspacePath;
+        // The build context is the directory containing the Dockerfile (the module
+        // directory for monorepos, or the workspace root for single-module projects).
+        // This ensures relative paths inside the Dockerfile (e.g. `COPY requirements.txt .`)
+        // resolve against the module's source files rather than the workspace root.
+        // When artifacts have not yet been saved to disk the generated Dockerfile
+        // lives in the staging directory, so we pass its path via --file while still
+        // using the workspace module directory as the build context.
 
         // Collect Dockerfile build targets. Monorepos have one Dockerfile per module
         // (staged as "<modulePath>/Dockerfile"); single-module projects have one
@@ -51,6 +53,7 @@ export async function buildPhase(
             dockerfilePath: string;
             dockerfileFlag: string;
             imageName: string;
+            contextPath: string;
         }
 
         const workspaceFolderName = path.basename(workspacePath);
@@ -81,6 +84,7 @@ export async function buildPhase(
                     dockerfilePath: df,
                     dockerfileFlag: isRoot ? "" : `--file "${df}"`,
                     imageName: `${baseImageName}${suffix}`,
+                    contextPath: path.dirname(df),
                 });
             }
         } else {
@@ -110,6 +114,7 @@ export async function buildPhase(
                     dockerfilePath: fsPath,
                     dockerfileFlag: `--file "${fsPath}"`,
                     imageName: `${baseImageName}${suffix}`,
+                    contextPath: isRoot ? workspacePath : path.join(workspacePath, relDir),
                 });
             }
             stream.markdown(
@@ -167,7 +172,12 @@ export async function buildPhase(
             const buildCommand =
                 `az acr build --registry ${config.acrName} --image ${target.imageName}:${imageTag} --subscription ${config.subscriptionId} ${target.dockerfileFlag} .`.trimEnd();
 
-            const buildResult = await runInTerminal(buildCommand, buildContextPath, token, request.toolInvocationToken);
+            const buildResult = await runInTerminal(
+                buildCommand,
+                target.contextPath,
+                token,
+                request.toolInvocationToken,
+            );
 
             if (!buildResult.succeeded) {
                 return {
@@ -182,7 +192,7 @@ export async function buildPhase(
             const verifyCommand = `az acr repository show-tags --name ${config.acrName} --repository ${target.imageName} --subscription ${config.subscriptionId} --orderby time_desc --output json`;
             const verifyResult = await runInTerminal(
                 verifyCommand,
-                buildContextPath,
+                target.contextPath,
                 token,
                 request.toolInvocationToken,
             );
