@@ -189,9 +189,43 @@ export function validateWorkflowConfig(config: WorkflowConfig): string[] {
  * Sanitizes a name to a valid GitHub Actions job-id segment.
  * Job IDs must start with a letter/underscore and contain only [A-Za-z0-9_-].
  */
-function sanitizeJobId(name: string): string {
+export function sanitizeJobId(name: string): string {
     const cleaned = name.replace(/[^A-Za-z0-9_-]/g, "-").replace(/-+/g, "-");
     return /^[A-Za-z_]/.test(cleaned) ? cleaned : `c-${cleaned || "container"}`;
+}
+
+/**
+ * Sanitizes a name to a valid ACR / OCI image repository segment.
+ * Image repos must be lowercase and only contain [a-z0-9._-]. Leading and
+ * trailing separators are stripped; consecutive separators are collapsed.
+ * Falls back to "container" if sanitization leaves the value empty.
+ */
+export function sanitizeImageName(name: string): string {
+    const cleaned = name
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^[-._]+|[-._]+$/g, "");
+    return cleaned.length > 0 ? cleaned : "container";
+}
+
+/**
+ * Re-indents a literal/folded block scalar (one whose first line is `|` or
+ * `>`) so its content lines are indented to `targetIndent` spaces. Plain
+ * scalars are returned unchanged. Used to embed a manifest list under a
+ * nested job env block where the default 8-space indentation produced by
+ * `formatManifestPathForYamlBlock` would otherwise outdent the content and
+ * produce invalid YAML.
+ */
+export function reindentBlockScalar(value: string, targetIndent: number): string {
+    if (!value.startsWith("|") && !value.startsWith(">")) return value;
+    const [header, ...rest] = value.split("\n");
+    const pad = " ".repeat(targetIndent);
+    const lines = rest.map((line) => {
+        const trimmed = line.replace(/^\s+/, "");
+        return trimmed.length === 0 ? "" : pad + trimmed;
+    });
+    return [header, ...lines].join("\n");
 }
 
 /**
@@ -239,15 +273,22 @@ export function validateMultiContainerWorkflowConfig(config: MultiContainerWorkf
 /**
  * Build the per-container build job YAML fragment.
  * Indented with 4 spaces (matching the existing single-container template style).
+ *
+ * `CONTAINER_NAME` is sanitized to a valid ACR image repository segment
+ * (lowercase, [a-z0-9._-]) because it is used as the image repo in
+ * `az acr build --image`. `DOCKER_FILE` and `BUILD_CONTEXT_PATH` are
+ * double-quoted in the shell command so paths containing spaces remain
+ * a single argument.
  */
 function renderBuildJob(jobId: string, container: ContainerJobConfig): string {
+    const imageName = sanitizeImageName(container.containerName);
     return `    build-${jobId}:
         permissions:
             contents: read
             id-token: write
         runs-on: ubuntu-latest
         env:
-            CONTAINER_NAME: ${container.containerName}
+            CONTAINER_NAME: ${imageName}
             DOCKER_FILE: ${container.dockerFile}
             BUILD_CONTEXT_PATH: ${container.buildContextPath}
         steps:
@@ -266,13 +307,19 @@ function renderBuildJob(jobId: string, container: ContainerJobConfig): string {
 
             - name: Build and push image to ACR
               run: |
-                  az acr build --image \${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/\${{ env.CONTAINER_NAME }}:\${{ github.sha }} --registry \${{ env.AZURE_CONTAINER_REGISTRY }} -g \${{ env.ACR_RESOURCE_GROUP }} -f \${{ env.DOCKER_FILE }} \${{ env.BUILD_CONTEXT_PATH }}
+                  az acr build --image \${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/\${{ env.CONTAINER_NAME }}:\${{ github.sha }} --registry \${{ env.AZURE_CONTAINER_REGISTRY }} -g \${{ env.ACR_RESOURCE_GROUP }} -f "\${{ env.DOCKER_FILE }}" "\${{ env.BUILD_CONTEXT_PATH }}"
 `;
 }
 
 /** Per-container deploy job YAML fragment (standard, non-managed namespace path). */
 function renderDeployJob(jobId: string, container: ContainerJobConfig, isManagedNamespace: boolean): string {
-    const manifestPath = container.deploymentManifestPath ?? "";
+    // The block scalar produced by formatManifestPathForYamlBlock is indented for
+    // the top-level (4-space) env block used by the single-container template;
+    // here the key sits at 12 spaces, so re-indent the content lines to 16
+    // spaces to keep the YAML valid for multi-manifest configs.
+    const rawManifestPath = container.deploymentManifestPath ?? "";
+    const manifestPath = reindentBlockScalar(rawManifestPath, 16);
+    const imageName = sanitizeImageName(container.containerName);
     const contextStep = isManagedNamespace
         ? `            - name: Get K8s context (managed namespace)
               run: |
@@ -298,6 +345,23 @@ function renderDeployJob(jobId: string, container: ContainerJobConfig, isManaged
                   use-kubelogin: "true"
 `;
 
+    // Managed-namespace workflows additionally annotate the namespace with
+    // workload identity metadata, matching the single-container managed
+    // template (resources/yaml/aks-deploy-managed-ns.template.yaml).
+    const annotateNamespaceStep = isManagedNamespace
+        ? `            - name: Annotate namespace
+              run: |
+                  az aks namespace update \\
+                    --resource-group \${{ env.CLUSTER_RESOURCE_GROUP }} \\
+                    --cluster-name \${{ env.CLUSTER_NAME }} \\
+                    --name \${{ env.NAMESPACE }} \\
+                    --annotations \\
+                      aks-project/workload-identity-id="\${{ secrets.AZURE_CLIENT_ID }}" \\
+                      aks-project/workload-identity-tenant="\${{ secrets.AZURE_TENANT_ID }}"
+
+`
+        : "";
+
     return `    deploy-${jobId}:
         permissions:
             actions: read
@@ -306,7 +370,7 @@ function renderDeployJob(jobId: string, container: ContainerJobConfig, isManaged
         runs-on: ubuntu-latest
         needs: [build-${jobId}]
         env:
-            CONTAINER_NAME: ${container.containerName}
+            CONTAINER_NAME: ${imageName}
             DEPLOYMENT_MANIFEST_PATH: ${manifestPath}
         steps:
             - uses: actions/checkout@v4
@@ -333,7 +397,7 @@ ${contextStep}
                       \${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/\${{ env.CONTAINER_NAME }}:\${{ github.sha }}
                   namespace: \${{ env.NAMESPACE }}
 
-            - name: Annotate deployment
+${annotateNamespaceStep}            - name: Annotate deployment
               run: |
                   if kubectl get deployment -n \${{ env.NAMESPACE }} --no-headers 2>/dev/null | grep -q .; then
                     kubectl annotate deployment --all -n \${{ env.NAMESPACE }} \\

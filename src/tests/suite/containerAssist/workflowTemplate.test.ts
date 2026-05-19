@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import * as yaml from "js-yaml";
 import {
     renderWorkflowTemplate,
     validateWorkflowConfig,
@@ -444,6 +445,99 @@ describe("Multi-Container Workflow Template Tests", () => {
             // Job id must only contain [A-Za-z0-9_-] and start with letter/underscore
             const buildJobMatch = yaml.match(/^ {4}(build-[A-Za-z_][A-Za-z0-9_-]*):$/m);
             assert.ok(buildJobMatch, `Build job id should be sanitized; got:\n${yaml}`);
+        });
+
+        it("emits a lowercase OCI-safe image repo (CONTAINER_NAME) in build/deploy env", () => {
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [
+                    {
+                        containerName: "My Service@v1",
+                        dockerFile: "Dockerfile",
+                        buildContextPath: "svc",
+                        deploymentManifestPath: "svc/k8s/dep.yaml",
+                    },
+                ],
+            };
+            const rendered = renderMultiContainerWorkflowTemplate(cfg);
+            // No uppercase characters or '@' allowed in the env value emitted
+            // as CONTAINER_NAME (the value is used as the ACR image repo).
+            const containerNameLines = rendered.split("\n").filter((line) => line.includes("CONTAINER_NAME:"));
+            assert.ok(containerNameLines.length >= 1, "Should emit at least one CONTAINER_NAME line");
+            for (const line of containerNameLines) {
+                const value = line.split("CONTAINER_NAME:")[1].trim();
+                assert.ok(
+                    /^[a-z0-9._-]+$/.test(value),
+                    `CONTAINER_NAME must be OCI-safe (lowercase [a-z0-9._-]); got "${value}"`,
+                );
+            }
+        });
+
+        it("double-quotes DOCKER_FILE and BUILD_CONTEXT_PATH in the az acr build command", () => {
+            const rendered = renderMultiContainerWorkflowTemplate(validMultiConfig);
+            // Paths can contain spaces; without quotes the shell would split them.
+            assert.ok(
+                rendered.includes('-f "${{ env.DOCKER_FILE }}" "${{ env.BUILD_CONTEXT_PATH }}"'),
+                "az acr build should quote DOCKER_FILE and BUILD_CONTEXT_PATH",
+            );
+        });
+
+        it("renders an Annotate namespace step in the multi-container managed-namespace deploy job", () => {
+            const managed: MultiContainerWorkflowConfig = { ...validMultiConfig, isManagedNamespace: true };
+            const rendered = renderMultiContainerWorkflowTemplate(managed);
+            assert.ok(
+                rendered.includes("Annotate namespace"),
+                "Managed-namespace multi-container deploy job should annotate the namespace",
+            );
+            assert.ok(rendered.includes("az aks namespace update"));
+            assert.ok(rendered.includes("aks-project/workload-identity-id="));
+            assert.ok(rendered.includes("aks-project/workload-identity-tenant="));
+        });
+
+        it("produces structurally valid YAML even with multi-manifest block scalars", () => {
+            // Reproduces the exact shape formatManifestPathForYamlBlock produces
+            // for multiple manifests \u2014 a `|` block scalar with content indented
+            // for the single-container (workflow-level) env. The multi-container
+            // renderer must re-indent this so it stays valid under a per-job env.
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [
+                    {
+                        containerName: "api",
+                        dockerFile: "Dockerfile",
+                        buildContextPath: "api",
+                        deploymentManifestPath:
+                            "|\n        api/k8s/deployment.yaml\n        api/k8s/service.yaml\n        api/k8s/ingress.yaml",
+                    },
+                ],
+            };
+            const rendered = renderMultiContainerWorkflowTemplate(cfg);
+
+            let parsed: unknown;
+            assert.doesNotThrow(() => {
+                parsed = yaml.load(rendered);
+            }, `Rendered workflow must be valid YAML. Rendered:\n${rendered}`);
+
+            // Inspect the parsed structure to confirm the manifest list survived
+            // re-indentation and is attached to the expected env key.
+            const root = parsed as {
+                jobs?: Record<string, { env?: Record<string, string>; needs?: string[] }>;
+            };
+            assert.ok(root.jobs, "Parsed YAML should have a top-level jobs map");
+            const deployApi = root.jobs!["deploy-api"];
+            assert.ok(deployApi, "Should contain a deploy-api job");
+            const manifestEnv = deployApi.env?.DEPLOYMENT_MANIFEST_PATH;
+            assert.ok(
+                typeof manifestEnv === "string" && manifestEnv.includes("api/k8s/deployment.yaml"),
+                `deploy-api env.DEPLOYMENT_MANIFEST_PATH should contain the manifests; got ${JSON.stringify(manifestEnv)}`,
+            );
+            assert.ok(manifestEnv!.includes("api/k8s/service.yaml"));
+            assert.ok(manifestEnv!.includes("api/k8s/ingress.yaml"));
+        });
+
+        it("produces structurally valid YAML for the standard multi-container config", () => {
+            const rendered = renderMultiContainerWorkflowTemplate(validMultiConfig);
+            assert.doesNotThrow(() => yaml.load(rendered), `Rendered workflow must be valid YAML:\n${rendered}`);
         });
     });
 

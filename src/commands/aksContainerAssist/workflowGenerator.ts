@@ -17,6 +17,7 @@ import {
     MultiContainerWorkflowConfig,
     renderMultiContainerWorkflowTemplate,
     validateMultiContainerWorkflowConfig,
+    sanitizeJobId,
 } from "./workflowTemplate";
 import {
     writeWorkflowFile,
@@ -450,12 +451,15 @@ async function promptForManifestSelection(
     serviceName: string,
 ): Promise<string[] | undefined> {
     if (detectedPaths.length === 0) {
-        const chosen = await promptForManifestWithBrowse(serviceName, workspaceRoot);
+        // Single-container mode requires at least one manifest, so don't offer
+        // Skip here — it would be misleading (we'd just warn and cancel).
+        const chosen = await promptForManifestWithBrowse(serviceName, workspaceRoot, { allowSkip: false });
         if (chosen === undefined) return undefined;
-        // Treat "Skip" (empty array) the same as cancel in single-container mode, since
-        // a deploy job without manifests is meaningless.
         if (chosen.length === 0) {
-            void vscode.window.showWarningMessage(
+            // Defensive: with allowSkip=false the dialog never returns [], but
+            // keep the warning as a safety net in case the user dismissed an
+            // empty Browse selection.
+            await vscode.window.showWarningMessage(
                 l10n.t("At least one Kubernetes manifest path is required for the deploy job."),
             );
             return undefined;
@@ -566,9 +570,11 @@ async function promptForMultiDockerfileSelection(
         ignoreFocusOut: true,
     });
 
-    // Edge case: user unchecked everything. Inform and re-prompt once.
+    // Edge case: user unchecked everything. Inform and re-prompt once. Await
+    // the warning so the user sees why their first selection was rejected
+    // before the retry picker is shown.
     if (selection && selection.length === 0) {
-        void vscode.window.showWarningMessage(
+        await vscode.window.showWarningMessage(
             l10n.t("Select at least one Dockerfile to continue with the multi-container workflow."),
         );
         selection = await vscode.window.showQuickPick(items, {
@@ -581,15 +587,18 @@ async function promptForMultiDockerfileSelection(
 
     if (!selection || selection.length === 0) return undefined;
 
-    // De-duplicate generated container names (e.g. two services share basename).
-    const used = new Set<string>();
+    // De-duplicate generated container names. We track collisions by sanitized
+    // job id so that names that look distinct (e.g. "api@v1" and "api#v1") but
+    // collapse to the same job id ("api-v1") get differentiated here rather
+    // than failing validation later.
+    const usedJobIds = new Set<string>();
     return selection.map((item) => {
         let name = item.containerName;
         let suffix = 2;
-        while (used.has(name)) {
+        while (usedJobIds.has(sanitizeJobId(name))) {
             name = `${item.containerName}-${suffix++}`;
         }
-        used.add(name);
+        usedJobIds.add(sanitizeJobId(name));
         return { dockerfileRelToProject: item.dockerfileRelToProject, containerName: name };
     });
 }
@@ -601,18 +610,26 @@ async function promptForMultiDockerfileSelection(
  *   - `undefined`  → user cancelled the dialog (treat as cancel of the whole flow).
  *   - `[]`         → user chose "Skip" (caller decides whether to omit or treat as cancel).
  *   - `string[]`   → workspace-relative POSIX paths to the chosen manifest files.
+ *
+ * `allowSkip` (default `true`) controls whether the "Skip" choice is offered;
+ * single-container callers pass `false` because a deploy job without manifests
+ * is meaningless in that mode.
  */
-async function promptForManifestWithBrowse(serviceName: string, workspaceRoot: string): Promise<string[] | undefined> {
+async function promptForManifestWithBrowse(
+    serviceName: string,
+    workspaceRoot: string,
+    options?: { allowSkip?: boolean },
+): Promise<string[] | undefined> {
+    const allowSkip = options?.allowSkip ?? true;
     const browse = l10n.t("Browse...");
     const manual = l10n.t("Enter path manually");
     const skip = l10n.t("Skip");
 
+    const choices = allowSkip ? [browse, manual, skip] : [browse, manual];
     const choice = await vscode.window.showInformationMessage(
         l10n.t('No K8s manifests found for "{0}". How would you like to specify them?', serviceName),
         { modal: false },
-        browse,
-        manual,
-        skip,
+        ...choices,
     );
 
     if (!choice) return undefined; // dismissed
@@ -629,7 +646,30 @@ async function promptForManifestWithBrowse(serviceName: string, workspaceRoot: s
             openLabel: l10n.t("Select"),
         });
         if (!uris || uris.length === 0) return undefined;
-        return uris.map((u) => toPosixPath(path.relative(workspaceRoot, u.fsPath)));
+        // Reject anything outside the workspace — path.relative produces
+        // "../..." entries that the manual-path validator forbids and that
+        // won't exist in the checked-out repo at workflow run time.
+        const wsRootAbs = path.resolve(workspaceRoot);
+        const inWorkspace: string[] = [];
+        const outsideWorkspace: string[] = [];
+        for (const u of uris) {
+            const rel = path.relative(wsRootAbs, u.fsPath);
+            if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
+                outsideWorkspace.push(u.fsPath);
+            } else {
+                inWorkspace.push(toPosixPath(rel));
+            }
+        }
+        if (outsideWorkspace.length > 0) {
+            await vscode.window.showWarningMessage(
+                l10n.t(
+                    "Some selected manifest files are outside the workspace and were ignored: {0}",
+                    outsideWorkspace.join(", "),
+                ),
+            );
+        }
+        if (inWorkspace.length === 0) return undefined;
+        return inWorkspace;
     }
 
     // Manual path entry
