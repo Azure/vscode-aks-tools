@@ -1,47 +1,36 @@
 import { Phase, KickstartState } from "./state";
+import type { LMClient } from "../../commands/aksContainerAssist/lmClient";
+import type * as vscode from "vscode";
+import { getDefaultGuardrails } from "./guardrails";
 
-/**
- * Intent represents the user's action request parsed from natural language
- */
 export interface Intent {
     phase?: Phase;
     action: "run" | "status" | "reset" | "skip" | "create";
 }
 
 /**
- * Detects the user's intent from their prompt and command
- *
- * Priority:
- * 1. Slash commands (highest priority)
- * 2. Keyword matching (case-insensitive)
- * 3. Default behavior (continue from current phase)
- *
- * @param prompt The user's natural language prompt
- * @param command Optional slash command (e.g., "/start", "/sample")
- * @param state The current kickstart state
- * @returns An Intent object representing the parsed action
+ * Fast-path intent detection. Returns undefined if no keyword matches
+ * (signals "ambiguous, consider LLM fallback").
  */
-export function detectIntent(prompt: string, command: string | undefined, state: KickstartState): Intent {
-    // Priority 1: Slash commands
+export function detectIntentFast(
+    prompt: string,
+    command: string | undefined,
+    state: KickstartState,
+): Intent | undefined {
     if (command) {
         if (command === "/start") {
-            // Start from beginning if no prior state or already complete
             if (state.currentPhase === Phase.COMPLETE) {
                 return { action: "run", phase: Phase.ANALYZE };
             }
-            // Resume from current phase if in progress
             return { action: "run", phase: state.currentPhase };
         }
         if (command === "/sample") {
-            // Sample command triggers analysis phase (will use sample repo)
             return { action: "run", phase: Phase.ANALYZE };
         }
     }
 
-    // Priority 2: Keyword matching (case-insensitive)
     const lowerPrompt = prompt.toLowerCase();
 
-    // Create cluster keywords
     if (
         lowerPrompt.includes("create cluster") ||
         lowerPrompt.includes("create a cluster") ||
@@ -54,12 +43,10 @@ export function detectIntent(prompt: string, command: string | undefined, state:
         return { action: "create" };
     }
 
-    // Status/progress keywords
     if (lowerPrompt.includes("status") || lowerPrompt.includes("where am i") || lowerPrompt.includes("progress")) {
         return { action: "status" };
     }
 
-    // Reset/restart keywords
     if (lowerPrompt.includes("start over") || lowerPrompt.includes("reset") || lowerPrompt.includes("restart")) {
         return { action: "reset" };
     }
@@ -68,7 +55,6 @@ export function detectIntent(prompt: string, command: string | undefined, state:
         return { action: "run", phase: state.currentPhase };
     }
 
-    // Phase-specific keywords
     if (lowerPrompt.includes("analyze") || lowerPrompt.includes("scan")) {
         return { action: "run", phase: Phase.ANALYZE };
     }
@@ -98,6 +84,104 @@ export function detectIntent(prompt: string, command: string | undefined, state:
         return { action: "run", phase: Phase.VERIFY };
     }
 
-    // Priority 3: Default - continue from current phase
-    return { action: "run", phase: state.currentPhase };
+    return undefined;
+}
+
+const INTENT_CLASSIFICATION_SYSTEM_PROMPT = `You classify user intents for an AKS Kickstart workflow that helps deploy applications to Azure Kubernetes Service. The workflow has 6 phases:
+- ANALYZE (0): inspect project, detect language/framework
+- CONFIGURE (1): select Azure cluster and container registry
+- PREPARE (2): generate Dockerfile and Kubernetes manifests
+- BUILD (3): build and push container image
+- DEPLOY (4): apply manifests to the cluster
+- VERIFY (5): check pod health and service endpoint
+
+Given the user's message and current phase, choose exactly ONE intent:
+- "run" with a phase number 0-5: execute that phase
+- "status": show current progress
+- "reset": start over
+- "create": create a new AKS cluster
+
+Respond with ONLY a JSON object on a single line, no markdown, no explanation. Examples:
+{"action":"run","phase":3}
+{"action":"status"}
+{"action":"reset"}
+{"action":"create"}`;
+
+interface ParsedIntent {
+    action: string;
+    phase?: number;
+}
+
+function parseIntentJson(text: string, state: KickstartState): Intent | undefined {
+    const trimmed = text.trim();
+
+    let jsonText = trimmed;
+    const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+        jsonText = codeBlockMatch[1].trim();
+    } else {
+        const braceMatch = trimmed.match(/\{[\s\S]*\}/);
+        if (braceMatch) jsonText = braceMatch[0];
+    }
+
+    let parsed: ParsedIntent;
+    try {
+        parsed = JSON.parse(jsonText) as ParsedIntent;
+    } catch {
+        return undefined;
+    }
+
+    const validActions = ["run", "status", "reset", "skip", "create"] as const;
+    if (!validActions.includes(parsed.action as (typeof validActions)[number])) {
+        return undefined;
+    }
+
+    if (parsed.action === "run") {
+        const phase = typeof parsed.phase === "number" ? parsed.phase : state.currentPhase;
+        if (phase < Phase.ANALYZE || phase > Phase.VERIFY) {
+            return { action: "run", phase: state.currentPhase };
+        }
+        return { action: "run", phase: phase as Phase };
+    }
+
+    return { action: parsed.action as Intent["action"] };
+}
+
+export async function classifyIntentWithLM(
+    prompt: string,
+    state: KickstartState,
+    lmClient: LMClient,
+    token?: vscode.CancellationToken,
+): Promise<Intent | undefined> {
+    const userPrompt = `Current phase: ${Phase[state.currentPhase]} (${state.currentPhase})
+User message: ${prompt}`;
+
+    const result = await lmClient.sendRequest(INTENT_CLASSIFICATION_SYSTEM_PROMPT, userPrompt, token, {
+        guardrails: getDefaultGuardrails(),
+        agentName: "kickstart-intent",
+    });
+
+    if (!result.succeeded) return undefined;
+
+    return parseIntentJson(result.result, state);
+}
+
+/**
+ * Combined intent detection: keyword fast-path, then LLM fallback, then default.
+ */
+export async function detectIntent(
+    prompt: string,
+    command: string | undefined,
+    state: KickstartState,
+    options?: { lmClient?: LMClient; token?: vscode.CancellationToken },
+): Promise<{ intent: Intent; source: "keyword" | "llm" | "default" }> {
+    const fast = detectIntentFast(prompt, command, state);
+    if (fast) return { intent: fast, source: "keyword" };
+
+    if (options?.lmClient && prompt.trim().length > 0) {
+        const classified = await classifyIntentWithLM(prompt, state, options.lmClient, options.token);
+        if (classified) return { intent: classified, source: "llm" };
+    }
+
+    return { intent: { action: "run", phase: state.currentPhase }, source: "default" };
 }
