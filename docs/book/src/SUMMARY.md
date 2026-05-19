@@ -33,7 +33,7 @@
   - [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)
   - [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
   - [Create AKS Fleet Manager from VS Code](./features/aks-fleet-manager.md)
-  - [Setup AKS MCP Server from VS Code](./features/aks-mcp-server-integration.md)
+  - [AKS MCP Server](./features/aks-mcp-server-integration.md)
   - [Argo CD GitOps Integration](./features/argocd-gitops-integration.md)
 
 - [Release](./release.md)
