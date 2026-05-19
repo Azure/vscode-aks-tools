@@ -3,6 +3,9 @@ import {
     renderWorkflowTemplate,
     validateWorkflowConfig,
     WorkflowConfig,
+    MultiContainerWorkflowConfig,
+    renderMultiContainerWorkflowTemplate,
+    validateMultiContainerWorkflowConfig,
 } from "../../../commands/aksContainerAssist/workflowTemplate";
 
 describe("Workflow Template Tests", () => {
@@ -326,6 +329,174 @@ describe("Workflow Template Tests", () => {
                 result.includes('echo "KUBECONFIG=') && result.includes(">> $GITHUB_ENV"),
                 "Should export KUBECONFIG to GITHUB_ENV in the Get K8s context step",
             );
+        });
+    });
+});
+
+describe("Multi-Container Workflow Template Tests", () => {
+    const validMultiConfig: MultiContainerWorkflowConfig = {
+        workflowName: "deploy-monorepo",
+        branchName: "main",
+        acrResourceGroup: "shared-rg",
+        azureContainerRegistry: "monoacr",
+        clusterName: "mono-cluster",
+        clusterResourceGroup: "mono-cluster-rg",
+        namespace: "apps",
+        isManagedNamespace: false,
+        containers: [
+            {
+                containerName: "frontend",
+                dockerFile: "Dockerfile",
+                buildContextPath: "frontend",
+                deploymentManifestPath: "frontend/k8s/deployment.yaml",
+            },
+            {
+                containerName: "api",
+                dockerFile: "Dockerfile",
+                buildContextPath: "api",
+                deploymentManifestPath: "|\n        api/k8s/deployment.yaml\n        api/k8s/service.yaml",
+            },
+        ],
+    };
+
+    describe("renderMultiContainerWorkflowTemplate", () => {
+        it("renders one build+deploy job pair per container", () => {
+            const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
+
+            assert.ok(yaml.includes("build-frontend:"), "Should have build-frontend job");
+            assert.ok(yaml.includes("deploy-frontend:"), "Should have deploy-frontend job");
+            assert.ok(yaml.includes("build-api:"), "Should have build-api job");
+            assert.ok(yaml.includes("deploy-api:"), "Should have deploy-api job");
+            assert.ok(yaml.includes("needs: [build-frontend]"), "deploy-frontend should depend on build-frontend");
+            assert.ok(yaml.includes("needs: [build-api]"), "deploy-api should depend on build-api");
+        });
+
+        it("places per-container values in per-job env, shared values at workflow level", () => {
+            const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
+
+            assert.ok(yaml.includes("AZURE_CONTAINER_REGISTRY: monoacr"), "ACR should be at workflow env");
+            assert.ok(yaml.includes("NAMESPACE: apps"), "namespace should be at workflow env");
+            assert.ok(yaml.includes("CONTAINER_NAME: frontend"), "frontend job should set CONTAINER_NAME");
+            assert.ok(yaml.includes("CONTAINER_NAME: api"), "api job should set CONTAINER_NAME");
+            assert.ok(yaml.includes("BUILD_CONTEXT_PATH: frontend"), "frontend build context should appear");
+            assert.ok(yaml.includes("BUILD_CONTEXT_PATH: api"), "api build context should appear");
+        });
+
+        it("does not contain unreplaced template placeholders", () => {
+            const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
+            const unreplaced = yaml.match(/(?<!\$)\{\s*\{\s*[A-Z_]+\s*\}\s*\}/g);
+            assert.strictEqual(unreplaced, null, "Should not contain any unreplaced { { X } } placeholders");
+        });
+
+        it("preserves GitHub Actions ${{ ... }} expressions", () => {
+            const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
+            assert.ok(yaml.includes("${{ secrets.AZURE_CLIENT_ID }}"));
+            assert.ok(yaml.includes("${{ env.AZURE_CONTAINER_REGISTRY }}"));
+            assert.ok(yaml.includes("${{ github.sha }}"));
+        });
+
+        it("uses az aks namespace get-credentials when isManagedNamespace is true", () => {
+            const managed = { ...validMultiConfig, isManagedNamespace: true };
+            const yaml = renderMultiContainerWorkflowTemplate(managed);
+            assert.ok(yaml.includes("az aks namespace get-credentials"), "Should use managed-ns credential flow");
+            assert.ok(!yaml.includes("azure/aks-set-context@v4"), "Should not use aks-set-context for managed ns");
+        });
+
+        it("uses azure/aks-set-context@v4 for non-managed namespaces", () => {
+            const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
+            assert.ok(yaml.includes("azure/aks-set-context@v4"));
+            assert.ok(!yaml.includes("az aks namespace get-credentials"));
+        });
+
+        it("omits the deploy job for containers without a manifest path (Skip)", () => {
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [
+                    { containerName: "worker", dockerFile: "Dockerfile", buildContextPath: "worker" }, // no manifest
+                    {
+                        containerName: "api",
+                        dockerFile: "Dockerfile",
+                        buildContextPath: "api",
+                        deploymentManifestPath: "api/k8s/deployment.yaml",
+                    },
+                ],
+            };
+            const yaml = renderMultiContainerWorkflowTemplate(cfg);
+            assert.ok(yaml.includes("build-worker:"), "worker should still have a build job");
+            assert.ok(!yaml.includes("deploy-worker:"), "worker should NOT have a deploy job (skipped)");
+            assert.ok(yaml.includes("build-api:"));
+            assert.ok(yaml.includes("deploy-api:"));
+        });
+
+        it("sanitizes container names into valid GitHub Actions job ids", () => {
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [
+                    {
+                        containerName: "My Service@v1",
+                        dockerFile: "Dockerfile",
+                        buildContextPath: "svc",
+                        deploymentManifestPath: "svc/k8s/dep.yaml",
+                    },
+                ],
+            };
+            const yaml = renderMultiContainerWorkflowTemplate(cfg);
+            // Job id must only contain [A-Za-z0-9_-] and start with letter/underscore
+            const buildJobMatch = yaml.match(/^ {4}(build-[A-Za-z_][A-Za-z0-9_-]*):$/m);
+            assert.ok(buildJobMatch, `Build job id should be sanitized; got:\n${yaml}`);
+        });
+    });
+
+    describe("validateMultiContainerWorkflowConfig", () => {
+        it("returns no errors for a valid configuration", () => {
+            assert.deepStrictEqual(validateMultiContainerWorkflowConfig(validMultiConfig), []);
+        });
+
+        it("returns an error when no containers are provided", () => {
+            const cfg = { ...validMultiConfig, containers: [] };
+            const errs = validateMultiContainerWorkflowConfig(cfg);
+            assert.ok(errs.some((e) => e.includes("At least one container")));
+        });
+
+        it("returns errors for missing per-container fields", () => {
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [{ containerName: "", dockerFile: "", buildContextPath: "" }],
+            };
+            const errs = validateMultiContainerWorkflowConfig(cfg);
+            assert.ok(errs.some((e) => e.toLowerCase().includes("container name")));
+            assert.ok(errs.some((e) => e.toLowerCase().includes("dockerfile")));
+            assert.ok(errs.some((e) => e.toLowerCase().includes("build context")));
+        });
+
+        it("detects duplicate job ids derived from container names", () => {
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [
+                    {
+                        containerName: "api",
+                        dockerFile: "Dockerfile",
+                        buildContextPath: "api",
+                        deploymentManifestPath: "api/k8s/dep.yaml",
+                    },
+                    {
+                        containerName: "api",
+                        dockerFile: "Dockerfile",
+                        buildContextPath: "api2",
+                        deploymentManifestPath: "api2/k8s/dep.yaml",
+                    },
+                ],
+            };
+            const errs = validateMultiContainerWorkflowConfig(cfg);
+            assert.ok(errs.some((e) => e.toLowerCase().includes("duplicate")));
+        });
+
+        it("returns errors for missing workflow-level fields", () => {
+            const cfg = { ...validMultiConfig, workflowName: "", clusterName: "", azureContainerRegistry: "" };
+            const errs = validateMultiContainerWorkflowConfig(cfg);
+            assert.ok(errs.some((e) => e.includes("Workflow name")));
+            assert.ok(errs.some((e) => e.includes("Cluster name")));
+            assert.ok(errs.some((e) => e.includes("Azure Container Registry")));
         });
     });
 });

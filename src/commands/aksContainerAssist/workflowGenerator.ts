@@ -8,18 +8,29 @@ import * as vscode from "vscode";
 import * as path from "path";
 import * as l10n from "@vscode/l10n";
 import { Errorable } from "../utils/errorable";
-import { WorkflowConfig, renderWorkflowTemplate, validateWorkflowConfig } from "./workflowTemplate";
+import {
+    WorkflowConfig,
+    renderWorkflowTemplate,
+    validateWorkflowConfig,
+    ContainerMode,
+    ContainerJobConfig,
+    MultiContainerWorkflowConfig,
+    renderMultiContainerWorkflowTemplate,
+    validateMultiContainerWorkflowConfig,
+} from "./workflowTemplate";
 import {
     writeWorkflowFile,
     workflowFileExists,
     fileExists,
     scanForK8sManifests,
     scanForDockerfiles,
+    scanManifestsForModulePaths,
     getK8sManifestFolder,
 } from "./fileOperations";
 import { logger } from "./logger";
 import type { AzureContext } from "./azureSelections";
 import { ContainerAssistService } from "./containerAssistService";
+import type { ModuleAnalysisResult } from "./types";
 
 /** Parameters for workflow generation, replacing positional arguments. */
 export interface WorkflowGenerationOptions {
@@ -53,7 +64,7 @@ async function doGenerateGitHubWorkflow(options: WorkflowGenerationOptions): Pro
     const { workspaceFolder, projectRoot, azureContext, hasBothActions, deploymentResult } = options;
     try {
         const workspaceRoot = workspaceFolder.uri.fsPath;
-        const config = await collectWorkflowConfiguration(
+        const collected = await collectWorkflowConfiguration(
             workspaceRoot,
             projectRoot,
             azureContext,
@@ -61,19 +72,22 @@ async function doGenerateGitHubWorkflow(options: WorkflowGenerationOptions): Pro
             deploymentResult?.manifestPaths,
             deploymentResult?.primaryModuleName,
         );
-        if (!config) {
+        if (!collected) {
             return { succeeded: false, error: "cancelled" };
         }
 
-        // Validate configuration
-        const validationErrors = validateWorkflowConfig(config);
+        // Validate configuration based on mode
+        const validationErrors =
+            collected.mode === ContainerMode.Multi
+                ? validateMultiContainerWorkflowConfig(collected.config)
+                : validateWorkflowConfig(collected.config);
         if (validationErrors.length > 0) {
             const errorMsg = validationErrors.join("; ");
             logger.error("Workflow configuration validation failed", errorMsg);
             return { succeeded: false, error: `Invalid configuration: ${errorMsg}` };
         }
 
-        const workflowName = sanitizeWorkflowName(config.workflowName);
+        const workflowName = sanitizeWorkflowName(collected.config.workflowName);
         const exists = await workflowFileExists(workspaceRoot, workflowName);
         if (exists) {
             const overwrite = await vscode.window.showWarningMessage(
@@ -87,7 +101,10 @@ async function doGenerateGitHubWorkflow(options: WorkflowGenerationOptions): Pro
         }
 
         // Render template and write file
-        const workflowContent = renderWorkflowTemplate(config);
+        const workflowContent =
+            collected.mode === ContainerMode.Multi
+                ? renderMultiContainerWorkflowTemplate(collected.config)
+                : renderWorkflowTemplate(collected.config);
 
         const workflowPath = await writeWorkflowFile(workspaceRoot, workflowName, workflowContent);
 
@@ -103,6 +120,11 @@ async function doGenerateGitHubWorkflow(options: WorkflowGenerationOptions): Pro
     }
 }
 
+/** Tagged result returned by `collectWorkflowConfiguration`. */
+type CollectedWorkflowConfig =
+    | { mode: ContainerMode.Single; config: WorkflowConfig }
+    | { mode: ContainerMode.Multi; config: MultiContainerWorkflowConfig };
+
 async function collectWorkflowConfiguration(
     workspaceRoot: string,
     projectRoot: string,
@@ -110,7 +132,7 @@ async function collectWorkflowConfiguration(
     hasBothActions: boolean,
     knownManifestPaths?: string[],
     primaryModuleName?: string,
-): Promise<WorkflowConfig | undefined> {
+): Promise<CollectedWorkflowConfig | undefined> {
     const {
         clusterName,
         clusterResourceGroup,
@@ -125,10 +147,32 @@ async function collectWorkflowConfiguration(
         return undefined;
     }
 
-    const appName = primaryModuleName ?? path.basename(projectRoot);
-
     // Search recursively; prefer the shallowest match for auto-selection.
     const detectedDockerfiles = await detectDockerfilePaths(projectRoot);
+
+    // Container mode prompt — only when >= 2 Dockerfiles detected (Issue #2105).
+    // When `hasBothActions` is true (deployment was just generated in the same flow),
+    // we always honor the user's earlier selections without re-prompting in single mode.
+    let mode: ContainerMode = ContainerMode.Single;
+    if (detectedDockerfiles.length >= 2) {
+        const chosen = await promptForContainerMode(detectedDockerfiles.length);
+        if (!chosen) return undefined;
+        mode = chosen;
+    }
+
+    if (mode === ContainerMode.Multi) {
+        const multi = await collectMultiContainerWorkflowConfiguration(
+            workspaceRoot,
+            projectRoot,
+            azureContext,
+            detectedDockerfiles,
+        );
+        if (!multi) return undefined;
+        return { mode: ContainerMode.Multi, config: multi };
+    }
+
+    // ---- Existing single-container flow ----
+    const appName = primaryModuleName ?? path.basename(projectRoot);
     const detectedDockerfile = detectedDockerfiles.length > 0 ? detectedDockerfiles[0] : undefined;
 
     let dockerfilePath: string | undefined;
@@ -178,24 +222,104 @@ async function collectWorkflowConfiguration(
     if (hasBothActions && relativeManifests.length > 0) {
         selectedManifests = relativeManifests;
     } else {
-        selectedManifests = await promptForManifestSelection(relativeManifests);
+        selectedManifests = await promptForManifestSelection(relativeManifests, workspaceRoot, appName);
     }
     if (!selectedManifests) return undefined;
     const manifestPath = formatManifestPathForYamlBlock(selectedManifests);
 
     return {
-        workflowName,
-        branchName: "main", // Default to main
-        containerName: appName, // Use app name as container name
-        dockerFile: dockerfileRelToBuildContext,
-        buildContextPath: buildContextRelToWorkspace,
-        acrResourceGroup,
-        azureContainerRegistry: acrName,
+        mode: ContainerMode.Single,
+        config: {
+            workflowName,
+            branchName: "main", // Default to main
+            containerName: appName, // Use app name as container name
+            dockerFile: dockerfileRelToBuildContext,
+            buildContextPath: buildContextRelToWorkspace,
+            acrResourceGroup,
+            azureContainerRegistry: acrName,
+            clusterName,
+            clusterResourceGroup,
+            deploymentManifestPath: manifestPath,
+            namespace,
+            isManagedNamespace: isManagedNamespace ?? false,
+        },
+    };
+}
+
+/**
+ * Multi-container collection flow (Issue #2106, #2107, #2108).
+ * Lets the user multi-select Dockerfiles, auto-derives per-service config, and
+ * prompts (Browse / Enter manually / Skip) only when manifests are missing.
+ */
+async function collectMultiContainerWorkflowConfiguration(
+    workspaceRoot: string,
+    projectRoot: string,
+    azureContext: AzureContext,
+    detectedDockerfiles: string[],
+): Promise<MultiContainerWorkflowConfig | undefined> {
+    const {
         clusterName,
         clusterResourceGroup,
-        deploymentManifestPath: manifestPath,
+        acrName,
+        acrResourceGroup,
         namespace,
+        isManagedNamespace,
+        workflowName,
+    } = azureContext;
+
+    // Best-effort module analysis to enrich the multi-select with language/framework/port.
+    const service = new ContainerAssistService();
+    const analysis = await service.analyzeRepository(projectRoot);
+    const modules: ModuleAnalysisResult[] = analysis.succeeded ? analysis.result.modules : [];
+
+    const selected = await promptForMultiDockerfileSelection(detectedDockerfiles, modules, projectRoot);
+    if (!selected || selected.length === 0) return undefined;
+
+    // Map module path -> manifests, scanned in parallel for all selected services.
+    const moduleScanRoots = selected.map((s) => path.dirname(path.resolve(projectRoot, s.dockerfileRelToProject)));
+    const manifestsByModule = await scanManifestsForModulePaths(moduleScanRoots);
+
+    const containers: ContainerJobConfig[] = [];
+    for (const item of selected) {
+        const dockerfileAbsolute = path.resolve(projectRoot, item.dockerfileRelToProject);
+        const buildContextAbsolute = path.dirname(dockerfileAbsolute);
+        const buildContextRelToWorkspace = toPosixPath(path.relative(workspaceRoot, buildContextAbsolute)) || ".";
+        const dockerfileRelToBuildContext = toPosixPath(path.relative(buildContextAbsolute, dockerfileAbsolute));
+
+        const moduleManifests = manifestsByModule.get(buildContextAbsolute) ?? [];
+        let manifestPath: string | undefined;
+        if (moduleManifests.length > 0) {
+            const relManifests = moduleManifests.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
+            manifestPath = formatManifestPathForYamlBlock(relManifests);
+        } else {
+            // No manifests under <module>/k8s — offer Browse / Manual / Skip.
+            const chosen = await promptForManifestWithBrowse(item.containerName, workspaceRoot);
+            if (chosen === undefined) return undefined; // user cancelled
+            if (chosen.length === 0) {
+                manifestPath = undefined; // user picked Skip — build-only for this service
+            } else {
+                manifestPath = formatManifestPathForYamlBlock(chosen);
+            }
+        }
+
+        containers.push({
+            containerName: item.containerName,
+            dockerFile: dockerfileRelToBuildContext,
+            buildContextPath: buildContextRelToWorkspace,
+            deploymentManifestPath: manifestPath,
+        });
+    }
+
+    return {
+        workflowName: workflowName!,
+        branchName: "main",
+        acrResourceGroup,
+        azureContainerRegistry: acrName,
+        clusterName: clusterName!,
+        clusterResourceGroup: clusterResourceGroup!,
+        namespace: namespace!,
         isManagedNamespace: isManagedNamespace ?? false,
+        containers,
     };
 }
 
@@ -316,25 +440,27 @@ async function promptForBuildContext(
 
 /**
  * Prompts user to select Kubernetes manifest files from a multi-select dropdown.
- * Detected manifests are pre-selected. User can also type a custom path.
+ * Detected manifests are pre-selected. When none are detected, falls back to the
+ * Browse / Enter manually / Skip dialog (Issue #2108) so users no longer have to
+ * copy-paste a path into a plain InputBox.
  */
-async function promptForManifestSelection(detectedPaths: string[]): Promise<string[] | undefined> {
+async function promptForManifestSelection(
+    detectedPaths: string[],
+    workspaceRoot: string,
+    serviceName: string,
+): Promise<string[] | undefined> {
     if (detectedPaths.length === 0) {
-        // No manifests detected — fall back to a simple input box
-        const result = await vscode.window.showInputBox({
-            prompt: l10n.t("No manifests detected. Enter Kubernetes manifest path (relative to repo root)"),
-            placeHolder: "k8s/deployment.yaml",
-            value: "k8s/deployment.yaml",
-            title: l10n.t("Kubernetes Manifests"),
-            ignoreFocusOut: true,
-            validateInput: (value) => {
-                if (!value || value.trim() === "") {
-                    return l10n.t("At least one manifest path is required");
-                }
-                return undefined;
-            },
-        });
-        return result ? [result.trim()] : undefined;
+        const chosen = await promptForManifestWithBrowse(serviceName, workspaceRoot);
+        if (chosen === undefined) return undefined;
+        // Treat "Skip" (empty array) the same as cancel in single-container mode, since
+        // a deploy job without manifests is meaningless.
+        if (chosen.length === 0) {
+            void vscode.window.showWarningMessage(
+                l10n.t("At least one Kubernetes manifest path is required for the deploy job."),
+            );
+            return undefined;
+        }
+        return chosen;
     }
 
     const items: vscode.QuickPickItem[] = detectedPaths.map((p) => ({
@@ -351,6 +477,178 @@ async function promptForManifestSelection(detectedPaths: string[]): Promise<stri
 
     if (!selected || selected.length === 0) return undefined;
     return selected.map((item) => item.label);
+}
+
+/** Item returned by the multi-Dockerfile picker. */
+interface SelectedDockerfile {
+    /** Dockerfile path relative to projectRoot. */
+    dockerfileRelToProject: string;
+    /** Derived service / container name (module name when available, else parent dir). */
+    containerName: string;
+}
+
+/**
+ * Prompts the user to choose between Single- and Multi-container mode.
+ * Issue #2105 — only invoked when >= 2 Dockerfiles are detected.
+ */
+async function promptForContainerMode(dockerfileCount: number): Promise<ContainerMode | undefined> {
+    interface ModeItem extends vscode.QuickPickItem {
+        mode: ContainerMode;
+    }
+    const items: ModeItem[] = [
+        {
+            label: l10n.t("$(package) Single Container"),
+            description: l10n.t("Build & deploy one container image"),
+            mode: ContainerMode.Single,
+        },
+        {
+            label: l10n.t("$(symbol-namespace) Multi-Container (mono repo)"),
+            description: l10n.t("Build & deploy multiple container images in one workflow"),
+            mode: ContainerMode.Multi,
+        },
+    ];
+    const picked = await vscode.window.showQuickPick(items, {
+        placeHolder: l10n.t("Multiple Dockerfiles found ({0}). Choose container mode.", dockerfileCount),
+        title: l10n.t("Container Mode"),
+        ignoreFocusOut: true,
+    });
+    return picked?.mode;
+}
+
+/**
+ * Prompts the user to multi-select which Dockerfiles to include (Issue #2106).
+ * All detected Dockerfiles are pre-checked. Description is enriched from
+ * module analysis (language / framework / port) when available.
+ *
+ * Returns `undefined` on cancel and re-prompts once if the user unchecks
+ * everything (Issue #2112 — empty selection edge case).
+ */
+async function promptForMultiDockerfileSelection(
+    detectedPaths: string[],
+    modules: ModuleAnalysisResult[],
+    projectRoot: string,
+): Promise<SelectedDockerfile[] | undefined> {
+    interface DockerfileItem extends vscode.QuickPickItem {
+        dockerfileRelToProject: string;
+        containerName: string;
+    }
+
+    // Build a map of absolute module dir -> module for enrichment.
+    const moduleByDir = new Map<string, ModuleAnalysisResult>();
+    for (const m of modules) {
+        moduleByDir.set(path.resolve(m.modulePath), m);
+    }
+
+    const items: DockerfileItem[] = detectedPaths.map((rel) => {
+        const dockerfileAbsolute = path.resolve(projectRoot, rel);
+        const moduleDir = path.dirname(dockerfileAbsolute);
+        const module = moduleByDir.get(moduleDir);
+        const containerName = module?.name ?? path.basename(moduleDir) ?? "container";
+        const descParts: string[] = [];
+        if (module?.language) descParts.push(module.language);
+        if (module?.framework) descParts.push(module.framework);
+        if (module?.port) descParts.push(`port ${module.port}`);
+        return {
+            label: rel,
+            description: descParts.length > 0 ? `(${descParts.join(", ")})` : undefined,
+            detail: l10n.t("Container: {0}", containerName),
+            picked: true,
+            dockerfileRelToProject: rel,
+            containerName,
+        };
+    });
+
+    // First attempt
+    let selection = await vscode.window.showQuickPick(items, {
+        canPickMany: true,
+        placeHolder: l10n.t("Select Dockerfiles to include ({0} found)", detectedPaths.length),
+        title: l10n.t("Multi-Container — Select Dockerfiles"),
+        ignoreFocusOut: true,
+    });
+
+    // Edge case: user unchecked everything. Inform and re-prompt once.
+    if (selection && selection.length === 0) {
+        void vscode.window.showWarningMessage(
+            l10n.t("Select at least one Dockerfile to continue with the multi-container workflow."),
+        );
+        selection = await vscode.window.showQuickPick(items, {
+            canPickMany: true,
+            placeHolder: l10n.t("Select at least one Dockerfile"),
+            title: l10n.t("Multi-Container — Select Dockerfiles"),
+            ignoreFocusOut: true,
+        });
+    }
+
+    if (!selection || selection.length === 0) return undefined;
+
+    // De-duplicate generated container names (e.g. two services share basename).
+    const used = new Set<string>();
+    return selection.map((item) => {
+        let name = item.containerName;
+        let suffix = 2;
+        while (used.has(name)) {
+            name = `${item.containerName}-${suffix++}`;
+        }
+        used.add(name);
+        return { dockerfileRelToProject: item.dockerfileRelToProject, containerName: name };
+    });
+}
+
+/**
+ * Browse / Enter manually / Skip dialog for missing K8s manifests (Issue #2108).
+ *
+ * Return value semantics:
+ *   - `undefined`  → user cancelled the dialog (treat as cancel of the whole flow).
+ *   - `[]`         → user chose "Skip" (caller decides whether to omit or treat as cancel).
+ *   - `string[]`   → workspace-relative POSIX paths to the chosen manifest files.
+ */
+async function promptForManifestWithBrowse(serviceName: string, workspaceRoot: string): Promise<string[] | undefined> {
+    const browse = l10n.t("Browse...");
+    const manual = l10n.t("Enter path manually");
+    const skip = l10n.t("Skip");
+
+    const choice = await vscode.window.showInformationMessage(
+        l10n.t('No K8s manifests found for "{0}". How would you like to specify them?', serviceName),
+        { modal: false },
+        browse,
+        manual,
+        skip,
+    );
+
+    if (!choice) return undefined; // dismissed
+    if (choice === skip) return [];
+
+    if (choice === browse) {
+        const uris = await vscode.window.showOpenDialog({
+            canSelectMany: true,
+            canSelectFiles: true,
+            canSelectFolders: false,
+            defaultUri: vscode.Uri.file(workspaceRoot),
+            filters: { [l10n.t("Kubernetes Manifests")]: ["yaml", "yml"] },
+            title: l10n.t('Select K8s manifests for "{0}"', serviceName),
+            openLabel: l10n.t("Select"),
+        });
+        if (!uris || uris.length === 0) return undefined;
+        return uris.map((u) => toPosixPath(path.relative(workspaceRoot, u.fsPath)));
+    }
+
+    // Manual path entry
+    const typed = await vscode.window.showInputBox({
+        prompt: l10n.t('Enter K8s manifest path for "{0}" (relative to repo root)', serviceName),
+        placeHolder: "k8s/deployment.yaml",
+        value: "k8s/deployment.yaml",
+        title: l10n.t("Kubernetes Manifests — {0}", serviceName),
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+            if (!value || value.trim() === "") return l10n.t("A manifest path is required");
+            if (value.startsWith("/") || value.includes("..")) {
+                return l10n.t("Manifest path must be a relative path within the repository");
+            }
+            return undefined;
+        },
+    });
+    if (!typed) return undefined;
+    return [toPosixPath(typed.trim())];
 }
 
 function formatManifestPathForYamlBlock(manifests: string[]): string {
