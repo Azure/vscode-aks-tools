@@ -22,7 +22,6 @@ import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
 import { AutomatedDeployments } from "./AutomatedDeployments/AutomatedDeployments";
 import { CreateFleet } from "./CreateFleet/CreateFleet";
 import { FleetProperties } from "./FleetProperties/FleetProperties";
-import { Kickstart } from "./Kickstart/Kickstart";
 import * as l10n from "@vscode/l10n";
 import { vscode } from "./utilities/vscode";
 
@@ -87,7 +86,6 @@ function getVsCodeContent(rootElem: HTMLElement): JSX.Element {
         automatedDeployments: () => <AutomatedDeployments {...getInitialState()} />,
         createFleet: () => <CreateFleet {...getInitialState()} />,
         fleetProperties: () => <FleetProperties {...getInitialState()} />,
-        kickstart: () => <Kickstart {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();
