@@ -5,7 +5,7 @@ import { getDefaultGuardrails } from "./guardrails";
 
 export interface Intent {
     phase?: Phase;
-    action: "run" | "status" | "reset" | "skip" | "create";
+    action: "run" | "status" | "reset" | "skip" | "create" | "handoff";
 }
 
 /**
@@ -41,6 +41,16 @@ export function detectIntentFast(
         lowerPrompt.includes("no cluster")
     ) {
         return { action: "create" };
+    }
+
+    if (
+        lowerPrompt.includes("pull request") ||
+        lowerPrompt.includes("create pr") ||
+        lowerPrompt.includes("open pr") ||
+        lowerPrompt.includes("handoff") ||
+        lowerPrompt.includes("hand off")
+    ) {
+        return { action: "handoff" };
     }
 
     if (lowerPrompt.includes("status") || lowerPrompt.includes("where am i") || lowerPrompt.includes("progress")) {
@@ -100,6 +110,7 @@ Given the user's message and current phase, choose exactly ONE intent:
 - "status": show current progress
 - "reset": start over
 - "create": create a new AKS cluster
+- "handoff": create a GitHub pull request with the generated artifacts
 
 Respond with ONLY a JSON object on a single line, no markdown, no explanation. Examples:
 {"action":"run","phase":3}
@@ -131,7 +142,7 @@ function parseIntentJson(text: string, state: KickstartState): Intent | undefine
         return undefined;
     }
 
-    const validActions = ["run", "status", "reset", "skip", "create"] as const;
+    const validActions = ["run", "status", "reset", "skip", "create", "handoff"] as const;
     if (!validActions.includes(parsed.action as (typeof validActions)[number])) {
         return undefined;
     }
