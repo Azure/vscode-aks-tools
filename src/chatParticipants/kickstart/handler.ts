@@ -6,6 +6,7 @@ import { validatePrereqs, executePhase, classifyError } from "./phaseRunner";
 import { renderProgress, renderStateSummary, phaseName } from "./progress";
 import { reportKickstartTelemetry } from "./telemetry";
 import { getAssetContext } from "../../assets";
+import { runGuardrails, getDefaultGuardrails } from "./guardrails";
 
 /**
  * Returns true if this is the first kickstart turn in this chat thread
@@ -71,6 +72,24 @@ export async function defaultHandler(
 
         const prompt = request.prompt ?? "";
         const isEmptyPrompt = prompt.trim().length === 0 && !request.command;
+
+        if (prompt.trim().length > 0) {
+            const guardrails = getDefaultGuardrails();
+            const inputCheck = await runGuardrails(
+                "input",
+                { stage: "input", userMessage: prompt },
+                guardrails,
+                "kickstart",
+            );
+            if (inputCheck.blocked) {
+                stream.markdown(
+                    "**Blocked:** Your message was flagged by a safety check and cannot be processed. " +
+                        "Please remove any credentials, secrets, or sensitive data and try again.",
+                );
+                reportKickstartTelemetry("guardrail.input-blocked");
+                return { metadata: { command: "guardrail-blocked" } };
+            }
+        }
 
         // In a new chat thread, always pause and surface any existing workspace
         // session before acting — regardless of what the user typed.
