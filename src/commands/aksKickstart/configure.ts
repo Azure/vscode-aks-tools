@@ -1,19 +1,23 @@
 import * as vscode from "vscode";
+import * as k8s from "vscode-kubernetes-tools-api";
 import { getReadySessionProvider } from "../../auth/azureAuth";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
 import { getResources, clusterResourceType, acrResourceType } from "../utils/azureResources";
-import { getManagedCluster } from "../utils/clusters";
+import { getClusterNamespacesWithTypes, getManagedCluster, NamespaceWithType } from "../utils/clusters";
 import { getAksClient } from "../utils/arm";
 import { failed, Errorable } from "../utils/errorable";
 import { ClusterKey, AcrKey } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { checkKickstartPermissions } from "../utils/kickstartPermissions";
 
 const LAST_USED_KEY = "kickstart.lastUsed";
+const DEFAULT_NAMESPACE = "default";
 
 interface LastUsedSelections {
     subscriptionId?: string;
     clusterName?: string;
     acrName?: string;
+    namespace?: string;
 }
 
 export interface KickstartConfiguration {
@@ -23,6 +27,7 @@ export interface KickstartConfiguration {
     acrLoginServer: string;
     clusterName: string;
     resourceGroup: string;
+    namespace: string;
     isAutomatic: boolean;
     canGetKubeconfig: boolean;
     hasAcrPull: boolean;
@@ -102,6 +107,12 @@ export async function configureKickstart(
         clusterName: clusterPick.resource.name,
     };
 
+    const namespaceResult = await pickNamespace(sessionProvider.result, clusterKey, lastUsed.namespace);
+    if (failed(namespaceResult)) {
+        return { succeeded: false, error: namespaceResult.error };
+    }
+    const namespace = namespaceResult.result;
+
     const acrsResult = await getResources(sessionProvider.result, subscriptionId, acrResourceType);
     if (failed(acrsResult)) {
         return { succeeded: false, error: `Failed to load registries: ${acrsResult.error}` };
@@ -152,6 +163,7 @@ export async function configureKickstart(
             subscriptionId: subscriptionId,
             clusterName: clusterPick.resource.name,
             acrName: acrPick.resource.name,
+            namespace,
         });
     }
 
@@ -164,6 +176,7 @@ export async function configureKickstart(
             acrLoginServer,
             clusterName: clusterPick.resource.name,
             resourceGroup: clusterPick.resource.resourceGroup,
+            namespace,
             isAutomatic,
             canGetKubeconfig,
             hasAcrPull,
@@ -172,7 +185,7 @@ export async function configureKickstart(
 }
 
 async function checkClusterSku(
-    sessionProvider: import("../../auth/types").ReadyAzureSessionProvider,
+    sessionProvider: ReadyAzureSessionProvider,
     clusterKey: ClusterKey,
 ): Promise<Errorable<boolean>> {
     const cluster = await getManagedCluster(
@@ -188,7 +201,7 @@ async function checkClusterSku(
 }
 
 async function checkKubeconfigAccess(
-    sessionProvider: import("../../auth/types").ReadyAzureSessionProvider,
+    sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     clusterKey: ClusterKey,
 ): Promise<Errorable<boolean>> {
@@ -199,4 +212,73 @@ async function checkKubeconfigAccess(
     } catch {
         return { succeeded: true, result: false };
     }
+}
+
+type NamespacePickItem = vscode.QuickPickItem & { name: string };
+
+/**
+ * Lets the user pick an existing namespace from the cluster. System namespaces
+ * (kube-system, kube-public, kube-node-lease, kube-lease) are filtered out, but
+ * "default" is always offered. Returns an error if kubectl is unavailable or
+ * the cluster's namespaces cannot be listed.
+ */
+async function pickNamespace(
+    sessionProvider: ReadyAzureSessionProvider,
+    clusterKey: ClusterKey,
+    lastUsed: string | undefined,
+): Promise<Errorable<string>> {
+    const kubectl = await k8s.extension.kubectl.v1;
+    if (!kubectl.available) {
+        return { succeeded: false, error: "kubectl is not available — cannot list cluster namespaces." };
+    }
+
+    const nsResult = await getClusterNamespacesWithTypes(
+        sessionProvider,
+        kubectl,
+        clusterKey.subscriptionId,
+        clusterKey.resourceGroup,
+        clusterKey.clusterName,
+    );
+    if (failed(nsResult)) {
+        return { succeeded: false, error: `Could not list namespaces: ${nsResult.error}` };
+    }
+
+    const orderedNames = orderNamespacesForPick(nsResult.result, lastUsed);
+    if (orderedNames.length === 0) {
+        return { succeeded: false, error: "No user namespaces found on the cluster." };
+    }
+    const items: NamespacePickItem[] = orderedNames.map((name) => ({
+        label: name,
+        description: name === lastUsed ? "(last used)" : name === DEFAULT_NAMESPACE ? "(default)" : undefined,
+        name,
+    }));
+
+    const pick = await vscode.window.showQuickPick(items, {
+        placeHolder: "Select a Kubernetes namespace for your application",
+        ignoreFocusOut: true,
+    });
+    if (!pick) {
+        return { succeeded: false, error: "Cancelled." };
+    }
+    return { succeeded: true, result: pick.name };
+}
+
+/**
+ * Returns non-system namespace names, with "default" always first and the
+ * last-used namespace promoted to the top when present.
+ */
+function orderNamespacesForPick(namespaces: NamespaceWithType[], lastUsed: string | undefined): string[] {
+    const names = new Set<string>();
+    if (namespaces.some((n) => n.name === DEFAULT_NAMESPACE)) {
+        names.add(DEFAULT_NAMESPACE);
+    }
+    for (const ns of namespaces) {
+        if (ns.type === "system") continue;
+        names.add(ns.name);
+    }
+    const ordered = [...names].sort();
+    if (lastUsed && names.has(lastUsed)) {
+        return [lastUsed, ...ordered.filter((n) => n !== lastUsed)];
+    }
+    return ordered;
 }

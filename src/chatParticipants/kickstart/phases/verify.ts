@@ -105,8 +105,8 @@ export async function verifyPhase(
             stream.markdown("### Pod Status\n\n");
             stream.progress("Checking pod status...");
 
-            // Step 3: Check pod status in default namespace
-            const namespace = "default";
+            // Step 3: Check pod status in the configured namespace
+            const namespace = config.namespace || "default";
             const podsResult = await getResources<KubernetesPod>(kubectl, kubeConfigFile.filePath, "pods", namespace);
 
             if (failed(podsResult)) {
@@ -121,7 +121,7 @@ export async function verifyPhase(
 
             // If no pods deployed, this is a failure
             if (pods.length === 0) {
-                stream.markdown("⚠️ **No pods found in default namespace**\n\n");
+                stream.markdown(`⚠️ **No pods found in namespace \`${namespace}\`**\n\n`);
                 return {
                     ok: false,
                     error: "No pods were deployed. Check that manifests were applied correctly.",
@@ -179,7 +179,7 @@ export async function verifyPhase(
             let serviceEndpoint: string | undefined;
 
             if (services.length === 0) {
-                stream.markdown("ℹ️ **No services found in default namespace**\n\n");
+                stream.markdown(`ℹ️ **No services found in namespace \`${namespace}\`**\n\n`);
             } else {
                 let serviceTable = "| Service Name | Type | Endpoint |\n";
                 serviceTable += "|--------------|------|----------|\n";

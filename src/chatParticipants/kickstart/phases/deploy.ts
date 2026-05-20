@@ -141,17 +141,17 @@ export async function deployPhase(
                 );
             }
 
-            // Skip namespace creation for AKS Automatic (it manages namespaces automatically)
+            const namespace = config.namespace || "default";
             if (config.clusterSku === "Automatic") {
                 stream.markdown("ℹ️ **AKS Automatic Note:**\n");
                 stream.markdown(
-                    "- Namespaces are managed automatically by AKS Automatic\n" +
+                    `- Manifests target namespace **\`${namespace}\`**\n` +
                         "- Node provisioning may take 2-3 minutes on first deployment\n" +
                         "- Pods may remain in Pending state while nodes are being provisioned\n\n",
                 );
             }
 
-            stream.markdown(`### Applying manifests to **${config.clusterName}**\n\n`);
+            stream.markdown(`### Applying manifests to **${config.clusterName}** (namespace \`${namespace}\`)\n\n`);
             if (manifestDirs.length > 1) {
                 stream.markdown(`Applying manifests from ${manifestDirs.length} module directories:\n`);
                 for (const d of manifestDirs) {
@@ -190,10 +190,10 @@ export async function deployPhase(
             stream.anchor(vscode.Uri.parse(portalUrl), "Open cluster in Azure Portal");
             stream.markdown("\n");
 
-            stream.markdown("1. Check pod status: `kubectl get pods -A`\n");
-            stream.markdown("2. View logs: `kubectl logs -n default <pod-name>`\n");
+            stream.markdown(`1. Check pod status: \`kubectl get pods -n ${namespace}\`\n`);
+            stream.markdown(`2. View logs: \`kubectl logs -n ${namespace} <pod-name>\`\n`);
             stream.markdown(
-                "3. Port-forward to test: `kubectl port-forward -n default svc/<service-name> 8080:80`\n\n",
+                `3. Port-forward to test: \`kubectl port-forward -n ${namespace} svc/<service-name> 8080:80\`\n\n`,
             );
 
             if (config.clusterSku === "Automatic") {

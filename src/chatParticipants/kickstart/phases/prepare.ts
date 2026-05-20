@@ -48,6 +48,7 @@ export async function preparePhase(
         // Show which cluster SKU is being used
         const skuLabel = config.clusterSku === "Automatic" ? "AKS Automatic" : "AKS Standard";
         stream.markdown(`Generating artifacts for **${skuLabel}** cluster...\n\n`);
+        stream.markdown(`Manifests will target namespace **\`${config.namespace}\`**.\n\n`);
 
         if (config.clusterSku === "Automatic") {
             stream.markdown(
@@ -151,6 +152,7 @@ export async function preparePhase(
             {
                 acrLoginServer: config.acrLoginServer,
                 clusterName: config.clusterName,
+                namespace: config.namespace,
                 existingManifestsByModule: existingManifestsByModule.size > 0 ? existingManifestsByModule : undefined,
             },
         );

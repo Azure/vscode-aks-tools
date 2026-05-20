@@ -32,6 +32,7 @@ export async function generateManifestsStep(
     options?: {
         acrLoginServer?: string;
         clusterName?: string;
+        namespace?: string;
         existingManifestsByModule?: Map<string, ExistingManifestInput[]>;
     },
 ): Promise<Errorable<{ files: Record<string, string> }>> {
@@ -70,7 +71,7 @@ export async function generateManifestsStep(
                 buildK8sManifestUserPrompt(
                     planResult.value,
                     appName,
-                    "default",
+                    options?.namespace ?? "default",
                     options?.acrLoginServer ?? "<your-registry>",
                     existingManifestsForModule,
                 ),

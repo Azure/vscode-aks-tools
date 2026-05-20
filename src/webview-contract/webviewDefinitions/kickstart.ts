@@ -62,6 +62,7 @@ export interface ConfigData {
     clusterSku: "Automatic" | "Standard";
     acrName: string;
     acrLoginServer: string;
+    namespace: string;
     canGetKubeconfig: boolean;
     hasAcrPull: boolean;
 }

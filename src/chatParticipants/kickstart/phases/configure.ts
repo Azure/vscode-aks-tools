@@ -123,6 +123,7 @@ export async function configurePhase(
             clusterSku: kickstartConfig.isAutomatic ? "Automatic" : "Standard",
             acrName: kickstartConfig.acrKey.acrName,
             acrLoginServer: kickstartConfig.acrLoginServer,
+            namespace: kickstartConfig.namespace,
             canGetKubeconfig: kickstartConfig.canGetKubeconfig,
             hasAcrPull: kickstartConfig.hasAcrPull,
         };
@@ -133,6 +134,7 @@ export async function configurePhase(
         summaryTable += "|-----------|----------|--------|\n";
         summaryTable += `| Compute | ${config.clusterName} | ${config.clusterSku === "Automatic" ? "AKS Automatic" : "AKS Standard"} |\n`;
         summaryTable += `| Registry | ${config.acrName} | ${config.acrLoginServer} |\n`;
+        summaryTable += `| Namespace | ${config.namespace} | Target for generated manifests |\n`;
         summaryTable += `| Resource Group | ${config.resourceGroup} | ${kickstartConfig.subscriptionId} |\n`;
 
         stream.markdown(summaryTable);

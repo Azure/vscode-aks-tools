@@ -79,6 +79,7 @@ describe("Kickstart Integration Tests", () => {
             clusterSku,
             acrName: "testacr",
             acrLoginServer: "testacr.azurecr.io",
+            namespace: "default",
             canGetKubeconfig: true,
             hasAcrPull: true,
         };
