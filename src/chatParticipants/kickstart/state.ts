@@ -54,6 +54,17 @@ export interface ConfigData {
     acrLoginServer: string;
     canGetKubeconfig: boolean;
     hasAcrPull: boolean;
+    /**
+     * RBAC pre-flight for the signed-in user. `*Inconclusive` means listing
+     * role assignments was blocked by 403 (treat as advisory, don't block).
+     */
+    azureRbacEnabled: boolean;
+    hasAksDeployRole: boolean;
+    aksDeployRoleNames: string[];
+    clusterRbacInconclusive: boolean;
+    hasAcrPushRole: boolean;
+    hasAcrTasksContributorRole: boolean;
+    acrRbacInconclusive: boolean;
 }
 
 /**

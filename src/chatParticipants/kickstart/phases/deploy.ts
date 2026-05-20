@@ -74,6 +74,21 @@ export async function deployPhase(
             };
         }
 
+        // Block when Azure RBAC for Kubernetes is enabled and the user definitively
+        // lacks an RBAC Writer-tier role. Inconclusive checks (403) are surfaced as
+        // warnings in CONFIGURE rather than blocking here.
+        if (config.azureRbacEnabled && !config.hasAksDeployRole && !config.clusterRbacInconclusive) {
+            return {
+                ok: false,
+                error:
+                    "Insufficient cluster RBAC to deploy workloads. Azure RBAC for Kubernetes is enabled on this " +
+                    "cluster, so you need one of 'Azure Kubernetes Service RBAC Writer', 'RBAC Admin', or " +
+                    "'RBAC Cluster Admin' assigned at cluster scope. Ask an Owner or User Access Administrator " +
+                    "to assign the role, then re-run **configure**.",
+                retryable: false,
+            };
+        }
+
         // Get kubectl API
         const kubectl = await k8s.extension.kubectl.v1;
         if (!kubectl.available) {

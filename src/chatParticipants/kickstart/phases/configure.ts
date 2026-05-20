@@ -5,6 +5,40 @@ import { PhaseResult } from "../phaseRunner";
 import { ConfigData } from "../state";
 import { getAssetContext } from "../../../assets";
 
+/** Result of a single pre-flight check: granted ✅, missing ❌, or inconclusive ⚠️ (403). */
+type CheckStatus = "granted" | "missing" | "inconclusive";
+
+const STATUS_ICON: Record<CheckStatus, string> = { granted: "✅", missing: "❌", inconclusive: "⚠️" };
+
+function statusOf(granted: boolean, inconclusive: boolean): CheckStatus {
+    if (inconclusive) return "inconclusive";
+    return granted ? "granted" : "missing";
+}
+
+interface PreflightCheck {
+    label: string;
+    status: CheckStatus;
+    detail: string;
+}
+
+/** Resolves the matching detail string for the active status. */
+function check(label: string, status: CheckStatus, details: Record<CheckStatus, string>): PreflightCheck {
+    return { label, status, detail: details[status] };
+}
+
+/** Escape pipes/newlines so dynamic text can't break the markdown table. */
+function escapeCell(text: string): string {
+    return text.replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+function renderPreflightTable(stream: vscode.ChatResponseStream, checks: readonly PreflightCheck[]): void {
+    const header = "| Status | Check | Detail |\n|:------:|-------|--------|\n";
+    const rows = checks
+        .map((c) => `| ${STATUS_ICON[c.status]} | ${escapeCell(c.label)} | ${escapeCell(c.detail)} |`)
+        .join("\n");
+    stream.markdown(`${header}${rows}\n`);
+}
+
 /**
  * Configures the cluster and container registry for the kickstart workflow.
  *
@@ -116,6 +150,7 @@ export async function configurePhase(
             };
         }
 
+        const rbac = kickstartConfig.userDeployRbac;
         const config: ConfigData = {
             subscriptionId: kickstartConfig.subscriptionId,
             resourceGroup: kickstartConfig.resourceGroup,
@@ -125,6 +160,13 @@ export async function configurePhase(
             acrLoginServer: kickstartConfig.acrLoginServer,
             canGetKubeconfig: kickstartConfig.canGetKubeconfig,
             hasAcrPull: kickstartConfig.hasAcrPull,
+            azureRbacEnabled: rbac?.azureRbacEnabled ?? kickstartConfig.isAutomatic,
+            hasAksDeployRole: rbac?.hasDeployRole ?? false,
+            aksDeployRoleNames: rbac?.matchingDeployRoles ?? [],
+            clusterRbacInconclusive: rbac?.clusterScopeInconclusive ?? true,
+            hasAcrPushRole: rbac?.hasAcrPushRole ?? false,
+            hasAcrTasksContributorRole: rbac?.hasAcrTasksContributorRole ?? false,
+            acrRbacInconclusive: rbac?.acrScopeInconclusive ?? true,
         };
 
         stream.markdown("### Configuration Summary\n\n");
@@ -146,34 +188,63 @@ export async function configurePhase(
 
         stream.markdown("\n### Pre-flight Checks\n\n");
 
-        const skuLabel = config.clusterSku === "Automatic" ? "AKS Automatic" : "AKS Standard";
-        const skuIcon = config.clusterSku === "Automatic" ? "⚠️" : "✅";
-        stream.markdown(`${skuIcon} **Cluster SKU:** ${skuLabel}`);
-        if (config.clusterSku === "Automatic") {
-            stream.markdown(
-                "  > AKS Automatic manages node pools, scaling, and upgrades. Some Kickstart features may behave differently.",
-            );
-        }
-        stream.markdown("");
+        const checks: PreflightCheck[] = [
+            check("Cluster SKU", config.clusterSku === "Automatic" ? "inconclusive" : "granted", {
+                granted: "AKS Standard",
+                missing: "AKS Standard",
+                inconclusive:
+                    "AKS Automatic — Azure manages node pools, scaling, and upgrades. Some Kickstart features may behave differently.",
+            }),
+            check("Kubeconfig access (you → cluster)", config.canGetKubeconfig ? "granted" : "missing", {
+                granted: "Available",
+                missing: "Denied. Ensure you have the **Azure Kubernetes Service Cluster User Role** on the cluster.",
+                inconclusive: "Could not verify.",
+            }),
+            check("ACR pull permission (cluster → registry)", statusOf(config.hasAcrPull, false), {
+                granted: "Configured (cluster kubelet identity has AcrPull)",
+                missing: "The cluster does not have **AcrPull** on this registry. Attach it from the Azure Portal.",
+                inconclusive: "Could not verify.",
+            }),
+            check("ACR push permission (you → registry)", statusOf(config.hasAcrPushRole, config.acrRbacInconclusive), {
+                granted: "Granted (**AcrPush**)",
+                missing: "Missing. You need **AcrPush** on the registry to push images during the build phase.",
+                inconclusive: "Could not verify; build may fail with a forbidden error if **AcrPush** is missing.",
+            }),
+            check(
+                "ACR tasks permission (you → registry)",
+                statusOf(config.hasAcrTasksContributorRole, config.acrRbacInconclusive),
+                {
+                    granted: "Granted (**Container Registry Tasks Contributor**)",
+                    missing:
+                        "Missing. `az acr build` requires **Container Registry Tasks Contributor** on the registry.",
+                    inconclusive: "Could not verify; `az acr build` may fail with a forbidden error.",
+                },
+            ),
+        ];
 
-        const kubeconfigIcon = config.canGetKubeconfig ? "✅" : "❌";
-        stream.markdown(`${kubeconfigIcon} **Kubeconfig access:** ${config.canGetKubeconfig ? "Available" : "Denied"}`);
-        if (!config.canGetKubeconfig) {
-            stream.markdown(
-                "  > You do not have permission to get kubeconfig credentials for this cluster. Ensure you have the **Azure Kubernetes Service Cluster User Role**.",
+        // Azure RBAC for Kubernetes is only relevant when enabled (always on for AKS Automatic);
+        // on Standard clusters without it, `kubectl apply` is authorized via Kubernetes RBAC.
+        if (config.azureRbacEnabled) {
+            const grantedDetail =
+                config.aksDeployRoleNames.length > 0 ? `Granted (${config.aksDeployRoleNames.join(", ")})` : "Granted";
+            checks.push(
+                check(
+                    "Cluster deploy permission (Azure RBAC, you → cluster)",
+                    statusOf(config.hasAksDeployRole, config.clusterRbacInconclusive),
+                    {
+                        granted: grantedDetail,
+                        missing:
+                            "Missing. `kubectl apply` requires one of **AKS RBAC Writer**, **RBAC Admin**, or " +
+                            "**RBAC Cluster Admin** on the cluster. Owner/Contributor on the AKS resource do NOT grant Kubernetes write.",
+                        inconclusive:
+                            "Could not verify. Deployment will proceed, but if it fails with a forbidden error, " +
+                            "ask your admin to assign **AKS RBAC Writer** on the cluster.",
+                    },
+                ),
             );
         }
-        stream.markdown("");
 
-        const acrPullIcon = config.hasAcrPull ? "✅" : "⚠️";
-        stream.markdown(
-            `${acrPullIcon} **ACR Pull permission:** ${config.hasAcrPull ? "Configured" : "Not configured"}`,
-        );
-        if (!config.hasAcrPull) {
-            stream.markdown(
-                "  > The cluster does not have AcrPull on this registry. You can attach it using Azure Portal.",
-            );
-        }
+        renderPreflightTable(stream, checks);
 
         await renderCostEstimate(stream, config);
 
