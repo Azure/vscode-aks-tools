@@ -18,6 +18,33 @@ function isNewThread(context: vscode.ChatContext): boolean {
     );
 }
 
+const KICKSTART_INTRO =
+    "## 🚀 AKS Kickstart\n\n" +
+    "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
+    "**Here's what I do:**\n" +
+    "1. 🔍 **Analyze** your project (language, framework, entry point)\n" +
+    "2. ⚙️ **Configure** your Azure target (AKS cluster + container registry)\n" +
+    "3. 📦 **Prepare** deployment artifacts (Dockerfile + K8s manifests)\n" +
+    "4. 🔨 **Build** and push your container image\n" +
+    "5. 🚀 **Deploy** to your AKS cluster\n" +
+    "6. ✅ **Verify** everything is running\n\n";
+
+/**
+ * Streams the kickstart welcome — the three "get started" buttons, optionally
+ * preceded by the full intro/overview. Centralizes wording used from multiple
+ * entry points (no workspace, empty prompt, /reset, fallthrough).
+ */
+function renderWelcome(stream: vscode.ChatResponseStream, options: { includeIntro: boolean }): void {
+    if (options.includeIntro) {
+        stream.markdown(`${KICKSTART_INTRO}**Choose how to get started:**`);
+    } else {
+        stream.markdown("✨ **Starting fresh!**\n\n**Choose how to get started:**\n");
+    }
+    stream.button({ command: "aks.kickstart.useSample", title: "📦 Use sample repo" });
+    stream.button({ command: "aks.kickstart.useWorkspace", title: "📂 Use existing repo" });
+    stream.button({ command: "aks.kickstart.createNew", title: "✨ Create something new" });
+}
+
 export async function defaultHandler(
     request: vscode.ChatRequest,
     context: vscode.ChatContext,
@@ -37,21 +64,7 @@ export async function defaultHandler(
 
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-            stream.markdown(
-                "## 🚀 AKS Kickstart\n\n" +
-                    "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
-                    "**Here's what I do:**\n" +
-                    "1. 🔍 **Analyze** your project (language, framework, entry point)\n" +
-                    "2. ⚙️ **Configure** your Azure target (AKS cluster + container registry)\n" +
-                    "3. 📦 **Prepare** deployment artifacts (Dockerfile + K8s manifests)\n" +
-                    "4. 🔨 **Build** and push your container image\n" +
-                    "5. 🚀 **Deploy** to your AKS cluster\n" +
-                    "6. ✅ **Verify** everything is running\n\n" +
-                    "**Choose how to get started:**",
-            );
-            stream.button({ command: "aks.kickstart.useSample", title: "📦 Use sample repo" });
-            stream.button({ command: "aks.kickstart.useWorkspace", title: "📂 Use existing repo" });
-            stream.button({ command: "aks.kickstart.createNew", title: "✨ Create something new" });
+            renderWelcome(stream, { includeIntro: true });
             return { metadata: { command: request.command ?? "welcome" } };
         }
 
@@ -91,21 +104,7 @@ export async function defaultHandler(
         }
 
         if (isEmptyPrompt && !hasExistingProgress) {
-            stream.markdown(
-                "## 🚀 AKS Kickstart\n\n" +
-                    "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
-                    "**Here's what I do:**\n" +
-                    "1. 🔍 **Analyze** your project (language, framework, entry point)\n" +
-                    "2. ⚙️ **Configure** your Azure target (AKS cluster + container registry)\n" +
-                    "3. 📦 **Prepare** deployment artifacts (Dockerfile + K8s manifests)\n" +
-                    "4. 🔨 **Build** and push your container image\n" +
-                    "5. 🚀 **Deploy** to your AKS cluster\n" +
-                    "6. ✅ **Verify** everything is running\n\n" +
-                    "**Choose how to get started:**",
-            );
-            stream.button({ command: "aks.kickstart.useSample", title: "📦 Use sample repo" });
-            stream.button({ command: "aks.kickstart.useWorkspace", title: "📂 Use existing repo" });
-            stream.button({ command: "aks.kickstart.createNew", title: "✨ Create something new" });
+            renderWelcome(stream, { includeIntro: true });
             reportKickstartTelemetry("welcome.completed");
             return { metadata: { command: "welcome" } };
         }
@@ -127,7 +126,7 @@ export async function defaultHandler(
             state = createInitialState(workspaceFolder);
             await saveState(extensionContext, workspaceFolder, state);
             KickstartPanel.pushState(state);
-            stream.markdown("✨ **Starting fresh!**\n\nLet's analyze your project...");
+            renderWelcome(stream, { includeIntro: false });
             reportKickstartTelemetry("reset.completed");
             return { metadata: { command: "reset" } };
         }
@@ -267,21 +266,7 @@ export async function defaultHandler(
             return { metadata: { command: `phase-${intent.phase}` } };
         }
 
-        stream.markdown(
-            "## 🚀 AKS Kickstart\n\n" +
-                "I'll help you containerize and deploy your application to Azure Kubernetes Service (AKS) in minutes.\n\n" +
-                "**Here's what I do:**\n" +
-                "1. 🔍 **Analyze** your project (language, framework, entry point)\n" +
-                "2. ⚙️ **Configure** your Azure target (AKS cluster + container registry)\n" +
-                "3. 📦 **Prepare** deployment artifacts (Dockerfile + K8s manifests)\n" +
-                "4. 🔨 **Build** and push your container image\n" +
-                "5. 🚀 **Deploy** to your AKS cluster\n" +
-                "6. ✅ **Verify** everything is running\n\n" +
-                "**Choose how to get started:**",
-        );
-        stream.button({ command: "aks.kickstart.useSample", title: "📦 Use sample repo" });
-        stream.button({ command: "aks.kickstart.useWorkspace", title: "📂 Use existing repo" });
-        stream.button({ command: "aks.kickstart.createNew", title: "✨ Create something new" });
+        renderWelcome(stream, { includeIntro: true });
         reportKickstartTelemetry("welcome.completed");
         return { metadata: { command: "welcome" } };
     } catch (e) {

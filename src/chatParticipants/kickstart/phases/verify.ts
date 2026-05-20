@@ -4,8 +4,7 @@ import { PhaseResult } from "../phaseRunner";
 import { ConfigData, DeploymentData, VerificationData } from "../state";
 import { invokeKubectlCommand, getResources } from "../../../commands/utils/kubectl";
 import { failed } from "../../../commands/utils/errorable";
-import { createTempFile } from "../../../commands/utils/tempfile";
-import { getAuthenticatedKubeconfigYaml } from "../../../commands/utils/clusters";
+import { acquireKubeconfigFile } from "../kubeconfig";
 import { NonZeroExitCodeBehaviour } from "../../../commands/utils/shell";
 
 /**
@@ -68,7 +67,7 @@ interface KubernetesService {
 export async function verifyPhase(
     _workspaceFolder: vscode.Uri,
     deployment: DeploymentData,
-    _config: ConfigData,
+    config: ConfigData,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
 ): Promise<PhaseResult & { verification?: VerificationData }> {
@@ -94,36 +93,13 @@ export async function verifyPhase(
             };
         }
 
-        // Step 2: Get kubeconfig for the cluster
-        const kubeConfigResult = await invokeKubectlCommand(
-            kubectl,
-            "",
-            "config view --raw",
-            NonZeroExitCodeBehaviour.Fail,
-        );
-
+        // Step 2: Acquire authenticated kubeconfig for the cluster (Azure SDK path,
+        // shared with the DEPLOY phase — does not rely on the user's local kubectl context).
+        const kubeConfigResult = await acquireKubeconfigFile(config);
         if (failed(kubeConfigResult)) {
-            return {
-                ok: false,
-                error: "Could not read kubeconfig. Ensure kubectl is configured.",
-                retryable: true,
-            };
+            return { ok: false, error: kubeConfigResult.error, retryable: true };
         }
-
-        const kubeconfigYaml = kubeConfigResult.result.stdout;
-
-        // Authenticate kubeconfig for AKS AAD clusters (injects VS Code managed token)
-        const authenticatedConfig = await getAuthenticatedKubeconfigYaml(kubeconfigYaml);
-        if (failed(authenticatedConfig)) {
-            return {
-                ok: false,
-                error: `Could not authenticate kubeconfig: ${authenticatedConfig.error}`,
-                retryable: true,
-            };
-        }
-
-        // Write kubeconfig to temp file for kubectl operations
-        const kubeConfigFile = await createTempFile(authenticatedConfig.result, "yaml");
+        const kubeConfigFile = kubeConfigResult.result;
 
         try {
             stream.markdown("### Pod Status\n\n");

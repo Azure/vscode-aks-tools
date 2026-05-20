@@ -332,6 +332,7 @@ export async function executePhase(
                     stream,
                     token,
                     request,
+                    storageUri,
                 );
 
             case Phase.VERIFY:

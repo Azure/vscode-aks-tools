@@ -1,9 +1,8 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { getAuthenticatedKubeconfigYaml } from "../../../commands/utils/clusters";
 import { failed } from "../../../commands/utils/errorable";
-import { createTempFile } from "../../../commands/utils/tempfile";
+import { acquireKubeconfigFile } from "../kubeconfig";
 import { PhaseResult } from "../phaseRunner";
 import { ArtifactsData, ConfigData, ImageData, DeploymentData } from "../state";
 import { runInTerminal } from "../terminalTool";
@@ -36,6 +35,7 @@ export async function deployPhase(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     request: vscode.ChatRequest,
+    storageUri?: vscode.Uri,
 ): Promise<PhaseResult & { deployment?: DeploymentData }> {
     try {
         if (token.isCancellationRequested) {
@@ -47,11 +47,17 @@ export async function deployPhase(
         // Entry validation
         stream.markdown("🚀 **Deploying to AKS**\n\n");
 
-        // Check manifests are saved
-        if (!artifacts.savedToDisk || artifacts.stagedFiles.length === 0) {
+        if (artifacts.stagedFiles.length === 0) {
             return {
                 ok: false,
-                error: "Manifests have not been saved to disk. Please save the generated manifests before deploying.",
+                error: "No manifests available. Please run the Prepare phase to generate them.",
+                retryable: false,
+            };
+        }
+        if (!artifacts.savedToDisk && !storageUri) {
+            return {
+                ok: false,
+                error: "No staged artifacts found. Please run the Prepare phase first.",
                 retryable: false,
             };
         }
@@ -84,56 +90,56 @@ export async function deployPhase(
             };
         }
 
-        // Get authenticated kubeconfig
-        let kubeconfigYaml: string;
-        try {
-            const cfgResult = await kubectl.api.invokeCommand("config view --minify --flatten -o yaml");
-            if (!cfgResult || cfgResult.code !== 0) {
-                return {
-                    ok: false,
-                    error: `Could not read kubeconfig for cluster '${config.clusterName}'.`,
-                    retryable: true,
-                };
-            }
-
-            const authenticatedConfig = await getAuthenticatedKubeconfigYaml(cfgResult.stdout);
-            if (failed(authenticatedConfig)) {
-                return {
-                    ok: false,
-                    error: `Could not authenticate kubeconfig: ${authenticatedConfig.error}`,
-                    retryable: true,
-                };
-            }
-
-            kubeconfigYaml = authenticatedConfig.result;
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            return {
-                ok: false,
-                error: `Failed to prepare kubeconfig: ${message}`,
-                retryable: true,
-            };
+        // Acquire authenticated kubeconfig (written to a temp file ready for kubectl --kubeconfig=...)
+        const kubeConfigResult = await acquireKubeconfigFile(config);
+        if (failed(kubeConfigResult)) {
+            return { ok: false, error: kubeConfigResult.error, retryable: true };
         }
-
-        // Create temporary kubeconfig file
-        const kubeConfigFile = await createTempFile(kubeconfigYaml, "yaml");
+        const kubeConfigFile = kubeConfigResult.result;
 
         try {
             // Determine manifest directories. Monorepo modules have manifests under
             // "<module>/k8s/"; single-module projects have them at the workspace root "k8s/".
             const isManifestFilename = (filename: string): boolean => /(^|\/)k8s\//.test(filename);
-            const manifestDirsRel = new Set<string>();
-            for (const sf of artifacts.stagedFiles) {
-                if (!isManifestFilename(sf.filename)) continue;
-                const idx = sf.filename.lastIndexOf("k8s/");
-                const dirRel = idx > 0 ? `${sf.filename.substring(0, idx)}k8s` : "k8s";
-                manifestDirsRel.add(dirRel);
+            const manifestFiles = artifacts.stagedFiles.filter((f) => isManifestFilename(f.filename));
+
+            let manifestDirs: string[];
+            if (manifestFiles.length === 0) {
+                return {
+                    ok: false,
+                    error: "No staged manifests found under k8s/. Please run the Prepare phase to generate them.",
+                    retryable: false,
+                };
             }
-            if (manifestDirsRel.size === 0) {
-                // Fall back to default location (backward compat with non-staged flows)
-                manifestDirsRel.add("k8s");
+            if (artifacts.savedToDisk) {
+                // Manifests live in the user's workspace; group by their relative k8s/ dir.
+                const dirsRel = new Set<string>();
+                for (const sf of manifestFiles) {
+                    const idx = sf.filename.lastIndexOf("k8s/");
+                    const dirRel = idx > 0 ? `${sf.filename.substring(0, idx)}k8s` : "k8s";
+                    dirsRel.add(dirRel);
+                }
+                manifestDirs = [...dirsRel].map((d) => path.join(workspacePath, d));
+            } else {
+                // Manifests are still staged in extension storage. Use the on-disk
+                // directories of the staged files directly so kubectl can read them.
+                const dirsAbs = new Set<string>();
+                for (const sf of manifestFiles) {
+                    const fsPath = vscode.Uri.parse(sf.stagedPath).fsPath;
+                    if (!fsPath) {
+                        return {
+                            ok: false,
+                            error: "Staged manifests are not available on the local filesystem. Save artifacts to the workspace before deploying (this is required when running on vscode.dev / Azure web).",
+                            retryable: false,
+                        };
+                    }
+                    dirsAbs.add(path.dirname(fsPath));
+                }
+                manifestDirs = [...dirsAbs];
+                stream.markdown(
+                    `\u2139\ufe0f Deploying from staged manifest${manifestDirs.length > 1 ? "s" : ""} (not yet saved to workspace).\n\n`,
+                );
             }
-            const manifestDirs = [...manifestDirsRel].map((d) => path.join(workspacePath, d));
 
             // Skip namespace creation for AKS Automatic (it manages namespaces automatically)
             if (config.clusterSku === "Automatic") {
