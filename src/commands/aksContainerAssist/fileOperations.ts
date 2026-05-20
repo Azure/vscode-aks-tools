@@ -126,6 +126,28 @@ export async function scanForK8sManifests(rootPath: string): Promise<string[]> {
 }
 
 /**
+ * Scans for Kubernetes manifests under each module's `<modulePath>/<k8sFolder>`
+ * directory and returns a map of `modulePath -> absolute manifest paths`.
+ *
+ * Modules with no manifests are still represented (empty array) so callers can
+ * decide whether to prompt (Browse / Manual / Skip) for missing services.
+ */
+export async function scanManifestsForModulePaths(
+    modulePaths: string[],
+    k8sFolder: string = getK8sManifestFolder(),
+): Promise<Map<string, string[]>> {
+    const uniqueModules = Array.from(new Set(modulePaths));
+    const results = await Promise.all(
+        uniqueModules.map(async (modulePath) => {
+            const scanRoot = path.join(modulePath, k8sFolder);
+            const hits = await scanForK8sManifests(scanRoot);
+            return [modulePath, hits] as const;
+        }),
+    );
+    return new Map(results);
+}
+
+/**
  * Generic depth-limited directory walker. Calls `onFile` for each file found.
  * Skips excluded directories. The callback can be async.
  * Uses Node.js fs/promises for reliable performance across all environments.
