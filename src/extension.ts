@@ -79,6 +79,7 @@ import {
     deployAppWithAutomatedPipelineFromTree,
 } from "./commands/aksContainerAssist/aksContainerAssist";
 import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModernizationBridge";
+import { switchToClassicMenu, switchToStructuredMenu } from "./commands/menuToggle/menuToggle";
 import { draftArgoCDDeployment } from "./commands/aksArgoCD/argoCDDeployment";
 import { argoCDCheckStatus } from "./commands/aksArgoCD/argoCDInstall";
 import { argoCDApplyApp, argoCDPostApplyActions, isArgoCDApplication } from "./commands/aksArgoCD/argoCDApplyApp";
@@ -189,6 +190,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.argoCDCheckStatus", argoCDCheckStatus);
         registerCommandWithTelemetry("aks.argoCDApplyApp", argoCDApplyApp);
         registerCommandWithTelemetry("aks.argoCDPostApplyActions", argoCDPostApplyActions);
+        registerCommandWithTelemetry("aks.switchToClassicMenu", switchToClassicMenu);
+        registerCommandWithTelemetry("aks.switchToStructuredMenu", switchToStructuredMenu);
 
         // Notify when an Argo CD Application YAML is opened in the editor.
         context.subscriptions.push(

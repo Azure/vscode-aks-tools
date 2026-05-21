@@ -80,5 +80,7 @@
   "AKS: Create Argo CD GitOps Pipeline": "AKS: Create Argo CD GitOps Pipeline",
   "AKS: Check Argo CD Status": "AKS: Check Argo CD Status",
   "AKS: Apply Argo CD Application to Cluster": "AKS: Apply Argo CD Application to Cluster",
-  "AKS: Argo CD Post-Deploy Actions": "AKS: Argo CD Post-Deploy Actions"
+  "AKS: Argo CD Post-Deploy Actions": "AKS: Argo CD Post-Deploy Actions",
+  "AKS: Take me back to Classic Menu": "AKS: Take me back to Classic Menu",
+  "AKS: Switch to Structured Menu": "AKS: Switch to Structured Menu"
 }
