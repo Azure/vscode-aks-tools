@@ -13,19 +13,27 @@ export interface ReviewResult {
     findings: ReviewFinding[];
 }
 
+function getOrderedGuardrails(guardrails: GuardrailContribution[], agentName: string): GuardrailContribution[] {
+    const applicable = guardrails.filter(
+        (g) => g.stages.includes("tool") && g.appliesTo.some((p) => p === "*" || p === agentName),
+    );
+    const core = applicable.filter((g) => g.id.startsWith("core/"));
+    const other = applicable.filter((g) => !g.id.startsWith("core/"));
+    return [...core, ...other];
+}
+
 export async function reviewArtifacts(
     files: StagedFile[],
     options?: { guardrails?: GuardrailContribution[]; toolName?: string },
 ): Promise<ReviewResult> {
     const guardrails = options?.guardrails ?? getDefaultGuardrails();
     const toolName = options?.toolName ?? "write_file";
+    const ordered = getOrderedGuardrails(guardrails, "kickstart");
 
     const findings: ReviewFinding[] = [];
 
     for (const file of files) {
-        for (const guardrail of guardrails) {
-            if (!guardrail.stages.includes("tool")) continue;
-
+        for (const guardrail of ordered) {
             let result;
             try {
                 result = await guardrail.evaluate({

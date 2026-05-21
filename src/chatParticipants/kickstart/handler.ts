@@ -9,6 +9,8 @@ import { getAssetContext } from "../../assets";
 import { runGuardrails, getDefaultGuardrails } from "./guardrails";
 import { LMClient } from "../../commands/aksContainerAssist/lmClient";
 
+let sharedLmClient: LMClient | undefined;
+
 /**
  * Returns true if this is the first kickstart turn in this chat thread
  * (i.e. no prior kickstart response exists in history).
@@ -126,7 +128,10 @@ export async function defaultHandler(
             return { metadata: { command: "welcome" } };
         }
 
-        const lmClient = new LMClient();
+        if (!sharedLmClient) {
+            sharedLmClient = new LMClient();
+        }
+        const lmClient = sharedLmClient;
         await lmClient.ensureModel();
         const { intent, source: intentSource } = await detectIntent(prompt, request.command, state, {
             lmClient,

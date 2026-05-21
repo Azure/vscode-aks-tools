@@ -1,5 +1,8 @@
+import * as l10n from "@vscode/l10n";
 import { Uri, window, workspace, ExtensionContext } from "vscode";
 import { KickstartState, loadState, saveState } from "../../chatParticipants/kickstart/state";
+
+const encoder = new TextEncoder();
 
 export async function triggerAcceptAll(context: ExtensionContext): Promise<void> {
     const workspaceFolders = workspace.workspaceFolders;
@@ -15,7 +18,7 @@ export async function triggerAcceptAll(context: ExtensionContext): Promise<void>
     for (const f of stagedFiles) {
         if (f.status === "rejected") continue;
         const dest = Uri.joinPath(workspaceRoot, f.filename);
-        await workspace.fs.writeFile(dest, Buffer.from(f.content, "utf8"));
+        await workspace.fs.writeFile(dest, encoder.encode(f.content));
     }
 
     const updated = stagedFiles.map((f) => (f.status !== "rejected" ? { ...f, status: "accepted" as const } : f));
@@ -25,5 +28,5 @@ export async function triggerAcceptAll(context: ExtensionContext): Promise<void>
     };
     await saveState(context, workspaceFolder, newState);
     const count = updated.filter((f) => f.status === "accepted").length;
-    window.showInformationMessage(`Saved ${count} file(s) to project.`);
+    window.showInformationMessage(l10n.t("Saved {0} file(s) to project.", count));
 }

@@ -38,6 +38,9 @@ export function applyRedact(input: GuardrailInput, result: GuardrailResult): voi
             if (result.redactedArgs !== undefined) {
                 input.toolArgs = result.redactedArgs;
             } else if (result.redacted !== undefined) {
+                if (typeof result.redacted !== "object" || result.redacted === null || Array.isArray(result.redacted)) {
+                    throw new Error("Guardrail redact on tool stage: redacted value must be a non-null object");
+                }
                 input.toolArgs = result.redacted as Record<string, unknown>;
             }
             break;

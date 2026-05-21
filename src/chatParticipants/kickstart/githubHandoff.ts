@@ -65,6 +65,11 @@ export async function createPullRequest(args: CreatePullRequestArgs): Promise<Pu
     const data = (await response.json()) as Record<string, unknown>;
     const prNumber = typeof data["number"] === "number" ? (data["number"] as number) : 0;
     const htmlUrl = typeof data["html_url"] === "string" ? (data["html_url"] as string) : "";
+
+    if (!prNumber || !htmlUrl) {
+        throw new Error(`GitHub API returned an unexpected response: missing PR number or URL. Raw: ${JSON.stringify(data)}`);
+    }
+
     return { prNumber, htmlUrl };
 }
 
