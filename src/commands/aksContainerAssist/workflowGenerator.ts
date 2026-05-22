@@ -281,7 +281,7 @@ async function collectMultiContainerWorkflowConfiguration(
     const manifestsByModule = await scanManifestsForModulePaths(moduleScanRoots);
 
     const containers: ContainerJobConfig[] = [];
-    /** Track the first manually-chosen manifest to offer "apply to all" shortcut (#2163). */
+    /** Track the first resolved manifest (auto-detected or manually chosen) to offer the shared-manifest shortcut (#2163). */
     let sharedManifestPath: string | undefined;
     let applySharedToAll = false;
 
