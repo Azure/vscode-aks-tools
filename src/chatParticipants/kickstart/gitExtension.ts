@@ -2,21 +2,13 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { Errorable, getErrorMessage } from "../../commands/utils/errorable";
 
-// Subset of the vscode.git extension API we depend on.
-// See https://github.com/microsoft/vscode/blob/main/extensions/git/src/api/git.d.ts
-interface GitCloneOptions {
-    parentPath?: vscode.Uri;
-    ref?: string;
-    recursive?: boolean;
-    // 'none' suppresses the post-clone "Open / Add to Workspace" action.
-    // When omitted, the user's git.openAfterClone setting is used (default: "prompt").
-    postCloneAction?: "none";
-}
-
+// TODO: See https://github.com/microsoft/vscode/blob/main/extensions/git/src/api/git.d.ts
 interface GitAPI {
-    clone(uri: vscode.Uri, options?: GitCloneOptions): Promise<vscode.Uri | null>;
+    clone(url: string, parentPath: string, options?: { parentPath?: string; recursive?: boolean }): Promise<string>;
 }
 
+// The vscode.git extension exports an object with a getAPI method.
+// vscode.Extension<T>.exports is T, so we type the extension as having getAPI directly.
 interface GitExtensionExports {
     getAPI(version: 1): GitAPI;
 }
@@ -42,6 +34,41 @@ export async function getGitApi(): Promise<Errorable<GitAPI>> {
     }
 }
 
+async function pathExists(filePath: string): Promise<boolean> {
+    try {
+        await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function isSafeTargetName(targetName: string): boolean {
+    return targetName === path.basename(targetName) && targetName !== "." && targetName !== "..";
+}
+
+async function getUniqueCloneTargetPath(parentPath: string, targetName: string): Promise<Errorable<string>> {
+    if (!isSafeTargetName(targetName)) {
+        return { succeeded: false, error: "Invalid target name" };
+    }
+
+    const basePath = path.resolve(parentPath);
+    let cloneTargetPath = path.resolve(basePath, targetName);
+
+    let suffix = 1;
+    while (await pathExists(cloneTargetPath)) {
+        cloneTargetPath = path.resolve(basePath, `${targetName}-${suffix}`);
+        suffix++;
+    }
+
+    const relativePath = path.relative(basePath, cloneTargetPath);
+    if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+        return { succeeded: false, error: "Invalid target name" };
+    }
+
+    return { succeeded: true, result: cloneTargetPath };
+}
+
 export async function cloneSample(
     url: string,
     parentPath: string,
@@ -52,9 +79,8 @@ export async function cloneSample(
         {
             location: vscode.ProgressLocation.Notification,
             cancellable: true,
-            title: `Cloning ${targetName}…`,
         },
-        async (_progress, progressToken) => {
+        async (_, progressToken) => {
             const checkCancelled = () => token.isCancellationRequested || progressToken.isCancellationRequested;
 
             if (checkCancelled()) {
@@ -66,55 +92,18 @@ export async function cloneSample(
                 return gitApiResult;
             }
 
+            const targetResult = await getUniqueCloneTargetPath(parentPath, targetName);
+            if (!targetResult.succeeded) {
+                return targetResult;
+            }
+
             if (checkCancelled()) {
                 return { succeeded: false, error: "Clone cancelled" };
             }
 
             try {
-                // Modern Git extension API: clone(uri: Uri, options): Promise<Uri | null>.
-                // - `parentPath` is the parent directory; the clone manager creates
-                //   <parentPath>/<repo-name-from-url> inside it.
-                // - `postCloneAction: 'none'` suppresses the "Open / Add to Workspace"
-                //   prompt AND the sibling-root add, so kickstart fully owns workspace
-                //   placement. Without this, the user's git.openAfterClone setting
-                //   (default "prompt") drives a UI prompt that adds the cloned folder
-                //   as a sibling root next to the Azure workspace.
-                const resultUri = await gitApiResult.result.clone(vscode.Uri.parse(url), {
-                    parentPath: vscode.Uri.file(parentPath),
-                    recursive: true,
-                    postCloneAction: "none",
-                });
-
-                if (!resultUri) {
-                    return { succeeded: false, error: "Clone failed: no result path returned" };
-                }
-
-                const clonedPath = resultUri.fsPath;
-
-                // The Git extension's clone manager keeps a cache of known cloned
-                // repositories keyed by URL. If a clone already exists for this URL
-                // (e.g. the parent workspace folder is itself a checkout of this
-                // repo, or a prior clone was registered) the API returns that
-                // existing path WITHOUT performing a clone. Detect when the result
-                // is not a fresh child of `parentPath` and surface an actionable
-                // error rather than silently treating the parent as the sample.
-                const normalizedParent = path.resolve(parentPath);
-                const normalizedResult = path.resolve(clonedPath);
-                const isFreshChild =
-                    normalizedResult !== normalizedParent &&
-                    (normalizedResult + path.sep).startsWith(normalizedParent + path.sep);
-
-                if (!isFreshChild) {
-                    return {
-                        succeeded: false,
-                        error:
-                            `This repository is already checked out at ${normalizedResult}. ` +
-                            `Use "Use current workspace folder" to continue with the existing checkout, ` +
-                            `or remove it and try again.`,
-                    };
-                }
-
-                return { succeeded: true, result: clonedPath };
+                await gitApiResult.result.clone(url, parentPath, { parentPath: targetResult.result, recursive: true });
+                return { succeeded: true, result: targetResult.result };
             } catch (error) {
                 return { succeeded: false, error: getErrorMessage(error) };
             }

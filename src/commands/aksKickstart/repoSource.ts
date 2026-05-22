@@ -1,9 +1,7 @@
-import * as os from "os";
-import * as path from "path";
 import * as vscode from "vscode";
 import { Errorable } from "../utils/errorable";
 import { cloneSample } from "../../chatParticipants/kickstart/gitExtension";
-import { KICKSTART_SAMPLE_REPOS } from "../../chatParticipants/kickstart/config";
+import { KICKSTART_SAMPLE_REPO_URL } from "../../chatParticipants/kickstart/config";
 
 export async function useWorkspace(): Promise<Errorable<string>> {
     const folders = vscode.workspace.workspaceFolders;
@@ -23,44 +21,38 @@ export async function useWorkspace(): Promise<Errorable<string>> {
     return { succeeded: true, result: picked.uri.fsPath };
 }
 
-export const KICKSTART_TEMP_ROOT = path.join(os.tmpdir(), "kickstart-samples");
+export async function useSample(token: vscode.CancellationToken): Promise<Errorable<string>> {
+    const uris = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: "Select clone destination",
+    });
 
-export async function useSample(
-    token: vscode.CancellationToken,
-    parentPath: string = KICKSTART_TEMP_ROOT,
-): Promise<Errorable<string>> {
-    const picked = await vscode.window.showQuickPick(
-        KICKSTART_SAMPLE_REPOS.map((r) => ({
-            label: r.label,
-            description: r.description,
-            url: r.url,
-        })),
-        {
-            placeHolder: "Choose a sample project to containerize",
-            title: "Kickstart: Sample Repos",
-        },
-    );
-
-    if (!picked) {
+    if (!uris || uris.length === 0) {
         return { succeeded: false, error: "Cancelled." };
     }
 
+    const parentPath = uris[0].fsPath;
     const repoName =
-        picked.url
-            .split("/")
+        KICKSTART_SAMPLE_REPO_URL.split("/")
             .pop()
-            ?.replace(/\.git$/, "") ?? "sample";
+            ?.replace(/\.git$/, "") ?? "aks-store-demo";
 
     try {
-        await vscode.workspace.fs.createDirectory(vscode.Uri.file(parentPath));
-    } catch {
-        // directory already exists — safe to ignore
-    }
+        const cloneResult = await cloneSample(KICKSTART_SAMPLE_REPO_URL, parentPath, repoName, token);
+        if (!cloneResult.succeeded) {
+            return cloneResult;
+        }
 
-    const cloneResult = await cloneSample(picked.url, parentPath, repoName, token);
-    if (!cloneResult.succeeded) {
-        return cloneResult;
-    }
+        const clonedPath = cloneResult.result;
+        await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(clonedPath), {
+            forceNewWindow: false,
+        });
 
-    return { succeeded: true, result: cloneResult.result };
+        return { succeeded: true, result: clonedPath };
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { succeeded: false, error: message };
+    }
 }

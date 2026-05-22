@@ -63,12 +63,12 @@ describe("kickstart gitExtension", () => {
         });
     });
 
-    it("cloneSample passes postCloneAction: 'none' to suppress the open-after-clone prompt", async () => {
-        const cloneResultUri = vscode.Uri.file("/tmp/parent/sample");
-        const clone = sandbox.spy(async () => cloneResultUri);
+    it("cloneSample uses a unique target when the default exists", async () => {
+        const clone = sandbox.spy(async () => "/tmp/parent/sample-1");
         const getAPI = sandbox.stub().returns({ clone });
-        // pathExists check after clone: report the path exists.
-        sandbox.stub(vscode.workspace.fs, "stat").resolves();
+        const statStub = sandbox.stub(vscode.workspace.fs, "stat");
+        statStub.onFirstCall().resolves();
+        statStub.onSecondCall().rejects(new Error("not found"));
 
         sandbox.stub(vscode.extensions, "getExtension").returns({
             isActive: true,
@@ -81,16 +81,8 @@ describe("kickstart gitExtension", () => {
 
         assert.deepStrictEqual(result, {
             succeeded: true,
-            result: cloneResultUri.fsPath,
+            result: "/tmp/parent/sample-1",
         });
         assert.ok(clone.calledOnce);
-        const [uriArg, optionsArg] = clone.firstCall.args as unknown as [
-            vscode.Uri,
-            { parentPath?: vscode.Uri; recursive?: boolean; postCloneAction?: string },
-        ];
-        assert.strictEqual(uriArg.toString(), vscode.Uri.parse("https://example.com/repo.git").toString());
-        assert.strictEqual(optionsArg.parentPath?.fsPath, vscode.Uri.file("/tmp/parent").fsPath);
-        assert.strictEqual(optionsArg.recursive, true);
-        assert.strictEqual(optionsArg.postCloneAction, "none");
     });
 });

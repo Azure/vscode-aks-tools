@@ -8,9 +8,6 @@ import { analyzeProject } from "./steps/analyze";
 import { generateDockerfileStep } from "./steps/dockerfile";
 import { generateManifestsStep } from "./steps/manifests";
 import { generateGithubActionsStep } from "./steps/githubActions";
-import { configureKickstart } from "../../commands/aksKickstart/configure";
-import { StagedFileManager } from "./stagedFileManager";
-import { StagedFile } from "./state";
 
 export interface KickstartOptions {
     projectPath: string;
@@ -19,9 +16,6 @@ export interface KickstartOptions {
     acrLoginServer?: string;
     clusterName?: string;
     resourceGroup?: string;
-    isAutomatic?: boolean;
-    canGetKubeconfig?: boolean;
-    hasAcrPull?: boolean;
 }
 
 export interface KickstartResult {
@@ -39,7 +33,6 @@ export async function handleStart(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     options?: Partial<KickstartOptions>,
-    storageUri?: vscode.Uri,
 ): Promise<KickstartResult> {
     if (isCancelled(token, stream)) {
         reportKickstartTelemetry("start.cancelled");
@@ -56,36 +49,6 @@ export async function handleStart(
     }
 
     const projectPath = projectPathResult.result;
-
-    if (!options?.clusterKey) {
-        stream.progress("Configuring cluster and registry...");
-        const configResult = await configureKickstart();
-        if (failed(configResult)) {
-            if (configResult.error === "Cancelled.") {
-                reportKickstartTelemetry("start.cancelled");
-                return { metadata: { command: "start", cancelled: true } };
-            }
-            stream.markdown(`**Error:** ${configResult.error}`);
-            reportKickstartTelemetry("start.error", { error: "configure_failed" });
-            return { metadata: { command: "start", error: configResult.error } };
-        }
-
-        options = {
-            ...options,
-            projectPath,
-            clusterKey: configResult.result.clusterKey,
-            acrKey: configResult.result.acrKey,
-            acrLoginServer: configResult.result.acrLoginServer,
-            clusterName: configResult.result.clusterName,
-            resourceGroup: configResult.result.resourceGroup,
-            isAutomatic: configResult.result.isAutomatic,
-            canGetKubeconfig: configResult.result.canGetKubeconfig,
-            hasAcrPull: configResult.result.hasAcrPull,
-        };
-    }
-
-    renderPreflightChecks(stream, options);
-
     const lmClient = new LMClient();
     const modelResult = await lmClient.ensureModel();
     if (failed(modelResult)) {
@@ -112,23 +75,7 @@ export async function handleStart(
         return { metadata: { command: "start", cancelled: true } };
     }
     stream.progress("Generating Dockerfile...");
-    const stagedManager = new StagedFileManager(storageUri ?? vscode.Uri.file(projectPath));
-    const stagedSoFar: StagedFile[] = [];
-    const noopOnFileStaged = (_file: StagedFile, allStaged: StagedFile[]) => {
-        stagedSoFar.length = 0;
-        stagedSoFar.push(...allStaged);
-    };
-
-    const dockerfileResult = await generateDockerfileStep(
-        analysis.result,
-        lmClient,
-        stream,
-        token,
-        projectPath,
-        stagedManager,
-        stagedSoFar,
-        noopOnFileStaged,
-    );
+    const dockerfileResult = await generateDockerfileStep(analysis.result, lmClient, stream, token, projectPath);
     if (failed(dockerfileResult)) {
         stream.markdown(`**Error:** ${dockerfileResult.error}`);
         reportKickstartTelemetry("start.error", { error: "dockerfile_failed" });
@@ -147,9 +94,6 @@ export async function handleStart(
         stream,
         token,
         projectPath,
-        stagedManager,
-        stagedSoFar,
-        noopOnFileStaged,
         options,
     );
     if (failed(manifestsResult)) {
@@ -169,9 +113,6 @@ export async function handleStart(
         stream,
         token,
         projectPath,
-        stagedManager,
-        stagedSoFar,
-        noopOnFileStaged,
         options,
     );
     if (failed(githubActionsResult)) {
@@ -180,17 +121,7 @@ export async function handleStart(
         return { metadata: { command: "start", projectPath, error: githubActionsResult.error } };
     }
 
-    stream.markdown("\n✅ **Files generated** — review in the panel, then click **Save to project**:\n\n");
-
-    // Build file tree for native chat rendering (supports nested per-module paths).
-    const fileTree = buildNestedFileTree(stagedSoFar.map((sf) => sf.filename));
-    // Use the staging root as the filetree base so clicking a file opens the staged copy
-    stream.filetree(fileTree, stagedManager.stagingRoot);
-    for (const sf of stagedSoFar) {
-        stream.reference(vscode.Uri.parse(sf.stagedPath));
-    }
-
-    stream.button({ command: "aks.kickstart.acceptAll", title: "Save to project" });
+    stream.button({ command: "aks.kickstart.saveAll", title: "Save all files" });
     if (options?.clusterKey) {
         const { subscriptionId, resourceGroup, clusterName } = options.clusterKey;
         const portalUrl = `https://portal.azure.com/#@/resource/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.ContainerService/managedClusters/${clusterName}/overview`;
@@ -216,43 +147,6 @@ export async function handleSample(
     return { metadata: { command: "sample" } };
 }
 
-function renderPreflightChecks(stream: vscode.ChatResponseStream, options?: Partial<KickstartOptions>): void {
-    if (!options) return;
-
-    const lines: string[] = ["### Pre-flight Checks\n"];
-
-    if (options.isAutomatic !== undefined) {
-        const skuLabel = options.isAutomatic ? "AKS Automatic" : "AKS Standard";
-        const icon = options.isAutomatic ? "⚠️" : "✅";
-        lines.push(`${icon} **Cluster SKU:** ${skuLabel}`);
-        if (options.isAutomatic) {
-            lines.push(
-                "  > AKS Automatic manages node pools, scaling, and upgrades. Some Kickstart features may behave differently.",
-            );
-        }
-    }
-
-    if (options.canGetKubeconfig !== undefined) {
-        const icon = options.canGetKubeconfig ? "✅" : "❌";
-        lines.push(`${icon} **Kubeconfig access:** ${options.canGetKubeconfig ? "Available" : "Denied"}`);
-        if (!options.canGetKubeconfig) {
-            lines.push(
-                "  > You do not have permission to get kubeconfig credentials for this cluster. Ensure you have the **Azure Kubernetes Service Cluster User Role**.",
-            );
-        }
-    }
-
-    if (options.hasAcrPull !== undefined) {
-        const icon = options.hasAcrPull ? "✅" : "⚠️";
-        lines.push(`${icon} **ACR Pull permission:** ${options.hasAcrPull ? "Configured" : "Not configured"}`);
-        if (!options.hasAcrPull) {
-            lines.push("  > The cluster does not have AcrPull on this registry. You can attach it below.");
-        }
-    }
-
-    stream.markdown(lines.join("\n"));
-}
-
 function isCancelled(token: vscode.CancellationToken, stream: vscode.ChatResponseStream): boolean {
     if (!token.isCancellationRequested) {
         return false;
@@ -260,30 +154,4 @@ function isCancelled(token: vscode.CancellationToken, stream: vscode.ChatRespons
 
     stream.markdown("Cancelled.");
     return true;
-}
-
-/**
- * Builds a nested ChatResponseFileTree from "/"-separated filenames.
- * Staged filenames may be flat (e.g. "Dockerfile") or per-module
- * (e.g. "src/api/Dockerfile", "src/api/k8s/deployment.yaml").
- */
-function buildNestedFileTree(filenames: string[]): vscode.ChatResponseFileTree[] {
-    type Node = { name: string; children?: Node[] };
-    const root: Node = { name: "", children: [] };
-    for (const fn of filenames) {
-        const parts = fn.split("/").filter((p) => p.length > 0);
-        let curr: Node = root;
-        for (let i = 0; i < parts.length; i++) {
-            const name = parts[i];
-            const isLast = i === parts.length - 1;
-            curr.children = curr.children ?? [];
-            let next = curr.children.find((c) => c.name === name);
-            if (!next) {
-                next = isLast ? { name } : { name, children: [] };
-                curr.children.push(next);
-            }
-            curr = next;
-        }
-    }
-    return (root.children ?? []) as vscode.ChatResponseFileTree[];
 }

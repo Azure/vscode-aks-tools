@@ -2,7 +2,11 @@ import * as assert from "assert";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
-import { scanForDockerfiles, scanForK8sManifests } from "../../../commands/aksContainerAssist/fileOperations";
+import {
+    scanForDockerfiles,
+    scanForK8sManifests,
+    scanManifestsForModulePaths,
+} from "../../../commands/aksContainerAssist/fileOperations";
 
 describe("fileOperations", () => {
     let tempDir: string;
@@ -270,6 +274,103 @@ describe("fileOperations", () => {
             const result = await scanForK8sManifests(dir);
 
             assert.strictEqual(result.length, 1);
+        });
+    });
+
+    describe("scanManifestsForModulePaths", () => {
+        let modulesDir: string;
+
+        before(() => {
+            modulesDir = path.join(tempDir, "modules-scan");
+            fs.mkdirSync(modulesDir);
+        });
+
+        const writeManifest = (file: string, kind: string = "Deployment") => {
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, `apiVersion: apps/v1\nkind: ${kind}\nmetadata:\n  name: x\n`);
+        };
+
+        it("returns a map keyed by module path with absolute manifest paths", async () => {
+            const root = path.join(modulesDir, "happy");
+            const frontend = path.join(root, "frontend");
+            const api = path.join(root, "api");
+            writeManifest(path.join(frontend, "k8s", "deployment.yaml"));
+            writeManifest(path.join(api, "k8s", "deployment.yaml"), "Deployment");
+            writeManifest(path.join(api, "k8s", "service.yaml"), "Service");
+
+            const result = await scanManifestsForModulePaths([frontend, api]);
+
+            assert.strictEqual(result.size, 2);
+            assert.ok(result.has(frontend));
+            assert.ok(result.has(api));
+            assert.strictEqual(result.get(frontend)!.length, 1);
+            assert.ok(result.get(frontend)![0].endsWith(path.join("frontend", "k8s", "deployment.yaml")));
+            assert.strictEqual(result.get(api)!.length, 2);
+            assert.ok(result.get(api)!.every((p) => path.isAbsolute(p)));
+        });
+
+        it("represents modules with no k8s folder as an empty array (not omitted)", async () => {
+            const root = path.join(modulesDir, "missing");
+            const withK8s = path.join(root, "with");
+            const without = path.join(root, "without");
+            fs.mkdirSync(without, { recursive: true });
+            writeManifest(path.join(withK8s, "k8s", "deployment.yaml"));
+
+            const result = await scanManifestsForModulePaths([withK8s, without]);
+
+            assert.strictEqual(result.size, 2);
+            assert.strictEqual(result.get(withK8s)!.length, 1);
+            assert.deepStrictEqual(result.get(without), []);
+        });
+
+        it("represents modules with empty k8s folder as an empty array", async () => {
+            const root = path.join(modulesDir, "empty-k8s");
+            fs.mkdirSync(path.join(root, "k8s"), { recursive: true });
+
+            const result = await scanManifestsForModulePaths([root]);
+
+            assert.deepStrictEqual(result.get(root), []);
+        });
+
+        it("supports a custom k8s folder name", async () => {
+            const root = path.join(modulesDir, "custom-folder");
+            writeManifest(path.join(root, "manifests", "deployment.yaml"));
+            // A "k8s" folder elsewhere with a manifest should NOT be picked up.
+            writeManifest(path.join(root, "k8s", "deployment.yaml"));
+
+            const result = await scanManifestsForModulePaths([root], "manifests");
+
+            assert.strictEqual(result.get(root)!.length, 1);
+            assert.ok(result.get(root)![0].includes(path.join("manifests", "deployment.yaml")));
+        });
+
+        it("deduplicates repeated module paths in the input", async () => {
+            const root = path.join(modulesDir, "dup");
+            writeManifest(path.join(root, "k8s", "deployment.yaml"));
+
+            const result = await scanManifestsForModulePaths([root, root, root]);
+
+            // Even though the input had 3 entries, the map should have a single key.
+            assert.strictEqual(result.size, 1);
+            assert.strictEqual(result.get(root)!.length, 1);
+        });
+
+        it("returns an empty map when given no module paths", async () => {
+            const result = await scanManifestsForModulePaths([]);
+            assert.strictEqual(result.size, 0);
+        });
+
+        it("paths in the map are workspace-convertible via path.relative by callers", async () => {
+            const workspaceRoot = path.join(modulesDir, "ws");
+            const moduleAbs = path.join(workspaceRoot, "services", "api");
+            writeManifest(path.join(moduleAbs, "k8s", "deployment.yaml"));
+
+            const result = await scanManifestsForModulePaths([moduleAbs]);
+            const hits = result.get(moduleAbs)!;
+            assert.strictEqual(hits.length, 1);
+            const rel = path.relative(workspaceRoot, hits[0]);
+            assert.ok(!rel.startsWith(".."), `Manifest path should be inside workspace; got ${rel}`);
+            assert.ok(rel.endsWith(path.join("services", "api", "k8s", "deployment.yaml")));
         });
     });
 });

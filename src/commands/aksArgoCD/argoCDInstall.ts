@@ -81,6 +81,49 @@ export function getOutputChannel(): vscode.OutputChannel {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: detect whether Argo CD was installed via the Azure-managed
+// `Microsoft.ArgoCD` k8s-extension (public preview, Mar 2026).
+//
+// The managed extension stamps every workload pod with a `managed-by` label
+// referencing the extension type.  Returns a tri-state so callers can
+// distinguish a definite "upstream" install from "could not determine" (e.g.
+// RBAC forbidden, transient connection failure) and surface an appropriate
+// message instead of silently misclassifying the install.
+//
+// This helper is currently consumed in two places:
+//   * showArgoCDStatus() — informational logging in the output channel.
+//   * argoCDApplyApp.ts post-apply menu — gates the Azure Workload Identity
+//     hint so it is only shown when the managed extension is detected.
+//
+// Reference: https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-argocd
+// ---------------------------------------------------------------------------
+
+export type ArgoCDInstallMethod = "managed" | "upstream" | "unknown";
+
+export async function detectManagedArgoCDExtension(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+): Promise<ArgoCDInstallMethod> {
+    const result = await invokeKubectlCommand(
+        kubectl,
+        kubeConfigFile,
+        `get pods -n ${ARGOCD_NAMESPACE} ` +
+            `-l app.kubernetes.io/managed-by=Microsoft.ArgoCD ` +
+            `--ignore-not-found -o name`,
+        NonZeroExitCodeBehaviour.Succeed,
+    );
+    if (failed(result)) return "unknown";
+    // With NonZeroExitCodeBehaviour.Succeed, kubectl can return a non-zero
+    // exit code (e.g. RBAC forbidden) without throwing.  Treat any non-zero
+    // exit or non-empty stderr as "could not determine" rather than silently
+    // classifying the install as upstream.
+    if (result.result.code !== 0 || result.result.stderr.trim() !== "") {
+        return "unknown";
+    }
+    return result.result.stdout.trim() !== "" ? "managed" : "upstream";
+}
+
+// ---------------------------------------------------------------------------
 // Command: Check Argo CD Status
 // ---------------------------------------------------------------------------
 
@@ -130,6 +173,18 @@ async function showArgoCDStatus(
             ),
         );
         return;
+    }
+
+    // Detect installation method (Azure-managed extension vs upstream OSS).
+    const installMethod = await detectManagedArgoCDExtension(kubectl, kubeconfigFile);
+    if (installMethod === "managed") {
+        channel.appendLine(`[Argo CD Status] Install: Azure-managed extension (Microsoft.ArgoCD) detected.`);
+    } else if (installMethod === "upstream") {
+        channel.appendLine(`[Argo CD Status] Install: upstream Argo CD (no Microsoft.ArgoCD managed-by label found).`);
+    } else {
+        channel.appendLine(
+            `[Argo CD Status] Install: could not determine — 'kubectl get pods -l app.kubernetes.io/managed-by=Microsoft.ArgoCD' failed (RBAC or connection issue?).`,
+        );
     }
 
     // Pods.

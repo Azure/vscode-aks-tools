@@ -1,4 +1,3 @@
-import * as path from "path";
 import * as vscode from "vscode";
 import { generateDockerfile as sdkGenerateDockerfile, formatErrorForLLM } from "containerization-assist-mcp/sdk";
 import { DOCKERFILE_SYSTEM_PROMPT, buildDockerfileUserPrompt } from "../../../commands/aksContainerAssist/prompts";
@@ -7,28 +6,6 @@ import { extractContent } from "../../../commands/aksContainerAssist/contentPars
 import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { Errorable, failed } from "../../../commands/utils/errorable";
 import { AnalysisResult, ModuleAnalysis, tokenToAbortSignal } from "./analyze";
-import { StagedFileManager } from "../stagedFileManager";
-import { StagedFile } from "../state";
-
-export type OnFileStaged = (file: StagedFile, allStaged: StagedFile[]) => void;
-
-export interface DockerfileEnhancementInput {
-    content: string;
-    sourcePath?: string;
-}
-
-/**
- * Returns the staging path prefix for files belonging to `module`.
- * Returns "" for a root-level module (single module or module at project root),
- * or "<rel>/" (forward-slash separated, workspace-relative) otherwise.
- * Used so monorepo modules don't clobber each other's Dockerfile / k8s manifests.
- */
-export function moduleStagePrefix(module: ModuleAnalysis, projectPath: string): string {
-    if (!module.modulePath) return "";
-    const rel = path.isAbsolute(module.modulePath) ? path.relative(projectPath, module.modulePath) : module.modulePath;
-    if (!rel || rel === "." || rel.startsWith("..")) return "";
-    return `${rel.split(path.sep).join("/")}/`;
-}
 
 export async function generateDockerfileStep(
     analysis: AnalysisResult,
@@ -36,15 +13,10 @@ export async function generateDockerfileStep(
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
     projectPath: string,
-    stagedFileManager: StagedFileManager,
-    currentStaged: StagedFile[],
-    onFileStaged: OnFileStaged,
-    existingDockerfileByModule?: Map<string, DockerfileEnhancementInput>,
-): Promise<Errorable<{ dockerfile: string }>> {
+): Promise<Errorable<{ dockerfile: string; dockerignore?: string }>> {
     const modules = modulesOrProject(analysis, projectPath);
     let dockerfile = "";
     let lastError: string | undefined;
-    const staged = [...currentStaged];
 
     for (const module of modules) {
         if (token.isCancellationRequested) {
@@ -55,7 +27,7 @@ export async function generateDockerfileStep(
             const planResult = await sdkGenerateDockerfile(
                 {
                     repositoryPath: projectPath,
-                    modulePath: path.resolve(projectPath, module.modulePath ?? projectPath),
+                    modulePath: module.modulePath ?? projectPath,
                     language: module.language,
                     framework: module.framework,
                     detectedDependencies: module.dependencies,
@@ -69,10 +41,9 @@ export async function generateDockerfileStep(
                 continue;
             }
 
-            const existingDockerfile = existingDockerfileByModule?.get(module.modulePath ?? "");
             const response = await lmClient.sendRequestWithTools(
                 DOCKERFILE_SYSTEM_PROMPT,
-                buildDockerfileUserPrompt(planResult.value, existingDockerfile),
+                buildDockerfileUserPrompt(planResult.value),
                 {
                     tools: PROJECT_TOOLS,
                     toolHandler: (call) => handleToolCall(call, projectPath),
@@ -87,12 +58,12 @@ export async function generateDockerfileStep(
             }
 
             dockerfile = extractContent(response.result, "dockerfile");
-
-            // Stage per-module so monorepo modules don't clobber each other.
-            const stagedFilename = `${moduleStagePrefix(module, projectPath)}Dockerfile`;
-            const stagedFile = await stagedFileManager.stage(stagedFilename, dockerfile);
-            staged.push(stagedFile);
-            onFileStaged(stagedFile, staged);
+            stream.markdown(`**Dockerfile**\n\`\`\`dockerfile\n${dockerfile}\n\`\`\``);
+            stream.button({
+                command: "aks.kickstart.saveFile",
+                title: "Save Dockerfile",
+                arguments: [{ filename: "Dockerfile", content: dockerfile, projectPath }],
+            });
         } catch (error) {
             lastError = String(error);
             stream.markdown(`**Dockerfile error:** ${lastError}`);
