@@ -361,26 +361,30 @@ describe("Multi-Container Workflow Template Tests", () => {
     };
 
     describe("renderMultiContainerWorkflowTemplate", () => {
-        it("renders one build+deploy job pair per container", () => {
+        it("renders a matrix build job and per-container deploy jobs", () => {
             const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
 
-            assert.ok(yaml.includes("build-frontend:"), "Should have build-frontend job");
+            assert.ok(yaml.includes("build:"), "Should have a single build job");
+            assert.ok(yaml.includes("strategy:"), "Build job should use strategy");
+            assert.ok(yaml.includes("matrix:"), "Build job should use matrix");
+            assert.ok(yaml.includes("service: frontend"), "Matrix should include frontend service");
+            assert.ok(yaml.includes("service: api"), "Matrix should include api service");
             assert.ok(yaml.includes("deploy-frontend:"), "Should have deploy-frontend job");
-            assert.ok(yaml.includes("build-api:"), "Should have build-api job");
             assert.ok(yaml.includes("deploy-api:"), "Should have deploy-api job");
-            assert.ok(yaml.includes("needs: [build-frontend]"), "deploy-frontend should depend on build-frontend");
-            assert.ok(yaml.includes("needs: [build-api]"), "deploy-api should depend on build-api");
+            assert.ok(yaml.includes("needs: [build]"), "deploy jobs should depend on build");
         });
 
-        it("places per-container values in per-job env, shared values at workflow level", () => {
+        it("places per-container values in matrix entries, shared values at workflow level", () => {
             const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
 
             assert.ok(yaml.includes("AZURE_CONTAINER_REGISTRY: monoacr"), "ACR should be at workflow env");
             assert.ok(yaml.includes("NAMESPACE: apps"), "namespace should be at workflow env");
-            assert.ok(yaml.includes("CONTAINER_NAME: frontend"), "frontend job should set CONTAINER_NAME");
-            assert.ok(yaml.includes("CONTAINER_NAME: api"), "api job should set CONTAINER_NAME");
-            assert.ok(yaml.includes("BUILD_CONTEXT_PATH: frontend"), "frontend build context should appear");
-            assert.ok(yaml.includes("BUILD_CONTEXT_PATH: api"), "api build context should appear");
+            assert.ok(yaml.includes("image: frontend"), "matrix should include frontend image");
+            assert.ok(yaml.includes("image: api"), "matrix should include api image");
+            assert.ok(yaml.includes("build_context: frontend"), "matrix should include frontend build context");
+            assert.ok(yaml.includes("build_context: api"), "matrix should include api build context");
+            assert.ok(yaml.includes("CONTAINER_NAME: frontend"), "deploy-frontend job should set CONTAINER_NAME");
+            assert.ok(yaml.includes("CONTAINER_NAME: api"), "deploy-api job should set CONTAINER_NAME");
         });
 
         it("does not contain unreplaced template placeholders", () => {
@@ -423,10 +427,10 @@ describe("Multi-Container Workflow Template Tests", () => {
                 ],
             };
             const yaml = renderMultiContainerWorkflowTemplate(cfg);
-            assert.ok(yaml.includes("build-worker:"), "worker should still have a build job");
+            assert.ok(yaml.includes("service: worker"), "worker should still be in matrix build");
             assert.ok(!yaml.includes("deploy-worker:"), "worker should NOT have a deploy job (skipped)");
-            assert.ok(yaml.includes("build-api:"));
-            assert.ok(yaml.includes("deploy-api:"));
+            assert.ok(yaml.includes("service: api"), "api should be in matrix build");
+            assert.ok(yaml.includes("deploy-api:"), "api should have a deploy job");
         });
 
         it("sanitizes container names into valid GitHub Actions job ids", () => {
@@ -442,12 +446,12 @@ describe("Multi-Container Workflow Template Tests", () => {
                 ],
             };
             const yaml = renderMultiContainerWorkflowTemplate(cfg);
-            // Job id must only contain [A-Za-z0-9_-] and start with letter/underscore
-            const buildJobMatch = yaml.match(/^ {4}(build-[A-Za-z_][A-Za-z0-9_-]*):$/m);
-            assert.ok(buildJobMatch, `Build job id should be sanitized; got:\n${yaml}`);
+            // Deploy job id must only contain [A-Za-z0-9_-] and start with letter/underscore
+            const deployJobMatch = yaml.match(/^ {4}(deploy-[A-Za-z_][A-Za-z0-9_-]*):$/m);
+            assert.ok(deployJobMatch, `Deploy job id should be sanitized; got:\n${yaml}`);
         });
 
-        it("emits a lowercase OCI-safe image repo (CONTAINER_NAME) in build/deploy env", () => {
+        it("emits a lowercase OCI-safe image name in matrix entries and deploy env", () => {
             const cfg: MultiContainerWorkflowConfig = {
                 ...validMultiConfig,
                 containers: [
@@ -460,8 +464,17 @@ describe("Multi-Container Workflow Template Tests", () => {
                 ],
             };
             const rendered = renderMultiContainerWorkflowTemplate(cfg);
-            // No uppercase characters or '@' allowed in the env value emitted
-            // as CONTAINER_NAME (the value is used as the ACR image repo).
+            // Check matrix image values are OCI-safe
+            const imageLines = rendered.split("\n").filter((line) => line.trim().startsWith("image:"));
+            assert.ok(imageLines.length >= 1, "Should emit at least one image line in matrix");
+            for (const line of imageLines) {
+                const value = line.split("image:")[1].trim();
+                assert.ok(
+                    /^[a-z0-9._-]+$/.test(value),
+                    `image must be OCI-safe (lowercase [a-z0-9._-]); got "${value}"`,
+                );
+            }
+            // Check CONTAINER_NAME in deploy job
             const containerNameLines = rendered.split("\n").filter((line) => line.includes("CONTAINER_NAME:"));
             assert.ok(containerNameLines.length >= 1, "Should emit at least one CONTAINER_NAME line");
             for (const line of containerNameLines) {
@@ -473,12 +486,12 @@ describe("Multi-Container Workflow Template Tests", () => {
             }
         });
 
-        it("double-quotes DOCKER_FILE and BUILD_CONTEXT_PATH in the az acr build command", () => {
+        it("double-quotes docker_file and build_context in the az acr build command", () => {
             const rendered = renderMultiContainerWorkflowTemplate(validMultiConfig);
             // Paths can contain spaces; without quotes the shell would split them.
             assert.ok(
-                rendered.includes('-f "${{ env.DOCKER_FILE }}" "${{ env.BUILD_CONTEXT_PATH }}"'),
-                "az acr build should quote DOCKER_FILE and BUILD_CONTEXT_PATH",
+                rendered.includes('-f "${{ matrix.docker_file }}" "${{ matrix.build_context }}"'),
+                "az acr build should quote matrix.docker_file and matrix.build_context",
             );
         });
 
@@ -591,6 +604,125 @@ describe("Multi-Container Workflow Template Tests", () => {
             assert.ok(errs.some((e) => e.includes("Workflow name")));
             assert.ok(errs.some((e) => e.includes("Cluster name")));
             assert.ok(errs.some((e) => e.includes("Azure Container Registry")));
+        });
+    });
+
+    describe("3-service snapshot test (Issue #2161)", () => {
+        const threeServiceConfig: MultiContainerWorkflowConfig = {
+            workflowName: "deploy-platform",
+            branchName: "main",
+            acrResourceGroup: "platform-rg",
+            azureContainerRegistry: "platformacr",
+            clusterName: "platform-cluster",
+            clusterResourceGroup: "platform-cluster-rg",
+            namespace: "platform",
+            isManagedNamespace: false,
+            containers: [
+                {
+                    containerName: "web",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "web",
+                    deploymentManifestPath: "web/k8s/deployment.yaml",
+                },
+                {
+                    containerName: "api",
+                    dockerFile: "Dockerfile.prod",
+                    buildContextPath: "api",
+                    deploymentManifestPath: "|\n        api/k8s/deployment.yaml\n        api/k8s/service.yaml",
+                },
+                {
+                    containerName: "worker",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "worker",
+                    deploymentManifestPath: "worker/k8s/deployment.yaml",
+                },
+            ],
+        };
+
+        it("produces valid YAML with expected structure for a 3-service config", () => {
+            const rendered = renderMultiContainerWorkflowTemplate(threeServiceConfig);
+
+            let parsed: unknown;
+            assert.doesNotThrow(() => {
+                parsed = yaml.load(rendered);
+            }, `Rendered workflow must be valid YAML:\n${rendered}`);
+
+            const root = parsed as {
+                name?: string;
+                env?: Record<string, string>;
+                jobs?: Record<string, unknown>;
+            };
+            assert.strictEqual(root.name, "deploy-platform");
+            assert.strictEqual(root.env?.AZURE_CONTAINER_REGISTRY, "platformacr");
+            assert.strictEqual(root.env?.NAMESPACE, "platform");
+            assert.ok(root.jobs, "Should have jobs");
+            assert.ok(root.jobs!["build"], "Should have a build job");
+            assert.ok(root.jobs!["deploy-web"], "Should have deploy-web job");
+            assert.ok(root.jobs!["deploy-api"], "Should have deploy-api job");
+            assert.ok(root.jobs!["deploy-worker"], "Should have deploy-worker job");
+        });
+
+        it("matrix includes all 3 services with correct docker_file and build_context", () => {
+            const rendered = renderMultiContainerWorkflowTemplate(threeServiceConfig);
+            const parsed = yaml.load(rendered) as {
+                jobs?: { build?: { strategy?: { matrix?: { include?: Array<Record<string, string>> } } } };
+            };
+
+            const matrix = parsed.jobs?.build?.strategy?.matrix?.include;
+            assert.ok(matrix, "Should have matrix include");
+            assert.strictEqual(matrix!.length, 3, "Matrix should have 3 entries");
+            assert.strictEqual(matrix![0].image, "web");
+            assert.strictEqual(matrix![0].docker_file, "Dockerfile");
+            assert.strictEqual(matrix![0].build_context, "web");
+            assert.strictEqual(matrix![1].image, "api");
+            assert.strictEqual(matrix![1].docker_file, "Dockerfile.prod");
+            assert.strictEqual(matrix![1].build_context, "api");
+            assert.strictEqual(matrix![2].image, "worker");
+            assert.strictEqual(matrix![2].docker_file, "Dockerfile");
+            assert.strictEqual(matrix![2].build_context, "worker");
+        });
+
+        it("all deploy jobs depend on the single build job", () => {
+            const rendered = renderMultiContainerWorkflowTemplate(threeServiceConfig);
+            const parsed = yaml.load(rendered) as {
+                jobs?: Record<string, { needs?: string[] }>;
+            };
+
+            assert.deepStrictEqual(parsed.jobs?.["deploy-web"]?.needs, ["build"]);
+            assert.deepStrictEqual(parsed.jobs?.["deploy-api"]?.needs, ["build"]);
+            assert.deepStrictEqual(parsed.jobs?.["deploy-worker"]?.needs, ["build"]);
+        });
+
+        it("multi-manifest block scalar is valid in the parsed structure", () => {
+            const rendered = renderMultiContainerWorkflowTemplate(threeServiceConfig);
+            const parsed = yaml.load(rendered) as {
+                jobs?: Record<string, { env?: Record<string, string> }>;
+            };
+
+            const apiManifest = parsed.jobs?.["deploy-api"]?.env?.DEPLOYMENT_MANIFEST_PATH;
+            assert.ok(apiManifest, "deploy-api should have DEPLOYMENT_MANIFEST_PATH");
+            assert.ok(apiManifest!.includes("api/k8s/deployment.yaml"));
+            assert.ok(apiManifest!.includes("api/k8s/service.yaml"));
+        });
+
+        it("shared manifest across all services produces correct per-job env (#2163)", () => {
+            const sharedManifest = "k8s/shared-deployment.yaml";
+            const sharedConfig: MultiContainerWorkflowConfig = {
+                ...threeServiceConfig,
+                containers: threeServiceConfig.containers.map((c) => ({
+                    ...c,
+                    deploymentManifestPath: sharedManifest,
+                })),
+            };
+            const rendered = renderMultiContainerWorkflowTemplate(sharedConfig);
+            const parsed = yaml.load(rendered) as {
+                jobs?: Record<string, { env?: Record<string, string> }>;
+            };
+
+            // All deploy jobs should have the same manifest path
+            assert.strictEqual(parsed.jobs?.["deploy-web"]?.env?.DEPLOYMENT_MANIFEST_PATH, sharedManifest);
+            assert.strictEqual(parsed.jobs?.["deploy-api"]?.env?.DEPLOYMENT_MANIFEST_PATH, sharedManifest);
+            assert.strictEqual(parsed.jobs?.["deploy-worker"]?.env?.DEPLOYMENT_MANIFEST_PATH, sharedManifest);
         });
     });
 });
