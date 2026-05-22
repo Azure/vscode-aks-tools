@@ -281,9 +281,12 @@ async function collectMultiContainerWorkflowConfiguration(
     const manifestsByModule = await scanManifestsForModulePaths(moduleScanRoots);
 
     const containers: ContainerJobConfig[] = [];
-    /** Track the first resolved manifest (auto-detected or manually chosen) to offer the shared-manifest shortcut (#2163). */
+
+    /** Track the first resolved manifest (auto-detected or user-chosen) to offer the shared-manifest shortcut (#2163). */
     let sharedManifestPath: string | undefined;
     let applySharedToAll = false;
+    /** Whether we've already offered the "apply to all" QuickPick. */
+    let sharedManifestOffered = false;
 
     for (let idx = 0; idx < selected.length; idx++) {
         const item = selected[idx];
@@ -295,8 +298,9 @@ async function collectMultiContainerWorkflowConfiguration(
         const moduleManifests = manifestsByModule.get(buildContextAbsolute) ?? [];
         let manifestPath: string | undefined;
 
-        if (applySharedToAll && sharedManifestPath) {
-            // User chose "Apply to all remaining" — reuse the shared manifest.
+        if (applySharedToAll && sharedManifestPath && moduleManifests.length === 0) {
+            // User chose "Apply to all remaining" — reuse the shared manifest
+            // only for services that lack auto-detected manifests.
             manifestPath = sharedManifestPath;
         } else if (moduleManifests.length > 0) {
             const relManifests = moduleManifests.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
@@ -312,14 +316,16 @@ async function collectMultiContainerWorkflowConfiguration(
             }
         }
 
-        // After the first service manifest is resolved, offer to apply it to
-        // all remaining services that also lack auto-detected manifests (#2163).
-        if (idx === 0 && manifestPath && !applySharedToAll && selected.length > 1) {
-            const remainingWithoutManifests = selected.slice(1).filter((s) => {
+        // After the first non-undefined manifest is resolved, offer to apply it
+        // to all remaining services that lack auto-detected manifests (#2163).
+        if (!sharedManifestOffered && manifestPath && selected.length > 1) {
+            const remainingServices = selected.slice(idx + 1);
+            const remainingWithoutManifests = remainingServices.filter((s) => {
                 const dir = path.dirname(path.resolve(projectRoot, s.dockerfileRelToProject));
                 return (manifestsByModule.get(dir) ?? []).length === 0;
             });
             if (remainingWithoutManifests.length > 0) {
+                sharedManifestOffered = true;
                 const apply = l10n.t("Apply to all remaining services");
                 const individual = l10n.t("Choose individually");
                 const choice = await vscode.window.showQuickPick(
