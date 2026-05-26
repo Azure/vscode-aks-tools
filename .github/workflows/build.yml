@@ -30,9 +30,11 @@ jobs:
         disable-telemetry: true
         egress-policy: block
         allowed-endpoints: >
+          api.github.com:443
           devdiv.pkgs.visualstudio.com:443
           github.com:443
           marketplace.visualstudio.com:443
+          nodejs.org:443
           objects.githubusercontent.com:443
           registry.npmjs.org:443
           update.code.visualstudio.com:443
