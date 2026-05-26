@@ -7,6 +7,7 @@ import { getAksClient } from "../utils/arm";
 import { failed, Errorable } from "../utils/errorable";
 import { ClusterKey, AcrKey } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { checkKickstartPermissions } from "../utils/kickstartPermissions";
+import { DeployRbacCheckResult, checkUserDeployRbac } from "../utils/aksRbacHelpers";
 
 const LAST_USED_KEY = "kickstart.lastUsed";
 
@@ -26,6 +27,8 @@ export interface KickstartConfiguration {
     isAutomatic: boolean;
     canGetKubeconfig: boolean;
     hasAcrPull: boolean;
+    /** RBAC pre-flight for the signed-in user (cluster + ACR). Undefined if cluster fetch failed. */
+    userDeployRbac?: DeployRbacCheckResult;
 }
 
 /**
@@ -137,15 +140,29 @@ export async function configureKickstart(
     };
     const acrLoginServer = `${acrPick.resource.name.toLowerCase()}.azurecr.io`;
 
-    const [skuResult, kubeconfigResult, permissionsResult] = await Promise.all([
-        checkClusterSku(sessionProvider.result, clusterKey),
+    // Fetch the cluster once; SKU + RBAC checks both consume it.
+    const clusterResult = await getManagedCluster(
+        sessionProvider.result,
+        clusterKey.subscriptionId,
+        clusterKey.resourceGroup,
+        clusterKey.clusterName,
+    );
+
+    const [kubeconfigResult, permissionsResult, rbacResult] = await Promise.all([
         checkKubeconfigAccess(sessionProvider.result, subscriptionId, clusterKey),
         checkKickstartPermissions(sessionProvider.result, clusterKey, acrKey),
+        !failed(clusterResult)
+            ? checkUserDeployRbac(sessionProvider.result, clusterKey, clusterResult.result, acrKey)
+            : Promise.resolve<Errorable<DeployRbacCheckResult>>({
+                  succeeded: false,
+                  error: clusterResult.error,
+              }),
     ]);
 
-    const isAutomatic = !failed(skuResult) && skuResult.result;
+    const isAutomatic = !failed(clusterResult) && clusterResult.result.sku?.name === "Automatic";
     const canGetKubeconfig = !failed(kubeconfigResult) && kubeconfigResult.result;
     const hasAcrPull = !failed(permissionsResult) && permissionsResult.result.hasAcrPull;
+    const userDeployRbac = !failed(rbacResult) ? rbacResult.result : undefined;
 
     if (context) {
         await context.workspaceState.update(LAST_USED_KEY, {
@@ -167,24 +184,9 @@ export async function configureKickstart(
             isAutomatic,
             canGetKubeconfig,
             hasAcrPull,
+            userDeployRbac,
         },
     };
-}
-
-async function checkClusterSku(
-    sessionProvider: import("../../auth/types").ReadyAzureSessionProvider,
-    clusterKey: ClusterKey,
-): Promise<Errorable<boolean>> {
-    const cluster = await getManagedCluster(
-        sessionProvider,
-        clusterKey.subscriptionId,
-        clusterKey.resourceGroup,
-        clusterKey.clusterName,
-    );
-    if (failed(cluster)) {
-        return cluster;
-    }
-    return { succeeded: true, result: cluster.result.sku?.name === "Automatic" };
 }
 
 async function checkKubeconfigAccess(

@@ -81,6 +81,13 @@ describe("Kickstart Integration Tests", () => {
             acrLoginServer: "testacr.azurecr.io",
             canGetKubeconfig: true,
             hasAcrPull: true,
+            azureRbacEnabled: false,
+            hasAksDeployRole: true,
+            aksDeployRoleNames: [],
+            clusterRbacInconclusive: false,
+            hasAcrPushRole: true,
+            hasAcrTasksContributorRole: true,
+            acrRbacInconclusive: false,
         };
     }
 
