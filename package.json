@@ -1055,7 +1055,7 @@
         "mocha": "^11.7.5",
         "node-loader": "^2.1.0",
         "prettier": "^3.8.1",
-        "sinon": "^21.1.2",
+        "sinon": "^22.0.0",
         "ts-loader": "^9.5.7",
         "typescript": "^6.0.3",
         "webpack": "^5.105.4",
@@ -1098,7 +1098,7 @@
         "node-fetch": "^3.3.2",
         "rxjs": "^7.8.2",
         "semver": "^7.7.4",
-        "sinon": "^21.1.2",
+        "sinon": "^22.0.0",
         "tmp": "^0.2.5",
         "uuid": "^14.0.0",
         "vscode-kubernetes-tools-api": "^1.0.0"
