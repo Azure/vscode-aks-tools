@@ -70,7 +70,9 @@ async function getUserRoleIdsAtScope(
     scope: string,
     userObjectId: string,
 ): Promise<Errorable<ScopeRolesResult>> {
-    const listResult = await listAll(client.roleAssignments.listForScope(scope, { filter: "atScope()" }));
+    const listResult = await listAll(
+        client.roleAssignments.listForScope(scope, { filter: `assignedTo('${userObjectId}')` }),
+    );
 
     if (failed(listResult)) {
         if (isAuthorizationError(listResult.error)) {
@@ -84,7 +86,6 @@ async function getUserRoleIdsAtScope(
 
     const roleIds = new Set<string>();
     for (const ra of listResult.result) {
-        if (ra.principalId?.toLowerCase() !== userObjectId.toLowerCase()) continue;
         const roleDefName = ra.roleDefinitionId?.split("/").pop();
         if (roleDefName) roleIds.add(roleDefName.toLowerCase());
     }

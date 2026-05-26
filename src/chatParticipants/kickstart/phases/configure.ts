@@ -5,10 +5,10 @@ import { PhaseResult } from "../phaseRunner";
 import { ConfigData } from "../state";
 import { getAssetContext } from "../../../assets";
 
-/** Result of a single pre-flight check: granted ✅, missing ❌, or inconclusive ⚠️ (403). */
-type CheckStatus = "granted" | "missing" | "inconclusive";
+/** Result of a single pre-flight check. */
+type CheckStatus = "granted" | "missing" | "inconclusive" | "warning";
 
-const STATUS_ICON: Record<CheckStatus, string> = { granted: "✅", missing: "❌", inconclusive: "⚠️" };
+const STATUS_ICON: Record<CheckStatus, string> = { granted: "✅", missing: "❌", inconclusive: "⚠️", warning: "💡" };
 
 function statusOf(granted: boolean, inconclusive: boolean): CheckStatus {
     if (inconclusive) return "inconclusive";
@@ -21,9 +21,8 @@ interface PreflightCheck {
     detail: string;
 }
 
-/** Resolves the matching detail string for the active status. */
-function check(label: string, status: CheckStatus, details: Record<CheckStatus, string>): PreflightCheck {
-    return { label, status, detail: details[status] };
+function check(label: string, status: CheckStatus, details: Partial<Record<CheckStatus, string>>): PreflightCheck {
+    return { label, status, detail: details[status] ?? "" };
 }
 
 /** Escape pipes/newlines so dynamic text can't break the markdown table. */
@@ -142,14 +141,6 @@ export async function configurePhase(
             };
         }
 
-        if (!kickstartConfig.canGetKubeconfig) {
-            return {
-                ok: false,
-                error: "You do not have permission to access kubeconfig for this cluster. Ensure you have the 'Azure Kubernetes Service Cluster User Role'.",
-                retryable: false,
-            };
-        }
-
         const rbac = kickstartConfig.userDeployRbac;
         const config: ConfigData = {
             subscriptionId: kickstartConfig.subscriptionId,
@@ -189,11 +180,12 @@ export async function configurePhase(
         stream.markdown("\n### Pre-flight Checks\n\n");
 
         const checks: PreflightCheck[] = [
-            check("Cluster SKU", config.clusterSku === "Automatic" ? "inconclusive" : "granted", {
+            check("Cluster SKU", config.clusterSku === "Automatic" ? "warning" : "granted", {
                 granted: "AKS Standard",
                 missing: "AKS Standard",
-                inconclusive:
+                warning:
                     "AKS Automatic — Azure manages node pools, scaling, and upgrades. Some Kickstart features may behave differently.",
+                inconclusive: "Could not determine cluster SKU.",
             }),
             check("Kubeconfig access (you → cluster)", config.canGetKubeconfig ? "granted" : "missing", {
                 granted: "Available",
@@ -245,6 +237,14 @@ export async function configurePhase(
         }
 
         renderPreflightTable(stream, checks);
+
+        if (!config.canGetKubeconfig) {
+            return {
+                ok: false,
+                error: "You do not have permission to access kubeconfig for this cluster. Ensure you have the **Azure Kubernetes Service Cluster User Role**.",
+                retryable: false,
+            };
+        }
 
         await renderCostEstimate(stream, config);
 
