@@ -5,12 +5,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { getAksClusterSubscriptionNode, getAksClusterTreeNode } from "../utils/clusters";
 import { succeeded } from "../utils/errorable";
 
-type CommandId =
-    | "aks.aksRunKubectlCommands"
-    | "aks.aksSetupMCPServerCommands"
-    | "aks.clusterProperties"
-    | "aks.showInPortal"
-    | "aks.clusterFilter";
+type CommandId = "aks.aksRunKubectlCommands" | "aks.clusterProperties" | "aks.showInPortal" | "aks.clusterFilter";
 
 type UsageStats = Record<CommandId, { count: number; lastUsed: number }>;
 
@@ -40,12 +35,6 @@ const clusterCommandDefaults: Array<{ commandId: CommandId; label: string; descr
         label: l10n.t("Show In Azure Portal"),
         description: l10n.t("Most used"),
         detail: l10n.t("Open this AKS cluster in the Azure portal."),
-    },
-    {
-        commandId: "aks.aksSetupMCPServerCommands",
-        label: l10n.t("Setup AKS MCP Server"),
-        description: l10n.t("Recommended"),
-        detail: l10n.t("Configure the AKS MCP server in your VS Code user settings."),
     },
 ];
 
@@ -111,12 +100,7 @@ async function getClusterQuickActionItems(target: unknown): Promise<QuickActionI
     });
 
     const mostUsed = withArgs.filter((item) => (usage[item.commandId]?.count || 0) > 0).slice(0, 3);
-    const recommended = withArgs.filter((item) => ["aks.aksSetupMCPServerCommands"].includes(item.commandId));
-    const moreActions = withArgs.filter(
-        (item) =>
-            !mostUsed.some((used) => used.commandId === item.commandId) &&
-            !recommended.some((rec) => rec.commandId === item.commandId),
-    );
+    const moreActions = withArgs.filter((item) => !mostUsed.some((used) => used.commandId === item.commandId));
 
     const topItems: QuickActionItem[] = [];
 
@@ -126,14 +110,6 @@ async function getClusterQuickActionItems(target: unknown): Promise<QuickActionI
             kind: vscode.QuickPickItemKind.Separator,
         });
         topItems.push(...mostUsed);
-    }
-
-    if (recommended.length > 0) {
-        topItems.push({
-            label: l10n.t("Recommended"),
-            kind: vscode.QuickPickItemKind.Separator,
-        });
-        topItems.push(...recommended);
     }
 
     if (moreActions.length > 0) {

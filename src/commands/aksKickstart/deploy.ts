@@ -23,7 +23,7 @@ export async function deploy(_ctx: IActionContext, args: DeployArgs): Promise<vo
     if (yamlFiles.length === 0) {
         const choice = await vscode.window.showErrorMessage("No manifests found. Save manifests first.", "Save now");
         if (choice === "Save now") {
-            await vscode.commands.executeCommand("aks.kickstart.acceptAll");
+            await vscode.commands.executeCommand("aks.kickstart.saveAll");
         }
         return;
     }

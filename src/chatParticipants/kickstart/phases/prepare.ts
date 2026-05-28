@@ -8,6 +8,7 @@ import { failed } from "../../../commands/utils/errorable";
 import { PhaseResult } from "../phaseRunner";
 import { AnalysisData, ConfigData, ArtifactsData, StagedFile } from "../state";
 import { StagedFileManager } from "../stagedFileManager";
+import { reviewArtifacts, formatReviewFindings } from "../review";
 
 /**
  * Generates Dockerfile and Kubernetes manifests with AKS Automatic awareness.
@@ -219,7 +220,20 @@ export async function preparePhase(
             };
         }
 
-        // Step 5: Show generated files as a native file tree in chat
+        // Step 5: Review generated artifacts against safety guardrails
+        stream.markdown("\n🔍 **Reviewing artifacts...**\n\n");
+        const review = await reviewArtifacts(adaptedStaged);
+        stream.markdown(`${formatReviewFindings(review)}\n\n`);
+
+        if (!review.passed) {
+            return {
+                ok: false,
+                error: "Generated artifacts failed safety review. See findings above.",
+                retryable: true,
+            };
+        }
+
+        // Step 6: Show generated files as a native file tree in chat
         const fileTree = buildNestedFileTree(adaptedStaged.map((s) => s.filename));
 
         stream.markdown("\n✅ **Files generated** — review in the panel, then click **Save to project**:\n\n");

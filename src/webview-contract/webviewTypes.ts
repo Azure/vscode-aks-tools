@@ -20,7 +20,6 @@ import { TestStyleViewerDefinition } from "./webviewDefinitions/testStyleViewer"
 import { AutomatedDeploymentsDefinition } from "./webviewDefinitions/automatedDeployments";
 import { CreateFleetDefinition } from "./webviewDefinitions/createFleet";
 import { FleetProperties } from "./webviewDefinitions/fleetProperties";
-import { KickstartDefinition } from "./webviewDefinitions/kickstart";
 
 /**
  * Groups all the related types for a single webview.
@@ -61,7 +60,6 @@ type AllWebviewDefinitions = {
     automatedDeployments: AutomatedDeploymentsDefinition;
     createFleet: CreateFleetDefinition;
     fleetProperties: FleetProperties;
-    kickstart: KickstartDefinition;
 };
 
 type ContentIdLookup = {

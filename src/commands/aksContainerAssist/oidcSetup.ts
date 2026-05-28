@@ -12,6 +12,14 @@ import {
     getScopeForCluster,
     getScopeForManagedNamespace,
 } from "../utils/roleAssignments";
+import {
+    ACR_PUSH_ROLE_ID,
+    ACR_TASKS_CONTRIBUTOR_ROLE_ID,
+    AKS_CLUSTER_USER_ROLE_ID,
+    AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID,
+    AKS_RBAC_WRITER_ROLE_ID,
+    isAzureRbacEnabled,
+} from "../utils/aksRbacHelpers";
 import { getSessionProvider } from "../../auth/azureSessionProvider";
 import { isReady } from "../../auth/types";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
@@ -30,13 +38,8 @@ const execFilePromise = promisify(execFile);
 // GitHub OIDC issuer URL
 const GITHUB_OIDC_ISSUER = "https://token.actions.githubusercontent.com";
 
-// Azure built-in role definition IDs
-// https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
-const AKS_CLUSTER_USER_ROLE_ID = "4abbcc35-e782-43d8-92c5-2d3f1bd2253f";
-const AKS_RBAC_WRITER_ROLE_ID = "a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb";
-const AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID = "289d8817-ee69-43f1-a0af-43a45505b488";
-const ACR_PUSH_ROLE_ID = "8311e382-0749-4cb8-b61a-304f252e45ec";
-const ACR_TASKS_CONTRIBUTOR_ROLE_ID = "fb382eab-e894-4461-af04-94435c366c3f";
+// Azure built-in role definition IDs are imported from ../utils/aksRbacHelpers
+// (single source of truth).
 
 interface OIDCSetupResult {
     clientId: string;
@@ -602,12 +605,7 @@ async function isAzureRbacEnabledForCluster(
             endpoint: getEnvironment().resourceManagerEndpointUrl,
         });
         const cluster = await aksClient.managedClusters.get(clusterResourceGroup, clusterName);
-        const enabled =
-            (cluster as unknown as { aadProfile?: { enableAzureRBAC?: boolean; enableAzureRbac?: boolean } }).aadProfile
-                ?.enableAzureRBAC ??
-            (cluster as unknown as { aadProfile?: { enableAzureRBAC?: boolean; enableAzureRbac?: boolean } }).aadProfile
-                ?.enableAzureRbac;
-        return enabled === true;
+        return isAzureRbacEnabled(cluster);
     } catch (error) {
         logger.warn(
             `Failed to determine if Azure RBAC is enabled for cluster '${clusterName}': ${error instanceof Error ? error.message : String(error)}. Skipping conditional role assignment.`,

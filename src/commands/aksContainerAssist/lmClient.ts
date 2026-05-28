@@ -4,6 +4,8 @@ import { ModelQuickPickItem } from "./types";
 import { logger } from "./logger";
 import { showWizardExitConfirmation } from "./wizardUtils";
 import * as l10n from "@vscode/l10n";
+import type { GuardrailContribution } from "../../chatParticipants/kickstart/guardrails/types";
+import { runGuardrails } from "../../chatParticipants/kickstart/guardrails/engine";
 
 const DEFAULT_MAX_TOOL_ROUNDS = 20;
 /**
@@ -68,6 +70,7 @@ export class LMClient {
         systemPrompt: string,
         userPrompt: string,
         token?: vscode.CancellationToken,
+        guardrailOptions?: { guardrails: GuardrailContribution[]; agentName?: string },
     ): Promise<Errorable<string>> {
         if (!this.languageModel) {
             return {
@@ -83,7 +86,24 @@ export class LMClient {
             ];
 
             const response = await this.languageModel.sendRequest(messages, {}, token);
-            const content = await this.collectResponseText(response);
+            let content = await this.collectResponseText(response);
+
+            if (guardrailOptions?.guardrails && guardrailOptions.guardrails.length > 0) {
+                const outputInput = { stage: "output" as const, proposedOutput: content };
+                const check = await runGuardrails(
+                    "output",
+                    outputInput,
+                    guardrailOptions.guardrails,
+                    guardrailOptions.agentName ?? "kickstart",
+                );
+                if (check.blocked) {
+                    return {
+                        succeeded: false,
+                        error: l10n.t("Response blocked by safety guardrail."),
+                    };
+                }
+                content = outputInput.proposedOutput ?? content;
+            }
 
             return { succeeded: true, result: content };
         } catch (error) {
@@ -99,6 +119,8 @@ export class LMClient {
             tools: vscode.LanguageModelChatTool[];
             toolHandler: (call: vscode.LanguageModelToolCallPart) => Promise<string>;
             maxToolRounds?: number;
+            guardrails?: GuardrailContribution[];
+            agentName?: string;
         },
         token?: vscode.CancellationToken,
     ): Promise<Errorable<string>> {
@@ -120,17 +142,20 @@ export class LMClient {
                 const response = await this.languageModel.sendRequest(messages, { tools: options.tools }, token);
                 const { textParts, toolCallParts } = await this.consumeStream(response);
 
-                // If no tool calls, we're done — return accumulated text
                 if (toolCallParts.length === 0) {
                     const content = textParts.map((p) => p.value).join("");
-                    return { succeeded: true, result: content };
+                    return this.applyOutputGuardrails(content, options.guardrails, options.agentName);
                 }
 
                 // Build assistant message echoing back text and tool call parts
                 messages.push(vscode.LanguageModelChatMessage.Assistant([...textParts, ...toolCallParts]));
 
-                // Execute all tool handlers concurrently and build result parts
-                const resultParts = await this.executeToolCalls(toolCallParts, options.toolHandler);
+                const resultParts = await this.executeToolCalls(
+                    toolCallParts,
+                    options.toolHandler,
+                    options.guardrails,
+                    options.agentName,
+                );
 
                 // Append user message with tool results
                 messages.push(vscode.LanguageModelChatMessage.User(resultParts));
@@ -144,7 +169,7 @@ export class LMClient {
             const finalContent = await this.collectResponseText(finalResponse);
 
             if (finalContent.length > 0) {
-                return { succeeded: true, result: finalContent };
+                return this.applyOutputGuardrails(finalContent, options.guardrails, options.agentName);
             }
 
             // If the model still returned nothing useful, report the error.
@@ -189,15 +214,36 @@ export class LMClient {
         return content;
     }
 
-    /**
-     * Executes tool handlers concurrently and returns the result parts.
-     */
     private async executeToolCalls(
         toolCallParts: vscode.LanguageModelToolCallPart[],
         toolHandler: (call: vscode.LanguageModelToolCallPart) => Promise<string>,
+        guardrails?: GuardrailContribution[],
+        agentName?: string,
     ): Promise<vscode.LanguageModelToolResultPart[]> {
         return Promise.all(
             toolCallParts.map(async (toolCall) => {
+                if (guardrails && guardrails.length > 0) {
+                    const check = await runGuardrails(
+                        "tool",
+                        {
+                            stage: "tool",
+                            toolName: toolCall.name,
+                            toolArgs: toolCall.input as Record<string, unknown>,
+                        },
+                        guardrails,
+                        agentName ?? "kickstart",
+                    );
+                    if (check.blocked) {
+                        logger.warn(`Tool call "${toolCall.name}" blocked by guardrail`);
+                        return new vscode.LanguageModelToolResultPart(toolCall.callId, [
+                            new vscode.LanguageModelTextPart(
+                                `Tool call "${toolCall.name}" was blocked by a safety guardrail. ` +
+                                    "Please ensure the tool arguments do not contain credentials, secrets, or unsafe configurations.",
+                            ),
+                        ]);
+                    }
+                }
+
                 let resultText: string;
                 try {
                     resultText = await toolHandler(toolCall);
@@ -211,6 +257,25 @@ export class LMClient {
                 ]);
             }),
         );
+    }
+
+    private async applyOutputGuardrails(
+        content: string,
+        guardrails?: GuardrailContribution[],
+        agentName?: string,
+    ): Promise<Errorable<string>> {
+        if (!guardrails || guardrails.length === 0) {
+            return { succeeded: true, result: content };
+        }
+
+        const outputInput = { stage: "output" as const, proposedOutput: content };
+        const check = await runGuardrails("output", outputInput, guardrails, agentName ?? "kickstart");
+
+        if (check.blocked) {
+            return { succeeded: false, error: l10n.t("Response blocked by safety guardrail.") };
+        }
+
+        return { succeeded: true, result: outputInput.proposedOutput ?? content };
     }
 
     async selectModel(showPicker: boolean = false): Promise<Errorable<vscode.LanguageModelChat>> {

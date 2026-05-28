@@ -3,19 +3,13 @@ import { LMClient } from "../../../commands/aksContainerAssist/lmClient";
 import { extractContent } from "../../../commands/aksContainerAssist/contentParser";
 import { Errorable, failed } from "../../../commands/utils/errorable";
 import { AnalysisResult } from "./analyze";
-import { StagedFileManager } from "../stagedFileManager";
-import { StagedFile } from "../state";
-import { OnFileStaged } from "./dockerfile";
 
 export async function generateGithubActionsStep(
     analysis: AnalysisResult,
     lmClient: LMClient,
     stream: vscode.ChatResponseStream,
     token: vscode.CancellationToken,
-    _projectPath: string,
-    stagedFileManager: StagedFileManager,
-    currentStaged: StagedFile[],
-    onFileStaged: OnFileStaged,
+    projectPath: string,
     options?: { acrLoginServer?: string; clusterName?: string; resourceGroup?: string },
 ): Promise<Errorable<{ workflow: string }>> {
     const acrRef = options?.acrLoginServer ?? "${{ secrets.ACR_LOGIN_SERVER }}";
@@ -43,12 +37,12 @@ Output ONLY the YAML file content, no explanation.`;
     }
 
     const workflow = extractContent(response.result, "yaml");
-    const workflowFilename = ".github/workflows/aks-deploy.yml";
-
-    // Stage the file and notify
-    const stagedFile = await stagedFileManager.stage(workflowFilename, workflow);
-    const staged = [...currentStaged, stagedFile];
-    onFileStaged(stagedFile, staged);
+    stream.markdown(`**.github/workflows/aks-deploy.yml**\n\`\`\`yaml\n${workflow}\n\`\`\``);
+    stream.button({
+        command: "aks.kickstart.saveFile",
+        title: "Save GitHub Actions workflow",
+        arguments: [{ filename: ".github/workflows/aks-deploy.yml", content: workflow, projectPath }],
+    });
 
     return { succeeded: true, result: { workflow } };
 }
