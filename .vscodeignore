@@ -4,6 +4,7 @@ out/**
 out/**/*.map
 src/**
 webview-ui/**
+docs/**
 !webview-ui/dist/
 !webview-ui/dist/assets/
 !webview-ui/dist/assets/**
