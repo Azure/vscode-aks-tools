@@ -478,11 +478,13 @@
             },
             {
                 "command": "aks.switchToClassicMenu",
-                "title": "%AKS: Switch to Classic Menu%"
+                "title": "%Take me back to Classic Menu%",
+                "category": "AKS"
             },
             {
                 "command": "aks.switchToStructuredMenu",
-                "title": "%AKS: Switch to Grouped Menu%"
+                "title": "%Switch to Structured Menu%",
+                "category": "AKS"
             }
         ],
         "menus": {

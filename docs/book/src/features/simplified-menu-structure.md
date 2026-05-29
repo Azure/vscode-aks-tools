@@ -44,6 +44,23 @@ When both feature flags are enabled:
 
 and a workspace folder is open, `AKS: Run Container Assist (Preview)` appears under `Develop & Deploy`.
 
+## Switching between Classic and Structured menus
+
+Two commands let you switch menu modes without opening Settings:
+
+| Command | Effect |
+|---------|--------|
+| **AKS: Take me back to Classic Menu** | Sets `aks.simplifiedMenuStructure` to `false` and prompts to reload. |
+| **AKS: Switch to Structured Menu** | Sets `aks.simplifiedMenuStructure` to `true` and prompts to reload. |
+
+Both commands are available in:
+
+- The **Command Palette** (`Cmd+Shift+P` / `Ctrl+Shift+P`).
+- The **AKS cluster context menu** (right-click on a cluster in the Azure/Kubernetes Cloud Explorer).  
+  Only the applicable command is shown — if the structured menu is active you see "Take me back to Classic Menu", and vice versa.
+
+After running either command, VS Code prompts you to reload the window. The new menu layout takes effect after the reload.
+
 ## Backward compatibility
 
 When `aks.simplifiedMenuStructure` is `false`, the previous menu organization stays active.
