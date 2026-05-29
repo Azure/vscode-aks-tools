@@ -482,7 +482,7 @@
             },
             {
                 "command": "aks.switchToStructuredMenu",
-                "title": "%AKS: Switch to Structured Menu%"
+                "title": "%AKS: Switch to Grouped Menu%"
             }
         ],
         "menus": {
