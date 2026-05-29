@@ -28,7 +28,7 @@ export async function switchToClassicMenu(_context: IActionContext, _target?: un
     await setSimplifiedMenuStructure(false);
     await promptReload(
         l10n.t(
-            "Classic AKS menu restored. Reload the window for the change to take effect. You can switch back at any time with 'AKS: Switch to Structured Menu'.",
+            "Classic AKS menu restored. Reload the window for the change to take effect. You can switch back at any time with 'Switch to Grouped Menu'.",
         ),
     );
 }
@@ -39,7 +39,7 @@ export async function switchToStructuredMenu(_context: IActionContext, _target?:
     await setSimplifiedMenuStructure(true);
     await promptReload(
         l10n.t(
-            "Structured AKS menu enabled. Reload the window for the change to take effect. You can switch back at any time with 'AKS: Take me back to Classic Menu'.",
+            "Grouped AKS menu enabled. Reload the window for the change to take effect. You can switch back at any time with 'Take me back to Classic Menu'.",
         ),
     );
 }
