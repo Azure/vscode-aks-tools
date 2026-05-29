@@ -478,7 +478,7 @@
             },
             {
                 "command": "aks.switchToClassicMenu",
-                "title": "%AKS: Take me back to Classic Menu%"
+                "title": "%AKS: Switch to Classic Menu%"
             },
             {
                 "command": "aks.switchToStructuredMenu",
