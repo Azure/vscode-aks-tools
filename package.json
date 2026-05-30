@@ -207,8 +207,8 @@
                 },
                 "aks.simplifiedMenuStructure": {
                     "type": "boolean",
-                    "default": false,
-                    "description": "Enable simplified menu structure with grouped commands by role (Develop & Deploy, Troubleshoot & Diagnose, Manage Cluster). Requires reload after changing."
+                    "default": true,
+                    "description": "Use the grouped AKS menu (Develop & Deploy, Troubleshoot & Diagnose, Manage Cluster). When disabled, the classic menu layout is shown. Requires reload after changing. You can also toggle this via the commands 'AKS: Take me back to Classic Menu' and 'AKS: Switch to Grouped Menu'."
                 },
                 "aks.argoCDEnabled": {
                     "type": "boolean",
@@ -475,6 +475,16 @@
             {
                 "command": "aks.argoCDPostApplyActions",
                 "title": "%AKS: Argo CD Post-Deploy Actions%"
+            },
+            {
+                "command": "aks.switchToClassicMenu",
+                "title": "%Take me back to Classic Menu%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.switchToStructuredMenu",
+                "title": "%Switch to Grouped Menu%",
+                "category": "AKS"
             }
         ],
         "menus": {
@@ -498,6 +508,14 @@
                 {
                     "command": "aks.argoCDPostApplyActions",
                     "when": "config.aks.argoCDEnabled"
+                },
+                {
+                    "command": "aks.switchToClassicMenu",
+                    "when": "config.aks.simplifiedMenuStructure"
+                },
+                {
+                    "command": "aks.switchToStructuredMenu",
+                    "when": "!config.aks.simplifiedMenuStructure"
                 },
                 {
                     "command": "aks.draftWorkflow",
@@ -584,6 +602,16 @@
                     "command": "aks.quickActions",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.simplifiedMenuStructure",
                     "group": "6@1"
+                },
+                {
+                    "command": "aks.switchToClassicMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.simplifiedMenuStructure",
+                    "group": "0_menuMode@1"
+                },
+                {
+                    "command": "aks.switchToStructuredMenu",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
+                    "group": "0_menuMode@1"
                 },
                 {
                     "submenu": "aks.developDeploySubMenu",

@@ -63,7 +63,6 @@ import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCrea
 import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
 import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
 import aksClusterFilter from "./commands/utils/clusterfilter";
-//import aksAutomatedDeployments from "./commands/devhub/aksAutomatedDeployments";
 import aksCreateFleet from "./commands/aksFleet/aksFleetManager";
 import aksFleetProperties from "./commands/aksFleetProperties/askFleetProperties";
 import * as l10n from "@vscode/l10n";
@@ -79,6 +78,7 @@ import {
     deployAppWithAutomatedPipelineFromTree,
 } from "./commands/aksContainerAssist/aksContainerAssist";
 import { migrateAndModernizeApp } from "./commands/aksContainerAssist/appModernizationBridge";
+import { switchToClassicMenu, switchToStructuredMenu } from "./commands/menuToggle/menuToggle";
 import { draftArgoCDDeployment } from "./commands/aksArgoCD/argoCDDeployment";
 import { argoCDCheckStatus } from "./commands/aksArgoCD/argoCDInstall";
 import { argoCDApplyApp, argoCDPostApplyActions, isArgoCDApplication } from "./commands/aksArgoCD/argoCDApplyApp";
@@ -172,7 +172,6 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.getAzureKubernetesServicePlugins", getPlugins);
         registerCommandWithTelemetry("aks.aksDraftValidate", draftValidate);
         registerCommandWithTelemetry("aks.clusterFilter", aksClusterFilter);
-        //registerCommandWithTelemetry("aks.aksAutomatedDeployments", aksAutomatedDeployments);
         registerCommandWithTelemetry("aks.aksCreateFleet", aksCreateFleet);
         registerCommandWithTelemetry("aks.aksFleetProperties", aksFleetProperties);
         registerCommandWithTelemetry("aks.quickActions", aksQuickActions);
@@ -189,6 +188,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.argoCDCheckStatus", argoCDCheckStatus);
         registerCommandWithTelemetry("aks.argoCDApplyApp", argoCDApplyApp);
         registerCommandWithTelemetry("aks.argoCDPostApplyActions", argoCDPostApplyActions);
+        registerCommandWithTelemetry("aks.switchToClassicMenu", switchToClassicMenu);
+        registerCommandWithTelemetry("aks.switchToStructuredMenu", switchToStructuredMenu);
 
         // Notify when an Argo CD Application YAML is opened in the editor.
         context.subscriptions.push(
