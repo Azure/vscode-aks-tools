@@ -1351,15 +1351,15 @@ To disable the GitHub Copilot AKS hook in VS Code, add the following line to you
 <li>[@azure] Can you get kubectl command for getting all API resources</li>
 </ul>
 <p>Overall, these features enhance the user experience by making it easier to manage AKS clusters, deploy applications, and execute commands, all from within the GitHub Copilot Chat view. This integration promotes a more seamless and productive workflow for DevOps engineers and developers</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="simplified-aks-menu-structure-feature-flag"><a class="header" href="#simplified-aks-menu-structure-feature-flag">Simplified AKS Menu Structure (Feature Flag)</a></h1>
-<p>This release introduces a new role-based AKS cluster context menu organization behind a feature flag.</p>
-<h2 id="feature-flag-1"><a class="header" href="#feature-flag-1">Feature flag</a></h2>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="simplified-aks-menu-structure"><a class="header" href="#simplified-aks-menu-structure">Simplified AKS Menu Structure</a></h1>
+<p>The AKS extension uses a role-based cluster context menu organization as the default experience.</p>
+<h2 id="setting"><a class="header" href="#setting">Setting</a></h2>
 <pre><code class="language-json">{
   &quot;aks.simplifiedMenuStructure&quot;: true
 }
 </code></pre>
-<p>Default value: <code>false</code></p>
-<p>After changing this setting, reload the VS Code window.</p>
+<p>Default value: <code>true</code></p>
+<p>After changing this setting, reload the VS Code window. You can also switch modes via the commands <strong>AKS: Take me back to Classic Menu</strong> and <strong>AKS: Switch to Grouped Menu</strong> without editing settings directly.</p>
 <h2 id="what-changes-when-enabled"><a class="header" href="#what-changes-when-enabled">What changes when enabled</a></h2>
 <p>Instead of many top-level commands, cluster actions are grouped into three submenus:</p>
 <ul>
@@ -1382,6 +1382,20 @@ To disable the GitHub Copilot AKS hook in VS Code, add the following line to you
 <li><code>aks.containerAssistEnabledPreview = true</code></li>
 </ul>
 <p>and a workspace folder is open, <code>AKS: Run Container Assist (Preview)</code> appears under <code>Develop &amp; Deploy</code>.</p>
+<h2 id="switching-between-classic-and-grouped-menus"><a class="header" href="#switching-between-classic-and-grouped-menus">Switching between Classic and Grouped menus</a></h2>
+<p>Two commands let you switch menu modes without opening Settings:</p>
+<div class="table-wrapper"><table><thead><tr><th>Command</th><th>Effect</th></tr></thead><tbody>
+<tr><td><strong>AKS: Take me back to Classic Menu</strong></td><td>Sets <code>aks.simplifiedMenuStructure</code> to <code>false</code> and prompts to reload.</td></tr>
+<tr><td><strong>AKS: Switch to Grouped Menu</strong></td><td>Sets <code>aks.simplifiedMenuStructure</code> to <code>true</code> and prompts to reload.</td></tr>
+</tbody></table>
+</div>
+<p>Both commands are available in:</p>
+<ul>
+<li>The <strong>Command Palette</strong> (<code>Cmd+Shift+P</code> / <code>Ctrl+Shift+P</code>).</li>
+<li>The <strong>AKS cluster context menu</strong> (right-click on a cluster in the Azure/Kubernetes Cloud Explorer).<br />
+Only the applicable command is shown — if the grouped menu is active you see “Take me back to Classic Menu”, and vice versa.</li>
+</ul>
+<p>After running either command, VS Code prompts you to reload the window. The new menu layout takes effect after the reload.</p>
 <h2 id="backward-compatibility"><a class="header" href="#backward-compatibility">Backward compatibility</a></h2>
 <p>When <code>aks.simplifiedMenuStructure</code> is <code>false</code>, the previous menu organization stays active.
 This allows gradual rollout, internal validation, and user feedback collection without breaking existing workflows.</p>
@@ -1474,7 +1488,7 @@ This allows gradual rollout, internal validation, and user feedback collection w
 Your cluster never pushes. Argo CD continuously pulls desired state from a dedicated Git config repository and reconciles it automatically.</p>
 </blockquote>
 <hr />
-<h2 id="feature-flag-2"><a class="header" href="#feature-flag-2">Feature Flag</a></h2>
+<h2 id="feature-flag-1"><a class="header" href="#feature-flag-1">Feature Flag</a></h2>
 <p>All Argo CD commands are gated behind a feature flag and <strong>disabled by default</strong>. To enable:</p>
 <pre><code class="language-json">{
   &quot;aks.argoCDEnabled&quot;: true
