@@ -485,12 +485,21 @@
                 "command": "aks.switchToStructuredMenu",
                 "title": "%Switch to Grouped Menu%",
                 "category": "AKS"
+            },
+            {
+                "command": "aks.askAzureCopilot",
+                "title": "%Ask @azure%",
+                "category": "AKS"
             }
         ],
         "menus": {
             "commandPalette": [
                 {
                     "command": "aks.refreshSubscription",
+                    "when": "never"
+                },
+                {
+                    "command": "aks.askAzureCopilot",
                     "when": "never"
                 },
                 {
@@ -602,6 +611,11 @@
                     "command": "aks.quickActions",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && config.aks.simplifiedMenuStructure",
                     "group": "6@1"
+                },
+                {
+                    "command": "aks.askAzureCopilot",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && github.copilot-chat.activated",
+                    "group": "6@2"
                 },
                 {
                     "command": "aks.switchToClassicMenu",

@@ -45,7 +45,7 @@ class AksClusterTreeItem extends AzExtTreeItem implements AksClusterTreeNode {
         } else {
             this.subscriptionTreeNode = parent.subscriptionTreeNode;
         }
-        this.id = `${this.clusterResource.name} ${clusterResource.resourceGroup}`;
+        this.id = this.clusterResource.id;
         this.armId = this.clusterResource.id;
         this.resourceGroupName = clusterResource.resourceGroup;
         this.name = this.clusterResource.name;
