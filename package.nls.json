@@ -81,6 +81,6 @@
   "AKS: Check Argo CD Status": "AKS: Check Argo CD Status",
   "AKS: Apply Argo CD Application to Cluster": "AKS: Apply Argo CD Application to Cluster",
   "AKS: Argo CD Post-Deploy Actions": "AKS: Argo CD Post-Deploy Actions",
-  "Take me back to Classic Menu": "Take me back to Classic Menu",
+  "Switch to Classic Menu": "Switch to Classic Menu",
   "Switch to Grouped Menu": "Switch to Grouped Menu"
 }
