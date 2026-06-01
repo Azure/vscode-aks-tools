@@ -32,16 +32,45 @@ Then immediately call `vscode_askQuestions`:
     "header": "Get started",
     "question": "How would you like to begin?",
     "options": [
+      { "label": "Start from a GitHub repo", "description": "Clone an existing GitHub repository", "recommended": true },
+      { "label": "Make something new", "description": "Tell me what you want to build and I'll scaffold it" },
       { "label": "Start from an example", "description": "Clone a sample repo into your workspace" },
-      { "label": "Start from a GitHub repo", "description": "Clone an existing GitHub repository" },
-      { "label": "Use my current workspace", "description": "Analyze the project already open here", "recommended": true },
-      { "label": "Make something new", "description": "Tell me what you want to build and I'll scaffold it" }
+      { "label": "Use my current workspace", "description": "Analyze the project already open here" }
     ]
   }]
 }
 ```
 
 ### Handling each choice
+
+**"Start from a GitHub repo"**: Ask for the repo URL using `vscode_askQuestions` with `allowFreeformInput: true`:
+```json
+{
+  "questions": [{
+    "header": "GitHub repo",
+    "question": "What's the GitHub repo URL or owner/name?",
+    "allowFreeformInput": true
+  }]
+}
+```
+Then use `run_in_terminal` to clone it into the workspace, and proceed to Phase 1.
+
+**"Make something new"**: Ask what they want to build using `vscode_askQuestions`:
+```json
+{
+  "questions": [
+    {
+      "header": "Project type",
+      "question": "What kind of project?",
+      "options": [
+        { "label": "Web app or API", "description": "Express, FastAPI, .NET, Go, Spring Boot, Django" },
+        { "label": "AI agent", "description": "LangChain, RAG, Semantic Kernel" }
+      ]
+    }
+  ]
+}
+```
+Then follow up with a framework picker, scaffold the project, and proceed to Phase 1.
 
 **"Start from an example"**: Ask the user to pick a sample using `vscode_askQuestions`:
 ```json
@@ -105,36 +134,7 @@ After cloning, present the pre-filled discovery summary and use `vscode_askQuest
 ```
 If confirmed, skip directly to Phase 2 (Design).
 
-**"Start from a GitHub repo"**: Ask for the repo URL using `vscode_askQuestions` with `allowFreeformInput: true`:
-```json
-{
-  "questions": [{
-    "header": "GitHub repo",
-    "question": "What's the GitHub repo URL or owner/name?",
-    "allowFreeformInput": true
-  }]
-}
-```
-Then use `run_in_terminal` to clone it into the workspace, and proceed to Phase 1.
-
 **"Use my current workspace"**: Skip cloning. Use `search` and `codebase` tools to scan the open workspace and proceed directly to Phase 1 (Discover).
-
-**"Make something new"**: Ask what they want to build using `vscode_askQuestions`:
-```json
-{
-  "questions": [
-    {
-      "header": "Project type",
-      "question": "What kind of project?",
-      "options": [
-        { "label": "Web app or API", "description": "Express, FastAPI, .NET, Go, Spring Boot, Django" },
-        { "label": "AI agent", "description": "LangChain, RAG, Semantic Kernel" }
-      ]
-    }
-  ]
-}
-```
-Then follow up with a framework picker, scaffold the project, and proceed to Phase 1.
 
 ## Phase Machine
 
