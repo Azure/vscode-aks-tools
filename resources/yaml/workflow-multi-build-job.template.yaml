@@ -1,0 +1,26 @@
+    build:
+        permissions:
+            contents: read
+            id-token: write
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                include:
+{ { MATRIX_INCLUDE } }
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Azure login
+              uses: azure/login@v2
+              with:
+                  client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                  tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                  subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+            - name: Log into ACR
+              run: |
+                  az acr login -n ${{ env.AZURE_CONTAINER_REGISTRY }}
+
+            - name: Build and push image to ACR
+              run: |
+                  az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ matrix.image }}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.ACR_RESOURCE_GROUP }} -f "${{ matrix.docker_file }}" "${{ matrix.build_context }}"

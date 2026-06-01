@@ -271,48 +271,44 @@ export function validateMultiContainerWorkflowConfig(config: MultiContainerWorkf
 }
 
 /**
- * Build the per-container build job YAML fragment.
- * Indented with 4 spaces (matching the existing single-container template style).
- *
- * `CONTAINER_NAME` is sanitized to a valid ACR image repository segment
- * (lowercase, [a-z0-9._-]) because it is used as the image repo in
- * `az acr build --image`. `DOCKER_FILE` and `BUILD_CONTEXT_PATH` are
- * double-quoted in the shell command so paths containing spaces remain
- * a single argument.
+ * Loads a multi-container template fragment from resources/yaml/.
+ * Throws if the file cannot be read.
  */
-function renderBuildJob(jobId: string, container: ContainerJobConfig): string {
-    const imageName = sanitizeImageName(container.containerName);
-    return `    build-${jobId}:
-        permissions:
-            contents: read
-            id-token: write
-        runs-on: ubuntu-latest
-        env:
-            CONTAINER_NAME: ${imageName}
-            DOCKER_FILE: ${container.dockerFile}
-            BUILD_CONTEXT_PATH: ${container.buildContextPath}
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Azure login
-              uses: azure/login@v2
-              with:
-                  client-id: \${{ secrets.AZURE_CLIENT_ID }}
-                  tenant-id: \${{ secrets.AZURE_TENANT_ID }}
-                  subscription-id: \${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-            - name: Log into ACR
-              run: |
-                  az acr login -n \${{ env.AZURE_CONTAINER_REGISTRY }}
-
-            - name: Build and push image to ACR
-              run: |
-                  az acr build --image \${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/\${{ env.CONTAINER_NAME }}:\${{ github.sha }} --registry \${{ env.AZURE_CONTAINER_REGISTRY }} -g \${{ env.ACR_RESOURCE_GROUP }} -f "\${{ env.DOCKER_FILE }}" "\${{ env.BUILD_CONTEXT_PATH }}"
-`;
+function loadMultiTemplate(templateName: string): string {
+    const result = getWorkflowYaml(`${templateName}.template`);
+    if (failed(result)) {
+        throw new Error(result.error);
+    }
+    return result.result;
 }
 
-/** Per-container deploy job YAML fragment (standard, non-managed namespace path). */
+/**
+ * Renders the matrix `include:` entries for the build job.
+ * Each entry is indented to align under `strategy.matrix.include:` (20 spaces).
+ */
+function renderMatrixInclude(containers: ContainerJobConfig[]): string {
+    return containers
+        .map((c) => {
+            const imageName = sanitizeImageName(c.containerName);
+            const lines = [
+                `                    - service: ${sanitizeJobId(c.containerName)}`,
+                `                      docker_file: ${c.dockerFile}`,
+                `                      build_context: ${c.buildContextPath}`,
+                `                      image: ${imageName}`,
+            ];
+            return lines.join("\n");
+        })
+        .join("\n");
+}
+
+/**
+ * Renders a per-container deploy job fragment by loading the appropriate
+ * template file and performing placeholder substitution.
+ */
 function renderDeployJob(jobId: string, container: ContainerJobConfig, isManagedNamespace: boolean): string {
+    const templateName = isManagedNamespace ? "workflow-multi-deploy-job-managed-ns" : "workflow-multi-deploy-job";
+    let template = loadMultiTemplate(templateName);
+
     // The block scalar produced by formatManifestPathForYamlBlock is indented for
     // the top-level (4-space) env block used by the single-container template;
     // here the key sits at 12 spaces, so re-indent the content lines to 16
@@ -320,139 +316,59 @@ function renderDeployJob(jobId: string, container: ContainerJobConfig, isManaged
     const rawManifestPath = container.deploymentManifestPath ?? "";
     const manifestPath = reindentBlockScalar(rawManifestPath, 16);
     const imageName = sanitizeImageName(container.containerName);
-    const contextStep = isManagedNamespace
-        ? `            - name: Get K8s context (managed namespace)
-              run: |
-                  az aks namespace get-credentials \\
-                    --name \${{ env.NAMESPACE }} \\
-                    --resource-group \${{ env.CLUSTER_RESOURCE_GROUP }} \\
-                    --cluster-name \${{ env.CLUSTER_NAME }} \\
-                    --file "\${{ runner.temp }}/kubeconfig" \\
-                    --overwrite-existing
 
-                  kubelogin convert-kubeconfig \\
-                    -l azurecli \\
-                    --kubeconfig "\${{ runner.temp }}/kubeconfig"
+    const replacements: Record<string, string> = {
+        "{ { DEPLOY_JOB_ID } }": `deploy-${jobId}`,
+        "{ { CONTAINERNAME } }": imageName,
+        "{ { DEPLOYMENTMANIFESTPATH } }": manifestPath,
+    };
 
-                  echo "KUBECONFIG=\${{ runner.temp }}/kubeconfig" >> $GITHUB_ENV
-`
-        : `            - name: Get K8s context
-              uses: azure/aks-set-context@v4
-              with:
-                  resource-group: \${{ env.CLUSTER_RESOURCE_GROUP }}
-                  cluster-name: \${{ env.CLUSTER_NAME }}
-                  admin: "false"
-                  use-kubelogin: "true"
-`;
+    for (const [placeholder, value] of Object.entries(replacements)) {
+        const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        template = template.replace(new RegExp(escapedPlaceholder, "g"), value);
+    }
 
-    // Managed-namespace workflows additionally annotate the namespace with
-    // workload identity metadata, matching the single-container managed
-    // template (resources/yaml/aks-deploy-managed-ns.template.yaml).
-    const annotateNamespaceStep = isManagedNamespace
-        ? `            - name: Annotate namespace
-              run: |
-                  az aks namespace update \\
-                    --resource-group \${{ env.CLUSTER_RESOURCE_GROUP }} \\
-                    --cluster-name \${{ env.CLUSTER_NAME }} \\
-                    --name \${{ env.NAMESPACE }} \\
-                    --annotations \\
-                      aks-project/workload-identity-id="\${{ secrets.AZURE_CLIENT_ID }}" \\
-                      aks-project/workload-identity-tenant="\${{ secrets.AZURE_TENANT_ID }}"
-
-`
-        : "";
-
-    return `    deploy-${jobId}:
-        permissions:
-            actions: read
-            contents: read
-            id-token: write
-        runs-on: ubuntu-latest
-        needs: [build-${jobId}]
-        env:
-            CONTAINER_NAME: ${imageName}
-            DEPLOYMENT_MANIFEST_PATH: ${manifestPath}
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Azure login
-              uses: azure/login@v2
-              with:
-                  client-id: \${{ secrets.AZURE_CLIENT_ID }}
-                  tenant-id: \${{ secrets.AZURE_TENANT_ID }}
-                  subscription-id: \${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-            - name: Set up kubelogin for non-interactive login
-              uses: azure/use-kubelogin@v1
-              with:
-                  kubelogin-version: "v0.0.25"
-
-${contextStep}
-            - name: Deploys application
-              uses: Azure/k8s-deploy@v5
-              with:
-                  action: deploy
-                  manifests: \${{ env.DEPLOYMENT_MANIFEST_PATH }}
-                  images: |
-                      \${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/\${{ env.CONTAINER_NAME }}:\${{ github.sha }}
-                  namespace: \${{ env.NAMESPACE }}
-
-${annotateNamespaceStep}            - name: Annotate deployment
-              run: |
-                  if kubectl get deployment -n \${{ env.NAMESPACE }} --no-headers 2>/dev/null | grep -q .; then
-                    kubectl annotate deployment --all -n \${{ env.NAMESPACE }} \\
-                      aks-project/pipeline-repo="\${{ github.repository }}" \\
-                      aks-project/pipeline-workflow="\${{ github.workflow }}" \\
-                      aks-project/deployed-by="vscode" \\
-                      aks-project/pipeline-run-url="\${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}" \\
-                      --overwrite
-                  fi
-`;
+    return template;
 }
 
 /**
  * Renders a multi-container GitHub Actions workflow.
  *
  * Layout: one top-level workflow with shared `env:` for ACR/cluster/namespace,
- * then a `build-<name>` + `deploy-<name>` job pair per selected container.
+ * a single `build` job using matrix strategy (one matrix entry per container),
+ * then a `deploy-<name>` job per container that has a manifest path.
  * Containers without a `deploymentManifestPath` are built but not deployed.
  */
 export function renderMultiContainerWorkflowTemplate(config: MultiContainerWorkflowConfig): string {
-    const header = `# This workflow was generated by the AKS VS Code Extension (multi-container).
-#
-# 🔐 IMPORTANT: OIDC Authentication Required!
-# Configure the following GitHub repository secrets before running:
-#    - AZURE_CLIENT_ID
-#    - AZURE_TENANT_ID
-#    - AZURE_SUBSCRIPTION_ID
-#
-name: ${config.workflowName}
+    // --- Header ---
+    let header = loadMultiTemplate("workflow-multi-header");
+    const headerReplacements: Record<string, string> = {
+        "{ { WORKFLOWNAME } }": config.workflowName,
+        "{ { BRANCHNAME } }": config.branchName,
+        "{ { ACRRESOURCEGROUP } }": config.acrResourceGroup,
+        "{ { AZURECONTAINERREGISTRY } }": config.azureContainerRegistry,
+        "{ { CLUSTERNAME } }": config.clusterName,
+        "{ { CLUSTERRESOURCEGROUP } }": config.clusterResourceGroup,
+        "{ { NAMESPACE } }": config.namespace,
+    };
+    for (const [placeholder, value] of Object.entries(headerReplacements)) {
+        const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        header = header.replace(new RegExp(escapedPlaceholder, "g"), value);
+    }
 
-on:
-    push:
-        branches: [${config.branchName}]
-    workflow_dispatch:
+    // --- Build job (matrix strategy) ---
+    let buildJob = loadMultiTemplate("workflow-multi-build-job");
+    const matrixInclude = renderMatrixInclude(config.containers);
+    buildJob = buildJob.replace(/\{\s*\{\s*MATRIX_INCLUDE\s*\}\s*\}/g, matrixInclude);
 
-env:
-    ACR_RESOURCE_GROUP: ${config.acrResourceGroup}
-    AZURE_CONTAINER_REGISTRY: ${config.azureContainerRegistry}
-    CLUSTER_NAME: ${config.clusterName}
-    CLUSTER_RESOURCE_GROUP: ${config.clusterResourceGroup}
-    NAMESPACE: ${config.namespace}
-
-jobs:
-`;
-
-    const jobs = config.containers
+    // --- Deploy jobs (one per container with a manifest) ---
+    const deployJobs = config.containers
+        .filter((container) => container.deploymentManifestPath)
         .map((container) => {
             const jobId = sanitizeJobId(container.containerName);
-            const build = renderBuildJob(jobId, container);
-            const deploy = container.deploymentManifestPath
-                ? renderDeployJob(jobId, container, config.isManagedNamespace)
-                : "";
-            return deploy ? `${build}\n${deploy}` : build;
+            return renderDeployJob(jobId, container, config.isManagedNamespace);
         })
         .join("\n");
 
-    return `${header}${jobs}`;
+    return `${header}${buildJob}\n${deployJobs}`;
 }

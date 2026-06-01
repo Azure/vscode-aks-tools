@@ -281,7 +281,15 @@ async function collectMultiContainerWorkflowConfiguration(
     const manifestsByModule = await scanManifestsForModulePaths(moduleScanRoots);
 
     const containers: ContainerJobConfig[] = [];
-    for (const item of selected) {
+
+    /** Track the first resolved manifest (auto-detected or user-chosen) to offer the shared-manifest shortcut (#2163). */
+    let sharedManifestPath: string | undefined;
+    let applySharedToAll = false;
+    /** Whether we've already offered the "apply to all" QuickPick. */
+    let sharedManifestOffered = false;
+
+    for (let idx = 0; idx < selected.length; idx++) {
+        const item = selected[idx];
         const dockerfileAbsolute = path.resolve(projectRoot, item.dockerfileRelToProject);
         const buildContextAbsolute = path.dirname(dockerfileAbsolute);
         const buildContextRelToWorkspace = toPosixPath(path.relative(workspaceRoot, buildContextAbsolute)) || ".";
@@ -289,7 +297,12 @@ async function collectMultiContainerWorkflowConfiguration(
 
         const moduleManifests = manifestsByModule.get(buildContextAbsolute) ?? [];
         let manifestPath: string | undefined;
-        if (moduleManifests.length > 0) {
+
+        if (applySharedToAll && sharedManifestPath && moduleManifests.length === 0) {
+            // User chose "Apply to all remaining" — reuse the shared manifest
+            // only for services that lack auto-detected manifests.
+            manifestPath = sharedManifestPath;
+        } else if (moduleManifests.length > 0) {
             const relManifests = moduleManifests.map((p) => toPosixPath(path.relative(workspaceRoot, p)));
             manifestPath = formatManifestPathForYamlBlock(relManifests);
         } else {
@@ -300,6 +313,37 @@ async function collectMultiContainerWorkflowConfiguration(
                 manifestPath = undefined; // user picked Skip — build-only for this service
             } else {
                 manifestPath = formatManifestPathForYamlBlock(chosen);
+            }
+        }
+
+        // After the first non-undefined manifest is resolved, offer to apply it
+        // to all remaining services that lack auto-detected manifests (#2163).
+        if (!sharedManifestOffered && manifestPath && selected.length > 1) {
+            const remainingServices = selected.slice(idx + 1);
+            const remainingWithoutManifests = remainingServices.filter((s) => {
+                const dir = path.dirname(path.resolve(projectRoot, s.dockerfileRelToProject));
+                return (manifestsByModule.get(dir) ?? []).length === 0;
+            });
+            if (remainingWithoutManifests.length > 0) {
+                sharedManifestOffered = true;
+                const apply = l10n.t("Apply to all remaining services");
+                const individual = l10n.t("Choose individually");
+                const choice = await vscode.window.showQuickPick(
+                    [
+                        { label: apply, description: l10n.t("Use this manifest for all services") },
+                        { label: individual, description: l10n.t("Pick a different manifest per service") },
+                    ],
+                    {
+                        placeHolder: l10n.t("Apply the same manifest to remaining services?"),
+                        title: l10n.t("Shared Manifest"),
+                        ignoreFocusOut: true,
+                    },
+                );
+                if (!choice) return undefined;
+                if (choice.label === apply) {
+                    sharedManifestPath = manifestPath;
+                    applySharedToAll = true;
+                }
             }
         }
 
