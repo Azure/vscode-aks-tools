@@ -68,6 +68,7 @@ import aksFleetProperties from "./commands/aksFleetProperties/askFleetProperties
 import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import * as fs from "fs";
+import * as os from "os";
 import { registerAksMcpServerProvider } from "./commands/aksMCP/aksMCPServer";
 import { aksQuickActions, initializeQuickActions } from "./commands/quickActions/aksQuickActions";
 import {
@@ -88,6 +89,20 @@ import {
     getGitHubRepoInfo,
 } from "./commands/aksContainerAssist/oidcSetup";
 
+function ensureKubeconfig(): void {
+    const kubeDir = path.join(os.homedir(), ".kube");
+    const kubeconfigPath = path.join(kubeDir, "config");
+    if (fs.existsSync(kubeconfigPath)) {
+        return;
+    }
+    try {
+        fs.mkdirSync(kubeDir, { recursive: true });
+        fs.writeFileSync(kubeconfigPath, "", { mode: 0o600 });
+    } catch {
+        // Best-effort — don't block activation if we can't write.
+    }
+}
+
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
 
@@ -96,6 +111,8 @@ export async function activate(context: vscode.ExtensionContext) {
     if (fs.existsSync(newpath)) {
         l10n.config({ fsPath: newpath });
     }
+
+    ensureKubeconfig();
 
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter());
@@ -108,6 +125,25 @@ export async function activate(context: vscode.ExtensionContext) {
     // Create and register the Azure session provider before accessing it.
     activateAzureSessionProvider(context);
     const sessionProvider = getSessionProvider();
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("aks.kickstartFocus", async () => {
+            const config = vscode.workspace.getConfiguration("aks.kickstart");
+            if (!config.get<boolean>("enabled", true)) {
+                vscode.window.showWarningMessage(
+                    "The Kickstart agent is disabled. Enable it via the 'aks.kickstart.enabled' setting.",
+                );
+                return;
+            }
+
+            await vscode.commands.executeCommand("workbench.action.closePanel");
+            await vscode.commands.executeCommand("workbench.action.closeSidebar");
+            await vscode.commands.executeCommand("workbench.action.chat.open", {
+                query: "@kickstart Let's get started",
+            });
+            await vscode.commands.executeCommand("workbench.action.maximizeAuxiliaryBar");
+        }),
+    );
 
     if (cloudExplorer.available) {
         // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
