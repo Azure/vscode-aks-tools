@@ -39,7 +39,7 @@ export async function switchToStructuredMenu(_context: IActionContext, _target?:
     await setSimplifiedMenuStructure(true);
     await promptReload(
         l10n.t(
-            "Grouped AKS menu enabled. Reload the window for the change to take effect. You can switch back at any time with 'Take me back to Classic Menu'.",
+            "Grouped AKS menu enabled. Reload the window for the change to take effect. You can switch back at any time with 'Switch to Classic Menu'.",
         ),
     );
 }

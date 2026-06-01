@@ -12,7 +12,7 @@ The AKS extension uses a role-based cluster context menu organization as the def
 
 Default value: `true`
 
-After changing this setting, reload the VS Code window. You can also switch modes via the commands **AKS: Take me back to Classic Menu** and **AKS: Switch to Grouped Menu** without editing settings directly.
+After changing this setting, reload the VS Code window. You can also switch modes via the commands **AKS: Switch to Classic Menu** and **AKS: Switch to Grouped Menu** without editing settings directly.
 
 ## What changes when enabled
 
@@ -50,14 +50,14 @@ Two commands let you switch menu modes without opening Settings:
 
 | Command | Effect |
 |---------|--------|
-| **AKS: Take me back to Classic Menu** | Sets `aks.simplifiedMenuStructure` to `false` and prompts to reload. |
+| **AKS: Switch to Classic Menu** | Sets `aks.simplifiedMenuStructure` to `false` and prompts to reload. |
 | **AKS: Switch to Grouped Menu** | Sets `aks.simplifiedMenuStructure` to `true` and prompts to reload. |
 
 Both commands are available in:
 
 - The **Command Palette** (`Cmd+Shift+P` / `Ctrl+Shift+P`).
 - The **AKS cluster context menu** (right-click on a cluster in the Azure/Kubernetes Cloud Explorer).  
-  Only the applicable command is shown — if the grouped menu is active you see "Take me back to Classic Menu", and vice versa.
+  Only the applicable command is shown — if the grouped menu is active you see "Switch to Classic Menu", and vice versa.
 
 After running either command, VS Code prompts you to reload the window. The new menu layout takes effect after the reload.
 

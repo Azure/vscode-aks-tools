@@ -208,7 +208,7 @@
                 "aks.simplifiedMenuStructure": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Use the grouped AKS menu (Develop & Deploy, Troubleshoot & Diagnose, Manage Cluster). When disabled, the classic menu layout is shown. Requires reload after changing. You can also toggle this via the commands 'AKS: Take me back to Classic Menu' and 'AKS: Switch to Grouped Menu'."
+                    "description": "Use the grouped AKS menu (Develop & Deploy, Troubleshoot & Diagnose, Manage Cluster). When disabled, the classic menu layout is shown. Requires reload after changing. You can also toggle this via the commands 'AKS: Switch to Classic Menu' and 'AKS: Switch to Grouped Menu'."
                 },
                 "aks.argoCDEnabled": {
                     "type": "boolean",
@@ -478,7 +478,7 @@
             },
             {
                 "command": "aks.switchToClassicMenu",
-                "title": "%Take me back to Classic Menu%",
+                "title": "%Switch to Classic Menu%",
                 "category": "AKS"
             },
             {
