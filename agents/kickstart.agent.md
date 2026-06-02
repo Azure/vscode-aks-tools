@@ -47,9 +47,34 @@ Select or create Azure resources early so the cluster provisions in the backgrou
 
 Ask create-new (default) vs use-existing via `vscode_askQuestions`.
 
-**Create new:** Get current subscription via `az account show`. Collect region, RG name, cluster name, ACR name in one `vscode_askQuestions` call (pre-fill defaults from app name: `rg-<app>-dev`, `aks-<app>-dev`, `acr<app>dev`). Then run:
+**Create new:** Get current subscription via `az account show`.
+
+Before collecting resource details, run pre-flight checks:
+
+1. **Provider registration** — ensure required providers are registered:
+```bash
+az provider show --namespace Microsoft.ContainerService --subscription <sub> --query "registrationState" --output tsv
+az provider show --namespace Microsoft.ContainerRegistry --subscription <sub> --query "registrationState" --output tsv
+```
+If either is `NotRegistered`, register it: `az provider register --namespace Microsoft.ContainerService --subscription <sub>` (takes ~1 min).
+
+2. **Quota-aware region selection** — check compute quota across candidate regions before offering the picker:
+```bash
+for region in eastus2 westus3 westeurope southeastasia; do az vm list-usage --location $region --subscription <sub> --output json --query "[?contains(name.value,'standardDSv3Family')].{region:'$region', available:limit-currentValue}" 2>/dev/null; done
+```
+Parse results and only offer regions with at least 4 available vCPUs. Mark the region with most headroom as recommended. If no regions have quota, tell the user to request a quota increase via the Azure Portal and provide a link.
+
+Then collect RG name, cluster name, ACR name in one `vscode_askQuestions` call alongside the filtered region picker (pre-fill defaults from app name: `rg-<app>-dev`, `aks-<app>-dev`, `acr<app>dev`).
+
+3. **ACR name availability** — check the chosen name is globally unique:
+```bash
+az acr check-name --name <acr> --subscription <sub> --output json --query "nameAvailable"
+```
+If `false`, suggest an alternative (append random suffix) and re-ask.
+
+Then run:
 1. `az group create --name <rg> --location <region> --subscription <sub>`
-2. `az aks create --name <cluster> --resource-group <rg> --sku automatic --location <region> --subscription <sub> --generate-ssh-keys --no-wait`
+2. Run `az aks create --name <cluster> --resource-group <rg> --sku automatic --location <region> --subscription <sub> --generate-ssh-keys --no-wait` using `run_in_terminal` in **async mode** (set `isAsync: true` or `mode: "async"` in the tool input). This returns control immediately while the command runs in the background. The `--no-wait` flag makes Azure provision server-side; async mode ensures the terminal tool doesn't block waiting for the CLI to finish its initial handshake. We'll verify creation was accepted via `az aks show` in the cluster status check.
 3. `az acr create --name <acr> --resource-group <rg> --sku Basic --location <region> --subscription <sub>`
 
 Move to Phase 3 immediately. Do NOT wait for cluster. Do NOT attach ACR yet.
@@ -72,8 +97,31 @@ If cluster already confirmed ready in a prior check, skip to deploy confirmation
 Follow `/kickstart-deploy`. Execute step by step via `run_in_terminal`: `az acr build`, `az aks get-credentials`, `kubectl apply -f k8s/`, `kubectl get pods`. Confirm between each step. Only mention GitHub Actions if user asks.
 
 ## Cluster Status Check
-Run at end of Phases 3, 4, 5 (non-blocking peek):
-`az aks show --name <cluster> --resource-group <rg> --subscription <sub> --query provisioningState --output tsv`
-- `Succeeded`: attach ACR if not done, remember for Phase 6.
-- `Creating`: note it, continue.
-- `Failed`: report error, offer retry.
+
+Run at the end of Phases 3, 4, and 5 (non-blocking — just a quick peek). Wrap in `timeout` to prevent hanging if `az` is blocked on auth or token cache locks.
+
+```bash
+timeout 15 az aks show --name <cluster> --resource-group <rg> --subscription <sub> --query "{state:provisioningState, power:powerState.code}" --output json --only-show-errors
+```
+
+If the command times out (exit code 124), skip the check silently and try again next phase — don't block the flow.
+
+- **`state: Succeeded`**: Cluster is ready. Attach ACR if not done. Remember for Phase 6.
+- **`state: Creating`**: Still provisioning. Report progress ("Cluster still creating — we'll check again after the next phase."). Continue.
+- **`state: Failed`**: Provisioning failed. Get the error details:
+  ```bash
+  az aks show --name <cluster> --resource-group <rg> --subscription <sub> --query "provisioningState" --output tsv
+  az monitor activity-log list --resource-group <rg> --subscription <sub> --status Failed --max-events 3 --output json --query "[].{op:operationName.localizedValue, msg:properties.statusMessage}"
+  ```
+  Common failures and fixes:
+  - **QuotaExceeded**: Not enough vCPUs — suggest a different region or VM size.
+  - **OperationNotAllowed**: Provider not registered or policy blocking — check `az provider show`.
+  - **InvalidParameter**: Bad cluster/RG name — re-collect from user.
+  Report the error, offer to retry with fixes via `vscode_askQuestions`. Do not continue until resolved.
+- **No resource found (404)**: The `az aks create --no-wait` may have failed. Check if the resource group exists (`az group show`). If it does, retry `az aks create`. If not, re-run from step 1.
+
+Also verify ACR was created successfully:
+```bash
+timeout 15 az acr show --name <acr> --resource-group <rg> --subscription <sub> --query "provisioningState" --output tsv --only-show-errors
+```
+If not `Succeeded` or timed out, report and fix before continuing.
