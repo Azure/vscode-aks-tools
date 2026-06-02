@@ -7,8 +7,20 @@
             "label": "webpack-dev",
             "type": "npm",
             "script": "webpack-dev",
-            "problemMatcher": "$ts-webpack-watch",
             "isBackground": true,
+            "problemMatcher": {
+                "owner": "webpack",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "ERROR in (.*)",
+                    "file": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "webpack .* compilat",
+                    "endsPattern": "webpack .* compiled"
+                }
+            }
         },
         {
             "label": "webpack",

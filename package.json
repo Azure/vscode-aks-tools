@@ -1070,6 +1070,7 @@
             { "path": "./skills/kickstart-kaito-gpu/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-bicep-authoring/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-security-hardening/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+                { "path": "./skills/kickstart-pim-activation/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-github-actions-oidc/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-github-actions-workflow/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-github-pr-conventions/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
