@@ -1,74 +1,67 @@
 ---
 name: kickstart-handoff
-description: "Pre-deploy check playbook — verify cluster readiness and ACR attachment before deployment."
+description: "Pre-deploy check playbook — verify cluster, ACR, permissions, and tooling before deployment."
 disable-model-invocation: true
 ---
 
 # Pre-Deploy Check
 
-Verify that Azure infrastructure from the Configure phase is ready before deploying. This is the only phase that may block waiting on Azure.
+Ensure cluster, ACR, permissions, and tooling are all ready. Follow this strict order.
 
-## Cluster Readiness
+## 6a. Cluster Readiness
 
-Check the cluster provisioning state first:
 ```bash
 az aks show --name <cluster> --resource-group <rg> --subscription <sub> --query "provisioningState" --output tsv
 ```
+- **Succeeded**: continue.
+- **Creating**: `az aks wait --created --interval 30 --timeout 600`
+- **Failed**: offer retry or different cluster via `vscode_askQuestions`.
 
-### Already Succeeded
-Skip straight to ACR attachment.
+## 6b. Cluster Metadata Detection
 
-### Still Creating
-Use `az aks wait` instead of manual polling:
 ```bash
-az aks wait --name <cluster> --resource-group <rg> --subscription <sub> --created --interval 30 --timeout 600
+az aks show --name <cluster> --resource-group <rg> --subscription <sub> --query "{sku:sku.tier, azureRbac:aadProfile.enableAzureRBAC, localAccountsDisabled:disableLocalAccounts}" --output json
 ```
-Tell the user: "Cluster is still provisioning. Waiting for it to finish — this usually takes a few more minutes."
+Record `isAutomatic`, `isAzureRbac`, `localAccountsDisabled` to gate subsequent checks.
 
-If it times out (10 min), check the state again and report the error.
+## 6c. ACR Attachment
 
-### Failed
-Show the error and use `vscode_askQuestions`:
-  ```json
-  {
-    "questions": [{
-      "header": "Cluster failed",
-      "question": "Cluster provisioning failed. What do you want to do?",
-      "options": [
-        { "label": "Retry creation", "recommended": true },
-        { "label": "Use a different cluster" },
-        { "label": "Cancel" }
-      ]
-    }]
-  }
-  ```
+Do NOT assume the user is Owner. `--attach-acr` requires Owner/Account Admin/Co-Admin on the subscription. Try in order:
+1. `az aks update --attach-acr` — works if user is Owner.
+2. Direct role assignment (kubelet identity → AcrPull on ACR scope) — works if user has `roleAssignments/write`.
+3. Admin hand-off — print the exact command, wait for confirmation, poll to verify.
 
-## ACR Attachment
+## 6d. kubelogin
 
-Ensure the ACR is attached to the cluster:
+`which kubelogin` — if missing: `az aks install-cli`.
+**Never use `--admin` credentials.** **Never suggest `az aks command invoke`** (same identity, same Forbidden).
+
+## 6e. Control-Plane Probe
+
 ```bash
-az aks update --name <cluster> --resource-group <rg> --attach-acr <acr> --subscription <sub>
+az aks get-credentials --resource-group <rg> --name <cluster> --overwrite-existing
+kubectl auth can-i get namespaces
 ```
+If fails → user needs **Azure Kubernetes Service Cluster User Role**. Halt and provide fix.
 
-## Pre-Flight Summary
+## 6f. Data-Plane RBAC Probes
 
-Present a final summary of what will be deployed and use `vscode_askQuestions`:
-```json
-{
-  "questions": [{
-    "header": "Ready to deploy",
-    "question": "Everything looks good. Deploy now?",
-    "options": [
-      { "label": "Yes, deploy", "recommended": true },
-      { "label": "Review artifacts first" },
-      { "label": "Not yet" }
-    ]
-  }]
-}
+```bash
+kubectl auth can-i create deployments --namespace <namespace>
+kubectl auth can-i create services --namespace <namespace>
+kubectl auth can-i create configmaps --namespace <namespace>
 ```
+If any return `no` → user needs **AKS RBAC Writer/Admin/Cluster Admin**.
 
-## Exit Criteria
-- Cluster provisioning state is `Succeeded`.
-- ACR is attached to the cluster.
-- User confirms readiness.
-- Announce: "Pre-deploy check complete — moving to Deploy."
+**Self-remediation branching:**
+- Probe: attempt `az role assignment create --role "Azure Kubernetes Service RBAC Cluster Admin"` for self.
+- **Case A (succeeds):** Re-run `can-i` probes to confirm.
+- **Case B (403):** Print admin hand-off block with exact commands. Wait for user confirmation, then poll `kubectl auth can-i create deployments` every 15s up to 3 min.
+
+## 6g. ACR Push Pre-Check
+
+User needs **AcrPush** + **Container Registry Tasks Contributor**. For new resources, self-assign. For existing, admin hand-off.
+
+## Confirm
+
+Use `vscode_askQuestions`: "Yes, deploy" (recommended), "Review artifacts first", "Not yet".
