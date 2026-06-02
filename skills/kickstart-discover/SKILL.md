@@ -1,82 +1,32 @@
 ---
 name: kickstart-discover
-description: "Discovery phase playbook — collect application details to propose an architecture."
+description: "Discovery phase playbook — collect application details."
 disable-model-invocation: true
 ---
 
 # Discover Phase
 
-Collect enough information about the user's application to propose a deployment architecture. Use `vscode_askQuestions` for every question — present choices whenever possible.
+Collect enough information to propose a deployment architecture.
 
-## What to Collect
+## Auto-detect first, then ask
 
-| Item | How to get it |
-|------|--------------|
-| App name | `vscode_askQuestions` with `allowFreeformInput: true` |
-| Language / framework | Infer from workspace files first, then confirm via `vscode_askQuestions` with detected options |
-| Dependencies | `vscode_askQuestions` multi-select: databases, caches, queues, external APIs |
-| Port | Infer from code, confirm via `vscode_askQuestions` with detected value + "Other" |
-| Environment variables | Infer from `.env.example` / code, confirm via `vscode_askQuestions` |
-| Existing Dockerfile | Search workspace — no question needed |
-| Existing CI/CD | Search workspace — no question needed |
-| Source repo | Infer from git remote — no question needed |
+Use `search` and `codebase` to scan the workspace before asking anything. Look for `package.json`, `requirements.txt`, `go.mod`, `*.csproj`, `Dockerfile`, `.github/workflows/`, `azure-pipelines.yml`.
 
-## Conversation Strategy
+## What to collect
 
-- **Always use `vscode_askQuestions`** to collect information. Never ask questions in plain markdown and wait for free-text replies.
-- Before asking, use `search` and `codebase` tools to auto-detect answers. Then present what you found as pre-selected options for confirmation.
-- Ask one question at a time. Each `vscode_askQuestions` call should have one focused question with concrete options.
-- When the answer space is bounded (language, framework, database type), provide a curated option list. Mark the detected/recommended option with `recommended: true`.
-- When the answer is open-ended (app name, custom port), use `allowFreeformInput: true`.
+- App name
+- Language / framework (detect from manifest files, confirm via `vscode_askQuestions`)
+- Dependencies (databases, caches, queues — offer common options as multi-select)
+- Port (detect from code like `app.listen(3000)`, confirm)
+- Environment variables (detect from `.env.example` or code)
+- Existing Dockerfile (search workspace)
+- Existing CI/CD (search workspace)
 
-### Example — Language Detection
+## Rules
 
-After scanning the workspace and finding `package.json`:
-```json
-{
-  "questions": [{
-    "header": "Framework",
-    "question": "I found a package.json — which framework does your app use?",
-    "options": [
-      { "label": "Express.js", "recommended": true },
-      { "label": "Next.js" },
-      { "label": "Fastify" },
-      { "label": "NestJS" }
-    ],
-    "allowFreeformInput": true
-  }]
-}
-```
-
-### Example — Dependencies
-
-```json
-{
-  "questions": [{
-    "header": "Dependencies",
-    "question": "Which backing services does your app need?",
-    "multiSelect": true,
-    "options": [
-      { "label": "PostgreSQL" },
-      { "label": "Redis" },
-      { "label": "Azure Service Bus" },
-      { "label": "Azure Blob Storage" },
-      { "label": "MongoDB" },
-      { "label": "None" }
-    ]
-  }]
-}
-```
+- Use `vscode_askQuestions` for every question with concrete options. Mark detected/recommended values with `recommended: true`.
+- One question at a time unless tightly related.
+- When the answer is open-ended (app name), use `allowFreeformInput: true`.
 
 ## Exit Criteria
-
-You have enough to proceed when you know:
-- [ ] App name
-- [ ] Language and framework
-- [ ] Port
-- [ ] Key dependencies
-- [ ] Environment variables (at least which ones exist)
-- [ ] Whether a Dockerfile exists
-- [ ] Whether CI/CD exists
-
-When all items are collected, announce: "Discovery complete — ready to move to the Design phase."
+You know the app name, language, framework, port, key deps, env vars, and Dockerfile/CI status. Announce: "Discovery complete — moving to Configure Infrastructure."
