@@ -68,7 +68,6 @@ import aksFleetProperties from "./commands/aksFleetProperties/askFleetProperties
 import * as l10n from "@vscode/l10n";
 import * as path from "path";
 import * as fs from "fs";
-import * as os from "os";
 import { registerAksMcpServerProvider } from "./commands/aksMCP/aksMCPServer";
 import { aksQuickActions, initializeQuickActions } from "./commands/quickActions/aksQuickActions";
 import {
@@ -89,20 +88,6 @@ import {
     getGitHubRepoInfo,
 } from "./commands/aksContainerAssist/oidcSetup";
 
-function ensureKubeconfig(): void {
-    const kubeDir = path.join(os.homedir(), ".kube");
-    const kubeconfigPath = path.join(kubeDir, "config");
-    if (fs.existsSync(kubeconfigPath)) {
-        return;
-    }
-    try {
-        fs.mkdirSync(kubeDir, { recursive: true });
-        fs.writeFileSync(kubeconfigPath, "", { mode: 0o600 });
-    } catch {
-        // Best-effort — don't block activation if we can't write.
-    }
-}
-
 export async function activate(context: vscode.ExtensionContext) {
     const language = vscode.env.language;
 
@@ -111,8 +96,6 @@ export async function activate(context: vscode.ExtensionContext) {
     if (fs.existsSync(newpath)) {
         l10n.config({ fsPath: newpath });
     }
-
-    ensureKubeconfig();
 
     const cloudExplorer = await k8s.extension.cloudExplorer.v1;
     context.subscriptions.push(new Reporter());
