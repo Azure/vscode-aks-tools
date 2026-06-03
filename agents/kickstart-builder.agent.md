@@ -2,7 +2,6 @@
 name: aks/kickstart-builder
 description: "Internal Kickstart sub-agent: proposes target architecture, then generates Dockerfile, K8s manifests, Bicep, and GitHub Actions workflow. Invoked by kickstart only."
 tools: ['edit/editFiles', 'search', 'search/codebase', 'web/fetch', 'execute/runInTerminal', 'execute/getTerminalOutput', 'read/problems', 'search/usages', 'vscode/askQuestions']
-model: ['Claude Sonnet 4', 'GPT-4o']
 user-invocable: false
 handoffs:
   - label: Review Artifacts

@@ -31,7 +31,6 @@ All four agents read `.kickstart/state.json` on entry and write it on exit. See 
 **User-invocable**: Yes (gated by `aks.kickstart.enabled` setting)
 **Owns**: Welcome, Phase 1 Discover, Phase 2 Configure
 **Tools**: editFiles, search, codebase, fetch, runCommands, problems, usages, vscode_askQuestions, run_in_terminal, get_terminal_output, send_to_terminal, kill_terminal
-**Models**: Claude Sonnet 4, GPT-4o
 **Handoffs**: → `kickstart-builder` (forward), → `kickstart-reviewer`/`kickstart-deployer` (re-entry after downstream fix)
 
 The orchestrator. Greets the user, runs Discover, runs Configure (provider checks, quota-aware region pick, `az group/aks/acr create` with `--no-wait`), then hands off to the builder. Also serves as the fallback when a downstream agent bounces work back due to an out-of-scope issue.

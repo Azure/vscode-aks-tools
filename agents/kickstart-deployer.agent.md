@@ -2,7 +2,6 @@
 name: aks/kickstart-deployer
 description: "Internal Kickstart sub-agent: runs all pre-deploy permission/tooling checks and executes the actual deployment (az acr build, kubectl apply). Invoked after kickstart-reviewer approves artifacts."
 tools: ['search', 'search/codebase', 'execute/runInTerminal', 'execute/getTerminalOutput', 'execute/killTerminal', 'read/terminalLastCommand', 'read/terminalSelection', 'read/problems', 'vscode/askQuestions']
-model: ['Claude Sonnet 4', 'GPT-4o']
 user-invocable: false
 handoffs:
   - label: Back to Kickstart

@@ -2,7 +2,6 @@
 name: aks/kickstart
 description: "AI-guided onboarding to deploy your app on AKS Automatic. Orchestrates discover → configure, then hands off to builder → reviewer → deployer."
 tools: ['edit/editFiles', 'search', 'search/codebase', 'web/fetch', 'execute/getTerminalOutput', 'execute/runInTerminal', 'read/terminalLastCommand', 'read/terminalSelection', 'read/problems', 'search/usages', 'vscode/askQuestions', 'vscode/runCommand', 'execute/killTerminal']
-model: ['Claude Sonnet 4', 'GPT-4o']
 handoffs:
   - label: Design & Generate Artifacts
     agent: aks/kickstart-builder
