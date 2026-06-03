@@ -6,89 +6,112 @@ How the Kickstart VS Code extension works — agents, skills, handoffs, and the 
 
 Kickstart is a VS Code Copilot extension that uses **declarative agents and skills** (no runtime code). Everything is contributed via `package.json` using the `chatAgents` and `chatSkills` contribution points from the `chatParticipantAdditions` proposed API.
 
+The flow is split across **four sub-agents** that hand off to each other. State is persisted to `.kickstart/state.json` so handoffs (and session restarts) don't depend on chat scrollback.
+
 ```
 User selects "kickstart" agent in Copilot
         │
         ▼
-┌─────────────────────────────────────────┐
-│         kickstart.agent.md              │
-│  (main orchestrator, user-invocable)    │
-│                                         │
-│  Phase Machine:                         │
-│  Discover → Design → Generate →         │
-│  Review → Handoff → Deploy              │
-│                                         │
-│  At each phase, invokes /kickstart-*    │
-│  skills for playbooks + domain rules    │
-├─────────────────────────────────────────┤
-│  Handoff: "Review Artifacts"            │
-│  ──────► kickstart-reviewer.agent.md    │
-│          (internal, not user-invocable) │
-│          Handoff: "Back to Kickstart"   │
-│  ◄────── returns to main agent         │
-└─────────────────────────────────────────┘
+  kickstart (Welcome → Discover → Configure)
+        │  Design & Generate Artifacts
+        ▼
+  kickstart-builder (Design → Generate)
+        │  Review Artifacts
+        ▼
+  kickstart-reviewer (Review)
+        │  Proceed to Deploy   /   Fix and Regenerate → builder
+        ▼
+  kickstart-deployer (Pre-Deploy → Deploy)
+        │  (on auth/config issue) Back to Kickstart
+        ▼
+  kickstart  (re-enter Discover or Configure, then hand off forward)
 ```
+
+All four agents read `.kickstart/state.json` on entry and write it on exit. The schema and read/write helpers live in [skills/kickstart-state/SKILL.md](skills/kickstart-state/SKILL.md).
 
 ## Feature Gate
 
-The main agent is gated by a VS Code setting:
+All agents are gated by a VS Code setting:
 
 ```json
 "aks.kickstart.enabled": true  // default
 ```
 
-The `chatAgents` entry uses `"when": "config.aks.kickstart.enabled == true"` so the agent only appears in the Copilot agent picker when the setting is enabled. The reviewer sub-agent has no `when` clause — it's internal and only reachable via handoff.
+The four `chatAgents` entries use `"when": "config.aks.kickstart.enabled == true"`. Only `kickstart` appears in the Copilot agent picker — the three sub-agents have `user-invocable: false` in their frontmatter and are only reachable via handoff.
 
 ## Entry Points
 
 | Entry Point | How | What happens |
 |---|---|---|
-| **Agent picker** | User selects "kickstart" in Copilot's agent dropdown | Full agent prompt loads, starts at Phase 1 |
+| **Agent picker** | User selects "kickstart" in Copilot's agent dropdown | Full orchestrator prompt loads, starts at Welcome → Phase 1 |
 | **Command palette** | User runs `AKS: Launch Kickstart Agent` (`aks.kickstartFocus`) | Hides sidebar/panel, opens chat, sends initial message to kickstart agent |
 | **Prompt file** | User runs `kickstart.prompt.md` from the prompt picker | Lightweight version — invokes `/kickstart-discover` and starts the flow |
 
 ## Agent Handoffs
 
-There are exactly two agents and one handoff cycle:
+Four agents with five forward handoffs and three back-edges. All handoffs use `send: false` so the user clicks to confirm — each one is a deliberate checkpoint.
 
-### kickstart → kickstart-reviewer
+### Forward edges
 
-- **When**: Phase 4 (Review). After artifacts are generated, the main agent offers "Review Artifacts" as a suggested action.
-- **Mechanism**: `handoffs` in frontmatter with `send: false` (user clicks to confirm).
-- **What reviewer does**: Invokes `/kickstart-deployment-review`, `/kickstart-safeguard-checklist`, `/kickstart-security-hardening`. Checks every generated file against a pass/fail/warn checklist.
+| From | To | Trigger |
+|---|---|---|
+| `kickstart` | `kickstart-builder` | End of Configure (Phase 2); state has `app.*` + `azure.*` populated |
+| `kickstart-builder` | `kickstart-reviewer` | End of Generate (Phase 4); state has `artifacts.*` populated |
+| `kickstart-reviewer` | `kickstart-deployer` | Review passed (or only warnings accepted) |
+| `kickstart-reviewer` | `kickstart-builder` | Review failed; needs regenerate |
+| `kickstart-deployer` | `kickstart-reviewer` | Deploy-time issue traced back to artifact (e.g. ImagePullBackOff) |
 
-### kickstart-reviewer → kickstart
+### Back-edges to `kickstart` (escalation)
 
-- **When**: Review is complete. The reviewer offers "Back to Kickstart" as a suggested action.
-- **Mechanism**: Same `handoffs` pattern with `send: false`.
-- **What happens next**: Main agent resumes at Phase 5 (Handoff).
+Any sub-agent can hand back to `kickstart` when an issue is rooted in discovery or infrastructure decisions. The orchestrator reads state, re-runs the appropriate phase, and hands off forward again.
 
-Both handoffs are **user-initiated** — Copilot presents them as buttons, not automatic transfers.
+## State Contract
+
+Every agent persists decisions to `.kickstart/state.json`. Defined in `/kickstart-state`. Sections and owners:
+
+| Section | Owner |
+|---|---|
+| `app.*` | `kickstart` (Discover) |
+| `azure.*` | `kickstart` (Configure) |
+| `cluster.*` | `kickstart` (peek), `kickstart-deployer` (full probes) |
+| `artifacts.*` | `kickstart-builder` |
+| `review.*` | `kickstart-reviewer` |
+| `deploy.*` | `kickstart-deployer` |
+| `phase`, `lastAgent`, `updatedAt` | every agent on transition |
+
+State lets agents resume after session restart, lets handoffs work without re-deriving context from chat scrollback, and lets the orchestrator render a one-line status pill on re-entry: `[Phase: deploy · Cluster: Succeeded · ACR: attached · Artifacts: 7]`.
 
 ## Phase Machine
 
-The main agent follows seven phases in strict order. Each phase has a dedicated **phase skill** that contains the playbook.
+Seven phases in strict order, owned by four agents. Each phase has a dedicated **phase skill** with the playbook.
 
-| Phase | Skill | What it does | Exit criteria |
-|---|---|---|---|
-| 1. Discover | `/kickstart-discover` | Collect app name, language, framework, deps, port, env vars, Dockerfile/CI status | Enough info to propose architecture |
-| 2. Configure | (inline in agent) | Create new or select existing Azure resources (RG, AKS cluster, ACR). Cluster creates with `--no-wait` | Resources selected/creating |
-| 3. Design | `/kickstart-design` | Propose AKS Automatic architecture, get user approval | User approves |
-| 4. Generate | `/kickstart-generate` | Create Dockerfile, K8s manifests, Bicep, GHA workflow | All files written to workspace |
-| 5. Review | `/kickstart-review` | Validate artifacts against safeguards + security | All checks pass |
-| 6. Pre-Deploy | `/kickstart-handoff` | Verify cluster ready, ACR attached, final summary | Cluster provisioned, user confirms |
-| 7. Deploy | `/kickstart-deploy` | Build, push, apply with `az` and `kubectl` | App running on AKS |
+| Phase | Owner agent | Skill | What it does | Exit criteria |
+|---|---|---|---|---|
+| 1. Discover | `kickstart` | `/kickstart-discover` | Collect app name, language, framework, deps, port, env vars, Dockerfile/CI status | Enough info to propose architecture |
+| 2. Configure | `kickstart` | (inline in agent) | Create or select Azure resources (RG, AKS cluster, ACR). Cluster creates with `--no-wait` | Resources selected/creating |
+| 3. Design | `kickstart-builder` | `/kickstart-design` | Propose AKS Automatic architecture, get user approval | User approves |
+| 4. Generate | `kickstart-builder` | `/kickstart-generate` | Create Dockerfile, K8s manifests, Bicep, GHA workflow | All files written; client-side dry-runs pass |
+| 5. Review | `kickstart-reviewer` | `/kickstart-review` | Validate artifacts against safeguards + security | All checks pass (or warnings accepted) |
+| 6. Pre-Deploy | `kickstart-deployer` | `/kickstart-handoff` | 6a–6g: cluster ready, ACR attach (PIM-aware), kubelogin, control-plane probe, data-plane RBAC, ACR push pre-check | All probes green, user confirms |
+| 7. Deploy | `kickstart-deployer` | `/kickstart-deploy` | `az acr build`, `kubectl apply`, verify | App running on AKS |
 
 ### Phase transitions
-- The agent announces each transition: *"Discovery complete — moving to the Design phase."*
-- Phases can only be skipped if the user explicitly asks AND all info is available. If skipping, the agent invokes `/kickstart-phase-acceleration` first.
+- Each agent announces transitions: *"Discovery complete — moving to Configure."*
+- Cross-agent transitions surface as **handoff buttons** the user clicks (`send: false`).
+- Phases can only be skipped if the user explicitly asks AND state has the required fields. The agent invokes `/kickstart-phase-acceleration` first.
 
 ## Skill Taxonomy
 
-All 30 skills use `disable-model-invocation: true` — they only fire when explicitly invoked via `/skill-name` by an agent.
+All 31 skills use `disable-model-invocation: true` — they only fire when explicitly invoked via `/skill-name` by an agent.
+
+### Shared contract (1)
+
+| Skill | Purpose |
+|---|---|
+| `kickstart-state` | `.kickstart/state.json` schema and read/write helpers, referenced by all four agents on entry/exit |
 
 ### Phase Skills (6)
-One per phase (Configure is inline in the agent prompt, not a separate skill).
+One per phase (Configure is inline in the orchestrator prompt, not a separate skill).
 
 | Skill | Phase |
 |---|---|
@@ -214,41 +237,37 @@ The agents use VS Code Copilot's built-in tools (not custom extension tools):
 ```
 ├── package.json                        # chatAgents + chatSkills + settings
 ├── tsconfig.json
+├── AGENTS.md                           # agent topology + ownership reference
 ├── src/extension.ts                    # Activation + aks.kickstartFocus command
 ├── agents/
-│   ├── kickstart.agent.md              # Main agent (gated by kickstart.enabled)
-│   └── kickstart-reviewer.agent.md     # Internal reviewer sub-agent
+│   ├── kickstart.agent.md              # Orchestrator (Discover + Configure)
+│   ├── kickstart-builder.agent.md      # Design + Generate
+│   ├── kickstart-reviewer.agent.md     # Review
+│   └── kickstart-deployer.agent.md     # Pre-Deploy + Deploy
 ├── skills/
-│   ├── kickstart-discover/SKILL.md     # Phase skills (6)
+│   ├── kickstart-state/SKILL.md         # Shared state contract
+│   ├── kickstart-discover/SKILL.md      # Phase skills (6)
 │   ├── kickstart-design/SKILL.md
 │   ├── kickstart-generate/SKILL.md
 │   ├── kickstart-review/SKILL.md
 │   ├── kickstart-handoff/SKILL.md
 │   ├── kickstart-deploy/SKILL.md
-│   ├── kickstart-aks-automatic/SKILL.md  # Domain skills (19)
+│   ├── kickstart-aks-automatic/SKILL.md  # Domain skills
 │   ├── kickstart-gateway-api/SKILL.md
 │   ├── kickstart-workload-identity/SKILL.md
 │   ├── kickstart-acr-integration/SKILL.md
 │   ├── kickstart-kaito-gpu/SKILL.md
-│   ├── kickstart-aks-terminology/SKILL.md
-│   ├── kickstart-deployment-safeguards/SKILL.md
+│   ├── kickstart-pim-activation/SKILL.md
 │   ├── kickstart-bicep-authoring/SKILL.md
 │   ├── kickstart-security-hardening/SKILL.md
-│   ├── kickstart-deployment-review/SKILL.md
-│   ├── kickstart-resource-management/SKILL.md
-│   ├── kickstart-networking/SKILL.md
-│   ├── kickstart-cost-estimation/SKILL.md
-│   ├── kickstart-monitoring/SKILL.md
-│   ├── kickstart-arm-basics/SKILL.md
-│   ├── kickstart-azure-identity/SKILL.md
 │   ├── kickstart-github-actions-oidc/SKILL.md
 │   ├── kickstart-github-actions-workflow/SKILL.md
 │   ├── kickstart-github-pr-conventions/SKILL.md
-│   ├── kickstart-phase-acceleration/SKILL.md   # Behavioral skills (4)
-│   ├── kickstart-teach-then-ask/SKILL.md
+│   ├── kickstart-samples/SKILL.md
+│   ├── kickstart-safeguard-checklist/SKILL.md   # Validation
+│   ├── kickstart-phase-acceleration/SKILL.md    # Behavioral
 │   ├── kickstart-collaborator-voice/SKILL.md
-│   ├── kickstart-file-generation/SKILL.md
-│   └── kickstart-safeguard-checklist/SKILL.md  # Validation (1)
+│   └── kickstart-file-generation/SKILL.md
 └── prompts/
     └── kickstart.prompt.md             # Quick-start prompt file
 ```

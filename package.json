@@ -1041,18 +1041,31 @@
         "chatAgents": [
             {
                 "name": "kickstart",
-                "description": "AI-guided onboarding to deploy your app on AKS Automatic. Walks you through discover, design, generate, review, handoff, and deploy.",
+                "description": "AI-guided onboarding to deploy your app on AKS Automatic. Orchestrates discover and configure, then hands off to builder, reviewer, and deployer sub-agents.",
                 "path": "./agents/kickstart.agent.md",
                 "when": "config.aks.kickstart.enabled == true"
             },
             {
+                "name": "kickstart-builder",
+                "description": "Internal agent: Designs target architecture and generates Dockerfile, K8s manifests, Bicep, and GitHub Actions workflow. Invoked by kickstart only.",
+                "path": "./agents/kickstart-builder.agent.md",
+                "when": "config.aks.kickstart.enabled == true"
+            },
+            {
                 "name": "kickstart-reviewer",
-                "description": "Internal agent: Reviews Kickstart-generated deployment artifacts for correctness, security, and AKS Automatic compliance. Invoked by kickstart only.",
+                "description": "Internal agent: Reviews Kickstart-generated deployment artifacts for correctness, security, and AKS Automatic compliance. Invoked by kickstart-builder only.",
                 "path": "./agents/kickstart-reviewer.agent.md",
+                "when": "config.aks.kickstart.enabled == true"
+            },
+            {
+                "name": "kickstart-deployer",
+                "description": "Internal agent: Runs pre-deploy permission and tooling checks then deploys to AKS. Invoked by kickstart-reviewer only.",
+                "path": "./agents/kickstart-deployer.agent.md",
                 "when": "config.aks.kickstart.enabled == true"
             }
         ],
         "chatSkills": [
+            { "path": "./skills/kickstart-state/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-discover/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-design/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-generate/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
