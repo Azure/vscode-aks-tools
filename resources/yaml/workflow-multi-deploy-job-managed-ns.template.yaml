@@ -6,7 +6,6 @@
         runs-on: ubuntu-latest
         needs: [build]
         env:
-            CONTAINER_NAME: { { CONTAINERNAME } }
             DEPLOYMENT_MANIFEST_PATH: { { DEPLOYMENTMANIFESTPATH } }
         steps:
             - uses: actions/checkout@v4
@@ -44,7 +43,7 @@
                   action: deploy
                   manifests: ${{ env.DEPLOYMENT_MANIFEST_PATH }}
                   images: |
-                      ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
+{ { IMAGES } }
                   namespace: ${{ env.NAMESPACE }}
 
             - name: Annotate namespace

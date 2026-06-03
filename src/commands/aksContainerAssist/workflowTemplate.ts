@@ -302,25 +302,35 @@ function renderMatrixInclude(containers: ContainerJobConfig[]): string {
 }
 
 /**
- * Renders a per-container deploy job fragment by loading the appropriate
- * template file and performing placeholder substitution.
+ * Renders a deploy job fragment. When multiple containers share a manifest, a
+ * single consolidated deploy job lists every image so that k8s-deploy substitutes
+ * them all in one pass — preventing concurrent per-container jobs from racing
+ * each other and reverting prior image substitutions.
  */
-function renderDeployJob(jobId: string, container: ContainerJobConfig, isManagedNamespace: boolean): string {
+function renderDeployJob(
+    jobId: string,
+    containers: ContainerJobConfig[],
+    manifestPath: string,
+    isManagedNamespace: boolean,
+): string {
     const templateName = isManagedNamespace ? "workflow-multi-deploy-job-managed-ns" : "workflow-multi-deploy-job";
     let template = loadMultiTemplate(templateName);
 
-    // The block scalar produced by formatManifestPathForYamlBlock is indented for
-    // the top-level (4-space) env block used by the single-container template;
-    // here the key sits at 12 spaces, so re-indent the content lines to 16
-    // spaces to keep the YAML valid for multi-manifest configs.
-    const rawManifestPath = container.deploymentManifestPath ?? "";
-    const manifestPath = reindentBlockScalar(rawManifestPath, 16);
-    const imageName = sanitizeImageName(container.containerName);
+    // Image refs align under `images: |` at 22 spaces.
+    const indent = " ".repeat(22);
+    const images = containers
+        .map(
+            (c) =>
+                `${indent}\${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${sanitizeImageName(c.containerName)}:\${{ github.sha }}`,
+        )
+        .join("\n");
 
     const replacements: Record<string, string> = {
         "{ { DEPLOY_JOB_ID } }": `deploy-${jobId}`,
-        "{ { CONTAINERNAME } }": imageName,
-        "{ { DEPLOYMENTMANIFESTPATH } }": manifestPath,
+        // Manifest block scalars come pre-indented for the single-container template;
+        // re-indent to 16 spaces for the multi-container deploy env block.
+        "{ { DEPLOYMENTMANIFESTPATH } }": reindentBlockScalar(manifestPath, 16),
+        "{ { IMAGES } }": images,
     };
 
     for (const [placeholder, value] of Object.entries(replacements)) {
@@ -361,14 +371,23 @@ export function renderMultiContainerWorkflowTemplate(config: MultiContainerWorkf
     const matrixInclude = renderMatrixInclude(config.containers);
     buildJob = buildJob.replace(/\{\s*\{\s*MATRIX_INCLUDE\s*\}\s*\}/g, matrixInclude);
 
-    // --- Deploy jobs (one per container with a manifest) ---
-    const deployJobs = config.containers
-        .filter((container) => container.deploymentManifestPath)
-        .map((container) => {
-            const jobId = sanitizeJobId(container.containerName);
-            return renderDeployJob(jobId, container, config.isManagedNamespace);
-        })
-        .join("\n");
+    // --- Deploy jobs (one per unique manifest path) ---
+    // Group containers by manifest so a shared manifest yields one consolidated
+    // deploy job; concurrent per-container deploys would race and revert each
+    // other's image substitutions.
+    const groups = new Map<string, ContainerJobConfig[]>();
+    for (const c of config.containers) {
+        if (!c.deploymentManifestPath) continue;
+        const list = groups.get(c.deploymentManifestPath) ?? [];
+        list.push(c);
+        groups.set(c.deploymentManifestPath, list);
+    }
+
+    let sharedCount = 0;
+    const deployJobs = Array.from(groups, ([manifestPath, containers]) => {
+        const jobId = containers.length === 1 ? sanitizeJobId(containers[0].containerName) : `shared-${++sharedCount}`;
+        return renderDeployJob(jobId, containers, manifestPath, config.isManagedNamespace);
+    }).join("\n");
 
     return `${header}${buildJob}\n${deployJobs}`;
 }

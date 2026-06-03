@@ -383,8 +383,8 @@ describe("Multi-Container Workflow Template Tests", () => {
             assert.ok(yaml.includes("image: api"), "matrix should include api image");
             assert.ok(yaml.includes("build_context: frontend"), "matrix should include frontend build context");
             assert.ok(yaml.includes("build_context: api"), "matrix should include api build context");
-            assert.ok(yaml.includes("CONTAINER_NAME: frontend"), "deploy-frontend job should set CONTAINER_NAME");
-            assert.ok(yaml.includes("CONTAINER_NAME: api"), "deploy-api job should set CONTAINER_NAME");
+            assert.ok(yaml.includes(".azurecr.io/frontend:"), "deploy-frontend job should reference frontend image");
+            assert.ok(yaml.includes(".azurecr.io/api:"), "deploy-api job should reference api image");
         });
 
         it("does not contain unreplaced template placeholders", () => {
@@ -474,14 +474,16 @@ describe("Multi-Container Workflow Template Tests", () => {
                     `image must be OCI-safe (lowercase [a-z0-9._-]); got "${value}"`,
                 );
             }
-            // Check CONTAINER_NAME in deploy job
-            const containerNameLines = rendered.split("\n").filter((line) => line.includes("CONTAINER_NAME:"));
-            assert.ok(containerNameLines.length >= 1, "Should emit at least one CONTAINER_NAME line");
-            for (const line of containerNameLines) {
-                const value = line.split("CONTAINER_NAME:")[1].trim();
+            // Check image references in the deploy job's images block are OCI-safe.
+            // The build job uses a `${{ matrix.image }}` placeholder; only inspect the
+            // bare-name refs emitted into deploy jobs.
+            const deployImageRefRe = /\.azurecr\.io\/([a-zA-Z0-9._-]+):\$\{\{ github\.sha \}\}/g;
+            const deployImageRefs = Array.from(rendered.matchAll(deployImageRefRe), (m) => m[1]);
+            assert.ok(deployImageRefs.length >= 1, "Should emit at least one bare-name image ref in the deploy job");
+            for (const value of deployImageRefs) {
                 assert.ok(
                     /^[a-z0-9._-]+$/.test(value),
-                    `CONTAINER_NAME must be OCI-safe (lowercase [a-z0-9._-]); got "${value}"`,
+                    `deploy image ref must be OCI-safe (lowercase [a-z0-9._-]); got "${value}"`,
                 );
             }
         });
@@ -705,7 +707,7 @@ describe("Multi-Container Workflow Template Tests", () => {
             assert.ok(apiManifest!.includes("api/k8s/service.yaml"));
         });
 
-        it("shared manifest across all services produces correct per-job env (#2163)", () => {
+        it("shared manifest across all services consolidates into a single deploy job (#2163)", () => {
             const sharedManifest = "k8s/shared-deployment.yaml";
             const sharedConfig: MultiContainerWorkflowConfig = {
                 ...threeServiceConfig,
@@ -719,10 +721,226 @@ describe("Multi-Container Workflow Template Tests", () => {
                 jobs?: Record<string, { env?: Record<string, string> }>;
             };
 
-            // All deploy jobs should have the same manifest path
-            assert.strictEqual(parsed.jobs?.["deploy-web"]?.env?.DEPLOYMENT_MANIFEST_PATH, sharedManifest);
-            assert.strictEqual(parsed.jobs?.["deploy-api"]?.env?.DEPLOYMENT_MANIFEST_PATH, sharedManifest);
-            assert.strictEqual(parsed.jobs?.["deploy-worker"]?.env?.DEPLOYMENT_MANIFEST_PATH, sharedManifest);
+            // Per-container deploy jobs must NOT exist when a manifest is shared.
+            assert.ok(!parsed.jobs?.["deploy-web"], "deploy-web should not exist when manifest is shared");
+            assert.ok(!parsed.jobs?.["deploy-api"], "deploy-api should not exist when manifest is shared");
+            assert.ok(!parsed.jobs?.["deploy-worker"], "deploy-worker should not exist when manifest is shared");
+            // Exactly one consolidated deploy job that carries the shared manifest path.
+            assert.strictEqual(parsed.jobs?.["deploy-shared-1"]?.env?.DEPLOYMENT_MANIFEST_PATH, sharedManifest);
         });
+    });
+});
+
+describe("Multi-Container Shared-Manifest Deploy Consolidation", () => {
+    const base: Omit<MultiContainerWorkflowConfig, "containers"> = {
+        workflowName: "deploy-monorepo",
+        branchName: "main",
+        acrResourceGroup: "shared-rg",
+        azureContainerRegistry: "monoacr",
+        clusterName: "mono-cluster",
+        clusterResourceGroup: "mono-cluster-rg",
+        namespace: "apps",
+        isManagedNamespace: false,
+    };
+
+    it("emits a single deploy job when two containers share the same manifest", () => {
+        const cfg: MultiContainerWorkflowConfig = {
+            ...base,
+            containers: [
+                {
+                    containerName: "frontend",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "frontend",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+                {
+                    containerName: "api",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "api",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+            ],
+        };
+        const rendered = renderMultiContainerWorkflowTemplate(cfg);
+
+        // Matrix build job covers both containers; consolidated single deploy job.
+        assert.ok(rendered.includes("service: frontend"), "matrix build should include frontend");
+        assert.ok(rendered.includes("service: api"), "matrix build should include api");
+
+        // Exactly one deploy job; per-container deploy jobs must NOT exist for shared manifests.
+        assert.ok(!rendered.includes("deploy-frontend:"), "deploy-frontend should not exist (consolidated)");
+        assert.ok(!rendered.includes("deploy-api:"), "deploy-api should not exist (consolidated)");
+        const deployJobMatches = rendered.match(/^ {4}deploy-[A-Za-z0-9_-]+:$/gm) ?? [];
+        assert.strictEqual(deployJobMatches.length, 1, `Expected exactly one deploy job, got ${deployJobMatches}`);
+        assert.ok(rendered.includes("deploy-shared-1:"), "consolidated deploy job should be named deploy-shared-1");
+    });
+
+    it("the consolidated deploy job depends on the matrix build job", () => {
+        const cfg: MultiContainerWorkflowConfig = {
+            ...base,
+            containers: [
+                {
+                    containerName: "frontend",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "frontend",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+                {
+                    containerName: "api",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "api",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+            ],
+        };
+        const rendered = renderMultiContainerWorkflowTemplate(cfg);
+        assert.ok(
+            rendered.includes("needs: [build]"),
+            `Consolidated deploy job must depend on the matrix build job; got:\n${rendered}`,
+        );
+    });
+
+    it("the consolidated deploy job lists every container image in the k8s-deploy images block", () => {
+        const cfg: MultiContainerWorkflowConfig = {
+            ...base,
+            containers: [
+                {
+                    containerName: "frontend",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "frontend",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+                {
+                    containerName: "api",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "api",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+            ],
+        };
+        const rendered = renderMultiContainerWorkflowTemplate(cfg);
+        const parsed = yaml.load(rendered) as {
+            jobs: Record<string, { env?: Record<string, string>; steps: Array<{ with?: { images?: string } }> }>;
+        };
+        const deploy = parsed.jobs["deploy-shared-1"];
+        assert.ok(deploy, "deploy-shared-1 should be present in parsed YAML");
+        const deployStep = deploy.steps.find((s) => s.with?.images !== undefined);
+        assert.ok(deployStep && deployStep.with?.images, "Deploy step should set k8s-deploy images");
+        const images = deployStep.with!.images!;
+        assert.ok(
+            images.includes(".azurecr.io/frontend:${{ github.sha }}"),
+            `images should include frontend ref; got: ${images}`,
+        );
+        assert.ok(
+            images.includes(".azurecr.io/api:${{ github.sha }}"),
+            `images should include api ref; got: ${images}`,
+        );
+        // CONTAINER_NAME env must NOT be present on consolidated deploy jobs.
+        assert.ok(
+            !deploy.env || deploy.env.CONTAINER_NAME === undefined,
+            "Consolidated deploy job should not set CONTAINER_NAME env",
+        );
+    });
+
+    it("keeps distinct deploy jobs for containers with different manifests", () => {
+        const cfg: MultiContainerWorkflowConfig = {
+            ...base,
+            containers: [
+                {
+                    containerName: "frontend",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "frontend",
+                    deploymentManifestPath: "frontend/k8s/dep.yaml",
+                },
+                {
+                    containerName: "api",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "api",
+                    deploymentManifestPath: "api/k8s/dep.yaml",
+                },
+            ],
+        };
+        const rendered = renderMultiContainerWorkflowTemplate(cfg);
+        assert.ok(rendered.includes("deploy-frontend:"));
+        assert.ok(rendered.includes("deploy-api:"));
+        assert.ok(!rendered.includes("deploy-shared-"), "Distinct manifests must not be consolidated");
+    });
+
+    it("supports mixed: a shared group + a distinct deploy + a build-only container", () => {
+        const cfg: MultiContainerWorkflowConfig = {
+            ...base,
+            containers: [
+                {
+                    containerName: "frontend",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "frontend",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+                {
+                    containerName: "api",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "api",
+                    deploymentManifestPath: "k8s/app.yaml",
+                },
+                {
+                    containerName: "billing",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "billing",
+                    deploymentManifestPath: "billing/k8s/dep.yaml",
+                },
+                {
+                    containerName: "worker",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "worker",
+                    // No manifest — build-only.
+                },
+            ],
+        };
+        const rendered = renderMultiContainerWorkflowTemplate(cfg);
+        const deployJobMatches = rendered.match(/^ {4}deploy-[A-Za-z0-9_-]+:$/gm) ?? [];
+        assert.strictEqual(
+            deployJobMatches.length,
+            2,
+            `Expected 2 deploy jobs (shared + billing), got ${deployJobMatches}`,
+        );
+        assert.ok(rendered.includes("deploy-shared-1:"), "shared deploy job present");
+        assert.ok(rendered.includes("deploy-billing:"), "distinct billing deploy job present");
+        assert.ok(rendered.includes("service: worker"), "worker is in matrix build");
+        assert.ok(!rendered.includes("deploy-worker:"), "worker has no deploy job (skipped)");
+    });
+
+    it("produces valid YAML when consolidating with a multi-manifest block scalar", () => {
+        const cfg: MultiContainerWorkflowConfig = {
+            ...base,
+            containers: [
+                {
+                    containerName: "frontend",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "frontend",
+                    deploymentManifestPath:
+                        "|\n        k8s/deployment.yaml\n        k8s/service.yaml\n        k8s/ingress.yaml",
+                },
+                {
+                    containerName: "api",
+                    dockerFile: "Dockerfile",
+                    buildContextPath: "api",
+                    deploymentManifestPath:
+                        "|\n        k8s/deployment.yaml\n        k8s/service.yaml\n        k8s/ingress.yaml",
+                },
+            ],
+        };
+        const rendered = renderMultiContainerWorkflowTemplate(cfg);
+        let parsed: unknown;
+        assert.doesNotThrow(() => {
+            parsed = yaml.load(rendered);
+        }, `Consolidated workflow must be valid YAML:\n${rendered}`);
+        const root = parsed as { jobs: Record<string, { env?: Record<string, string> }> };
+        const manifestEnv = root.jobs["deploy-shared-1"]?.env?.DEPLOYMENT_MANIFEST_PATH;
+        assert.ok(
+            typeof manifestEnv === "string" && manifestEnv.includes("k8s/deployment.yaml"),
+            "Consolidated deploy job should carry the shared multi-manifest list",
+        );
+        assert.ok(manifestEnv!.includes("k8s/service.yaml"));
+        assert.ok(manifestEnv!.includes("k8s/ingress.yaml"));
     });
 });
