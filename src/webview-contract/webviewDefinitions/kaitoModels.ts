@@ -13,9 +13,9 @@ export interface InitialState {
 export type ToVsCodeMsgDef = {
     generateCRDRequest: { model: string | undefined };
     deployKaitoRequest: { model: string; yaml: string | undefined; gpu: string };
-    resetStateRequest: {};
+    resetStateRequest: Record<string, never>;
     cancelRequest: { model: string };
-    kaitoManageRedirectRequest: {};
+    kaitoManageRedirectRequest: Record<string, never>;
 };
 
 export type ToWebViewMsgDef = {

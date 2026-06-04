@@ -16,10 +16,10 @@ export type ModelState = {
 };
 
 export type ToVsCodeMsgDef = {
-    monitorUpdateRequest: {};
+    monitorUpdateRequest: Record<string, never>;
     deleteWorkspaceRequest: { model: string; namespace: string };
     redeployWorkspaceRequest: { modelName: string; modelYaml: string | undefined; namespace: string };
-    getLogsRequest: {};
+    getLogsRequest: Record<string, never>;
     testWorkspaceRequest: { modelName: string; namespace: string };
     portForwardRequest: { modelName: string; namespace: string };
 };
