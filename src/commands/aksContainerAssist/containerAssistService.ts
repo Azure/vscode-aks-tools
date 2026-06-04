@@ -43,7 +43,7 @@ export class ContainerAssistService {
     async isAvailable(): Promise<Errorable<boolean>> {
         try {
             const config = vscode.workspace.getConfiguration("aks");
-            const isEnabled = config.get<boolean>("containerAssistEnabledPreview", false);
+            const isEnabled = config.get<boolean>("containerAssistEnabledPreview", true);
 
             if (!isEnabled) {
                 const errorMsg = l10n.t(

@@ -155,7 +155,7 @@
                 },
                 "aks.containerAssistEnabledPreview": {
                     "type": "boolean",
-                    "default": false,
+                    "default": true,
                     "description": "Set to true to enable deployment related file generation capability using AI tool. (Preview feature)"
                 },
                 "aks.containerAssist.k8sManifestFolder": {

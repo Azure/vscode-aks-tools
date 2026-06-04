@@ -4,7 +4,7 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 
 ## Release spotlight
 
-This release adds two feature-flagged experiences:
+This release adds two configurable experiences:
 
 - [Container Assist Integration (Preview)](./container-assist-integration.md)
 - [Simplified AKS Menu Structure (Feature Flag)](./simplified-menu-structure.md)
@@ -17,6 +17,8 @@ These can be enabled independently:
 	"aks.simplifiedMenuStructure": true
 }
 ```
+
+From `2.1.0`, `aks.containerAssistEnabledPreview` is enabled by default.
 
 Container Assist release screenshots:
 
