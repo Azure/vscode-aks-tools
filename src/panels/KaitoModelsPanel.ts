@@ -265,7 +265,7 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                         this.resourceGroupName,
                         this.clusterName,
                     );
-                    const quotas = computeClient.usageOperations.list(cluster.location);
+                    const quotas = computeClient.usage.list(cluster.location);
                     const foundQuota = await this.findMatchingQuota(quotas, gpuFamily);
                     if (!foundQuota || !this.isQuotaSufficient(foundQuota, requiredCPUs)) {
                         this.promptForQuotaIncrease();
