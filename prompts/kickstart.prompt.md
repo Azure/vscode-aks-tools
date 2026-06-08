@@ -13,7 +13,7 @@ After the user picks, proceed through the phase machine in order:
 2. **Design** — Propose architecture (`/kickstart-design`)
 3. **Generate** — Create deployment artifacts (`/kickstart-generate`)
 4. **Review** — Validate artifacts (`/kickstart-review`)
-5. **Handoff** — Confirm deployment target (`/kickstart-handoff`)
+5. **Pre-Deploy** — Verify cluster, ACR, permissions, and tooling (`/kickstart-predeploy`)
 6. **Deploy** — Provide deployment commands (`/kickstart-deploy`)
 
 Always use `vscode_askQuestions` to advance the conversation with choices. Skills are declarative — just reference `/kickstart-*` by name and the system loads them automatically. Do NOT search the filesystem for skill files.

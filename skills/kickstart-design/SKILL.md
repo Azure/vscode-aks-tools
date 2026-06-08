@@ -29,7 +29,7 @@ Present a summary covering:
 | Question | Answer |
 |---|---|
 | "Do I need Kubernetes knowledge?" | No. AKS Automatic manages nodes, scaling, upgrades. |
-| "How much will this cost?" | Invoke `/kickstart-cost-estimation`. |
+| "How much will this cost?" | Give a rough estimate: AKS Automatic control plane is free; you pay for nodes (auto-scaled, ~$70/mo per active D4s_v5), ACR Basic (~$5/mo), and egress. Point users at the Azure Pricing Calculator for exact numbers. |
 | "Can I use existing CI/CD?" | Yes, but recommend GitHub Actions with OIDC. |
 
 ## Exit Criteria

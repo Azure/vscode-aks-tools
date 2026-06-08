@@ -1,5 +1,5 @@
 ---
-name: kickstart-handoff
+name: kickstart-predeploy
 description: "Pre-deploy check playbook — verify cluster, ACR, permissions, and tooling before deployment."
 disable-model-invocation: true
 ---
@@ -15,7 +15,7 @@ az aks show --name <cluster> --resource-group <rg> --subscription <sub> --query 
 ```
 - **Succeeded**: continue.
 - **Creating**: `az aks wait --created --interval 30 --timeout 600`
-- **Failed**: offer retry or different cluster via `vscode_askQuestions`.
+- **Failed**: return to parent with `status: 'failed'`, `errorClass: 'cluster'`, and the activity-log message. The parent decides whether to retry, pick a different cluster, or escalate to the user.
 
 ## 6b. Cluster Metadata Detection
 

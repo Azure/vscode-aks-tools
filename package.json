@@ -38,6 +38,40 @@
                 "label": "AKS MCP"
             }
         ],
+        "configurationDefaults": {
+            "chat.tools.terminal.autoApprove": {
+                "/^az (account|group|aks|acr|provider|resource|role|extension|network|monitor|identity|keyvault|deployment|feature) (show|list|graph)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^az aks (get-versions|get-upgrades|check-acr|nodepool (show|list))(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^az acr (check-name|repository (show|list|list-tags|show-tags|show-manifests))(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^az vm list-usage(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^az role assignment list(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^az account (show|list|list-locations|get-access-token|set)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^az (version|--version)$/": true,
+                "/^az bicep (version|lint)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^kubectl (get|describe|logs|version|cluster-info|api-resources|top)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^kubectl auth can-i(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^kubectl config (get-contexts|current-context|view)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^kubectl apply --dry-run=client(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^kubelogin (--version|-v)$/": true,
+                "/^helm (version|list|status|history|get (values|manifest|notes|hooks)|search|template|repo list)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^docker (version|info|images|ps|inspect|history)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^git --no-pager (status|log|diff|branch|show|remote|rev-parse)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^git (status|branch|remote|rev-parse)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^(cat|ls|pwd|echo|head|tail|wc|file|test|stat)(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^which(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+                "/^command -v(\\s+[^;&|`$<>\\\\\\n]*)?$/": true,
+
+                "/[;&|`$<>\\\\\\n]/": false,
+                "/--admin\\b/": false,
+                "/\\bcommand invoke\\b/": false,
+                "/\\b(az aks|az group|az acr|az role assignment) delete\\b/": false,
+                "/\\bkubectl delete\\b/": false,
+                "/\\bkubectl (drain|cordon|uncordon|taint)\\b/": false,
+                "/\\brm\\b/": false,
+                "/\\b(sudo|su)\\b/": false,
+                "/\\b(curl|wget)\\b/": false
+            }
+        },
         "walkthroughs": [
             {
                 "id": "aksvscodewalkthrough",
@@ -1070,7 +1104,7 @@
             { "path": "./skills/kickstart-design/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-generate/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-review/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
-            { "path": "./skills/kickstart-handoff/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-predeploy/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-deploy/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-samples/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-workload-identity/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
@@ -1085,7 +1119,8 @@
             { "path": "./skills/kickstart-phase-acceleration/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-collaborator-voice/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-file-generation/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
-            { "path": "./skills/kickstart-safeguard-checklist/SKILL.md", "when": "config.aks.kickstart.enabled == true" }
+            { "path": "./skills/kickstart-safeguard-checklist/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-terminal-conventions/SKILL.md", "when": "config.aks.kickstart.enabled == true" }
         ]
     },
     "scripts": {

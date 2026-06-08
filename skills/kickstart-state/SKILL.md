@@ -1,29 +1,51 @@
 ---
 name: kickstart-state
-description: "Shared state contract for Kickstart sub-agents. Defines .kickstart/state.json schema and read/write commands so handoffs survive agent boundaries and session restarts."
+description: "How Kickstart tracks progress and hands off between sub-agents without persisting a state file. Uses the native todo list for visible progress and inline JSON for cross-agent handoff."
 disable-model-invocation: true
 ---
 
-# Kickstart State Contract
+# Kickstart Progress & State Contract
 
-All Kickstart sub-agents persist their decisions to a single workspace file: `.kickstart/state.json`. This is the **only** reliable channel across agent handoffs and session restarts. Chat scrollback is not a substitute.
+Kickstart tracks progress through two native chat-surface channels — no disk persistence:
 
-## Rules
+1. **`manage_todo_list`** — a 7-item checklist the parent (`kickstart`) maintains. This is the user-facing progress UI.
+2. **Inline JSON in agent prompts and return values** — the parent embeds the current state JSON in each subagent prompt; subagents return a `stateDelta` JSON block in their final message. The parent merges deltas into its in-context state object (chat history is the parent's memory).
 
-1. **On entry**, every sub-agent reads `.kickstart/state.json` first. If missing, treat as a fresh run.
-2. **After any meaningful decision or action**, merge the new fields into the file and write it back.
-3. **On handoff**, set `phase` to the next phase and `lastAgent` to the sub-agent that just finished.
-4. Never delete keys other sub-agents set. Only update what you own.
-5. If `jq` is unavailable, fall back to writing the whole file with `editFiles` — but prefer the shell approach.
+## Why no file
 
-## Schema
+- Writing state to disk in shell would hit the terminal allowlist denies for `>`, `&&`, `mkdir`, `jq`, `mv` — producing an approval prompt every phase.
+- The parent's own chat history already retains everything it decided. A file just duplicates that.
+- Subagent handoff has explicit channels (prompt in, structured return out). A file is a side channel that gets out of sync.
+- Resume after chat restart re-derives cheaply from workspace artifacts plus one `az` probe (see *Resuming* below).
+
+## Channel 1 — Todo List (Parent Only)
+
+On Welcome, after the user picks a workflow, the parent seeds the todo list with these seven items in this order:
+
+| # | Title |
+|---|---|
+| 1 | Discover app |
+| 2 | Configure Azure resources |
+| 3 | Design target architecture |
+| 4 | Generate deployment artifacts |
+| 5 | Review artifacts |
+| 6 | Pre-deploy checks |
+| 7 | Deploy to AKS |
+
+Status transitions:
+
+- Mark the active item `in-progress` when the parent enters that phase (or invokes the subagent that owns it).
+- Mark it `completed` immediately on success, before invoking the next subagent.
+- On a subagent failure that requires backtracking (reviewer fails → re-invoke builder), revert item N to `in-progress` and leave later items `not-started`.
+
+Only one item is `in-progress` at any moment. **Subagents must not call `manage_todo_list`** — only the parent does. Single writer keeps the list coherent.
+
+## Channel 2 — In-Context State JSON (Cross-Agent Handoff)
+
+The parent keeps a running JSON state object in its own context (visible in its own chat history). Schema:
 
 ```json
 {
-  "version": 1,
-  "phase": "discover | configure | design | generate | review | pre-deploy | deploy | done",
-  "lastAgent": "kickstart | kickstart-builder | kickstart-reviewer | kickstart-deployer",
-  "updatedAt": "<ISO-8601 UTC>",
   "app": {
     "name": "",
     "language": "",
@@ -50,8 +72,7 @@ All Kickstart sub-agents persist their decisions to a single workspace file: `.k
     "kubeloginInstalled": null,
     "controlPlaneOk": null,
     "dataPlaneOk": null,
-    "acrPushOk": null,
-    "lastCheckedAt": null
+    "acrPushOk": null
   },
   "artifacts": {
     "dockerfile": null,
@@ -60,80 +81,76 @@ All Kickstart sub-agents persist their decisions to a single workspace file: `.k
     "bicep": [],
     "workflow": null
   },
-  "review": {
-    "status": "pending",
-    "failures": [],
-    "warnings": []
-  },
-  "deploy": {
-    "imageTag": null,
-    "lastStep": null,
-    "status": "pending",
-    "error": null
+  "review": { "status": "pending", "failures": [], "warnings": [] },
+  "deploy": { "imageTag": null, "lastStep": null, "status": "pending", "error": null }
+}
+```
+
+### Parent → Subagent (inline in the agent prompt)
+
+When invoking any subagent via the `agent` tool, embed the current state as a fenced JSON block at the top of the prompt:
+
+> Take the following state and execute your phase. Return a `stateDelta` along with `status` in your final message.
+>
+> ```json
+> { "app": {...}, "azure": {...}, "cluster": {...}, "artifacts": {...}, "review": {...}, "deploy": {...} }
+> ```
+>
+> (then the task-specific instructions)
+
+Subagents read this directly from their prompt — no file I/O, no separate read step.
+
+### Subagent → Parent (`stateDelta` in the final message)
+
+Every subagent's final message ends with one fenced JSON block of this exact shape:
+
+```json
+{
+  "status": "ok | changed | failed | pass | warn | fail | succeeded",
+  "stateDelta": {
+    "artifacts": { "...": "..." },
+    "cluster":   { "...": "..." },
+    "review":    { "...": "..." },
+    "deploy":    { "...": "..." }
   }
 }
 ```
 
-## Ownership
+The parent does a shallow merge of `stateDelta` into the running state object, then invokes the next subagent (or branches per `status`).
 
-Which agent writes which fields:
+Ownership — what each subagent may put in `stateDelta`:
 
 | Section | Owner |
 |---|---|
-| `app` | `kickstart` (Discover) |
-| `azure` | `kickstart` (Configure) |
-| `cluster` | `kickstart`, `kickstart-deployer` (peeks + final probes) |
-| `artifacts` | `kickstart-builder` (Generate) |
+| `app` | parent (Discover) |
+| `azure` | parent (Configure) |
+| `cluster` | parent (early peek) + `kickstart-deployer` (probes) |
+| `artifacts` | `kickstart-builder` |
 | `review` | `kickstart-reviewer` |
 | `deploy` | `kickstart-deployer` |
-| `phase`, `lastAgent`, `updatedAt` | every agent on entry/exit |
 
-## Read
+Subagents must only emit deltas in their owned sections. Do not invent fields.
 
-```bash
-mkdir -p .kickstart
-[ -f .kickstart/state.json ] || echo '{"version":1,"phase":"discover"}' > .kickstart/state.json
-cat .kickstart/state.json
-```
+## Resuming After Chat Restart
 
-## Write (merge with jq)
+When a fresh `kickstart` turn starts with no prior context, infer progress from the workspace and one Azure probe — no file read.
 
-```bash
-mkdir -p .kickstart
-tmp=$(mktemp)
-jq '. * {
-  phase: "<new-phase>",
-  lastAgent: "<this-agent-name>",
-  updatedAt: "'"$(date -u +%FT%TZ)"'"
-}' .kickstart/state.json > "$tmp" && mv "$tmp" .kickstart/state.json
-```
+1. **Workspace scan** (read-only, instant, no approval needed via `search`/`read_file`):
+   - `Dockerfile` and `.dockerignore` present → Phase 4 (Generate) done.
+   - `k8s/*.yaml` present → Phase 4 done.
+   - `infra/main.bicep` present → Phase 4 done.
+   - `.github/workflows/deploy.yml` present → Phase 4 done.
+2. **Azure probe** — only if step 1 suggests Generate completed. Use one allowlisted call: `az aks list --query "[].{name:name,rg:resourceGroup,state:provisioningState}" -o json`. If a cluster matches the app naming pattern, treat Configure as done.
+3. **Cluster probe** — `kubectl get deploy -n <ns> <app> -o name` if kubeconfig already has a matching context. A hit means Phase 7 ran.
 
-For nested updates, pass an object that mirrors the schema:
+Confirm with one `vscode_askQuestions`: "It looks like you already completed up to **<phase>**. Resume from there?" Options: *Yes, resume*, *Restart from Discover*, *Inspect existing deployment*.
 
-```bash
-jq '. * {
-  app: { name: "myapp", language: "python", port: 8000 },
-  phase: "configure",
-  lastAgent: "kickstart",
-  updatedAt: "'"$(date -u +%FT%TZ)"'"
-}' .kickstart/state.json > "$tmp" && mv "$tmp" .kickstart/state.json
-```
+If the workspace has none of the artifacts, treat as a fresh run.
 
-## Status Pill
+## Status Pill (Optional)
 
-When summarizing state for the user, render a one-line pill:
+When the parent prints a one-line status, derive it from the in-context state — no file needed:
 
-`[Phase: <phase> · Cluster: <provisioningState> · ACR: <attached|not attached> · Artifacts: <count>]`
+`[Phase: <next-todo> · Cluster: <provisioningState> · ACR: <attached|not attached> · Artifacts: <count>]`
 
-## .gitignore
-
-On first write, ensure `.kickstart/` is in `.gitignore`:
-
-```bash
-grep -qxF '.kickstart/' .gitignore 2>/dev/null || echo '.kickstart/' >> .gitignore
-```
-
-## Reset / Resume
-
-- **Resume**: read `state.json`, jump to the phase named in `phase`.
-- **Reset**: `rm -rf .kickstart/` and restart `kickstart` agent.
+The todo list is the source of truth for progress; the pill is decorative.
