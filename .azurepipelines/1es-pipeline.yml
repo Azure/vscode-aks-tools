@@ -150,7 +150,7 @@ extends:
                         - task: GithubRelease@1
                           displayName: "Create GitHub Release"
                           inputs:
-                              gitHubConnection: Kubernetes (9)
+                              gitHubConnection: AKS-VsCode-Release-GH-SVC
                               repositoryName: Azure/vscode-aks-tools
                               action: create
                               title: ${{ parameters.publishVersion }}
