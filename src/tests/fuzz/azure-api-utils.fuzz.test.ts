@@ -18,7 +18,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
                     try {
                         parseResource(input);
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -31,7 +31,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
                 fc.property(
                     fc.array(fc.string({ minLength: 0, maxLength: 50 }), { minLength: 0, maxLength: 20 }),
                     (parts) => {
-                        const input = "/" + parts.join("/");
+                        const input = `/${parts.join("/")}`;
                         try {
                             const result = parseResource(input);
                             // Result should always be an object with expected keys
@@ -40,7 +40,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
                             expect(result).to.have.property("resourceGroupName");
                             expect(result).to.have.property("name");
                             return true;
-                        } catch (e) {
+                        } catch {
                             return false;
                         }
                     },
@@ -84,7 +84,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
                             const result = parseResource(input);
                             expect(result).to.be.an("object");
                             return true;
-                        } catch (e) {
+                        } catch {
                             return false;
                         }
                     },
@@ -99,7 +99,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
                     try {
                         parseResource(input);
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -115,9 +115,9 @@ describe("Azure API Utils - Fuzz Tests", () => {
                 // Duplicate slashes
                 fc.stringMatching(/\/\/+/),
                 // Mixed case variations
-                fc.string().map((s) => "/SUBSCRIPTIONS/" + s),
+                fc.string().map((s) => `/SUBSCRIPTIONS/${s}`),
                 // Invalid characters
-                fc.string().map((s) => "/subscriptions/<script>" + s),
+                fc.string().map((s) => `/subscriptions/<script>${s}`),
             );
 
             fc.assert(
@@ -127,7 +127,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
                         // Should return an object even if parsing is incomplete
                         expect(result).to.be.an("object");
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -143,7 +143,7 @@ describe("Azure API Utils - Fuzz Tests", () => {
                     try {
                         parseSubId(input);
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -170,12 +170,12 @@ describe("Azure API Utils - Fuzz Tests", () => {
         it("should handle edge cases with few path segments", () => {
             fc.assert(
                 fc.property(fc.array(fc.string({ maxLength: 20 }), { maxLength: 3 }), (parts) => {
-                    const input = "/" + parts.join("/");
+                    const input = `/${parts.join("/")}`;
                     try {
                         const result = parseSubId(input);
                         expect(result).to.have.property("subId");
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),

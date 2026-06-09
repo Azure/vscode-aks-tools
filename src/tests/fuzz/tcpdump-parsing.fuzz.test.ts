@@ -45,7 +45,7 @@ describe("TCP Dump Command Parsing - Fuzz Tests", () => {
                     try {
                         getCaptureFromCommand(command, commandWithArgs);
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -82,7 +82,7 @@ describe("TCP Dump Command Parsing - Fuzz Tests", () => {
                     fc.string(),
                     (command, args) => {
                         const result = getCaptureFromCommand(command, args);
-                        expect(result).to.be.null;
+                        expect(result).to.equal(null);
                         return true;
                     },
                 ),
@@ -98,7 +98,7 @@ describe("TCP Dump Command Parsing - Fuzz Tests", () => {
                     try {
                         getCaptureFromFilePath(filePath);
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -165,9 +165,9 @@ describe("TCP Dump Command Parsing - Fuzz Tests", () => {
                         const result = getCaptureFromCommand("tcpdump", cmd);
                         // Result may be null or may extract the payload - both are acceptable
                         // The key is that it doesn't execute code or crash
-                        expect(result === null || typeof result === "string").to.be.true;
+                        expect(result === null || typeof result === "string").to.equal(true);
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false; // Fail if exception thrown
                     }
                 }),

@@ -29,7 +29,7 @@ describe("KAITO GPU Parsing - Fuzz Tests", () => {
                     try {
                         parseGPU(input);
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -76,10 +76,10 @@ describe("KAITO GPU Parsing - Fuzz Tests", () => {
                         expect(count).to.be.a("number");
                         // NaN check
                         if (Number.isNaN(count)) {
-                            expect(count).to.be.NaN;
+                            expect(Number.isNaN(count)).to.equal(true);
                         }
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -111,7 +111,7 @@ describe("KAITO GPU Parsing - Fuzz Tests", () => {
                         expect(family).to.be.a("string");
                         expect(count).to.be.a("number");
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -131,7 +131,7 @@ describe("KAITO GPU Parsing - Fuzz Tests", () => {
                         expect(family).to.be.a("string");
                         expect(count).to.be.a("number");
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
@@ -155,7 +155,7 @@ describe("KAITO GPU Parsing - Fuzz Tests", () => {
                         expect(family).to.be.a("string");
                         expect(count).to.be.a("number");
                         return true;
-                    } catch (e) {
+                    } catch {
                         return false;
                     }
                 }),
