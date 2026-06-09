@@ -79,6 +79,9 @@ extends:
               - script: npm run install:all
                 displayName: Install npm for project
 
+              - script: npm run lint:all
+                displayName: Run ESLint
+
               - script: npm run webpack
                 displayName: Run webpack
 

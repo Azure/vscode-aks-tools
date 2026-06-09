@@ -49,6 +49,8 @@ jobs:
     - name: Build Extension
       run: |
         npm run install:all
+    - name: Lint
+      run: npm run lint:all
     - name: Smoke test (Linux)
       run: xvfb-run -a npm run test
       if: runner.os == 'Linux'

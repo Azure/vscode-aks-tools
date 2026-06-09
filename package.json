@@ -1027,8 +1027,8 @@
     },
     "scripts": {
         "install:all": "npm install --legacy-peer-deps && cd webview-ui && npm install --legacy-peer-deps",
-        "lint:all": "eslint -c .eslintrc.js --ext .ts ./src && cd webview-ui && npm run lint",
-        "lint-fix:all": "eslint -c .eslintrc.js --ext .ts ./src --fix && cd webview-ui && npm run lint-fix",
+        "lint:all": "npx eslint . && cd webview-ui && npm run lint",
+        "lint-fix:all": "npx eslint . --fix && cd webview-ui && npm run lint-fix",
         "prettier-format": "prettier --config .prettierrc . --write",
         "dev:webview": "cd webview-ui && npm run dev",
         "build:webview": "cd webview-ui && npm run build",
