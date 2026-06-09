@@ -64,14 +64,14 @@ On success, track `cluster.acrAttached: true` and chain to 6d.
 ```bash
 which kubelogin || az aks install-cli
 ```
-Chain. Track `cluster.kubeloginInstalled: true`.
+Chain. If `kubelogin` is now resolvable, track `cluster.kubeloginInstalled: true`; otherwise track `false` and surface an install failure to the parent before continuing.
 
 ### 6e. Control-Plane Probe
 ```bash
 az aks get-credentials --resource-group <rg> --name <cluster> --overwrite-existing
 kubectl auth can-i get namespaces
 ```
-On failure → **branch**: user needs **Azure Kubernetes Service Cluster User Role**. Halt and provide fix via `vscode_askQuestions`.
+On failure → **branch**: user needs **Azure Kubernetes Service Cluster User Role**. Halt and provide fix via `vscode_askQuestions`. Track `cluster.controlPlaneOk: false`.
 On success, track `cluster.controlPlaneOk: true` and chain.
 
 ### 6f. Data-Plane RBAC Probes
@@ -81,14 +81,14 @@ kubectl auth can-i create services --namespace <namespace>
 kubectl auth can-i create configmaps --namespace <namespace>
 ```
 All three are independent. Self-remediation branching per `/kickstart-predeploy`. On 403, follow `/kickstart-pim-activation` (**branch**). After admin assignment, poll every 15s up to 3 min.
-Track `cluster.dataPlaneOk: true`.
+Track `cluster.dataPlaneOk: true` **only when all three probes return `yes`**; otherwise track `false` and follow the branch above before continuing.
 
 ### 6g. ACR Push Pre-Check
 ```bash
 az acr build --registry <acr> --image kickstart-probe:probe --file /dev/null /dev/null 2>&1 | head -5
 ```
-If forbidden, follow `/kickstart-pim-activation` for AcrPush + Container Registry Tasks Contributor (**branch**).
-Track `cluster.acrPushOk: true`.
+If forbidden, follow `/kickstart-pim-activation` for AcrPush + Container Registry Tasks Contributor (**branch**) and track `cluster.acrPushOk: false`.
+On success, track `cluster.acrPushOk: true`.
 
 ### Pre-Deploy Complete — Start Phase 7 Inline
 Print a one-line summary: "Pre-deploy checks complete. Starting deploy: build image → fetch credentials → apply manifests → verify." then go straight into Phase 7 in the same turn. **Do NOT call `vscode_askQuestions`.** The destructive commands in Phase 7 will each trigger the terminal's inline approval, which is the consent gate.

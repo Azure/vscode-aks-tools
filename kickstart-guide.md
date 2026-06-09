@@ -110,7 +110,7 @@ Seven phases in strict order, owned by four agents. Each phase has a dedicated *
 
 ## Skill Taxonomy
 
-All 22 skills use `disable-model-invocation: true` — they only fire when explicitly invoked via `/skill-name` by an agent.
+All 21 skills use `disable-model-invocation: true` — they only fire when explicitly invoked via `/skill-name` by an agent.
 
 ### Shared contract (1)
 

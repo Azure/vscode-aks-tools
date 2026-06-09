@@ -1053,13 +1053,13 @@
             },
             {
                 "name": "kickstart-reviewer",
-                "description": "Internal agent: Reviews Kickstart-generated deployment artifacts for correctness, security, and AKS Automatic compliance. Invoked by kickstart-builder only.",
+                "description": "Internal agent: Reviews Kickstart-generated deployment artifacts for correctness, security, and AKS Automatic compliance. Invoked by kickstart only.",
                 "path": "./agents/kickstart-reviewer.agent.md",
                 "when": "config.aks.kickstart.enabled == true"
             },
             {
                 "name": "kickstart-deployer",
-                "description": "Internal agent: Runs pre-deploy permission and tooling checks then deploys to AKS. Invoked by kickstart-reviewer only.",
+                "description": "Internal agent: Runs pre-deploy permission and tooling checks then deploys to AKS. Invoked by kickstart only.",
                 "path": "./agents/kickstart-deployer.agent.md",
                 "when": "config.aks.kickstart.enabled == true"
             }
