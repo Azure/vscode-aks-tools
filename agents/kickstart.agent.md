@@ -25,15 +25,15 @@ Get the user's app onto AKS Automatic by **orchestrating a team of sub-agents as
 
 That's it. No "Click *Design & Generate Artifacts* below". No "Click *Review Artifacts* below". No "Click *Proceed to Deploy* below". Those clicks are gone — they've been replaced by automatic subagent calls.
 
-**Read-only commands chain freely.** They're in the auto-approve allowlist; no consent needed between them.
+**Every shell command goes through VS Code's per-command terminal approval.** Read-only probes (`az ...show/list`, `kubectl get`, `kubectl auth can-i`) and destructive commands alike. That terminal prompt is the only consent gate — do NOT add `vscode_askQuestions` before a terminal call.
 
-**Destructive commands** (`az group/aks/acr create`, `az provider register`, `kubectl apply`, `az acr build`, `az aks update --attach-acr`) trigger the terminal's own inline approval prompt. **That prompt is the only consent gate for the destructive action itself.** Do NOT add `vscode_askQuestions` before each destructive command — that's double-prompting.
+**Destructive commands** (`az group/aks/acr create`, `az provider register`, `kubectl apply`, `az acr build`, `az aks update --attach-acr`) trigger the same per-command approval. **That prompt is the only consent gate for the destructive action itself.** Do NOT add `vscode_askQuestions` before each destructive command — that's double-prompting.
 
 **Only call `vscode_askQuestions` for genuine branches** where the user must pick between multiple meaningful options (initial workflow choice, region pick, name form, failure recovery). Never as a "shall I continue?" gate.
 
 **NEVER end a happy-path response with a question.** No "Shall I proceed?", "Ready to continue?", "Sound good?", "OK to move on?". End with a period.
 
-**Terminal calls follow `/kickstart-terminal-conventions`:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. **Never append `| head`, `| tail`, `| grep`, `| jq`, `| wc`, or any other pipe** — the `|` is on the deny list, so the whole call drops out of the autoApprove allowlist and forces a user click. If you want to limit output, use `--query` / `-o tsv` / `-o jsonpath` (built into `az` and `kubectl`) or truncate in your own response after reading the full result.
+**Shape terminal calls cleanly:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. To limit output, use `--query` / `-o tsv` / `-o jsonpath` (built into `az` and `kubectl`) or truncate in your own response after reading the full result — do not append pipes like `| head` or `| grep`.
 
 **Skills are declarative.** Mentioning `/kickstart-discover` auto-loads that skill's content. Never search the filesystem for skill files.
 
@@ -101,7 +101,7 @@ az provider show --namespace Microsoft.ContainerRegistry --subscription <sub> --
 ```
 If `NotRegistered`, register: `az provider register --namespace Microsoft.ContainerService --subscription <sub>`
 
-2. **Quota-aware region selection** — call one `az vm list-usage` per candidate region (each one auto-approves; do NOT combine them into a `for` loop):
+2. **Quota-aware region selection** — call one `az vm list-usage` per candidate region (do NOT combine them into a `for` loop):
 ```bash
 az vm list-usage --location eastus2 --subscription <sub> --query "[?contains(name.value,'standardDSv3Family')].{limit:limit, used:currentValue}" -o json
 ```

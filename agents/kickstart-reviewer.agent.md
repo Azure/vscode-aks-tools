@@ -22,7 +22,7 @@ Required: `artifacts.dockerfile` set and `artifacts.k8s` non-empty. If missing, 
 - You are a subagent. Your final message is consumed by the parent orchestrator. Do not surface "click *Proceed to Deploy*" instructions — those buttons no longer exist.
 - **Do NOT call `vscode_askQuestions` for any branch.** On all paths (pass / fail / warn) you simply return the structured summary; the parent decides whether to invoke the deployer, re-invoke the builder, or surface a choice to the user.
 - **NEVER end with a question.** End with the structured return summary in the *Return* section below.
-- **Terminal calls follow `/kickstart-terminal-conventions`:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. **Never append `| head`, `| tail`, `| grep`, `| jq`, `| wc`, or any other pipe** — the `|` is on the deny list and will force a user click. Use `--query` / `-o tsv` / `-o jsonpath` or truncate in your own response.
+- **Shape terminal calls cleanly:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. To limit output, use `--query` / `-o tsv` / `-o jsonpath` or truncate in your own response — do not append pipes.
 - **Skills are declarative and pre-loaded.** Referencing `/kickstart-safeguard-checklist`, `/kickstart-security-hardening`, or any `/kickstart-*` skill auto-loads its content. Do not search the filesystem.
 
 ## Review Process

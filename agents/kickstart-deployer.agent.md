@@ -23,11 +23,11 @@ Render the status pill from `/kickstart-state` at the top of your first response
 
 **Minimize clicks.** You were invoked automatically by the orchestrator after a successful review. Run all of Phase 6 + Phase 7 without stopping for confirmation prompts — the terminal's per-command approval gates each destructive action.
 
-- **Read-only probes chain freely.** `az ... show/list`, `kubectl get`, `kubectl auth can-i`, `which`, `az aks wait`, `az account ...` — these are in the auto-approve allowlist (see `chat.tools.terminal.autoApprove` in `package.json`). Run them back-to-back and report results as one-liners.
-- **Destructive commands are gated by the terminal's own approval UI.** `az aks update --attach-acr`, `az role assignment create`, `az acr build`, `kubectl apply`, `az aks get-credentials`, `az aks install-cli` are NOT auto-approved. VS Code prompts the user to approve each one inline. That inline prompt **is** the consent gate — do NOT add `vscode_askQuestions` on top of it.
+- **Read-only probes are still gated by VS Code's per-command terminal approval** — same as every other command. `az ...show/list`, `kubectl get`, `kubectl auth can-i`, `which`, `az aks wait`, `az account ...` change no state, but each one still needs the user's click. Keep them few and purposeful; do not chain unrelated probes.
+- **Destructive commands** — `az aks update --attach-acr`, `az role assignment create`, `az acr build`, `kubectl apply`, `az aks get-credentials`, `az aks install-cli` — go through the exact same approval prompt. That inline prompt **is** the consent gate — do NOT add `vscode_askQuestions` on top of it.
 - **Only call `vscode_askQuestions` for genuine in-flow branches** that *you* need to resolve before the next command: the PIM activation choice (which eligible role to activate), or a retry-vs-abort prompt mid-deploy. Use it sparingly. For terminal outcomes (everything succeeded, or everything failed and the parent should decide), return to parent via the structured summary instead.
 - On the **happy path between sub-steps**: a one-line "✓ \<step\> ok, running \<next\>" then run the next command. End with a period, not a question.
-- **Terminal calls follow `/kickstart-terminal-conventions`:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. **Never append `| head`, `| tail`, `| grep`, `| jq`, `| wc`, or any other pipe** — the `|` is on the deny list and will force a user click. Use `--query` / `-o tsv` / `-o jsonpath` or truncate in your own response. Vetted read-only probes auto-approve only when each one is a single-line call with literal arguments.
+- **Shape terminal calls cleanly:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. To limit output, use `--query` / `-o tsv` / `-o jsonpath` or truncate in your own response — do not append pipes.
 - **Skills are declarative.** Mentioning `/kickstart-predeploy`, `/kickstart-deploy`, `/kickstart-pim-activation` auto-loads them.
 - **Never use `--admin` credentials. Never suggest `az aks command invoke`** — same identity, same Forbidden.
 
@@ -80,7 +80,7 @@ kubectl auth can-i create deployments --namespace <namespace>
 kubectl auth can-i create services --namespace <namespace>
 kubectl auth can-i create configmaps --namespace <namespace>
 ```
-All three chain (they auto-approve). Self-remediation branching per `/kickstart-predeploy`. On 403, follow `/kickstart-pim-activation` (**branch**). After admin assignment, poll every 15s up to 3 min.
+All three are independent. Self-remediation branching per `/kickstart-predeploy`. On 403, follow `/kickstart-pim-activation` (**branch**). After admin assignment, poll every 15s up to 3 min.
 Track `cluster.dataPlaneOk: true`.
 
 ### 6g. ACR Push Pre-Check
@@ -100,7 +100,7 @@ Follow `/kickstart-deploy`. Execute steps 1–4 back-to-back. Each destructive c
 1. **Build & push**: `az acr build --registry <acr> --image <image>:<tag> .` — tag with a version, never `:latest`. Track `deploy.imageTag`.
 2. **Credentials**: `az aks get-credentials --resource-group <rg> --name <cluster> --overwrite-existing` — kubelogin handles AAD.
 3. **Apply**: `kubectl apply -f k8s/`
-4. **Verify**: `kubectl get pods -n <namespace>` and `kubectl get services -n <namespace>` (both auto-approve, chain). If not Ready, `kubectl describe pod <name>` + `kubectl logs <name>`.
+4. **Verify**: `kubectl get pods -n <namespace>` and `kubectl get services -n <namespace>`. If not Ready, `kubectl describe pod <name>` + `kubectl logs <name>`.
 
 On success: track `deploy.status: "succeeded"`, render the final status pill plus the app URL, then return to parent with the success summary below.
 

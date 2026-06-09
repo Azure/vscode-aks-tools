@@ -86,14 +86,14 @@ On the happy path, the user is asked to consent only:
 7. **Once** inside the builder subagent for design approval.
 8. **Per destructive terminal command** — VS Code's built-in terminal approval UI prompts for each `az group/aks/acr create`, `az aks update --attach-acr`, `az role assignment create`, `az acr build`, `az aks get-credentials`, and `kubectl apply`.
 
-Read-only `az ...show/list`, `kubectl get`, `kubectl auth can-i`, etc. auto-approve via the allowlist in [package.json](package.json) (`chat.tools.terminal.autoApprove`). There are no "Shall I proceed?" gates and no handoff buttons.
+VS Code's standard per-command terminal approval is the consent gate for every shell command — read-only `az ...show/list`, `kubectl get`, and `kubectl auth can-i` calls included. There are no "Shall I proceed?" gates inside the agent prompts and no handoff buttons.
 
 ## Skills
 
-22 skills in `skills/` provide domain knowledge and shared contracts to the agents. All use `disable-model-invocation: true` (only fire when explicitly invoked). Categorized as:
+21 skills in `skills/` provide domain knowledge and shared contracts to the agents. All use `disable-model-invocation: true` (only fire when explicitly invoked). Categorized as:
 
 - **Shared contract (1)**: `kickstart-state` — defines the 7-item `manage_todo_list` and the in-context `stateDelta` JSON exchange format used between parent and subagents
 - **Phase skills (6)**: One per phase — `kickstart-discover`, `kickstart-design`, `kickstart-generate`, `kickstart-review`, `kickstart-predeploy`, `kickstart-deploy`
 - **Domain skills (10)**: `kickstart-acr-integration`, `kickstart-bicep-authoring`, `kickstart-github-actions-oidc`, `kickstart-github-actions-workflow`, `kickstart-github-pr-conventions`, `kickstart-kaito-gpu`, `kickstart-pim-activation`, `kickstart-samples`, `kickstart-security-hardening`, `kickstart-workload-identity`
-- **Behavioral skills (4)**: `kickstart-phase-acceleration`, `kickstart-collaborator-voice`, `kickstart-file-generation`, `kickstart-terminal-conventions`
+- **Behavioral skills (3)**: `kickstart-phase-acceleration`, `kickstart-collaborator-voice`, `kickstart-file-generation`
 - **Validation skill (1)**: `kickstart-safeguard-checklist` — DS001–DS013

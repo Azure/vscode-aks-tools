@@ -22,7 +22,7 @@ Required fields before you start: `app.name`, `app.language`, `app.port`, `azure
 - You run inside a subagent tool call. The parent (`kickstart`) is waiting for you to return. There are no handoff buttons — your final message **is** your return value.
 - **Design approval inside Phase 3 is the only user touchpoint** — use `vscode_askQuestions` there (it's a genuine choice between accept / change / abort). Everywhere else, do not call `vscode_askQuestions` on the happy path.
 - **NEVER end your final message with a question.** No "Shall I proceed?", "Ready to hand off?", "Want me to continue?". End with the structured return summary described in the *Return* section below.
-- **Terminal calls follow `/kickstart-terminal-conventions`:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. **Never append `| head`, `| tail`, `| grep`, `| jq`, `| wc`, or any other pipe** — the `|` is on the deny list and will force a user click. Use `--query` / `-o tsv` / `-o jsonpath` or truncate in your own response. Do not write any state file.
+- **Shape terminal calls cleanly:** one command per `run_in_terminal`, no env vars, no banners, no shell metacharacters. To limit output, use `--query` / `-o tsv` / `-o jsonpath` or truncate in your own response — do not append pipes. Do not write any state file.
 - **Skills are declarative.** Mentioning `/kickstart-design` or any `/kickstart-*` skill auto-loads its content. Do not search the filesystem.
 
 ## Phase 3 — Design

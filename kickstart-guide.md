@@ -154,7 +154,6 @@ Cross-cutting behavior rules.
 | `kickstart-phase-acceleration` | Rules for skipping phases safely |
 | `kickstart-collaborator-voice` | Tone: warm, direct, jargon-light; teach-then-ask pattern |
 | `kickstart-file-generation` | Batch file writes: compute all → write all → report |
-| `kickstart-terminal-conventions` | One command per `run_in_terminal`; no env vars, banners, or shell metachars |
 
 ### Validation Skill (1)
 
@@ -173,7 +172,6 @@ Phase 1 — Discover
   └── /kickstart-samples (if user picks "Start from an example")
 
 Phase 2 — Configure Infrastructure
-  └── /kickstart-terminal-conventions
   └── az CLI commands (az group create, az aks create, az acr create)
 
 Phase 3 — Design
@@ -204,7 +202,6 @@ Phase 6 — Pre-Deploy Check
 
 Phase 7 — Deploy
   └── /kickstart-deploy
-  └── /kickstart-terminal-conventions
 ```
 
 ## VS Code Tools Used
@@ -257,10 +254,9 @@ The agents use VS Code Copilot's built-in tools (not custom extension tools):
 │   ├── kickstart-github-pr-conventions/SKILL.md
 │   ├── kickstart-samples/SKILL.md
 │   ├── kickstart-safeguard-checklist/SKILL.md   # Validation
-│   ├── kickstart-phase-acceleration/SKILL.md    # Behavioral (4)
+│   ├── kickstart-phase-acceleration/SKILL.md    # Behavioral (3)
 │   ├── kickstart-collaborator-voice/SKILL.md
-│   ├── kickstart-file-generation/SKILL.md
-│   └── kickstart-terminal-conventions/SKILL.md
+│   └── kickstart-file-generation/SKILL.md
 └── prompts/
     └── kickstart.prompt.md             # Quick-start prompt file
 ```
