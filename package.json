@@ -212,7 +212,7 @@
                 },
                 "aks.argoCDEnabled": {
                     "type": "boolean",
-                    "default": false,
+                    "default": true,
                     "description": "Enable Argo CD GitOps integration commands (Create Argo CD GitOps Pipeline, Apply Argo CD Application, Check Argo CD Status, Post-Deploy Actions). Requires reload after changing."
                 }
             }

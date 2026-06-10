@@ -9,15 +9,17 @@ The Argo CD integration brings a complete GitOps workflow to AKS clusters direct
 
 ## Feature Flag
 
-All Argo CD commands are gated behind a feature flag and **disabled by default**. To enable:
+All Argo CD commands are gated behind a feature flag and **enabled by default**.
+
+If you want to hide Argo CD commands, set:
 
 ```json
 {
-  "aks.argoCDEnabled": true
+   "aks.argoCDEnabled": false
 }
 ```
 
-Default value: `false`
+Default value: `true`
 
 After changing this setting, reload the VS Code window (`Developer: Reload Window`).
 
