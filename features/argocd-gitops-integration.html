@@ -153,12 +153,13 @@ Your cluster never pushes. Argo CD continuously pulls desired state from a dedic
 </blockquote>
 <hr />
 <h2 id="feature-flag"><a class="header" href="#feature-flag">Feature Flag</a></h2>
-<p>All Argo CD commands are gated behind a feature flag and <strong>disabled by default</strong>. To enable:</p>
+<p>All Argo CD commands are gated behind a feature flag and <strong>enabled by default</strong>.</p>
+<p>If you want to hide Argo CD commands, set:</p>
 <pre><code class="language-json">{
-  &quot;aks.argoCDEnabled&quot;: true
+   &quot;aks.argoCDEnabled&quot;: false
 }
 </code></pre>
-<p>Default value: <code>false</code></p>
+<p>Default value: <code>true</code></p>
 <p>After changing this setting, reload the VS Code window (<code>Developer: Reload Window</code>).</p>
 <hr />
 <h2 id="installation-options"><a class="header" href="#installation-options">Installation options</a></h2>
