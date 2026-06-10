@@ -56,6 +56,7 @@ describe("ContainerAssistService", () => {
     describe("generateDockerfile", () => {
         it("returns error when LM not available", async function () {
             this.timeout(10_000);
+            sandbox.stub(vscode.lm, "selectChatModels").resolves([]);
             const moduleInfo: ModuleAnalysisResult = {
                 name: "test-module",
                 modulePath: "/test/path",
@@ -77,6 +78,7 @@ describe("ContainerAssistService", () => {
     describe("generateManifests", () => {
         it("returns error when LM not available", async function () {
             this.timeout(10_000);
+            sandbox.stub(vscode.lm, "selectChatModels").resolves([]);
             const moduleInfo: ModuleAnalysisResult = {
                 name: "test-module",
                 modulePath: "/test/path",
