@@ -19,7 +19,6 @@ import "./main.css";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
 import { TcpDump } from "./TCPDump/TcpDump";
 import { TestStyleViewer } from "./TestStyleViewer/TestStyleViewer";
-import { AutomatedDeployments } from "./AutomatedDeployments/AutomatedDeployments";
 import { CreateFleet } from "./CreateFleet/CreateFleet";
 import { FleetProperties } from "./FleetProperties/FleetProperties";
 import * as l10n from "@vscode/l10n";
@@ -83,7 +82,6 @@ function getVsCodeContent(rootElem: HTMLElement): JSX.Element {
         kaitoModels: () => <KaitoModels {...getInitialState()} />,
         kaitoManage: () => <KaitoManage {...getInitialState()} />,
         kaitoTest: () => <KaitoTest {...getInitialState()} />,
-        automatedDeployments: () => <AutomatedDeployments {...getInitialState()} />,
         createFleet: () => <CreateFleet {...getInitialState()} />,
         fleetProperties: () => <FleetProperties {...getInitialState()} />,
     };
