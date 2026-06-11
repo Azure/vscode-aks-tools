@@ -790,6 +790,11 @@
                     "command": "aks.draftWorkflow",
                     "group": "navigation",
                     "when": "workspaceFolderCount >= 1"
+                },
+                {
+                    "command": "aks.argoCDCheckStatus",
+                    "group": "navigation",
+                    "when": "config.aks.argoCDEnabled"
                 }
             ],
             "aks.networkTroubleshootingSubMenu": [
