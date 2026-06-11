@@ -29,7 +29,7 @@ Present a summary covering:
 | Question | Answer |
 |---|---|
 | "Do I need Kubernetes knowledge?" | No. AKS Automatic manages nodes, scaling, upgrades. |
-| "How much will this cost?" | Invoke `/kickstart-cost-estimation`. |
+| "How much will this cost?" | Explain the cost drivers: AKS Automatic control-plane fee + node compute (pay-as-you-go per vCPU/memory, scaled by Karpenter) + ACR tier + egress. Offer a rough estimate for their expected load. |
 | "Can I use existing CI/CD?" | Yes, but recommend GitHub Actions with OIDC. |
 
 ## Exit Criteria
