@@ -61,6 +61,8 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
     // TODO: Replace with the actual scenarios when available.
     fleetProperties: [],
+    kickstartGuidedSetup: [],
+    kickstartCluster: [],
 };
 
 const testScenarios = Object.values(contentTestScenarios).flatMap((s) => s);
