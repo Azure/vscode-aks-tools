@@ -60,6 +60,8 @@ import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
 import { getPlugins } from "./plugins/getPlugins";
 import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCreateClusterFromCopilot";
+import { kickstartLaunch } from "./commands/aksKickstart/kickstartLaunch";
+import { kickstartCluster } from "./commands/aksKickstart/kickstartCluster";
 import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
 import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
 import aksClusterFilter from "./commands/utils/clusterfilter";
@@ -109,23 +111,11 @@ export async function activate(context: vscode.ExtensionContext) {
     activateAzureSessionProvider(context);
     const sessionProvider = getSessionProvider();
 
+    context.subscriptions.push(vscode.commands.registerCommand("aks.kickstartFocus", () => kickstartLaunch()));
     context.subscriptions.push(
-        vscode.commands.registerCommand("aks.kickstartFocus", async () => {
-            const config = vscode.workspace.getConfiguration("aks.kickstart");
-            if (!config.get<boolean>("enabled", true)) {
-                vscode.window.showWarningMessage(
-                    "The Kickstart agent is disabled. Enable it via the 'aks.kickstart.enabled' setting.",
-                );
-                return;
-            }
-
-            await vscode.commands.executeCommand("workbench.action.closePanel");
-            await vscode.commands.executeCommand("workbench.action.closeSidebar");
-            await vscode.commands.executeCommand("workbench.action.chat.open", {
-                query: "@kickstart Let's get started",
-            });
-            await vscode.commands.executeCommand("workbench.action.maximizeAuxiliaryBar");
-        }),
+        vscode.commands.registerCommand("aks.kickstartCluster", (launchContext?: unknown) =>
+            kickstartCluster(context, launchContext),
+        ),
     );
 
     if (cloudExplorer.available) {

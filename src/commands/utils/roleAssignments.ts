@@ -4,9 +4,11 @@ import {
     RoleAssignmentCreateParameters,
 } from "@azure/arm-authorization";
 import { v4 as uuidv4 } from "uuid";
-import { listAll } from "./arm";
+import { getAuthorizationManagementClient, listAll } from "./arm";
+import { createGraphClient, getCurrentUserId } from "./graph";
 import { acrProvider, acrResourceName } from "./azureResources";
 import { Errorable, failed, getErrorMessage } from "./errorable";
+import { ReadyAzureSessionProvider } from "../../auth/types";
 
 export function getPrincipalRoleAssignmentsForAcr(
     client: AuthorizationManagementClient,
@@ -129,4 +131,64 @@ function createRoleAssignmentName(): string {
     // https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments#name
     // "A role assignment's resource name must be a globally unique identifier"
     return uuidv4();
+}
+
+// Well-known Azure built-in role definition GUIDs.
+// https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+export const ROLE_OWNER = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635";
+export const ROLE_CONTRIBUTOR = "b24988ac-6180-42a0-ab88-20f7382dd24c";
+export const ROLE_USER_ACCESS_ADMINISTRATOR = "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9";
+export const ROLE_RBAC_ADMINISTRATOR = "f58310d9-a9f6-439a-9e8d-f62e7b41a168";
+export const ROLE_READER = "acdd72a7-3385-48ef-bd42-f606fba81ae7";
+
+const WELL_KNOWN_ROLE_NAMES: Record<string, string> = {
+    [ROLE_OWNER]: "Owner",
+    [ROLE_CONTRIBUTOR]: "Contributor",
+    [ROLE_USER_ACCESS_ADMINISTRATOR]: "User Access Administrator",
+    [ROLE_RBAC_ADMINISTRATOR]: "Role Based Access Control Administrator",
+    [ROLE_READER]: "Reader",
+};
+
+// Only these built-in roles can create the AcrPull / cluster RBAC assignments the
+// deployment needs; Contributor notably cannot assign roles.
+const ROLE_ASSIGNMENT_CAPABLE = new Set<string>([ROLE_OWNER, ROLE_USER_ACCESS_ADMINISTRATOR, ROLE_RBAC_ADMINISTRATOR]);
+
+export interface UserSubscriptionRoles {
+    roleNames: string[];
+    canAssignRoles: boolean;
+}
+
+export async function getUserSubscriptionRoles(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): Promise<Errorable<UserSubscriptionRoles>> {
+    const graphClient = createGraphClient(sessionProvider);
+    const userId = await getCurrentUserId(graphClient);
+    if (failed(userId)) {
+        return userId;
+    }
+
+    const client = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+    const scope = `/subscriptions/${subscriptionId}`;
+    const assignments = await listAll(
+        client.roleAssignments.listForScope(scope, {
+            filter: `atScope() and assignedTo('${userId.result}')`,
+        }),
+    );
+    if (failed(assignments)) {
+        return assignments;
+    }
+
+    const roleDefinitionIds = [
+        ...new Set(
+            assignments.result
+                .map((ra) => ra.roleDefinitionId?.split("/").pop())
+                .filter((id): id is string => Boolean(id)),
+        ),
+    ];
+
+    const roleNames = roleDefinitionIds.map((id) => WELL_KNOWN_ROLE_NAMES[id] ?? "Custom role");
+    const canAssignRoles = roleDefinitionIds.some((id) => ROLE_ASSIGNMENT_CAPABLE.has(id));
+
+    return { succeeded: true, result: { roleNames, canAssignRoles } };
 }

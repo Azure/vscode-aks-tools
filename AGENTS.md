@@ -21,7 +21,7 @@ Guides users through deploying an application to AKS Automatic in seven sequenti
 
 Each phase invokes a dedicated phase skill (`/kickstart-discover`, `/kickstart-design`, etc.) plus domain-specific skills as needed. See `kickstart-guide.md` for the full skill invocation map.
 
-**Handoff**: At Phase 4, hands off to `kickstart-reviewer` for artifact validation.
+**Handoff**: At Phase 5 (Review), hands off to `kickstart-reviewer` for artifact validation.
 
 ## kickstart-reviewer
 
@@ -31,7 +31,7 @@ Each phase invokes a dedicated phase skill (`/kickstart-discover`, `/kickstart-d
 
 Reviews all generated deployment artifacts (Dockerfile, K8s manifests, Bicep, GitHub Actions) against a pass/fail/warn checklist covering security, correctness, and AKS Automatic compliance.
 
-Invokes: `/kickstart-deployment-review`, `/kickstart-safeguard-checklist`, `/kickstart-security-hardening`
+Invokes: `/kickstart-review`, `/kickstart-safeguard-checklist`, `/kickstart-security-hardening`
 
 **Handoff**: Returns to `kickstart` agent when review is complete.
 
@@ -45,9 +45,11 @@ Invokes: `/kickstart-deployment-review`, `/kickstart-safeguard-checklist`, `/kic
 
 ## Skills
 
-30 skills in `skills/` provide domain knowledge to the agents. All use `disable-model-invocation: true` (only fire when explicitly invoked). Categorized as:
+19 skills in `skills/` provide domain knowledge to the agents. All use `disable-model-invocation: true` (only fire when explicitly invoked). Categorized as:
 
-- **Phase skills (6)**: One per phase — step-by-step playbooks
-- **Domain skills (19)**: AKS Automatic, Gateway API, Workload Identity, Bicep, networking, cost estimation, etc.
-- **Behavioral skills (4)**: Phase acceleration, teach-then-ask, collaborator voice, file generation batching
-- **Validation skill (1)**: Safeguard checklist (DS001–DS013)
+- **Phase skills (7)**: One per phase — step-by-step playbooks (`discover`, `configure-infra`, `design`, `generate`, `review`, `handoff`, `deploy`)
+- **Operational skill (1)**: `cluster-status` — non-blocking AKS provisioning peek run at the end of Phases 3–5
+- **Onboarding skill (1)**: `samples` — pre-filled app profiles for "Start from an example"
+- **Domain skills (6)**: Workload Identity, ACR integration, Bicep authoring, security hardening, PIM activation, GitHub PR conventions
+- **Behavioral skills (3)**: Phase acceleration, collaborator voice, file-generation batching
+- **Validation skill (1)**: Safeguard checklist (16 manifest safeguard rules)

@@ -53,9 +53,9 @@ There are exactly two agents and one handoff cycle:
 
 ### kickstart → kickstart-reviewer
 
-- **When**: Phase 4 (Review). After artifacts are generated, the main agent offers "Review Artifacts" as a suggested action.
+- **When**: Phase 5 (Review). After artifacts are generated, the main agent offers "Review Artifacts" as a suggested action.
 - **Mechanism**: `handoffs` in frontmatter with `send: false` (user clicks to confirm).
-- **What reviewer does**: Invokes `/kickstart-deployment-review`, `/kickstart-safeguard-checklist`, `/kickstart-security-hardening`. Checks every generated file against a pass/fail/warn checklist.
+- **What reviewer does**: Invokes `/kickstart-review`, `/kickstart-safeguard-checklist`, `/kickstart-security-hardening`. Checks every generated file against a pass/fail/warn checklist.
 
 ### kickstart-reviewer → kickstart
 
@@ -72,7 +72,7 @@ The main agent follows seven phases in strict order. Each phase has a dedicated 
 | Phase | Skill | What it does | Exit criteria |
 |---|---|---|---|
 | 1. Discover | `/kickstart-discover` | Collect app name, language, framework, deps, port, env vars, Dockerfile/CI status | Enough info to propose architecture |
-| 2. Configure | (inline in agent) | Create new or select existing Azure resources (RG, AKS cluster, ACR). Cluster creates with `--no-wait` | Resources selected/creating |
+| 2. Configure | `/kickstart-configure-infra` | Create new or select existing Azure resources (RG, AKS cluster, ACR). Cluster creates with `--no-wait` | Resources selected/creating |
 | 3. Design | `/kickstart-design` | Propose AKS Automatic architecture, get user approval | User approves |
 | 4. Generate | `/kickstart-generate` | Create Dockerfile, K8s manifests, Bicep, GHA workflow | All files written to workspace |
 | 5. Review | `/kickstart-review` | Validate artifacts against safeguards + security | All checks pass |
@@ -85,109 +85,109 @@ The main agent follows seven phases in strict order. Each phase has a dedicated 
 
 ## Skill Taxonomy
 
-All 30 skills use `disable-model-invocation: true` — they only fire when explicitly invoked via `/skill-name` by an agent.
+All 19 skills use `disable-model-invocation: true` — they only fire when explicitly invoked via `/skill-name` by an agent.
 
-### Phase Skills (6)
-One per phase (Configure is inline in the agent prompt, not a separate skill).
+### Phase Skills (7)
+One per phase.
 
 | Skill | Phase |
 |---|---|
 | `kickstart-discover` | Discover |
+| `kickstart-configure-infra` | Configure Infrastructure |
 | `kickstart-design` | Design |
 | `kickstart-generate` | Generate |
 | `kickstart-review` | Review |
 | `kickstart-handoff` | Pre-Deploy Check |
 | `kickstart-deploy` | Deploy |
 
-### Domain Skills (19)
+### Operational Skill (1)
+
+| Skill | Purpose |
+|---|---|
+| `kickstart-cluster-status` | Non-blocking AKS provisioning peek; run at the end of Phases 3–5 |
+
+### Onboarding Skill (1)
+
+| Skill | Purpose |
+|---|---|
+| `kickstart-samples` | Pre-filled sample app profiles for "Start from an example" (skips Discover) |
+
+### Domain Skills (6)
 Specialized knowledge loaded on demand by the phase skills.
 
 | Skill | Domain | Invoked during |
 |---|---|---|
-| `kickstart-aks-automatic` | AKS Automatic cluster creation | Design |
-| `kickstart-gateway-api` | Gateway API + HTTPRoute | Design, Generate |
-| `kickstart-workload-identity` | Azure Workload Identity | Design, Generate |
-| `kickstart-acr-integration` | ACR attachment to AKS | Generate |
-| `kickstart-kaito-gpu` | KAITO GPU model inference | Generate (if GPU) |
-| `kickstart-aks-terminology` | AKS naming conventions | Design |
-| `kickstart-deployment-safeguards` | K8s security constraints | Generate |
-| `kickstart-bicep-authoring` | Bicep template patterns | Generate |
-| `kickstart-security-hardening` | Azure security defaults | Review |
-| `kickstart-deployment-review` | Artifact review checklist | Review |
-| `kickstart-resource-management` | Azure resource naming | Configure |
-| `kickstart-networking` | Azure networking concepts | Design |
-| `kickstart-cost-estimation` | Cost estimation via Retail Prices API | Design, Deploy |
-| `kickstart-monitoring` | Azure Monitor + Container Insights | Deploy |
-| `kickstart-arm-basics` | ARM resource model | Generate |
-| `kickstart-azure-identity` | Managed identity concepts | Design |
-| `kickstart-github-actions-oidc` | OIDC federated credentials | Generate |
-| `kickstart-github-actions-workflow` | GHA workflow structure | Generate |
-| `kickstart-github-pr-conventions` | PR conventions | Generate |
+| `kickstart-workload-identity` | Azure Workload Identity (federated credentials, SA wiring, pod labels) | Generate |
+| `kickstart-acr-integration` | ACR attachment to AKS (no pull secrets) | Generate |
+| `kickstart-bicep-authoring` | Bicep template structure and conventions | Generate |
+| `kickstart-security-hardening` | Azure security defaults and checks | Review |
+| `kickstart-pim-activation` | Activating PIM-eligible roles for RBAC self-assignment | Configure, Pre-Deploy |
+| `kickstart-github-pr-conventions` | Branch naming, Conventional Commits, PR structure | Deploy |
 
-### Behavioral Skills (4)
+### Behavioral Skills (3)
 Cross-cutting behavior rules.
 
 | Skill | Purpose |
 |---|---|
-| `kickstart-phase-acceleration` | Rules for skipping phases safely |
-| `kickstart-teach-then-ask` | Explain context before asking questions |
-| `kickstart-collaborator-voice` | Tone: warm, direct, jargon-light |
+| `kickstart-phase-acceleration` | Rules for condensing or skipping phases safely |
+| `kickstart-collaborator-voice` | Tone (warm, direct, jargon-light) + progress narration before/after questions and phase transitions |
 | `kickstart-file-generation` | Batch file writes: compute all → write all → report |
 
 ### Validation Skill (1)
 
 | Skill | Purpose |
 |---|---|
-| `kickstart-safeguard-checklist` | 13 deployment safeguard rules (DS001-DS013) for K8s manifest validation |
+| `kickstart-safeguard-checklist` | 16 manifest safeguard rules for K8s validation |
 
 ## Skill Invocation Map
 
 Which skills get invoked at each phase:
 
 ```
+Cross-cutting (every phase)
+  └── /kickstart-collaborator-voice    (tone + progress narration)
+  └── /kickstart-phase-acceleration    (only when condensing/skipping phases)
+
+Onboarding — "Start from an example"
+  └── /kickstart-samples               (pre-filled profile → skips Phase 1)
+
 Phase 1 — Discover
   └── /kickstart-discover
-  └── /kickstart-teach-then-ask
 
 Phase 2 — Configure Infrastructure
-  └── /kickstart-resource-management
-  └── /kickstart-cost-estimation (if user asks)
-  └── az CLI commands (az group create, az aks create, az acr create)
+  └── /kickstart-configure-infra       (subscription picker, RG/ACR/cluster creation)
+  └── /kickstart-pim-activation        (if RBAC self-assign returns 403)
 
 Phase 3 — Design
   └── /kickstart-design
-  └── /kickstart-aks-automatic
-  └── /kickstart-gateway-api
-  └── /kickstart-workload-identity
-  └── /kickstart-aks-terminology
-  └── /kickstart-cost-estimation (if user asks)
+  └── /kickstart-cluster-status        (end-of-phase peek)
 
 Phase 4 — Generate
   └── /kickstart-generate
-  └── /kickstart-deployment-safeguards
-  └── /kickstart-acr-integration
-  └── /kickstart-bicep-authoring
-  └── /kickstart-github-actions-workflow
-  └── /kickstart-github-actions-oidc
-  └── /kickstart-kaito-gpu (if GPU workload)
-  └── /kickstart-file-generation
+        ├── /kickstart-file-generation     (batch-write order)
+        ├── /kickstart-bicep-authoring
+        ├── /kickstart-workload-identity
+        └── /kickstart-acr-integration
+  └── /kickstart-cluster-status        (end-of-phase peek)
 
 Phase 5 — Review
   └── /kickstart-review
-  └── /kickstart-safeguard-checklist
-  └── /kickstart-deployment-review
-  └── /kickstart-security-hardening
+        └── /kickstart-safeguard-checklist
+  └── /kickstart-cluster-status        (end-of-phase peek)
   └── HANDOFF → kickstart-reviewer agent
+        ├── /kickstart-review
+        ├── /kickstart-safeguard-checklist
+        └── /kickstart-security-hardening
 
 Phase 6 — Pre-Deploy Check
   └── /kickstart-handoff
   └── az aks show (verify cluster ready)
   └── az aks update --attach-acr
+  └── /kickstart-pim-activation        (if ACR attach / RBAC needs elevation)
 
 Phase 7 — Deploy
   └── /kickstart-deploy
-  └── /kickstart-cost-estimation
-  └── /kickstart-monitoring
+  └── /kickstart-github-pr-conventions (if user commits / opens a PR)
 ```
 
 ## VS Code Tools Used
@@ -219,33 +219,22 @@ The agents use VS Code Copilot's built-in tools (not custom extension tools):
 │   ├── kickstart.agent.md              # Main agent (gated by kickstart.enabled)
 │   └── kickstart-reviewer.agent.md     # Internal reviewer sub-agent
 ├── skills/
-│   ├── kickstart-discover/SKILL.md     # Phase skills (6)
+│   ├── kickstart-discover/SKILL.md     # Phase skills (7)
+│   ├── kickstart-configure-infra/SKILL.md
 │   ├── kickstart-design/SKILL.md
 │   ├── kickstart-generate/SKILL.md
 │   ├── kickstart-review/SKILL.md
 │   ├── kickstart-handoff/SKILL.md
 │   ├── kickstart-deploy/SKILL.md
-│   ├── kickstart-aks-automatic/SKILL.md  # Domain skills (19)
-│   ├── kickstart-gateway-api/SKILL.md
-│   ├── kickstart-workload-identity/SKILL.md
+│   ├── kickstart-cluster-status/SKILL.md   # Operational (1)
+│   ├── kickstart-samples/SKILL.md      # Onboarding (1)
+│   ├── kickstart-workload-identity/SKILL.md  # Domain skills (6)
 │   ├── kickstart-acr-integration/SKILL.md
-│   ├── kickstart-kaito-gpu/SKILL.md
-│   ├── kickstart-aks-terminology/SKILL.md
-│   ├── kickstart-deployment-safeguards/SKILL.md
 │   ├── kickstart-bicep-authoring/SKILL.md
 │   ├── kickstart-security-hardening/SKILL.md
-│   ├── kickstart-deployment-review/SKILL.md
-│   ├── kickstart-resource-management/SKILL.md
-│   ├── kickstart-networking/SKILL.md
-│   ├── kickstart-cost-estimation/SKILL.md
-│   ├── kickstart-monitoring/SKILL.md
-│   ├── kickstart-arm-basics/SKILL.md
-│   ├── kickstart-azure-identity/SKILL.md
-│   ├── kickstart-github-actions-oidc/SKILL.md
-│   ├── kickstart-github-actions-workflow/SKILL.md
+│   ├── kickstart-pim-activation/SKILL.md
 │   ├── kickstart-github-pr-conventions/SKILL.md
-│   ├── kickstart-phase-acceleration/SKILL.md   # Behavioral skills (4)
-│   ├── kickstart-teach-then-ask/SKILL.md
+│   ├── kickstart-phase-acceleration/SKILL.md   # Behavioral skills (3)
 │   ├── kickstart-collaborator-voice/SKILL.md
 │   ├── kickstart-file-generation/SKILL.md
 │   └── kickstart-safeguard-checklist/SKILL.md  # Validation (1)

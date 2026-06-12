@@ -495,6 +495,11 @@
                 "command": "aks.kickstartFocus",
                 "title": "AKS: Launch Kickstart Agent",
                 "category": "AKS"
+            },
+            {
+                "command": "aks.kickstartCluster",
+                "title": "AKS: Configure Kickstart Cluster",
+                "category": "AKS"
             }
         ],
         "menus": {
@@ -549,6 +554,10 @@
                 },
                 {
                     "command": "aks.kickstartFocus",
+                    "when": "config.aks.kickstart.enabled == true"
+                },
+                {
+                    "command": "aks.kickstartCluster",
                     "when": "config.aks.kickstart.enabled == true"
                 }
             ],
@@ -1064,15 +1073,14 @@
             { "path": "./skills/kickstart-review/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-handoff/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-deploy/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-configure-infra/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-cluster-status/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-samples/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-workload-identity/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-acr-integration/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
-            { "path": "./skills/kickstart-kaito-gpu/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-bicep-authoring/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-security-hardening/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
                 { "path": "./skills/kickstart-pim-activation/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
-            { "path": "./skills/kickstart-github-actions-oidc/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
-            { "path": "./skills/kickstart-github-actions-workflow/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-github-pr-conventions/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-phase-acceleration/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
             { "path": "./skills/kickstart-collaborator-voice/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
