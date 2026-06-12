@@ -252,9 +252,13 @@ export function ClusterInput(props: ClusterInputProps) {
 
     function handleSubscriptionSelect(value: string | null) {
         const subscription = props.subscriptions.find((s) => s.name === value);
+        const newSubscriptionId = subscription?.id ?? "";
+        if (newSubscriptionId === (props.selectedSubscriptionId ?? "")) {
+            return;
+        }
         setLocation(unset());
         setExistingResourceGroup("");
-        props.eventHandlers.onSetSubscriptionSelected({ subscriptionId: subscription?.id ?? "" });
+        props.eventHandlers.onSetSubscriptionSelected({ subscriptionId: newSubscriptionId });
     }
 
     function handleLocationSelect(value: string | null) {

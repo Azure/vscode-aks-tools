@@ -80,7 +80,11 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
 
     function handleSubscriptionSelect(value: string | null) {
         const subscription = props.subscriptions.find((s) => s.name === value);
-        props.eventHandlers.onSetSubscriptionSelected({ subscriptionId: subscription?.id ?? "" });
+        const newSubscriptionId = subscription?.id ?? "";
+        if (newSubscriptionId === (props.selectedSubscriptionId ?? "")) {
+            return;
+        }
+        props.eventHandlers.onSetSubscriptionSelected({ subscriptionId: newSubscriptionId });
     }
 
     function handleClusterSelect(value: string | null) {
