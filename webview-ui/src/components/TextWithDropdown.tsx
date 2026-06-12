@@ -1,6 +1,7 @@
 import { FormEvent, HTMLAttributes, useEffect, useRef, useState } from "react";
 import styles from "./TextWithDropdown.module.css";
 import { Lazy, asLazy, isLoaded, isLoading, isNotLoaded, orDefault } from "../utilities/lazy";
+import { fuzzyMatch } from "../utilities/fuzzy";
 import { ProgressRing } from "./ProgressRing";
 
 type AvailableHtmlAttributes = Pick<HTMLAttributes<HTMLElement>, "className" | "id">;
@@ -17,6 +18,7 @@ export interface TextWithDropdownProps extends AvailableHtmlAttributes {
     getAddItemText: (text: string) => string;
     selectedItem: string | null;
     onSelect: (value: string | null, isNew: boolean) => void;
+    allowAddItem?: boolean;
 }
 
 enum DisplayMode {
@@ -59,6 +61,10 @@ function TextOnly(props: TextOnlyProps) {
         props.onSelect(newText, true);
     }
 
+    if (props.allowAddItem === false) {
+        return <input type="text" className={props.className} value={props.selectedItem || ""} disabled />;
+    }
+
     return (
         <input type="text" className={props.className} onInput={handleTextChange} value={props.selectedItem || ""} />
     );
@@ -90,7 +96,7 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
     }, [props.items, props.selectedItem, allItems]);
 
     const itemLookup = new Map(allItems.map((item) => [item.toLowerCase(), item]));
-    const canAddItem = searchText ? !itemLookup.has(searchText.toLowerCase()) : false;
+    const canAddItem = props.allowAddItem !== false && searchText !== "" && !itemLookup.has(searchText.toLowerCase());
     const addItems = createAddItems(canAddItem, props.getAddItemText(searchText), searchText, props.selectedItem);
     const filteredItems = createFilteredItems(allItems, searchText, props.selectedItem);
     const selectionItems: SelectionItem[] = [...addItems, ...filteredItems];
@@ -261,12 +267,18 @@ function createAddItems(
 }
 
 function createFilteredItems(allItems: string[], searchText: string, selectedItem: string | null): SelectionItem[] {
-    return allItems
-        .filter((item) => item.toLowerCase().includes(searchText.toLowerCase()))
-        .map((item) => ({
-            isAddItem: false,
-            value: item,
-            displayText: item,
-            isSelected: item === selectedItem,
-        }));
+    const matches = allItems
+        .map((item) => ({ item, match: fuzzyMatch(searchText, item) }))
+        .filter(({ match }) => match.matched);
+
+    if (searchText !== "") {
+        matches.sort((a, b) => b.match.score - a.match.score);
+    }
+
+    return matches.map(({ item }) => ({
+        isAddItem: false,
+        value: item,
+        displayText: item,
+        isSelected: item === selectedItem,
+    }));
 }
