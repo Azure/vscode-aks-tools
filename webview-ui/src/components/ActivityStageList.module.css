@@ -1,0 +1,89 @@
+.checklist {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.75rem;
+}
+
+.checkItem {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    column-gap: 0.5rem;
+}
+
+.checkItem svg {
+    margin-top: 0.2rem;
+}
+
+.checkBody {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.checkTitle {
+    display: block;
+}
+
+.checkDetail {
+    display: block;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    margin-top: 0.15rem;
+}
+
+.checkPending {
+    color: var(--vscode-disabledForeground);
+}
+
+.checkRunning {
+    color: var(--vscode-progressBar-background);
+}
+
+.checkSucceeded {
+    color: var(--vscode-testing-iconPassed);
+}
+
+.checkWarning {
+    color: var(--vscode-list-warningForeground);
+}
+
+.checkFailed {
+    color: var(--vscode-testing-iconFailed);
+}
+
+.activityEntries {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding-left: 0.25rem;
+}
+
+.activityEntry {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 0.4rem;
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.activityAction {
+    color: var(--vscode-foreground);
+}
+
+.activityEntryDetail {
+    color: var(--vscode-descriptionForeground);
+}
+
+.activityElapsed {
+    margin-left: auto;
+    padding-left: 0.5rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--vscode-descriptionForeground);
+}

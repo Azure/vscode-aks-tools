@@ -1,0 +1,162 @@
+.page {
+    max-width: 52rem;
+    margin: 0 auto;
+}
+
+.inputContainer {
+    display: grid;
+    grid-template-columns: 12rem 20rem 8rem;
+    grid-gap: 1rem;
+    align-items: center;
+}
+
+.label {
+    grid-column: 1 / 2;
+}
+
+.midControl {
+    grid-column: 2 / 3;
+}
+
+.longControl {
+    grid-column: 2 / 4;
+    width: 20rem;
+}
+
+.sideControl {
+    grid-column: 3 / 4;
+}
+
+.validationMessage {
+    grid-column: 2 / 4;
+    margin-top: -0.5rem;
+}
+
+.fullWidth {
+    grid-column: 1 / 4;
+}
+
+.errorIndicator {
+    color: var(--vscode-testing-iconFailed);
+    padding-right: 5px;
+}
+
+.buttonContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.5rem;
+}
+
+.secondaryButton {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.checkWarning {
+    color: var(--vscode-list-warningForeground);
+}
+
+.chipRow {
+    grid-column: 2 / 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: -0.5rem;
+}
+
+.chipLabel {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+.chip {
+    padding: 0.15rem 0.6rem;
+    border-radius: 1rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 0.9em;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.chip:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.chipSelected {
+    border-color: var(--vscode-focusBorder);
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.activityContainer {
+    grid-column: 2 / 4;
+    margin-top: -0.5rem;
+}
+
+.permissionWarning {
+    grid-column: 2 / 4;
+    display: flex;
+    align-items: flex-start;
+    column-gap: 0.5rem;
+    margin-top: -0.25rem;
+    font-size: 0.9em;
+}
+
+.showAllToggle {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    column-gap: 0.4rem;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+.resultPanel {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.5rem;
+}
+
+.modeToggle {
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.modeButton {
+    background: transparent;
+    color: var(--vscode-foreground);
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.modeButton:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.modeButtonActive {
+    border-bottom-color: var(--vscode-focusBorder);
+    color: var(--vscode-textLink-foreground);
+}
+
+.detectRow {
+    grid-column: 2 / 4;
+    display: flex;
+    align-items: center;
+    column-gap: 0.5rem;
+}
+
+.hint {
+    grid-column: 2 / 4;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    margin-top: -0.5rem;
+}
