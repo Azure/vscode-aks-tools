@@ -8,7 +8,40 @@ disable-model-invocation: true
 
 When the user gets a **403** on `az role assignment create` or `az aks update --attach-acr` (meaning they lack `Microsoft.Authorization/roleAssignments/write`), check whether they have PIM-eligible roles they can self-activate before falling back to admin hand-off.
 
-## Step 1 — List eligible roles
+## Step 1 — Run the built-in permissions check (preferred)
+
+Invoke the bundled VS Code command via `vscode/runCommand`. It performs the active-permissions check **and** the PIM eligibility lookup in one call, and returns a self-contained markdown report you can render directly in the chat.
+
+**Command ID:** `aks.checkRoleAssignmentPermissions`
+
+**Args:**
+```json
+{
+  "subscriptionId": "<sub>",
+  "resourceGroup": "<rg>"
+}
+```
+
+**Returns:**
+```ts
+{
+  cancelled: boolean,
+  canCreate?: boolean,             // true if the user can already create role assignments
+  scope?: { subscriptionId, subscriptionName, resourceGroup, resourceGroupScopeId },
+  verdict?: { canCreate, grantingActions, strippedByNotActions },
+  eligiblePimRoles?: Array<{ roleName, scopeId, scopeDisplayName?, grantingAction? }>,
+  markdown: string                 // full report — render this verbatim in chat
+}
+```
+
+**How to use the result:**
+
+- If `canCreate === true`: skip PIM activation entirely; retry the original `az role assignment create` / `az aks update --attach-acr`.
+- If `canCreate === false` and `eligiblePimRoles.length > 0`: render `markdown` in the chat, then proceed to **Step 2** for activation guidance.
+- If `canCreate === false` and `eligiblePimRoles.length === 0` (or `eligiblePimRoles` is missing): render `markdown` and proceed to **Step 3** (admin hand-off).
+- If `error` is set: render the error and fall back to the manual `az rest` query below.
+
+**Manual fallback** (only if the command is unavailable):
 
 ```bash
 az rest --method GET \
