@@ -104,7 +104,6 @@ export type ToWebViewMsgDef = {
         runId: number;
         recommendedRegion: string | null;
         regionResults: RegionQuotaResult[];
-        role: RoleSummary;
     };
     preflightComplete: { canProceed: boolean; role: RoleSummary; deployment: DeploymentPermissionsSummary };
     finishComplete: {

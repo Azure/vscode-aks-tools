@@ -31,7 +31,6 @@ export type ScanResult = {
     runId: number;
     recommendedRegion: string | null;
     regionResults: RegionQuotaResult[];
-    role: RoleSummary;
 };
 
 export type FinishResult = {
@@ -59,7 +58,7 @@ export type KickstartClusterState = InitialState & {
     scan: ScanResult | null;
     errorMessage: string | null;
     preflightCanProceed: boolean | null;
-    /** Role verdict from the most recent preflight run; overrides {@link ScanResult.role} for the warning banner. */
+    /** Role verdict from the most recent preflight run; drives the form's permission warning banner. */
     preflightRole: RoleSummary | null;
     /** Deployment-permissions verdict from the most recent preflight run. */
     preflightDeployment: DeploymentPermissionsSummary | null;
@@ -138,7 +137,6 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
                     runId: args.runId,
                     recommendedRegion: args.recommendedRegion,
                     regionResults: args.regionResults,
-                    role: args.role,
                 },
             };
         },

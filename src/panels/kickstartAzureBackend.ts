@@ -56,7 +56,6 @@ export interface SubscriptionScanResult {
     runId: number;
     recommendedRegion: string | null;
     regionResults: RegionQuotaResult[];
-    role: RoleSummary;
 }
 
 async function unwrapErrorable<T>(promise: Promise<Errorable<T>>): Promise<T> {
@@ -244,29 +243,6 @@ export async function runSubscriptionScan(
         providersStage.warn(l10n.t("Couldn't check provider registration: {0}", getErrorMessage(e)));
     }
 
-    const roleStage = reporter.stage("role", l10n.t("Your access"));
-    let role: RoleSummary;
-    try {
-        const roleResult = await roleStage.run(l10n.t("Reading role assignments"), () =>
-            getUserSubscriptionRoles(sessionProvider, subscriptionId),
-        );
-        role = summarizeSubscriptionRole(roleResult);
-    } catch (e) {
-        token.throwIfCancelled();
-        role = summarizeSubscriptionRole({ succeeded: false, error: getErrorMessage(e) });
-    }
-    role = await enrichRoleSummaryWithPim(
-        role,
-        getAuthorizationManagementClient(sessionProvider, subscriptionId),
-        `/subscriptions/${subscriptionId}`,
-        channel,
-    );
-    if (role.canAssignRolesKnown && role.canAssignRoles) {
-        roleStage.succeed(role.detail);
-    } else {
-        roleStage.warn(role.detail);
-    }
-
     const quotaStage = reporter.stage("quota", l10n.t("Regional quota"));
     const regionResults = await Promise.all(
         SCAN_REGIONS.map((location) =>
@@ -303,7 +279,7 @@ export async function runSubscriptionScan(
         quotaStage.warn(l10n.t("None of the scanned regions had enough AKS Automatic quota."));
     }
 
-    return { runId, recommendedRegion, regionResults, role };
+    return { runId, recommendedRegion, regionResults };
 }
 
 export interface PreflightResult {
