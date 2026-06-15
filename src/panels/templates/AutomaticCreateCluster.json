@@ -53,6 +53,13 @@
             "metadata": {
                 "description": "The user principal id."
             }
+        },
+        "assignClusterAdminRole": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "When false, skip the Cluster Admin RBAC assignment so the deployment can succeed for callers without Microsoft.Authorization/roleAssignments/write on the resource group."
+            }
         }
     },
     "resources": [
@@ -77,6 +84,7 @@
         },
         {
             "type": "Microsoft.Authorization/roleAssignments",
+            "condition": "[parameters('assignClusterAdminRole')]",
             "apiVersion": "2022-04-01",
             "name": "[guid(resourceGroup().id)]",
             "dependsOn": [

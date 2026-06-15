@@ -17,7 +17,12 @@ import {
     MultipleFeatureRegistration,
     createMultipleFeatureRegistrations,
 } from "../commands/utils/featureRegistrations";
-import { createRoleAssignment, getScopeForAcr, getScopeForCluster } from "../commands/utils/roleAssignments";
+import {
+    canCreateRoleAssignmentsAtResourceGroup,
+    createRoleAssignment,
+    getScopeForAcr,
+    getScopeForCluster,
+} from "../commands/utils/roleAssignments";
 import { acrPullRoleDefinitionName } from "../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { PresetType } from "../webview-contract/webviewDefinitions/createCluster";
 import { ClusterSelections, ExistingClusterSelection } from "../webview-contract/webviewDefinitions/kickstartCluster";
@@ -80,6 +85,15 @@ export async function runClusterProvisioning(
     }
 
     const clusterStage = reporter.stage("cluster", l10n.t("AKS Automatic cluster"));
+    let userCanAssignRoles = true;
+    try {
+        const authClient = getAuthorizationManagementClient(sessionProvider, selections.subscriptionId);
+        const verdict = await canCreateRoleAssignmentsAtResourceGroup(authClient, selections.resourceGroupName);
+        userCanAssignRoles = !failed(verdict) && verdict.result.canCreate;
+    } catch {
+        // Treat lookup failures as "unknown"; deploy without the role assignment to avoid spurious 403s.
+        userCanAssignRoles = false;
+    }
     try {
         const kubernetesVersion = await clusterStage.run(
             l10n.t("Selecting Kubernetes version"),
@@ -97,9 +111,18 @@ export async function runClusterProvisioning(
         );
         result.clusterPortalUrl = await clusterStage.run(
             l10n.t("Deploying cluster — this can take several minutes"),
-            () => deployAutomaticCluster(sessionProvider, selections, kubernetesVersion, identity),
+            () => deployAutomaticCluster(sessionProvider, selections, kubernetesVersion, identity, userCanAssignRoles),
         );
-        clusterStage.succeed(l10n.t("Cluster {0} is ready.", selections.clusterName));
+        if (userCanAssignRoles) {
+            clusterStage.succeed(l10n.t("Cluster {0} is ready.", selections.clusterName));
+        } else {
+            clusterStage.warn(
+                l10n.t(
+                    "Cluster {0} is ready. Skipped granting you 'Azure Kubernetes Service RBAC Cluster Admin' because you can't create role assignments here \u2014 kubectl admin access and other RBAC-gated steps may not work until an Owner or RBAC Admin grants the role.",
+                    selections.clusterName,
+                ),
+            );
+        }
     } catch (e) {
         clusterStage.fail(getErrorMessage(e));
         return result;
@@ -132,6 +155,17 @@ export async function runClusterProvisioning(
     }
 
     const attachStage = reporter.stage("attach", l10n.t("Connect registry to cluster"));
+    if (!userCanAssignRoles) {
+        attachStage.warn(
+            l10n.t(
+                "Skipped attaching {0} to {1} because you can't create role assignments here. Ask an Owner or RBAC Admin to grant the AcrPull role on the registry to the cluster's kubelet identity, or pods won't be able to pull images.",
+                selections.acrName,
+                selections.clusterName,
+            ),
+        );
+        result.succeeded = true;
+        return result;
+    }
     try {
         await attachStage.run(l10n.t("Granting the cluster permission to pull images"), () =>
             attachAcrToCluster(sessionProvider, selections),
@@ -303,6 +337,7 @@ async function deployAutomaticCluster(
     selections: ClusterSelections,
     kubernetesVersion: string,
     identity: DeploymentIdentity,
+    assignClusterAdminRole: boolean,
 ): Promise<string> {
     const clusterSpec: ClusterSpec = {
         location: selections.location,
@@ -312,6 +347,7 @@ async function deployAutomaticCluster(
         kubernetesVersion,
         username: identity.username,
         servicePrincipalId: identity.servicePrincipalId,
+        assignClusterAdminRole,
     };
 
     const deployment = new ClusterDeploymentBuilder()
