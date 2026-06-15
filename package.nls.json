@@ -26,6 +26,8 @@
   "Cluster and Control Plane Availability and Performance": "Cluster and Control Plane Availability and Performance",
   "Storage": "Storage",
   "Attach ACR to Cluster": "Attach ACR to Cluster",
+  "Check Role Assignment Permissions": "Check Role Assignment Permissions",
+  "Check Deployment Permissions": "Check Deployment Permissions",
   "Create a Dockerfile": "Create a Dockerfile",
   "Create a Deployment": "Create a Deployment",
   "Create a GitHub Workflow": "Create a GitHub Workflow",

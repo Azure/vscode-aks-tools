@@ -1,0 +1,474 @@
+import * as vscode from "vscode";
+import { AuthorizationManagementClient, Permission, RoleAssignment } from "@azure/arm-authorization";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { getReadySessionProvider } from "../../auth/azureAuth";
+import { ReadyAzureSessionProvider } from "../../auth/types";
+import { getAuthorizationManagementClient, listAll } from "../utils/arm";
+import { getResourceGroups } from "../utils/resourceGroups";
+import { getSubscriptions, SelectionType } from "../utils/subscriptions";
+import { getManagedCluster } from "../utils/clusters";
+import { acrResourceType, clusterResourceType, getResources } from "../utils/azureResources";
+import {
+    azRoleAssignmentCommand,
+    findGrantingAction,
+    getPrincipalRoleAssignmentsForAcr,
+    getScopeForAcr,
+    getScopeForCluster,
+} from "../utils/roleAssignments";
+import { Errorable, failed, getErrorMessage } from "../utils/errorable";
+import { openMarkdownReport } from "../utils/markdownReport";
+
+const QUICKPICK_TITLE = "Check AKS deployment permissions";
+
+// Required actions for each gate in Phase 6 of the Kickstart agent.
+const AKS_CLUSTER_USER_ACTION = "Microsoft.ContainerService/managedClusters/listClusterUserCredential/action";
+const AKS_DATAPLANE_WRITE_ACTION = "Microsoft.ContainerService/managedClusters/apps/deployments/write";
+const ACR_PULL_DATAACTION = "Microsoft.ContainerRegistry/registries/pull/read";
+const ACR_PUSH_DATAACTION = "Microsoft.ContainerRegistry/registries/push/write";
+const ACR_TASKS_ACTION = "Microsoft.ContainerRegistry/registries/tasks/write";
+
+// Least-privilege built-in roles to recommend when a probe fails.
+const ROLE_CLUSTER_USER = "Azure Kubernetes Service Cluster User Role";
+const ROLE_RBAC_WRITER = "Azure Kubernetes Service RBAC Writer";
+const ROLE_ACR_PULL = "AcrPull";
+const ROLE_ACR_PUSH = "AcrPush";
+const ROLE_ACR_TASKS = "Container Registry Tasks Contributor";
+
+type DeploymentScope = {
+    subscriptionId: string;
+    subscriptionName: string;
+    resourceGroup: string;
+    clusterName: string;
+    clusterScopeId: string;
+    acrName?: string;
+    acrScopeId?: string;
+};
+
+type ProbeStatus = "pass" | "fail" | "unknown";
+
+type Probe = {
+    id: string;
+    label: string;
+    status: ProbeStatus;
+    reason: string;
+    /** Built-in role names that would satisfy this probe, ordered by least privilege. */
+    recommendedRoles?: string[];
+    /** A ready-to-run `az role assignment create` command for the first recommended role. */
+    remediation?: string;
+};
+
+export type CheckDeploymentPermissionsArgs = {
+    subscriptionId?: string;
+    resourceGroup?: string;
+    clusterName?: string;
+    /** Optional. When omitted, ACR-related probes are skipped. */
+    acrName?: string;
+    /** When true, suppresses the toast and skips opening the markdown document. */
+    silent?: boolean;
+};
+
+export type CheckDeploymentPermissionsResult = {
+    cancelled: boolean;
+    allPassed?: boolean;
+    scope?: DeploymentScope;
+    probes?: Probe[];
+    /** Self-contained markdown report suitable for rendering in chat or opening as a document. */
+    markdown?: string;
+    error?: string;
+};
+
+export async function checkDeploymentPermissions(
+    _context: IActionContext | undefined,
+    args?: CheckDeploymentPermissionsArgs,
+): Promise<CheckDeploymentPermissionsResult> {
+    const invokedProgrammatically = Boolean(args?.subscriptionId && args?.resourceGroup && args?.clusterName);
+    const silent = args?.silent ?? invokedProgrammatically;
+
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        if (!silent) vscode.window.showErrorMessage(sessionProvider.error);
+        return { cancelled: false, error: sessionProvider.error };
+    }
+
+    const scopeResult = invokedProgrammatically
+        ? await resolveScopeFromArgs(sessionProvider.result, args!)
+        : await pickScope(sessionProvider.result);
+    if (!scopeResult) return { cancelled: !invokedProgrammatically };
+    if ("error" in scopeResult) {
+        if (!silent) vscode.window.showErrorMessage(scopeResult.error);
+        return { cancelled: false, error: scopeResult.error };
+    }
+    const scope = scopeResult;
+
+    const authClient = getAuthorizationManagementClient(sessionProvider.result, scope.subscriptionId);
+    const probes = await runProbes(sessionProvider.result, authClient, scope);
+    const allPassed = probes.every((p) => p.status === "pass");
+    const markdown = buildReport(scope, probes);
+
+    if (!silent) {
+        await openMarkdownReport(markdown);
+        const target = `${scope.clusterName} (${scope.subscriptionName} / ${scope.resourceGroup})`;
+        if (allPassed) {
+            vscode.window.showInformationMessage(`All deployment permission checks passed for '${target}'.`);
+        } else {
+            const failing = probes.filter((p) => p.status !== "pass").length;
+            vscode.window.showWarningMessage(
+                `${failing} of ${probes.length} deployment permission check(s) need attention. See report.`,
+            );
+        }
+    }
+
+    return { cancelled: false, allPassed, scope, probes, markdown };
+}
+
+// ---------- Probes ----------
+
+async function runProbes(
+    sessionProvider: ReadyAzureSessionProvider,
+    authClient: AuthorizationManagementClient,
+    scope: DeploymentScope,
+): Promise<Probe[]> {
+    const clusterPerms = await listForResource(authClient, scope.clusterScopeId);
+    const probes: Probe[] = [
+        evaluateClusterUserProbe(clusterPerms, scope),
+        evaluateDataPlaneWriteProbe(clusterPerms, scope),
+    ];
+
+    if (!scope.acrName || !scope.acrScopeId) return probes;
+
+    const acrPerms = await listForResource(authClient, scope.acrScopeId);
+    probes.push(evaluateAcrPushProbe(acrPerms, scope));
+    probes.push(evaluateAcrTasksProbe(acrPerms, scope));
+
+    const kubeletObjectId = await fetchKubeletObjectId(sessionProvider, scope);
+    probes.push(await evaluateAcrPullProbe(authClient, scope, kubeletObjectId));
+
+    return probes;
+}
+
+function evaluateClusterUserProbe(perms: Errorable<Permission[]>, scope: DeploymentScope): Probe {
+    return probeFromActionCheck({
+        id: "cluster-user",
+        label: `Download kubeconfig for cluster '${scope.clusterName}'`,
+        perms,
+        action: AKS_CLUSTER_USER_ACTION,
+        kind: "action",
+        scopeId: scope.clusterScopeId,
+        recommendedRoles: [ROLE_CLUSTER_USER],
+    });
+}
+
+function evaluateDataPlaneWriteProbe(perms: Errorable<Permission[]>, scope: DeploymentScope): Probe {
+    return probeFromActionCheck({
+        id: "aks-dataplane-write",
+        label: `Create/update Kubernetes workloads on cluster '${scope.clusterName}'`,
+        perms,
+        action: AKS_DATAPLANE_WRITE_ACTION,
+        kind: "dataAction",
+        scopeId: scope.clusterScopeId,
+        recommendedRoles: [ROLE_RBAC_WRITER],
+    });
+}
+
+function evaluateAcrPushProbe(perms: Errorable<Permission[]>, scope: DeploymentScope): Probe {
+    return probeFromActionCheck({
+        id: "acr-push",
+        label: `Push container images to ACR '${scope.acrName}'`,
+        perms,
+        action: ACR_PUSH_DATAACTION,
+        kind: "dataAction",
+        scopeId: scope.acrScopeId!,
+        recommendedRoles: [ROLE_ACR_PUSH],
+    });
+}
+
+function evaluateAcrTasksProbe(perms: Errorable<Permission[]>, scope: DeploymentScope): Probe {
+    return probeFromActionCheck({
+        id: "acr-tasks",
+        label: `Run server-side ACR builds (\`az acr build\`) on '${scope.acrName}'`,
+        perms,
+        action: ACR_TASKS_ACTION,
+        kind: "action",
+        scopeId: scope.acrScopeId!,
+        recommendedRoles: [ROLE_ACR_TASKS],
+    });
+}
+
+async function evaluateAcrPullProbe(
+    authClient: AuthorizationManagementClient,
+    scope: DeploymentScope,
+    kubeletObjectId: Errorable<string>,
+): Promise<Probe> {
+    const probe: Probe = {
+        id: "acr-pull-kubelet",
+        label: `Cluster's kubelet identity can pull from ACR '${scope.acrName}'`,
+        status: "unknown",
+        reason: "",
+        recommendedRoles: [ROLE_ACR_PULL],
+    };
+
+    if (failed(kubeletObjectId)) {
+        probe.reason = `Could not look up the cluster's kubelet identity: ${kubeletObjectId.error}`;
+        return probe;
+    }
+
+    const assignments = await getPrincipalRoleAssignmentsForAcr(
+        authClient,
+        kubeletObjectId.result,
+        scope.resourceGroup,
+        scope.acrName!,
+    );
+    if (failed(assignments)) {
+        probe.reason = `Could not list role assignments on ACR: ${assignments.error}`;
+        return probe;
+    }
+
+    for (const ra of assignments.result) {
+        const grants = await roleAssignmentGrantsDataAction(authClient, ra, ACR_PULL_DATAACTION);
+        if (grants) {
+            probe.status = "pass";
+            probe.reason = `Kubelet identity has an assignment that grants \`${ACR_PULL_DATAACTION}\`.`;
+            return probe;
+        }
+    }
+
+    probe.status = "fail";
+    probe.reason = `The cluster's kubelet identity has no role assignment on this ACR that grants \`${ACR_PULL_DATAACTION}\`.`;
+    probe.remediation = azRoleAssignmentCommand({
+        assigneeObjectId: kubeletObjectId.result,
+        principalType: "ServicePrincipal",
+        role: ROLE_ACR_PULL,
+        scopeId: scope.acrScopeId!,
+    });
+    return probe;
+}
+
+function probeFromActionCheck(input: {
+    id: string;
+    label: string;
+    perms: Errorable<Permission[]>;
+    action: string;
+    kind: "action" | "dataAction";
+    scopeId: string;
+    recommendedRoles: string[];
+}): Probe {
+    const probe: Probe = {
+        id: input.id,
+        label: input.label,
+        status: "unknown",
+        reason: "",
+        recommendedRoles: input.recommendedRoles,
+    };
+
+    if (failed(input.perms)) {
+        probe.reason = `Could not read effective permissions: ${input.perms.error}`;
+        return probe;
+    }
+
+    const verdict = findGrantingAction(input.perms.result, input.action, input.kind);
+    if (verdict.granted) {
+        probe.status = "pass";
+        probe.reason = `Granted via \`${verdict.via!}\`.`;
+        return probe;
+    }
+
+    probe.status = "fail";
+    probe.reason = `No active role you hold at this scope grants \`${input.action}\`${input.kind === "dataAction" ? " (data action)" : ""}.`;
+    probe.remediation = azRoleAssignmentCommand({
+        assigneeObjectId: "<your-object-id>",
+        principalType: "User",
+        role: input.recommendedRoles[0],
+        scopeId: input.scopeId,
+    });
+    return probe;
+}
+
+async function roleAssignmentGrantsDataAction(
+    authClient: AuthorizationManagementClient,
+    assignment: RoleAssignment,
+    dataAction: string,
+): Promise<boolean> {
+    if (!assignment.roleDefinitionId) return false;
+    try {
+        const def = await authClient.roleDefinitions.getById(assignment.roleDefinitionId);
+        return findGrantingAction(def.permissions ?? [], dataAction, "dataAction").granted;
+    } catch {
+        return false;
+    }
+}
+
+async function listForResource(
+    authClient: AuthorizationManagementClient,
+    resourceScopeId: string,
+): Promise<Errorable<Permission[]>> {
+    // Parsed: /subscriptions/{sub}/resourceGroups/{rg}/providers/{ns}/{type}/{name}
+    const parts = resourceScopeId.split("/");
+    const rg = parts[4];
+    const namespace = parts[6];
+    const type = parts[7];
+    const name = parts[8];
+    try {
+        return await listAll(authClient.permissions.listForResource(rg, namespace, "", type, name));
+    } catch (e) {
+        return { succeeded: false, error: getErrorMessage(e) };
+    }
+}
+
+async function fetchKubeletObjectId(
+    sessionProvider: ReadyAzureSessionProvider,
+    scope: DeploymentScope,
+): Promise<Errorable<string>> {
+    const cluster = await getManagedCluster(
+        sessionProvider,
+        scope.subscriptionId,
+        scope.resourceGroup,
+        scope.clusterName,
+    );
+    if (failed(cluster)) return cluster;
+    const kubeletObjectId = cluster.result.identityProfile?.kubeletidentity?.objectId;
+    if (!kubeletObjectId) {
+        return {
+            succeeded: false,
+            error: "Cluster has no kubelet identity (service-principal clusters are not supported by this probe).",
+        };
+    }
+    return { succeeded: true, result: kubeletObjectId };
+}
+
+// ---------- Report ----------
+
+function buildReport(scope: DeploymentScope, probes: Probe[]): string {
+    const passCount = probes.filter((p) => p.status === "pass").length;
+    const failCount = probes.filter((p) => p.status === "fail").length;
+    const unknownCount = probes.filter((p) => p.status === "unknown").length;
+
+    const acrLine = scope.acrScopeId
+        ? `**ACR:** \`${scope.acrScopeId}\`\n`
+        : `**ACR:** _(not provided — ACR probes skipped)_\n`;
+    const header =
+        `# AKS deployment permission check\n\n` +
+        `**Cluster:** \`${scope.clusterScopeId}\`\n` +
+        `${acrLine}` +
+        `\n**Summary:** ${passCount} pass · ${failCount} fail · ${unknownCount} unknown\n`;
+
+    const rows = probes.map(renderProbeSection).join("\n");
+    const footer = failCount + unknownCount > 0 ? renderFooter() : "";
+    return `${header}\n${rows}${footer}`;
+}
+
+function renderProbeSection(probe: Probe): string {
+    const icon = probe.status === "pass" ? "✅" : probe.status === "fail" ? "❌" : "⚠️";
+    const lines = [`## ${icon} ${probe.label}\n`, `${probe.reason}\n`];
+
+    if (probe.status !== "pass" && probe.recommendedRoles?.length) {
+        const roles = probe.recommendedRoles.map((r) => `\`${r}\``).join(" or ");
+        lines.push(`**Recommended role(s):** ${roles}\n`);
+    }
+    if (probe.remediation) {
+        lines.push(`**Remediation:**\n\n${probe.remediation}`);
+    }
+    return `${lines.join("\n")}\n`;
+}
+
+function renderFooter(): string {
+    return (
+        `---\n\n` +
+        `_If \`az role assignment create\` returns 403, run the **AKS: Check Role Assignment Permissions** ` +
+        `command (or invoke \`aks.checkRoleAssignmentPermissions\` programmatically) to check for PIM-eligible ` +
+        `roles and generate an admin hand-off block._\n`
+    );
+}
+
+// ---------- Scope picker / arg resolver ----------
+
+async function resolveScopeFromArgs(
+    sessionProvider: ReadyAzureSessionProvider,
+    args: CheckDeploymentPermissionsArgs,
+): Promise<DeploymentScope | { error: string }> {
+    const subs = await getSubscriptions(sessionProvider, SelectionType.AllIfNoFilters);
+    if (failed(subs)) return { error: subs.error };
+    const sub = subs.result.find((s) => s.subscriptionId === args.subscriptionId);
+    if (!sub) return { error: `Subscription '${args.subscriptionId}' is not accessible.` };
+
+    const clusterScopeId = getScopeForCluster(sub.subscriptionId, args.resourceGroup!, args.clusterName!);
+    const acrScopeId = args.acrName ? getScopeForAcr(sub.subscriptionId, args.resourceGroup!, args.acrName) : undefined;
+
+    return {
+        subscriptionId: sub.subscriptionId,
+        subscriptionName: sub.displayName,
+        resourceGroup: args.resourceGroup!,
+        clusterName: args.clusterName!,
+        clusterScopeId,
+        acrName: args.acrName,
+        acrScopeId,
+    };
+}
+
+async function pickScope(sessionProvider: ReadyAzureSessionProvider): Promise<DeploymentScope | undefined> {
+    const subs = await getSubscriptions(sessionProvider, SelectionType.AllIfNoFilters);
+    if (failed(subs)) {
+        vscode.window.showErrorMessage(subs.error);
+        return undefined;
+    }
+    const subPick = await vscode.window.showQuickPick(
+        subs.result.map((s) => ({
+            label: s.displayName,
+            description: s.subscriptionId,
+            subscriptionId: s.subscriptionId,
+            subscriptionName: s.displayName,
+        })),
+        { title: QUICKPICK_TITLE, placeHolder: "Select a subscription" },
+    );
+    if (!subPick) return undefined;
+
+    const rgs = await getResourceGroups(sessionProvider, subPick.subscriptionId);
+    if (failed(rgs)) {
+        vscode.window.showErrorMessage(rgs.error);
+        return undefined;
+    }
+    const rgPick = await vscode.window.showQuickPick(
+        rgs.result.map((rg) => ({ label: rg.name, description: rg.location })),
+        { title: QUICKPICK_TITLE, placeHolder: "Select a resource group" },
+    );
+    if (!rgPick) return undefined;
+
+    const clusters = await getResources(sessionProvider, subPick.subscriptionId, clusterResourceType);
+    if (failed(clusters)) {
+        vscode.window.showErrorMessage(clusters.error);
+        return undefined;
+    }
+    const clustersInRg = clusters.result.filter((c) => c.resourceGroup.toLowerCase() === rgPick.label.toLowerCase());
+    if (clustersInRg.length === 0) {
+        vscode.window.showWarningMessage(`Resource group '${rgPick.label}' has no AKS clusters.`);
+        return undefined;
+    }
+    const clusterPick = await vscode.window.showQuickPick(
+        clustersInRg.map((c) => ({ label: c.name, description: c.location })),
+        { title: QUICKPICK_TITLE, placeHolder: "Select an AKS cluster" },
+    );
+    if (!clusterPick) return undefined;
+
+    const acrs = await getResources(sessionProvider, subPick.subscriptionId, acrResourceType);
+    const acrChoices = failed(acrs)
+        ? []
+        : acrs.result.map((a) => ({ label: a.name, description: `${a.resourceGroup} · ${a.location}`, acr: a }));
+    const acrPick = await vscode.window.showQuickPick(
+        [{ label: "$(circle-slash) Skip ACR checks", description: "" }, ...acrChoices],
+        { title: QUICKPICK_TITLE, placeHolder: "Select an ACR (or skip)" },
+    );
+    if (!acrPick) return undefined;
+
+    const acrName = "acr" in acrPick ? acrPick.acr.name : undefined;
+    const acrResourceGroup = "acr" in acrPick ? acrPick.acr.resourceGroup : undefined;
+
+    return {
+        subscriptionId: subPick.subscriptionId,
+        subscriptionName: subPick.subscriptionName,
+        resourceGroup: rgPick.label,
+        clusterName: clusterPick.label,
+        clusterScopeId: getScopeForCluster(subPick.subscriptionId, rgPick.label, clusterPick.label),
+        acrName,
+        acrScopeId:
+            acrName && acrResourceGroup ? getScopeForAcr(subPick.subscriptionId, acrResourceGroup, acrName) : undefined,
+    };
+}

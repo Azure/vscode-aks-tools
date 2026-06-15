@@ -301,6 +301,16 @@
                 "category": "AKS"
             },
             {
+                "command": "aks.checkRoleAssignmentPermissions",
+                "title": "%Check Role Assignment Permissions%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.checkDeploymentPermissions",
+                "title": "%Check Deployment Permissions%",
+                "category": "AKS"
+            },
+            {
                 "command": "aks.draftWorkflow",
                 "title": "%Create a GitHub Workflow%",
                 "category": "Automated Deployments"
