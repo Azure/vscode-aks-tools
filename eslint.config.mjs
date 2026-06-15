@@ -27,6 +27,7 @@ export default [
             "**/resources",
             "**/webview-ui/",
             "**/*.js",
+            "**/*.mjs",
         ],
     },
     ...compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended"),

@@ -40,7 +40,7 @@ Direct commands `Show In Azure Portal` and `Show Properties` remain available.
 When both feature flags are enabled:
 
 - `aks.simplifiedMenuStructure = true`
-- `aks.containerAssistEnabledPreview = true`
+- `aks.containerAssistEnabledPreview = true` (default in `2.1.0`)
 
 and a workspace folder is open, `AKS: Run Container Assist (Preview)` appears under `Develop & Deploy`.
 

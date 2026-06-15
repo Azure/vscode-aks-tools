@@ -9,7 +9,7 @@
 > **Technology Note**
 > This experience is built on [Azure/containerization-assist](https://github.com/Azure/containerization-assist), which combines AI generation with a specialized containerization toolchain and knowledge/policy guidance for Docker and Kubernetes workflows.
 
-Container Assist is a feature-flagged workflow in the AKS VS Code extension that helps generate deployment assets for AKS directly from your project.
+Container Assist is a preview workflow in the AKS VS Code extension that helps generate deployment assets for AKS directly from your project.
 
 ## Detailed documentation
 
@@ -120,7 +120,9 @@ If your project type is not in the list above, the SDK classifies it as `other` 
 
 ## Feature flag
 
-Enable this preview feature in VS Code settings:
+From `2.1.0`, this preview feature is enabled by default.
+
+You can still explicitly control it in VS Code settings:
 
 ```json
 {
@@ -128,7 +130,7 @@ Enable this preview feature in VS Code settings:
 }
 ```
 
-Default value: `false`
+Default value: `true`
 
 This can also be enabled from the VS Code Settings UI.
 
@@ -143,7 +145,7 @@ Container Assist can be launched from:
 
 The AKS cluster context menu entry is shown when:
 
-- `aks.containerAssistEnabledPreview` is `true`
+- `aks.containerAssistEnabledPreview` is `true` (default in `2.1.0`)
 - At least one workspace folder is open
 
 ## User flow and options
@@ -196,7 +198,7 @@ This supports a full path from local generation to reviewable GitHub PR with min
 ## Configuration reference
 
 `aks.containerAssistEnabledPreview`
-: Enable/disable the Container Assist preview entry points.
+: Enable/disable the Container Assist preview entry points. Default: `true`.
 
 `aks.containerAssist.k8sManifestFolder`
 : Folder name for generated Kubernetes manifests. Default: `k8s`.

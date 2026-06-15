@@ -6,7 +6,6 @@ import "../main.css";
 import { Scenario } from "../utilities/manualTest";
 import { getASOScenarios } from "./asoTests";
 import { getAttachAcrToClusterScenarios } from "./attachAcrToClusterTests";
-import { getAutomatedDeploymentScenarios } from "./automatedDeploymentsTests";
 import { getClusterPropertiesScenarios } from "./clusterPropertiesTests";
 import { getCreateClusterScenarios } from "./createClusterTests";
 import { getDetectorScenarios } from "./detectorTests";
@@ -56,7 +55,6 @@ const contentTestScenarios: Record<ContentId, Scenario[]> = {
     kaitoModels: getKaitoModelScenarios(),
     kaitoManage: getKaitoManageScenarios(),
     kaitoTest: getKaitoTestScenarios(),
-    automatedDeployments: getAutomatedDeploymentScenarios(),
     createFleet: getCreateFleetScenarios(),
     // Hardcoded createFleet: Only to ensure the dependencies are resolved for compilation.
     // TODO: Replace with the actual scenarios when available.

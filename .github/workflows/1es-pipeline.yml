@@ -79,6 +79,9 @@ extends:
               - script: npm run install:all
                 displayName: Install npm for project
 
+              - script: npm run lint:all
+                displayName: Run ESLint
+
               - script: npm run webpack
                 displayName: Run webpack
 
@@ -248,7 +251,7 @@ extends:
               - task: GithubRelease@1
                 displayName: "Create GitHub Release"
                 inputs:
-                  gitHubConnection: Kubernetes (9)
+                  gitHubConnection: AKS-VsCode-Release-GH-SVC
                   repositoryName: Azure/vscode-aks-tools
                   action: create
                   title: ${{ parameters.publishVersion }}
