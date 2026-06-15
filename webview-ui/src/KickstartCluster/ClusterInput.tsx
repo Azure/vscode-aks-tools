@@ -7,7 +7,9 @@ import {
     ActivityFlow,
     ClusterLaunchContext,
     ClusterSelections,
+    DeploymentPermissionsSummary,
     ResourceGroup,
+    RoleSummary,
     Subscription,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
@@ -29,6 +31,10 @@ interface ClusterInputProps {
     scan: ScanResult | null;
     errorMessage: string | null;
     preflightCanProceed: boolean | null;
+    /** RG-scoped verdict from the most recent preflight; takes precedence over `scan.role` for the warning banner. */
+    preflightRole: RoleSummary | null;
+    /** Deployment-permissions verdict (create cluster / create registry) from the most recent preflight. */
+    preflightDeployment: DeploymentPermissionsSummary | null;
     launchContext: ClusterLaunchContext;
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
@@ -261,6 +267,8 @@ export function ClusterInput(props: ClusterInputProps) {
         props.vscode.postRunPreflightRequest({
             subscriptionId: selections.subscriptionId,
             location: selections.location,
+            resourceGroupName: selections.resourceGroupName,
+            isNewResourceGroup: selections.isNewResourceGroup,
         });
     }
 
@@ -281,19 +289,47 @@ export function ClusterInput(props: ClusterInputProps) {
     }
 
     function renderPermissionWarning() {
-        const role = props.scan?.role;
+        // The activity stage row already shows the role verdict (role.detail). This banner only
+        // surfaces actionable extras: PIM grants the caller can activate, or a PIM lookup error
+        // worth flagging. The preflight verdict is scope-accurate (RG or sub-scope) and overrides
+        // the looser pre-submit subscription scan once available.
+        const role = props.preflightRole ?? props.scan?.role;
         if (!role || (role.canAssignRolesKnown && role.canAssignRoles)) {
             return null;
         }
-        const message = role.canAssignRolesKnown
-            ? l10n.t(
-                  "You may not have permission to assign the ACR pull and cluster RBAC roles. An Owner or User Access Administrator may need to complete those assignments.",
-              )
-            : l10n.t("We couldn't verify whether you can assign the ACR pull and cluster RBAC roles.");
+        const pim = role.eligiblePimGrants ?? [];
+        if (pim.length === 0 && !role.pimLookupNote) {
+            return null;
+        }
         return (
             <span className={styles.permissionWarning}>
                 <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
-                {message}
+                {pim.length > 0 ? (
+                    <>
+                        {pim.length === 1 ? l10n.t("Activate PIM role:") : l10n.t("Activate a PIM role:")}{" "}
+                        {pim.map((g, i) => (
+                            <span key={`${g.roleName}-${i}`}>
+                                {i > 0 ? ", " : ""}
+                                <strong>{g.roleName}</strong> ({g.scopeDisplayName})
+                            </span>
+                        ))}
+                        {"."}
+                    </>
+                ) : (
+                    l10n.t("PIM check failed: {0}", role.pimLookupNote ?? "")
+                )}
+            </span>
+        );
+    }
+
+    function renderDeploymentWarning() {
+        const deployment = props.preflightDeployment;
+        if (!deployment) return null;
+        if (deployment.known && deployment.allGranted) return null;
+        return (
+            <span className={styles.permissionWarning}>
+                <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
+                {deployment.detail}
             </span>
         );
     }
@@ -425,6 +461,7 @@ export function ClusterInput(props: ClusterInputProps) {
                         </div>
                     )}
                     {renderPermissionWarning()}
+                    {renderDeploymentWarning()}
                 </>
             )}
 

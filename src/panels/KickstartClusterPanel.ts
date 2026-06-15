@@ -30,6 +30,15 @@ import {
     runSubscriptionScan,
 } from "./kickstartAzureBackend";
 import { attachRegistryToExistingCluster, runClusterProvisioning } from "./kickstartProvision";
+import {
+    checkDeploymentPermissions,
+    type CheckDeploymentPermissionsResult,
+} from "../commands/aksCheckPermissions/checkDeploymentPermissions";
+import { openMarkdownReport } from "../commands/utils/markdownReport";
+import type {
+    PostProvisionPermissionsSummary,
+    PostProvisionProbe,
+} from "../webview-contract/webviewDefinitions/kickstartShared";
 
 export class KickstartClusterPanel extends BasePanel<"kickstartCluster"> {
     constructor(extensionUri: Uri) {
@@ -43,6 +52,7 @@ export class KickstartClusterPanel extends BasePanel<"kickstartCluster"> {
             subscriptionScanComplete: null,
             preflightComplete: null,
             finishComplete: null,
+            postProvisionPermissionsUpdate: null,
             errorNotification: null,
         });
     }
@@ -53,6 +63,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
     private nextRunId = 0;
     private lastProvisioned: ProvisionedClusterInfo | null = null;
     private lastFinish: (() => Promise<void>) | null = null;
+    private lastDeploymentPermissionsReport: string | null = null;
 
     constructor(
         private readonly sessionProvider: ReadyAzureSessionProvider,
@@ -85,6 +96,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             useExistingClusterRequest: true,
             retryProvisioningRequest: true,
             continueInChatRequest: true,
+            openDeploymentPermissionsReportRequest: false,
         };
     }
 
@@ -102,6 +114,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             useExistingClusterRequest: (args) => this.handleUseExistingCluster(webview, args),
             retryProvisioningRequest: () => this.handleRetry(),
             continueInChatRequest: () => this.handleContinueInChat(),
+            openDeploymentPermissionsReportRequest: () => this.handleOpenDeploymentPermissionsReport(),
         };
     }
 
@@ -162,7 +175,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
 
     private async handleRunPreflight(
         webview: MessageSink<ToWebViewMsgDef>,
-        args: { subscriptionId: string; location: string },
+        args: { subscriptionId: string; location: string; resourceGroupName: string; isNewResourceGroup: boolean },
     ) {
         const token = new CancellationToken();
         const runId = this.nextRunId++;
@@ -172,6 +185,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
                 this.sessionProvider,
                 args.subscriptionId,
                 args.location,
+                { name: args.resourceGroupName, isNew: args.isNewResourceGroup },
                 runId,
                 webview,
                 getKickstartOutputChannel(),
@@ -209,6 +223,14 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
                 };
             }
             webview.postFinishComplete(result);
+            if (result.succeeded) {
+                await this.runPostProvisionPermissionsCheck(webview, {
+                    subscriptionId: selections.subscriptionId,
+                    resourceGroup: selections.resourceGroupName,
+                    clusterName: result.clusterName,
+                    acrName: result.acrName,
+                });
+            }
         } catch (e) {
             webview.postErrorNotification({ message: getErrorMessage(e) });
         }
@@ -279,6 +301,14 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
                 };
             }
             webview.postFinishComplete(result);
+            if (result.succeeded) {
+                await this.runPostProvisionPermissionsCheck(webview, {
+                    subscriptionId: selection.subscriptionId,
+                    resourceGroup: selection.clusterResourceGroup,
+                    clusterName: result.clusterName,
+                    acrName: result.acrName,
+                });
+            }
         } catch (e) {
             webview.postErrorNotification({ message: getErrorMessage(e) });
         }
@@ -288,5 +318,60 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
         if (this.lastProvisioned) {
             await handoffClusterToChat(this.lastProvisioned);
         }
+    }
+
+    private async handleOpenDeploymentPermissionsReport() {
+        if (!this.lastDeploymentPermissionsReport) return;
+        await openMarkdownReport(this.lastDeploymentPermissionsReport);
+    }
+
+    private async runPostProvisionPermissionsCheck(
+        webview: MessageSink<ToWebViewMsgDef>,
+        args: { subscriptionId: string; resourceGroup: string; clusterName: string; acrName: string },
+    ): Promise<void> {
+        this.lastDeploymentPermissionsReport = null;
+        webview.postPostProvisionPermissionsUpdate({ status: "running", hasReport: false });
+
+        let result: CheckDeploymentPermissionsResult;
+        try {
+            result = await checkDeploymentPermissions(undefined, {
+                subscriptionId: args.subscriptionId,
+                resourceGroup: args.resourceGroup,
+                clusterName: args.clusterName,
+                acrName: args.acrName,
+                silent: true,
+            });
+        } catch (e) {
+            webview.postPostProvisionPermissionsUpdate({
+                status: "error",
+                hasReport: false,
+                error: getErrorMessage(e),
+            });
+            return;
+        }
+
+        if (result.error || !result.probes) {
+            webview.postPostProvisionPermissionsUpdate({
+                status: "error",
+                hasReport: false,
+                error: result.error ?? "No probes were returned.",
+            });
+            return;
+        }
+
+        this.lastDeploymentPermissionsReport = result.markdown ?? null;
+        const probes: PostProvisionProbe[] = result.probes.map((p) => ({
+            id: p.id,
+            label: p.label,
+            status: p.status,
+            reason: p.reason,
+        }));
+        const summary: PostProvisionPermissionsSummary = {
+            status: "complete",
+            allPassed: result.allPassed ?? false,
+            probes,
+            hasReport: Boolean(this.lastDeploymentPermissionsReport),
+        };
+        webview.postPostProvisionPermissionsUpdate(summary);
     }
 }

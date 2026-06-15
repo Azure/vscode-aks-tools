@@ -1,5 +1,6 @@
 import { OutputChannel } from "vscode";
 import * as l10n from "@vscode/l10n";
+import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAuthorizationManagementClient, getResourceManagementClient, listAll } from "../commands/utils/arm";
 import { getAcrRegistry } from "../commands/utils/acrs";
@@ -23,8 +24,19 @@ import { Errorable, failed, getErrorMessage, success } from "../commands/utils/e
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { getSubscriptions, SelectionType } from "../commands/utils/subscriptions";
 import { getFilteredSubscriptions } from "../commands/utils/config";
-import { UserSubscriptionRoles, getUserSubscriptionRoles } from "../commands/utils/roleAssignments";
 import {
+    UserSubscriptionRoles,
+    canCreateRoleAssignmentsAtResourceGroup,
+    findEligiblePimGrants,
+    findGrantingAction,
+    getEffectivePermissionsAtResourceGroup,
+    getEffectivePermissionsAtSubscription,
+    getUserSubscriptionRoles,
+} from "../commands/utils/roleAssignments";
+import {
+    DeploymentActionResult,
+    DeploymentPermissionsSummary,
+    PimEligibleGrant,
     RegionQuotaResult,
     ResourceGroup,
     RoleSummary,
@@ -238,11 +250,17 @@ export async function runSubscriptionScan(
         const roleResult = await roleStage.run(l10n.t("Reading role assignments"), () =>
             getUserSubscriptionRoles(sessionProvider, subscriptionId),
         );
-        role = summarizeRole(roleResult);
+        role = summarizeSubscriptionRole(roleResult);
     } catch (e) {
         token.throwIfCancelled();
-        role = summarizeRole({ succeeded: false, error: getErrorMessage(e) });
+        role = summarizeSubscriptionRole({ succeeded: false, error: getErrorMessage(e) });
     }
+    role = await enrichRoleSummaryWithPim(
+        role,
+        getAuthorizationManagementClient(sessionProvider, subscriptionId),
+        `/subscriptions/${subscriptionId}`,
+        channel,
+    );
     if (role.canAssignRolesKnown && role.canAssignRoles) {
         roleStage.succeed(role.detail);
     } else {
@@ -288,15 +306,22 @@ export async function runSubscriptionScan(
     return { runId, recommendedRegion, regionResults, role };
 }
 
+export interface PreflightResult {
+    canProceed: boolean;
+    role: RoleSummary;
+    deployment: DeploymentPermissionsSummary;
+}
+
 export async function runPreflightChecks(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     location: string,
+    resourceGroup: { name: string; isNew: boolean },
     runId: number,
     sink: ActivitySink,
     channel: OutputChannel,
     token: CancellationToken,
-): Promise<{ canProceed: boolean }> {
+): Promise<PreflightResult> {
     const reporter = new ActivityReporter("preflight", runId, sink, channel, token);
     let canProceed = true;
 
@@ -344,10 +369,176 @@ export async function runPreflightChecks(
         quotaStage.warn(quotaSummary.detail);
     }
 
-    return { canProceed };
+    const role = await runRoleStage(reporter, sessionProvider, subscriptionId, resourceGroup, channel, token);
+    const deployment = await runDeploymentPermissionsStage(
+        reporter,
+        sessionProvider,
+        subscriptionId,
+        resourceGroup,
+        token,
+    );
+
+    return { canProceed, role, deployment };
 }
 
-function summarizeRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummary {
+async function runRoleStage(
+    reporter: ActivityReporter,
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: { name: string; isNew: boolean },
+    channel: OutputChannel,
+    token: CancellationToken,
+): Promise<RoleSummary> {
+    const stageLabel = resourceGroup.isNew
+        ? l10n.t("Permission to assign roles in subscription")
+        : l10n.t("Permission to assign roles in '{0}'", resourceGroup.name);
+    const stage = reporter.stage("role", stageLabel);
+    const entryLabel = resourceGroup.isNew
+        ? l10n.t("Probing subscription-scope permissions")
+        : l10n.t("Probing resource-group permissions");
+
+    const authClient = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+    let role: RoleSummary;
+    try {
+        if (resourceGroup.isNew) {
+            // New RG inherits sub-scope perms; no listForResourceGroup target yet.
+            const roleResult = await stage.run(entryLabel, () =>
+                getUserSubscriptionRoles(sessionProvider, subscriptionId),
+            );
+            role = summarizeSubscriptionRole(roleResult);
+        } else {
+            const verdict = await stage.run(entryLabel, () =>
+                canCreateRoleAssignmentsAtResourceGroup(authClient, resourceGroup.name),
+            );
+            role = summarizeResourceGroupRole(verdict, resourceGroup.name);
+        }
+    } catch (e) {
+        token.throwIfCancelled();
+        role = summarizeSubscriptionRole({ succeeded: false, error: getErrorMessage(e) });
+    }
+
+    // Only look up PIM when the active verdict won't already let the user assign roles. PIM lookup
+    // is non-fatal: failures are recorded in `pimLookupNote` so the UI can explain why no PIM
+    // grants are listed, but they never block the stage verdict.
+    const pimScope = resourceGroup.isNew
+        ? `/subscriptions/${subscriptionId}`
+        : `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup.name}`;
+    role = await enrichRoleSummaryWithPim(role, authClient, pimScope, channel);
+
+    if (role.canAssignRolesKnown && role.canAssignRoles) {
+        stage.succeed(role.detail);
+    } else {
+        stage.warn(role.detail);
+    }
+    return role;
+}
+
+async function runDeploymentPermissionsStage(
+    reporter: ActivityReporter,
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: { name: string; isNew: boolean },
+    token: CancellationToken,
+): Promise<DeploymentPermissionsSummary> {
+    const stageLabel = resourceGroup.isNew
+        ? l10n.t("Permission to create cluster and registry")
+        : l10n.t("Permission to create cluster and registry in '{0}'", resourceGroup.name);
+    const stage = reporter.stage("deployment", stageLabel);
+    const entryLabel = resourceGroup.isNew
+        ? l10n.t("Probing subscription-scope permissions")
+        : l10n.t("Probing resource-group permissions");
+
+    const probes: { label: string; action: string }[] = [
+        { label: l10n.t("Create AKS cluster"), action: "Microsoft.ContainerService/managedClusters/write" },
+        {
+            label: l10n.t("Create container registry"),
+            action: "Microsoft.ContainerRegistry/registries/write",
+        },
+    ];
+
+    const authClient = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+    try {
+        const permsResult = await stage.run(entryLabel, () =>
+            resourceGroup.isNew
+                ? getEffectivePermissionsAtSubscription(sessionProvider, authClient, subscriptionId)
+                : getEffectivePermissionsAtResourceGroup(authClient, resourceGroup.name),
+        );
+        if (failed(permsResult)) {
+            const summary: DeploymentPermissionsSummary = {
+                known: false,
+                allGranted: false,
+                actions: [],
+                detail: l10n.t("Couldn't read effective permissions: {0}", permsResult.error),
+            };
+            stage.warn(summary.detail);
+            return summary;
+        }
+
+        const actions: DeploymentActionResult[] = probes.map((p) => ({
+            label: p.label,
+            action: p.action,
+            granted: findGrantingAction(permsResult.result, p.action).granted,
+        }));
+        const allGranted = actions.every((a) => a.granted);
+        const missing = actions.filter((a) => !a.granted).map((a) => a.label);
+        const detail = allGranted
+            ? l10n.t("You can create the cluster and registry.")
+            : l10n.t(
+                  "You may not be able to create: {0}. Deployment will fail unless an Owner or Contributor on this scope runs it.",
+                  missing.join(", "),
+              );
+
+        const summary: DeploymentPermissionsSummary = { known: true, allGranted, actions, detail };
+        if (allGranted) {
+            stage.succeed(detail);
+        } else {
+            stage.warn(detail);
+        }
+        return summary;
+    } catch (e) {
+        token.throwIfCancelled();
+        const summary: DeploymentPermissionsSummary = {
+            known: false,
+            allGranted: false,
+            actions: [],
+            detail: l10n.t("Couldn't probe deployment permissions: {0}", getErrorMessage(e)),
+        };
+        stage.warn(summary.detail);
+        return summary;
+    }
+}
+
+async function enrichRoleSummaryWithPim(
+    role: RoleSummary,
+    authClient: AuthorizationManagementClient,
+    pimScope: string,
+    channel: OutputChannel,
+): Promise<RoleSummary> {
+    if (role.canAssignRolesKnown && role.canAssignRoles) {
+        return role;
+    }
+    try {
+        const grantsResult = await findEligiblePimGrants(authClient, pimScope, (msg) => channel.appendLine(msg));
+        if (failed(grantsResult)) {
+            return { ...role, pimLookupNote: grantsResult.error };
+        }
+        if (grantsResult.result.length > 0) {
+            return {
+                ...role,
+                eligiblePimGrants: grantsResult.result.map<PimEligibleGrant>((g) => ({
+                    roleName: g.roleName,
+                    scopeDisplayName: g.scopeDisplayName ?? g.scopeId,
+                })),
+            };
+        }
+        return { ...role, pimLookupNote: "" };
+    } catch (e) {
+        channel.appendLine(`[pim] lookup threw: ${getErrorMessage(e)}`);
+        return { ...role, pimLookupNote: getErrorMessage(e) };
+    }
+}
+
+function summarizeSubscriptionRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummary {
     if (failed(roleResult)) {
         return {
             roleNames: [],
@@ -356,7 +547,6 @@ function summarizeRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummar
             detail: l10n.t("Couldn't read your role assignments: {0}", roleResult.error),
         };
     }
-
     const { roleNames, canAssignRoles } = roleResult.result;
     if (roleNames.length === 0) {
         return {
@@ -369,12 +559,37 @@ function summarizeRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummar
 
     const detail = canAssignRoles
         ? l10n.t("You have: {0}.", roleNames.join(", "))
-        : l10n.t(
-              "You have: {0}. This may not be enough to assign the AcrPull role or set cluster RBAC — an Owner or Role Based Access Control Administrator can do that.",
-              roleNames.join(", "),
-          );
+        : l10n.t("Your role ({0}) can't assign roles in this subscription.", roleNames.join(", "));
 
     return { roleNames, canAssignRoles, canAssignRolesKnown: true, detail };
+}
+
+function summarizeResourceGroupRole(
+    verdict: Errorable<{ canCreate: boolean; grantingActions: string[] }>,
+    resourceGroupName: string,
+): RoleSummary {
+    if (failed(verdict)) {
+        return {
+            roleNames: [],
+            canAssignRoles: false,
+            canAssignRolesKnown: false,
+            detail: l10n.t("Couldn't read effective permissions on '{0}': {1}", resourceGroupName, verdict.error),
+        };
+    }
+    if (verdict.result.canCreate) {
+        return {
+            roleNames: [],
+            canAssignRoles: true,
+            canAssignRolesKnown: true,
+            detail: l10n.t("You can create role assignments in '{0}'.", resourceGroupName),
+        };
+    }
+    return {
+        roleNames: [],
+        canAssignRoles: false,
+        canAssignRolesKnown: true,
+        detail: l10n.t("You can't assign roles in '{0}'.", resourceGroupName),
+    };
 }
 
 function summarizeQuota(

@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import * as l10n from "@vscode/l10n";
-import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
+import {
+    InitialState,
+    PostProvisionPermissionsSummary,
+} from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
 import { ActivityStageList } from "../components/ActivityStageList";
 import { ProgressRing } from "../components/ProgressRing";
 import { useStateManagement } from "../utilities/state";
@@ -8,6 +11,70 @@ import { ClusterInput } from "./ClusterInput";
 import { ExistingClusterInput } from "./ExistingClusterInput";
 import { Stage, stateUpdater, vscode } from "./helpers/state";
 import styles from "./KickstartCluster.module.css";
+
+function renderPostProvisionPermissions(summary: PostProvisionPermissionsSummary | null) {
+    if (!summary) return null;
+
+    if (summary.status === "running") {
+        return (
+            <div className={styles.resultPanel}>
+                <h3>{l10n.t("Verifying deployment permissions")}</h3>
+                <p>
+                    <ProgressRing />{" "}
+                    {l10n.t(
+                        "Checking that you can pull kubeconfig, write Kubernetes resources, push images, run ACR tasks, and that the kubelet can pull from the registry.",
+                    )}
+                </p>
+            </div>
+        );
+    }
+
+    if (summary.status === "error") {
+        return (
+            <div className={styles.resultPanel}>
+                <h3>{l10n.t("Deployment permissions check failed")}</h3>
+                <p>{summary.error ?? l10n.t("Unknown error.")}</p>
+            </div>
+        );
+    }
+
+    const icon = (status: string) => (status === "pass" ? "\u2713" : status === "fail" ? "\u2717" : "?");
+    const headline = summary.allPassed
+        ? l10n.t("All deployment permission checks passed.")
+        : l10n.t("Some deployment permission checks need attention.");
+
+    return (
+        <div className={styles.resultPanel}>
+            <h3>{l10n.t("Deployment permissions")}</h3>
+            <p>{headline}</p>
+            {summary.probes && summary.probes.length > 0 && (
+                <ul>
+                    {summary.probes.map((p) => (
+                        <li key={p.id}>
+                            <strong>
+                                {icon(p.status)} {p.label}
+                            </strong>
+                            {p.reason ? ` — ${p.reason}` : null}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {summary.hasReport && (
+                <p>
+                    <a
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            vscode.postOpenDeploymentPermissionsReportRequest();
+                        }}
+                    >
+                        {l10n.t("Open full report")}
+                    </a>
+                </p>
+            )}
+        </div>
+    );
+}
 
 export function KickstartCluster(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
@@ -42,6 +109,7 @@ export function KickstartCluster(initialState: InitialState) {
                             </p>
                         )}
                     </div>
+                    {renderPostProvisionPermissions(state.postProvisionPermissions)}
                     <div className={styles.buttonContainer}>
                         <button onClick={() => vscode.postContinueInChatRequest()}>{l10n.t("Continue in chat")}</button>
                     </div>
@@ -116,6 +184,8 @@ export function KickstartCluster(initialState: InitialState) {
                                 scan={state.scan}
                                 errorMessage={state.errorMessage}
                                 preflightCanProceed={state.preflightCanProceed}
+                                preflightRole={state.preflightRole}
+                                preflightDeployment={state.preflightDeployment}
                                 launchContext={state.launchContext}
                                 eventHandlers={eventHandlers}
                                 vscode={vscode}

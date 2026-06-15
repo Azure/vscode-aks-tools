@@ -1,5 +1,13 @@
 import { WebviewDefinition } from "../webviewTypes";
-import type { Subscription, ResourceGroup, ActivitySnapshot, RegionQuotaResult, RoleSummary } from "./kickstartShared";
+import type {
+    Subscription,
+    ResourceGroup,
+    ActivitySnapshot,
+    RegionQuotaResult,
+    RoleSummary,
+    DeploymentPermissionsSummary,
+    PostProvisionPermissionsSummary,
+} from "./kickstartShared";
 
 export type {
     Subscription,
@@ -12,6 +20,12 @@ export type {
     ActivitySnapshot,
     RegionQuotaResult,
     RoleSummary,
+    PimEligibleGrant,
+    DeploymentPermissionsSummary,
+    DeploymentActionResult,
+    PostProvisionPermissionsSummary,
+    PostProvisionProbe,
+    PostProvisionProbeStatus,
 } from "./kickstartShared";
 
 export interface ClusterLaunchContext {
@@ -66,10 +80,16 @@ export type ToVsCodeMsgDef = {
     getResourceGroupsRequest: { subscriptionId: string };
     startSubscriptionScanRequest: { subscriptionId: string };
     cancelSubscriptionScanRequest: void;
-    runPreflightRequest: { subscriptionId: string; location: string };
+    runPreflightRequest: {
+        subscriptionId: string;
+        location: string;
+        resourceGroupName: string;
+        isNewResourceGroup: boolean;
+    };
     finishRequest: ClusterSelections;
     retryProvisioningRequest: void;
     continueInChatRequest: void;
+    openDeploymentPermissionsReportRequest: void;
     getClustersRequest: { subscriptionId: string };
     detectClusterAcrsRequest: { subscriptionId: string; clusterResourceGroup: string; clusterName: string };
     useExistingClusterRequest: ExistingClusterSelection;
@@ -86,7 +106,7 @@ export type ToWebViewMsgDef = {
         regionResults: RegionQuotaResult[];
         role: RoleSummary;
     };
-    preflightComplete: { canProceed: boolean };
+    preflightComplete: { canProceed: boolean; role: RoleSummary; deployment: DeploymentPermissionsSummary };
     finishComplete: {
         succeeded: boolean;
         clusterName: string;
@@ -94,6 +114,7 @@ export type ToWebViewMsgDef = {
         acrName: string;
         acrLoginServer: string | null;
     };
+    postProvisionPermissionsUpdate: PostProvisionPermissionsSummary;
     getClustersResponse: { subscriptionId: string; clusters: ExistingCluster[] };
     detectClusterAcrsResponse: {
         subscriptionId: string;
