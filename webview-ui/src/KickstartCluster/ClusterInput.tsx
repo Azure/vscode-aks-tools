@@ -31,7 +31,7 @@ interface ClusterInputProps {
     scan: ScanResult | null;
     errorMessage: string | null;
     preflightCanProceed: boolean | null;
-    /** RG-scoped verdict from the most recent preflight; takes precedence over `scan.role` for the warning banner. */
+    /** RG-scoped verdict from the most recent preflight; drives the permission warning banner. */
     preflightRole: RoleSummary | null;
     /** Deployment-permissions verdict (create cluster / create registry) from the most recent preflight. */
     preflightDeployment: DeploymentPermissionsSummary | null;
@@ -129,6 +129,12 @@ export function ClusterInput(props: ClusterInputProps) {
         props.subscriptions.find((s) => s.id === props.selectedSubscriptionId)?.name ?? null;
     const currentLocation = isValueSet(location) ? location.value : "";
     const subscriptionScanStages = props.activity.subscriptionScan?.stages ?? [];
+    const activeRole = props.preflightRole;
+    const roleHasWarning =
+        !!props.preflightRole && !(props.preflightRole.canAssignRolesKnown && props.preflightRole.canAssignRoles);
+    const deploymentHasWarning =
+        !!props.preflightDeployment && !(props.preflightDeployment.known && props.preflightDeployment.allGranted);
+    const preflightHasWarning = roleHasWarning || deploymentHasWarning;
 
     useEffect(() => {
         if (props.selectedSubscriptionId) {
@@ -192,11 +198,11 @@ export function ClusterInput(props: ClusterInputProps) {
     }, [newResourceGroupName, isNewResourceGroup, uniqueSuffix, appName]);
 
     useEffect(() => {
-        if (phase === "preflight" && props.preflightCanProceed === true && pendingSelections) {
+        if (phase === "preflight" && props.preflightCanProceed === true && !preflightHasWarning && pendingSelections) {
             props.vscode.postFinishRequest(pendingSelections);
             props.eventHandlers.onSetProvisioning();
         }
-    }, [phase, props.preflightCanProceed, pendingSelections, props.vscode, props.eventHandlers]);
+    }, [phase, props.preflightCanProceed, preflightHasWarning, pendingSelections, props.vscode, props.eventHandlers]);
 
     function handleSubscriptionSelect(value: string | null) {
         const subscription = props.subscriptions.find((s) => s.name === value);
@@ -289,35 +295,49 @@ export function ClusterInput(props: ClusterInputProps) {
     }
 
     function renderPermissionWarning() {
-        // The activity stage row already shows the role verdict (role.detail). This banner only
-        // surfaces actionable extras: PIM grants the caller can activate, or a PIM lookup error
-        // worth flagging. The preflight verdict is scope-accurate (RG or sub-scope) and overrides
-        // the looser pre-submit subscription scan once available.
-        const role = props.preflightRole ?? props.scan?.role;
+        // Single source of truth for the role-write verdict when the user can't assign roles:
+        // shows the verdict text, lists any PIM grants they can activate to fix it, and warns
+        // about downstream features that need Cluster Admin RBAC.
+        const role = activeRole;
         if (!role || (role.canAssignRolesKnown && role.canAssignRoles)) {
             return null;
         }
         const pim = role.eligiblePimGrants ?? [];
-        if (pim.length === 0 && !role.pimLookupNote) {
-            return null;
-        }
         return (
             <span className={styles.permissionWarning}>
                 <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
-                {pim.length > 0 ? (
-                    <>
-                        {pim.length === 1 ? l10n.t("Activate PIM role:") : l10n.t("Activate a PIM role:")}{" "}
-                        {pim.map((g, i) => (
-                            <span key={`${g.roleName}-${i}`}>
-                                {i > 0 ? ", " : ""}
-                                <strong>{g.roleName}</strong> ({g.scopeDisplayName})
+                <span className={styles.permissionWarningBody}>
+                    <span>
+                        {l10n.t(
+                            "After the cluster is created, kubectl admin commands won't work for you until an Owner or Role Based Access Control Administrator grants you the Azure Kubernetes Service RBAC Cluster Admin role on the cluster.",
+                        )}
+                    </span>
+                    {pim.length > 0 && (
+                        <>
+                            <span>
+                                {pim.length === 1
+                                    ? l10n.t(
+                                          "To fix this yourself, activate this eligible role in PIM and re-run the check:",
+                                      )
+                                    : l10n.t(
+                                          "To fix this yourself, activate one of these eligible roles in PIM and re-run the check:",
+                                      )}
                             </span>
-                        ))}
-                        {"."}
-                    </>
-                ) : (
-                    l10n.t("PIM check failed: {0}", role.pimLookupNote ?? "")
-                )}
+                            <ul className={styles.pimList}>
+                                {pim.map((g, i) => (
+                                    <li key={`${g.roleName}-${i}`}>
+                                        <strong>{g.roleName}</strong>
+                                        {" \u2014 "}
+                                        {g.scopeDisplayName}
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
+                    {pim.length === 0 && role.pimLookupNote && (
+                        <span>{l10n.t("PIM check failed: {0}", role.pimLookupNote)}</span>
+                    )}
+                </span>
             </span>
         );
     }
@@ -418,12 +438,26 @@ export function ClusterInput(props: ClusterInputProps) {
     }
 
     if (phase === "preflight") {
+        const warningContent =
+            preflightHasWarning && props.preflightCanProceed !== null ? (
+                <>
+                    {renderPermissionWarning()}
+                    {renderDeploymentWarning()}
+                </>
+            ) : undefined;
         return (
             <PreflightChecklist
                 stages={props.activity.preflight?.stages ?? []}
                 canProceed={props.preflightCanProceed}
                 onBack={() => setPhase("form")}
                 onRetry={handleRetry}
+                warningContent={warningContent}
+                onConfirm={() => {
+                    if (pendingSelections) {
+                        props.vscode.postFinishRequest(pendingSelections);
+                        props.eventHandlers.onSetProvisioning();
+                    }
+                }}
             />
         );
     }

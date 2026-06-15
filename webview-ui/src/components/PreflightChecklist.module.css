@@ -9,3 +9,10 @@
     background: var(--vscode-button-secondaryBackground);
     color: var(--vscode-button-secondaryForeground);
 }
+
+.warningContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.5rem;
+}
