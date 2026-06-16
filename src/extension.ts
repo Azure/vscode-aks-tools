@@ -13,6 +13,8 @@ import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSe
 import { registerUriHandler } from "./uriHandler";
 import { selectSubscriptions, selectTenant, signInToAzure } from "./commands/aksAccount/aksAccount";
 import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrToCluster";
+import { checkRoleAssignmentPermissions } from "./commands/aksCheckPermissions/checkRoleAssignmentPermissions";
+import { checkDeploymentPermissions } from "./commands/aksCheckPermissions/checkDeploymentPermissions";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
 import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
@@ -138,6 +140,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksBestPracticesDiagnostics", aksBestPracticesDiagnostics);
         registerCommandWithTelemetry("aks.aksIdentitySecurityDiagnostics", aksIdentitySecurityDiagnostics);
         registerCommandWithTelemetry("aks.attachAcrToCluster", attachAcrToCluster);
+        registerCommandWithTelemetry("aks.checkRoleAssignmentPermissions", checkRoleAssignmentPermissions);
+        registerCommandWithTelemetry("aks.checkDeploymentPermissions", checkDeploymentPermissions);
         registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
         registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);
         registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);

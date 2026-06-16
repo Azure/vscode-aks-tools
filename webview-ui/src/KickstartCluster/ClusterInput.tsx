@@ -7,7 +7,9 @@ import {
     ActivityFlow,
     ClusterLaunchContext,
     ClusterSelections,
+    DeploymentPermissionsSummary,
     ResourceGroup,
+    RoleSummary,
     Subscription,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
@@ -16,9 +18,10 @@ import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
 import styles from "./KickstartCluster.module.css";
-import { PreflightChecklist } from "../components/PreflightChecklist";
 import { ActivityStageList, statusClass, statusIcon } from "../components/ActivityStageList";
 import { EventDef, FlowActivity, ScanResult } from "./helpers/state";
+
+const PIM_PORTAL_URL = "https://ms.portal.azure.com/#view/Microsoft_Azure_PIMCommon/ActivationMenuBlade/~/azurerbac";
 
 interface ClusterInputProps {
     subscriptions: Subscription[];
@@ -29,6 +32,12 @@ interface ClusterInputProps {
     scan: ScanResult | null;
     errorMessage: string | null;
     preflightCanProceed: boolean | null;
+    /** RG-scoped verdict from the most recent preflight; drives the permission warning banner. */
+    preflightRole: RoleSummary | null;
+    /** Deployment-permissions verdict (create cluster / create registry) from the most recent preflight. */
+    preflightDeployment: DeploymentPermissionsSummary | null;
+    /** Incremented each time the user clicks "Re-check permissions"; causes preflight to re-fire. */
+    preflightGeneration: number;
     launchContext: ClusterLaunchContext;
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
@@ -109,8 +118,7 @@ export function ClusterInput(props: ClusterInputProps) {
     );
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [showAllQuestions, setShowAllQuestions] = useState(false);
-    const [phase, setPhase] = useState<"form" | "preflight">("form");
-    const [pendingSelections, setPendingSelections] = useState<ClusterSelections | null>(null);
+    const lastPreflightKeyRef = useRef<string | null>(null);
     const autoSelectedScanRef = useRef<number | null>(null);
     const [uniqueSuffix] = useState(() => randomSuffix(4));
     const rgEditedRef = useRef(false);
@@ -123,6 +131,23 @@ export function ClusterInput(props: ClusterInputProps) {
         props.subscriptions.find((s) => s.id === props.selectedSubscriptionId)?.name ?? null;
     const currentLocation = isValueSet(location) ? location.value : "";
     const subscriptionScanStages = props.activity.subscriptionScan?.stages ?? [];
+    const providerScanStages = subscriptionScanStages.filter((s) => s.stage === "providers");
+    const regionScanStages = subscriptionScanStages.filter((s) => s.stage !== "providers");
+    const preflightStages = props.activity.preflight?.stages ?? [];
+    const preflightHasFailure = preflightStages.some((s) => s.status === "failed");
+    const preflightRunning = preflightStages.length > 0 && props.preflightCanProceed === null;
+    const preflightAttempted = preflightStages.length > 0 || props.preflightCanProceed !== null;
+    const activeRole = props.preflightRole;
+    const roleHasWarning =
+        !!props.preflightRole && !(props.preflightRole.canAssignRolesKnown && props.preflightRole.canAssignRoles);
+    // Only role-assignment write warnings require explicit acknowledgment via the Continue action.
+    const requiresExplicitContinue = roleHasWarning && !preflightRunning;
+    const preflightLocationValue = isValueSet(location) ? location.value : "";
+    const preflightResourceGroupName = isNewResourceGroup
+        ? isValid(newResourceGroupName)
+            ? newResourceGroupName.value
+            : ""
+        : existingResourceGroup;
 
     useEffect(() => {
         if (props.selectedSubscriptionId) {
@@ -185,12 +210,45 @@ export function ClusterInput(props: ClusterInputProps) {
         return () => window.clearTimeout(timer);
     }, [newResourceGroupName, isNewResourceGroup, uniqueSuffix, appName]);
 
+    // Auto-run preflight in the background whenever the user has supplied enough to probe
+    // (subscription + location + resource group). Re-runs when any of those change. The verdict
+    // gates the submit button without forcing a separate validation pane. Cluster + ACR names
+    // aren't part of the probe inputs, so we trigger independently of full-form validation.
     useEffect(() => {
-        if (phase === "preflight" && props.preflightCanProceed === true && pendingSelections) {
-            props.vscode.postFinishRequest(pendingSelections);
-            props.eventHandlers.onSetProvisioning();
+        if (!props.selectedSubscriptionId) {
+            lastPreflightKeyRef.current = null;
+            return;
         }
-    }, [phase, props.preflightCanProceed, pendingSelections, props.vscode, props.eventHandlers]);
+        if (!isValid(location)) {
+            lastPreflightKeyRef.current = null;
+            return;
+        }
+        const resourceGroupName = preflightResourceGroupName;
+        if (!resourceGroupName) {
+            lastPreflightKeyRef.current = null;
+            return;
+        }
+        const key = `${props.selectedSubscriptionId}|${preflightLocationValue}|${resourceGroupName}|${isNewResourceGroup}|${props.preflightGeneration}`;
+        if (lastPreflightKeyRef.current === key) return;
+        lastPreflightKeyRef.current = key;
+        const timer = window.setTimeout(() => {
+            props.eventHandlers.onResetPreflight();
+            props.vscode.postRunPreflightRequest({
+                subscriptionId: props.selectedSubscriptionId!,
+                location: preflightLocationValue,
+                resourceGroupName,
+                isNewResourceGroup,
+            });
+        }, 350);
+        return () => window.clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        props.selectedSubscriptionId,
+        preflightLocationValue,
+        isNewResourceGroup,
+        preflightResourceGroupName,
+        props.preflightGeneration,
+    ]);
 
     function handleSubscriptionSelect(value: string | null) {
         const subscription = props.subscriptions.find((s) => s.name === value);
@@ -213,6 +271,13 @@ export function ClusterInput(props: ClusterInputProps) {
 
     function isVisible(question: QuestionId): boolean {
         if (showAllQuestions) return true;
+
+        // Cluster and ACR inputs should appear together once RG is resolved.
+        // ACR should not wait for cluster-name validation.
+        if (question === "clusterName" || question === "acrName") {
+            return resolved.subscription && resolved.region && resolved.resourceGroup;
+        }
+
         const index = QUESTION_ORDER.indexOf(question);
         return QUESTION_ORDER.slice(0, index).every((earlier) => resolved[earlier]);
     }
@@ -246,28 +311,43 @@ export function ClusterInput(props: ClusterInputProps) {
         });
     }
 
+    function submitSelections() {
+        const parameters = validate();
+        if (isNothing(parameters)) return;
+        if (preflightRunning) return;
+        if (preflightHasFailure) return;
+        props.vscode.postFinishRequest(parameters.value);
+        props.eventHandlers.onSetProvisioning();
+    }
+
+    function markRequiredFieldErrors() {
+        if (!isValueSet(clusterName)) {
+            setClusterName(getValidatedClusterName(""));
+        }
+        if (!isValueSet(acrName)) {
+            setAcrName(getValidatedAcrName(""));
+        }
+    }
+
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
         setSubmitAttempted(true);
-        const parameters = validate();
-        if (isNothing(parameters)) return;
-        startPreflight(parameters.value);
+        markRequiredFieldErrors();
+        if (requiresExplicitContinue) return;
+        submitSelections();
     }
 
-    function startPreflight(selections: ClusterSelections) {
-        setPendingSelections(selections);
-        setPhase("preflight");
-        props.eventHandlers.onResetPreflight();
-        props.vscode.postRunPreflightRequest({
-            subscriptionId: selections.subscriptionId,
-            location: selections.location,
-        });
-    }
+    function handleContinueAnyway() {
+        setSubmitAttempted(true);
+        setShowAllQuestions(true);
+        markRequiredFieldErrors();
+        if (preflightRunning) return;
+        if (!roleHasWarning) return;
+        if (preflightHasFailure) return;
 
-    function handleRetry() {
-        if (pendingSelections) {
-            startPreflight(pendingSelections);
-        }
+        // Continue uses the same field validation as normal submit. Missing cluster/ACR names
+        // must be fixed by the user instead of being auto-derived here.
+        submitSelections();
     }
 
     function renderValidationMessage(field: Validatable<unknown>) {
@@ -280,20 +360,199 @@ export function ClusterInput(props: ClusterInputProps) {
         );
     }
 
+    function renderRecheckButton() {
+        return (
+            <span className={styles.recheckRow}>
+                <button
+                    type="button"
+                    className={styles.recheckButton}
+                    onClick={() => props.eventHandlers.onRecheckPermissions()}
+                >
+                    {l10n.t("Re-check permissions")}
+                </button>
+                <span className={styles.recheckHint}>
+                    {l10n.t("Activate a PIM role first, then click to re-check.")}
+                </span>
+            </span>
+        );
+    }
+
+    function getPermissionActionUrl(): string {
+        return activeRole?.actionBanner?.actionUrl ?? PIM_PORTAL_URL;
+    }
+
+    function getRoleSpecificBestPathHint(): string {
+        const pim = activeRole?.eligiblePimGrants ?? [];
+        if (pim.length === 0) {
+            return l10n.t(
+                "No PIM-eligible role that grants role-assignment write was found. Ask an Owner or User Access Administrator to grant access, or continue with limited capability.",
+            );
+        }
+
+        const uniqueRoleNames = Array.from(new Set(pim.map((g) => g.roleName))).filter((n) => !!n);
+        if (uniqueRoleNames.length === 1) {
+            return l10n.t(
+                "Best path: activate the PIM role '{0}', then re-check. You can still continue with limited capability.",
+                uniqueRoleNames[0],
+            );
+        }
+
+        return l10n.t(
+            "Best path: activate one of these PIM roles ({0}), then re-check. You can still continue with limited capability.",
+            uniqueRoleNames.join(", "),
+        );
+    }
+
+    function renderBottomWarningPanel() {
+        if (!requiresExplicitContinue) return null;
+
+        const permissionActionUrl = getPermissionActionUrl();
+
+        return (
+            <div className={`${styles.footerWarningPanel} ${styles.fullWidth}`}>
+                <span className={styles.footerWarningMessage}>
+                    <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
+                    <span>
+                        {l10n.t(
+                            "Role assignment warning: you may not have sufficient permission to grant AKS cluster-admin access to yourself after cluster creation.",
+                        )}
+                    </span>
+                </span>
+                <span className={styles.footerWarningHint}>{getRoleSpecificBestPathHint()}</span>
+                <div className={styles.footerWarningActions}>
+                    <a className={styles.footerActionLink} href={permissionActionUrl} target="_blank" rel="noreferrer">
+                        {l10n.t("Activate PIM role")}
+                    </a>
+                    <button
+                        type="button"
+                        className={`${styles.recheckButton} ${styles.footerActionButton}`}
+                        onClick={() => props.eventHandlers.onRecheckPermissions()}
+                    >
+                        {l10n.t("Re-check access")}
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.secondaryButton} ${styles.footerActionButton}`}
+                        onClick={handleContinueAnyway}
+                        disabled={preflightRunning || preflightHasFailure}
+                        title={
+                            preflightRunning
+                                ? l10n.t("Running pre-flight checks...")
+                                : preflightHasFailure
+                                  ? l10n.t("Fix failed pre-flight checks before continuing.")
+                                  : undefined
+                        }
+                    >
+                        {l10n.t("Continue without role-assignment write permission")}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     function renderPermissionWarning() {
-        const role = props.scan?.role;
+        // Single source of truth for the role-write verdict when the user can't assign roles:
+        // explains the impact, lists PIM-eligible roles the user can activate, and links to the
+        // PIM portal so the fix is one click away.
+        const role = activeRole;
         if (!role || (role.canAssignRolesKnown && role.canAssignRoles)) {
             return null;
         }
-        const message = role.canAssignRolesKnown
-            ? l10n.t(
-                  "You may not have permission to assign the ACR pull and cluster RBAC roles. An Owner or User Access Administrator may need to complete those assignments.",
-              )
-            : l10n.t("We couldn't verify whether you can assign the ACR pull and cluster RBAC roles.");
+
+        // If action banner exists (no PIM roles available), show prominent warning with clear actions
+        if (role.actionBanner) {
+            return (
+                <span className={styles.permissionWarning}>
+                    <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
+                    <span className={styles.permissionWarningBody}>
+                        <strong>{role.actionBanner.message}</strong>
+                        {role.actionBanner.nextSteps && role.actionBanner.nextSteps.length > 0 && (
+                            <>
+                                <span>{l10n.t("Next steps:")}</span>
+                                <ol className={styles.pimList}>
+                                    {role.actionBanner.nextSteps.map((step, i) => (
+                                        <li key={i}>{step}</li>
+                                    ))}
+                                </ol>
+                            </>
+                        )}
+                        {role.actionBanner.actionUrl && (
+                            <a href={role.actionBanner.actionUrl} target="_blank" rel="noreferrer">
+                                {role.actionBanner.actionText}
+                            </a>
+                        )}
+                        {renderRecheckButton()}
+                    </span>
+                </span>
+            );
+        }
+
+        const pim = role.eligiblePimGrants ?? [];
         return (
             <span className={styles.permissionWarning}>
                 <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
-                {message}
+                <span className={styles.permissionWarningBody}>
+                    <span>
+                        {l10n.t(
+                            'You don\'t have permission to grant yourself cluster-admin access on the new cluster. After the cluster is created, kubectl admin commands (apply, get, exec, logs, etc.) will fail until an Owner or Role Based Access Control Administrator grants you the "Azure Kubernetes Service RBAC Cluster Admin" role on the cluster.',
+                        )}
+                    </span>
+                    {pim.length > 0 && (
+                        <>
+                            <span>
+                                {pim.length === 1
+                                    ? l10n.t(
+                                          "You can fix this yourself: open Privileged Identity Management (PIM), activate the eligible role below, then click Re-check.",
+                                      )
+                                    : l10n.t(
+                                          "You can fix this yourself: open Privileged Identity Management (PIM), activate one of the eligible roles below, then click Re-check.",
+                                      )}
+                            </span>
+                            <ul className={styles.pimList}>
+                                {pim.map((g, i) => (
+                                    <li key={`${g.roleName}-${i}`}>
+                                        <strong>{g.roleName}</strong>
+                                        {" \u2014 "}
+                                        {g.scopeDisplayName}
+                                    </li>
+                                ))}
+                            </ul>
+                            <a href={PIM_PORTAL_URL} target="_blank" rel="noreferrer">
+                                {l10n.t("Open PIM \u2192 My roles in the Azure portal")}
+                            </a>
+                        </>
+                    )}
+                    {pim.length === 0 && (
+                        <>
+                            <span>
+                                {role.pimLookupNote
+                                    ? l10n.t(
+                                          "We couldn't list PIM-eligible roles ({0}). If you have any eligible Owner / Contributor / Role Based Access Control Administrator assignments, activate one in PIM and continue.",
+                                          role.pimLookupNote,
+                                      )
+                                    : l10n.t(
+                                          "If you have any eligible Owner / Contributor / Role Based Access Control Administrator assignments in Privileged Identity Management (PIM), activate one and continue \u2014 then click Re-check.",
+                                      )}
+                            </span>
+                            <a href={PIM_PORTAL_URL} target="_blank" rel="noreferrer">
+                                {l10n.t("Open PIM \u2192 My roles in the Azure portal")}
+                            </a>
+                        </>
+                    )}
+                    {renderRecheckButton()}
+                </span>
+            </span>
+        );
+    }
+
+    function renderDeploymentWarning() {
+        const deployment = props.preflightDeployment;
+        if (!deployment) return null;
+        if (deployment.known && deployment.allGranted) return null;
+        return (
+            <span className={styles.permissionWarning}>
+                <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
+                {deployment.detail}
             </span>
         );
     }
@@ -381,17 +640,6 @@ export function ClusterInput(props: ClusterInputProps) {
         );
     }
 
-    if (phase === "preflight") {
-        return (
-            <PreflightChecklist
-                stages={props.activity.preflight?.stages ?? []}
-                canProceed={props.preflightCanProceed}
-                onBack={() => setPhase("form")}
-                onRetry={handleRetry}
-            />
-        );
-    }
-
     return (
         <form className={styles.inputContainer} onSubmit={handleSubmit}>
             <label htmlFor="app-name-input" className={styles.label}>
@@ -419,12 +667,13 @@ export function ClusterInput(props: ClusterInputProps) {
                         allowAddItem={false}
                         onSelect={handleSubscriptionSelect}
                     />
-                    {subscriptionScanStages.length > 0 && (
+                    {renderPermissionWarning()}
+                    {renderDeploymentWarning()}
+                    {providerScanStages.length > 0 && (
                         <div className={styles.activityContainer}>
-                            <ActivityStageList stages={subscriptionScanStages} />
+                            <ActivityStageList stages={providerScanStages} />
                         </div>
                     )}
-                    {renderPermissionWarning()}
                 </>
             )}
 
@@ -435,6 +684,11 @@ export function ClusterInput(props: ClusterInputProps) {
                     </label>
                     {renderRegionControl()}
                     {renderRegionChips()}
+                    {regionScanStages.length > 0 && (
+                        <div className={styles.activityContainer}>
+                            <ActivityStageList stages={regionScanStages} />
+                        </div>
+                    )}
                     {renderValidationMessage(location)}
                 </>
             )}
@@ -520,8 +774,30 @@ export function ClusterInput(props: ClusterInputProps) {
                 </span>
             )}
 
+            {preflightAttempted && (
+                <div className={`${styles.activityContainer} ${styles.fullWidth}`}>
+                    <ActivityStageList stages={preflightStages} />
+                </div>
+            )}
+
+            {renderBottomWarningPanel()}
+
             <div className={`${styles.buttonContainer} ${styles.fullWidth}`}>
-                <button type="submit">{l10n.t("Continue")}</button>
+                <button
+                    type="submit"
+                    disabled={preflightRunning || preflightHasFailure || requiresExplicitContinue}
+                    title={
+                        preflightRunning
+                            ? l10n.t("Running pre-flight checks...")
+                            : preflightHasFailure
+                              ? l10n.t("Fix the failed check before continuing.")
+                              : requiresExplicitContinue
+                                ? l10n.t("Resolve warning or choose Continue without role-assignment write permission.")
+                                : undefined
+                    }
+                >
+                    {preflightRunning ? l10n.t("Checking...") : l10n.t("Create cluster")}
+                </button>
                 <label className={styles.showAllToggle}>
                     <input
                         type="checkbox"
