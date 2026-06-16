@@ -116,6 +116,9 @@ export function KickstartCluster(initialState: InitialState) {
                                 scan={state.scan}
                                 errorMessage={state.errorMessage}
                                 preflightCanProceed={state.preflightCanProceed}
+                                preflightRole={state.preflightRole}
+                                preflightDeployment={state.preflightDeployment}
+                                preflightGeneration={state.preflightGeneration}
                                 launchContext={state.launchContext}
                                 eventHandlers={eventHandlers}
                                 vscode={vscode}

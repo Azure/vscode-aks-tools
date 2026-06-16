@@ -91,7 +91,7 @@ Follow `/kickstart-generate`. Produce Dockerfile, K8s manifests (`k8s/`), Bicep 
 Follow `/kickstart-review`. Run `/kickstart-safeguard-checklist` validation. Present pass/fail/warn checklist. Fix failures before proceeding. Run `/kickstart-cluster-status` before transitioning.
 
 ### 6 — Pre-Deploy Check
-Follow `/kickstart-handoff` — it carries the full strict-order playbook: cluster readiness (6a), metadata detection (6b), ACR attachment verification (6c — idempotent; the registry is usually already attached during cluster setup), kubelogin (6d), control-plane and data-plane RBAC probes with self-remediation (6e–6f), and the ACR push pre-check (6g). Escalate through `/kickstart-pim-activation` whenever a role assignment returns 403. Confirm readiness with the user via `vscode_askQuestions` before deploying.
+Follow `/kickstart-handoff` — it carries the full strict-order playbook: cluster readiness (6a), metadata detection (6b), ACR attachment verification (6c — idempotent; the registry is usually already attached during cluster setup), kubelogin (6d), and the consolidated permission probes (6e–6g) via the bundled `aks.checkDeploymentPermissions` command. Escalate through `/kickstart-pim-activation` whenever a role assignment returns 403. Confirm readiness with the user via `vscode_askQuestions` before deploying.
 
 ### 7 — Deploy
 Follow `/kickstart-deploy` — build & push to ACR, get credentials, apply manifests, and verify, executed step by step via `run_in_terminal` with confirmation between each and error classification on failure.

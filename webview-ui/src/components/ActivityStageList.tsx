@@ -74,7 +74,18 @@ export function ActivityStageList({ stages }: { stages: ActivitySnapshot[] }) {
                                             icon={entryStatusIcon[entry.status]}
                                             spin={entry.status === "running"}
                                         />
-                                        <span className={styles.activityAction}>{entry.action}</span>
+                                        {entry.url ? (
+                                            <a
+                                                className={styles.activityAction}
+                                                href={entry.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                {entry.action}
+                                            </a>
+                                        ) : (
+                                            <span className={styles.activityAction}>{entry.action}</span>
+                                        )}
                                         {entry.detail && (
                                             <span className={styles.activityEntryDetail}>{entry.detail}</span>
                                         )}

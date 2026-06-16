@@ -19,6 +19,7 @@ export type ClusterSpec = {
     kubernetesVersion: string;
     username: string;
     servicePrincipalId: string;
+    assignClusterAdminRole?: boolean;
 };
 
 type TemplateContent = Record<string, unknown>;
@@ -77,6 +78,9 @@ export class ClusterDeploymentBuilder {
             },
             userPrincipalId: {
                 value: clusterSpec.servicePrincipalId,
+            },
+            assignClusterAdminRole: {
+                value: clusterSpec.assignClusterAdminRole ?? true,
             },
         };
 

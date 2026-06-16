@@ -54,37 +54,56 @@ which kubelogin
 If missing: `az aks install-cli`. If that fails: `brew install Azure/kubelogin/kubelogin` or https://github.com/Azure/kubelogin/releases.
 **Never use `az aks get-credentials --admin`** (will fail). **Never suggest `az aks command invoke`** (same user identity, same Forbidden error).
 
-## 6e. Control-Plane Probe
+## 6e–6g. Permission Probes (preferred — single call)
 
+Invoke the bundled VS Code command **`aks.checkDeploymentPermissions`** via `vscode/runCommand`. It runs all five remaining permission gates against the Azure ARM API (no `kubectl` / `az acr build` round-trip) and returns a self-contained markdown report you can render directly in chat.
+
+**Args:**
+```json
+{
+  "subscriptionId": "<sub>",
+  "resourceGroup": "<rg>",
+  "clusterName": "<cluster>",
+  "acrName": "<acr>"
+}
+```
+
+**Returns:**
+```ts
+{
+  cancelled: boolean,
+  allPassed?: boolean,
+  scope?: { clusterScopeId, acrScopeId? },
+  probes?: Array<{ id, label, status: "pass" | "fail" | "unknown", reason, recommendedRoles?, remediation? }>,
+  markdown: string  // render verbatim
+}
+```
+
+**Probes performed:**
+
+| ID | Gate | Required role on fail |
+|---|---|---|
+| `cluster-user` | 6e — can download kubeconfig (`listClusterUserCredential`) | `Azure Kubernetes Service Cluster User Role` |
+| `aks-dataplane-write` | 6f — can create K8s workloads on the cluster | `Azure Kubernetes Service RBAC Writer` |
+| `acr-push` | 6g — user can push images to the ACR | `AcrPush` |
+| `acr-tasks` | 6g — user can run `az acr build` server-side | `Container Registry Tasks Contributor` |
+| `acr-pull-kubelet` | Cluster's kubelet identity can pull from the ACR | `AcrPull` |
+
+**How to use the result:**
+
+- If `allPassed === true`: render `markdown` and proceed to **Confirm**.
+- For any failing probe, the included `remediation` is a ready-to-run `az role assignment create` command. Offer to run it.
+- If `az role assignment create` then returns 403 (user lacks `Microsoft.Authorization/roleAssignments/write`), follow `/kickstart-pim-activation` — that skill calls `aks.checkRoleAssignmentPermissions` to surface PIM-eligible roles or generate an admin hand-off block.
+- If `acrName` is omitted (no ACR in scope), the three ACR probes are skipped and the report says so.
+
+**Fallback (only if the command is unavailable in this build):** fall back to the manual probes —
 ```bash
 az aks get-credentials --resource-group <rg> --name <cluster> --overwrite-existing
 kubectl auth can-i get namespaces
-```
-If `az aks get-credentials` fails, the user needs **Azure Kubernetes Service Cluster User Role** on the cluster. Halt and provide the fix.
-
-## 6f. Data-Plane RBAC Probes
-
-```bash
 kubectl auth can-i create deployments --namespace <namespace>
-kubectl auth can-i create services --namespace <namespace>
-kubectl auth can-i create configmaps --namespace <namespace>
-```
-If any return `no`, the user needs one of: **AKS RBAC Writer**, **RBAC Admin**, or **RBAC Cluster Admin**.
-
-**Self-remediation branching** — probe whether the user can self-assign:
-```bash
-USER_ID=$(az ad signed-in-user show --query id --output tsv)
-az role assignment create --assignee "$USER_ID" --role "Azure Kubernetes Service RBAC Cluster Admin" --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ContainerService/managedClusters/<cluster>" 2>&1
-```
-- **Case A (succeeds):** Re-run the `can-i` probes to confirm.
-- **Case B (403):** User cannot self-assign. Follow `/kickstart-pim-activation` to check for PIM-eligible roles. If eligible, guide activation then retry. If none, print an admin hand-off block with the exact command, wait for confirmation, then poll `kubectl auth can-i create deployments` every 15s (up to 3 min) until it returns `yes`.
-
-## 6g. ACR Push Pre-Check
-
-```bash
 az acr build --registry <acr> --image kickstart-probe:probe --file /dev/null /dev/null 2>&1 | head -5
 ```
-If forbidden, the user needs **AcrPush** + **Container Registry Tasks Contributor**. For new resources, self-assign (user is Owner). For existing, follow `/kickstart-pim-activation` to check for eligible roles and guide activation; if none, provide an admin hand-off.
+With the same remediation roles as listed in the table above.
 
 ## Confirm
 

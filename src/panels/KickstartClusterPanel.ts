@@ -162,7 +162,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
 
     private async handleRunPreflight(
         webview: MessageSink<ToWebViewMsgDef>,
-        args: { subscriptionId: string; location: string },
+        args: { subscriptionId: string; location: string; resourceGroupName: string; isNewResourceGroup: boolean },
     ) {
         const token = new CancellationToken();
         const runId = this.nextRunId++;
@@ -172,6 +172,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
                 this.sessionProvider,
                 args.subscriptionId,
                 args.location,
+                { name: args.resourceGroupName, isNew: args.isNewResourceGroup },
                 runId,
                 webview,
                 getKickstartOutputChannel(),

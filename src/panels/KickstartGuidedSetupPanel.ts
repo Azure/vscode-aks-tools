@@ -2,12 +2,11 @@ import { Uri, window } from "vscode";
 import * as vscode from "vscode";
 import * as l10n from "@vscode/l10n";
 import { KICKSTART_SAMPLES, handoffToChat } from "../commands/aksKickstart/kickstartChat";
-import { MessageHandler, MessageSink } from "../webview-contract/messaging";
+import { MessageHandler } from "../webview-contract/messaging";
 import {
     GuidedSetupSelections,
     InitialState,
     ToVsCodeMsgDef,
-    ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/kickstartGuidedSetup";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
@@ -39,7 +38,7 @@ export class KickstartGuidedSetupDataProvider implements PanelDataProvider<"kick
         };
     }
 
-    getMessageHandler(_webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+    getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
         return {
             finishRequest: (args) => this.handleFinish(args),
         };

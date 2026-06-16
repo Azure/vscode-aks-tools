@@ -23,8 +23,21 @@ import { Errorable, failed, getErrorMessage, success } from "../commands/utils/e
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { getSubscriptions, SelectionType } from "../commands/utils/subscriptions";
 import { getFilteredSubscriptions } from "../commands/utils/config";
-import { UserSubscriptionRoles, getUserSubscriptionRoles } from "../commands/utils/roleAssignments";
 import {
+    UserSubscriptionRoles,
+    findGrantingAction,
+    getEffectivePermissionsAtResourceGroup,
+    getEffectivePermissionsAtSubscription,
+    getUserSubscriptionRoles,
+} from "../commands/utils/roleAssignments";
+import {
+    CheckRoleAssignmentPermissionsResult,
+    checkRoleAssignmentPermissions,
+} from "../commands/aksCheckPermissions/checkRoleAssignmentPermissions";
+import {
+    DeploymentActionResult,
+    DeploymentPermissionsSummary,
+    PimEligibleGrant,
     RegionQuotaResult,
     ResourceGroup,
     RoleSummary,
@@ -44,7 +57,6 @@ export interface SubscriptionScanResult {
     runId: number;
     recommendedRegion: string | null;
     regionResults: RegionQuotaResult[];
-    role: RoleSummary;
 }
 
 async function unwrapErrorable<T>(promise: Promise<Errorable<T>>): Promise<T> {
@@ -232,23 +244,6 @@ export async function runSubscriptionScan(
         providersStage.warn(l10n.t("Couldn't check provider registration: {0}", getErrorMessage(e)));
     }
 
-    const roleStage = reporter.stage("role", l10n.t("Your access"));
-    let role: RoleSummary;
-    try {
-        const roleResult = await roleStage.run(l10n.t("Reading role assignments"), () =>
-            getUserSubscriptionRoles(sessionProvider, subscriptionId),
-        );
-        role = summarizeRole(roleResult);
-    } catch (e) {
-        token.throwIfCancelled();
-        role = summarizeRole({ succeeded: false, error: getErrorMessage(e) });
-    }
-    if (role.canAssignRolesKnown && role.canAssignRoles) {
-        roleStage.succeed(role.detail);
-    } else {
-        roleStage.warn(role.detail);
-    }
-
     const quotaStage = reporter.stage("quota", l10n.t("Regional quota"));
     const regionResults = await Promise.all(
         SCAN_REGIONS.map((location) =>
@@ -285,18 +280,25 @@ export async function runSubscriptionScan(
         quotaStage.warn(l10n.t("None of the scanned regions had enough AKS Automatic quota."));
     }
 
-    return { runId, recommendedRegion, regionResults, role };
+    return { runId, recommendedRegion, regionResults };
+}
+
+export interface PreflightResult {
+    canProceed: boolean;
+    role: RoleSummary;
+    deployment: DeploymentPermissionsSummary;
 }
 
 export async function runPreflightChecks(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     location: string,
+    resourceGroup: { name: string; isNew: boolean },
     runId: number,
     sink: ActivitySink,
     channel: OutputChannel,
     token: CancellationToken,
-): Promise<{ canProceed: boolean }> {
+): Promise<PreflightResult> {
     const reporter = new ActivityReporter("preflight", runId, sink, channel, token);
     let canProceed = true;
 
@@ -344,10 +346,211 @@ export async function runPreflightChecks(
         quotaStage.warn(quotaSummary.detail);
     }
 
-    return { canProceed };
+    const role = await runRoleStage(reporter, sessionProvider, subscriptionId, resourceGroup, token);
+    const deployment = await runDeploymentPermissionsStage(
+        reporter,
+        sessionProvider,
+        subscriptionId,
+        resourceGroup,
+        token,
+    );
+
+    return { canProceed, role, deployment };
 }
 
-function summarizeRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummary {
+async function runRoleStage(
+    reporter: ActivityReporter,
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: { name: string; isNew: boolean },
+    token: CancellationToken,
+): Promise<RoleSummary> {
+    const stageLabel = resourceGroup.isNew
+        ? l10n.t("Permission to assign roles in subscription")
+        : l10n.t("Permission to assign roles in '{0}'", resourceGroup.name);
+    const stage = reporter.stage("role", stageLabel);
+    const entryLabel = resourceGroup.isNew
+        ? l10n.t("Probing subscription-scope permissions")
+        : l10n.t("Probing resource-group permissions");
+
+    let role: RoleSummary;
+    try {
+        if (resourceGroup.isNew) {
+            // New RG inherits sub-scope perms; the RG-scoped command can't probe a non-existent RG,
+            // so fall back to the sub-scope helper here. PIM enrichment below uses sub scope too.
+            const roleResult = await stage.run(entryLabel, () =>
+                getUserSubscriptionRoles(sessionProvider, subscriptionId),
+            );
+            role = summarizeSubscriptionRole(roleResult);
+        } else {
+            // Delegates to the shared `aks.checkRoleAssignmentPermissions` command (silent mode) so
+            // panel + palette + agent surfaces all use one probe + PIM-lookup pipeline.
+            const cmdResult = await stage.run(entryLabel, () =>
+                checkRoleAssignmentPermissions(undefined, {
+                    subscriptionId,
+                    resourceGroup: resourceGroup.name,
+                    silent: true,
+                }),
+            );
+            role = summarizeRoleCommandResult(cmdResult, resourceGroup.name);
+        }
+    } catch (e) {
+        token.throwIfCancelled();
+        role = summarizeSubscriptionRole({ succeeded: false, error: getErrorMessage(e) });
+    }
+
+    // Shared command now always returns complete PIM grants (or failure reason),
+    // so no fallback enrichment needed.
+
+    if (role.canAssignRolesKnown && role.canAssignRoles) {
+        stage.succeed(role.detail);
+    } else {
+        stage.warn(role.detail);
+
+        const currentRoles =
+            role.roleNames.length > 0
+                ? role.roleNames.join(", ")
+                : l10n.t("No active role at this scope grants role-assignment write");
+        stage.addEntry({
+            action: l10n.t("Current role(s) for role-assignment write"),
+            status: "warning",
+            detail: currentRoles,
+        });
+        stage.addEntry({
+            action: l10n.t("Role needed"),
+            status: "warning",
+            detail: l10n.t("Owner or User Access Administrator"),
+        });
+
+        // Display eligible PIM roles as informational activity entries.
+        if (role.eligiblePimGrants && role.eligiblePimGrants.length > 0) {
+            for (const grant of role.eligiblePimGrants) {
+                stage.addEntry({
+                    action: l10n.t(
+                        "Eligible PIM role: {0} ({1})",
+                        grant.roleName,
+                        grant.scopeDisplayName ?? grant.roleName,
+                    ),
+                    status: "warning",
+                    detail: l10n.t("Activate this role in PIM, then re-run the preflight check."),
+                });
+            }
+        } else {
+            // No PIM roles available — add actionable warning banner with next steps
+            const rgScope = resourceGroup.isNew
+                ? `subscription '${subscriptionId}'`
+                : `resource group '${resourceGroup.name}'`;
+            role.actionBanner = {
+                message: l10n.t(
+                    "You don't have permission to assign roles in {0}, and no PIM-eligible roles are available. " +
+                        "A subscription owner or admin must grant you the 'Owner' or 'User Access Administrator' role.",
+                    rgScope,
+                ),
+                actionText: l10n.t("Request access from your admin"),
+                nextSteps: [
+                    l10n.t(
+                        "Contact your Azure subscription admin to request the 'Owner' or 'User Access Administrator' role",
+                    ),
+                    l10n.t("Or ask them to run this deployment on your behalf"),
+                    l10n.t(
+                        "Or activate an eligible PIM role if available (check Privileged Identity Management in Azure Portal)",
+                    ),
+                ],
+            };
+            stage.addEntry({
+                action: l10n.t("Action required"),
+                status: "warning",
+                detail: l10n.t("Contact your admin to request role assignment permissions"),
+            });
+        }
+    }
+    return role;
+}
+
+async function runDeploymentPermissionsStage(
+    reporter: ActivityReporter,
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: { name: string; isNew: boolean },
+    token: CancellationToken,
+): Promise<DeploymentPermissionsSummary> {
+    const stageLabel = resourceGroup.isNew
+        ? l10n.t("Permission to create cluster and registry")
+        : l10n.t("Permission to create cluster and registry in '{0}'", resourceGroup.name);
+    const stage = reporter.stage("deployment", stageLabel);
+    const entryLabel = resourceGroup.isNew
+        ? l10n.t("Probing subscription-scope permissions")
+        : l10n.t("Probing resource-group permissions");
+
+    // Preflight focuses only on control-plane create permissions. Runtime deployment permissions
+    // (kubeconfig/data-plane/ACR push-pull) are verified after provisioning begins in the
+    // provisioning flow's verification stage.
+    const probes: { label: string; action: string; kind: "action" | "dataAction" }[] = [
+        {
+            label: l10n.t("Create AKS cluster"),
+            action: "Microsoft.ContainerService/managedClusters/write",
+            kind: "action",
+        },
+        {
+            label: l10n.t("Create container registry"),
+            action: "Microsoft.ContainerRegistry/registries/write",
+            kind: "action",
+        },
+    ];
+
+    const authClient = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+    try {
+        const permsResult = await stage.run(entryLabel, () =>
+            resourceGroup.isNew
+                ? getEffectivePermissionsAtSubscription(sessionProvider, authClient, subscriptionId)
+                : getEffectivePermissionsAtResourceGroup(authClient, resourceGroup.name),
+        );
+        if (failed(permsResult)) {
+            const summary: DeploymentPermissionsSummary = {
+                known: false,
+                allGranted: false,
+                actions: [],
+                detail: l10n.t("Couldn't read effective permissions: {0}", permsResult.error),
+            };
+            stage.warn(summary.detail);
+            return summary;
+        }
+
+        const actions: DeploymentActionResult[] = probes.map((p) => ({
+            label: p.label,
+            action: p.action,
+            granted: findGrantingAction(permsResult.result, p.action, p.kind).granted,
+        }));
+        const allGranted = actions.every((a) => a.granted);
+        const missing = actions.filter((a) => !a.granted).map((a) => a.label);
+        const detail = allGranted
+            ? l10n.t("You can create the cluster and registry.")
+            : l10n.t(
+                  "You may not be able to create: {0}. Provisioning will fail unless an Owner or Contributor on this scope runs it.",
+                  missing.join(", "),
+              );
+
+        const summary: DeploymentPermissionsSummary = { known: true, allGranted, actions, detail };
+        if (allGranted) {
+            stage.succeed(detail);
+        } else {
+            stage.warn(detail);
+        }
+        return summary;
+    } catch (e) {
+        token.throwIfCancelled();
+        const summary: DeploymentPermissionsSummary = {
+            known: false,
+            allGranted: false,
+            actions: [],
+            detail: l10n.t("Couldn't probe deployment permissions: {0}", getErrorMessage(e)),
+        };
+        stage.warn(summary.detail);
+        return summary;
+    }
+}
+
+function summarizeSubscriptionRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummary {
     if (failed(roleResult)) {
         return {
             roleNames: [],
@@ -356,7 +559,6 @@ function summarizeRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummar
             detail: l10n.t("Couldn't read your role assignments: {0}", roleResult.error),
         };
     }
-
     const { roleNames, canAssignRoles } = roleResult.result;
     if (roleNames.length === 0) {
         return {
@@ -369,12 +571,39 @@ function summarizeRole(roleResult: Errorable<UserSubscriptionRoles>): RoleSummar
 
     const detail = canAssignRoles
         ? l10n.t("You have: {0}.", roleNames.join(", "))
-        : l10n.t(
-              "You have: {0}. This may not be enough to assign the AcrPull role or set cluster RBAC — an Owner or Role Based Access Control Administrator can do that.",
-              roleNames.join(", "),
-          );
+        : l10n.t("Your role ({0}) can't assign roles in this subscription.", roleNames.join(", "));
 
     return { roleNames, canAssignRoles, canAssignRolesKnown: true, detail };
+}
+
+function summarizeRoleCommandResult(
+    result: CheckRoleAssignmentPermissionsResult,
+    resourceGroupName: string,
+): RoleSummary {
+    if (result.error) {
+        return {
+            roleNames: [],
+            canAssignRoles: false,
+            canAssignRolesKnown: false,
+            detail: l10n.t("Couldn't read effective permissions on '{0}': {1}", resourceGroupName, result.error),
+        };
+    }
+    const canAssignRoles = result.canCreate === true;
+    const roleNames = result.activeRoleNames ?? [l10n.t("Active role names unavailable for this scope")];
+    const pimGrants: PimEligibleGrant[] = (result.eligiblePimRoles ?? []).map((g) => ({
+        roleName: g.roleName,
+        scopeDisplayName: g.scopeDisplayName ?? g.scopeId,
+    }));
+    const detail = canAssignRoles
+        ? l10n.t("You can create role assignments in '{0}'.", resourceGroupName)
+        : l10n.t("You can't assign roles in '{0}'.", resourceGroupName);
+    return {
+        roleNames,
+        canAssignRoles,
+        canAssignRolesKnown: true,
+        detail,
+        eligiblePimGrants: pimGrants.length > 0 ? pimGrants : undefined,
+    };
 }
 
 function summarizeQuota(
