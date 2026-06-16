@@ -2,6 +2,7 @@ import {
     ActivityFlow,
     ActivitySnapshot,
     ConnectedAcr,
+    CostEstimate,
     DeploymentPermissionsSummary,
     ExistingCluster,
     InitialState,
@@ -40,6 +41,12 @@ export type FinishResult = {
     acrLoginServer: string | null;
 };
 
+export type CostEstimateResult = {
+    location: string;
+    estimate: CostEstimate | null;
+    error: string | null;
+};
+
 export type ClusterMode = "createNew" | "useExisting";
 
 export type KickstartClusterState = InitialState & {
@@ -64,6 +71,7 @@ export type KickstartClusterState = InitialState & {
     /** Incremented each time the user requests a manual re-check; causes the preflight effect to re-fire. */
     preflightGeneration: number;
     finishResult: FinishResult | null;
+    costEstimate: CostEstimateResult | null;
 };
 
 export type EventDef = {
@@ -112,6 +120,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         preflightDeployment: null,
         preflightGeneration: 0,
         finishResult: null,
+        costEstimate: null,
     }),
     vscodeMessageHandler: {
         getSubscriptionsResponse: (state, args) => ({
@@ -156,6 +165,10 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             args.clusterName === state.selectedCluster.name
                 ? { ...state, connectedAcrs: args.acrs, detectingAcrs: false }
                 : state,
+        getCostEstimateResponse: (state, args) => ({
+            ...state,
+            costEstimate: { location: args.location, estimate: args.estimate, error: args.error },
+        }),
         errorNotification: (state, args) => ({ ...state, errorMessage: args.message }),
     },
     eventHandler: {
@@ -175,6 +188,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             selectedCluster: null,
             connectedAcrs: null,
             detectingAcrs: false,
+            costEstimate: null,
             activity: { ...state.activity, subscriptionScan: undefined, preflight: undefined },
         }),
         setExistingClusterSelected: (state, args) => ({
@@ -233,4 +247,5 @@ export const vscode = getWebviewMessageContext<"kickstartCluster">({
     getClustersRequest: null,
     detectClusterAcrsRequest: null,
     useExistingClusterRequest: null,
+    getCostEstimateRequest: null,
 });

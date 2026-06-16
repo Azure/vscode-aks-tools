@@ -65,6 +65,22 @@ export interface ExistingClusterSelection {
     acrResourceGroup: string;
 }
 
+export interface CostEstimateLineItem {
+    label: string;
+    monthlyCost: number;
+    detail: string;
+    isApproximate: boolean;
+}
+
+export interface CostEstimate {
+    location: string;
+    currencyCode: string;
+    monthlyTotal: number;
+    isApproximate: boolean;
+    items: CostEstimateLineItem[];
+    disclaimers: string[];
+}
+
 export interface InitialState {
     launchContext: ClusterLaunchContext;
     lastSubscriptionId: string | null;
@@ -88,6 +104,7 @@ export type ToVsCodeMsgDef = {
     getClustersRequest: { subscriptionId: string };
     detectClusterAcrsRequest: { subscriptionId: string; clusterResourceGroup: string; clusterName: string };
     useExistingClusterRequest: ExistingClusterSelection;
+    getCostEstimateRequest: { location: string };
 };
 
 export type ToWebViewMsgDef = {
@@ -115,6 +132,7 @@ export type ToWebViewMsgDef = {
         clusterName: string;
         acrs: ConnectedAcr[];
     };
+    getCostEstimateResponse: { location: string; estimate: CostEstimate | null; error: string | null };
     errorNotification: { message: string };
 };
 

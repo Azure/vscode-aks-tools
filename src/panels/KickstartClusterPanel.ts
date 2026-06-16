@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import * as l10n from "@vscode/l10n";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
+import { estimateClusterMonthlyCost } from "../commands/utils/kickstartCostEstimate";
 import {
     LAST_SUBSCRIPTION_KEY,
     ProvisionedClusterInfo,
@@ -43,6 +44,7 @@ export class KickstartClusterPanel extends BasePanel<"kickstartCluster"> {
             subscriptionScanComplete: null,
             preflightComplete: null,
             finishComplete: null,
+            getCostEstimateResponse: null,
             errorNotification: null,
         });
     }
@@ -80,6 +82,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             detectClusterAcrsRequest: false,
             startSubscriptionScanRequest: false,
             cancelSubscriptionScanRequest: false,
+            getCostEstimateRequest: false,
             runPreflightRequest: true,
             finishRequest: true,
             useExistingClusterRequest: true,
@@ -97,6 +100,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             detectClusterAcrsRequest: (args) => this.handleDetectClusterAcrs(webview, args),
             startSubscriptionScanRequest: (args) => this.handleStartSubscriptionScan(webview, args.subscriptionId),
             cancelSubscriptionScanRequest: () => this.scanToken?.cancel(),
+            getCostEstimateRequest: (args) => this.handleGetCostEstimate(webview, args.location),
             runPreflightRequest: (args) => this.handleRunPreflight(webview, args),
             finishRequest: (args) => this.handleFinish(webview, args),
             useExistingClusterRequest: (args) => this.handleUseExistingCluster(webview, args),
@@ -158,6 +162,16 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             }
             webview.postErrorNotification({ message: getErrorMessage(e) });
         }
+    }
+
+    private async handleGetCostEstimate(webview: MessageSink<ToWebViewMsgDef>, location: string) {
+        const result = await estimateClusterMonthlyCost(location);
+        if (failed(result)) {
+            webview.postGetCostEstimateResponse({ location, estimate: null, error: result.error });
+            return;
+        }
+
+        webview.postGetCostEstimateResponse({ location, estimate: result.result, error: null });
     }
 
     private async handleRunPreflight(

@@ -19,7 +19,7 @@ import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
 import styles from "./KickstartCluster.module.css";
 import { ActivityStageList, statusClass, statusIcon } from "../components/ActivityStageList";
-import { EventDef, FlowActivity, ScanResult } from "./helpers/state";
+import { CostEstimateResult, EventDef, FlowActivity, ScanResult } from "./helpers/state";
 
 const PIM_PORTAL_URL = "https://ms.portal.azure.com/#view/Microsoft_Azure_PIMCommon/ActivationMenuBlade/~/azurerbac";
 
@@ -39,6 +39,7 @@ interface ClusterInputProps {
     /** Incremented each time the user clicks "Re-check permissions"; causes preflight to re-fire. */
     preflightGeneration: number;
     launchContext: ClusterLaunchContext;
+    costEstimate: CostEstimateResult | null;
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
 }
@@ -100,6 +101,18 @@ function toBaseName(appName: string): string {
         .replace(/^-+|-+$/g, "");
 }
 
+function formatCurrency(value: number, currencyCode: string): string {
+    try {
+        return new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: currencyCode,
+            maximumFractionDigits: 2,
+        }).format(value);
+    } catch {
+        return `${currencyCode} ${value.toFixed(2)}`;
+    }
+}
+
 export function ClusterInput(props: ClusterInputProps) {
     const [appName, setAppName] = useState<string>(props.launchContext.appName ?? "");
     const [location, setLocation] = useState<Validatable<string>>(
@@ -121,6 +134,7 @@ export function ClusterInput(props: ClusterInputProps) {
     const lastPreflightKeyRef = useRef<string | null>(null);
     const autoSelectedScanRef = useRef<number | null>(null);
     const [uniqueSuffix] = useState(() => randomSuffix(4));
+    const estimateRegionRef = useRef<string | null>(null);
     const rgEditedRef = useRef(false);
     const clusterNameEditedRef = useRef(!!props.launchContext.suggestedClusterName);
     const acrNameEditedRef = useRef(!!props.launchContext.suggestedAcrName);
@@ -249,6 +263,18 @@ export function ClusterInput(props: ClusterInputProps) {
         preflightResourceGroupName,
         props.preflightGeneration,
     ]);
+
+    useEffect(() => {
+        if (!isValid(location)) {
+            estimateRegionRef.current = null;
+            return;
+        }
+        if (estimateRegionRef.current === location.value) {
+            return;
+        }
+        estimateRegionRef.current = location.value;
+        props.vscode.postGetCostEstimateRequest({ location: location.value });
+    }, [location, props.vscode]);
 
     function handleSubscriptionSelect(value: string | null) {
         const subscription = props.subscriptions.find((s) => s.name === value);
@@ -644,6 +670,67 @@ export function ClusterInput(props: ClusterInputProps) {
         );
     }
 
+    function renderCostEstimate() {
+        if (!isValid(location)) {
+            return null;
+        }
+        const result = props.costEstimate;
+        const matchesRegion = !!result && result.location === currentLocation;
+
+        if (!matchesRegion) {
+            return (
+                <div className={styles.costPanel}>
+                    <span className={styles.costHeader}>{l10n.t("Estimated monthly cost")}</span>
+                    <span className={styles.costLoading}>{l10n.t("Estimating costs for {0}…", currentLocation)}</span>
+                </div>
+            );
+        }
+
+        if (result.error || !result.estimate) {
+            return (
+                <div className={styles.costPanel}>
+                    <span className={styles.costHeader}>{l10n.t("Estimated monthly cost")}</span>
+                    <span className={styles.costError}>
+                        <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
+                        {result.error ?? l10n.t("Couldn't estimate the monthly cost for this region.")}
+                    </span>
+                </div>
+            );
+        }
+
+        const estimate = result.estimate;
+        return (
+            <div className={styles.costPanel}>
+                <div className={styles.costHeaderRow}>
+                    <span className={styles.costHeader}>{l10n.t("Estimated monthly cost")}</span>
+                    <span className={styles.costTotal}>
+                        {formatCurrency(estimate.monthlyTotal, estimate.currencyCode)}
+                        {estimate.isApproximate ? "*" : ""}
+                    </span>
+                </div>
+                <ul className={styles.costList}>
+                    {estimate.items.map((item) => (
+                        <li key={item.label} className={styles.costItem}>
+                            <span className={styles.costItemLabel}>
+                                {item.label}
+                                {item.isApproximate ? "*" : ""}
+                            </span>
+                            <span className={styles.costItemValue}>
+                                {formatCurrency(item.monthlyCost, estimate.currencyCode)}
+                            </span>
+                            <span className={styles.costItemDetail}>{item.detail}</span>
+                        </li>
+                    ))}
+                </ul>
+                <ul className={styles.costDisclaimers}>
+                    {estimate.disclaimers.map((disclaimer, index) => (
+                        <li key={index}>{disclaimer}</li>
+                    ))}
+                </ul>
+            </div>
+        );
+    }
+
     return (
         <form className={styles.inputContainer} onSubmit={handleSubmit}>
             <label htmlFor="app-name-input" className={styles.label}>
@@ -785,6 +872,7 @@ export function ClusterInput(props: ClusterInputProps) {
             )}
 
             {renderBottomWarningPanel()}
+            {renderCostEstimate()}
 
             <div className={`${styles.buttonContainer} ${styles.fullWidth}`}>
                 <button
