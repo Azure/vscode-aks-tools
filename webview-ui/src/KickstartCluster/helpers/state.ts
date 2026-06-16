@@ -2,6 +2,7 @@ import {
     ActivityFlow,
     ActivitySnapshot,
     ConnectedAcr,
+    DeploymentPermissionsSummary,
     ExistingCluster,
     InitialState,
     RegionQuotaResult,
@@ -29,7 +30,6 @@ export type ScanResult = {
     runId: number;
     recommendedRegion: string | null;
     regionResults: RegionQuotaResult[];
-    role: RoleSummary;
 };
 
 export type FinishResult = {
@@ -57,6 +57,12 @@ export type KickstartClusterState = InitialState & {
     scan: ScanResult | null;
     errorMessage: string | null;
     preflightCanProceed: boolean | null;
+    /** Role verdict from the most recent preflight run; drives the form's permission warning banner. */
+    preflightRole: RoleSummary | null;
+    /** Deployment-permissions verdict from the most recent preflight run. */
+    preflightDeployment: DeploymentPermissionsSummary | null;
+    /** Incremented each time the user requests a manual re-check; causes the preflight effect to re-fire. */
+    preflightGeneration: number;
     finishResult: FinishResult | null;
 };
 
@@ -67,6 +73,7 @@ export type EventDef = {
     setExistingClusterSelected: { cluster: ExistingCluster };
     goToExistingClusterSelection: void;
     resetPreflight: void;
+    recheckPermissions: void;
     setProvisioning: void;
     retryProvisioning: void;
 };
@@ -101,6 +108,9 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         scan: null,
         errorMessage: null,
         preflightCanProceed: null,
+        preflightRole: null,
+        preflightDeployment: null,
+        preflightGeneration: 0,
         finishResult: null,
     }),
     vscodeMessageHandler: {
@@ -127,11 +137,15 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
                     runId: args.runId,
                     recommendedRegion: args.recommendedRegion,
                     regionResults: args.regionResults,
-                    role: args.role,
                 },
             };
         },
-        preflightComplete: (state, args) => ({ ...state, preflightCanProceed: args.canProceed }),
+        preflightComplete: (state, args) => ({
+            ...state,
+            preflightCanProceed: args.canProceed,
+            preflightRole: args.role,
+            preflightDeployment: args.deployment,
+        }),
         finishComplete: (state, args) => ({ ...state, stage: Stage.Complete, finishResult: args }),
         getClustersResponse: (state, args) =>
             args.subscriptionId === state.selectedSubscriptionId ? { ...state, clusters: args.clusters } : state,
@@ -154,11 +168,14 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             resourceGroups: null,
             errorMessage: null,
             scan: null,
+            preflightRole: null,
+            preflightDeployment: null,
+            preflightCanProceed: null,
             clusters: null,
             selectedCluster: null,
             connectedAcrs: null,
             detectingAcrs: false,
-            activity: { ...state.activity, subscriptionScan: undefined },
+            activity: { ...state.activity, subscriptionScan: undefined, preflight: undefined },
         }),
         setExistingClusterSelected: (state, args) => ({
             ...state,
@@ -169,6 +186,16 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         resetPreflight: (state) => ({
             ...state,
             preflightCanProceed: null,
+            preflightRole: null,
+            preflightDeployment: null,
+            activity: { ...state.activity, preflight: undefined },
+        }),
+        recheckPermissions: (state) => ({
+            ...state,
+            preflightCanProceed: null,
+            preflightRole: null,
+            preflightDeployment: null,
+            preflightGeneration: state.preflightGeneration + 1,
             activity: { ...state.activity, preflight: undefined },
         }),
         setProvisioning: (state) => ({ ...state, stage: Stage.Provisioning }),

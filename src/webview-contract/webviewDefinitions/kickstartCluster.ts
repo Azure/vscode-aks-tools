@@ -1,5 +1,12 @@
 import { WebviewDefinition } from "../webviewTypes";
-import type { Subscription, ResourceGroup, ActivitySnapshot, RegionQuotaResult, RoleSummary } from "./kickstartShared";
+import type {
+    Subscription,
+    ResourceGroup,
+    ActivitySnapshot,
+    RegionQuotaResult,
+    RoleSummary,
+    DeploymentPermissionsSummary,
+} from "./kickstartShared";
 
 export type {
     Subscription,
@@ -12,6 +19,9 @@ export type {
     ActivitySnapshot,
     RegionQuotaResult,
     RoleSummary,
+    PimEligibleGrant,
+    DeploymentPermissionsSummary,
+    DeploymentActionResult,
 } from "./kickstartShared";
 
 export interface ClusterLaunchContext {
@@ -66,7 +76,12 @@ export type ToVsCodeMsgDef = {
     getResourceGroupsRequest: { subscriptionId: string };
     startSubscriptionScanRequest: { subscriptionId: string };
     cancelSubscriptionScanRequest: void;
-    runPreflightRequest: { subscriptionId: string; location: string };
+    runPreflightRequest: {
+        subscriptionId: string;
+        location: string;
+        resourceGroupName: string;
+        isNewResourceGroup: boolean;
+    };
     finishRequest: ClusterSelections;
     retryProvisioningRequest: void;
     continueInChatRequest: void;
@@ -84,9 +99,8 @@ export type ToWebViewMsgDef = {
         runId: number;
         recommendedRegion: string | null;
         regionResults: RegionQuotaResult[];
-        role: RoleSummary;
     };
-    preflightComplete: { canProceed: boolean };
+    preflightComplete: { canProceed: boolean; role: RoleSummary; deployment: DeploymentPermissionsSummary };
     finishComplete: {
         succeeded: boolean;
         clusterName: string;

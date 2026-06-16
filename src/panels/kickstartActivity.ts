@@ -137,6 +137,16 @@ export class StageReporter {
         this.finish("failed", detail);
     }
 
+    /**
+     * Append a pre-computed entry to this stage. Useful when a single underlying call (e.g.
+     * `checkDeploymentPermissions`) returns multiple results that should each show as their own
+     * row in the activity list rather than as one timed `run()` entry.
+     */
+    addEntry(entry: ActivityEntry): void {
+        this.entries.push(entry);
+        this.post();
+    }
+
     private finish(status: SetupStepStatus, detail?: string): void {
         this.status = status;
         this.detail = detail;
