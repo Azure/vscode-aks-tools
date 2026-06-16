@@ -26,11 +26,11 @@ export const KICKSTART_SAMPLES: KickstartSample[] = [
 ];
 
 export async function handoffToChat(selections: GuidedSetupSelections): Promise<void> {
-    await openMaximizedChat();
+    await openMaximizedChat(true);
     await vscode.commands.executeCommand("workbench.action.chat.open", buildChatOpenOptions(selections));
 }
 
-async function openMaximizedChat(): Promise<void> {
+async function openMaximizedChat(startNewChat: boolean): Promise<void> {
     await vscode.commands.executeCommand("workbench.action.closePanel");
     await vscode.commands.executeCommand("workbench.action.closeSidebar");
     await vscode.commands.executeCommand("workbench.action.chat.open", {
@@ -39,6 +39,9 @@ async function openMaximizedChat(): Promise<void> {
         isPartialQuery: true,
     });
     await vscode.commands.executeCommand("workbench.action.maximizeAuxiliaryBar");
+    if (startNewChat) {
+        await vscode.commands.executeCommand("workbench.action.chat.newChat");
+    }
 }
 
 function buildContextSummary(selections: GuidedSetupSelections): string {
@@ -112,7 +115,7 @@ export interface ProvisionedClusterInfo {
 }
 
 export async function handoffClusterToChat(info: ProvisionedClusterInfo): Promise<void> {
-    await openMaximizedChat();
+    await openMaximizedChat(false);
     await vscode.commands.executeCommand("workbench.action.chat.open", buildClusterChatOpenOptions(info));
 }
 
