@@ -1,4 +1,6 @@
 import {
+    faBuilding,
+    faCheckToSlot,
     faCircle,
     faCode,
     faCodeBranch,
@@ -8,6 +10,7 @@ import {
     faRobot,
     faServer,
     faSpinner,
+    faStore,
     faTimesCircle,
     faUser,
     faWandMagicSparkles,
@@ -76,6 +79,12 @@ const PROJECT_TYPE_ICONS: Record<ProjectType, typeof faCircle> = {
     backend: faServer,
     fullstack: faCubes,
     agentic: faRobot,
+};
+
+const SAMPLE_ICONS: Record<string, typeof faCircle> = {
+    "AKS Store Demo": faStore,
+    "Azure Voting App": faCheckToSlot,
+    "Contoso Real Estate": faBuilding,
 };
 
 const LANGUAGE_OPTIONS: string[] = ["React", "Node.js", "Python", "Go", "Java", ".NET", "Rust"];
@@ -306,18 +315,25 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
 
             {appSourceKind === "sample" && (
                 <>
-                    <label htmlFor="sample-dropdown" className={styles.label}>
-                        {l10n.t("Sample*")}
-                    </label>
-                    <CustomDropdown id="sample-dropdown" value={sampleLabel} onChange={setSampleLabel}>
+                    <label className={styles.choiceLabel}>{l10n.t("Sample*")}</label>
+                    <div className={styles.choiceGroup}>
                         {props.samples.map((sample) => (
-                            <CustomDropdownOption
+                            <button
+                                type="button"
                                 key={sample.label}
-                                value={sample.label}
-                                label={`${sample.label} — ${sample.description}`}
-                            />
+                                className={`${styles.choiceCard} ${sampleLabel === sample.label ? styles.choiceSelected : ""}`}
+                                aria-pressed={sampleLabel === sample.label}
+                                title={sample.description}
+                                onClick={() => setSampleLabel(sample.label)}
+                            >
+                                <FontAwesomeIcon
+                                    className={styles.choiceCardIcon}
+                                    icon={SAMPLE_ICONS[sample.label] ?? faCubes}
+                                />
+                                <span>{sample.label}</span>
+                            </button>
                         ))}
-                    </CustomDropdown>
+                    </div>
                 </>
             )}
 
