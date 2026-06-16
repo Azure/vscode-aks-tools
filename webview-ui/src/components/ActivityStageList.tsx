@@ -1,5 +1,9 @@
+import { useState } from "react";
+import * as l10n from "@vscode/l10n";
 import {
     faCheckCircle,
+    faChevronDown,
+    faChevronRight,
     faCircle,
     faExclamationTriangle,
     faSpinner,
@@ -49,6 +53,24 @@ export function formatElapsed(ms: number): string {
     return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
+function StageFullError({ fullError }: { fullError: string }) {
+    const [expanded, setExpanded] = useState(false);
+    return (
+        <span className={styles.fullError}>
+            <button
+                type="button"
+                className={styles.fullErrorToggle}
+                aria-expanded={expanded}
+                onClick={() => setExpanded((prev) => !prev)}
+            >
+                <FontAwesomeIcon className={styles.fullErrorChevron} icon={expanded ? faChevronDown : faChevronRight} />
+                {expanded ? l10n.t("Hide details") : l10n.t("More")}
+            </button>
+            {expanded && <span className={styles.fullErrorBody}>{fullError}</span>}
+        </span>
+    );
+}
+
 export function ActivityStageList({ stages }: { stages: ActivitySnapshot[] }) {
     if (stages.length === 0) {
         return null;
@@ -65,6 +87,7 @@ export function ActivityStageList({ stages }: { stages: ActivitySnapshot[] }) {
                     <span className={styles.checkBody}>
                         <span className={styles.checkTitle}>{stage.title}</span>
                         {stage.detail && <span className={styles.checkDetail}>{stage.detail}</span>}
+                        {stage.fullError && <StageFullError fullError={stage.fullError} />}
                         {stage.entries.length > 0 && (
                             <span className={styles.activityEntries}>
                                 {stage.entries.map((entry) => (

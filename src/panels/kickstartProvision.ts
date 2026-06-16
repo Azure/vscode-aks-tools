@@ -11,6 +11,7 @@ import {
 } from "../commands/utils/arm";
 import { getPortalResourceUrl } from "../commands/utils/env";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
+import { getDeploymentErrorDetails, getDeploymentErrorMessage } from "../commands/utils/deploymentErrors";
 import { createAcr, getAcrRegistry } from "../commands/utils/acrs";
 import { DefinedManagedCluster, getManagedCluster } from "../commands/utils/clusters";
 import {
@@ -126,7 +127,7 @@ export async function runClusterProvisioning(
             );
         }
     } catch (e) {
-        clusterStage.fail(getErrorMessage(e));
+        clusterStage.fail(getDeploymentErrorMessage(e), getDeploymentErrorDetails(e));
         return result;
     }
 
@@ -232,7 +233,7 @@ export async function attachRegistryToExistingCluster(
         result.clusterPortalUrl = getPortalResourceUrl(getEnvironment(), clusterArmId);
         clusterStage.succeed(l10n.t("Using cluster {0}.", selection.clusterName));
     } catch (e) {
-        clusterStage.fail(getErrorMessage(e));
+        clusterStage.fail(getDeploymentErrorMessage(e), getDeploymentErrorDetails(e));
         return result;
     }
 

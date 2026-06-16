@@ -96,6 +96,7 @@ export class StageReporter {
     private readonly entries: ActivityEntry[] = [];
     private status: SetupStepStatus = "running";
     private detail?: string;
+    private fullError?: string;
 
     constructor(
         private readonly flow: ActivityFlow,
@@ -133,8 +134,8 @@ export class StageReporter {
         this.finish("warning", detail);
     }
 
-    fail(detail?: string): void {
-        this.finish("failed", detail);
+    fail(detail?: string, fullError?: string): void {
+        this.finish("failed", detail, fullError);
     }
 
     /**
@@ -147,9 +148,10 @@ export class StageReporter {
         this.post();
     }
 
-    private finish(status: SetupStepStatus, detail?: string): void {
+    private finish(status: SetupStepStatus, detail?: string, fullError?: string): void {
         this.status = status;
         this.detail = detail;
+        this.fullError = fullError;
         this.post();
     }
 
@@ -165,6 +167,7 @@ export class StageReporter {
             status: this.status,
             entries: this.entries.map((e) => ({ ...e })),
             detail: this.detail,
+            fullError: this.fullError,
         });
     }
 }

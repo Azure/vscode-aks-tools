@@ -39,6 +39,7 @@ export interface ActivitySnapshot {
     status: SetupStepStatus;
     entries: ActivityEntry[];
     detail?: string;
+    fullError?: string;
 }
 
 export interface RegionQuotaResult {
