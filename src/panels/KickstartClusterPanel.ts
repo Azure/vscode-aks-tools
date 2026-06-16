@@ -216,6 +216,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             if (result.succeeded) {
                 this.lastProvisioned = {
                     subscriptionName: selections.subscriptionName,
+                    subscriptionId: selections.subscriptionId,
                     resourceGroupName: selections.resourceGroupName,
                     clusterName: result.clusterName,
                     clusterPortalUrl: result.clusterPortalUrl,
@@ -286,6 +287,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             if (result.succeeded) {
                 this.lastProvisioned = {
                     subscriptionName: selection.subscriptionName,
+                    subscriptionId: selection.subscriptionId,
                     resourceGroupName: selection.clusterResourceGroup,
                     clusterName: result.clusterName,
                     clusterPortalUrl: result.clusterPortalUrl,

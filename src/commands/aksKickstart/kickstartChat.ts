@@ -107,6 +107,7 @@ function buildChatOpenOptions(selections: GuidedSetupSelections): Record<string,
 
 export interface ProvisionedClusterInfo {
     subscriptionName: string;
+    subscriptionId: string;
     resourceGroupName: string;
     clusterName: string;
     clusterPortalUrl: string | null;
@@ -123,6 +124,7 @@ function buildClusterContextSummary(info: ProvisionedClusterInfo): string {
     const registry = info.acrLoginServer ? `${info.acrName} (${info.acrLoginServer})` : info.acrName;
     const lines = [
         `- **Subscription:** ${info.subscriptionName}`,
+        `- **Subscription ID:** ${info.subscriptionId}`,
         `- **Resource group:** ${info.resourceGroupName}`,
         `- **AKS Automatic cluster:** ${info.clusterName}`,
         `- **Container registry:** ${registry}`,
