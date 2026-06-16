@@ -6,7 +6,6 @@ import type {
     RegionQuotaResult,
     RoleSummary,
     DeploymentPermissionsSummary,
-    PostProvisionPermissionsSummary,
 } from "./kickstartShared";
 
 export type {
@@ -23,9 +22,6 @@ export type {
     PimEligibleGrant,
     DeploymentPermissionsSummary,
     DeploymentActionResult,
-    PostProvisionPermissionsSummary,
-    PostProvisionProbe,
-    PostProvisionProbeStatus,
 } from "./kickstartShared";
 
 export interface ClusterLaunchContext {
@@ -89,7 +85,6 @@ export type ToVsCodeMsgDef = {
     finishRequest: ClusterSelections;
     retryProvisioningRequest: void;
     continueInChatRequest: void;
-    openDeploymentPermissionsReportRequest: void;
     getClustersRequest: { subscriptionId: string };
     detectClusterAcrsRequest: { subscriptionId: string; clusterResourceGroup: string; clusterName: string };
     useExistingClusterRequest: ExistingClusterSelection;
@@ -113,7 +108,6 @@ export type ToWebViewMsgDef = {
         acrName: string;
         acrLoginServer: string | null;
     };
-    postProvisionPermissionsUpdate: PostProvisionPermissionsSummary;
     getClustersResponse: { subscriptionId: string; clusters: ExistingCluster[] };
     detectClusterAcrsResponse: {
         subscriptionId: string;

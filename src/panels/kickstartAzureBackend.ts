@@ -1,6 +1,5 @@
 import { OutputChannel } from "vscode";
 import * as l10n from "@vscode/l10n";
-import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAuthorizationManagementClient, getResourceManagementClient, listAll } from "../commands/utils/arm";
 import { getAcrRegistry } from "../commands/utils/acrs";
@@ -26,13 +25,15 @@ import { getSubscriptions, SelectionType } from "../commands/utils/subscriptions
 import { getFilteredSubscriptions } from "../commands/utils/config";
 import {
     UserSubscriptionRoles,
-    canCreateRoleAssignmentsAtResourceGroup,
-    findEligiblePimGrants,
     findGrantingAction,
     getEffectivePermissionsAtResourceGroup,
     getEffectivePermissionsAtSubscription,
     getUserSubscriptionRoles,
 } from "../commands/utils/roleAssignments";
+import {
+    CheckRoleAssignmentPermissionsResult,
+    checkRoleAssignmentPermissions,
+} from "../commands/aksCheckPermissions/checkRoleAssignmentPermissions";
 import {
     DeploymentActionResult,
     DeploymentPermissionsSummary,
@@ -345,7 +346,7 @@ export async function runPreflightChecks(
         quotaStage.warn(quotaSummary.detail);
     }
 
-    const role = await runRoleStage(reporter, sessionProvider, subscriptionId, resourceGroup, channel, token);
+    const role = await runRoleStage(reporter, sessionProvider, subscriptionId, resourceGroup, token);
     const deployment = await runDeploymentPermissionsStage(
         reporter,
         sessionProvider,
@@ -362,7 +363,6 @@ async function runRoleStage(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: { name: string; isNew: boolean },
-    channel: OutputChannel,
     token: CancellationToken,
 ): Promise<RoleSummary> {
     const stageLabel = resourceGroup.isNew
@@ -373,38 +373,96 @@ async function runRoleStage(
         ? l10n.t("Probing subscription-scope permissions")
         : l10n.t("Probing resource-group permissions");
 
-    const authClient = getAuthorizationManagementClient(sessionProvider, subscriptionId);
     let role: RoleSummary;
     try {
         if (resourceGroup.isNew) {
-            // New RG inherits sub-scope perms; no listForResourceGroup target yet.
+            // New RG inherits sub-scope perms; the RG-scoped command can't probe a non-existent RG,
+            // so fall back to the sub-scope helper here. PIM enrichment below uses sub scope too.
             const roleResult = await stage.run(entryLabel, () =>
                 getUserSubscriptionRoles(sessionProvider, subscriptionId),
             );
             role = summarizeSubscriptionRole(roleResult);
         } else {
-            const verdict = await stage.run(entryLabel, () =>
-                canCreateRoleAssignmentsAtResourceGroup(authClient, resourceGroup.name),
+            // Delegates to the shared `aks.checkRoleAssignmentPermissions` command (silent mode) so
+            // panel + palette + agent surfaces all use one probe + PIM-lookup pipeline.
+            const cmdResult = await stage.run(entryLabel, () =>
+                checkRoleAssignmentPermissions(undefined, {
+                    subscriptionId,
+                    resourceGroup: resourceGroup.name,
+                    silent: true,
+                }),
             );
-            role = summarizeResourceGroupRole(verdict, resourceGroup.name);
+            role = summarizeRoleCommandResult(cmdResult, resourceGroup.name);
         }
     } catch (e) {
         token.throwIfCancelled();
         role = summarizeSubscriptionRole({ succeeded: false, error: getErrorMessage(e) });
     }
 
-    // Only look up PIM when the active verdict won't already let the user assign roles. PIM lookup
-    // is non-fatal: failures are recorded in `pimLookupNote` so the UI can explain why no PIM
-    // grants are listed, but they never block the stage verdict.
-    const pimScope = resourceGroup.isNew
-        ? `/subscriptions/${subscriptionId}`
-        : `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup.name}`;
-    role = await enrichRoleSummaryWithPim(role, authClient, pimScope, channel);
+    // Shared command now always returns complete PIM grants (or failure reason),
+    // so no fallback enrichment needed.
 
     if (role.canAssignRolesKnown && role.canAssignRoles) {
         stage.succeed(role.detail);
     } else {
         stage.warn(role.detail);
+
+        const currentRoles =
+            role.roleNames.length > 0
+                ? role.roleNames.join(", ")
+                : l10n.t("No active role at this scope grants role-assignment write");
+        stage.addEntry({
+            action: l10n.t("Current role(s) for role-assignment write"),
+            status: "warning",
+            detail: currentRoles,
+        });
+        stage.addEntry({
+            action: l10n.t("Role needed"),
+            status: "warning",
+            detail: l10n.t("Owner or User Access Administrator"),
+        });
+
+        // Display eligible PIM roles as informational activity entries.
+        if (role.eligiblePimGrants && role.eligiblePimGrants.length > 0) {
+            for (const grant of role.eligiblePimGrants) {
+                stage.addEntry({
+                    action: l10n.t(
+                        "Eligible PIM role: {0} ({1})",
+                        grant.roleName,
+                        grant.scopeDisplayName ?? grant.roleName,
+                    ),
+                    status: "warning",
+                    detail: l10n.t("Activate this role in PIM, then re-run the preflight check."),
+                });
+            }
+        } else {
+            // No PIM roles available — add actionable warning banner with next steps
+            const rgScope = resourceGroup.isNew
+                ? `subscription '${subscriptionId}'`
+                : `resource group '${resourceGroup.name}'`;
+            role.actionBanner = {
+                message: l10n.t(
+                    "You don't have permission to assign roles in {0}, and no PIM-eligible roles are available. " +
+                        "A subscription owner or admin must grant you the 'Owner' or 'User Access Administrator' role.",
+                    rgScope,
+                ),
+                actionText: l10n.t("Request access from your admin"),
+                nextSteps: [
+                    l10n.t(
+                        "Contact your Azure subscription admin to request the 'Owner' or 'User Access Administrator' role",
+                    ),
+                    l10n.t("Or ask them to run this deployment on your behalf"),
+                    l10n.t(
+                        "Or activate an eligible PIM role if available (check Privileged Identity Management in Azure Portal)",
+                    ),
+                ],
+            };
+            stage.addEntry({
+                action: l10n.t("Action required"),
+                status: "warning",
+                detail: l10n.t("Contact your admin to request role assignment permissions"),
+            });
+        }
     }
     return role;
 }
@@ -424,11 +482,19 @@ async function runDeploymentPermissionsStage(
         ? l10n.t("Probing subscription-scope permissions")
         : l10n.t("Probing resource-group permissions");
 
-    const probes: { label: string; action: string }[] = [
-        { label: l10n.t("Create AKS cluster"), action: "Microsoft.ContainerService/managedClusters/write" },
+    // Preflight focuses only on control-plane create permissions. Runtime deployment permissions
+    // (kubeconfig/data-plane/ACR push-pull) are verified after provisioning begins in the
+    // provisioning flow's verification stage.
+    const probes: { label: string; action: string; kind: "action" | "dataAction" }[] = [
+        {
+            label: l10n.t("Create AKS cluster"),
+            action: "Microsoft.ContainerService/managedClusters/write",
+            kind: "action",
+        },
         {
             label: l10n.t("Create container registry"),
             action: "Microsoft.ContainerRegistry/registries/write",
+            kind: "action",
         },
     ];
 
@@ -453,14 +519,14 @@ async function runDeploymentPermissionsStage(
         const actions: DeploymentActionResult[] = probes.map((p) => ({
             label: p.label,
             action: p.action,
-            granted: findGrantingAction(permsResult.result, p.action).granted,
+            granted: findGrantingAction(permsResult.result, p.action, p.kind).granted,
         }));
         const allGranted = actions.every((a) => a.granted);
         const missing = actions.filter((a) => !a.granted).map((a) => a.label);
         const detail = allGranted
             ? l10n.t("You can create the cluster and registry.")
             : l10n.t(
-                  "You may not be able to create: {0}. Deployment will fail unless an Owner or Contributor on this scope runs it.",
+                  "You may not be able to create: {0}. Provisioning will fail unless an Owner or Contributor on this scope runs it.",
                   missing.join(", "),
               );
 
@@ -481,36 +547,6 @@ async function runDeploymentPermissionsStage(
         };
         stage.warn(summary.detail);
         return summary;
-    }
-}
-
-async function enrichRoleSummaryWithPim(
-    role: RoleSummary,
-    authClient: AuthorizationManagementClient,
-    pimScope: string,
-    channel: OutputChannel,
-): Promise<RoleSummary> {
-    if (role.canAssignRolesKnown && role.canAssignRoles) {
-        return role;
-    }
-    try {
-        const grantsResult = await findEligiblePimGrants(authClient, pimScope, (msg) => channel.appendLine(msg));
-        if (failed(grantsResult)) {
-            return { ...role, pimLookupNote: grantsResult.error };
-        }
-        if (grantsResult.result.length > 0) {
-            return {
-                ...role,
-                eligiblePimGrants: grantsResult.result.map<PimEligibleGrant>((g) => ({
-                    roleName: g.roleName,
-                    scopeDisplayName: g.scopeDisplayName ?? g.scopeId,
-                })),
-            };
-        }
-        return { ...role, pimLookupNote: "" };
-    } catch (e) {
-        channel.appendLine(`[pim] lookup threw: ${getErrorMessage(e)}`);
-        return { ...role, pimLookupNote: getErrorMessage(e) };
     }
 }
 
@@ -540,31 +576,33 @@ function summarizeSubscriptionRole(roleResult: Errorable<UserSubscriptionRoles>)
     return { roleNames, canAssignRoles, canAssignRolesKnown: true, detail };
 }
 
-function summarizeResourceGroupRole(
-    verdict: Errorable<{ canCreate: boolean; grantingActions: string[] }>,
+function summarizeRoleCommandResult(
+    result: CheckRoleAssignmentPermissionsResult,
     resourceGroupName: string,
 ): RoleSummary {
-    if (failed(verdict)) {
+    if (result.error) {
         return {
             roleNames: [],
             canAssignRoles: false,
             canAssignRolesKnown: false,
-            detail: l10n.t("Couldn't read effective permissions on '{0}': {1}", resourceGroupName, verdict.error),
+            detail: l10n.t("Couldn't read effective permissions on '{0}': {1}", resourceGroupName, result.error),
         };
     }
-    if (verdict.result.canCreate) {
-        return {
-            roleNames: [],
-            canAssignRoles: true,
-            canAssignRolesKnown: true,
-            detail: l10n.t("You can create role assignments in '{0}'.", resourceGroupName),
-        };
-    }
+    const canAssignRoles = result.canCreate === true;
+    const roleNames = result.activeRoleNames ?? [l10n.t("Active role names unavailable for this scope")];
+    const pimGrants: PimEligibleGrant[] = (result.eligiblePimRoles ?? []).map((g) => ({
+        roleName: g.roleName,
+        scopeDisplayName: g.scopeDisplayName ?? g.scopeId,
+    }));
+    const detail = canAssignRoles
+        ? l10n.t("You can create role assignments in '{0}'.", resourceGroupName)
+        : l10n.t("You can't assign roles in '{0}'.", resourceGroupName);
     return {
-        roleNames: [],
-        canAssignRoles: false,
+        roleNames,
+        canAssignRoles,
         canAssignRolesKnown: true,
-        detail: l10n.t("You can't assign roles in '{0}'.", resourceGroupName),
+        detail,
+        eligiblePimGrants: pimGrants.length > 0 ? pimGrants : undefined,
     };
 }
 

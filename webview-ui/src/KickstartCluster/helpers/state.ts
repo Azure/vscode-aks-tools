@@ -5,7 +5,6 @@ import {
     DeploymentPermissionsSummary,
     ExistingCluster,
     InitialState,
-    PostProvisionPermissionsSummary,
     RegionQuotaResult,
     ResourceGroup,
     RoleSummary,
@@ -62,8 +61,8 @@ export type KickstartClusterState = InitialState & {
     preflightRole: RoleSummary | null;
     /** Deployment-permissions verdict from the most recent preflight run. */
     preflightDeployment: DeploymentPermissionsSummary | null;
-    /** Post-provision deployment-permissions check (kubeconfig / RBAC writer / ACR push / ACR Tasks / kubelet AcrPull). */
-    postProvisionPermissions: PostProvisionPermissionsSummary | null;
+    /** Incremented each time the user requests a manual re-check; causes the preflight effect to re-fire. */
+    preflightGeneration: number;
     finishResult: FinishResult | null;
 };
 
@@ -74,6 +73,7 @@ export type EventDef = {
     setExistingClusterSelected: { cluster: ExistingCluster };
     goToExistingClusterSelection: void;
     resetPreflight: void;
+    recheckPermissions: void;
     setProvisioning: void;
     retryProvisioning: void;
 };
@@ -110,7 +110,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         preflightCanProceed: null,
         preflightRole: null,
         preflightDeployment: null,
-        postProvisionPermissions: null,
+        preflightGeneration: 0,
         finishResult: null,
     }),
     vscodeMessageHandler: {
@@ -147,7 +147,6 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             preflightDeployment: args.deployment,
         }),
         finishComplete: (state, args) => ({ ...state, stage: Stage.Complete, finishResult: args }),
-        postProvisionPermissionsUpdate: (state, args) => ({ ...state, postProvisionPermissions: args }),
         getClustersResponse: (state, args) =>
             args.subscriptionId === state.selectedSubscriptionId ? { ...state, clusters: args.clusters } : state,
         detectClusterAcrsResponse: (state, args) =>
@@ -172,7 +171,6 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             preflightRole: null,
             preflightDeployment: null,
             preflightCanProceed: null,
-            postProvisionPermissions: null,
             clusters: null,
             selectedCluster: null,
             connectedAcrs: null,
@@ -192,13 +190,20 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             preflightDeployment: null,
             activity: { ...state.activity, preflight: undefined },
         }),
+        recheckPermissions: (state) => ({
+            ...state,
+            preflightCanProceed: null,
+            preflightRole: null,
+            preflightDeployment: null,
+            preflightGeneration: state.preflightGeneration + 1,
+            activity: { ...state.activity, preflight: undefined },
+        }),
         setProvisioning: (state) => ({ ...state, stage: Stage.Provisioning }),
         retryProvisioning: (state) => ({
             ...state,
             stage: Stage.Provisioning,
             errorMessage: null,
             finishResult: null,
-            postProvisionPermissions: null,
             activity: { ...state.activity, provision: undefined },
         }),
         goToExistingClusterSelection: (state) => ({
@@ -207,7 +212,6 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             mode: "useExisting",
             errorMessage: null,
             finishResult: null,
-            postProvisionPermissions: null,
             selectedCluster: null,
             connectedAcrs: null,
             detectingAcrs: false,
@@ -226,7 +230,6 @@ export const vscode = getWebviewMessageContext<"kickstartCluster">({
     finishRequest: null,
     retryProvisioningRequest: null,
     continueInChatRequest: null,
-    openDeploymentPermissionsReportRequest: null,
     getClustersRequest: null,
     detectClusterAcrsRequest: null,
     useExistingClusterRequest: null,

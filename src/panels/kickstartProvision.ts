@@ -26,8 +26,10 @@ import {
 import { acrPullRoleDefinitionName } from "../webview-contract/webviewDefinitions/attachAcrToCluster";
 import { PresetType } from "../webview-contract/webviewDefinitions/createCluster";
 import { ClusterSelections, ExistingClusterSelection } from "../webview-contract/webviewDefinitions/kickstartCluster";
+import { ActivityStatus } from "../webview-contract/webviewDefinitions/kickstartShared";
 import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCreationBuilder";
 import { ActivityReporter, ActivitySink, CancellationToken } from "./kickstartActivity";
+import { checkDeploymentPermissions } from "../commands/aksCheckPermissions/checkDeploymentPermissions";
 
 const DEPLOYMENT_API_VERSION = "2021-04-01";
 
@@ -163,18 +165,25 @@ export async function runClusterProvisioning(
                 selections.clusterName,
             ),
         );
-        result.succeeded = true;
-        return result;
+    } else {
+        try {
+            await attachStage.run(l10n.t("Granting the cluster permission to pull images"), () =>
+                attachAcrToCluster(sessionProvider, selections),
+            );
+            attachStage.succeed(
+                l10n.t("{0} can now pull images from {1}.", selections.clusterName, selections.acrName),
+            );
+        } catch (e) {
+            attachStage.fail(getErrorMessage(e));
+        }
     }
-    try {
-        await attachStage.run(l10n.t("Granting the cluster permission to pull images"), () =>
-            attachAcrToCluster(sessionProvider, selections),
-        );
-        attachStage.succeed(l10n.t("{0} can now pull images from {1}.", selections.clusterName, selections.acrName));
-    } catch (e) {
-        attachStage.fail(getErrorMessage(e));
-        return result;
-    }
+
+    await runDeploymentVerificationStage(reporter, {
+        subscriptionId: selections.subscriptionId,
+        resourceGroup: selections.resourceGroupName,
+        clusterName: selections.clusterName,
+        acrName: selections.acrName,
+    });
 
     result.succeeded = true;
     return result;
@@ -293,8 +302,63 @@ export async function attachRegistryToExistingCluster(
         return result;
     }
 
+    await runDeploymentVerificationStage(reporter, {
+        subscriptionId: selection.subscriptionId,
+        resourceGroup: selection.clusterResourceGroup,
+        clusterName: selection.clusterName,
+        acrName: selection.acrName,
+    });
+
     result.succeeded = true;
     return result;
+}
+
+async function runDeploymentVerificationStage(
+    reporter: ActivityReporter,
+    args: { subscriptionId: string; resourceGroup: string; clusterName: string; acrName?: string },
+): Promise<void> {
+    const stage = reporter.stage("verify", l10n.t("Verify deployment permissions"));
+    const probeResult = await stage.run(l10n.t("Probing cluster and registry access"), () =>
+        checkDeploymentPermissions(undefined, { ...args, silent: true }),
+    );
+
+    if (probeResult.error) {
+        stage.warn(probeResult.error);
+        return;
+    }
+
+    const probes = probeResult.probes ?? [];
+    for (const probe of probes) {
+        stage.addEntry({
+            action: probe.label,
+            status: probeStatusToActivityStatus(probe.status),
+            detail: probe.reason,
+        });
+    }
+
+    if (probeResult.allPassed) {
+        stage.succeed(l10n.t("All deployment permission checks passed."));
+    } else {
+        const failedCount = probes.filter((p) => p.status !== "pass").length;
+        stage.warn(
+            l10n.t(
+                "{0} of {1} permission checks didn't pass. Pods may fail to deploy or pull images until these are fixed.",
+                failedCount,
+                probes.length,
+            ),
+        );
+    }
+}
+
+function probeStatusToActivityStatus(status: "pass" | "fail" | "unknown"): ActivityStatus {
+    switch (status) {
+        case "pass":
+            return "succeeded";
+        case "fail":
+            return "failed";
+        case "unknown":
+            return "warning";
+    }
 }
 
 async function createResourceGroup(

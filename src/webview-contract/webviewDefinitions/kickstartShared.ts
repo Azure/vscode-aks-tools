@@ -27,6 +27,8 @@ export interface ActivityEntry {
     status: ActivityStatus;
     elapsedMs?: number;
     detail?: string;
+    /** Optional URL — renders the action label as a clickable link. */
+    url?: string;
 }
 
 export interface ActivitySnapshot {
@@ -69,6 +71,16 @@ export interface RoleSummary {
      * succeeded with no qualifying grants; non-empty string carries the error message.
      */
     pimLookupNote?: string;
+    /**
+     * Actionable warning banner shown when role assignment permission is denied and no PIM roles are available.
+     * Includes guidance on how to request access or contact an admin.
+     */
+    actionBanner?: {
+        message: string;
+        actionText: string;
+        actionUrl?: string;
+        nextSteps?: string[];
+    };
 }
 
 export interface DeploymentActionResult {
@@ -85,22 +97,4 @@ export interface DeploymentPermissionsSummary {
     allGranted: boolean;
     actions: DeploymentActionResult[];
     detail: string;
-}
-
-export type PostProvisionProbeStatus = "pass" | "fail" | "unknown";
-
-export interface PostProvisionProbe {
-    id: string;
-    label: string;
-    status: PostProvisionProbeStatus;
-    reason: string;
-}
-
-export interface PostProvisionPermissionsSummary {
-    status: "running" | "complete" | "error";
-    allPassed?: boolean;
-    probes?: PostProvisionProbe[];
-    /** True when the panel has a markdown report cached and is ready to open it on request. */
-    hasReport: boolean;
-    error?: string;
 }

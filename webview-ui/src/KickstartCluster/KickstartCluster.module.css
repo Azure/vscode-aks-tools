@@ -124,6 +124,33 @@
     color: var(--vscode-descriptionForeground);
 }
 
+.recheckRow {
+    display: flex;
+    align-items: center;
+    column-gap: 0.6rem;
+    margin-top: 0.25rem;
+}
+
+.recheckButton {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85em;
+    cursor: pointer;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 2px;
+    white-space: nowrap;
+}
+
+.recheckButton:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+.recheckHint {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+}
+
 .showAllToggle {
     margin-left: auto;
     display: flex;
@@ -138,6 +165,51 @@
     display: flex;
     flex-direction: column;
     row-gap: 0.5rem;
+}
+
+.footerWarningPanel {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--vscode-inputValidation-warningBorder);
+    background: var(--vscode-inputValidation-warningBackground);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.45rem;
+}
+
+.footerWarningMessage {
+    display: flex;
+    align-items: flex-start;
+    column-gap: 0.5rem;
+    color: var(--vscode-list-warningForeground);
+}
+
+.footerWarningHint {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+.footerWarningActions {
+    display: flex;
+    align-items: center;
+    column-gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.footerActionLink {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: none;
+    font-size: 0.9em;
+}
+
+.footerActionLink:hover {
+    text-decoration: underline;
+}
+
+.footerActionButton {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85em;
 }
 
 .modeToggle {

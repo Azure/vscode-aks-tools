@@ -2,12 +2,18 @@ import * as vscode from "vscode";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { ReadyAzureSessionProvider } from "../../auth/types";
-import { getAuthorizationManagementClient } from "../utils/arm";
+import { getAuthorizationManagementClient, listAll } from "../utils/arm";
 import { getResourceGroups } from "../utils/resourceGroups";
 import { getSubscriptions, SelectionType } from "../utils/subscriptions";
+import { createGraphClient, getCurrentUserId } from "../utils/graph";
 import {
     EligibleGrant,
     RBAC_ADMIN_ROLE,
+    ROLE_CONTRIBUTOR,
+    ROLE_OWNER,
+    ROLE_RBAC_ADMINISTRATOR,
+    ROLE_READER,
+    ROLE_USER_ACCESS_ADMINISTRATOR,
     ROLE_ASSIGNMENT_WRITE,
     RoleAssignmentWriteVerdict,
     azRoleAssignmentCommand,
@@ -19,11 +25,27 @@ import { openMarkdownReport } from "../utils/markdownReport";
 
 const QUICKPICK_TITLE = "Check role-assignment permissions";
 
+let outputChannel: vscode.OutputChannel | undefined;
+function getOutputChannel(): vscode.OutputChannel {
+    if (!outputChannel) {
+        outputChannel = vscode.window.createOutputChannel("AKS Kickstart");
+    }
+    return outputChannel;
+}
+
 type PermissionsScope = {
     subscriptionId: string;
     subscriptionName: string;
     resourceGroup: string;
     resourceGroupScopeId: string;
+};
+
+const WELL_KNOWN_ROLE_NAMES: Record<string, string> = {
+    [ROLE_OWNER]: "Owner",
+    [ROLE_CONTRIBUTOR]: "Contributor",
+    [ROLE_USER_ACCESS_ADMINISTRATOR]: "User Access Administrator",
+    [ROLE_RBAC_ADMINISTRATOR]: "Role Based Access Control Administrator",
+    [ROLE_READER]: "Reader",
 };
 
 /**
@@ -45,6 +67,8 @@ export type CheckRoleAssignmentPermissionsArgs = {
 export type CheckRoleAssignmentPermissionsResult = {
     cancelled: boolean;
     canCreate?: boolean;
+    /** Active role names resolved for the current user at/above the probed scope. */
+    activeRoleNames?: string[];
     scope?: {
         subscriptionId: string;
         subscriptionName: string;
@@ -60,7 +84,7 @@ export type CheckRoleAssignmentPermissionsResult = {
 };
 
 export async function checkRoleAssignmentPermissions(
-    _context: IActionContext,
+    _context: IActionContext | undefined,
     args?: CheckRoleAssignmentPermissionsArgs,
 ): Promise<CheckRoleAssignmentPermissionsResult> {
     const invokedProgrammatically = Boolean(args?.subscriptionId && args?.resourceGroup);
@@ -90,9 +114,27 @@ export async function checkRoleAssignmentPermissions(
     }
 
     const verdict = verdictResult.result;
-    const eligible = verdict.canCreate
-        ? undefined
-        : await findEligiblePimGrants(authClient, scope.resourceGroupScopeId);
+    const activeRoleNames = await getActiveRoleNamesForCurrentUserAtScope(sessionProvider.result, authClient, scope);
+    // Always attempt PIM lookup to ensure command always returns complete grants.
+    // When user already has role-write permission, PIM data is still useful context.
+    const channel = getOutputChannel();
+    channel.appendLine(
+        `[checkRoleAssignmentPermissions] canCreate=${verdict.canCreate} scope=${scope.resourceGroupScopeId}`,
+    );
+    channel.appendLine(`[checkRoleAssignmentPermissions] Starting PIM lookup at ${scope.resourceGroupScopeId}`);
+    const eligible = await findEligiblePimGrants(authClient, scope.resourceGroupScopeId, (msg) =>
+        channel.appendLine(msg),
+    );
+    if (failed(eligible)) {
+        channel.appendLine(`[checkRoleAssignmentPermissions] PIM lookup failed: ${eligible.error}`);
+    } else {
+        channel.appendLine(
+            `[checkRoleAssignmentPermissions] PIM lookup returned ${eligible.result.length} qualifying grant(s)`,
+        );
+        for (const g of eligible.result) {
+            channel.appendLine(`  - ${g.roleName} at ${g.scopeId}`);
+        }
+    }
 
     const markdown = buildReport(scope, verdict, eligible);
 
@@ -111,11 +153,66 @@ export async function checkRoleAssignmentPermissions(
     return {
         cancelled: false,
         canCreate: verdict.canCreate,
+        activeRoleNames,
         scope,
         verdict,
-        eligiblePimRoles: eligible && !failed(eligible) ? eligible.result : undefined,
+        eligiblePimRoles: !failed(eligible) ? eligible.result : undefined,
         markdown,
     };
+}
+
+async function getActiveRoleNamesForCurrentUserAtScope(
+    sessionProvider: ReadyAzureSessionProvider,
+    authClient: ReturnType<typeof getAuthorizationManagementClient>,
+    scope: PermissionsScope,
+): Promise<string[] | undefined> {
+    try {
+        const graphClient = createGraphClient(sessionProvider);
+        const userIdResult = await getCurrentUserId(graphClient);
+        if (failed(userIdResult)) {
+            return undefined;
+        }
+
+        // Do not use atScope(): inherited assignments from subscription/management group are
+        // relevant to effective permissions at the resource-group scope.
+        const assignments = await listAll(
+            authClient.roleAssignments.listForScope(scope.resourceGroupScopeId, {
+                filter: `assignedTo('${userIdResult.result}')`,
+            }),
+        );
+        if (failed(assignments)) {
+            return undefined;
+        }
+
+        const roleDefinitionIds = [
+            ...new Set(
+                assignments.result
+                    .map((ra) => ra.roleDefinitionId?.split("/").pop())
+                    .filter((id): id is string => Boolean(id)),
+            ),
+        ];
+        if (roleDefinitionIds.length === 0) {
+            return [];
+        }
+
+        const names: string[] = [];
+        for (const id of roleDefinitionIds) {
+            if (WELL_KNOWN_ROLE_NAMES[id]) {
+                names.push(WELL_KNOWN_ROLE_NAMES[id]);
+                continue;
+            }
+            try {
+                const def = await authClient.roleDefinitions.get(`/subscriptions/${scope.subscriptionId}`, id);
+                names.push(def.roleName ?? "Custom role");
+            } catch {
+                names.push("Custom role");
+            }
+        }
+
+        return [...new Set(names)];
+    } catch {
+        return undefined;
+    }
 }
 
 export function buildReport(
