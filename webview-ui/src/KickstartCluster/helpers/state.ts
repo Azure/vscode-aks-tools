@@ -123,12 +123,18 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         costEstimate: null,
     }),
     vscodeMessageHandler: {
-        getSubscriptionsResponse: (state, args) => ({
-            ...state,
-            subscriptions: args.subscriptions,
-            selectedSubscriptionId: state.selectedSubscriptionId ?? args.defaultSubscriptionId,
-            stage: Stage.CollectingInput,
-        }),
+        getSubscriptionsResponse: (state, args) => {
+            const available = new Set(args.subscriptions.map((s) => s.id));
+            const preferred = [state.selectedSubscriptionId, args.defaultSubscriptionId].find(
+                (id) => id !== null && available.has(id),
+            );
+            return {
+                ...state,
+                subscriptions: args.subscriptions,
+                selectedSubscriptionId: preferred ?? args.subscriptions[0]?.id ?? null,
+                stage: Stage.CollectingInput,
+            };
+        },
         getLocationsResponse: (state, args) => ({ ...state, locations: args.locations }),
         getResourceGroupsResponse: (state, args) => ({ ...state, resourceGroups: args.groups }),
         activitySnapshot: (state, snapshot) => ({
