@@ -87,8 +87,17 @@ export class ActivityReporter {
         private readonly token: CancellationToken,
     ) {}
 
-    stage(stage: string, title: string): StageReporter {
-        return new StageReporter(this.flow, this.runId, stage, title, this.sink, this.channel, this.token);
+    stage(stage: string, title: string, options?: { collapsible?: boolean }): StageReporter {
+        return new StageReporter(
+            this.flow,
+            this.runId,
+            stage,
+            title,
+            this.sink,
+            this.channel,
+            this.token,
+            options?.collapsible ?? false,
+        );
     }
 }
 
@@ -106,6 +115,7 @@ export class StageReporter {
         private readonly sink: ActivitySink,
         private readonly channel: vscode.OutputChannel,
         private readonly token: CancellationToken,
+        private readonly collapsible: boolean = false,
     ) {
         this.post();
     }
@@ -168,6 +178,7 @@ export class StageReporter {
             entries: this.entries.map((e) => ({ ...e })),
             detail: this.detail,
             fullError: this.fullError,
+            collapsible: this.collapsible,
         });
     }
 }

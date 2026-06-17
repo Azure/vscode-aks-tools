@@ -40,6 +40,8 @@ export interface ActivitySnapshot {
     entries: ActivityEntry[];
     detail?: string;
     fullError?: string;
+    /** When true, the webview collapses this stage's entries behind an expandable summary by default. */
+    collapsible?: boolean;
 }
 
 export interface RegionQuotaResult {

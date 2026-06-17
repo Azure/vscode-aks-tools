@@ -11,6 +11,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+    ActivityEntry,
     ActivitySnapshot,
     ActivityStatus,
     SetupStepStatus,
@@ -71,6 +72,53 @@ function StageFullError({ fullError }: { fullError: string }) {
     );
 }
 
+function EntryRow({ entry }: { entry: ActivityEntry }) {
+    return (
+        <span className={styles.activityEntry}>
+            <FontAwesomeIcon
+                className={entryStatusClass[entry.status]}
+                icon={entryStatusIcon[entry.status]}
+                spin={entry.status === "running"}
+            />
+            {entry.url ? (
+                <a className={styles.activityAction} href={entry.url} target="_blank" rel="noreferrer">
+                    {entry.action}
+                </a>
+            ) : (
+                <span className={styles.activityAction}>{entry.action}</span>
+            )}
+            {entry.detail && <span className={styles.activityEntryDetail}>{entry.detail}</span>}
+            {entry.elapsedMs !== undefined && (
+                <span className={styles.activityElapsed}>{formatElapsed(entry.elapsedMs)}</span>
+            )}
+        </span>
+    );
+}
+
+function CollapsibleEntries({ stage }: { stage: ActivitySnapshot }) {
+    const [expanded, setExpanded] = useState(false);
+    return (
+        <span className={styles.entriesCollapse}>
+            <button
+                type="button"
+                className={styles.entriesToggle}
+                aria-expanded={expanded}
+                onClick={() => setExpanded((prev) => !prev)}
+            >
+                <FontAwesomeIcon className={styles.entriesChevron} icon={expanded ? faChevronDown : faChevronRight} />
+                {expanded ? l10n.t("Hide Quota Checks") : l10n.t("Show Quota Checks")}
+            </button>
+            {expanded && (
+                <span className={styles.activityEntries}>
+                    {stage.entries.map((entry) => (
+                        <EntryRow key={entry.action} entry={entry} />
+                    ))}
+                </span>
+            )}
+        </span>
+    );
+}
+
 export function ActivityStageList({ stages }: { stages: ActivitySnapshot[] }) {
     if (stages.length === 0) {
         return null;
@@ -88,39 +136,16 @@ export function ActivityStageList({ stages }: { stages: ActivitySnapshot[] }) {
                         <span className={styles.checkTitle}>{stage.title}</span>
                         {stage.detail && <span className={styles.checkDetail}>{stage.detail}</span>}
                         {stage.fullError && <StageFullError fullError={stage.fullError} />}
-                        {stage.entries.length > 0 && (
-                            <span className={styles.activityEntries}>
-                                {stage.entries.map((entry) => (
-                                    <span key={entry.action} className={styles.activityEntry}>
-                                        <FontAwesomeIcon
-                                            className={entryStatusClass[entry.status]}
-                                            icon={entryStatusIcon[entry.status]}
-                                            spin={entry.status === "running"}
-                                        />
-                                        {entry.url ? (
-                                            <a
-                                                className={styles.activityAction}
-                                                href={entry.url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                {entry.action}
-                                            </a>
-                                        ) : (
-                                            <span className={styles.activityAction}>{entry.action}</span>
-                                        )}
-                                        {entry.detail && (
-                                            <span className={styles.activityEntryDetail}>{entry.detail}</span>
-                                        )}
-                                        {entry.elapsedMs !== undefined && (
-                                            <span className={styles.activityElapsed}>
-                                                {formatElapsed(entry.elapsedMs)}
-                                            </span>
-                                        )}
-                                    </span>
-                                ))}
-                            </span>
-                        )}
+                        {stage.entries.length > 0 &&
+                            (stage.collapsible && stage.entries.length > 1 ? (
+                                <CollapsibleEntries stage={stage} />
+                            ) : (
+                                <span className={styles.activityEntries}>
+                                    {stage.entries.map((entry) => (
+                                        <EntryRow key={entry.action} entry={entry} />
+                                    ))}
+                                </span>
+                            ))}
                     </span>
                 </li>
             ))}
