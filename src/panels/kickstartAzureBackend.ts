@@ -46,7 +46,27 @@ import {
 } from "../webview-contract/webviewDefinitions/kickstartShared";
 import { ActivityReporter, ActivitySink, CancellationToken } from "./kickstartActivity";
 
-const SCAN_REGIONS = ["eastus", "eastus2", "westus2", "westeurope"];
+const REGION_CAPACITY_RISK = {
+    low: ["eastus2", "westus3", "southcentralus", "canadacentral", "swedencentral", "japaneast"],
+    medium: ["centralus", "westus2"],
+    high: ["eastus", "westeurope", "southeastasia"],
+};
+
+const PREFERRED_REGION_ORDER = [...REGION_CAPACITY_RISK.low, ...REGION_CAPACITY_RISK.medium];
+const HIGH_RISK_REGIONS = new Set(REGION_CAPACITY_RISK.high);
+
+const MAX_SUGGESTED_REGIONS = 3;
+
+function compareRegionsByCapacityRisk(a: string, b: string): number {
+    const rank = (region: string): number => {
+        const preferred = PREFERRED_REGION_ORDER.indexOf(region);
+        if (preferred >= 0) {
+            return preferred;
+        }
+        return HIGH_RISK_REGIONS.has(region) ? PREFERRED_REGION_ORDER.length + 1 : PREFERRED_REGION_ORDER.length;
+    };
+    return rank(a) - rank(b) || a.localeCompare(b);
+}
 
 export interface SubscriptionListResult {
     subscriptions: Subscription[];
@@ -116,7 +136,7 @@ export async function getLocationList(
         };
     }
 
-    return success(resourceTypes[0].locations.map(normalizeLocation));
+    return success(resourceTypes[0].locations.map(normalizeLocation).sort(compareRegionsByCapacityRisk));
 }
 
 export async function getResourceGroupList(
@@ -244,9 +264,9 @@ export async function runSubscriptionScan(
         providersStage.warn(l10n.t("Couldn't check provider registration: {0}", getErrorMessage(e)));
     }
 
-    const quotaStage = reporter.stage("quota", l10n.t("Regional quota"));
-    const regionResults = await Promise.all(
-        SCAN_REGIONS.map((location) =>
+    const quotaStage = reporter.stage("quota", l10n.t("Regional quota"), { collapsible: true });
+    const scannedResults = await Promise.all(
+        PREFERRED_REGION_ORDER.map((location) =>
             quotaStage
                 .run(
                     l10n.t("Checking quota in {0}", location),
@@ -273,7 +293,11 @@ export async function runSubscriptionScan(
     );
     token.throwIfCancelled();
 
-    const recommendedRegion = SCAN_REGIONS.find((r) => regionResults.find((x) => x.location === r)?.hasQuota) ?? null;
+    const availableRegions = scannedResults.filter((r) => r.hasQuota);
+    const recommendedRegion = availableRegions[0]?.location ?? null;
+    const suggestedRegions = availableRegions.length > 0 ? availableRegions : scannedResults;
+    const regionResults = suggestedRegions.slice(0, MAX_SUGGESTED_REGIONS);
+
     if (recommendedRegion) {
         quotaStage.succeed(l10n.t("Recommended region: {0}", recommendedRegion));
     } else {
