@@ -16,6 +16,10 @@ export function KickstartGuidedSetup(initialState: InitialState) {
                         samples={state.samples}
                         workspaceIsEmpty={state.workspaceIsEmpty}
                         errorMessage={state.errorMessage}
+                        githubRepos={state.githubRepos}
+                        githubReposLoading={state.githubReposLoading}
+                        githubReposError={state.githubReposError}
+                        githubSignedInUser={state.githubSignedInUser}
                         eventHandlers={eventHandlers}
                         vscode={vscode}
                     />

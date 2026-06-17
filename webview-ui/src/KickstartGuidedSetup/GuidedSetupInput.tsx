@@ -7,17 +7,20 @@ import {
     faLayerGroup,
     faRobot,
     faServer,
+    faSpinner,
     faTimesCircle,
+    faUser,
     faWandMagicSparkles,
     faWindowMaximize,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import * as l10n from "@vscode/l10n";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     AppSource,
     AppSourceKind,
+    GitHubRepo,
     GuidedSetupSelections,
     KickstartSample,
     ProjectType,
@@ -35,6 +38,10 @@ interface GuidedSetupInputProps {
     samples: KickstartSample[];
     workspaceIsEmpty: boolean;
     errorMessage: string | null;
+    githubRepos: GitHubRepo[] | null;
+    githubReposLoading: boolean;
+    githubReposError: string | null;
+    githubSignedInUser: string | null;
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
 }
@@ -82,6 +89,22 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
     const [projectIdea, setProjectIdea] = useState<string>("");
     const [sampleLabel, setSampleLabel] = useState<string>(props.samples[0]?.label ?? "");
     const [submitAttempted, setSubmitAttempted] = useState(false);
+
+    // Auto-load the user's GitHub repositories the first time they open the
+    // "Start from a GitHub repo" section. Uses whichever GitHub account is
+    // currently signed in to VS Code (no prompt, no account picker).
+    useEffect(() => {
+        if (
+            appSourceKind === "repo" &&
+            props.githubRepos === null &&
+            !props.githubReposLoading &&
+            props.githubReposError === null
+        ) {
+            props.eventHandlers.onSetGitHubReposLoading();
+            props.vscode.postListGitHubReposRequest();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [appSourceKind]);
 
     function buildAppSource(): AppSource | null {
         switch (appSourceKind) {
@@ -143,23 +166,90 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
             </div>
 
             {appSourceKind === "repo" && (
-                <>
-                    <label htmlFor="repo-url-input" className={styles.label}>
-                        {l10n.t("Repository URL*")}
-                    </label>
-                    <input
-                        type="text"
-                        id="repo-url-input"
-                        className={styles.longControl}
-                        value={isValueSet(repoUrl) ? repoUrl.value : ""}
-                        placeholder="https://github.com/owner/repo"
-                        onInput={(e) => {
-                            const v = e.currentTarget.value;
-                            setRepoUrl(v ? valid(v) : missing<string>(l10n.t("A repository URL is required.")));
-                        }}
-                    />
-                    {renderValidationMessage(repoUrl)}
-                </>
+                <div className={styles.ghSection}>
+                    <div className={styles.ghHeader}>
+                        <span className={styles.ghHeaderTitle}>
+                            <FontAwesomeIcon icon={faCodeBranch} />
+                            {l10n.t("Your GitHub repositories")}
+                        </span>
+                        <div className={styles.ghHeaderActions}>
+                            {props.githubReposLoading && (
+                                <span className={styles.ghLoading}>
+                                    <FontAwesomeIcon icon={faSpinner} spin />
+                                    {l10n.t("Loading…")}
+                                </span>
+                            )}
+                            {props.githubSignedInUser && (
+                                <>
+                                    <span className={styles.ghEmptyHint}>{l10n.t("Signed in as")}</span>
+                                    <span className={styles.ghAccountPill}>
+                                        <FontAwesomeIcon icon={faUser} />
+                                        {props.githubSignedInUser}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {props.githubReposError && (
+                        <span className={styles.ghErrorRow}>
+                            <FontAwesomeIcon icon={faTimesCircle} />
+                            {props.githubReposError}
+                        </span>
+                    )}
+
+                    {props.githubRepos && props.githubRepos.length === 0 && (
+                        <span className={styles.ghEmptyHint}>
+                            {l10n.t("No repositories were found for this GitHub account.")}
+                        </span>
+                    )}
+
+                    {props.githubRepos && props.githubRepos.length > 0 && (
+                        <CustomDropdown
+                            id="github-repo-dropdown"
+                            className={styles.ghDropdown}
+                            value={
+                                isValueSet(repoUrl) && props.githubRepos.some((r) => r.cloneUrl === repoUrl.value)
+                                    ? repoUrl.value
+                                    : ""
+                            }
+                            onChange={(value) => {
+                                if (value) setRepoUrl(valid(value));
+                            }}
+                        >
+                            {props.githubRepos.map((repo) => {
+                                const name = repo.fullName.split("/").slice(1).join("/") || repo.fullName;
+                                return (
+                                    <CustomDropdownOption
+                                        key={repo.cloneUrl}
+                                        value={repo.cloneUrl}
+                                        label={`${name}${repo.private ? "  •  private" : ""}${
+                                            repo.description ? `  —  ${repo.description}` : ""
+                                        }`}
+                                    />
+                                );
+                            })}
+                        </CustomDropdown>
+                    )}
+
+                    <div className={styles.ghDivider}>{l10n.t("or")}</div>
+
+                    <div className={styles.ghManualField}>
+                        <label htmlFor="repo-url-input">{l10n.t("Paste a repository URL*")}</label>
+                        <input
+                            type="text"
+                            id="repo-url-input"
+                            className={styles.ghManualInput}
+                            value={isValueSet(repoUrl) ? repoUrl.value : ""}
+                            placeholder="https://github.com/owner/repo"
+                            onInput={(e) => {
+                                const v = e.currentTarget.value;
+                                setRepoUrl(v ? valid(v) : missing<string>(l10n.t("A repository URL is required.")));
+                            }}
+                        />
+                        {renderValidationMessage(repoUrl)}
+                    </div>
+                </div>
             )}
 
             {appSourceKind === "new" && (

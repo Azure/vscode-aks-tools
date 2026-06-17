@@ -24,6 +24,13 @@ export interface GuidedSetupSelections {
     appSource: AppSource;
 }
 
+export interface GitHubRepo {
+    fullName: string;
+    description: string | null;
+    cloneUrl: string;
+    private: boolean;
+}
+
 export interface InitialState {
     samples: KickstartSample[];
     workspaceIsEmpty: boolean;
@@ -31,10 +38,13 @@ export interface InitialState {
 
 export type ToVsCodeMsgDef = {
     finishRequest: GuidedSetupSelections;
+    listGitHubReposRequest: void;
 };
 
 export type ToWebViewMsgDef = {
     errorNotification: { message: string };
+    gitHubReposLoaded: { repos: GitHubRepo[]; signedInUser: string | null };
+    gitHubReposError: { message: string };
 };
 
 export type KickstartGuidedSetupDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
