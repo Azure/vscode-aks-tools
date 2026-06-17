@@ -85,6 +85,7 @@ export function randomSuffix(length: number): string {
 
 function deriveClusterName(resourceGroupName: string, suffix: string): string {
     const base = resourceGroupName.replace(/[^a-zA-Z0-9_-]/g, "").replace(/^[-_]+|[-_]+$/g, "") || "aks";
+    if (!suffix) return base.slice(0, 63).replace(/[-_]+$/g, "");
     return `${base.slice(0, 63 - suffix.length - 1)}-${suffix}`;
 }
 
@@ -114,7 +115,10 @@ function formatCurrency(value: number, currencyCode: string): string {
 }
 
 export function ClusterInput(props: ClusterInputProps) {
-    const [appName, setAppName] = useState<string>(props.launchContext.appName ?? "");
+    const [uniqueSuffix] = useState(() => randomSuffix(4));
+    const [appName, setAppName] = useState<string>(
+        props.launchContext.appName ? `${props.launchContext.appName}-${uniqueSuffix}` : "",
+    );
     const [location, setLocation] = useState<Validatable<string>>(
         props.launchContext.suggestedLocation ? valid(props.launchContext.suggestedLocation) : unset(),
     );
@@ -133,7 +137,6 @@ export function ClusterInput(props: ClusterInputProps) {
     const [showAllQuestions, setShowAllQuestions] = useState(false);
     const lastPreflightKeyRef = useRef<string | null>(null);
     const autoSelectedScanRef = useRef<number | null>(null);
-    const [uniqueSuffix] = useState(() => randomSuffix(4));
     const estimateRegionRef = useRef<string | null>(null);
     const rgEditedRef = useRef(false);
     const clusterNameEditedRef = useRef(!!props.launchContext.suggestedClusterName);
@@ -196,14 +199,14 @@ export function ClusterInput(props: ClusterInputProps) {
                 setNewResourceGroupName(getValidatedRgName(`${base}-rg`));
             }
             if (!clusterNameEditedRef.current) {
-                setClusterName(getValidatedClusterName(deriveClusterName(base, uniqueSuffix)));
+                setClusterName(getValidatedClusterName(deriveClusterName(base, "")));
             }
             if (!acrNameEditedRef.current) {
-                setAcrName(getValidatedAcrName(deriveAcrName(base, uniqueSuffix)));
+                setAcrName(getValidatedAcrName(deriveAcrName(base, "")));
             }
         }, 0);
         return () => window.clearTimeout(timer);
-    }, [appName, isNewResourceGroup, uniqueSuffix]);
+    }, [appName, isNewResourceGroup]);
 
     useEffect(() => {
         if (appName.trim() || !isNewResourceGroup || !isValid(newResourceGroupName)) {
