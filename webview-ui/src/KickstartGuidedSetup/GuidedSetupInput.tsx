@@ -330,7 +330,10 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
                                     className={styles.choiceCardIcon}
                                     icon={SAMPLE_ICONS[sample.label] ?? faCubes}
                                 />
-                                <span>{sample.label}</span>
+                                <span className={styles.choiceCardText}>
+                                    <span>{sample.label}</span>
+                                    <span className={styles.choiceCardSub}>{sample.stack}</span>
+                                </span>
                             </button>
                         ))}
                     </div>

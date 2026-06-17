@@ -144,6 +144,18 @@
     font-size: 1.4rem;
 }
 
+.choiceCardText {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.choiceCardSub {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+}
+
 .choiceSelected {
     border-color: var(--vscode-focusBorder);
     background: var(--vscode-list-activeSelectionBackground);
