@@ -1,4 +1,3 @@
-import { Uri, window } from "vscode";
 import * as vscode from "vscode";
 import * as l10n from "@vscode/l10n";
 import { Octokit } from "@octokit/rest";
@@ -13,7 +12,7 @@ import { TelemetryDefinition, ToWebviewMessageSink } from "../webview-contract/w
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 
 export class KickstartGuidedSetupPanel extends BasePanel<"kickstartGuidedSetup"> {
-    constructor(extensionUri: Uri) {
+    constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kickstartGuidedSetup", {
             errorNotification: null,
             gitHubReposLoaded: null,
@@ -23,84 +22,95 @@ export class KickstartGuidedSetupPanel extends BasePanel<"kickstartGuidedSetup">
 }
 
 export class KickstartGuidedSetupDataProvider implements PanelDataProvider<"kickstartGuidedSetup"> {
+    private authListener: vscode.Disposable | undefined;
+
     getTitle(): string {
         return l10n.t("AKS Kickstart");
     }
 
     getInitialState(): InitialState {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
         return {
             samples: KICKSTART_SAMPLES,
-            workspaceIsEmpty: !workspaceFolders || workspaceFolders.length === 0,
+            workspaceIsEmpty: !vscode.workspace.workspaceFolders?.length,
         };
     }
 
     getTelemetryDefinition(): TelemetryDefinition<"kickstartGuidedSetup"> {
-        return {
-            finishRequest: true,
-            listGitHubReposRequest: true,
-        };
+        return { finishRequest: true, listGitHubReposRequest: true };
+    }
+
+    /** Disposable to pass to `panel.show(...)` so the auth listener is cleaned up. */
+    getProviderDisposable(): vscode.Disposable {
+        return new vscode.Disposable(() => this.authListener?.dispose());
     }
 
     getMessageHandler(webview: ToWebviewMessageSink<"kickstartGuidedSetup">): MessageHandler<ToVsCodeMsgDef> {
-        // Refresh the repo list automatically whenever the user signs in,
-        // signs out, or switches GitHub accounts in VS Code.
-        vscode.authentication.onDidChangeSessions((e) => {
-            if (e.provider.id === "github") {
-                void this.fetchRepos(webview);
-            }
+        // Silently refresh whenever the user signs in/out or switches GitHub accounts.
+        this.authListener = vscode.authentication.onDidChangeSessions((e) => {
+            if (e.provider.id === "github") void this.fetchRepos(webview, { prompt: false });
         });
 
         return {
             finishRequest: (args) => this.handleFinish(args),
-            listGitHubReposRequest: () => this.fetchRepos(webview),
+            // User-initiated, so we may prompt for the `repo` scope.
+            listGitHubReposRequest: () => this.fetchRepos(webview, { prompt: true }),
         };
     }
 
     private async handleFinish(selections: GuidedSetupSelections) {
         await handoffToChat(selections);
-        window.showInformationMessage(l10n.t("Continuing AKS Kickstart in the chat view."));
+        vscode.window.showInformationMessage(l10n.t("Continuing AKS Kickstart in the chat view."));
     }
 
-    private async fetchRepos(webview: ToWebviewMessageSink<"kickstartGuidedSetup">) {
-        // Use whichever GitHub account is signed into VS Code. `createIfNone: false`
-        // means we never prompt — sign-in happens via the Accounts menu.
+    /**
+     * Obtain a GitHub session with the `repo` scope and list the user's repos.
+     * On user-initiated calls we prompt for the scope if it hasn't been granted;
+     * background refreshes (auth-change events) stay silent.
+     */
+    private async fetchRepos(webview: ToWebviewMessageSink<"kickstartGuidedSetup">, opts: { prompt: boolean }) {
         let session: vscode.AuthenticationSession | undefined;
         try {
-            session = await vscode.authentication.getSession("github", ["repo"], { createIfNone: false });
+            session = await vscode.authentication.getSession(
+                "github",
+                ["repo"],
+                opts.prompt ? { createIfNone: true } : { silent: true },
+            );
         } catch {
-            session = undefined;
+            // Treat as "no session" below.
         }
 
         if (!session) {
             webview.postGitHubReposError({
                 message: l10n.t(
-                    "No GitHub account is signed in to VS Code. Sign in via the Accounts menu to see your repositories.",
+                    "No GitHub account with `repo` access is signed in. Sign in via the Accounts menu to see your repositories.",
                 ),
+                signedInUser: null,
             });
             return;
         }
 
+        const signedInUser = session.account?.label ?? null;
+
         try {
-            // type: "owner" restricts the list to repos owned by the signed-in user.
             const octokit = new Octokit({ auth: session.accessToken });
-            const { data: apiRepos } = await octokit.rest.repos.listForAuthenticatedUser({
+            const { data } = await octokit.rest.repos.listForAuthenticatedUser({
                 per_page: 100,
                 sort: "updated",
                 type: "owner",
             });
             webview.postGitHubReposLoaded({
-                repos: apiRepos.map((r) => ({
+                repos: data.map((r) => ({
                     fullName: r.full_name,
                     description: r.description,
                     cloneUrl: r.clone_url,
                     private: r.private,
                 })),
-                signedInUser: session.account?.label ?? null,
+                signedInUser,
             });
         } catch (e) {
             webview.postGitHubReposError({
                 message: l10n.t("Failed to fetch GitHub repositories: {0}", String(e)),
+                signedInUser,
             });
         }
     }
