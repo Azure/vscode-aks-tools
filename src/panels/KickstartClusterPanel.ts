@@ -24,6 +24,7 @@ import { CancellationToken, ScanCancelledError, getKickstartOutputChannel } from
 import {
     getClusterList,
     getConnectedAcrList,
+    getExistingClusterReadiness,
     getLocationList,
     getResourceGroupList,
     getSubscriptionList,
@@ -45,8 +46,72 @@ export class KickstartClusterPanel extends BasePanel<"kickstartCluster"> {
             preflightComplete: null,
             finishComplete: null,
             getCostEstimateResponse: null,
+            existingReadinessComplete: null,
+            awaitingProvisioningAccess: null,
+            provisioningAccessResolved: null,
             errorNotification: null,
         });
+    }
+}
+
+type ProvisioningAccessProbe = () => Promise<boolean>;
+
+interface ProvisioningAccessRequest {
+    runId: number;
+    probe: ProvisioningAccessProbe;
+    onResolved: () => void;
+    onStillBlocked: () => void;
+    settle: (granted: boolean) => void;
+    rechecking: boolean;
+}
+
+class ProvisioningAccessGate {
+    private active: ProvisioningAccessRequest | null = null;
+
+    waitForAccess(
+        runId: number,
+        probe: ProvisioningAccessProbe,
+        onResolved: () => void,
+        onStillBlocked: () => void,
+    ): Promise<boolean> {
+        this.cancel();
+        return new Promise<boolean>((resolve) => {
+            this.active = { runId, probe, onResolved, onStillBlocked, settle: resolve, rechecking: false };
+        });
+    }
+
+    async recheck(runId: number): Promise<void> {
+        const request = this.active;
+        if (!request || request.runId !== runId || request.rechecking) {
+            return;
+        }
+        request.rechecking = true;
+        try {
+            const granted = await request.probe();
+            if (this.active !== request) {
+                return;
+            }
+            if (granted) {
+                this.active = null;
+                request.onResolved();
+                request.settle(true);
+            } else {
+                request.onStillBlocked();
+            }
+        } finally {
+            if (this.active === request) {
+                request.rechecking = false;
+            }
+        }
+    }
+
+    cancel(): void {
+        const request = this.active;
+        if (!request) {
+            return;
+        }
+        this.active = null;
+        request.settle(false);
     }
 }
 
@@ -55,6 +120,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
     private nextRunId = 0;
     private lastProvisioned: ProvisionedClusterInfo | null = null;
     private lastFinish: (() => Promise<void>) | null = null;
+    private readonly provisioningGate = new ProvisioningAccessGate();
 
     constructor(
         private readonly sessionProvider: ReadyAzureSessionProvider,
@@ -83,10 +149,12 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             startSubscriptionScanRequest: false,
             cancelSubscriptionScanRequest: false,
             getCostEstimateRequest: false,
+            runExistingReadinessRequest: false,
             runPreflightRequest: true,
             finishRequest: true,
             useExistingClusterRequest: true,
             retryProvisioningRequest: true,
+            recheckProvisioningPermissionRequest: false,
             continueInChatRequest: true,
         };
     }
@@ -105,7 +173,9 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             finishRequest: (args) => this.handleFinish(webview, args),
             useExistingClusterRequest: (args) => this.handleUseExistingCluster(webview, args),
             retryProvisioningRequest: () => this.handleRetry(),
+            recheckProvisioningPermissionRequest: (args) => this.handleRecheckProvisioningPermission(args.runId),
             continueInChatRequest: () => this.handleContinueInChat(),
+            runExistingReadinessRequest: (args) => this.handleRunExistingReadiness(webview, args),
         };
     }
 
@@ -212,6 +282,15 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
                 webview,
                 getKickstartOutputChannel(),
                 token,
+                (prompt, probe) => {
+                    webview.postAwaitingProvisioningAccess(prompt);
+                    return this.provisioningGate.waitForAccess(
+                        prompt.runId,
+                        probe,
+                        () => webview.postProvisioningAccessResolved({ runId: prompt.runId }),
+                        () => webview.postAwaitingProvisioningAccess(prompt),
+                    );
+                },
             );
             if (result.succeeded) {
                 this.lastProvisioned = {
@@ -234,6 +313,10 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
         if (this.lastFinish) {
             await this.lastFinish();
         }
+    }
+
+    private handleRecheckProvisioningPermission(runId: number) {
+        void this.provisioningGate.recheck(runId);
     }
 
     private async handleGetClusters(webview: MessageSink<ToWebViewMsgDef>, subscriptionId: string) {
@@ -299,6 +382,27 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
         } catch (e) {
             webview.postErrorNotification({ message: getErrorMessage(e) });
         }
+    }
+
+    private async handleRunExistingReadiness(
+        webview: MessageSink<ToWebViewMsgDef>,
+        args: {
+            subscriptionId: string;
+            clusterResourceGroup: string;
+            clusterName: string;
+            acrName?: string;
+            acrResourceGroup?: string;
+            requestKey: string;
+        },
+    ) {
+        const readiness = await getExistingClusterReadiness(
+            args.subscriptionId,
+            args.clusterResourceGroup,
+            args.clusterName,
+            args.acrName,
+            args.acrResourceGroup,
+        );
+        webview.postExistingReadinessComplete({ readiness, requestKey: args.requestKey });
     }
 
     private async handleContinueInChat() {
