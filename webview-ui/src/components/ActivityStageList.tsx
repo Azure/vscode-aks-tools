@@ -106,7 +106,7 @@ function CollapsibleEntries({ stage }: { stage: ActivitySnapshot }) {
                 onClick={() => setExpanded((prev) => !prev)}
             >
                 <FontAwesomeIcon className={styles.entriesChevron} icon={expanded ? faChevronDown : faChevronRight} />
-                {expanded ? l10n.t("Hide Quota Checks") : l10n.t("Show Quota Checks")}
+                {expanded ? l10n.t("Hide Capacity Checks") : l10n.t("Show Capacity Checks")}
             </button>
             {expanded && (
                 <span className={styles.activityEntries}>

@@ -15,8 +15,10 @@ import { resolveClusterKubeletPrincipalId } from "./kickstartProvision";
 import {
     AUTOMATIC_REQUIRED_PROVIDERS,
     AutomaticSkuQuota,
+    AutomaticSkuZones,
     REQUIRED_VCPUS_FOR_AUTOMATIC,
     checkAutomaticSkuQuota,
+    checkAutomaticSkuZones,
     checkRegionSupportsAks,
     ensureProvidersRegistered,
     getProviderRegistrationStatus,
@@ -275,27 +277,35 @@ export async function runSubscriptionScan(
         providersStage.warn(l10n.t("Couldn't check provider registration: {0}", getErrorMessage(e)));
     }
 
-    const quotaStage = reporter.stage("quota", l10n.t("Regional quota"), { collapsible: true });
+    const capacityStage = reporter.stage("quota", l10n.t("Regional capacity"), { collapsible: true });
     const scannedResults = await Promise.all(
         PREFERRED_REGION_ORDER.map((location) =>
-            quotaStage
+            capacityStage
                 .run(
-                    l10n.t("Checking quota in {0}", location),
+                    l10n.t("Checking capacity in {0}", location),
                     async () => {
-                        const quota = await checkAutomaticSkuQuota(
-                            sessionProvider,
-                            subscriptionId,
-                            location,
-                            REQUIRED_VCPUS_FOR_AUTOMATIC,
-                        );
-                        const { status, detail, entryDetail } = summarizeQuota(quota, location);
+                        const [quota, zones] = await Promise.all([
+                            checkAutomaticSkuQuota(
+                                sessionProvider,
+                                subscriptionId,
+                                location,
+                                REQUIRED_VCPUS_FOR_AUTOMATIC,
+                            ),
+                            checkAutomaticSkuZones(sessionProvider, subscriptionId, location),
+                        ]);
+                        const quotaSummary = summarizeQuota(quota, location);
+                        const zoneSummary = summarizeZones(zones, location);
+                        // Recommendable only when both quota and the three-zone SKU requirement clear;
+                        // zones gate harder than quota, so the zone reason wins when it isn't a pass.
+                        const cleared = quotaSummary.status === "succeeded" && zoneSummary.status === "succeeded";
+                        const blocking = zoneSummary.status !== "succeeded" ? zoneSummary : quotaSummary;
                         const regionResult: RegionQuotaResult = {
                             location,
-                            status,
-                            detail,
-                            hasQuota: status === "succeeded",
+                            status: cleared ? "succeeded" : "warning",
+                            detail: blocking.detail,
+                            hasQuota: quotaSummary.status === "succeeded",
                         };
-                        return { regionResult, entryDetail };
+                        return { regionResult, entryDetail: blocking.entryDetail };
                     },
                     (r) => r.entryDetail,
                 )
@@ -304,15 +314,15 @@ export async function runSubscriptionScan(
     );
     token.throwIfCancelled();
 
-    const availableRegions = scannedResults.filter((r) => r.hasQuota);
+    const availableRegions = scannedResults.filter((r) => r.status === "succeeded");
     const recommendedRegion = availableRegions[0]?.location ?? null;
     const suggestedRegions = availableRegions.length > 0 ? availableRegions : scannedResults;
     const regionResults = suggestedRegions.slice(0, MAX_SUGGESTED_REGIONS);
 
     if (recommendedRegion) {
-        quotaStage.succeed(l10n.t("Recommended region: {0}", recommendedRegion));
+        capacityStage.succeed(l10n.t("Recommended region: {0}", recommendedRegion));
     } else {
-        quotaStage.warn(l10n.t("None of the scanned regions had enough AKS Automatic quota."));
+        capacityStage.warn(l10n.t("None of the scanned regions had enough AKS Automatic capacity."));
     }
 
     return { runId, recommendedRegion, regionResults };
@@ -380,6 +390,22 @@ export async function runPreflightChecks(
         quotaStage.succeed(quotaSummary.detail);
     } else {
         quotaStage.warn(quotaSummary.detail);
+    }
+
+    const zonesStage = reporter.stage("zones", l10n.t("Availability zones for AKS Automatic"));
+    const zones = await zonesStage.run(
+        l10n.t("Checking availability zones in {0}", location),
+        () => checkAutomaticSkuZones(sessionProvider, subscriptionId, location),
+        (z) => summarizeZones(z, location).entryDetail,
+    );
+    const zoneSummary = summarizeZones(zones, location);
+    if (zoneSummary.status === "succeeded") {
+        zonesStage.succeed(zoneSummary.detail);
+    } else if (zoneSummary.status === "failed") {
+        zonesStage.fail(zoneSummary.detail);
+        canProceed = false;
+    } else {
+        zonesStage.warn(zoneSummary.detail);
     }
 
     const role = await runRoleStage(reporter, sessionProvider, subscriptionId, resourceGroup, token);
@@ -851,5 +877,67 @@ function summarizeQuota(
         status: "succeeded",
         detail: l10n.t("{0} regional vCPUs available in {1} for AKS Automatic.", available, location),
         entryDetail: l10n.t("{0} of {1} vCPUs free", available, limit),
+    };
+}
+
+function summarizeZones(
+    zones: Errorable<AutomaticSkuZones>,
+    location: string,
+): { status: SetupStepStatus; detail: string; entryDetail: string } {
+    if (failed(zones)) {
+        // A transient probe failure shouldn't condemn the region: warn so the user can retry rather
+        // than being told a usable region is unusable. ARM still rejects a real shortfall on deploy.
+        return {
+            status: "warning",
+            detail: l10n.t("Couldn't verify availability-zone support for AKS Automatic: {0}", zones.error),
+            entryDetail: l10n.t("zone support unverified"),
+        };
+    }
+
+    const { offered, restrictedZones, requiredZoneCount, sufficient } = zones.result;
+    if (sufficient) {
+        return {
+            status: "succeeded",
+            detail: l10n.t(
+                "AKS Automatic VM sizes are available across at least {0} availability zones in {1}.",
+                requiredZoneCount,
+                location,
+            ),
+            entryDetail: l10n.t("{0}+ zones available", requiredZoneCount),
+        };
+    }
+
+    if (offered.length === 0) {
+        return {
+            status: "failed",
+            detail: l10n.t(
+                "{0} doesn't offer any of the VM sizes AKS Automatic needs for its system node pool.",
+                location,
+            ),
+            entryDetail: l10n.t("no AKS Automatic VM sizes"),
+        };
+    }
+
+    if (restrictedZones.length > 0) {
+        return {
+            status: "failed",
+            detail: l10n.t(
+                "Your subscription is restricted from availability zone(s) {0} in {1}, leaving fewer than the {2} zones AKS Automatic requires. Choose another region or request zone access for this subscription.",
+                restrictedZones.join(", "),
+                location,
+                requiredZoneCount,
+            ),
+            entryDetail: l10n.t("zone(s) {0} restricted", restrictedZones.join(", ")),
+        };
+    }
+
+    return {
+        status: "failed",
+        detail: l10n.t(
+            "{0} doesn't support the {1} availability zones AKS Automatic requires for its VM sizes.",
+            location,
+            requiredZoneCount,
+        ),
+        entryDetail: l10n.t("fewer than {0} zones", requiredZoneCount),
     };
 }
