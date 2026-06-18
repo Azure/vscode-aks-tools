@@ -44,6 +44,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartGuidedSetup", EventDef,
             ...state,
             githubReposLoading: false,
             githubReposError: args.message,
+            githubSignedInUser: args.signedInUser ?? state.githubSignedInUser,
         }),
     },
     eventHandler: {

@@ -21,6 +21,6 @@ export async function kickstartLaunch(): Promise<void> {
 
     const panel = new KickstartGuidedSetupPanel(extension.result.extensionUri);
     const dataProvider = new KickstartGuidedSetupDataProvider();
-    panel.show(dataProvider);
+    panel.show(dataProvider, dataProvider.getProviderDisposable());
     await vscode.commands.executeCommand("workbench.action.maximizeEditorHideSidebar");
 }
