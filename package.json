@@ -298,7 +298,7 @@
             {
                 "command": "aks.draftWorkflow",
                 "title": "%Create a GitHub Workflow%",
-                "category": "Automated Deployments"
+                "category": "AKS"
             },
             {
                 "command": "aks.showInPortal",
@@ -668,7 +668,7 @@
                     "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)"
                 },
                 {
-                    "submenu": "aks.automatedDeploymentsSubMenu",
+                    "submenu": "aks.deploymentToolsSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@1"
                 },
@@ -781,7 +781,7 @@
                     "group": "navigation"
                 }
             ],
-            "aks.automatedDeploymentsSubMenu": [
+            "aks.deploymentToolsSubMenu": [
                 {
                     "command": "aks.attachAcrToCluster",
                     "group": "navigation"
@@ -973,8 +973,8 @@
                 "label": "%Run AKS Diagnostics%"
             },
             {
-                "id": "aks.automatedDeploymentsSubMenu",
-                "label": "%Automated Deployments%"
+                "id": "aks.deploymentToolsSubMenu",
+                "label": "%Deployment Tools%"
             },
             {
                 "id": "aks.managedClusterOperationSubMenu",
