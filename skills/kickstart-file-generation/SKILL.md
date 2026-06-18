@@ -1,6 +1,6 @@
 ---
 name: kickstart-file-generation
-description: Rules for batching write_file calls efficiently. Prevents chatty incremental file writes and ensures the artifact store is updated atomically per logical unit of work.
+description: Rules for batching edit/editFiles calls efficiently. Prevents chatty incremental file writes and ensures the artifact store is updated atomically per logical unit of work.
 disable-model-invocation: true
 ---
 
@@ -14,7 +14,7 @@ When generating multiple related files, write them all before reporting to the u
 
 ```
 THINK: what files are needed and what goes in each
-WRITE: file 1, file 2, file 3, … (consecutive write_file calls)
+WRITE: file 1, file 2, file 3, … (consecutive edit/editFiles calls)
 REPORT: "I generated the following files: …"
 ```
 
@@ -38,7 +38,7 @@ If there are dependencies between files (e.g., the K8s deployment references an 
 
 ## Partial failures
 
-If a write_file call fails mid-batch:
+If a edit/editFiles call fails mid-batch:
 1. Stop the batch.
 2. Report which files were written successfully and which were not.
 3. Do not retry automatically — wait for the user to confirm intent before continuing.

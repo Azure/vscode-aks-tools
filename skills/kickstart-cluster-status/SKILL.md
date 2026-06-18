@@ -21,7 +21,7 @@ If timed out (exit 124), skip and retry next phase.
   - **QuotaExceeded**: Suggest different region or quota increase.
   - **OperationNotAllowed**: Provider not registered or policy blocking.
   - **InvalidParameter**: Bad name — re-collect from user.
-  Offer retry via `vscode_askQuestions`.
+  Offer retry via `vscode/askQuestions`.
 - **404**: `az aks create` may have failed silently. Check the RG exists, retry creation.
 
 Also check ACR:

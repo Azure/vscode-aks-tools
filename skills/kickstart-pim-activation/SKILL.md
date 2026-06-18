@@ -76,7 +76,7 @@ Then give these instructions:
 > 4. Fill in the justification and duration, then confirm
 > 5. Come back here and let me know once it's activated
 
-Use `vscode_askQuestions` to ask the user to confirm activation. After they confirm, wait 30 seconds for propagation, then validate by retrying the command that originally failed. If it still fails, suggest waiting another minute and retrying once more.
+Use `vscode/askQuestions` to ask the user to confirm activation. After they confirm, wait 30 seconds for propagation, then validate by retrying the command that originally failed. If it still fails, suggest waiting another minute and retrying once more.
 
 ## Step 3 — If no eligible roles found
 

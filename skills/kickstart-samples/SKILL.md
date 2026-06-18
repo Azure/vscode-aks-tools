@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Sample Repos
 
-**If the launch wizard already selected a sample**, skip the picker and clone that sample directly (see the table below). Otherwise, present this exact picker via `vscode_askQuestions`:
+**If the launch wizard already selected a sample**, skip the picker and clone that sample directly (see the table below). Otherwise, present this exact picker via `vscode/askQuestions`:
 ```json
 {
   "questions": [{
@@ -21,7 +21,7 @@ disable-model-invocation: true
 }
 ```
 
-After the user picks, clone with `run_in_terminal`:
+After the user picks, clone with `execute/runInTerminal`:
 
 | Sample | Clone command |
 |---|---|
@@ -29,7 +29,7 @@ After the user picks, clone with `run_in_terminal`:
 | Azure Voting App | `git clone https://github.com/Azure-Samples/azure-voting-app-redis.git` |
 | Contoso Real Estate | `git clone https://github.com/Azure-Samples/contoso-real-estate.git` |
 
-Then present the pre-filled profile below and confirm it with the user via `vscode_askQuestions` ("Looks good, continue to Configure" recommended). **Skip Discovery entirely** — go straight to Phase 2.
+Then present the pre-filled profile below and confirm it with the user via `vscode/askQuestions` ("Looks good, continue to Configure" recommended). **Skip Discovery entirely** — go straight to Phase 2.
 
 **AKS Store Demo**: Monorepo, 4 services — `store-front` (Node.js:8080), `order-service` (Node.js:3000), `product-service` (Go:3002), `makeline-service` (Rust:3001). Deps: MongoDB, RabbitMQ. Has Dockerfiles, K8s manifests, GitHub Actions.
 

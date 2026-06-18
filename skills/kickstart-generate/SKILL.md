@@ -29,7 +29,7 @@ Load these for detailed patterns as you author each artifact:
 - Use actual resource names from the Configure phase.
 - Never use `:latest` tags.
 - All K8s manifests must comply with AKS deployment safeguards (restricted pod security, no privileged, no hostPath).
-- After writing all files, confirm with user via `vscode_askQuestions`.
+- After writing all files, confirm with user via `vscode/askQuestions`.
 
 ## Exit Criteria
 All artifacts written. Announce: "Artifacts generated — moving to Review."

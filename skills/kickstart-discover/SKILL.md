@@ -15,7 +15,7 @@ Use `search` and `codebase` to scan the workspace before asking anything. Look f
 ## What to collect
 
 - App name
-- Language / framework (detect from manifest files, confirm via `vscode_askQuestions`)
+- Language / framework (detect from manifest files, confirm via `vscode/askQuestions`)
 - Dependencies (databases, caches, queues — offer common options as multi-select)
 - Port (detect from code like `app.listen(3000)`, confirm)
 - Environment variables (detect from `.env.example` or code)
@@ -24,7 +24,7 @@ Use `search` and `codebase` to scan the workspace before asking anything. Look f
 
 ## Rules
 
-- Use `vscode_askQuestions` for every question with concrete options. Mark detected/recommended values with `recommended: true`.
+- Use `vscode/askQuestions` for every question with concrete options. Mark detected/recommended values with `recommended: true`.
 - One question at a time unless tightly related.
 - When the answer is open-ended (app name), use `allowFreeformInput: true`.
 

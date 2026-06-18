@@ -21,14 +21,14 @@ Validate every artifact against security, correctness, and AKS Automatic complia
 ## Process
 
 1. Run `/kickstart-safeguard-checklist` for the full safeguard rule set.
-2. Run validation via `run_in_terminal`:
+2. Run validation via `execute/runInTerminal`:
    ```bash
    kubectl apply --dry-run=client -f k8s/
    az bicep build --file infra/main.bicep
    ```
 3. Present results as PASS ✓ / FAIL ✗ / WARN ⚠ per item.
-4. If FAILs: use `vscode_askQuestions` — fix automatically (recommended), show details, or skip.
-5. If WARNs only: confirm proceeding via `vscode_askQuestions`.
+4. If FAILs: use `vscode/askQuestions` — fix automatically (recommended), show details, or skip.
+5. If WARNs only: confirm proceeding via `vscode/askQuestions`.
 
 ## Exit Criteria
 All checks pass. Announce: "Review complete — moving to Pre-Deploy Check."

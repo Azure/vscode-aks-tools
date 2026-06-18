@@ -33,4 +33,4 @@ Present a summary covering:
 | "Can I use existing CI/CD?" | Yes, but recommend GitHub Actions with OIDC. |
 
 ## Exit Criteria
-User approves the architecture via `vscode_askQuestions`. Announce: "Architecture approved — moving to Generate."
+User approves the architecture via `vscode/askQuestions`. Announce: "Architecture approved — moving to Generate."

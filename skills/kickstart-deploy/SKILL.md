@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Deploy Phase
 
-Deploy using Azure CLI and `kubectl`. Execute each step via `run_in_terminal`, confirm between steps with `vscode_askQuestions`. Never auto-deploy.
+Deploy using Azure CLI and `kubectl`. Execute each step via `execute/runInTerminal`, confirm between steps with `vscode/askQuestions`. Never auto-deploy.
 
 ## Steps
 
@@ -29,7 +29,7 @@ Classify failures:
 - **dependency** — missing CLI tool, extension, or container image
 - **cluster** — pod CrashLoopBackOff, ImagePullBackOff, scheduling, quota
 
-Provide specific `az` or `kubectl` fix commands. Offer retry via `vscode_askQuestions`.
+Provide specific `az` or `kubectl` fix commands. Offer retry via `vscode/askQuestions`.
 
 ## Post-Deployment
 
