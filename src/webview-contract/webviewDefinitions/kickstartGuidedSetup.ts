@@ -44,7 +44,7 @@ export type ToVsCodeMsgDef = {
 export type ToWebViewMsgDef = {
     errorNotification: { message: string };
     gitHubReposLoaded: { repos: GitHubRepo[]; signedInUser: string | null };
-    gitHubReposError: { message: string };
+    gitHubReposError: { message: string; signedInUser: string | null };
 };
 
 export type KickstartGuidedSetupDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;
