@@ -5,6 +5,7 @@ import type {
     ActivitySnapshot,
     RegionQuotaResult,
     RoleSummary,
+    ProvisioningAccessPrompt,
     DeploymentPermissionsSummary,
 } from "./kickstartShared";
 
@@ -20,6 +21,7 @@ export type {
     RegionQuotaResult,
     RoleSummary,
     PimEligibleGrant,
+    ProvisioningAccessPrompt,
     DeploymentPermissionsSummary,
     DeploymentActionResult,
 } from "./kickstartShared";
@@ -100,11 +102,20 @@ export type ToVsCodeMsgDef = {
     };
     finishRequest: ClusterSelections;
     retryProvisioningRequest: void;
+    recheckProvisioningPermissionRequest: { runId: number };
     continueInChatRequest: void;
     getClustersRequest: { subscriptionId: string };
     detectClusterAcrsRequest: { subscriptionId: string; clusterResourceGroup: string; clusterName: string };
     useExistingClusterRequest: ExistingClusterSelection;
     getCostEstimateRequest: { location: string };
+    runExistingReadinessRequest: {
+        subscriptionId: string;
+        clusterResourceGroup: string;
+        clusterName: string;
+        acrName?: string;
+        acrResourceGroup?: string;
+        requestKey: string;
+    };
 };
 
 export type ToWebViewMsgDef = {
@@ -117,7 +128,12 @@ export type ToWebViewMsgDef = {
         recommendedRegion: string | null;
         regionResults: RegionQuotaResult[];
     };
-    preflightComplete: { canProceed: boolean; role: RoleSummary; deployment: DeploymentPermissionsSummary };
+    preflightComplete: {
+        canProceed: boolean;
+        role: RoleSummary;
+        deployment: DeploymentPermissionsSummary;
+        readiness: DeploymentPermissionsSummary;
+    };
     finishComplete: {
         succeeded: boolean;
         clusterName: string;
@@ -125,6 +141,8 @@ export type ToWebViewMsgDef = {
         acrName: string;
         acrLoginServer: string | null;
     };
+    awaitingProvisioningAccess: ProvisioningAccessPrompt;
+    provisioningAccessResolved: { runId: number };
     getClustersResponse: { subscriptionId: string; clusters: ExistingCluster[] };
     detectClusterAcrsResponse: {
         subscriptionId: string;
@@ -133,6 +151,7 @@ export type ToWebViewMsgDef = {
         acrs: ConnectedAcr[];
     };
     getCostEstimateResponse: { location: string; estimate: CostEstimate | null; error: string | null };
+    existingReadinessComplete: { readiness: DeploymentPermissionsSummary; requestKey: string };
     errorNotification: { message: string };
 };
 
