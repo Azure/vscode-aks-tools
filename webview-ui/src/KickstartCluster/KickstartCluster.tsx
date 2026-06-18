@@ -1,6 +1,11 @@
-import { useEffect } from "react";
+import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
 import * as l10n from "@vscode/l10n";
-import { InitialState } from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
+import {
+    InitialState,
+    ProvisioningAccessPrompt,
+} from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
 import { ActivityStageList } from "../components/ActivityStageList";
 import { ProgressRing } from "../components/ProgressRing";
 import { useStateManagement } from "../utilities/state";
@@ -132,6 +137,8 @@ export function KickstartCluster(initialState: InitialState) {
                                 selectedCluster={state.selectedCluster}
                                 connectedAcrs={state.connectedAcrs}
                                 detectingAcrs={state.detectingAcrs}
+                                existingReadiness={state.existingReadiness}
+                                existingReadinessKey={state.existingReadinessKey}
                                 errorMessage={state.errorMessage}
                                 eventHandlers={eventHandlers}
                                 vscode={vscode}
@@ -148,6 +155,12 @@ export function KickstartCluster(initialState: InitialState) {
                                 : l10n.t("Creating your cluster and registry…")}
                         </h2>
                         <p>{l10n.t("This can take several minutes. You can keep this view open while we work.")}</p>
+                        {state.provisioningAccess ? (
+                            <ProvisioningAccessPanel
+                                prompt={state.provisioningAccess}
+                                onRecheck={(runId) => vscode.postRecheckProvisioningPermissionRequest({ runId })}
+                            />
+                        ) : null}
                         <ActivityStageList stages={state.activity.provision?.stages ?? []} />
                     </div>
                 );
@@ -161,6 +174,63 @@ export function KickstartCluster(initialState: InitialState) {
             <h1>{l10n.t("AKS Kickstart — Configure Cluster")}</h1>
             <p>{l10n.t("Set up your AKS Automatic cluster and container registry, then continue building in chat.")}</p>
             {getBody()}
+        </div>
+    );
+}
+
+type ProvisioningAccessPanelProps = {
+    prompt: ProvisioningAccessPrompt;
+    onRecheck: (runId: number) => void;
+};
+
+function ProvisioningAccessPanel({ prompt, onRecheck }: ProvisioningAccessPanelProps) {
+    const [activePrompt, setActivePrompt] = useState(prompt);
+    const [rechecking, setRechecking] = useState(false);
+
+    if (activePrompt !== prompt) {
+        setActivePrompt(prompt);
+        setRechecking(false);
+    }
+
+    return (
+        <div className={styles.footerWarningPanel}>
+            <span className={styles.footerWarningMessage}>
+                <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
+                <span>
+                    {l10n.t(
+                        "Deployment is paused. You need permission to assign roles in {0} before we can create the cluster.",
+                        prompt.resourceGroupName,
+                    )}
+                </span>
+            </span>
+            <span className={styles.footerWarningHint}>{prompt.detail}</span>
+            {prompt.eligiblePimGrants.length > 0 ? (
+                <ul className={styles.pimList}>
+                    {prompt.eligiblePimGrants.map((grant) => (
+                        <li key={`${grant.roleName}:${grant.scopeId}`} className={styles.footerWarningHint}>
+                            {grant.roleName} — {grant.scopeDisplayName}
+                        </li>
+                    ))}
+                </ul>
+            ) : null}
+            <div className={styles.footerWarningActions}>
+                {prompt.permissionActionUrl ? (
+                    <a className={styles.footerActionLink} href={prompt.permissionActionUrl}>
+                        {l10n.t("Activate your role in the Azure portal")}
+                    </a>
+                ) : null}
+                <button
+                    type="button"
+                    className={`${styles.recheckButton} ${styles.footerActionButton}`}
+                    disabled={rechecking}
+                    onClick={() => {
+                        setRechecking(true);
+                        onRecheck(prompt.runId);
+                    }}
+                >
+                    {rechecking ? l10n.t("Checking…") : l10n.t("Re-check access")}
+                </button>
+            </div>
         </div>
     );
 }
