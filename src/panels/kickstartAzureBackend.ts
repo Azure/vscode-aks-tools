@@ -1,7 +1,10 @@
 import { OutputChannel } from "vscode";
 import * as l10n from "@vscode/l10n";
+import type { Permission } from "@azure/arm-authorization";
 import { ReadyAzureSessionProvider } from "../auth/types";
+import { getEnvironment } from "../auth/azureAuth";
 import { getAuthorizationManagementClient, getResourceManagementClient, listAll } from "../commands/utils/arm";
+import { getPortalScopeAccessUrl } from "../commands/utils/env";
 import { getAcrRegistry } from "../commands/utils/acrs";
 import { getClusters } from "../commands/utils/clusters";
 import { acrResourceType } from "../commands/utils/azureResources";
@@ -25,6 +28,7 @@ import { getSubscriptions, SelectionType } from "../commands/utils/subscriptions
 import { getFilteredSubscriptions } from "../commands/utils/config";
 import {
     UserSubscriptionRoles,
+    findEligiblePimGrants,
     findGrantingAction,
     getEffectivePermissionsAtResourceGroup,
     getEffectivePermissionsAtSubscription,
@@ -34,6 +38,13 @@ import {
     CheckRoleAssignmentPermissionsResult,
     checkRoleAssignmentPermissions,
 } from "../commands/aksCheckPermissions/checkRoleAssignmentPermissions";
+import {
+    ACR_PUSH_DATAACTION,
+    ACR_TASKS_ACTION,
+    AKS_CLUSTER_USER_ACTION,
+    AKS_DATAPLANE_WRITE_ACTION,
+    checkDeploymentPermissions,
+} from "../commands/aksCheckPermissions/checkDeploymentPermissions";
 import {
     DeploymentActionResult,
     DeploymentPermissionsSummary,
@@ -311,6 +322,7 @@ export interface PreflightResult {
     canProceed: boolean;
     role: RoleSummary;
     deployment: DeploymentPermissionsSummary;
+    readiness: DeploymentPermissionsSummary;
 }
 
 export async function runPreflightChecks(
@@ -371,15 +383,16 @@ export async function runPreflightChecks(
     }
 
     const role = await runRoleStage(reporter, sessionProvider, subscriptionId, resourceGroup, token);
-    const deployment = await runDeploymentPermissionsStage(
+    const { summary: deployment, perms } = await runProvisioningPermissionsStage(
         reporter,
         sessionProvider,
         subscriptionId,
         resourceGroup,
         token,
     );
+    const readiness = runReadinessStage(reporter, perms, role);
 
-    return { canProceed, role, deployment };
+    return { canProceed, role, deployment, readiness };
 }
 
 async function runRoleStage(
@@ -423,8 +436,9 @@ async function runRoleStage(
         role = summarizeSubscriptionRole({ succeeded: false, error: getErrorMessage(e) });
     }
 
-    // Shared command now always returns complete PIM grants (or failure reason),
-    // so no fallback enrichment needed.
+    if (resourceGroup.isNew && !(role.canAssignRolesKnown && role.canAssignRoles)) {
+        role.eligiblePimGrants = await findSubscriptionPimGrants(sessionProvider, subscriptionId);
+    }
 
     if (role.canAssignRolesKnown && role.canAssignRoles) {
         stage.succeed(role.detail);
@@ -446,6 +460,14 @@ async function runRoleStage(
             detail: l10n.t("Owner or User Access Administrator"),
         });
 
+        if (!resourceGroup.isNew) {
+            role.permissionActionUrl = getPortalScopeAccessUrl(
+                getEnvironment(),
+                sessionProvider.selectedTenant.id,
+                `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup.name}`,
+            );
+        }
+
         // Display eligible PIM roles as informational activity entries.
         if (role.eligiblePimGrants && role.eligiblePimGrants.length > 0) {
             for (const grant of role.eligiblePimGrants) {
@@ -456,14 +478,30 @@ async function runRoleStage(
                         grant.scopeDisplayName ?? grant.roleName,
                     ),
                     status: "warning",
-                    detail: l10n.t("Activate this role in PIM, then re-run the preflight check."),
+                    detail: l10n.t("Activate this role in PIM, then re-check access."),
                 });
             }
+        } else if (resourceGroup.isNew) {
+            role.actionBanner = {
+                message: l10n.t(
+                    "Your subscription role can't assign roles. After the resource group is created, deployment pauses until you can assign roles there.",
+                ),
+                actionText: l10n.t("Review role-assignment options"),
+                nextSteps: [
+                    l10n.t("Activate an eligible PIM role after the resource group is created, then re-check."),
+                    l10n.t(
+                        "Or ask an admin for 'Azure Kubernetes Service RBAC Cluster Admin' on just the new cluster.",
+                    ),
+                    l10n.t("Or ask an admin for 'Owner' or 'User Access Administrator' on the resource group."),
+                ],
+            };
+            stage.addEntry({
+                action: l10n.t("Role-assignment permission is re-checked after the resource group is created"),
+                status: "warning",
+                detail: l10n.t("If you still can't assign roles, deployment pauses until access is granted."),
+            });
         } else {
-            // No PIM roles available — add actionable warning banner with next steps
-            const rgScope = resourceGroup.isNew
-                ? `subscription '${subscriptionId}'`
-                : `resource group '${resourceGroup.name}'`;
+            const rgScope = `resource group '${resourceGroup.name}'`;
             role.actionBanner = {
                 message: l10n.t(
                     "You don't have permission to assign roles in {0}, and no PIM-eligible roles are available. " +
@@ -491,24 +529,19 @@ async function runRoleStage(
     return role;
 }
 
-async function runDeploymentPermissionsStage(
+async function runProvisioningPermissionsStage(
     reporter: ActivityReporter,
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     resourceGroup: { name: string; isNew: boolean },
     token: CancellationToken,
-): Promise<DeploymentPermissionsSummary> {
-    const stageLabel = resourceGroup.isNew
-        ? l10n.t("Permission to create cluster and registry")
-        : l10n.t("Permission to create cluster and registry in '{0}'", resourceGroup.name);
+): Promise<{ summary: DeploymentPermissionsSummary; perms: Errorable<Permission[]> }> {
+    const stageLabel = l10n.t("Provisioning permissions");
     const stage = reporter.stage("deployment", stageLabel);
     const entryLabel = resourceGroup.isNew
         ? l10n.t("Probing subscription-scope permissions")
         : l10n.t("Probing resource-group permissions");
 
-    // Preflight focuses only on control-plane create permissions. Runtime deployment permissions
-    // (kubeconfig/data-plane/ACR push-pull) are verified after provisioning begins in the
-    // provisioning flow's verification stage.
     const probes: { label: string; action: string; kind: "action" | "dataAction" }[] = [
         {
             label: l10n.t("Create AKS cluster"),
@@ -523,54 +556,191 @@ async function runDeploymentPermissionsStage(
     ];
 
     const authClient = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+    let perms: Errorable<Permission[]>;
     try {
-        const permsResult = await stage.run(entryLabel, () =>
+        perms = await stage.run(entryLabel, () =>
             resourceGroup.isNew
                 ? getEffectivePermissionsAtSubscription(sessionProvider, authClient, subscriptionId)
                 : getEffectivePermissionsAtResourceGroup(authClient, resourceGroup.name),
         );
-        if (failed(permsResult)) {
-            const summary: DeploymentPermissionsSummary = {
-                known: false,
-                allGranted: false,
-                actions: [],
-                detail: l10n.t("Couldn't read effective permissions: {0}", permsResult.error),
-            };
-            stage.warn(summary.detail);
-            return summary;
-        }
-
-        const actions: DeploymentActionResult[] = probes.map((p) => ({
-            label: p.label,
-            action: p.action,
-            granted: findGrantingAction(permsResult.result, p.action, p.kind).granted,
-        }));
-        const allGranted = actions.every((a) => a.granted);
-        const missing = actions.filter((a) => !a.granted).map((a) => a.label);
-        const detail = allGranted
-            ? l10n.t("You can create the cluster and registry.")
-            : l10n.t(
-                  "You may not be able to create: {0}. Provisioning will fail unless an Owner or Contributor on this scope runs it.",
-                  missing.join(", "),
-              );
-
-        const summary: DeploymentPermissionsSummary = { known: true, allGranted, actions, detail };
-        if (allGranted) {
-            stage.succeed(detail);
-        } else {
-            stage.warn(detail);
-        }
-        return summary;
     } catch (e) {
         token.throwIfCancelled();
+        const error = getErrorMessage(e);
         const summary: DeploymentPermissionsSummary = {
             known: false,
             allGranted: false,
             actions: [],
-            detail: l10n.t("Couldn't probe deployment permissions: {0}", getErrorMessage(e)),
+            detail: l10n.t("Couldn't probe deployment permissions: {0}", error),
+        };
+        stage.warn(summary.detail);
+        return { summary, perms: { succeeded: false, error } };
+    }
+
+    if (failed(perms)) {
+        const summary: DeploymentPermissionsSummary = {
+            known: false,
+            allGranted: false,
+            actions: [],
+            detail: l10n.t("Couldn't read effective permissions: {0}", perms.error),
+        };
+        stage.warn(summary.detail);
+        return { summary, perms };
+    }
+
+    const effective = perms.result;
+    const actions: DeploymentActionResult[] = probes.map((p) => ({
+        label: p.label,
+        action: p.action,
+        granted: findGrantingAction(effective, p.action, p.kind).granted,
+    }));
+    const allGranted = actions.every((a) => a.granted);
+    const missing = actions.filter((a) => !a.granted).map((a) => a.label);
+    const detail = allGranted
+        ? l10n.t("You can create the cluster and registry.")
+        : l10n.t(
+              "You may not be able to create: {0}. Provisioning will fail unless an Owner or Contributor on this scope runs it.",
+              missing.join(", "),
+          );
+
+    const summary: DeploymentPermissionsSummary = { known: true, allGranted, actions, detail };
+    if (allGranted) {
+        stage.succeed(detail);
+    } else {
+        stage.warn(detail);
+    }
+    return { summary, perms };
+}
+
+function runReadinessStage(
+    reporter: ActivityReporter,
+    perms: Errorable<Permission[]>,
+    role: RoleSummary,
+): DeploymentPermissionsSummary {
+    const stage = reporter.stage("readiness", l10n.t("Deployment readiness"));
+
+    const aksGranted = role.canAssignRolesKnown && role.canAssignRoles;
+    const aksDetail = aksGranted
+        ? l10n.t("Granted automatically while the cluster is provisioned.")
+        : l10n.t("Depends on the role-assignment permission flagged above.");
+    const aksActions: DeploymentActionResult[] = [
+        {
+            label: l10n.t("Download cluster kubeconfig"),
+            action: AKS_CLUSTER_USER_ACTION,
+            granted: aksGranted,
+            detail: aksDetail,
+        },
+        {
+            label: l10n.t("Deploy workloads to the cluster"),
+            action: AKS_DATAPLANE_WRITE_ACTION,
+            granted: aksGranted,
+            detail: aksDetail,
+        },
+    ];
+
+    if (failed(perms)) {
+        const summary: DeploymentPermissionsSummary = {
+            known: false,
+            allGranted: false,
+            actions: aksActions,
+            detail: l10n.t("Couldn't read effective permissions to predict registry access: {0}", perms.error),
         };
         stage.warn(summary.detail);
         return summary;
+    }
+
+    const effective = perms.result;
+    const acrActions: DeploymentActionResult[] = [
+        {
+            label: l10n.t("Push images to the new registry"),
+            action: ACR_PUSH_DATAACTION,
+            granted: findGrantingAction(effective, ACR_PUSH_DATAACTION, "dataAction").granted,
+        },
+        {
+            label: l10n.t("Run server-side ACR builds (az acr build)"),
+            action: ACR_TASKS_ACTION,
+            granted: findGrantingAction(effective, ACR_TASKS_ACTION, "action").granted,
+        },
+    ];
+
+    const actions = [...aksActions, ...acrActions];
+    const allGranted = actions.every((a) => a.granted);
+    const missing = actions.filter((a) => !a.granted).map((a) => a.label);
+    const detail = allGranted
+        ? l10n.t("After provisioning you'll be able to deploy workloads and push images.")
+        : l10n.t("After provisioning you may still need: {0}.", missing.join(", "));
+
+    const summary: DeploymentPermissionsSummary = { known: true, allGranted, actions, detail };
+    if (allGranted) {
+        stage.succeed(detail);
+    } else {
+        stage.warn(detail);
+    }
+    return summary;
+}
+
+export async function getExistingClusterReadiness(
+    subscriptionId: string,
+    clusterResourceGroup: string,
+    clusterName: string,
+    acrName: string | undefined,
+    acrResourceGroup: string | undefined,
+): Promise<DeploymentPermissionsSummary> {
+    try {
+        const result = await checkDeploymentPermissions(undefined, {
+            subscriptionId,
+            resourceGroup: clusterResourceGroup,
+            clusterName,
+            acrName,
+            acrResourceGroup,
+            probeScope: "user",
+            silent: true,
+        });
+        if (result.error || !result.probes) {
+            return {
+                known: false,
+                allGranted: false,
+                actions: [],
+                detail: result.error
+                    ? l10n.t("Couldn't check deployment readiness: {0}", result.error)
+                    : l10n.t("Couldn't check deployment readiness."),
+            };
+        }
+        const actions: DeploymentActionResult[] = result.probes.map((probe) => ({
+            label: probe.label,
+            action: probeActionId(probe.id),
+            granted: probe.status === "pass",
+            detail: probe.status === "pass" ? undefined : probe.reason,
+        }));
+        const allGranted = actions.every((a) => a.granted);
+        const missing = actions.filter((a) => !a.granted).map((a) => a.label);
+        const detail = allGranted
+            ? acrName
+                ? l10n.t("You can deploy workloads and push images to this cluster.")
+                : l10n.t("You can deploy workloads to this cluster.")
+            : l10n.t("You may not be able to: {0}.", missing.join(", "));
+        return { known: true, allGranted, actions, detail };
+    } catch (e) {
+        return {
+            known: false,
+            allGranted: false,
+            actions: [],
+            detail: l10n.t("Couldn't check deployment readiness: {0}", getErrorMessage(e)),
+        };
+    }
+}
+
+function probeActionId(id: string): string {
+    switch (id) {
+        case "cluster-user":
+            return AKS_CLUSTER_USER_ACTION;
+        case "aks-dataplane-write":
+            return AKS_DATAPLANE_WRITE_ACTION;
+        case "acr-push":
+            return ACR_PUSH_DATAACTION;
+        case "acr-tasks":
+            return ACR_TASKS_ACTION;
+        default:
+            return id;
     }
 }
 
@@ -600,6 +770,26 @@ function summarizeSubscriptionRole(roleResult: Errorable<UserSubscriptionRoles>)
     return { roleNames, canAssignRoles, canAssignRolesKnown: true, detail };
 }
 
+async function findSubscriptionPimGrants(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+): Promise<PimEligibleGrant[] | undefined> {
+    try {
+        const client = getAuthorizationManagementClient(sessionProvider, subscriptionId);
+        const eligible = await findEligiblePimGrants(client, `/subscriptions/${subscriptionId}`);
+        if (failed(eligible) || eligible.result.length === 0) {
+            return undefined;
+        }
+        return eligible.result.map((g) => ({
+            roleName: g.roleName,
+            scopeId: g.scopeId,
+            scopeDisplayName: g.scopeDisplayName ?? g.scopeId,
+        }));
+    } catch {
+        return undefined;
+    }
+}
+
 function summarizeRoleCommandResult(
     result: CheckRoleAssignmentPermissionsResult,
     resourceGroupName: string,
@@ -616,6 +806,7 @@ function summarizeRoleCommandResult(
     const roleNames = result.activeRoleNames ?? [l10n.t("Active role names unavailable for this scope")];
     const pimGrants: PimEligibleGrant[] = (result.eligiblePimRoles ?? []).map((g) => ({
         roleName: g.roleName,
+        scopeId: g.scopeId,
         scopeDisplayName: g.scopeDisplayName ?? g.scopeId,
     }));
     const detail = canAssignRoles
