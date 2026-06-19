@@ -90,6 +90,8 @@ export type EventDef = {
     recheckPermissions: void;
     setProvisioning: void;
     retryProvisioning: void;
+    retryProvisioningStage: void;
+    backToSetup: void;
 };
 
 function applySnapshot(existing: FlowActivity | undefined, snapshot: ActivitySnapshot): FlowActivity {
@@ -262,6 +264,25 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             provisioningAccess: null,
             activity: { ...state.activity, provision: undefined },
         }),
+        // Unlike retryProvisioning, this keeps activity.provision so the re-run's snapshots merge
+        // back into the existing stages (same runId) instead of starting a fresh stage list.
+        retryProvisioningStage: (state) => ({
+            ...state,
+            stage: Stage.Provisioning,
+            errorMessage: null,
+            finishResult: null,
+            provisioningAccess: null,
+        }),
+        // Returns to the setup form while preserving the user's selections; clears only the
+        // abandoned run's transient provisioning state (the panel cancels the in-flight attempt).
+        backToSetup: (state) => ({
+            ...state,
+            stage: Stage.CollectingInput,
+            errorMessage: null,
+            finishResult: null,
+            provisioningAccess: null,
+            activity: { ...state.activity, provision: undefined },
+        }),
         goToExistingClusterSelection: (state) => ({
             ...state,
             stage: Stage.CollectingInput,
@@ -287,7 +308,9 @@ export const vscode = getWebviewMessageContext<"kickstartCluster">({
     runPreflightRequest: null,
     finishRequest: null,
     retryProvisioningRequest: null,
+    retryProvisioningStageRequest: null,
     recheckProvisioningPermissionRequest: null,
+    backToSetupRequest: null,
     continueInChatRequest: null,
     getClustersRequest: null,
     detectClusterAcrsRequest: null,

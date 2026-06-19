@@ -24,6 +24,16 @@ export function KickstartCluster(initialState: InitialState) {
         }
     }, [state.stage, eventHandlers]);
 
+    const handleRetryStage = (runId: number, stageId: string) => {
+        eventHandlers.onRetryProvisioningStage();
+        vscode.postRetryProvisioningStageRequest({ runId, stageId });
+    };
+
+    const handleBackToSetup = () => {
+        eventHandlers.onBackToSetup();
+        vscode.postBackToSetupRequest();
+    };
+
     function getCompleteBody() {
         const result = state.finishResult;
         const provisionStages = state.activity.provision?.stages ?? [];
@@ -31,7 +41,7 @@ export function KickstartCluster(initialState: InitialState) {
             return (
                 <div>
                     <h2>{l10n.t("Your cluster is ready")}</h2>
-                    <ActivityStageList stages={provisionStages} />
+                    <ActivityStageList stages={provisionStages} onRetryStage={handleRetryStage} />
                     <div className={styles.resultPanel}>
                         <p>
                             {l10n.t("Cluster")}: {result.clusterName}
@@ -56,7 +66,7 @@ export function KickstartCluster(initialState: InitialState) {
         return (
             <div>
                 <h2>{l10n.t("We couldn't finish setting up your cluster")}</h2>
-                <ActivityStageList stages={provisionStages} />
+                <ActivityStageList stages={provisionStages} onRetryStage={handleRetryStage} />
                 <div className={styles.resultPanel}>
                     <p>
                         {state.errorMessage ??
@@ -71,6 +81,9 @@ export function KickstartCluster(initialState: InitialState) {
                         }}
                     >
                         {l10n.t("Try again")}
+                    </button>
+                    <button className={styles.secondaryButton} onClick={handleBackToSetup}>
+                        {l10n.t("Back to setup")}
                     </button>
                     <button
                         className={styles.secondaryButton}
@@ -161,7 +174,15 @@ export function KickstartCluster(initialState: InitialState) {
                                 onRecheck={(runId) => vscode.postRecheckProvisioningPermissionRequest({ runId })}
                             />
                         ) : null}
-                        <ActivityStageList stages={state.activity.provision?.stages ?? []} />
+                        <ActivityStageList
+                            stages={state.activity.provision?.stages ?? []}
+                            onRetryStage={handleRetryStage}
+                        />
+                        <div className={styles.buttonContainer}>
+                            <button className={styles.secondaryButton} onClick={handleBackToSetup}>
+                                {l10n.t("Back to setup")}
+                            </button>
+                        </div>
                     </div>
                 );
             case Stage.Complete:
