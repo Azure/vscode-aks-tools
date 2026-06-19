@@ -1,6 +1,6 @@
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as l10n from "@vscode/l10n";
 import {
     InitialState,
@@ -199,19 +199,58 @@ export function KickstartCluster(initialState: InitialState) {
     );
 }
 
+const POLL_INTERVAL_SECONDS = 15;
+const MAX_POLL_DURATION_SECONDS = 10 * 60;
+
 type ProvisioningAccessPanelProps = {
     prompt: ProvisioningAccessPrompt;
     onRecheck: (runId: number) => void;
 };
 
 function ProvisioningAccessPanel({ prompt, onRecheck }: ProvisioningAccessPanelProps) {
-    const [activePrompt, setActivePrompt] = useState(prompt);
-    const [rechecking, setRechecking] = useState(false);
+    // With no activation link there is nothing for the user to click, so start polling immediately.
+    const [phase, setPhase] = useState<"idle" | "polling" | "exhausted">(
+        prompt.permissionActionUrl ? "idle" : "polling",
+    );
+    const [secondsUntilRetry, setSecondsUntilRetry] = useState(POLL_INTERVAL_SECONDS);
+    const [activeRunId, setActiveRunId] = useState(prompt.runId);
+    const onRecheckRef = useRef(onRecheck);
 
-    if (activePrompt !== prompt) {
-        setActivePrompt(prompt);
-        setRechecking(false);
+    useEffect(() => {
+        onRecheckRef.current = onRecheck;
+    }, [onRecheck]);
+
+    // The extension re-posts the same prompt (same runId) on every still-blocked recheck; only reset the
+    // polling lifecycle when a genuinely new attempt (different runId) arrives so the countdown survives.
+    if (activeRunId !== prompt.runId) {
+        setActiveRunId(prompt.runId);
+        setPhase(prompt.permissionActionUrl ? "idle" : "polling");
+        setSecondsUntilRetry(POLL_INTERVAL_SECONDS);
     }
+
+    useEffect(() => {
+        if (phase !== "polling") {
+            return;
+        }
+
+        let secondsElapsed = 0;
+        let secondsLeft = POLL_INTERVAL_SECONDS;
+
+        const timer = window.setInterval(() => {
+            secondsElapsed += 1;
+            secondsLeft -= 1;
+            if (secondsLeft <= 0) {
+                onRecheckRef.current(prompt.runId);
+                secondsLeft = POLL_INTERVAL_SECONDS;
+            }
+            setSecondsUntilRetry(secondsLeft);
+            if (secondsElapsed >= MAX_POLL_DURATION_SECONDS) {
+                setPhase("exhausted");
+            }
+        }, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [phase, prompt.runId]);
 
     return (
         <div className={styles.footerWarningPanel}>
@@ -236,21 +275,31 @@ function ProvisioningAccessPanel({ prompt, onRecheck }: ProvisioningAccessPanelP
             ) : null}
             <div className={styles.footerWarningActions}>
                 {prompt.permissionActionUrl ? (
-                    <a className={styles.footerActionLink} href={prompt.permissionActionUrl}>
+                    <a
+                        className={styles.footerActionLink}
+                        href={prompt.permissionActionUrl}
+                        onClick={() => setPhase("polling")}
+                    >
                         {l10n.t("Activate your role in the Azure portal")}
                     </a>
                 ) : null}
-                <button
-                    type="button"
-                    className={`${styles.recheckButton} ${styles.footerActionButton}`}
-                    disabled={rechecking}
-                    onClick={() => {
-                        setRechecking(true);
-                        onRecheck(prompt.runId);
-                    }}
-                >
-                    {rechecking ? l10n.t("Checking…") : l10n.t("Re-check access")}
-                </button>
+                {phase === "polling" ? (
+                    <>
+                        <ProgressRing />
+                        <span className={styles.footerWarningHint}>
+                            {l10n.t("Checking for access… retrying in {0}s", secondsUntilRetry)}
+                        </span>
+                    </>
+                ) : null}
+                {phase === "exhausted" ? (
+                    <button
+                        type="button"
+                        className={`${styles.recheckButton} ${styles.footerActionButton}`}
+                        onClick={() => setPhase("polling")}
+                    >
+                        {l10n.t("Continue Checking")}
+                    </button>
+                ) : null}
             </div>
         </div>
     );
