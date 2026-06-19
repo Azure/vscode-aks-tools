@@ -102,7 +102,9 @@ export type ToVsCodeMsgDef = {
     };
     finishRequest: ClusterSelections;
     retryProvisioningRequest: void;
+    retryProvisioningStageRequest: { runId: number; stageId: string };
     recheckProvisioningPermissionRequest: { runId: number };
+    backToSetupRequest: void;
     continueInChatRequest: void;
     getClustersRequest: { subscriptionId: string };
     detectClusterAcrsRequest: { subscriptionId: string; clusterResourceGroup: string; clusterName: string };
