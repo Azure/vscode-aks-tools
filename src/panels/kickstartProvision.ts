@@ -73,6 +73,12 @@ interface ProvisioningStage {
     id: string;
     title: string;
     execute: (stage: StageReporter, token: CancellationToken) => Promise<StageOutcome>;
+    /**
+     * When this stage is retried, restart from this earlier stage instead of itself, so the retry
+     * reconciles the failure (e.g. `verify` re-runs the `attach` grant) rather than re-reading the
+     * same failed state.
+     */
+    retryFromStageId?: string;
 }
 
 interface ProvisioningContext {
@@ -95,9 +101,12 @@ async function runStages(
     result: ClusterProvisioningResult,
 ): Promise<ClusterProvisioningResult> {
     const reporter = new ActivityReporter("provision", runId, sink, channel, token);
-    const startIndex = startStageId === undefined ? 0 : stages.findIndex((stage) => stage.id === startStageId);
+    const requestedStage = startStageId === undefined ? undefined : stages.find((stage) => stage.id === startStageId);
+    const effectiveStartStageId = requestedStage?.retryFromStageId ?? startStageId;
+    const startIndex =
+        effectiveStartStageId === undefined ? 0 : stages.findIndex((stage) => stage.id === effectiveStartStageId);
     if (startIndex < 0) {
-        throw new Error(l10n.t("Unknown provisioning stage {0}.", startStageId ?? ""));
+        throw new Error(l10n.t("Unknown provisioning stage {0}.", effectiveStartStageId ?? ""));
     }
 
     result.succeeded = false;
@@ -301,6 +310,7 @@ export function createClusterProvisioningRun(
         },
         {
             id: "verify",
+            retryFromStageId: "attach",
             title: l10n.t("Verify registry pull access"),
             execute: async (stage, token) => {
                 await runDeploymentVerificationStage(stage, token, {
@@ -480,6 +490,7 @@ export function createExistingClusterAttachRun(
         },
         {
             id: "verify",
+            retryFromStageId: "attach",
             title: l10n.t("Verify registry pull access"),
             execute: async (stage, token) => {
                 await runDeploymentVerificationStage(stage, token, {
