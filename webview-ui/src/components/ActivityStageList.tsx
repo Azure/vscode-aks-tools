@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as l10n from "@vscode/l10n";
 import {
+    faArrowRotateRight,
     faCheckCircle,
     faChevronDown,
     faChevronRight,
@@ -119,7 +120,13 @@ function CollapsibleEntries({ stage }: { stage: ActivitySnapshot }) {
     );
 }
 
-export function ActivityStageList({ stages }: { stages: ActivitySnapshot[] }) {
+export function ActivityStageList({
+    stages,
+    onRetryStage,
+}: {
+    stages: ActivitySnapshot[];
+    onRetryStage?: (runId: number, stageId: string) => void;
+}) {
     if (stages.length === 0) {
         return null;
     }
@@ -146,6 +153,16 @@ export function ActivityStageList({ stages }: { stages: ActivitySnapshot[] }) {
                                     ))}
                                 </span>
                             ))}
+                        {onRetryStage && (stage.status === "failed" || stage.status === "warning") && (
+                            <button
+                                type="button"
+                                className={styles.stageRetry}
+                                onClick={() => onRetryStage(stage.runId, stage.stage)}
+                            >
+                                <FontAwesomeIcon className={styles.stageRetryIcon} icon={faArrowRotateRight} />
+                                {l10n.t("Retry this step")}
+                            </button>
+                        )}
                     </span>
                 </li>
             ))}

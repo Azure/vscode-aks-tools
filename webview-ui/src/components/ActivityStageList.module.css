@@ -163,3 +163,27 @@
 .entriesChevron {
     font-size: 0.8em;
 }
+
+.stageRetry {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    column-gap: 0.35rem;
+    margin-top: 0.35rem;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--vscode-textLink-foreground);
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+.stageRetry:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+
+.stageRetryIcon {
+    font-size: 0.85em;
+}
