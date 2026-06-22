@@ -35,5 +35,8 @@
     "vite-plugin-checker": "^0.14.4",
     "vite": "^8.0.16",
     "vite-plugin-eslint": "^1.8.1"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true
   }
 }
