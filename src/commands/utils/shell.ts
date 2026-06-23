@@ -55,7 +55,8 @@ function execCore(cmd: string, shellOptions: ShellOptions): Promise<ShellResult>
             } else if (err.code === undefined) {
                 resolve({ code: 1, stdout: stdoutStr, stderr: stderrStr });
             } else {
-                const code = typeof err.code === "number" ? err.code : parseInt(String(err.code), 10) || 1;
+                const parsed = Number.parseInt(String(err.code), 10);
+                const code = typeof err.code === "number" ? err.code : Number.isNaN(parsed) ? 1 : parsed;
                 resolve({ code, stdout: stdoutStr, stderr: stderrStr });
             }
         });
