@@ -11,13 +11,13 @@ This extension contributes two declarative Copilot chat agents defined in `agent
 
 Guides users through deploying an application to AKS Automatic in seven sequential phases:
 
-1. **Discover** — Understand the app (language, deps, ports, env vars)
+1. **Discover** — Understand the app (language, deps, ports, env vars) and map each service's structure (build context, entry point, existing Dockerfile path)
 2. **Configure Infrastructure** — Create new or select existing Azure resources (RG, AKS, ACR). Cluster creates with `--no-wait` to run in background.
 3. **Design** — Propose target architecture, get approval
-4. **Generate** — Create Dockerfile, K8s manifests, Bicep, GitHub Actions workflow
-5. **Review** — Validate artifacts against safeguards and security checks
+4. **Generate** — Create Dockerfile (reuse existing when present, validate every COPY/ADD path, build & inspect the image), K8s manifests, Bicep, GitHub Actions workflow
+5. **Review** — Validate artifacts against safeguards and security checks, confirm the Dockerfile source→destination map, verify the image builds
 6. **Pre-Deploy Check** — Verify cluster is ready, ACR attached
-7. **Deploy** — Build, push, apply with `az` CLI and `kubectl`
+7. **Deploy** — Build (per-service build context + Dockerfile path, never `.`), push, apply with `az` CLI and `kubectl`, then health-check the running app
 
 Each phase invokes a dedicated phase skill (`/kickstart-discover`, `/kickstart-design`, etc.) plus domain-specific skills as needed. See `kickstart-guide.md` for the full skill invocation map.
 

@@ -68,9 +68,54 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex-wrap: wrap;
     column-gap: 0.4rem;
+    row-gap: 0.2rem;
     font-size: 0.9em;
     color: var(--vscode-descriptionForeground);
+}
+
+.activityCode {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.9em;
+    color: var(--vscode-textPreformat-foreground);
+    background: var(--vscode-textCodeBlock-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    word-break: break-all;
+}
+
+.progressRow {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 0.5rem;
+    flex-basis: 100%;
+    width: 100%;
+    margin-top: 0.15rem;
+}
+
+.progressTrack {
+    flex: 1;
+    height: 0.4rem;
+    border-radius: 0.2rem;
+    background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.25));
+    border: 1px solid var(--vscode-widget-border);
+    overflow: hidden;
+}
+
+.progressFill {
+    display: block;
+    height: 100%;
+    background: var(--vscode-progressBar-background);
+    transition: width 0.3s ease;
+}
+
+.progressLabel {
+    font-variant-numeric: tabular-nums;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
 }
 
 .activityAction {
@@ -79,6 +124,14 @@
 
 .activityEntryDetail {
     color: var(--vscode-descriptionForeground);
+}
+
+.activityStarted {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95em;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.8;
+    white-space: nowrap;
 }
 
 .activityElapsed {
