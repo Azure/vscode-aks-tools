@@ -2,9 +2,11 @@ import {
     ActivityFlow,
     ActivitySnapshot,
     ConnectedAcr,
+    CostEstimate,
     DeploymentPermissionsSummary,
     ExistingCluster,
     InitialState,
+    ProvisioningAccessPrompt,
     RegionQuotaResult,
     ResourceGroup,
     RoleSummary,
@@ -40,6 +42,12 @@ export type FinishResult = {
     acrLoginServer: string | null;
 };
 
+export type CostEstimateResult = {
+    location: string;
+    estimate: CostEstimate | null;
+    error: string | null;
+};
+
 export type ClusterMode = "createNew" | "useExisting";
 
 export type KickstartClusterState = InitialState & {
@@ -53,6 +61,8 @@ export type KickstartClusterState = InitialState & {
     selectedCluster: ExistingCluster | null;
     connectedAcrs: ConnectedAcr[] | null;
     detectingAcrs: boolean;
+    existingReadiness: DeploymentPermissionsSummary | null;
+    existingReadinessKey: string | null;
     activity: Partial<Record<ActivityFlow, FlowActivity>>;
     scan: ScanResult | null;
     errorMessage: string | null;
@@ -61,9 +71,12 @@ export type KickstartClusterState = InitialState & {
     preflightRole: RoleSummary | null;
     /** Deployment-permissions verdict from the most recent preflight run. */
     preflightDeployment: DeploymentPermissionsSummary | null;
+    preflightReadiness: DeploymentPermissionsSummary | null;
     /** Incremented each time the user requests a manual re-check; causes the preflight effect to re-fire. */
     preflightGeneration: number;
+    provisioningAccess: ProvisioningAccessPrompt | null;
     finishResult: FinishResult | null;
+    costEstimate: CostEstimateResult | null;
 };
 
 export type EventDef = {
@@ -71,11 +84,14 @@ export type EventDef = {
     setMode: { mode: ClusterMode };
     setSubscriptionSelected: { subscriptionId: string };
     setExistingClusterSelected: { cluster: ExistingCluster };
+    setExistingReadinessPending: { key: string };
     goToExistingClusterSelection: void;
     resetPreflight: void;
     recheckPermissions: void;
     setProvisioning: void;
     retryProvisioning: void;
+    retryProvisioningStage: void;
+    backToSetup: void;
 };
 
 function applySnapshot(existing: FlowActivity | undefined, snapshot: ActivitySnapshot): FlowActivity {
@@ -104,22 +120,33 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         selectedCluster: null,
         connectedAcrs: null,
         detectingAcrs: false,
+        existingReadiness: null,
+        existingReadinessKey: null,
         activity: {},
         scan: null,
         errorMessage: null,
         preflightCanProceed: null,
         preflightRole: null,
         preflightDeployment: null,
+        preflightReadiness: null,
         preflightGeneration: 0,
+        provisioningAccess: null,
         finishResult: null,
+        costEstimate: null,
     }),
     vscodeMessageHandler: {
-        getSubscriptionsResponse: (state, args) => ({
-            ...state,
-            subscriptions: args.subscriptions,
-            selectedSubscriptionId: state.selectedSubscriptionId ?? args.defaultSubscriptionId,
-            stage: Stage.CollectingInput,
-        }),
+        getSubscriptionsResponse: (state, args) => {
+            const available = new Set(args.subscriptions.map((s) => s.id));
+            const preferred = [state.selectedSubscriptionId, args.defaultSubscriptionId].find(
+                (id) => id !== null && available.has(id),
+            );
+            return {
+                ...state,
+                subscriptions: args.subscriptions,
+                selectedSubscriptionId: preferred ?? args.subscriptions[0]?.id ?? null,
+                stage: Stage.CollectingInput,
+            };
+        },
         getLocationsResponse: (state, args) => ({ ...state, locations: args.locations }),
         getResourceGroupsResponse: (state, args) => ({ ...state, resourceGroups: args.groups }),
         activitySnapshot: (state, snapshot) => ({
@@ -145,8 +172,19 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             preflightCanProceed: args.canProceed,
             preflightRole: args.role,
             preflightDeployment: args.deployment,
+            preflightReadiness: args.readiness,
         }),
-        finishComplete: (state, args) => ({ ...state, stage: Stage.Complete, finishResult: args }),
+        finishComplete: (state, args) => ({
+            ...state,
+            stage: Stage.Complete,
+            finishResult: args,
+            provisioningAccess: null,
+        }),
+        awaitingProvisioningAccess: (state, args) => ({ ...state, provisioningAccess: args }),
+        provisioningAccessResolved: (state, args) =>
+            state.provisioningAccess && state.provisioningAccess.runId !== args.runId
+                ? state
+                : { ...state, provisioningAccess: null },
         getClustersResponse: (state, args) =>
             args.subscriptionId === state.selectedSubscriptionId ? { ...state, clusters: args.clusters } : state,
         detectClusterAcrsResponse: (state, args) =>
@@ -156,6 +194,12 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             args.clusterName === state.selectedCluster.name
                 ? { ...state, connectedAcrs: args.acrs, detectingAcrs: false }
                 : state,
+        getCostEstimateResponse: (state, args) => ({
+            ...state,
+            costEstimate: { location: args.location, estimate: args.estimate, error: args.error },
+        }),
+        existingReadinessComplete: (state, args) =>
+            args.requestKey === state.existingReadinessKey ? { ...state, existingReadiness: args.readiness } : state,
         errorNotification: (state, args) => ({ ...state, errorMessage: args.message }),
     },
     eventHandler: {
@@ -170,11 +214,15 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             scan: null,
             preflightRole: null,
             preflightDeployment: null,
+            preflightReadiness: null,
             preflightCanProceed: null,
             clusters: null,
             selectedCluster: null,
             connectedAcrs: null,
             detectingAcrs: false,
+            existingReadiness: null,
+            existingReadinessKey: null,
+            costEstimate: null,
             activity: { ...state.activity, subscriptionScan: undefined, preflight: undefined },
         }),
         setExistingClusterSelected: (state, args) => ({
@@ -182,12 +230,20 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             selectedCluster: args.cluster,
             connectedAcrs: null,
             detectingAcrs: true,
+            existingReadiness: null,
+            existingReadinessKey: null,
+        }),
+        setExistingReadinessPending: (state, args) => ({
+            ...state,
+            existingReadinessKey: args.key,
+            existingReadiness: null,
         }),
         resetPreflight: (state) => ({
             ...state,
             preflightCanProceed: null,
             preflightRole: null,
             preflightDeployment: null,
+            preflightReadiness: null,
             activity: { ...state.activity, preflight: undefined },
         }),
         recheckPermissions: (state) => ({
@@ -195,15 +251,36 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             preflightCanProceed: null,
             preflightRole: null,
             preflightDeployment: null,
+            preflightReadiness: null,
             preflightGeneration: state.preflightGeneration + 1,
             activity: { ...state.activity, preflight: undefined },
         }),
-        setProvisioning: (state) => ({ ...state, stage: Stage.Provisioning }),
+        setProvisioning: (state) => ({ ...state, stage: Stage.Provisioning, provisioningAccess: null }),
         retryProvisioning: (state) => ({
             ...state,
             stage: Stage.Provisioning,
             errorMessage: null,
             finishResult: null,
+            provisioningAccess: null,
+            activity: { ...state.activity, provision: undefined },
+        }),
+        // Unlike retryProvisioning, this keeps activity.provision so the re-run's snapshots merge
+        // back into the existing stages (same runId) instead of starting a fresh stage list.
+        retryProvisioningStage: (state) => ({
+            ...state,
+            stage: Stage.Provisioning,
+            errorMessage: null,
+            finishResult: null,
+            provisioningAccess: null,
+        }),
+        // Returns to the setup form while preserving the user's selections; clears only the
+        // abandoned run's transient provisioning state (the panel cancels the in-flight attempt).
+        backToSetup: (state) => ({
+            ...state,
+            stage: Stage.CollectingInput,
+            errorMessage: null,
+            finishResult: null,
+            provisioningAccess: null,
             activity: { ...state.activity, provision: undefined },
         }),
         goToExistingClusterSelection: (state) => ({
@@ -215,6 +292,8 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             selectedCluster: null,
             connectedAcrs: null,
             detectingAcrs: false,
+            existingReadiness: null,
+            existingReadinessKey: null,
             activity: { ...state.activity, provision: undefined },
         }),
     },
@@ -229,8 +308,13 @@ export const vscode = getWebviewMessageContext<"kickstartCluster">({
     runPreflightRequest: null,
     finishRequest: null,
     retryProvisioningRequest: null,
+    retryProvisioningStageRequest: null,
+    recheckProvisioningPermissionRequest: null,
+    backToSetupRequest: null,
     continueInChatRequest: null,
     getClustersRequest: null,
     detectClusterAcrsRequest: null,
     useExistingClusterRequest: null,
+    getCostEstimateRequest: null,
+    runExistingReadinessRequest: null,
 });

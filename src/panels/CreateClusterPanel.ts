@@ -1,17 +1,12 @@
 import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
-import { FeatureClient } from "@azure/arm-features";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
 import { Uri, window } from "vscode";
 import { getEnvironment } from "../auth/azureAuth";
 import { AzureAuthenticationSession, ReadyAzureSessionProvider } from "../auth/types";
-import { getAksClient, getFeatureClient, getResourceManagementClient } from "../commands/utils/arm";
+import { getAksClient, getResourceManagementClient } from "../commands/utils/arm";
 import { getDeploymentPortalUrl, getPortalResourceUrl } from "../commands/utils/env";
 import { failed, getErrorMessage } from "../commands/utils/errorable";
-import {
-    createMultipleFeatureRegistrations,
-    MultipleFeatureRegistration,
-} from "../commands/utils/featureRegistrations";
 import { getResourceGroups } from "../commands/utils/resourceGroups";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
@@ -43,7 +38,6 @@ export class CreateClusterPanel extends BasePanel<"createCluster"> {
 export class CreateClusterDataProvider implements PanelDataProvider<"createCluster"> {
     private readonly resourceManagementClient: ResourceManagementClient;
     private readonly containerServiceClient: ContainerServiceClient;
-    private readonly featureClient: FeatureClient;
     private readonly commandId: string;
     public constructor(
         readonly sessionProvider: ReadyAzureSessionProvider,
@@ -54,7 +48,6 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
     ) {
         this.resourceManagementClient = getResourceManagementClient(sessionProvider, this.subscriptionId);
         this.containerServiceClient = getAksClient(sessionProvider, this.subscriptionId);
-        this.featureClient = getFeatureClient(sessionProvider, this.subscriptionId);
         this.commandId = commandId;
     }
 
@@ -166,7 +159,6 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             webview,
             this.containerServiceClient,
             this.resourceManagementClient,
-            this.featureClient,
             this.commandId,
         );
 
@@ -227,7 +219,6 @@ async function createCluster(
     webview: MessageSink<ToWebViewMsgDef>,
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
-    featureClient: FeatureClient,
     commandId: string,
 ) {
     const operationDescription = l10n.t(`Creating cluster {0}`, name);
@@ -305,23 +296,6 @@ async function createCluster(
 
     const environment = getEnvironment();
 
-    // feature registration
-    try {
-        await doFeatureRegistration(preset, featureClient);
-    } catch (error) {
-        window.showErrorMessage(
-            l10n.t("Error Registering preview features for AKS cluster {0}: {1}", name, getErrorMessage(error)),
-        );
-        webview.postProgressUpdate({
-            event: ProgressEventType.Failed,
-            operationDescription: l10n.t("Error Registering preview features for AKS cluster"),
-            errorMessage: getErrorMessage(error),
-            deploymentPortalUrl: null,
-            createdCluster: null,
-        });
-        return;
-    }
-
     // event name for telemetry reporter
     const eventName = commandId === "aks.createCluster" ? "command" : "aks.ghcp";
 
@@ -395,37 +369,6 @@ async function createCluster(
             createdCluster: null,
         });
     }
-}
-
-async function doFeatureRegistration(preset: PresetType, featureClient: FeatureClient) {
-    if (preset !== PresetType.Automatic) {
-        return;
-    }
-    //Doc link - https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-automatic-deploy?pivots=azure-cli#register-the-feature-flags
-    const features: MultipleFeatureRegistration[] = [
-        {
-            resourceProviderNamespace: "Microsoft.ContainerService",
-            featureName: "EnableAPIServerVnetIntegrationPreview",
-        },
-        {
-            resourceProviderNamespace: "Microsoft.ContainerService",
-            featureName: "NRGLockdownPreview",
-        },
-        {
-            resourceProviderNamespace: "Microsoft.ContainerService",
-            featureName: "SafeguardsPreview",
-        },
-        {
-            resourceProviderNamespace: "Microsoft.ContainerService",
-            featureName: "DisableSSHPreview",
-        },
-        {
-            resourceProviderNamespace: "Microsoft.ContainerService",
-            featureName: "AutomaticSKUPreview",
-        },
-    ];
-
-    await createMultipleFeatureRegistrations(featureClient, features);
 }
 
 function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {
