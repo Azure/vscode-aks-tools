@@ -55,7 +55,8 @@ function execCore(cmd: string, shellOptions: ShellOptions): Promise<ShellResult>
             } else if (err.code === undefined) {
                 resolve({ code: 1, stdout: stdoutStr, stderr: stderrStr });
             } else {
-                resolve({ code: err.code, stdout: stdoutStr, stderr: stderrStr });
+                const code = typeof err.code === "number" ? err.code : parseInt(String(err.code), 10) || 1;
+                resolve({ code, stdout: stdoutStr, stderr: stderrStr });
             }
         });
 
