@@ -51,6 +51,10 @@ export function formatElapsed(ms: number): string {
     return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
+export function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export interface TimedResult<T> {
     result: T;
     elapsedMs: number;
@@ -78,6 +82,44 @@ function timestamp(): string {
     return `[${new Date().toISOString()}]`;
 }
 
+export interface PollUntilOptions<T> {
+    intervalMs: number;
+    timeoutMs: number;
+    token: CancellationToken;
+    onWait?: (elapsedMs: number, latest: T) => void;
+}
+
+export interface PollResult<T> {
+    result: T;
+    timedOut: boolean;
+}
+
+/**
+ * Polls `probe` at a fixed interval until `isDone` or `timeoutMs`. Returns the latest result plus
+ * `timedOut`, letting callers treat a timeout as "still pending" rather than "failed" — used so
+ * RBAC propagation lag after a role assignment does not surface as a hard error.
+ */
+export async function pollUntil<T>(
+    probe: () => Promise<T>,
+    isDone: (result: T) => boolean,
+    options: PollUntilOptions<T>,
+): Promise<PollResult<T>> {
+    const start = performance.now();
+    let result = await probe();
+    while (!isDone(result)) {
+        options.token.throwIfCancelled();
+        const elapsedMs = performance.now() - start;
+        if (elapsedMs >= options.timeoutMs) {
+            return { result, timedOut: true };
+        }
+        options.onWait?.(elapsedMs, result);
+        await delay(Math.min(options.intervalMs, options.timeoutMs - elapsedMs));
+        options.token.throwIfCancelled();
+        result = await probe();
+    }
+    return { result, timedOut: false };
+}
+
 export class ActivityReporter {
     constructor(
         private readonly flow: ActivityFlow,
@@ -87,8 +129,17 @@ export class ActivityReporter {
         private readonly token: CancellationToken,
     ) {}
 
-    stage(stage: string, title: string): StageReporter {
-        return new StageReporter(this.flow, this.runId, stage, title, this.sink, this.channel, this.token);
+    stage(stage: string, title: string, options?: { collapsible?: boolean }): StageReporter {
+        return new StageReporter(
+            this.flow,
+            this.runId,
+            stage,
+            title,
+            this.sink,
+            this.channel,
+            this.token,
+            options?.collapsible ?? false,
+        );
     }
 }
 
@@ -96,6 +147,7 @@ export class StageReporter {
     private readonly entries: ActivityEntry[] = [];
     private status: SetupStepStatus = "running";
     private detail?: string;
+    private fullError?: string;
 
     constructor(
         private readonly flow: ActivityFlow,
@@ -105,15 +157,28 @@ export class StageReporter {
         private readonly sink: ActivitySink,
         private readonly channel: vscode.OutputChannel,
         private readonly token: CancellationToken,
+        private readonly collapsible: boolean = false,
     ) {
         this.post();
     }
 
-    async run<T>(action: string, fn: () => Promise<T>, describe?: (result: T) => string | undefined): Promise<T> {
+    async run<T>(
+        action: string,
+        fn: (reportProgress: (detail: string) => void) => Promise<T>,
+        describe?: (result: T) => string | undefined,
+    ): Promise<T> {
         const index = this.entries.push({ action, status: "running" }) - 1;
         this.post();
+        const reportProgress = (detail: string): void => {
+            if (this.entries[index]?.status === "running") {
+                this.entries[index] = { action, status: "running", detail };
+                this.post();
+            }
+        };
         try {
-            const { result, elapsedMs } = await withTiming(this.channel, `[${this.stage}] ${action}`, fn);
+            const { result, elapsedMs } = await withTiming(this.channel, `[${this.stage}] ${action}`, () =>
+                fn(reportProgress),
+            );
             this.entries[index] = { action, status: "succeeded", elapsedMs, detail: describe?.(result) };
             this.post();
             return result;
@@ -133,8 +198,8 @@ export class StageReporter {
         this.finish("warning", detail);
     }
 
-    fail(detail?: string): void {
-        this.finish("failed", detail);
+    fail(detail?: string, fullError?: string): void {
+        this.finish("failed", detail, fullError);
     }
 
     /**
@@ -147,9 +212,10 @@ export class StageReporter {
         this.post();
     }
 
-    private finish(status: SetupStepStatus, detail?: string): void {
+    private finish(status: SetupStepStatus, detail?: string, fullError?: string): void {
         this.status = status;
         this.detail = detail;
+        this.fullError = fullError;
         this.post();
     }
 
@@ -165,6 +231,8 @@ export class StageReporter {
             status: this.status,
             entries: this.entries.map((e) => ({ ...e })),
             detail: this.detail,
+            fullError: this.fullError,
+            collapsible: this.collapsible,
         });
     }
 }

@@ -39,6 +39,9 @@ export interface ActivitySnapshot {
     status: SetupStepStatus;
     entries: ActivityEntry[];
     detail?: string;
+    fullError?: string;
+    /** When true, the webview collapses this stage's entries behind an expandable summary by default. */
+    collapsible?: boolean;
 }
 
 export interface RegionQuotaResult {
@@ -50,6 +53,7 @@ export interface RegionQuotaResult {
 
 export interface PimEligibleGrant {
     roleName: string;
+    scopeId: string;
     /** Scope at which the eligibility was found (sub or RG). Display name preferred when known. */
     scopeDisplayName: string;
 }
@@ -72,6 +76,12 @@ export interface RoleSummary {
      */
     pimLookupNote?: string;
     /**
+     * Azure portal deep link to the access-control (IAM) page, scoped to the resource group when it
+     * exists or the subscription for a new group, so the caller can activate PIM or request access.
+     * The webview falls back to the generic PIM activation blade when this is absent.
+     */
+    permissionActionUrl?: string;
+    /**
      * Actionable warning banner shown when role assignment permission is denied and no PIM roles are available.
      * Includes guidance on how to request access or contact an admin.
      */
@@ -83,12 +93,22 @@ export interface RoleSummary {
     };
 }
 
+export interface ProvisioningAccessPrompt {
+    runId: number;
+    resourceGroupName: string;
+    eligiblePimGrants: PimEligibleGrant[];
+    permissionActionUrl: string | null;
+    detail: string;
+}
+
 export interface DeploymentActionResult {
     /** Human-readable label, e.g. "Create AKS cluster". */
     label: string;
     /** ARM action probed, e.g. "Microsoft.ContainerService/managedClusters/write". */
     action: string;
     granted: boolean;
+    /** Optional per-action context, e.g. why it isn't granted or how it will be granted. */
+    detail?: string;
 }
 
 export interface DeploymentPermissionsSummary {

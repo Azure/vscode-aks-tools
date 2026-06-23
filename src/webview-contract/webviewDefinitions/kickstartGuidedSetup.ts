@@ -2,6 +2,7 @@ import { WebviewDefinition } from "../webviewTypes";
 
 export interface KickstartSample {
     label: string;
+    stack: string;
     description: string;
     repoUrl: string;
 }

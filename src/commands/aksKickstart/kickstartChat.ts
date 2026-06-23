@@ -10,27 +10,30 @@ export const LAST_SUBSCRIPTION_KEY = "aks.kickstart.lastSubscriptionId";
 export const KICKSTART_SAMPLES: KickstartSample[] = [
     {
         label: "AKS Store Demo",
+        stack: "Node.js · Go · Rust",
         description: "Microservices — Node.js, Go, Rust + MongoDB + RabbitMQ",
         repoUrl: "https://github.com/Azure-Samples/aks-store-demo.git",
     },
     {
         label: "Azure Voting App",
+        stack: "Python · Redis",
         description: "Two containers — Python/Flask + Redis",
         repoUrl: "https://github.com/Azure-Samples/azure-voting-app-redis.git",
     },
     {
         label: "Contoso Real Estate",
+        stack: "Next.js · PostgreSQL",
         description: "Full-stack JavaScript — Next.js + Fastify + PostgreSQL",
         repoUrl: "https://github.com/Azure-Samples/contoso-real-estate.git",
     },
 ];
 
 export async function handoffToChat(selections: GuidedSetupSelections): Promise<void> {
-    await openMaximizedChat();
+    await openMaximizedChat(true);
     await vscode.commands.executeCommand("workbench.action.chat.open", buildChatOpenOptions(selections));
 }
 
-async function openMaximizedChat(): Promise<void> {
+async function openMaximizedChat(startNewChat: boolean): Promise<void> {
     await vscode.commands.executeCommand("workbench.action.closePanel");
     await vscode.commands.executeCommand("workbench.action.closeSidebar");
     await vscode.commands.executeCommand("workbench.action.chat.open", {
@@ -39,6 +42,9 @@ async function openMaximizedChat(): Promise<void> {
         isPartialQuery: true,
     });
     await vscode.commands.executeCommand("workbench.action.maximizeAuxiliaryBar");
+    if (startNewChat) {
+        await vscode.commands.executeCommand("workbench.action.chat.newChat");
+    }
 }
 
 function buildContextSummary(selections: GuidedSetupSelections): string {
@@ -104,6 +110,7 @@ function buildChatOpenOptions(selections: GuidedSetupSelections): Record<string,
 
 export interface ProvisionedClusterInfo {
     subscriptionName: string;
+    subscriptionId: string;
     resourceGroupName: string;
     clusterName: string;
     clusterPortalUrl: string | null;
@@ -112,7 +119,7 @@ export interface ProvisionedClusterInfo {
 }
 
 export async function handoffClusterToChat(info: ProvisionedClusterInfo): Promise<void> {
-    await openMaximizedChat();
+    await openMaximizedChat(false);
     await vscode.commands.executeCommand("workbench.action.chat.open", buildClusterChatOpenOptions(info));
 }
 
@@ -120,6 +127,7 @@ function buildClusterContextSummary(info: ProvisionedClusterInfo): string {
     const registry = info.acrLoginServer ? `${info.acrName} (${info.acrLoginServer})` : info.acrName;
     const lines = [
         `- **Subscription:** ${info.subscriptionName}`,
+        `- **Subscription ID:** ${info.subscriptionId}`,
         `- **Resource group:** ${info.resourceGroupName}`,
         `- **AKS Automatic cluster:** ${info.clusterName}`,
         `- **Container registry:** ${registry}`,
