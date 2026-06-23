@@ -17,7 +17,7 @@ If timed out (exit 124), skip and retry next phase.
 - **`Succeeded`**: Attach ACR if not done yet (use the ACR attachment approach from `/kickstart-handoff`, step 6c). Remember this for Phase 6.
 - **`Creating`**: Note it, continue.
 - **`Failed`**: Get details from `az monitor activity-log list --resource-group <rg> --status Failed --max-events 3`. Common failures:
-  - **"could not find a suitable VM size"**: The region doesn't have capacity or the subscription lacks quota for the D-family SKUs AKS Automatic needs. Suggest trying a different region from the recommended list (westus2, westus3, eastus2, swedencentral). Link to quota page: `https://portal.azure.com/#view/Microsoft_Azure_Capacity/QuotaMenuBlade/~/myQuotas`
+  - **"could not find a suitable VM size"**: The region is out of capacity, or the subscription lacks quota for the D-family SKUs AKS Automatic needs. These look the same because AKS Automatic provisions nodes on AKS-owned (HOBO) subscriptions, so the shortage can be on the AKS side even when your own quota is fine. Suggest retrying in a **lower-contention region**, in priority order: `eastus2`, `westus3`, `southcentralus`, `canadacentral`, `swedencentral`. Avoid `eastus`, `westeurope`, and `southeastasia` — they carry the most capacity pressure. Link to quota page: `https://portal.azure.com/#view/Microsoft_Azure_Capacity/QuotaMenuBlade/~/myQuotas`
   - **QuotaExceeded**: Suggest different region or quota increase.
   - **OperationNotAllowed**: Provider not registered or policy blocking.
   - **InvalidParameter**: Bad name — re-collect from user.

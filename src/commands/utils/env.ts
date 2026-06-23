@@ -27,3 +27,9 @@ export function getPortalCreateUrl(environment: Environment, resourcePath: strin
     const encodedReferrerContext = encodeURIComponent(meta.name);
     return `${portalUrl}/#${resourcePath}?referrer_source=vscode&referrer_context=${encodedReferrerContext}`;
 }
+
+export function getPortalScopeAccessUrl(environment: Environment, tenantId: string, armScopeId: string): string {
+    const portalUrl = environment.portalUrl.replace(/\/$/, "");
+    const scope = armScopeId.startsWith("/") ? armScopeId : `/${armScopeId}`;
+    return `${portalUrl}/?feature.msaljs=true#@${tenantId}/resource${scope}/users`;
+}

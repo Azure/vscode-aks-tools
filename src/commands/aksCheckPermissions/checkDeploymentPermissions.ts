@@ -21,11 +21,11 @@ import { openMarkdownReport } from "../utils/markdownReport";
 const QUICKPICK_TITLE = "Check AKS deployment permissions";
 
 // Required actions for each gate in Phase 6 of the Kickstart agent.
-const AKS_CLUSTER_USER_ACTION = "Microsoft.ContainerService/managedClusters/listClusterUserCredential/action";
-const AKS_DATAPLANE_WRITE_ACTION = "Microsoft.ContainerService/managedClusters/apps/deployments/write";
-const ACR_PULL_DATAACTION = "Microsoft.ContainerRegistry/registries/pull/read";
-const ACR_PUSH_DATAACTION = "Microsoft.ContainerRegistry/registries/push/write";
-const ACR_TASKS_ACTION = "Microsoft.ContainerRegistry/registries/tasks/write";
+export const AKS_CLUSTER_USER_ACTION = "Microsoft.ContainerService/managedClusters/listClusterUserCredential/action";
+export const AKS_DATAPLANE_WRITE_ACTION = "Microsoft.ContainerService/managedClusters/apps/deployments/write";
+export const ACR_PULL_DATAACTION = "Microsoft.ContainerRegistry/registries/pull/read";
+export const ACR_PUSH_DATAACTION = "Microsoft.ContainerRegistry/registries/push/write";
+export const ACR_TASKS_ACTION = "Microsoft.ContainerRegistry/registries/tasks/write";
 
 // Least-privilege built-in roles to recommend when a probe fails.
 const ROLE_CLUSTER_USER = "Azure Kubernetes Service Cluster User Role";
@@ -42,11 +42,20 @@ type DeploymentScope = {
     clusterScopeId: string;
     acrName?: string;
     acrScopeId?: string;
+    acrResourceGroup?: string;
 };
 
-type ProbeStatus = "pass" | "fail" | "unknown";
+export type ProbeStatus = "pass" | "fail" | "unknown";
 
-type Probe = {
+/**
+ * Which probe set {@link runProbes} should execute:
+ * - "all" (default): the signed-in user's runtime probes plus the kubelet ACR pull probe.
+ * - "user": only the signed-in user's runtime probes (kubeconfig, workload deploy, image push, ACR build).
+ * - "kubelet-pull": only the cluster kubelet's ACR pull probe.
+ */
+export type ProbeScope = "all" | "user" | "kubelet-pull";
+
+export type Probe = {
     id: string;
     label: string;
     status: ProbeStatus;
@@ -63,6 +72,9 @@ export type CheckDeploymentPermissionsArgs = {
     clusterName?: string;
     /** Optional. When omitted, ACR-related probes are skipped. */
     acrName?: string;
+    /** Optional. Resource group of the ACR when it differs from the cluster's resource group. */
+    acrResourceGroup?: string;
+    probeScope?: ProbeScope;
     /** When true, suppresses the toast and skips opening the markdown document. */
     silent?: boolean;
 };
@@ -101,7 +113,7 @@ export async function checkDeploymentPermissions(
     const scope = scopeResult;
 
     const authClient = getAuthorizationManagementClient(sessionProvider.result, scope.subscriptionId);
-    const probes = await runProbes(sessionProvider.result, authClient, scope);
+    const probes = await runProbes(sessionProvider.result, authClient, scope, args?.probeScope ?? "all");
     const allPassed = probes.every((p) => p.status === "pass");
     const markdown = buildReport(scope, probes);
 
@@ -127,21 +139,30 @@ async function runProbes(
     sessionProvider: ReadyAzureSessionProvider,
     authClient: AuthorizationManagementClient,
     scope: DeploymentScope,
+    probeScope: ProbeScope,
 ): Promise<Probe[]> {
-    const clusterPerms = await listForResource(authClient, scope.clusterScopeId);
-    const probes: Probe[] = [
-        evaluateClusterUserProbe(clusterPerms, scope),
-        evaluateDataPlaneWriteProbe(clusterPerms, scope),
-    ];
+    const includeUserProbes = probeScope === "all" || probeScope === "user";
+    const includeKubeletProbe = probeScope === "all" || probeScope === "kubelet-pull";
+    const probes: Probe[] = [];
+
+    if (includeUserProbes) {
+        const clusterPerms = await listForResource(authClient, scope.clusterScopeId);
+        probes.push(evaluateClusterUserProbe(clusterPerms, scope));
+        probes.push(evaluateDataPlaneWriteProbe(clusterPerms, scope));
+    }
 
     if (!scope.acrName || !scope.acrScopeId) return probes;
 
-    const acrPerms = await listForResource(authClient, scope.acrScopeId);
-    probes.push(evaluateAcrPushProbe(acrPerms, scope));
-    probes.push(evaluateAcrTasksProbe(acrPerms, scope));
+    if (includeUserProbes) {
+        const acrPerms = await listForResource(authClient, scope.acrScopeId);
+        probes.push(evaluateAcrPushProbe(acrPerms, scope));
+        probes.push(evaluateAcrTasksProbe(acrPerms, scope));
+    }
 
-    const kubeletObjectId = await fetchKubeletObjectId(sessionProvider, scope);
-    probes.push(await evaluateAcrPullProbe(authClient, scope, kubeletObjectId));
+    if (includeKubeletProbe) {
+        const kubeletObjectId = await fetchKubeletObjectId(sessionProvider, scope);
+        probes.push(await evaluateAcrPullProbe(authClient, scope, kubeletObjectId));
+    }
 
     return probes;
 }
@@ -215,7 +236,7 @@ async function evaluateAcrPullProbe(
     const assignments = await getPrincipalRoleAssignmentsForAcr(
         authClient,
         kubeletObjectId.result,
-        scope.resourceGroup,
+        scope.acrResourceGroup ?? scope.resourceGroup,
         scope.acrName!,
     );
     if (failed(assignments)) {
@@ -391,7 +412,8 @@ async function resolveScopeFromArgs(
     if (!sub) return { error: `Subscription '${args.subscriptionId}' is not accessible.` };
 
     const clusterScopeId = getScopeForCluster(sub.subscriptionId, args.resourceGroup!, args.clusterName!);
-    const acrScopeId = args.acrName ? getScopeForAcr(sub.subscriptionId, args.resourceGroup!, args.acrName) : undefined;
+    const acrResourceGroup = args.acrResourceGroup ?? args.resourceGroup!;
+    const acrScopeId = args.acrName ? getScopeForAcr(sub.subscriptionId, acrResourceGroup, args.acrName) : undefined;
 
     return {
         subscriptionId: sub.subscriptionId,
@@ -401,6 +423,7 @@ async function resolveScopeFromArgs(
         clusterScopeId,
         acrName: args.acrName,
         acrScopeId,
+        acrResourceGroup: args.acrName ? acrResourceGroup : undefined,
     };
 }
 
@@ -470,5 +493,6 @@ async function pickScope(sessionProvider: ReadyAzureSessionProvider): Promise<De
         acrName,
         acrScopeId:
             acrName && acrResourceGroup ? getScopeForAcr(subPick.subscriptionId, acrResourceGroup, acrName) : undefined,
+        acrResourceGroup: acrName ? acrResourceGroup : undefined,
     };
 }
