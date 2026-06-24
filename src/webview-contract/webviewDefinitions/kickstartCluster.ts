@@ -143,6 +143,12 @@ export type ToWebViewMsgDef = {
         acrName: string;
         acrLoginServer: string | null;
     };
+    /**
+     * Fired once the cluster's kubelet identity has been granted AcrPull while the cluster is still
+     * provisioning, signalling that the user can hand back to chat early and let the background
+     * cluster create + role-assignment propagation finish in parallel.
+     */
+    clusterChatReady: void;
     awaitingProvisioningAccess: ProvisioningAccessPrompt;
     provisioningAccessResolved: { runId: number };
     getClustersResponse: { subscriptionId: string; clusters: ExistingCluster[] };

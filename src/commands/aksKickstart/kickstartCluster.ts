@@ -41,6 +41,9 @@ export async function kickstartCluster(context: vscode.ExtensionContext, launchC
     const panel = new KickstartClusterPanel(extension.result.extensionUri);
     const dataProvider = new KickstartClusterDataProvider(sessionProvider.result, context, launchContext);
     panel.show(dataProvider);
+    // Give the view the full editor surface: close the bottom panel (terminal/output) and hide the
+    // side bar. `maximizeEditorHideSidebar` alone leaves the terminal visible, so close it explicitly.
+    await vscode.commands.executeCommand("workbench.action.closePanel");
     await vscode.commands.executeCommand("workbench.action.maximizeEditorHideSidebar");
 }
 

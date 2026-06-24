@@ -76,6 +76,12 @@ export type KickstartClusterState = InitialState & {
     preflightGeneration: number;
     provisioningAccess: ProvisioningAccessPrompt | null;
     finishResult: FinishResult | null;
+    /**
+     * True once the extension reports the cluster's kubelet identity has been granted AcrPull while
+     * the cluster is still provisioning, so the Provisioning view can offer an early "Continue in
+     * chat" handoff. Persists across single-stage retries but resets on a fresh/abandoned run.
+     */
+    clusterChatReady: boolean;
     costEstimate: CostEstimateResult | null;
 };
 
@@ -132,6 +138,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         preflightGeneration: 0,
         provisioningAccess: null,
         finishResult: null,
+        clusterChatReady: false,
         costEstimate: null,
     }),
     vscodeMessageHandler: {
@@ -180,6 +187,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             finishResult: args,
             provisioningAccess: null,
         }),
+        clusterChatReady: (state) => ({ ...state, clusterChatReady: true }),
         awaitingProvisioningAccess: (state, args) => ({ ...state, provisioningAccess: args }),
         provisioningAccessResolved: (state, args) =>
             state.provisioningAccess && state.provisioningAccess.runId !== args.runId
@@ -255,13 +263,19 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             preflightGeneration: state.preflightGeneration + 1,
             activity: { ...state.activity, preflight: undefined },
         }),
-        setProvisioning: (state) => ({ ...state, stage: Stage.Provisioning, provisioningAccess: null }),
+        setProvisioning: (state) => ({
+            ...state,
+            stage: Stage.Provisioning,
+            provisioningAccess: null,
+            clusterChatReady: false,
+        }),
         retryProvisioning: (state) => ({
             ...state,
             stage: Stage.Provisioning,
             errorMessage: null,
             finishResult: null,
             provisioningAccess: null,
+            clusterChatReady: false,
             activity: { ...state.activity, provision: undefined },
         }),
         // Unlike retryProvisioning, this keeps activity.provision so the re-run's snapshots merge
@@ -281,6 +295,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             errorMessage: null,
             finishResult: null,
             provisioningAccess: null,
+            clusterChatReady: false,
             activity: { ...state.activity, provision: undefined },
         }),
         goToExistingClusterSelection: (state) => ({
@@ -289,6 +304,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             mode: "useExisting",
             errorMessage: null,
             finishResult: null,
+            clusterChatReady: false,
             selectedCluster: null,
             connectedAcrs: null,
             detectingAcrs: false,

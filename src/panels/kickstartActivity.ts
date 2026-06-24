@@ -82,6 +82,14 @@ function timestamp(): string {
     return `[${new Date().toISOString()}]`;
 }
 
+/** Optional structured progress a `run()` body can report alongside its status detail. */
+export interface ProgressExtra {
+    /** Determinate progress 0–100 for a progress bar. */
+    progress?: number;
+    /** Monospace value (object ID, role GUID, …) shown after the detail. */
+    code?: string;
+}
+
 export interface PollUntilOptions<T> {
     intervalMs: number;
     timeoutMs: number;
@@ -164,14 +172,22 @@ export class StageReporter {
 
     async run<T>(
         action: string,
-        fn: (reportProgress: (detail: string) => void) => Promise<T>,
+        fn: (reportProgress: (detail: string, extra?: ProgressExtra) => void) => Promise<T>,
         describe?: (result: T) => string | undefined,
     ): Promise<T> {
-        const index = this.entries.push({ action, status: "running" }) - 1;
+        const startedAt = Date.now();
+        const index = this.entries.push({ action, status: "running", startedAt }) - 1;
         this.post();
-        const reportProgress = (detail: string): void => {
+        const reportProgress = (detail: string, extra?: ProgressExtra): void => {
             if (this.entries[index]?.status === "running") {
-                this.entries[index] = { action, status: "running", detail };
+                this.entries[index] = {
+                    action,
+                    status: "running",
+                    detail,
+                    progress: extra?.progress,
+                    code: extra?.code,
+                    startedAt,
+                };
                 this.post();
             }
         };
@@ -179,12 +195,12 @@ export class StageReporter {
             const { result, elapsedMs } = await withTiming(this.channel, `[${this.stage}] ${action}`, () =>
                 fn(reportProgress),
             );
-            this.entries[index] = { action, status: "succeeded", elapsedMs, detail: describe?.(result) };
+            this.entries[index] = { action, status: "succeeded", elapsedMs, detail: describe?.(result), startedAt };
             this.post();
             return result;
         } catch (e) {
             const status: ActivityStatus = this.token.isCancelled ? "cancelled" : "failed";
-            this.entries[index] = { action, status, detail: getErrorMessage(e) };
+            this.entries[index] = { action, status, detail: getErrorMessage(e), startedAt };
             this.post();
             throw e;
         }
@@ -194,8 +210,8 @@ export class StageReporter {
         this.finish("succeeded", detail);
     }
 
-    warn(detail?: string): void {
-        this.finish("warning", detail);
+    warn(detail?: string, fullError?: string): void {
+        this.finish("warning", detail, fullError);
     }
 
     fail(detail?: string, fullError?: string): void {
@@ -208,7 +224,24 @@ export class StageReporter {
      * row in the activity list rather than as one timed `run()` entry.
      */
     addEntry(entry: ActivityEntry): void {
-        this.entries.push(entry);
+        this.entries.push({ startedAt: Date.now(), ...entry });
+        this.post();
+    }
+
+    /**
+     * Add an entry, or update the existing one with the same `action` in place. Lets a single
+     * logical step (e.g. image-pull pre-authorization) advance through pending → running → done as
+     * one row instead of stacking duplicate rows. The original {@link ActivityEntry.startedAt} is
+     * preserved across updates unless the caller supplies a new one — so a pending placeholder can
+     * stay timestamp-less until the work actually starts.
+     */
+    upsertEntry(entry: ActivityEntry): void {
+        const index = this.entries.findIndex((e) => e.action === entry.action);
+        if (index >= 0) {
+            this.entries[index] = { ...entry, startedAt: entry.startedAt ?? this.entries[index].startedAt };
+        } else {
+            this.entries.push(entry);
+        }
         this.post();
     }
 
