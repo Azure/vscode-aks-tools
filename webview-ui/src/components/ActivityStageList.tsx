@@ -55,6 +55,22 @@ export function formatElapsed(ms: number): string {
     return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
+function formatClock(epochMs: number): string {
+    return new Date(epochMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function ProgressBar({ progress }: { progress: number }) {
+    const pct = Math.max(0, Math.min(100, Math.round(progress)));
+    return (
+        <span className={styles.progressRow}>
+            <span className={styles.progressTrack}>
+                <span className={styles.progressFill} style={{ width: `${pct}%` }} />
+            </span>
+            <span className={styles.progressLabel}>{`${pct}%`}</span>
+        </span>
+    );
+}
+
 function StageFullError({ fullError }: { fullError: string }) {
     const [expanded, setExpanded] = useState(false);
     return (
@@ -88,10 +104,17 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
             ) : (
                 <span className={styles.activityAction}>{entry.action}</span>
             )}
+            {entry.startedAt !== undefined && (
+                <span className={styles.activityStarted} title={l10n.t("Started at {0}", formatClock(entry.startedAt))}>
+                    {formatClock(entry.startedAt)}
+                </span>
+            )}
             {entry.detail && <span className={styles.activityEntryDetail}>{entry.detail}</span>}
+            {entry.code && <code className={styles.activityCode}>{entry.code}</code>}
             {entry.elapsedMs !== undefined && (
                 <span className={styles.activityElapsed}>{formatElapsed(entry.elapsedMs)}</span>
             )}
+            {entry.progress !== undefined && <ProgressBar progress={entry.progress} />}
         </span>
     );
 }

@@ -9,6 +9,7 @@ import {
     ProvisionedClusterInfo,
     handoffClusterToChat,
 } from "../commands/aksKickstart/kickstartChat";
+import { getKubeloginBinaryPath } from "../commands/utils/helper/kubeloginDownload";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import {
     ClusterLaunchContext,
@@ -50,6 +51,7 @@ export class KickstartClusterPanel extends BasePanel<"kickstartCluster"> {
             subscriptionScanComplete: null,
             preflightComplete: null,
             finishComplete: null,
+            clusterChatReady: null,
             getCostEstimateResponse: null,
             existingReadinessComplete: null,
             awaitingProvisioningAccess: null,
@@ -136,6 +138,14 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
     private provisioningInFlight: Promise<void> | null = null;
     private activeProvisioningToken: CancellationToken | undefined;
     private runGeneration = 0;
+    // True once the active run reported a successful finishComplete. Drives whether a chat handoff
+    // describes the cluster as ready vs. still provisioning in the background.
+    private provisioningComplete = false;
+    // kubelogin is fetched in the background as soon as cluster setup starts so the chat handoff can
+    // point the agent at an already-installed binary (AKS Automatic disables local accounts, so the
+    // agent always needs kubelogin) instead of having it download its own copy.
+    private kubeloginPath: string | null = null;
+    private kubeloginReady: Promise<void> | null = null;
 
     constructor(
         private readonly sessionProvider: ReadyAzureSessionProvider,
@@ -290,7 +300,20 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
     private async handleFinish(webview: MessageSink<ToWebViewMsgDef>, selections: ClusterSelections) {
         this.lastFinish = () => this.handleFinish(webview, selections);
         await this.context.globalState.update(LAST_SUBSCRIPTION_KEY, selections.subscriptionId);
+        // Start fetching kubelogin now (once, reused across retries) so it's ready to hand to the agent
+        // by the time the user continues in chat, without blocking provisioning.
+        this.kubeloginReady ??= this.ensureKubeloginBinary();
         const runId = this.nextRunId++;
+        const toProvisioned = (result: ClusterProvisioningResult): ProvisionedClusterInfo => ({
+            subscriptionName: selections.subscriptionName,
+            subscriptionId: selections.subscriptionId,
+            resourceGroupName: selections.resourceGroupName,
+            clusterName: result.clusterName,
+            clusterPortalUrl: result.clusterPortalUrl,
+            acrName: result.acrName,
+            acrLoginServer: result.acrLoginServer,
+            kubeloginPath: this.kubeloginPath,
+        });
         const run = createClusterProvisioningRun(
             this.sessionProvider,
             selections,
@@ -306,16 +329,21 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
                     () => webview.postAwaitingProvisioningAccess(prompt),
                 );
             },
+            // Fired once the kubelet identity is granted AcrPull, while the cluster is still
+            // provisioning. Lets the user resume chat (Phases 3–4 don't need a ready cluster) in
+            // parallel with the background cluster create + role-assignment propagation.
+            (result) => this.handleClusterChatReady(webview, toProvisioned(result)),
         );
-        await this.startProvisioningRun(webview, run, (result) => ({
-            subscriptionName: selections.subscriptionName,
-            subscriptionId: selections.subscriptionId,
-            resourceGroupName: selections.resourceGroupName,
-            clusterName: result.clusterName,
-            clusterPortalUrl: result.clusterPortalUrl,
-            acrName: result.acrName,
-            acrLoginServer: result.acrLoginServer,
-        }));
+        await this.startProvisioningRun(webview, run, toProvisioned);
+    }
+
+    private handleClusterChatReady(webview: MessageSink<ToWebViewMsgDef>, info: ProvisionedClusterInfo) {
+        // Ignore a late callback from an attempt the user already abandoned (Back to setup nulls the run).
+        if (!this.activeRun) {
+            return;
+        }
+        this.lastProvisioned = info;
+        webview.postClusterChatReady();
     }
 
     private async handleRetry() {
@@ -330,6 +358,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
         toProvisioned: (result: ClusterProvisioningResult) => ProvisionedClusterInfo,
     ) {
         this.activeRun = { run, webview, toProvisioned };
+        this.provisioningComplete = false;
         await this.runProvisioningAttempt(undefined);
     }
 
@@ -360,6 +389,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
                 }
                 if (result.succeeded) {
                     this.lastProvisioned = active.toProvisioned(result);
+                    this.provisioningComplete = true;
                 }
                 active.webview.postFinishComplete(result);
             } catch (e) {
@@ -401,6 +431,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
         this.activeRun = null;
         this.activeProvisioningToken = undefined;
         this.provisioningInFlight = null;
+        this.provisioningComplete = false;
     }
 
     private handleRecheckProvisioningPermission(runId: number) {
@@ -443,6 +474,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
     private async handleUseExistingCluster(webview: MessageSink<ToWebViewMsgDef>, selection: ExistingClusterSelection) {
         this.lastFinish = () => this.handleUseExistingCluster(webview, selection);
         await this.context.globalState.update(LAST_SUBSCRIPTION_KEY, selection.subscriptionId);
+        this.kubeloginReady ??= this.ensureKubeloginBinary();
         const runId = this.nextRunId++;
         const run = createExistingClusterAttachRun(
             this.sessionProvider,
@@ -450,6 +482,15 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             runId,
             webview,
             getKickstartOutputChannel(),
+            (prompt, probe) => {
+                webview.postAwaitingProvisioningAccess(prompt);
+                return this.provisioningGate.waitForAccess(
+                    prompt.runId,
+                    probe,
+                    () => webview.postProvisioningAccessResolved({ runId: prompt.runId }),
+                    () => webview.postAwaitingProvisioningAccess(prompt),
+                );
+            },
         );
         await this.startProvisioningRun(webview, run, (result) => ({
             subscriptionName: selection.subscriptionName,
@@ -459,6 +500,7 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
             clusterPortalUrl: result.clusterPortalUrl,
             acrName: result.acrName,
             acrLoginServer: result.acrLoginServer,
+            kubeloginPath: this.kubeloginPath,
         }));
     }
 
@@ -483,9 +525,20 @@ export class KickstartClusterDataProvider implements PanelDataProvider<"kickstar
         webview.postExistingReadinessComplete({ readiness, requestKey: args.requestKey });
     }
 
+    private async ensureKubeloginBinary(): Promise<void> {
+        const result = await getKubeloginBinaryPath();
+        this.kubeloginPath = result.succeeded ? result.result : null;
+    }
+
     private async handleContinueInChat() {
         if (this.lastProvisioned) {
-            await handoffClusterToChat(this.lastProvisioned);
+            // Make sure the background kubelogin download started at setup has settled so the handoff
+            // can point the agent at the binary (or cleanly omit it if the download failed).
+            await this.kubeloginReady;
+            await handoffClusterToChat(
+                { ...this.lastProvisioned, kubeloginPath: this.kubeloginPath },
+                { stillProvisioning: !this.provisioningComplete },
+            );
         }
     }
 }
