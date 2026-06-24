@@ -178,7 +178,19 @@ export function KickstartCluster(initialState: InitialState) {
                             stages={state.activity.provision?.stages ?? []}
                             onRetryStage={handleRetryStage}
                         />
+                        {state.clusterChatReady && (
+                            <p>
+                                {l10n.t(
+                                    "The cluster's identity now has pull access to your registry, and the cluster is finishing in the background. You can continue in chat now — designing and generating your deployment files doesn't need the cluster to be ready.",
+                                )}
+                            </p>
+                        )}
                         <div className={styles.buttonContainer}>
+                            {state.clusterChatReady && (
+                                <button onClick={() => vscode.postContinueInChatRequest()}>
+                                    {l10n.t("Continue in chat")}
+                                </button>
+                            )}
                             <button className={styles.secondaryButton} onClick={handleBackToSetup}>
                                 {l10n.t("Back to setup")}
                             </button>

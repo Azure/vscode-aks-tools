@@ -76,6 +76,16 @@ function getValidatedRgName(value: string): Validatable<string> {
     return valid(value);
 }
 
+// AKS auto-generates the node resource group as MC_<rg>_<cluster>_<location>. Azure caps that name at
+// 80 characters. We supply a truncated name at deploy time (see generateNodeResourceGroup in
+// ClusterSpecCreationBuilder) so it never fails preflight, but we also warn here so the user can pick
+// shorter names up front instead of getting a silently truncated node resource group.
+const MAX_NODE_RESOURCE_GROUP_LENGTH = 80;
+
+function getNodeResourceGroupName(resourceGroupName: string, clusterName: string, location: string): string {
+    return `MC_${resourceGroupName}_${clusterName}_${location}`;
+}
+
 export function randomSuffix(length: number): string {
     const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
     return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
@@ -173,6 +183,16 @@ export function ClusterInput(props: ClusterInputProps) {
             ? newResourceGroupName.value
             : ""
         : existingResourceGroup;
+
+    // Once the cluster name, resource group, and region are all known, preview the AKS-generated node
+    // resource group name and warn when it would exceed Azure's 80-character cap (it gets truncated on
+    // deploy, but a heads-up lets the user choose tidier names).
+    const effectiveClusterName = isValid(clusterName) ? clusterName.value : "";
+    const prospectiveNodeResourceGroup =
+        preflightResourceGroupName && effectiveClusterName && currentLocation
+            ? getNodeResourceGroupName(preflightResourceGroupName, effectiveClusterName, currentLocation)
+            : "";
+    const nodeResourceGroupTooLong = prospectiveNodeResourceGroup.length > MAX_NODE_RESOURCE_GROUP_LENGTH;
 
     useEffect(() => {
         if (props.selectedSubscriptionId) {
@@ -664,6 +684,16 @@ export function ClusterInput(props: ClusterInputProps) {
                         }}
                     />
                     {renderValidationMessage(clusterName)}
+                    {nodeResourceGroupTooLong && (
+                        <span className={styles.validationMessage}>
+                            <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
+                            {l10n.t(
+                                "Heads up: the node resource group name (MC_…) would be {0} characters, over Azure's {1}-character limit, so it will be shortened automatically. Shorten the cluster name or resource group name for a cleaner name.",
+                                prospectiveNodeResourceGroup.length,
+                                MAX_NODE_RESOURCE_GROUP_LENGTH,
+                            )}
+                        </span>
+                    )}
                 </>
             )}
 

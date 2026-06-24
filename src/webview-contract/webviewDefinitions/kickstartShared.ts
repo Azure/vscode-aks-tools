@@ -29,6 +29,19 @@ export interface ActivityEntry {
     detail?: string;
     /** Optional URL — renders the action label as a clickable link. */
     url?: string;
+    /**
+     * Optional monospace value rendered after the detail — e.g. an identity object ID or a role
+     * definition GUID — so the user can see exactly which principal/role the step acted on.
+     */
+    code?: string;
+    /** Determinate progress (0–100) for long-running actions (e.g. cluster create); renders a bar. */
+    progress?: number;
+    /**
+     * Wall-clock time (epoch ms) the action's work began, rendered as a start timestamp. Lets the
+     * user see when a long-running step started (e.g. cluster create) and when a point-in-time event
+     * occurred (e.g. the AcrPull pre-authorization). Left unset while an entry is only pending/waiting.
+     */
+    startedAt?: number;
 }
 
 export interface ActivitySnapshot {

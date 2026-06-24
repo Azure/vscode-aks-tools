@@ -14,6 +14,7 @@ import {
     canCreateRoleAssignmentsAtResourceGroup,
     createRoleAssignment,
     findEligiblePimGrants,
+    getPrincipalRoleAssignmentsForAcr,
     getScopeForAcr,
     getScopeForCluster,
 } from "../commands/utils/roleAssignments";
@@ -33,16 +34,37 @@ import {
     delay,
     formatElapsed,
     pollUntil,
+    ProgressExtra,
     StageReporter,
 } from "./kickstartActivity";
-import { checkDeploymentPermissions } from "../commands/aksCheckPermissions/checkDeploymentPermissions";
+import {
+    ACR_PULL_DATAACTION,
+    checkDeploymentPermissions,
+} from "../commands/aksCheckPermissions/checkDeploymentPermissions";
 
 const DEPLOYMENT_API_VERSION = "2021-04-01";
 
 const VERIFY_POLL_INTERVAL_MS = 3000;
-const VERIFY_POLL_TIMEOUT_MS = 90000;
+// The AcrPull role assignment is created synchronously (an idempotent PUT), which is our authoritative
+// "granted" signal. Observing it replicate through Azure AD is best-effort and non-fatal, so we only
+// give it a short grace poll for live confirmation before downgrading to a soft "still propagating"
+// warning rather than blocking provisioning. A brand-new kubelet identity can take several minutes to
+// replicate, but the user doesn't need to wait that out — Design/Generate don't need pull access, and
+// pulls only happen later at deploy time.
+const PULL_PROPAGATION_GRACE_MS = 45000;
 const CLUSTER_POLL_INTERVAL_MS = 15000;
 const CLUSTER_POLL_TIMEOUT_MS = 1_800_000;
+// Don't pre-assign AcrPull and hand back to chat the instant the kubelet identity appears — it can
+// surface within the first ~30-90s, before we can be confident the create is genuinely underway.
+// Fast-fail creates (quota, capacity, policy) usually surface in the first couple of minutes, so we
+// require the cluster to have been actively "Creating" for at least this long first. That gives a high
+// probability the create will actually finish before we detach the user into chat, at the cost of only
+// ~2 of the ~15 provisioning minutes of phase overlap.
+const MIN_CREATING_DWELL_MS = 120000;
+// AKS Automatic clusters typically take ~15 minutes to provision. We have no server-provided
+// percentage, so we drive a determinate progress bar from elapsed time against this estimate,
+// capped below 100% until the real "Succeeded" state arrives.
+const ESTIMATED_CLUSTER_CREATE_MS = 15 * 60 * 1000;
 
 export type WaitForProvisioningAccess = (
     prompt: ProvisioningAccessPrompt,
@@ -56,7 +78,14 @@ interface DeploymentIdentity {
 
 interface ClusterDeploymentProgress {
     token: CancellationToken;
-    reportProgress: (detail: string) => void;
+    reportProgress: (detail: string, extra?: ProgressExtra) => void;
+    /**
+     * Invoked (at most once) with the cluster's kubelet identity object ID as soon as it appears in
+     * the cluster's `identityProfile` during provisioning, before the cluster reaches "Succeeded".
+     * Lets the caller pre-assign AcrPull early so it propagates through Azure AD while the cluster
+     * finishes creating.
+     */
+    onKubeletIdentity?: (kubeletObjectId: string) => void;
 }
 
 export interface ClusterProvisioningResult {
@@ -144,6 +173,7 @@ export function createClusterProvisioningRun(
     sink: ActivitySink,
     channel: OutputChannel,
     waitForAccess: WaitForProvisioningAccess,
+    onChatReady?: (result: ClusterProvisioningResult) => void,
 ): ProvisioningRun {
     const result: ClusterProvisioningResult = {
         succeeded: false,
@@ -197,7 +227,16 @@ export function createClusterProvisioningRun(
                     return "continue";
                 }
 
-                const prompt = await buildProvisioningAccessPrompt(authClient, selections, runId, channel);
+                const prompt = await buildProvisioningAccessPrompt(
+                    authClient,
+                    {
+                        subscriptionId: selections.subscriptionId,
+                        tenantId: selections.tenantId,
+                        resourceGroupName: selections.resourceGroupName,
+                    },
+                    runId,
+                    channel,
+                );
                 const granted = await stage.run(
                     l10n.t("Waiting for permission to assign roles in {0}", selections.resourceGroupName),
                     () => waitForAccess(prompt, probeRoleAssignmentAccess),
@@ -213,49 +252,6 @@ export function createClusterProvisioningRun(
                 }
                 stage.succeed(l10n.t("You can now assign roles in {0}.", selections.resourceGroupName));
                 return "continue";
-            },
-        },
-        {
-            id: "cluster",
-            title: l10n.t("AKS Automatic cluster"),
-            execute: async (stage, token) => {
-                try {
-                    const kubernetesVersion = await stage.run(
-                        l10n.t("Selecting Kubernetes version"),
-                        () =>
-                            resolveDefaultKubernetesVersion(
-                                sessionProvider,
-                                selections.subscriptionId,
-                                selections.location,
-                            ),
-                        (version) => version,
-                    );
-                    const identity = await stage.run(l10n.t("Resolving your account identity"), () =>
-                        resolveDeploymentIdentity(sessionProvider),
-                    );
-                    // Reuse the same deployment name across retries so a re-run reconciles the existing
-                    // deployment instead of starting a competing one.
-                    context.clusterDeploymentName ??= `${selections.clusterName}-${Math.random().toString(36).substring(5)}`;
-                    const deploymentName = context.clusterDeploymentName;
-                    result.clusterPortalUrl = await stage.run(
-                        l10n.t("Deploying cluster — this can take several minutes"),
-                        (reportProgress) =>
-                            deployAutomaticCluster(
-                                sessionProvider,
-                                selections,
-                                kubernetesVersion,
-                                identity,
-                                true,
-                                deploymentName,
-                                { token, reportProgress },
-                            ),
-                    );
-                    stage.succeed(l10n.t("Cluster {0} is ready.", selections.clusterName));
-                    return "continue";
-                } catch (e) {
-                    stage.fail(getDeploymentErrorMessage(e), getDeploymentErrorDetails(e));
-                    return "halt";
-                }
             },
         },
         {
@@ -290,15 +286,183 @@ export function createClusterProvisioningRun(
             },
         },
         {
+            id: "cluster",
+            title: l10n.t("AKS Automatic cluster"),
+            execute: async (stage, token) => {
+                try {
+                    const kubernetesVersion = await stage.run(
+                        l10n.t("Selecting Kubernetes version"),
+                        () =>
+                            resolveDefaultKubernetesVersion(
+                                sessionProvider,
+                                selections.subscriptionId,
+                                selections.location,
+                            ),
+                        (version) => version,
+                    );
+                    const identity = await stage.run(l10n.t("Resolving your account identity"), () =>
+                        resolveDeploymentIdentity(sessionProvider),
+                    );
+                    // Reuse the same deployment name across retries so a re-run reconciles the existing
+                    // deployment instead of starting a competing one.
+                    context.clusterDeploymentName ??= `${selections.clusterName}-${Math.random().toString(36).substring(5)}`;
+                    const deploymentName = context.clusterDeploymentName;
+
+                    // Pre-authorize image pulls as early as possible. The kubelet identity appears in the
+                    // cluster's identityProfile minutes before provisioning completes, and the ACR already
+                    // exists (created in the previous stage). Assigning AcrPull now lets the role assignment
+                    // propagate through Azure AD while the cluster finishes, so the later verify step
+                    // usually passes immediately instead of waiting on brand-new-identity replication lag.
+                    const preauthAction = l10n.t("Pre-authorize image pulls");
+                    let earlyGrant: Promise<void> | undefined;
+                    const grantAcrPullEarly = (kubeletObjectId: string): void => {
+                        if (earlyGrant) {
+                            return; // one-shot
+                        }
+                        // The kubelet identity surfaced — flip the pending row to "assigning" and stamp
+                        // startedAt now so the row records when the pre-authorization actually ran.
+                        stage.upsertEntry({
+                            action: preauthAction,
+                            status: "running",
+                            detail: l10n.t("Found the kubelet identity — assigning AcrPull…"),
+                            code: kubeletObjectId,
+                            startedAt: Date.now(),
+                        });
+                        earlyGrant = (async () => {
+                            try {
+                                const authClient = getAuthorizationManagementClient(
+                                    sessionProvider,
+                                    selections.subscriptionId,
+                                );
+                                await grantAcrPull(
+                                    authClient,
+                                    selections.subscriptionId,
+                                    kubeletObjectId,
+                                    selections.resourceGroupName,
+                                    selections.acrName,
+                                );
+                                stage.upsertEntry({
+                                    action: preauthAction,
+                                    status: "succeeded",
+                                    detail: l10n.t(
+                                        "Assigned AcrPull to the kubelet identity while the cluster finished provisioning, giving Azure AD time to propagate it.",
+                                    ),
+                                    code: kubeletObjectId,
+                                });
+                                // The kubelet identity now holds AcrPull and the cluster create is well
+                                // underway, so hand back to chat early. The portal URL is deterministic
+                                // from the cluster's ARM id (the create returns the same value later), and
+                                // Phases 3–4 (Design/Generate) don't need the cluster to be ready — letting
+                                // the user resume in chat while the create + RBAC propagation finish in the
+                                // background.
+                                result.clusterPortalUrl ??= getPortalResourceUrl(
+                                    getEnvironment(),
+                                    getScopeForCluster(
+                                        selections.subscriptionId,
+                                        selections.resourceGroupName,
+                                        selections.clusterName,
+                                    ),
+                                );
+                                onChatReady?.(result);
+                                // Confirm the brand-new assignment is actually observable while the cluster
+                                // is still provisioning, so the user sees pull access go live rather than
+                                // just "assigned". Non-fatal: the dedicated verify stage re-checks afterwards.
+                                await confirmEarlyPullAccess(
+                                    stage,
+                                    token,
+                                    {
+                                        subscriptionId: selections.subscriptionId,
+                                        resourceGroup: selections.resourceGroupName,
+                                        clusterName: selections.clusterName,
+                                        acrName: selections.acrName,
+                                    },
+                                    kubeletObjectId,
+                                );
+                            } catch (e) {
+                                // Non-fatal: the dedicated attach/verify stages reconcile this grant afterwards.
+                                stage.upsertEntry({
+                                    action: preauthAction,
+                                    status: "warning",
+                                    detail: l10n.t(
+                                        "Couldn't pre-assign AcrPull yet ({0}); the connect step will assign it once the cluster is ready.",
+                                        getErrorMessage(e),
+                                    ),
+                                    code: kubeletObjectId,
+                                });
+                            }
+                        })();
+                    };
+
+                    result.clusterPortalUrl = await stage.run(
+                        l10n.t("Deploying cluster — this can take several minutes"),
+                        (reportProgress) => {
+                            // Surface the pre-authorization as pending the moment cluster create starts, so
+                            // the user can see we're polling for the kubelet identity to pre-grant pulls.
+                            stage.upsertEntry({
+                                action: preauthAction,
+                                status: "running",
+                                detail: l10n.t(
+                                    "Polling for the cluster's kubelet identity to pre-authorize image pulls…",
+                                ),
+                            });
+                            return deployAutomaticCluster(
+                                sessionProvider,
+                                selections,
+                                kubernetesVersion,
+                                identity,
+                                true,
+                                deploymentName,
+                                { token, reportProgress, onKubeletIdentity: grantAcrPullEarly },
+                            );
+                        },
+                    );
+                    // Let any in-flight early grant + propagation check finish reporting before the stage closes.
+                    await earlyGrant;
+                    if (!earlyGrant) {
+                        // The kubelet identity never surfaced during provisioning (rare); the attach/verify
+                        // stages will assign and confirm pull access once the cluster is ready.
+                        stage.upsertEntry({
+                            action: preauthAction,
+                            status: "warning",
+                            detail: l10n.t(
+                                "The kubelet identity didn't appear before the cluster finished; the connect step will assign pull access.",
+                            ),
+                        });
+                    }
+                    stage.succeed(l10n.t("Cluster {0} is ready.", selections.clusterName));
+                    return "continue";
+                } catch (e) {
+                    stage.fail(getDeploymentErrorMessage(e), getDeploymentErrorDetails(e));
+                    return "halt";
+                }
+            },
+        },
+        {
             id: "attach",
             title: l10n.t("Connect registry to cluster"),
             execute: async (stage) => {
                 try {
-                    await stage.run(l10n.t("Granting the cluster permission to pull images"), () =>
+                    const principalId = await stage.run(l10n.t("Granting the cluster permission to pull images"), () =>
                         attachAcrToCluster(sessionProvider, selections),
                     );
+                    stage.addEntry({
+                        action: l10n.t("Cluster kubelet identity"),
+                        status: "succeeded",
+                        detail: l10n.t("Assigned the AcrPull role to the cluster's kubelet identity."),
+                        code: principalId,
+                    });
+                    stage.addEntry({
+                        action: l10n.t("AcrPull role definition"),
+                        status: "succeeded",
+                        detail: l10n.t("Built-in role granting `{0}`.", ACR_PULL_DATAACTION),
+                        code: acrPullRoleDefinitionName,
+                    });
                     stage.succeed(
-                        l10n.t("{0} can now pull images from {1}.", selections.clusterName, selections.acrName),
+                        l10n.t(
+                            "Assigned AcrPull on {1} to {0}. A brand-new cluster identity can take a few minutes to propagate through Azure AD before pulls succeed.",
+                            selections.clusterName,
+                            selections.acrName,
+                        ),
                     );
                 } catch (e) {
                     stage.fail(getErrorMessage(e));
@@ -329,11 +493,11 @@ export function createClusterProvisioningRun(
 
 async function buildProvisioningAccessPrompt(
     client: AuthorizationManagementClient,
-    selections: ClusterSelections,
+    args: { subscriptionId: string; tenantId: string; resourceGroupName: string },
     runId: number,
     channel: OutputChannel,
 ): Promise<ProvisioningAccessPrompt> {
-    const resourceGroupScope = `/subscriptions/${selections.subscriptionId}/resourceGroups/${selections.resourceGroupName}`;
+    const resourceGroupScope = `/subscriptions/${args.subscriptionId}/resourceGroups/${args.resourceGroupName}`;
     const eligible = await findEligiblePimGrants(client, resourceGroupScope, (msg) => channel.appendLine(msg));
     const eligiblePimGrants: PimEligibleGrant[] =
         !failed(eligible) && eligible.result.length > 0
@@ -343,17 +507,17 @@ async function buildProvisioningAccessPrompt(
                   scopeDisplayName: grant.scopeDisplayName ?? grant.scopeId,
               }))
             : [];
-    const permissionActionUrl = getPortalScopeAccessUrl(getEnvironment(), selections.tenantId, resourceGroupScope);
+    const permissionActionUrl = getPortalScopeAccessUrl(getEnvironment(), args.tenantId, resourceGroupScope);
     const detail =
         eligiblePimGrants.length > 0
             ? l10n.t("Activate an eligible role in Privileged Identity Management, then select Re-check to continue.")
             : l10n.t(
                   "You don't have an eligible role that can assign roles in {0}. Ask an administrator for access, then select Re-check.",
-                  selections.resourceGroupName,
+                  args.resourceGroupName,
               );
     return {
         runId,
-        resourceGroupName: selections.resourceGroupName,
+        resourceGroupName: args.resourceGroupName,
         eligiblePimGrants,
         permissionActionUrl,
         detail,
@@ -366,6 +530,7 @@ export function createExistingClusterAttachRun(
     runId: number,
     sink: ActivitySink,
     channel: OutputChannel,
+    waitForAccess: WaitForProvisioningAccess,
 ): ProvisioningRun {
     const result: ClusterProvisioningResult = {
         succeeded: false,
@@ -448,31 +613,120 @@ export function createExistingClusterAttachRun(
             },
         },
         {
+            id: "roleAccess",
+            title: l10n.t("Role assignment access"),
+            execute: async (stage) => {
+                const authClient = getAuthorizationManagementClient(sessionProvider, selection.subscriptionId);
+
+                // Decide whether this run will need to assign AcrPull. A brand-new ACR always does. For an
+                // existing ACR we re-check the kubelet's live assignments rather than trusting the
+                // point-in-time "connected" snapshot from cluster selection — if it already holds AcrPull
+                // no role assignment is needed and we can skip the permission gate entirely.
+                let needsGrant = selection.createNewAcr;
+                if (!needsGrant) {
+                    try {
+                        const kubeletPrincipalId = await resolveClusterKubeletPrincipalId(
+                            sessionProvider,
+                            selection.subscriptionId,
+                            selection.clusterResourceGroup,
+                            selection.clusterName,
+                        );
+                        needsGrant = !(await kubeletHasAcrPull(
+                            authClient,
+                            kubeletPrincipalId,
+                            selection.acrResourceGroup,
+                            selection.acrName,
+                        ));
+                    } catch {
+                        // Couldn't confirm the current assignment — gate defensively so that a grant we
+                        // end up needing in the attach stage doesn't hard-fail on missing permission.
+                        needsGrant = true;
+                    }
+                }
+
+                if (!needsGrant) {
+                    stage.succeed(
+                        l10n.t(
+                            "{0} already holds AcrPull on {1}; no role assignment is needed.",
+                            selection.clusterName,
+                            selection.acrName,
+                        ),
+                    );
+                    return "continue";
+                }
+
+                // AcrPull is assigned at the registry's resource group, so that's where we need
+                // Microsoft.Authorization/roleAssignments/write.
+                const probeRoleAssignmentAccess = async (): Promise<boolean> => {
+                    try {
+                        const verdict = await canCreateRoleAssignmentsAtResourceGroup(
+                            authClient,
+                            selection.acrResourceGroup,
+                        );
+                        return !failed(verdict) && verdict.result.canCreate;
+                    } catch {
+                        return false;
+                    }
+                };
+
+                if (await probeRoleAssignmentAccess()) {
+                    stage.succeed(l10n.t("You can assign roles in {0}.", selection.acrResourceGroup));
+                    return "continue";
+                }
+
+                const prompt = await buildProvisioningAccessPrompt(
+                    authClient,
+                    {
+                        subscriptionId: selection.subscriptionId,
+                        tenantId: selection.tenantId,
+                        resourceGroupName: selection.acrResourceGroup,
+                    },
+                    runId,
+                    channel,
+                );
+                const granted = await stage.run(
+                    l10n.t("Waiting for permission to assign roles in {0}", selection.acrResourceGroup),
+                    () => waitForAccess(prompt, probeRoleAssignmentAccess),
+                );
+                if (!granted) {
+                    stage.fail(
+                        l10n.t(
+                            "Couldn't connect {0} to {1} because permission to assign roles in {2} wasn't granted.",
+                            selection.clusterName,
+                            selection.acrName,
+                            selection.acrResourceGroup,
+                        ),
+                    );
+                    return "halt";
+                }
+                stage.succeed(l10n.t("You can now assign roles in {0}.", selection.acrResourceGroup));
+                return "continue";
+            },
+        },
+        {
             id: "attach",
             title: l10n.t("Connect registry to cluster"),
             execute: async (stage) => {
                 try {
-                    if (selection.createNewAcr) {
-                        await stage.run(l10n.t("Granting the cluster permission to pull images"), async () => {
-                            const kubeletPrincipalId = await resolveClusterKubeletPrincipalId(
-                                sessionProvider,
-                                selection.subscriptionId,
-                                selection.clusterResourceGroup,
-                                selection.clusterName,
-                            );
-                            const client = getAuthorizationManagementClient(sessionProvider, selection.subscriptionId);
-                            await grantAcrPull(
-                                client,
-                                selection.subscriptionId,
-                                kubeletPrincipalId,
-                                selection.acrResourceGroup,
-                                selection.acrName,
-                            );
-                        });
-                        stage.succeed(
-                            l10n.t("{0} can now pull images from {1}.", selection.clusterName, selection.acrName),
-                        );
-                    } else {
+                    const client = getAuthorizationManagementClient(sessionProvider, selection.subscriptionId);
+                    const kubeletPrincipalId = await resolveClusterKubeletPrincipalId(
+                        sessionProvider,
+                        selection.subscriptionId,
+                        selection.clusterResourceGroup,
+                        selection.clusterName,
+                    );
+                    // Re-check the live assignment on every run (including retries) so a failed verify can
+                    // self-heal: if AcrPull is missing we (idempotently) (re)grant it instead of assuming
+                    // the cluster is already connected.
+                    const alreadyConnected =
+                        !selection.createNewAcr &&
+                        (await kubeletHasAcrPull(
+                            client,
+                            kubeletPrincipalId,
+                            selection.acrResourceGroup,
+                            selection.acrName,
+                        ));
+                    if (alreadyConnected) {
                         stage.succeed(
                             l10n.t(
                                 "{0} is already connected to {1}, so no permission changes are needed.",
@@ -480,7 +734,20 @@ export function createExistingClusterAttachRun(
                                 selection.acrName,
                             ),
                         );
+                        return "continue";
                     }
+                    await stage.run(l10n.t("Granting the cluster permission to pull images"), () =>
+                        grantAcrPull(
+                            client,
+                            selection.subscriptionId,
+                            kubeletPrincipalId,
+                            selection.acrResourceGroup,
+                            selection.acrName,
+                        ),
+                    );
+                    stage.succeed(
+                        l10n.t("{0} can now pull images from {1}.", selection.clusterName, selection.acrName),
+                    );
                     return "continue";
                 } catch (e) {
                     stage.fail(getErrorMessage(e));
@@ -543,11 +810,14 @@ async function runDeploymentVerificationStage(
                 (r) => Boolean(r.error) || r.allPassed === true,
                 {
                     intervalMs: VERIFY_POLL_INTERVAL_MS,
-                    timeoutMs: VERIFY_POLL_TIMEOUT_MS,
+                    timeoutMs: PULL_PROPAGATION_GRACE_MS,
                     token,
                     onWait: (elapsedMs) =>
                         reportProgress(
-                            l10n.t("Waiting for the role assignment to take effect… ({0})", formatElapsed(elapsedMs)),
+                            l10n.t(
+                                "Waiting for the new role assignment to propagate through Azure AD… ({0})",
+                                formatElapsed(elapsedMs),
+                            ),
                         ),
                 },
             );
@@ -566,18 +836,95 @@ async function runDeploymentVerificationStage(
             action: probe.label,
             status: probeStatusToActivityStatus(probe.status),
             detail: probe.reason,
+            code: probe.principalId,
         });
     }
 
     if (probeResult.allPassed) {
         stage.succeed(l10n.t("The cluster can pull images from the registry."));
     } else {
+        const remediation = probes.find((p) => p.remediation)?.remediation;
         stage.warn(
             l10n.t(
-                "The cluster can't pull from the registry yet. Pods may fail to start until the AcrPull role is granted to the cluster's kubelet identity.",
+                "The AcrPull role is assigned, but the cluster can't pull from the registry yet — a brand-new kubelet identity can take several minutes to propagate through Azure AD. This usually clears on its own; retry to check again.",
             ),
+            remediation
+                ? l10n.t("If pulls keep failing, you can re-assign the role manually:\n\n{0}", remediation)
+                : undefined,
         );
     }
+}
+
+/**
+ * Polls the kubelet ACR-pull permission right after the early pre-authorization grant, while the
+ * cluster is still provisioning, and updates a single activity row from "checking" → "live" (or a
+ * soft "still propagating" warning). Lets the user watch the brand-new role assignment become
+ * effective instead of waiting until the post-create verify stage. Non-fatal by design.
+ */
+async function confirmEarlyPullAccess(
+    stage: StageReporter,
+    token: CancellationToken,
+    args: {
+        subscriptionId: string;
+        resourceGroup: string;
+        clusterName: string;
+        acrName?: string;
+        acrResourceGroup?: string;
+    },
+    kubeletObjectId: string,
+): Promise<void> {
+    const action = l10n.t("Confirm image pull access");
+    stage.upsertEntry({
+        action,
+        status: "running",
+        detail: l10n.t("Checking the AcrPull assignment has propagated through Azure AD…"),
+        code: kubeletObjectId,
+        startedAt: Date.now(),
+    });
+
+    const { result, timedOut } = await pollUntil(
+        () => checkDeploymentPermissions(undefined, { ...args, probeScope: "kubelet-pull", silent: true }),
+        (r) => Boolean(r.error) || r.allPassed === true,
+        {
+            intervalMs: VERIFY_POLL_INTERVAL_MS,
+            timeoutMs: PULL_PROPAGATION_GRACE_MS,
+            token,
+            onWait: (elapsedMs) =>
+                stage.upsertEntry({
+                    action,
+                    status: "running",
+                    detail: l10n.t(
+                        "Waiting for the AcrPull assignment to propagate through Azure AD… ({0})",
+                        formatElapsed(elapsedMs),
+                    ),
+                    code: kubeletObjectId,
+                }),
+        },
+    );
+
+    if (result.error) {
+        stage.upsertEntry({ action, status: "warning", detail: result.error, code: kubeletObjectId });
+        return;
+    }
+    if (result.allPassed) {
+        stage.upsertEntry({
+            action,
+            status: "succeeded",
+            detail: args.acrName
+                ? l10n.t("Image pull access is live — the cluster can pull from {0}.", args.acrName)
+                : l10n.t("Image pull access is live."),
+            code: kubeletObjectId,
+        });
+        return;
+    }
+    stage.upsertEntry({
+        action,
+        status: "warning",
+        detail: timedOut
+            ? l10n.t("Still propagating; the verify step will confirm once it settles.")
+            : l10n.t("Not effective yet; the verify step will confirm once it settles."),
+        code: kubeletObjectId,
+    });
 }
 
 function probeStatusToActivityStatus(status: "pass" | "fail" | "unknown"): ActivityStatus {
@@ -702,14 +1049,34 @@ async function tickClusterStatus(
         if (isSettled() || progress.token.isCancelled) {
             return;
         }
-        const elapsed = formatElapsed(performance.now() - start);
+        const elapsedMs = performance.now() - start;
+        const elapsed = formatElapsed(elapsedMs);
+        // ARM exposes no completion percentage for a cluster create, so estimate against a typical
+        // ~15-minute provisioning time. Cap below 100% so the bar never claims completion before the
+        // real "Succeeded" state arrives.
+        const pct = Math.min(95, Math.round((elapsedMs / ESTIMATED_CLUSTER_CREATE_MS) * 100));
         try {
             const cluster = await aksClient.managedClusters.get(selections.resourceGroupName, selections.clusterName);
+            // The kubelet identity is populated partway through provisioning. Surface it to pre-assign
+            // AcrPull and hand back to chat, but only once the cluster has been actively "Creating" for
+            // MIN_CREATING_DWELL_MS — so we detach with high confidence the create is genuinely underway
+            // rather than the instant the identity appears (when a fast-fail create could still be looming).
+            const identityProfile = cluster.identityProfile;
+            const kubeletObjectId =
+                identityProfile && "kubeletidentity" in identityProfile
+                    ? identityProfile.kubeletidentity?.objectId
+                    : undefined;
+            if (kubeletObjectId && elapsedMs >= MIN_CREATING_DWELL_MS && cluster.provisioningState === "Creating") {
+                progress.onKubeletIdentity?.(kubeletObjectId);
+            }
             progress.reportProgress(
                 l10n.t("Cluster status: {0} ({1})", cluster.provisioningState ?? "Creating", elapsed),
+                { progress: pct },
             );
         } catch {
-            progress.reportProgress(l10n.t("Waiting for the cluster to appear… ({0})", elapsed));
+            progress.reportProgress(l10n.t("Waiting for the cluster to appear… ({0})", elapsed), {
+                progress: pct,
+            });
         }
     }
 }
@@ -754,10 +1121,13 @@ async function pollClusterUntilTerminal(
             intervalMs: CLUSTER_POLL_INTERVAL_MS,
             timeoutMs: CLUSTER_POLL_TIMEOUT_MS,
             token: progress?.token ?? new CancellationToken(),
-            onWait: (elapsedMs, state) =>
+            onWait: (elapsedMs, state) => {
+                const pct = Math.min(95, Math.round((elapsedMs / ESTIMATED_CLUSTER_CREATE_MS) * 100));
                 progress?.reportProgress(
                     l10n.t("Cluster status: {0} ({1})", state ?? "Creating", formatElapsed(elapsedMs)),
-                ),
+                    { progress: pct },
+                );
+            },
         },
     );
     if (timedOut) {
@@ -774,7 +1144,7 @@ async function pollClusterUntilTerminal(
 async function attachAcrToCluster(
     sessionProvider: ReadyAzureSessionProvider,
     selections: ClusterSelections,
-): Promise<void> {
+): Promise<string> {
     const principalId = await resolveClusterKubeletPrincipalId(
         sessionProvider,
         selections.subscriptionId,
@@ -789,6 +1159,7 @@ async function attachAcrToCluster(
         selections.resourceGroupName,
         selections.acrName,
     );
+    return principalId;
 }
 
 async function grantAcrPull(
@@ -810,6 +1181,27 @@ async function grantAcrPull(
     if (failed(assignment)) {
         throw new Error(assignment.error);
     }
+}
+
+/**
+ * Returns true iff the given principal already holds the AcrPull role assignment on the registry.
+ * Used to defensively re-check the point-in-time "connected ACR" snapshot before deciding whether a
+ * (re)grant — and the role-assignment-write permission it requires — is actually needed. A failed
+ * lookup returns false so callers gate/grant defensively rather than assuming access exists.
+ */
+async function kubeletHasAcrPull(
+    client: AuthorizationManagementClient,
+    principalId: string,
+    acrResourceGroup: string,
+    acrName: string,
+): Promise<boolean> {
+    const assignments = await getPrincipalRoleAssignmentsForAcr(client, principalId, acrResourceGroup, acrName);
+    if (failed(assignments)) {
+        return false;
+    }
+    return assignments.result.some(
+        (ra) => (ra.roleDefinitionId?.split("/").pop() ?? "").toLowerCase() === acrPullRoleDefinitionName.toLowerCase(),
+    );
 }
 
 export async function resolveClusterKubeletPrincipalId(
