@@ -247,7 +247,7 @@ export function DraftDeployment(initialState: InitialState) {
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-                <h2>{l10n.t("Automated Deployments: Draft a deployment")}</h2>
+                <h2>{l10n.t("Deployment Tools: Draft a deployment")}</h2>
                 <p>
                     {l10n.t(
                         "Enter the appropriate values in the fields below to enable Draft to automatically create Kubernetes manifests, Helm charts, or Kustomize files for your application. Once created, you will be able to deploy your application to your AKS (Azure Kubernetes Service) cluster.",
@@ -611,7 +611,7 @@ export function DraftDeployment(initialState: InitialState) {
                             <p>
                                 {l10n.t("To generate a GitHub Action, you can run")}{" "}
                                 <a href="#" onClick={handleDraftWorkflowClick}>
-                                    {l10n.t("Automated Deployments: Create a GitHub workflow")}
+                                    {l10n.t("Deployment Tools: Create a GitHub workflow")}
                                 </a>
                                 .
                             </p>

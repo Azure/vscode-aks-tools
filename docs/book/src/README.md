@@ -22,7 +22,7 @@ Azure Kubernetes Service (AKS) Extension for Visual Studio Code helps enable AKS
 * [Compare AKS Cluster](./features/aks-compare-cluster.md)
 * [Run Image Cleaner Eraser Tool](./features/image-cleaner-eraser-tool.md)
 * [Run Retina Capture](./features/retina-capture.md)
-* [Run Automated Deployments Commands](./features/draft-integration.md)
+* [Run Deployment Tools Commands](./features/draft-integration.md)
 * [Use Container Assist Integration (Preview)](./features/container-assist-integration.md)
 * [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)
 * [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
