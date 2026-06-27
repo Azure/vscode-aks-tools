@@ -1058,6 +1058,7 @@
         "getPluginsCommand": "aks.getAzureKubernetesServicePlugins"
     },
     "devDependencies": {
+        "ajv": "^8.17.1",
         "@eslint/eslintrc": "^3.3.3",
         "@eslint/js": "^10.0.1",
         "@types/chai": "^5.2.3",
