@@ -1122,7 +1122,7 @@
         "@octokit/rest": "^22.0.1",
         "@vscode/extension-telemetry": "^1.5.2",
         "@vscode/l10n": "^0.0.18",
-        "containerization-assist-mcp": "^1.4.0",
+        "containerization-assist-mcp": "^1.4.1",
         "decompress": "^4.2.1",
         "js-yaml": "^4.2.0",
         "libsodium-wrappers": "^0.8.4",
