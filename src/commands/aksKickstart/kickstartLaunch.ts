@@ -21,6 +21,9 @@ export async function kickstartLaunch(): Promise<void> {
 
     const panel = new KickstartGuidedSetupPanel(extension.result.extensionUri);
     const dataProvider = new KickstartGuidedSetupDataProvider();
-    panel.show(dataProvider);
+    panel.show(dataProvider, dataProvider.getProviderDisposable());
+    // Give the view the full editor surface: close the bottom panel (terminal/output) and hide the
+    // side bar. `maximizeEditorHideSidebar` alone leaves the terminal visible, so close it explicitly.
+    await vscode.commands.executeCommand("workbench.action.closePanel");
     await vscode.commands.executeCommand("workbench.action.maximizeEditorHideSidebar");
 }

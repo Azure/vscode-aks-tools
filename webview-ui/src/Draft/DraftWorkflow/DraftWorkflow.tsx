@@ -392,17 +392,17 @@ export function DraftWorkflow(initialState: InitialState) {
     return (
         <>
             <form className={styles.wrapper} onSubmit={handleFormSubmit}>
-                <h2>{l10n.t("Automated Deployments: Draft a GitHub Workflow")}</h2>
+                <h2>{l10n.t("Deployment Tools: Draft a GitHub Workflow")}</h2>
                 <p className={styles.fullWidth}>
                     {l10n.t(
                         "Generate a workflow to deploy to Azure Kubernetes Service (AKS). Before running this command, make sure you have created a Dockerfile and Deployment. You can do this using the",
                     )}{" "}
                     <a href="#" onClick={handleDraftDockerfileClick}>
-                        {l10n.t("Automated Deployments: Create a Dockerfile")}
+                        {l10n.t("Deployment Tools: Create a Dockerfile")}
                     </a>{" "}
                     and{" "}
                     <a href="#" onClick={handleDraftDeploymentClick}>
-                        {l10n.t("Automated Deployments: Create a Deployment")}
+                        {l10n.t("Deployment Tools: Create a Deployment")}
                     </a>{" "}
                     {l10n.t("commands.")}
                 </p>

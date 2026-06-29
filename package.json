@@ -313,7 +313,7 @@
             {
                 "command": "aks.draftWorkflow",
                 "title": "%Create a GitHub Workflow%",
-                "category": "Automated Deployments"
+                "category": "AKS"
             },
             {
                 "command": "aks.showInPortal",
@@ -701,7 +701,7 @@
                     "when": "(view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure) || (view == extension.vsKubernetesExplorer && viewItem =~ /vsKubernetes\\.\\w*cluster$/i)"
                 },
                 {
-                    "submenu": "aks.automatedDeploymentsSubMenu",
+                    "submenu": "aks.deploymentToolsSubMenu",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && !config.aks.simplifiedMenuStructure",
                     "group": "9@1"
                 },
@@ -814,7 +814,7 @@
                     "group": "navigation"
                 }
             ],
-            "aks.automatedDeploymentsSubMenu": [
+            "aks.deploymentToolsSubMenu": [
                 {
                     "command": "aks.attachAcrToCluster",
                     "group": "navigation"
@@ -1006,8 +1006,8 @@
                 "label": "%Run AKS Diagnostics%"
             },
             {
-                "id": "aks.automatedDeploymentsSubMenu",
-                "label": "%Automated Deployments%"
+                "id": "aks.deploymentToolsSubMenu",
+                "label": "%Deployment Tools%"
             },
             {
                 "id": "aks.managedClusterOperationSubMenu",
@@ -1139,25 +1139,25 @@
         "@types/tmp": "^0.2.6",
         "@types/uuid": "^11.0.0",
         "@types/vscode": "^1.110.0",
-        "@typescript-eslint/eslint-plugin": "^8.61.0",
+        "@typescript-eslint/eslint-plugin": "^8.62.0",
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
         "@vscode/test-electron": "^2.5.2",
-        "@vscode/vsce": "^3.9.1",
+        "@vscode/vsce": "^3.9.2",
         "chai": "^6.2.2",
         "copy-webpack-plugin": "^14.0.0",
-        "eslint": "^10.3.0",
-        "eslint-webpack-plugin": "^5.0.3",
+        "eslint": "^10.5.0",
+        "eslint-webpack-plugin": "^6.0.0",
         "fast-check": "^4.8.0",
         "glob": "^13.0.6",
         "globals": "^17.6.0",
         "husky": "^9.1.7",
         "lint-staged": "^17.0.7",
-        "mocha": "^11.7.5",
+        "mocha": "^11.7.6",
         "node-loader": "^2.1.0",
         "prettier": "^3.8.3",
         "sinon": "^22.0.0",
-        "ts-loader": "^9.5.7",
+        "ts-loader": "^9.6.2",
         "typescript": "^6.0.3",
         "webpack": "^5.107.2",
         "webpack-cli": "^7.0.2"
@@ -1197,7 +1197,7 @@
         "move-file": "^4.1.0",
         "node-fetch": "^3.3.2",
         "rxjs": "^7.8.2",
-        "semver": "^7.7.4",
+        "semver": "^7.8.5",
         "sinon": "^22.0.0",
         "tmp": "^0.2.7",
         "uuid": "^14.0.0",

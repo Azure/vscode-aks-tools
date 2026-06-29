@@ -21,11 +21,17 @@ import { openMarkdownReport } from "../utils/markdownReport";
 const QUICKPICK_TITLE = "Check AKS deployment permissions";
 
 // Required actions for each gate in Phase 6 of the Kickstart agent.
-const AKS_CLUSTER_USER_ACTION = "Microsoft.ContainerService/managedClusters/listClusterUserCredential/action";
-const AKS_DATAPLANE_WRITE_ACTION = "Microsoft.ContainerService/managedClusters/apps/deployments/write";
-const ACR_PULL_DATAACTION = "Microsoft.ContainerRegistry/registries/pull/read";
-const ACR_PUSH_DATAACTION = "Microsoft.ContainerRegistry/registries/push/write";
-const ACR_TASKS_ACTION = "Microsoft.ContainerRegistry/registries/tasks/write";
+export const AKS_CLUSTER_USER_ACTION = "Microsoft.ContainerService/managedClusters/listClusterUserCredential/action";
+export const AKS_DATAPLANE_WRITE_ACTION = "Microsoft.ContainerService/managedClusters/apps/deployments/write";
+// NOTE: despite the `*_DATAACTION` naming, Azure's built-in AcrPull/AcrPush roles grant these
+// registry permissions as control-plane *actions* (their `dataActions` arrays are empty), and Azure
+// can reclassify actions<->dataActions over time. Probes therefore match them via
+// `grantsActionEitherBucket` rather than assuming a fixed bucket. Checking only `dataActions` was a
+// false-negative: a valid AcrPull assignment was present but never matched, leaving a permanent
+// "still propagating" warning that never cleared.
+export const ACR_PULL_DATAACTION = "Microsoft.ContainerRegistry/registries/pull/read";
+export const ACR_PUSH_DATAACTION = "Microsoft.ContainerRegistry/registries/push/write";
+export const ACR_TASKS_ACTION = "Microsoft.ContainerRegistry/registries/tasks/write";
 
 // Least-privilege built-in roles to recommend when a probe fails.
 const ROLE_CLUSTER_USER = "Azure Kubernetes Service Cluster User Role";
@@ -33,6 +39,11 @@ const ROLE_RBAC_WRITER = "Azure Kubernetes Service RBAC Writer";
 const ROLE_ACR_PULL = "AcrPull";
 const ROLE_ACR_PUSH = "AcrPush";
 const ROLE_ACR_TASKS = "Container Registry Tasks Contributor";
+
+// Fixed role-definition GUID for the built-in AcrPull role. Azure built-in role IDs are immutable,
+// so this lets us recognize an AcrPull assignment by ID even before its data actions have
+// propagated through Azure AD (when the role-definition lookup can't yet confirm the grant).
+const ACR_PULL_ROLE_DEFINITION_ID = "7f951dda-4ed3-4680-a7ca-43fe172d538d";
 
 type DeploymentScope = {
     subscriptionId: string;
@@ -42,11 +53,20 @@ type DeploymentScope = {
     clusterScopeId: string;
     acrName?: string;
     acrScopeId?: string;
+    acrResourceGroup?: string;
 };
 
-type ProbeStatus = "pass" | "fail" | "unknown";
+export type ProbeStatus = "pass" | "fail" | "unknown";
 
-type Probe = {
+/**
+ * Which probe set {@link runProbes} should execute:
+ * - "all" (default): the signed-in user's runtime probes plus the kubelet ACR pull probe.
+ * - "user": only the signed-in user's runtime probes (kubeconfig, workload deploy, image push, ACR build).
+ * - "kubelet-pull": only the cluster kubelet's ACR pull probe.
+ */
+export type ProbeScope = "all" | "user" | "kubelet-pull";
+
+export type Probe = {
     id: string;
     label: string;
     status: ProbeStatus;
@@ -55,6 +75,8 @@ type Probe = {
     recommendedRoles?: string[];
     /** A ready-to-run `az role assignment create` command for the first recommended role. */
     remediation?: string;
+    /** Object ID of the principal this probe evaluated (e.g. the kubelet identity), for display. */
+    principalId?: string;
 };
 
 export type CheckDeploymentPermissionsArgs = {
@@ -63,6 +85,9 @@ export type CheckDeploymentPermissionsArgs = {
     clusterName?: string;
     /** Optional. When omitted, ACR-related probes are skipped. */
     acrName?: string;
+    /** Optional. Resource group of the ACR when it differs from the cluster's resource group. */
+    acrResourceGroup?: string;
+    probeScope?: ProbeScope;
     /** When true, suppresses the toast and skips opening the markdown document. */
     silent?: boolean;
 };
@@ -101,7 +126,7 @@ export async function checkDeploymentPermissions(
     const scope = scopeResult;
 
     const authClient = getAuthorizationManagementClient(sessionProvider.result, scope.subscriptionId);
-    const probes = await runProbes(sessionProvider.result, authClient, scope);
+    const probes = await runProbes(sessionProvider.result, authClient, scope, args?.probeScope ?? "all");
     const allPassed = probes.every((p) => p.status === "pass");
     const markdown = buildReport(scope, probes);
 
@@ -127,21 +152,30 @@ async function runProbes(
     sessionProvider: ReadyAzureSessionProvider,
     authClient: AuthorizationManagementClient,
     scope: DeploymentScope,
+    probeScope: ProbeScope,
 ): Promise<Probe[]> {
-    const clusterPerms = await listForResource(authClient, scope.clusterScopeId);
-    const probes: Probe[] = [
-        evaluateClusterUserProbe(clusterPerms, scope),
-        evaluateDataPlaneWriteProbe(clusterPerms, scope),
-    ];
+    const includeUserProbes = probeScope === "all" || probeScope === "user";
+    const includeKubeletProbe = probeScope === "all" || probeScope === "kubelet-pull";
+    const probes: Probe[] = [];
+
+    if (includeUserProbes) {
+        const clusterPerms = await listForResource(authClient, scope.clusterScopeId);
+        probes.push(evaluateClusterUserProbe(clusterPerms, scope));
+        probes.push(evaluateDataPlaneWriteProbe(clusterPerms, scope));
+    }
 
     if (!scope.acrName || !scope.acrScopeId) return probes;
 
-    const acrPerms = await listForResource(authClient, scope.acrScopeId);
-    probes.push(evaluateAcrPushProbe(acrPerms, scope));
-    probes.push(evaluateAcrTasksProbe(acrPerms, scope));
+    if (includeUserProbes) {
+        const acrPerms = await listForResource(authClient, scope.acrScopeId);
+        probes.push(evaluateAcrPushProbe(acrPerms, scope));
+        probes.push(evaluateAcrTasksProbe(acrPerms, scope));
+    }
 
-    const kubeletObjectId = await fetchKubeletObjectId(sessionProvider, scope);
-    probes.push(await evaluateAcrPullProbe(authClient, scope, kubeletObjectId));
+    if (includeKubeletProbe) {
+        const kubeletObjectId = await fetchKubeletObjectId(sessionProvider, scope);
+        probes.push(await evaluateAcrPullProbe(authClient, scope, kubeletObjectId));
+    }
 
     return probes;
 }
@@ -176,7 +210,7 @@ function evaluateAcrPushProbe(perms: Errorable<Permission[]>, scope: DeploymentS
         label: `Push container images to ACR '${scope.acrName}'`,
         perms,
         action: ACR_PUSH_DATAACTION,
-        kind: "dataAction",
+        kind: "action",
         scopeId: scope.acrScopeId!,
         recommendedRoles: [ROLE_ACR_PUSH],
     });
@@ -212,10 +246,12 @@ async function evaluateAcrPullProbe(
         return probe;
     }
 
+    probe.principalId = kubeletObjectId.result;
+
     const assignments = await getPrincipalRoleAssignmentsForAcr(
         authClient,
         kubeletObjectId.result,
-        scope.resourceGroup,
+        scope.acrResourceGroup ?? scope.resourceGroup,
         scope.acrName!,
     );
     if (failed(assignments)) {
@@ -223,8 +259,10 @@ async function evaluateAcrPullProbe(
         return probe;
     }
 
+    let hasAcrPullAssignment = false;
     for (const ra of assignments.result) {
-        const grants = await roleAssignmentGrantsDataAction(authClient, ra, ACR_PULL_DATAACTION);
+        if (isAcrPullRoleAssignment(ra)) hasAcrPullAssignment = true;
+        const grants = await roleAssignmentGrantsAcrPull(authClient, ra, ACR_PULL_DATAACTION);
         if (grants) {
             probe.status = "pass";
             probe.reason = `Kubelet identity has an assignment that grants \`${ACR_PULL_DATAACTION}\`.`;
@@ -232,8 +270,18 @@ async function evaluateAcrPullProbe(
         }
     }
 
+    // An AcrPull assignment exists for the kubelet identity, but its role definition couldn't be
+    // read to confirm the grant (a transient lookup failure, or a brand-new assignment that hasn't
+    // replicated through Azure AD yet). Surface it as a soft "still confirming" signal ("unknown")
+    // instead of a hard fail, and omit the re-assign remediation since the role is already assigned.
+    if (hasAcrPullAssignment) {
+        probe.status = "unknown";
+        probe.reason = `The kubelet identity has an AcrPull assignment, but the grant couldn't be confirmed yet — a brand-new assignment can take a few minutes to replicate through Azure AD.`;
+        return probe;
+    }
+
     probe.status = "fail";
-    probe.reason = `The cluster's kubelet identity has no role assignment on this ACR that grants \`${ACR_PULL_DATAACTION}\`.`;
+    probe.reason = `No AcrPull role assignment that grants \`${ACR_PULL_DATAACTION}\` is visible on this ACR for the kubelet identity yet. If it was just assigned, it can take a few minutes to appear.`;
     probe.remediation = azRoleAssignmentCommand({
         assigneeObjectId: kubeletObjectId.result,
         principalType: "ServicePrincipal",
@@ -265,7 +313,7 @@ function probeFromActionCheck(input: {
         return probe;
     }
 
-    const verdict = findGrantingAction(input.perms.result, input.action, input.kind);
+    const verdict = grantsActionEitherBucket(input.perms.result, input.action);
     if (verdict.granted) {
         probe.status = "pass";
         probe.reason = `Granted via \`${verdict.via!}\`.`;
@@ -283,18 +331,40 @@ function probeFromActionCheck(input: {
     return probe;
 }
 
-async function roleAssignmentGrantsDataAction(
+/**
+ * True iff `perms` grant `action` in EITHER the `actions` or `dataActions` bucket. Azure classifies
+ * some Container Registry permissions (AcrPull's `registries/pull/read`, AcrPush's
+ * `registries/push/write`) as control-plane actions despite their data-plane nature, and can
+ * reclassify actions<->dataActions over time, so we accept a match in either bucket rather than
+ * hard-coding which one applies.
+ */
+function grantsActionEitherBucket(perms: Permission[], action: string): { granted: boolean; via?: string } {
+    const asAction = findGrantingAction(perms, action, "action");
+    return asAction.granted ? asAction : findGrantingAction(perms, action, "dataAction");
+}
+
+async function roleAssignmentGrantsAcrPull(
     authClient: AuthorizationManagementClient,
     assignment: RoleAssignment,
-    dataAction: string,
+    pullAction: string,
 ): Promise<boolean> {
     if (!assignment.roleDefinitionId) return false;
     try {
         const def = await authClient.roleDefinitions.getById(assignment.roleDefinitionId);
-        return findGrantingAction(def.permissions ?? [], dataAction, "dataAction").granted;
+        return grantsActionEitherBucket(def.permissions ?? [], pullAction).granted;
     } catch {
         return false;
     }
+}
+
+/**
+ * True when the role assignment references the built-in AcrPull role (matched by its fixed
+ * role-definition GUID). Unlike {@link roleAssignmentGrantsAcrPull} this is a pure string check
+ * with no network call, so it still recognizes the assignment when the role-definition lookup hasn't
+ * propagated yet — letting the probe distinguish "assigned, still propagating" from "absent".
+ */
+function isAcrPullRoleAssignment(assignment: RoleAssignment): boolean {
+    return assignment.roleDefinitionId?.toLowerCase().endsWith(`/${ACR_PULL_ROLE_DEFINITION_ID}`) ?? false;
 }
 
 async function listForResource(
@@ -391,7 +461,8 @@ async function resolveScopeFromArgs(
     if (!sub) return { error: `Subscription '${args.subscriptionId}' is not accessible.` };
 
     const clusterScopeId = getScopeForCluster(sub.subscriptionId, args.resourceGroup!, args.clusterName!);
-    const acrScopeId = args.acrName ? getScopeForAcr(sub.subscriptionId, args.resourceGroup!, args.acrName) : undefined;
+    const acrResourceGroup = args.acrResourceGroup ?? args.resourceGroup!;
+    const acrScopeId = args.acrName ? getScopeForAcr(sub.subscriptionId, acrResourceGroup, args.acrName) : undefined;
 
     return {
         subscriptionId: sub.subscriptionId,
@@ -401,6 +472,7 @@ async function resolveScopeFromArgs(
         clusterScopeId,
         acrName: args.acrName,
         acrScopeId,
+        acrResourceGroup: args.acrName ? acrResourceGroup : undefined,
     };
 }
 
@@ -470,5 +542,6 @@ async function pickScope(sessionProvider: ReadyAzureSessionProvider): Promise<De
         acrName,
         acrScopeId:
             acrName && acrResourceGroup ? getScopeForAcr(subPick.subscriptionId, acrResourceGroup, acrName) : undefined,
+        acrResourceGroup: acrName ? acrResourceGroup : undefined,
     };
 }

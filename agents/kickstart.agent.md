@@ -66,7 +66,7 @@ Handle each starting point (ask via `vscode/askQuestions` only when it wasn't al
     }]
   }
   ```
-  Clone with `execute/runInTerminal`, then load `/kickstart-samples` for the pre-filled profile and confirm it with the user. **Skip Phase 1 entirely** — go straight to **Phase 2 (Configure Infrastructure)**. Do NOT ask the user for app name, port, language, or any discovery questions.
+  Clone with `execute/runInTerminal`, then load `/kickstart-samples` for the pre-filled profile and confirm it with the user. **Skip Phase 1's questions** — go straight to **Phase 2 (Configure Infrastructure)**. Do NOT ask the user for app name, port, language, or any discovery questions — but still run the quick structure scan from `/kickstart-samples` to confirm each service's build context, Dockerfile path, and entry point before generating anything.
 - **Use my current workspace**: Proceed to **Phase 1 (Discover)**.
 
 ## Phases
@@ -74,26 +74,26 @@ Handle each starting point (ask via `vscode/askQuestions` only when it wasn't al
 Seven phases in order. Announce each transition in bold ("**✓ [Phase] complete → [Next phase].**") and open each phase with a one-line statement of what it will accomplish. To condense or skip phases — only when the user has supplied all inputs up-front — first follow `/kickstart-phase-acceleration`.
 
 ### 1 — Discover
-**Skip this phase if the user chose "Start from an example"** — the pre-filled profile from `/kickstart-samples` already provides all needed info.
+**Skip this phase's questions if the user chose "Start from an example"** — the pre-filled profile from `/kickstart-samples` provides the app details, but still confirm each service's build context, Dockerfile path, and entry point via a quick structure scan.
 
-Follow `/kickstart-discover`. Use `search` and `codebase` to auto-detect language, framework, ports, deps, Dockerfile, CI/CD before asking. Collect remaining details via `vscode/askQuestions`. Exit when you have enough to propose architecture.
+Follow `/kickstart-discover`. Use `search` and `codebase` to auto-detect language, framework, ports, deps, Dockerfile, CI/CD before asking, and to map each deployable service's build context, entry-point file, and existing Dockerfile path (never assume a flat repo). Collect remaining details via `vscode/askQuestions`. Exit when you have enough to propose architecture.
 
 ### 2 — Configure Infrastructure
-Follow `/kickstart-configure-infra`. Do NOT pick subscriptions or run `az aks create` yourself — launch the dedicated cluster-setup view with `vscode/runCommand` (command id `aks.kickstartCluster`), passing the app context as a single JSON argument so it can pre-fill sensible resource names: `{"appName":"<slug>","appSummary":"<one-line app description>","suggestedLocation":"<region, if known>"}`. That view collects the subscription, resource group, cluster, and ACR, then creates them (an AKS Automatic cluster + ACR, with the registry already attached to the cluster) and reports the provisioned resource names back to this chat. After launching it, tell the user to complete the cluster setup in that view and that you'll pick back up automatically — then **end your turn**. When the view hands back (a new message carrying the provisioned subscription, resource group, cluster, ACR, and login server), confirm those names in your opening prose and continue to Phase 3.
+Follow `/kickstart-configure-infra`. Do NOT pick subscriptions or run `az aks create` yourself — launch the dedicated cluster-setup view with `vscode/runCommand` (command id `aks.kickstartCluster`), passing the app context as a single JSON argument so it can pre-fill sensible resource names: `{"appName":"<slug>","appSummary":"<one-line app description>","suggestedLocation":"<region, if known>"}`. Only set `suggestedLocation` when the user has a region preference, and prefer a low-capacity-risk region (e.g. `eastus2`, `westus3`, `swedencentral`) over high-demand ones (`eastus`, `westeurope`, `southeastasia`) that frequently hit AKS Automatic capacity limits; otherwise omit it and let the view's quota scan choose. That view collects the subscription, resource group, cluster, and ACR, then creates them (an AKS Automatic cluster + ACR, with the registry already attached to the cluster) and reports the provisioned resource names back to this chat. After launching it, tell the user to complete the cluster setup in that view and that you'll pick back up automatically — then **end your turn**. When the view hands back (a new message carrying the provisioned subscription, resource group, cluster, ACR, and login server), confirm those names in your opening prose and continue to Phase 3.
 
 ### 3 — Design
 Follow `/kickstart-design`. Present architecture summary (container strategy, AKS Automatic, Gateway API, Workload Identity, ACR, monitoring). Get user approval via `vscode/askQuestions`. Run `/kickstart-cluster-status` before transitioning.
 
 ### 4 — Generate
-Follow `/kickstart-generate`. Produce Dockerfile, K8s manifests (`k8s/`), Bicep (`infra/`), GitHub Actions workflow. Use actual resource names from Phase 2. Pin image tags — never `:latest`. Run `/kickstart-cluster-status` before transitioning.
+Follow `/kickstart-generate`. Produce Dockerfile (reuse an existing one when present), K8s manifests (`k8s/`), Bicep (`infra/`), GitHub Actions workflow — driven by the structure map, with every `COPY`/`ADD` path validated against the build context. Use actual resource names from Phase 2. Pin image tags — never `:latest`. Build and inspect each image (confirm the entry point landed) before exiting. Run `/kickstart-cluster-status` before transitioning.
 
 ### 5 — Review
-Follow `/kickstart-review` for the first-pass per-artifact validation (safeguard checklist, dry-runs). Run `/kickstart-cluster-status` before transitioning. When that passes, **hand off to `aks/kickstart-reviewer`** for the deep security + cross-artifact pass — the reviewer will hand back with a proceed-or-fix verdict.
+Follow `/kickstart-review` for the first-pass per-artifact validation (safeguard checklist, Dockerfile source→destination map, image build, dry-runs). Run `/kickstart-cluster-status` before transitioning. When that passes, **hand off to `aks/kickstart-reviewer`** for the deep security + cross-artifact pass — the reviewer will hand back with a proceed-or-fix verdict.
 
 ### 6 — Pre-Deploy Check
 Follow `/kickstart-handoff` — it carries the full strict-order playbook: cluster readiness (6a), metadata detection (6b), ACR attachment verification (6c — idempotent; the registry is usually already attached during cluster setup), kubelogin (6d), and the consolidated permission probes (6e–6g) via the bundled `aks.checkDeploymentPermissions` command. Escalate through `/kickstart-pim-activation` whenever a role assignment returns 403. Confirm readiness with the user via `vscode/askQuestions` before deploying.
 
 ### 7 — Deploy
-Follow `/kickstart-deploy` — build & push to ACR, get credentials, apply manifests, and verify, executed step by step via `execute/runInTerminal` with confirmation between each and error classification on failure.
+Follow `/kickstart-deploy` — build & push to ACR (using each service's build context and Dockerfile path from the structure map, never `.`), get credentials, apply manifests, then verify and health-check the running app (hit its endpoint, compare expected vs actual — not just pod readiness), executed step by step via `execute/runInTerminal` with confirmation between each and error classification on failure.
 
 Once the app is running, offer to commit the generated artifacts (Dockerfile, `k8s/`, `infra/`, workflow). If the user wants to commit or open a PR, follow `/kickstart-github-pr-conventions` for branch naming, Conventional Commits, and PR structure.

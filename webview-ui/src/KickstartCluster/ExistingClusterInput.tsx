@@ -5,16 +5,18 @@ import * as l10n from "@vscode/l10n";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     ConnectedAcr,
+    DeploymentPermissionsSummary,
     ExistingCluster,
     ExistingClusterSelection,
     Subscription,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
+import { statusClass, statusIcon } from "../components/ActivityStageList";
 import { ProgressRing } from "../components/ProgressRing";
 import { TextWithDropdown } from "../components/TextWithDropdown";
 import { EventHandlers } from "../utilities/state";
-import { Validatable, hasMessage, isValid, isValueSet, unset } from "../utilities/validation";
-import { deriveAcrName, getValidatedAcrName, randomSuffix } from "./ClusterInput";
+import { Validatable, isValid, isValueSet, unset } from "../utilities/validation";
+import { deriveAcrName, getValidatedAcrName, randomSuffix, renderValidationMessage } from "./ClusterInput";
 import { EventDef } from "./helpers/state";
 import styles from "./KickstartCluster.module.css";
 
@@ -25,6 +27,8 @@ interface ExistingClusterInputProps {
     selectedCluster: ExistingCluster | null;
     connectedAcrs: ConnectedAcr[] | null;
     detectingAcrs: boolean;
+    existingReadiness: DeploymentPermissionsSummary | null;
+    existingReadinessKey: string | null;
     errorMessage: string | null;
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
@@ -80,7 +84,11 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
 
     function handleSubscriptionSelect(value: string | null) {
         const subscription = props.subscriptions.find((s) => s.name === value);
-        props.eventHandlers.onSetSubscriptionSelected({ subscriptionId: subscription?.id ?? "" });
+        const newSubscriptionId = subscription?.id ?? "";
+        if (newSubscriptionId === (props.selectedSubscriptionId ?? "")) {
+            return;
+        }
+        props.eventHandlers.onSetSubscriptionSelected({ subscriptionId: newSubscriptionId });
     }
 
     function handleClusterSelect(value: string | null) {
@@ -124,6 +132,40 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
 
     const effectiveAcrName = selectedAcrName ?? props.connectedAcrs?.[0]?.name ?? null;
 
+    useEffect(() => {
+        if (!props.selectedSubscriptionId || !props.selectedCluster) {
+            return;
+        }
+        if (props.detectingAcrs || props.connectedAcrs === null) {
+            return;
+        }
+        const connectedAcr = props.connectedAcrs.find((a) => a.name === effectiveAcrName) ?? null;
+        const acrName = connectedAcr?.name;
+        const acrResourceGroup = connectedAcr?.resourceGroup;
+        const key = `${props.selectedSubscriptionId}|${props.selectedCluster.resourceGroup}|${props.selectedCluster.name}|${acrName ?? ""}`;
+        if (props.existingReadinessKey === key) {
+            return;
+        }
+        props.eventHandlers.onSetExistingReadinessPending({ key });
+        props.vscode.postRunExistingReadinessRequest({
+            subscriptionId: props.selectedSubscriptionId,
+            clusterResourceGroup: props.selectedCluster.resourceGroup,
+            clusterName: props.selectedCluster.name,
+            acrName,
+            acrResourceGroup,
+            requestKey: key,
+        });
+    }, [
+        props.selectedSubscriptionId,
+        props.selectedCluster,
+        props.connectedAcrs,
+        props.detectingAcrs,
+        props.existingReadinessKey,
+        effectiveAcrName,
+        props.eventHandlers,
+        props.vscode,
+    ]);
+
     function handleUseConnected() {
         const acr = (props.connectedAcrs ?? []).find((a) => a.name === effectiveAcrName);
         if (!acr) {
@@ -138,18 +180,6 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
             return;
         }
         submitSelection(buildSelection(true, newAcrName.value, props.selectedCluster.resourceGroup));
-    }
-
-    function renderValidationMessage(field: Validatable<unknown>) {
-        if (!hasMessage(field)) {
-            return null;
-        }
-        return (
-            <span className={styles.validationMessage}>
-                <FontAwesomeIcon className={styles.errorIndicator} icon={faTimesCircle} />
-                {field.message}
-            </span>
-        );
     }
 
     function renderClusterControl() {
@@ -264,6 +294,53 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
         );
     }
 
+    function renderReadinessPanel() {
+        if (!props.selectedCluster) {
+            return null;
+        }
+        if (props.detectingAcrs || props.connectedAcrs === null) {
+            return null;
+        }
+        const readiness = props.existingReadiness;
+        if (readiness === null) {
+            return (
+                <div className={styles.costPanel}>
+                    <span className={styles.costHeader}>{l10n.t("Deployment readiness")}</span>
+                    <div className={styles.detectRow}>
+                        <ProgressRing />
+                        <span>{l10n.t("Checking your deployment permissions…")}</span>
+                    </div>
+                </div>
+            );
+        }
+        if (!readiness.known) {
+            return (
+                <div className={styles.costPanel}>
+                    <span className={styles.costHeader}>{l10n.t("Deployment readiness")}</span>
+                    <span className={styles.costItemDetail}>{readiness.detail}</span>
+                </div>
+            );
+        }
+        return (
+            <div className={styles.costPanel}>
+                <span className={styles.costHeader}>{l10n.t("Deployment readiness")}</span>
+                <span className={styles.costItemDetail}>{readiness.detail}</span>
+                {readiness.actions.map((action) => {
+                    const status = action.granted ? "succeeded" : "warning";
+                    return (
+                        <span key={action.action} className={styles.permissionWarning}>
+                            <FontAwesomeIcon className={statusClass[status]} icon={statusIcon[status]} />
+                            <span className={styles.permissionWarningBody}>
+                                <span>{action.label}</span>
+                                {action.detail && <span className={styles.permissionWarningHint}>{action.detail}</span>}
+                            </span>
+                        </span>
+                    );
+                })}
+            </div>
+        );
+    }
+
     return (
         <div className={styles.inputContainer}>
             <label htmlFor="existing-subscription-dropdown" className={styles.label}>
@@ -285,6 +362,8 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
             {renderClusterControl()}
 
             {renderAcrSection()}
+
+            {renderReadinessPanel()}
 
             {props.errorMessage && (
                 <span className={`${styles.validationMessage} ${styles.fullWidth}`}>

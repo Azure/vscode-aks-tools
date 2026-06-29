@@ -1,6 +1,6 @@
-# Automated Deployments: Draft Tool Integration
+# Deployment Tools: Draft Tool Integration
 
-The Automated Deployments commands integrate the Draft tool to provide:
+The Deployment Tools commands integrate the Draft tool to provide:
 
 - Draft Dockerfile
 - Draft Deployment

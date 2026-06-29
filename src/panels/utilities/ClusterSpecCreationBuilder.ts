@@ -56,6 +56,9 @@ export class ClusterDeploymentBuilder {
             resourceName: {
                 value: clusterSpec.name,
             },
+            nodeResourceGroup: {
+                value: generateNodeResourceGroup(clusterSpec.resourceGroupName, clusterSpec.name, clusterSpec.location),
+            },
             apiVersion: {
                 value: deploymentApiVersionPreview,
             },

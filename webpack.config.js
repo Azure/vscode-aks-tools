@@ -40,7 +40,7 @@ const config = {
         new CopyPlugin({
             patterns: [
                 {
-                    from: "src/commands/aksContainerAssist/aks-deploy.template.yaml",
+                    from: "resources/yaml/aks-deploy.template.yaml",
                     to: "[name][ext]",
                 },
             ],

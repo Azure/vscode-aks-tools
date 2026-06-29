@@ -12,6 +12,8 @@ export const REQUIRED_VCPUS_FOR_AUTOMATIC = 16;
 // Arm (Dp*) and confidential (DC*) families are intentionally excluded so a region with only those
 // available doesn't falsely pass the default x64 path.
 export const AKS_AUTOMATIC_CANDIDATE_FAMILIES = [
+    // v2: DSv2 SKUs (e.g. DS3_v2) are part of AKS Automatic's fallback set in older regions.
+    "standardDSv2Family",
     // v4 / v5: lowercase "standard", uppercase sub-family
     "standardDv4Family",
     "standardDSv4Family",
@@ -43,6 +45,30 @@ export const AKS_AUTOMATIC_CANDIDATE_FAMILIES = [
     "StandardDalsv7Family",
     "StandardDaldsv7Family",
 ];
+
+// The fixed set of 4-vCPU x64 D-series SKUs (each with a local temp disk for the ephemeral OS disk
+// the system pool needs) that the AKS RP picks from for an AKS Automatic system node pool. The
+// control plane requires the chosen SKU to be available in at least three availability zones; when
+// no candidate clears that bar for the subscription, creation fails with "could not find a suitable
+// VM size ... may not support three availability zones". Unlike the quota families above, these are
+// exact SKU names matched against resourceSkus (case-insensitively) — a broader family match would
+// admit v7 SKUs the RP does NOT use and falsely pass regions. Keep in sync with the AKS troubleshoot
+// guide: https://learn.microsoft.com/troubleshoot/azure/azure-kubernetes/create-upgrade-delete/aks-automatic-troubleshoot
+// Last verified: 2026-03-19.
+export const AKS_AUTOMATIC_SYSTEM_POOL_SKUS = [
+    "Standard_D4lds_v5",
+    "Standard_D4ads_v5",
+    "Standard_D4ds_v5",
+    "Standard_D4d_v5",
+    "Standard_D4d_v4",
+    "Standard_DS3_v2",
+    "Standard_DS12_v2",
+    "Standard_D4alds_v6",
+    "Standard_D4lds_v6",
+    "Standard_D4alds_v5",
+];
+
+export const REQUIRED_AVAILABILITY_ZONES_FOR_AUTOMATIC = 3;
 
 export const AUTOMATIC_REQUIRED_PROVIDERS = [
     "Microsoft.ContainerService",
@@ -77,6 +103,20 @@ export interface FamilyQuota extends VCpuQuota {
 export interface AutomaticSkuQuota {
     cores: VCpuQuota;
     families: FamilyQuota[];
+    sufficient: boolean;
+}
+
+export interface SkuZoneAvailability {
+    name: string;
+    regionZones: string[];
+    usableZones: string[];
+    sufficient: boolean;
+}
+
+export interface AutomaticSkuZones {
+    requiredZoneCount: number;
+    offered: SkuZoneAvailability[];
+    restrictedZones: string[];
     sufficient: boolean;
 }
 
@@ -213,6 +253,98 @@ export async function checkAutomaticSkuQuota(
     } catch (e) {
         return { succeeded: false, error: getErrorMessage(e) };
     }
+}
+
+export async function checkAutomaticSkuZones(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    location: string,
+    requiredZoneCount: number = REQUIRED_AVAILABILITY_ZONES_FOR_AUTOMATIC,
+): Promise<Errorable<AutomaticSkuZones>> {
+    try {
+        const client = getComputeManagementClient(sessionProvider, subscriptionId);
+        const normalizedLocation = normalizeLocation(location);
+        const candidateSkus = new Map(AKS_AUTOMATIC_SYSTEM_POOL_SKUS.map((name) => [name.toLowerCase(), name]));
+
+        const skus = client.resourceSkus.list({ filter: `location eq '${location}'` });
+        const offered: SkuZoneAvailability[] = [];
+        const restrictedZones = new Set<string>();
+
+        for await (const sku of skus) {
+            if (sku.resourceType !== "virtualMachines" || !sku.name) {
+                continue;
+            }
+            const canonicalName = candidateSkus.get(sku.name.toLowerCase());
+            if (!canonicalName) {
+                continue;
+            }
+
+            const locationInfo = (sku.locationInfo ?? []).find(
+                (info) => normalizeLocation(info.location ?? "") === normalizedLocation,
+            );
+            const regionZones = sortZones(locationInfo?.zones ?? []);
+
+            // A "Location" restriction blocks the SKU across the whole region for this subscription;
+            // a "Zone" restriction blocks specific zones. Subtract both from the offered zones.
+            let locationBlocked = false;
+            const blockedZones = new Set<string>();
+            for (const restriction of sku.restrictions ?? []) {
+                if (!restrictionAppliesToLocation(restriction, normalizedLocation)) {
+                    continue;
+                }
+                if (restriction.type === "Location") {
+                    locationBlocked = true;
+                } else if (restriction.type === "Zone") {
+                    for (const zone of restriction.restrictionInfo?.zones ?? []) {
+                        blockedZones.add(zone);
+                    }
+                }
+            }
+
+            const usableZones = locationBlocked ? [] : regionZones.filter((zone) => !blockedZones.has(zone));
+            for (const zone of regionZones) {
+                if (locationBlocked || blockedZones.has(zone)) {
+                    restrictedZones.add(zone);
+                }
+            }
+
+            offered.push({
+                name: canonicalName,
+                regionZones,
+                usableZones,
+                sufficient: usableZones.length >= requiredZoneCount,
+            });
+        }
+
+        return {
+            succeeded: true,
+            result: {
+                requiredZoneCount,
+                offered,
+                restrictedZones: sortZones([...restrictedZones]),
+                sufficient: offered.some((sku) => sku.sufficient),
+            },
+        };
+    } catch (e) {
+        return { succeeded: false, error: getErrorMessage(e) };
+    }
+}
+
+function sortZones(zones: string[]): string[] {
+    return [...new Set(zones)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+// A restriction is scoped to locations via restrictionInfo.locations (preferred) or the legacy
+// `values` array; when neither names a location it applies region-wide. Normalized so ARM display
+// names and region codes compare equal.
+function restrictionAppliesToLocation(
+    restriction: { values?: string[]; restrictionInfo?: { locations?: string[] } },
+    normalizedLocation: string,
+): boolean {
+    const scopedLocations = [...(restriction.restrictionInfo?.locations ?? []), ...(restriction.values ?? [])].map(
+        normalizeLocation,
+    );
+    return scopedLocations.length === 0 || scopedLocations.includes(normalizedLocation);
 }
 
 async function pollUntilRegistered(

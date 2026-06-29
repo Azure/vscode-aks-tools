@@ -2,6 +2,7 @@ import { WebviewDefinition } from "../webviewTypes";
 
 export interface KickstartSample {
     label: string;
+    stack: string;
     description: string;
     repoUrl: string;
 }
@@ -44,7 +45,7 @@ export type ToVsCodeMsgDef = {
 export type ToWebViewMsgDef = {
     errorNotification: { message: string };
     gitHubReposLoaded: { repos: GitHubRepo[]; signedInUser: string | null };
-    gitHubReposError: { message: string };
+    gitHubReposError: { message: string; signedInUser: string | null };
 };
 
 export type KickstartGuidedSetupDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

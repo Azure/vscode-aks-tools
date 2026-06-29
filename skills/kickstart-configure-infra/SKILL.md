@@ -23,6 +23,16 @@ Use `vscode/runCommand` to run command id `aks.kickstartCluster`, passing the ap
 - Derive `appName` from what you learned in Discovery — lowercase, hyphenated, no spaces. The view turns it into suggested resource-group, cluster, and registry names.
 - Omit any field you don't know; all are optional.
 
+### Region selection (capacity-aware)
+
+AKS Automatic provisions node pools on **AKS-owned (HOBO) subscriptions**, so a region that passes *your* subscription quota check can still fail to provision when the AKS-side capacity is constrained — and both failures look identical (the deploy just hangs or fails with no clear cause). Maximize the chance of a clean provision by steering toward **lower-contention regions** and treating the highest-demand regions as a last resort:
+
+- **Prefer (low capacity risk):** `eastus2`, `westus3`, `southcentralus`, `canadacentral`, `swedencentral`, `japaneast`.
+- **Acceptable (moderate):** `centralus`, `westus2`.
+- **Avoid unless the user requires it (high capacity risk):** `eastus`, `westeurope`, `southeastasia`.
+
+Only set `suggestedLocation` when the user states a region preference or a compliance / data-residency need — then pick the lowest-risk region that satisfies it (e.g. `eastus2` instead of `eastus` for US, `swedencentral` instead of `westeurope` for EU). If you have no preference to honor, **omit `suggestedLocation`**: the view runs a live quota scan across the low-risk regions and auto-recommends the best available one.
+
 ## Step 2 — Hand off to the view
 
 After launching, post a short message telling the user to complete cluster setup in the view that just opened, and that you'll continue automatically once it finishes. Then **end your turn** — do not ask questions or run commands while the user is working in that view.
