@@ -1065,7 +1065,7 @@
         "@types/js-yaml": "^4.0.9",
         "@types/libsodium-wrappers": "^0.8.2",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^26.0.0",
+        "@types/node": "^26.0.1",
         "@types/semver": "^7.7.1",
         "@types/sinon": "^21.0.1",
         "@types/tmp": "^0.2.6",
@@ -1089,7 +1089,7 @@
         "node-loader": "^2.1.0",
         "prettier": "^3.8.3",
         "sinon": "^22.0.0",
-        "ts-loader": "^9.5.7",
+        "ts-loader": "^9.6.2",
         "typescript": "^6.0.3",
         "webpack": "^5.107.2",
         "webpack-cli": "^7.0.2"
