@@ -1058,6 +1058,7 @@
         "getPluginsCommand": "aks.getAzureKubernetesServicePlugins"
     },
     "devDependencies": {
+        "ajv": "^8.17.1",
         "@eslint/eslintrc": "^3.3.3",
         "@eslint/js": "^10.0.1",
         "@types/chai": "^5.2.3",
@@ -1097,6 +1098,15 @@
     "lint-staged": {
         "*": "prettier --write --ignore-unknown"
     },
+    "overrides": {
+        "dockerfilelint": {
+            "js-yaml": "^4.2.0"
+        },
+        "mocha": {
+            "diff": "^8.0.3",
+            "serialize-javascript": "^7.0.5"
+        }
+    },
     "dependencies": {
         "@azure/arm-authorization": "^9.0.0",
         "@azure/arm-compute": "^24.0.0",
@@ -1106,7 +1116,7 @@
         "@azure/arm-features": "^3.1.0",
         "@azure/arm-monitor": "^7.0.0",
         "@azure/arm-msi": "^2.2.0",
-        "@azure/arm-resourcegraph": "^4.2.1",
+        "@azure/arm-resourcegraph": "^5.0.0-beta.5",
         "@azure/arm-resources": "^7.0.0",
         "@azure/arm-resources-subscriptions": "^2.1.0",
         "@azure/arm-storage": "^20.0.0",
@@ -1122,7 +1132,7 @@
         "@octokit/rest": "^22.0.1",
         "@vscode/extension-telemetry": "^1.5.2",
         "@vscode/l10n": "^0.0.18",
-        "containerization-assist-mcp": "^1.4.0",
+        "containerization-assist-mcp": "^1.4.1",
         "decompress": "^4.2.1",
         "js-yaml": "^4.2.0",
         "libsodium-wrappers": "^0.8.4",
@@ -1138,5 +1148,12 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/Azure/vscode-aks-tools"
+    },
+    "allowScripts": {
+        "cpu-features@0.0.10": true,
+        "keytar@7.9.0": true,
+        "protobufjs@7.6.4": true,
+        "ssh2@1.17.0": true,
+        "@vscode/vsce-sign@2.0.9": true
     }
 }
