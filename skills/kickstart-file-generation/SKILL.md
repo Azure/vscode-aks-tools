@@ -38,7 +38,7 @@ If there are dependencies between files (e.g., the K8s deployment references an 
 
 ## Partial failures
 
-If a edit/editFiles call fails mid-batch:
+If an `edit/editFiles` call fails mid-batch:
 1. Stop the batch.
 2. Report which files were written successfully and which were not.
 3. Do not retry automatically — wait for the user to confirm intent before continuing.

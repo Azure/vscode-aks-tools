@@ -10,7 +10,7 @@ Collect enough information to propose a deployment architecture.
 
 ## Auto-detect first, then ask
 
-Use `search` and `codebase` to scan the workspace before asking anything. Look for `package.json`, `requirements.txt`, `go.mod`, `*.csproj`, `Dockerfile`, `.github/workflows/`, `azure-pipelines.yml`.
+Use `search` and `search/codebase` to scan the workspace before asking anything. Look for `package.json`, `requirements.txt`, `go.mod`, `*.csproj`, `Dockerfile`, `.github/workflows/`, `azure-pipelines.yml`.
 
 ## Map the structure (before anything else)
 
@@ -24,7 +24,7 @@ Never assume a flat repo. Apps often live in nested or monorepo layouts (`src/<s
 | Existing Dockerfile | search the build context; record its path or "none — generate" | Generate (reuse vs. create) |
 | Port | code (`app.listen(3000)`, `EXPOSE`, framework default) | Service, probes |
 
-Use `codebase`/`search` to confirm each path actually exists — do not infer it from the language alone. Surface this map to the user and let them correct it before proceeding.
+Use `search/codebase`/`search` to confirm each path actually exists — do not infer it from the language alone. Surface this map to the user and let them correct it before proceeding.
 
 ## What to collect
 
