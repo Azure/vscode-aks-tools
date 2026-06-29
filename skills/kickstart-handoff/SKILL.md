@@ -16,7 +16,7 @@ az aks show --name <cluster> --resource-group <rg> --subscription <sub> --query 
 ```
 - **Succeeded**: continue.
 - **Creating**: `az aks wait --name <cluster> --resource-group <rg> --subscription <sub> --created --interval 30 --timeout 600`
-- **Failed**: offer retry or a different cluster via `vscode_askQuestions`.
+- **Failed**: offer retry or a different cluster via `vscode/askQuestions`.
 
 ## 6b. Cluster Metadata Detection
 
@@ -107,4 +107,4 @@ With the same remediation roles as listed in the table above.
 
 ## Confirm
 
-Confirm readiness via `vscode_askQuestions`: "Yes, deploy" (recommended), "Review artifacts first", "Not yet".
+Confirm readiness via `vscode/askQuestions`: "Yes, deploy" (recommended), "Review artifacts first", "Not yet".

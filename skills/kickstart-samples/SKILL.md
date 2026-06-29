@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Sample Repos
 
-**If the launch wizard already selected a sample**, skip the picker and clone that sample directly (see the table below). Otherwise, present this exact picker via `vscode_askQuestions`:
+**If the launch wizard already selected a sample**, skip the picker and clone that sample directly (see the table below). Otherwise, present this exact picker via `vscode/askQuestions`:
 ```json
 {
   "questions": [{
@@ -21,7 +21,7 @@ disable-model-invocation: true
 }
 ```
 
-After the user picks, clone with `run_in_terminal`:
+After the user picks, clone with `execute/runInTerminal`:
 
 | Sample | Clone command |
 |---|---|
@@ -29,7 +29,7 @@ After the user picks, clone with `run_in_terminal`:
 | Azure Voting App | `git clone https://github.com/Azure-Samples/azure-voting-app-redis.git` |
 | Contoso Real Estate | `git clone https://github.com/Azure-Samples/contoso-real-estate.git` |
 
-After cloning, **do a quick structure scan to confirm the profile** — the paths below are the expected layout, but samples change. Use `search`/`codebase` to verify each service's build context, `Dockerfile` path, and entry-point file actually exist before relying on them. Then present the (corrected) profile and confirm it via `vscode_askQuestions` ("Looks good, continue to Configure" recommended). **Skip the Discovery questions** — but never skip this structure check — then go straight to Phase 2.
+After cloning, **do a quick structure scan to confirm the profile** — the paths below are the expected layout, but samples change. Use `search`/`search/codebase` to verify each service's build context, `Dockerfile` path, and entry-point file actually exist before relying on them. Then present the (corrected) profile and confirm it via `vscode/askQuestions` ("Looks good, continue to Configure" recommended). **Skip the Discovery questions** — but never skip this structure check — then go straight to Phase 2.
 
 **AKS Store Demo** (monorepo, services under `src/`): `store-front` (Node.js, :8080, context `src/store-front`), `order-service` (Node.js, :3000, context `src/order-service`), `product-service` (Go, :3002, context `src/product-service`), `makeline-service` (Rust, :3001, context `src/makeline-service`). Each service dir is its own build context and ships a `Dockerfile`. Deps: MongoDB, RabbitMQ. Has K8s manifests, GitHub Actions.
 

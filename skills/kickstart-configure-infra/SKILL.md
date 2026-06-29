@@ -10,7 +10,7 @@ Azure resource selection and creation happen in a dedicated webview — the **Ki
 
 ## Step 1 — Launch the cluster-setup view
 
-Use `vscode_runCommand` to run command id `aks.kickstartCluster`, passing the app context as a single JSON argument so the view can pre-fill sensible, app-derived resource names:
+Use `vscode/runCommand` to run command id `aks.kickstartCluster`, passing the app context as a single JSON argument so the view can pre-fill sensible, app-derived resource names:
 
 ```json
 {

@@ -13,7 +13,7 @@ Create all deployment artifacts and write them to the workspace. Follow `/kickst
 Use the per-service structure map from Discovery (build context, entry point, existing Dockerfile path). Never assume the app sits at the repo root.
 
 - **Reuse existing Dockerfiles.** If a service already ships a working `Dockerfile`, use it as-is (or amend in place) — do not generate a parallel one. Only author a Dockerfile for services that lack one.
-- **Cross-check every `COPY`/`ADD`.** Each source must resolve to a real file/dir inside that service's build context, and the destination must match where the entry point runs (e.g. `WORKDIR /app` + `COPY . /app` only if the entry point is at the context root). Use `search`/`codebase` to confirm sources exist before writing the Dockerfile; flag and fix any mismatch.
+- **Cross-check every `COPY`/`ADD`.** Each source must resolve to a real file/dir inside that service's build context, and the destination must match where the entry point runs (e.g. `WORKDIR /app` + `COPY . /app` only if the entry point is at the context root). Use `search`/`search/codebase` to confirm sources exist before writing the Dockerfile; flag and fix any mismatch.
 - **Set the run target from the real entry point** (`CMD`/`ENTRYPOINT`), not a guessed filename.
 
 ## Domain playbooks
@@ -38,7 +38,7 @@ Load these for detailed patterns as you author each artifact:
 - Never use `:latest` tags.
 - Honor each service's build context and entry point from the structure map; reuse existing Dockerfiles instead of duplicating them.
 - All K8s manifests must comply with AKS deployment safeguards (restricted pod security, no privileged, no hostPath).
-- After writing all files, confirm with user via `vscode_askQuestions`.
+- After writing all files, confirm with user via `vscode/askQuestions`.
 
 ## Validate the build (before exit)
 
