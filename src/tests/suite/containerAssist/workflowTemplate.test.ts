@@ -293,28 +293,28 @@ describe("Workflow Template Tests", () => {
             assert.ok(result.includes("managed namespace"), "Should indicate managed namespace in comments");
         });
 
-        it("should annotate namespace and deployment in managed namespace template", () => {
+        it("should not annotate the managed namespace from CI — workload-identity annotations are written once by OIDC setup", () => {
             const managedConfig = { ...validConfig, isManagedNamespace: true };
             const result = renderWorkflowTemplate(managedConfig);
 
-            assert.ok(result.includes("Annotate namespace"), "Managed template should have annotate namespace step");
             assert.ok(
-                result.includes("az aks namespace update"),
-                "Managed template should update namespace annotations via az aks namespace update",
+                !result.includes("Annotate namespace"),
+                "Managed template should not have an annotate-namespace CI step",
             );
             assert.ok(
-                result.includes("--annotations"),
-                "Managed template should pass annotations to az aks namespace update",
+                !result.includes("az aks namespace update"),
+                "Managed template should not call az aks namespace update from CI",
             );
             assert.ok(
-                result.includes("aks-project/workload-identity-id="),
-                "Managed template should set workload-identity-id on namespace",
+                !result.includes("aks-project/workload-identity-id"),
+                "Managed template should not stamp workload-identity-id from CI",
             );
             assert.ok(
-                result.includes("aks-project/workload-identity-tenant="),
-                "Managed template should set workload-identity-tenant on namespace",
+                !result.includes("aks-project/workload-identity-tenant"),
+                "Managed template should not stamp workload-identity-tenant from CI",
             );
-            assert.ok(result.includes("Annotate deployment"), "Managed template should have annotate deployment step");
+
+            assert.ok(result.includes("Annotate deployment"), "Managed template should still annotate deployments");
             assert.ok(
                 result.includes("kubectl annotate deployment --all"),
                 "Managed template should annotate all deployments",
@@ -497,16 +497,13 @@ describe("Multi-Container Workflow Template Tests", () => {
             );
         });
 
-        it("renders an Annotate namespace step in the multi-container managed-namespace deploy job", () => {
+        it("does not annotate the managed namespace from CI in the multi-container deploy job", () => {
             const managed: MultiContainerWorkflowConfig = { ...validMultiConfig, isManagedNamespace: true };
             const rendered = renderMultiContainerWorkflowTemplate(managed);
-            assert.ok(
-                rendered.includes("Annotate namespace"),
-                "Managed-namespace multi-container deploy job should annotate the namespace",
-            );
-            assert.ok(rendered.includes("az aks namespace update"));
-            assert.ok(rendered.includes("aks-project/workload-identity-id="));
-            assert.ok(rendered.includes("aks-project/workload-identity-tenant="));
+            assert.ok(!rendered.includes("Annotate namespace"));
+            assert.ok(!rendered.includes("az aks namespace update"));
+            assert.ok(!rendered.includes("aks-project/workload-identity-id"));
+            assert.ok(!rendered.includes("aks-project/workload-identity-tenant"));
         });
 
         it("produces structurally valid YAML even with multi-manifest block scalars", () => {

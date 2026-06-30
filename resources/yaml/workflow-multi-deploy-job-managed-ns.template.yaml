@@ -46,16 +46,6 @@
 { { IMAGES } }
                   namespace: ${{ env.NAMESPACE }}
 
-            - name: Annotate namespace
-              run: |
-                  az aks namespace update \
-                    --resource-group ${{ env.CLUSTER_RESOURCE_GROUP }} \
-                    --cluster-name ${{ env.CLUSTER_NAME }} \
-                    --name ${{ env.NAMESPACE }} \
-                    --annotations \
-                      aks-project/workload-identity-id="${{ secrets.AZURE_CLIENT_ID }}" \
-                      aks-project/workload-identity-tenant="${{ secrets.AZURE_TENANT_ID }}"
-
             - name: Annotate deployment
               run: |
                   if kubectl get deployment -n ${{ env.NAMESPACE }} --no-headers 2>/dev/null | grep -q .; then

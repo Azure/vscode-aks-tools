@@ -38,6 +38,11 @@ const AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID = "289d8817-ee69-43f1-a0af-43a45505b488"
 const ACR_PUSH_ROLE_ID = "8311e382-0749-4cb8-b61a-304f252e45ec";
 const ACR_TASKS_CONTRIBUTOR_ROLE_ID = "fb382eab-e894-4461-af04-94435c366c3f";
 
+// Managed-namespace annotation keys for AKS desktop / project tooling to
+// discover which federated workload identity is wired up for the namespace.
+const WORKLOAD_IDENTITY_CLIENT_ID_ANNOTATION = "aks-project/workload-identity-id";
+const WORKLOAD_IDENTITY_TENANT_ID_ANNOTATION = "aks-project/workload-identity-tenant";
+
 interface OIDCSetupResult {
     clientId: string;
     tenantId: string;
@@ -152,6 +157,23 @@ export async function setupOIDCForGitHub(
                     azureConfig.identityName,
                     repoInfo,
                 );
+
+                if (
+                    azureContext?.isManagedNamespace &&
+                    azureContext.namespace &&
+                    azureContext.clusterName &&
+                    azureContext.clusterResourceGroup
+                ) {
+                    progress.report({ message: l10n.t("Annotating managed namespace...") });
+                    await annotateManagedNamespaceWithIdentity(
+                        new ContainerServiceClient(credential, azureConfig.subscriptionId),
+                        azureContext.clusterResourceGroup,
+                        azureContext.clusterName,
+                        azureContext.namespace,
+                        identityResult.clientId,
+                        identityResult.tenantId,
+                    );
+                }
 
                 return {
                     clientId: identityResult.clientId,
@@ -779,6 +801,68 @@ async function createFederatedCredential(
         subject: subject,
         audiences: ["api://AzureADTokenExchange"],
     });
+}
+
+/**
+ * Stamps the federated identity's client ID and tenant ID onto the managed
+ * namespace as annotations so AKS desktop and other tooling can discover which
+ * workload identity is wired up for the namespace.
+ *
+ * This is intentionally done ONCE during OIDC setup rather than on every CI
+ * deploy. The values are static (they only change if the identity is rotated),
+ * so re-stamping them per push wastes time, needs extra RBAC on the CI
+ * principal, and — most importantly — risks wiping existing annotations and
+ * labels because `az aks namespace update` is an ARM PUT (full replacement).
+ *
+ * Performed in TypeScript via the @azure/arm-containerservice SDK so we get a
+ * proper typed read-modify-write: fetch existing properties, spread to
+ * preserve all other annotations/labels, then PUT.
+ *
+ * Exported and accepts an injected `ContainerServiceClient` so the merge
+ * behavior can be unit-tested without spinning up a real Azure session.
+ */
+export async function annotateManagedNamespaceWithIdentity(
+    client: ContainerServiceClient,
+    clusterResourceGroup: string,
+    clusterName: string,
+    namespace: string,
+    clientId: string,
+    tenantId: string,
+): Promise<void> {
+    let existing;
+    try {
+        existing = await client.managedNamespaces.get(clusterResourceGroup, clusterName, namespace);
+    } catch (error) {
+        logger.warn(
+            `Failed to read managed namespace ${namespace} for annotation; skipping workload-identity annotation: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
+        return;
+    }
+
+    const mergedProperties = {
+        ...existing.properties,
+        annotations: {
+            ...(existing.properties?.annotations ?? {}),
+            [WORKLOAD_IDENTITY_CLIENT_ID_ANNOTATION]: clientId,
+            [WORKLOAD_IDENTITY_TENANT_ID_ANNOTATION]: tenantId,
+        },
+    };
+
+    try {
+        const poller = client.managedNamespaces.createOrUpdate(clusterResourceGroup, clusterName, namespace, {
+            ...existing,
+            properties: mergedProperties,
+        });
+        await poller.pollUntilDone();
+    } catch (error) {
+        logger.warn(
+            `Failed to annotate managed namespace ${namespace} with workload identity metadata: ${
+                error instanceof Error ? error.message : String(error)
+            }`,
+        );
+    }
 }
 
 async function displayOIDCResults(

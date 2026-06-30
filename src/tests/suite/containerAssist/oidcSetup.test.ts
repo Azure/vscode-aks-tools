@@ -374,3 +374,124 @@ describe("encryptSecret", () => {
         assert.strictEqual(decoded.length, expectedLen);
     });
 });
+
+// ─── annotateManagedNamespaceWithIdentity ──────────────────────────────────────
+
+describe("annotateManagedNamespaceWithIdentity", () => {
+    let sandbox: sinon.SinonSandbox;
+
+    const RG = "my-rg";
+    const CLUSTER = "my-cluster";
+    const NS = "my-ns";
+    const CLIENT_ID = "00000000-0000-0000-0000-000000000001";
+    const TENANT_ID = "00000000-0000-0000-0000-000000000002";
+
+    /** Build a mock ContainerServiceClient whose managedNamespaces operations are stubs. */
+    function makeMockClient(opts: { getResult?: unknown; getThrows?: Error; pollThrows?: Error }) {
+        const pollUntilDone = opts.pollThrows ? sinon.stub().rejects(opts.pollThrows) : sinon.stub().resolves({});
+        const createOrUpdate = sinon.stub().returns({ pollUntilDone });
+        const get = opts.getThrows ? sinon.stub().rejects(opts.getThrows) : sinon.stub().resolves(opts.getResult);
+
+        return {
+            client: {
+                managedNamespaces: { get, createOrUpdate },
+            } as unknown as Parameters<typeof oidcSetup.annotateManagedNamespaceWithIdentity>[0],
+            get,
+            createOrUpdate,
+            pollUntilDone,
+        };
+    }
+
+    beforeEach(() => {
+        sandbox = sinon.createSandbox();
+        sandbox.stub(logger.logger, "warn");
+    });
+
+    afterEach(() => {
+        sandbox.restore();
+    });
+
+    it("merges new annotations into existing without dropping other annotations or labels", async () => {
+        const { client, createOrUpdate } = makeMockClient({
+            getResult: {
+                location: "eastus",
+                properties: {
+                    annotations: { "user/existing-annotation": "keep-me" },
+                    labels: { "user/existing-label": "also-keep" },
+                    ingressPolicy: "AllowAll",
+                },
+            },
+        });
+
+        await oidcSetup.annotateManagedNamespaceWithIdentity(client, RG, CLUSTER, NS, CLIENT_ID, TENANT_ID);
+
+        assert.ok(createOrUpdate.calledOnce, "should issue exactly one PUT");
+        const [rg, cluster, ns, body] = createOrUpdate.firstCall.args;
+        assert.strictEqual(rg, RG);
+        assert.strictEqual(cluster, CLUSTER);
+        assert.strictEqual(ns, NS);
+
+        assert.deepStrictEqual(body.properties.annotations, {
+            "user/existing-annotation": "keep-me",
+            "aks-project/workload-identity-id": CLIENT_ID,
+            "aks-project/workload-identity-tenant": TENANT_ID,
+        });
+        assert.deepStrictEqual(body.properties.labels, { "user/existing-label": "also-keep" });
+        assert.strictEqual(body.properties.ingressPolicy, "AllowAll", "non-annotation properties must survive");
+        assert.strictEqual(body.location, "eastus", "outer ARM envelope must survive");
+    });
+
+    it("handles a namespace with no existing annotations or labels", async () => {
+        const { client, createOrUpdate } = makeMockClient({
+            getResult: { properties: {} },
+        });
+
+        await oidcSetup.annotateManagedNamespaceWithIdentity(client, RG, CLUSTER, NS, CLIENT_ID, TENANT_ID);
+
+        const body = createOrUpdate.firstCall.args[3];
+        assert.deepStrictEqual(body.properties.annotations, {
+            "aks-project/workload-identity-id": CLIENT_ID,
+            "aks-project/workload-identity-tenant": TENANT_ID,
+        });
+    });
+
+    it("is idempotent: re-running with new identity values overwrites only its own keys", async () => {
+        const { client, createOrUpdate } = makeMockClient({
+            getResult: {
+                properties: {
+                    annotations: {
+                        "aks-project/workload-identity-id": "OLD-CLIENT",
+                        "aks-project/workload-identity-tenant": "OLD-TENANT",
+                        "user/keep": "yes",
+                    },
+                },
+            },
+        });
+
+        await oidcSetup.annotateManagedNamespaceWithIdentity(client, RG, CLUSTER, NS, "NEW-CLIENT", "NEW-TENANT");
+
+        const sent = createOrUpdate.firstCall.args[3].properties.annotations;
+        assert.strictEqual(sent["aks-project/workload-identity-id"], "NEW-CLIENT");
+        assert.strictEqual(sent["aks-project/workload-identity-tenant"], "NEW-TENANT");
+        assert.strictEqual(sent["user/keep"], "yes");
+    });
+
+    it("fails closed: does not PUT if the initial get() throws", async () => {
+        const { client, createOrUpdate } = makeMockClient({
+            getThrows: new Error("403 Forbidden"),
+        });
+
+        await oidcSetup.annotateManagedNamespaceWithIdentity(client, RG, CLUSTER, NS, CLIENT_ID, TENANT_ID);
+
+        assert.ok(createOrUpdate.notCalled, "must not PUT after a failed read — risks wiping annotations/labels");
+    });
+
+    it("swallows PUT failures without throwing (best-effort metadata)", async () => {
+        const { client } = makeMockClient({
+            getResult: { properties: {} },
+            pollThrows: new Error("500 Internal Server Error"),
+        });
+
+        await oidcSetup.annotateManagedNamespaceWithIdentity(client, RG, CLUSTER, NS, CLIENT_ID, TENANT_ID);
+    });
+});
