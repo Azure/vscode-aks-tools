@@ -171,8 +171,8 @@ describe("Workflow Template Tests", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("buildImage:"), "Should have buildImage job");
-            assert.ok(result.includes("actions/checkout@v4"), "Should checkout code");
-            assert.ok(result.includes("azure/login@v2"), "Should login to Azure");
+            assert.ok(result.includes("actions/checkout@v7"), "Should checkout code");
+            assert.ok(result.includes("azure/login@v3"), "Should login to Azure");
             assert.ok(result.includes("az acr login"), "Should login to ACR");
             assert.ok(result.includes("az acr build"), "Should build and push image");
         });
@@ -206,14 +206,14 @@ describe("Workflow Template Tests", () => {
         it("should include AKS context setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/aks-set-context@v4"), "Should set AKS context");
+            assert.ok(result.includes("azure/aks-set-context@v5"), "Should set AKS context");
             assert.ok(result.includes('use-kubelogin: "true"'), "Should enable kubelogin");
         });
 
         it("should include deployment step", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("Azure/k8s-deploy@v5"), "Should use k8s-deploy action");
+            assert.ok(result.includes("Azure/k8s-deploy@v6"), "Should use k8s-deploy action");
             assert.ok(result.includes("action: deploy"), "Should specify deploy action");
         });
 
@@ -288,7 +288,7 @@ describe("Workflow Template Tests", () => {
         it("should use aks-set-context for non-managed namespaces", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/aks-set-context@v4"), "Should use aks-set-context");
+            assert.ok(result.includes("azure/aks-set-context@v5"), "Should use aks-set-context");
             assert.ok(!result.includes("az aks namespace get-credentials"), "Should not use namespace get-credentials");
         });
 
@@ -297,7 +297,7 @@ describe("Workflow Template Tests", () => {
             const result = renderWorkflowTemplate(managedConfig);
 
             assert.ok(
-                !result.includes("azure/aks-set-context@v4"),
+                !result.includes("azure/aks-set-context@"),
                 "Should not use aks-set-context for managed namespace",
             );
             assert.ok(result.includes("az aks namespace get-credentials"), "Should use namespace get-credentials");
@@ -454,12 +454,12 @@ describe("Multi-Container Workflow Template Tests", () => {
             const managed = { ...validMultiConfig, isManagedNamespace: true };
             const yaml = renderMultiContainerWorkflowTemplate(managed);
             assert.ok(yaml.includes("az aks namespace get-credentials"), "Should use managed-ns credential flow");
-            assert.ok(!yaml.includes("azure/aks-set-context@v4"), "Should not use aks-set-context for managed ns");
+            assert.ok(!yaml.includes("azure/aks-set-context@"), "Should not use aks-set-context for managed ns");
         });
 
-        it("uses azure/aks-set-context@v4 for non-managed namespaces", () => {
+        it("uses azure/aks-set-context@v5 for non-managed namespaces", () => {
             const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
-            assert.ok(yaml.includes("azure/aks-set-context@v4"));
+            assert.ok(yaml.includes("azure/aks-set-context@v5"));
             assert.ok(!yaml.includes("az aks namespace get-credentials"));
         });
 
