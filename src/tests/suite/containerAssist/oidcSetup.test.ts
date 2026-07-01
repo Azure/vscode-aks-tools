@@ -405,6 +405,7 @@ describe("annotateManagedNamespaceWithIdentity", () => {
     beforeEach(() => {
         sandbox = sinon.createSandbox();
         sandbox.stub(logger.logger, "warn");
+        sandbox.stub(vscode.window, "showWarningMessage");
     });
 
     afterEach(() => {
@@ -484,6 +485,10 @@ describe("annotateManagedNamespaceWithIdentity", () => {
         await oidcSetup.annotateManagedNamespaceWithIdentity(client, RG, CLUSTER, NS, CLIENT_ID, TENANT_ID);
 
         assert.ok(createOrUpdate.notCalled, "must not PUT after a failed read — risks wiping annotations/labels");
+        assert.ok(
+            (vscode.window.showWarningMessage as sinon.SinonStub).calledOnce,
+            "user should be notified when annotation read fails",
+        );
     });
 
     it("swallows PUT failures without throwing (best-effort metadata)", async () => {
@@ -493,5 +498,10 @@ describe("annotateManagedNamespaceWithIdentity", () => {
         });
 
         await oidcSetup.annotateManagedNamespaceWithIdentity(client, RG, CLUSTER, NS, CLIENT_ID, TENANT_ID);
+
+        assert.ok(
+            (vscode.window.showWarningMessage as sinon.SinonStub).calledOnce,
+            "user should be notified when annotation write fails",
+        );
     });
 });

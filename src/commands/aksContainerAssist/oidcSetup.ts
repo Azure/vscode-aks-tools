@@ -38,8 +38,9 @@ const AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID = "289d8817-ee69-43f1-a0af-43a45505b488"
 const ACR_PUSH_ROLE_ID = "8311e382-0749-4cb8-b61a-304f252e45ec";
 const ACR_TASKS_CONTRIBUTOR_ROLE_ID = "fb382eab-e894-4461-af04-94435c366c3f";
 
-// Managed-namespace annotation keys for AKS desktop / project tooling to
-// discover which federated workload identity is wired up for the namespace.
+// Namespace annotation keys — contract shared with AKS Desktop.
+// Keep in sync with ANNOTATION_WORKLOAD_IDENTITY / ANNOTATION_WORKLOAD_TENANT
+// in https://github.com/Azure/aks-desktop (usePipelineAnnotationSync.ts).
 const WORKLOAD_IDENTITY_CLIENT_ID_ANNOTATION = "aks-project/workload-identity-id";
 const WORKLOAD_IDENTITY_TENANT_ID_ANNOTATION = "aks-project/workload-identity-tenant";
 
@@ -815,10 +816,16 @@ export async function annotateManagedNamespaceWithIdentity(
     try {
         existing = await client.managedNamespaces.get(clusterResourceGroup, clusterName, namespace);
     } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         logger.warn(
-            `Failed to read managed namespace ${namespace} for annotation; skipping workload-identity annotation: ${
-                error instanceof Error ? error.message : String(error)
-            }`,
+            `Failed to read managed namespace ${namespace} for annotation; skipping workload-identity annotation: ${message}`,
+        );
+        void vscode.window.showWarningMessage(
+            l10n.t(
+                "Could not read managed namespace '{0}' to stamp workload-identity annotations. AKS Desktop may not detect this identity. Details: {1}",
+                namespace,
+                message,
+            ),
         );
         return;
     }
@@ -839,10 +846,14 @@ export async function annotateManagedNamespaceWithIdentity(
         });
         await poller.pollUntilDone();
     } catch (error) {
-        logger.warn(
-            `Failed to annotate managed namespace ${namespace} with workload identity metadata: ${
-                error instanceof Error ? error.message : String(error)
-            }`,
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(`Failed to annotate managed namespace ${namespace} with workload identity metadata: ${message}`);
+        void vscode.window.showWarningMessage(
+            l10n.t(
+                "Failed to write workload-identity annotations to managed namespace '{0}'. AKS Desktop may not detect this identity. Details: {1}",
+                namespace,
+                message,
+            ),
         );
     }
 }
