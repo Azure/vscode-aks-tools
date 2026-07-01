@@ -1,9 +1,21 @@
 "use strict";
 
 const path = require("path");
+const fs = require("fs");
 const webpack = require("webpack");
 const ESLintPlugin = require("eslint-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
+
+class CleanSkillsPlugin {
+    apply(compiler) {
+        const skillsDir = path.resolve(compiler.options.output.path, "skills");
+        const clean = () => {
+            fs.rmSync(skillsDir, { recursive: true, force: true });
+        };
+        compiler.hooks.beforeRun.tap("CleanSkillsPlugin", clean);
+        compiler.hooks.watchRun.tap("CleanSkillsPlugin", clean);
+    }
+}
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -29,6 +41,7 @@ const config = {
         "cpu-features": "commonjs cpu-features",
     },
     plugins: [
+        new CleanSkillsPlugin(),
         new ESLintPlugin({
             extensions: ["ts"],
             exclude: ["node_modules", "webview-ui"],
@@ -42,6 +55,11 @@ const config = {
                 {
                     from: "resources/yaml/aks-deploy.template.yaml",
                     to: "[name][ext]",
+                },
+                {
+                    from: "node_modules/containerization-assist-mcp/skills",
+                    to: "skills",
+                    noErrorOnMissing: true,
                 },
             ],
         }),

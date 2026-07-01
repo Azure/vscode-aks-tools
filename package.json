@@ -158,6 +158,11 @@
                     "default": true,
                     "description": "Set to true to enable deployment related file generation capability using AI tool. (Preview feature)"
                 },
+                "aks.skillsEnabledPreview": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set to true to enable the Containerization Assist agent skills (analyze-repo, generate-dockerfile, fix-dockerfile, generate-k8s-manifests, deploy-to-aks) in Copilot chat. (Preview feature)"
+                },
                 "aks.containerAssist.k8sManifestFolder": {
                     "type": "string",
                     "default": "k8s",
@@ -1095,7 +1100,12 @@
             { "path": "./skills/kickstart-phase-acceleration/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
             { "path": "./skills/kickstart-collaborator-voice/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
             { "path": "./skills/kickstart-file-generation/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
-            { "path": "./skills/kickstart-safeguard-checklist/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" }
+            { "path": "./skills/kickstart-safeguard-checklist/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./dist/skills/analyze-repo/SKILL.md", "when": "config.aks.skillsEnabledPreview" },
+            { "path": "./dist/skills/generate-dockerfile/SKILL.md", "when": "config.aks.skillsEnabledPreview" },
+            { "path": "./dist/skills/fix-dockerfile/SKILL.md", "when": "config.aks.skillsEnabledPreview" },
+            { "path": "./dist/skills/generate-k8s-manifests/SKILL.md", "when": "config.aks.skillsEnabledPreview" },
+            { "path": "./dist/skills/deploy-to-aks/SKILL.md", "when": "config.aks.skillsEnabledPreview" }
         ]
     },
     "scripts": {
