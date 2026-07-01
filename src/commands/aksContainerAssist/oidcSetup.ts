@@ -803,24 +803,6 @@ async function createFederatedCredential(
     });
 }
 
-/**
- * Stamps the federated identity's client ID and tenant ID onto the managed
- * namespace as annotations so AKS desktop and other tooling can discover which
- * workload identity is wired up for the namespace.
- *
- * This is intentionally done ONCE during OIDC setup rather than on every CI
- * deploy. The values are static (they only change if the identity is rotated),
- * so re-stamping them per push wastes time, needs extra RBAC on the CI
- * principal, and — most importantly — risks wiping existing annotations and
- * labels because `az aks namespace update` is an ARM PUT (full replacement).
- *
- * Performed in TypeScript via the @azure/arm-containerservice SDK so we get a
- * proper typed read-modify-write: fetch existing properties, spread to
- * preserve all other annotations/labels, then PUT.
- *
- * Exported and accepts an injected `ContainerServiceClient` so the merge
- * behavior can be unit-tested without spinning up a real Azure session.
- */
 export async function annotateManagedNamespaceWithIdentity(
     client: ContainerServiceClient,
     clusterResourceGroup: string,
