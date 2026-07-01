@@ -4,8 +4,28 @@
  */
 
 import * as vscode from "vscode";
-import { Errorable, failed } from "../utils/errorable";
+import { Errorable, failed, succeeded } from "../utils/errorable";
 import { getWorkflowYaml } from "../utils/configureWorkflowHelper";
+import { getKubeloginConfig } from "../utils/config";
+
+/**
+ * Fallback kubelogin version used when the setting can't be read (e.g. in
+ * unit tests that don't boot the VS Code config). Kept in sync with the
+ * `azure.kubelogin.releaseTag` default in package.json — see the release
+ * checklist in docs/book/src/release/releasing.md.
+ */
+const KUBELOGIN_FALLBACK_VERSION = "v0.2.19";
+
+/**
+ * Resolves the kubelogin version to embed in generated workflows.
+ * Reads the current value of the `azure.kubelogin.releaseTag` setting so a
+ * user override propagates into freshly generated workflows. Falls back to
+ * the package.json default if the setting isn't available.
+ */
+function getKubeloginVersionForWorkflow(): string {
+    const cfg = getKubeloginConfig();
+    return succeeded(cfg) && cfg.result.releaseTag ? cfg.result.releaseTag : KUBELOGIN_FALLBACK_VERSION;
+}
 
 export interface WorkflowConfig {
     // Workflow metadata
@@ -113,6 +133,7 @@ export function renderWorkflowTemplate(config: WorkflowConfig): string {
         "{ { CLUSTERRESOURCEGROUP } }": config.clusterResourceGroup,
         "{ { DEPLOYMENTMANIFESTPATH } }": config.deploymentManifestPath,
         "{ { NAMESPACE } }": config.namespace,
+        "{ { KUBELOGINVERSION } }": getKubeloginVersionForWorkflow(),
     };
 
     for (const [placeholder, value] of Object.entries(replacements)) {
@@ -331,6 +352,7 @@ function renderDeployJob(
         // re-indent to 16 spaces for the multi-container deploy env block.
         "{ { DEPLOYMENTMANIFESTPATH } }": reindentBlockScalar(manifestPath, 16),
         "{ { IMAGES } }": images,
+        "{ { KUBELOGINVERSION } }": getKubeloginVersionForWorkflow(),
     };
 
     for (const [placeholder, value] of Object.entries(replacements)) {

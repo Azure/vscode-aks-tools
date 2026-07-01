@@ -86,7 +86,7 @@ jobs:
             - name: Set up kubelogin for non-interactive login
               uses: azure/use-kubelogin@v1
               with:
-                  kubelogin-version: "v0.0.25"
+                  kubelogin-version: "{ { KUBELOGINVERSION } }"
 
             # Retrieves kubeconfig for managed namespace via Azure CLI
             # (aks-set-context does not support managed namespaces yet)

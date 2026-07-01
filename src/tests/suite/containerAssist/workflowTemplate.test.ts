@@ -191,6 +191,18 @@ describe("Workflow Template Tests", () => {
             assert.ok(result.includes("kubelogin-version"), "Should specify kubelogin version");
         });
 
+        it("substitutes the kubelogin version placeholder with a well-formed release tag", () => {
+            // The template contains `kubelogin-version: "{ { KUBELOGINVERSION } }"` which
+            // must be replaced with the current `azure.kubelogin.releaseTag` setting value
+            // (or the package.json default fallback). Regression guard for a duplicate
+            // hard-coded version drifting from the settings default.
+            const result = renderWorkflowTemplate(validConfig);
+
+            assert.ok(!result.includes("KUBELOGINVERSION"), "Kubelogin placeholder should have been substituted");
+            const match = result.match(/kubelogin-version:\s*"(v\d+\.\d+\.\d+)"/);
+            assert.ok(match, "Rendered kubelogin-version should be a well-formed semver tag (vX.Y.Z)");
+        });
+
         it("should include AKS context setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
@@ -398,6 +410,44 @@ describe("Multi-Container Workflow Template Tests", () => {
             assert.ok(yaml.includes("${{ secrets.AZURE_CLIENT_ID }}"));
             assert.ok(yaml.includes("${{ env.AZURE_CONTAINER_REGISTRY }}"));
             assert.ok(yaml.includes("${{ github.sha }}"));
+        });
+
+        it("substitutes the kubelogin version placeholder in every deploy job", () => {
+            // Every deploy job renders its own copy of the kubelogin setup, so a
+            // regression in the multi-container renderer could leave one job's
+            // placeholder unsubstituted while others are fine.
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [
+                    {
+                        containerName: "api",
+                        dockerFile: "api/Dockerfile",
+                        buildContextPath: "api",
+                        deploymentManifestPath: "api/k8s",
+                    },
+                    {
+                        containerName: "web",
+                        dockerFile: "web/Dockerfile",
+                        buildContextPath: "web",
+                        deploymentManifestPath: "web/k8s",
+                    },
+                ],
+            };
+            const yaml = renderMultiContainerWorkflowTemplate(cfg);
+
+            assert.ok(!yaml.includes("KUBELOGINVERSION"), "No deploy job should contain an unsubstituted placeholder");
+            const matches = yaml.match(/kubelogin-version:\s*"v\d+\.\d+\.\d+"/g);
+            assert.ok(
+                matches && matches.length >= 2,
+                `Expected kubelogin-version in each deploy job; got ${matches?.length ?? 0}`,
+            );
+            // All rendered versions should agree — one config value, consistent across jobs.
+            const unique = new Set(matches);
+            assert.strictEqual(
+                unique.size,
+                1,
+                `All deploy jobs should use the same kubelogin version; got ${[...unique].join(", ")}`,
+            );
         });
 
         it("uses az aks namespace get-credentials when isManagedNamespace is true", () => {

@@ -20,7 +20,7 @@
             - name: Set up kubelogin for non-interactive login
               uses: azure/use-kubelogin@v1
               with:
-                  kubelogin-version: "v0.0.25"
+                  kubelogin-version: "{ { KUBELOGINVERSION } }"
 
             - name: Get K8s context (managed namespace)
               run: |
