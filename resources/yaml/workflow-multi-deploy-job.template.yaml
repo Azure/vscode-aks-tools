@@ -8,10 +8,10 @@
         env:
             DEPLOYMENT_MANIFEST_PATH: { { DEPLOYMENTMANIFESTPATH } }
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
             - name: Azure login
-              uses: azure/login@v2
+              uses: azure/login@v3
               with:
                   client-id: ${{ secrets.AZURE_CLIENT_ID }}
                   tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -20,10 +20,10 @@
             - name: Set up kubelogin for non-interactive login
               uses: azure/use-kubelogin@v1
               with:
-                  kubelogin-version: "v0.0.25"
+                  kubelogin-version: "{ { KUBELOGINVERSION } }"
 
             - name: Get K8s context
-              uses: azure/aks-set-context@v4
+              uses: azure/aks-set-context@v5
               with:
                   resource-group: ${{ env.CLUSTER_RESOURCE_GROUP }}
                   cluster-name: ${{ env.CLUSTER_NAME }}
@@ -31,7 +31,7 @@
                   use-kubelogin: "true"
 
             - name: Deploys application
-              uses: Azure/k8s-deploy@v5
+              uses: Azure/k8s-deploy@v6
               with:
                   action: deploy
                   manifests: ${{ env.DEPLOYMENT_MANIFEST_PATH }}
