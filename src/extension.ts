@@ -13,6 +13,8 @@ import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSe
 import { registerUriHandler } from "./uriHandler";
 import { selectSubscriptions, selectTenant, signInToAzure } from "./commands/aksAccount/aksAccount";
 import { attachAcrToCluster } from "./commands/aksAttachAcrToCluster/attachAcrToCluster";
+import { checkRoleAssignmentPermissions } from "./commands/aksCheckPermissions/checkRoleAssignmentPermissions";
+import { checkDeploymentPermissions } from "./commands/aksCheckPermissions/checkDeploymentPermissions";
 import aksClusterProperties from "./commands/aksClusterProperties/aksClusterProperties";
 import aksCompareCluster from "./commands/aksCompareCluster/aksCompareCluster";
 import aksCreateCluster from "./commands/aksCreateCluster/aksCreateCluster";
@@ -60,6 +62,8 @@ import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
 import { getPlugins } from "./plugins/getPlugins";
 import { aksCreateClusterFromCopilot } from "./commands/aksCreateCluster/aksCreateClusterFromCopilot";
+import { kickstartLaunch } from "./commands/aksKickstart/kickstartLaunch";
+import { kickstartCluster } from "./commands/aksKickstart/kickstartCluster";
 import { aksDeployManifest } from "./commands/aksDeployManifest/aksDeployManifest";
 import { aksOpenKubectlPanel } from "./commands/aksOpenKubectlPanel/aksOpenKubectlPanel";
 import aksClusterFilter from "./commands/utils/clusterfilter";
@@ -109,6 +113,13 @@ export async function activate(context: vscode.ExtensionContext) {
     activateAzureSessionProvider(context);
     const sessionProvider = getSessionProvider();
 
+    context.subscriptions.push(vscode.commands.registerCommand("aks.kickstartFocus", () => kickstartLaunch()));
+    context.subscriptions.push(
+        vscode.commands.registerCommand("aks.kickstartCluster", (launchContext?: unknown) =>
+            kickstartCluster(context, launchContext),
+        ),
+    );
+
     if (cloudExplorer.available) {
         // NOTE: This is boilerplate configuration for the Azure UI extension on which this extension relies.
         const uiExtensionVariables = {
@@ -129,6 +140,8 @@ export async function activate(context: vscode.ExtensionContext) {
         registerCommandWithTelemetry("aks.aksBestPracticesDiagnostics", aksBestPracticesDiagnostics);
         registerCommandWithTelemetry("aks.aksIdentitySecurityDiagnostics", aksIdentitySecurityDiagnostics);
         registerCommandWithTelemetry("aks.attachAcrToCluster", attachAcrToCluster);
+        registerCommandWithTelemetry("aks.checkRoleAssignmentPermissions", checkRoleAssignmentPermissions);
+        registerCommandWithTelemetry("aks.checkDeploymentPermissions", checkDeploymentPermissions);
         registerCommandWithTelemetry("aks.draftDockerfile", draftDockerfile);
         registerCommandWithTelemetry("aks.draftDeployment", draftDeployment);
         registerCommandWithTelemetry("aks.draftWorkflow", draftWorkflow);

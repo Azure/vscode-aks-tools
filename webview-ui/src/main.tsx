@@ -14,6 +14,8 @@ import { Kaito } from "./Kaito/Kaito";
 import { KaitoModels } from "./KaitoModels/KaitoModels";
 import { KaitoManage } from "./KaitoManage/KaitoManage";
 import { KaitoTest } from "./KaitoTest/KaitoTest";
+import { KickstartCluster } from "./KickstartCluster/KickstartCluster";
+import { KickstartGuidedSetup } from "./KickstartGuidedSetup/KickstartGuidedSetup";
 import { Kubectl } from "./Kubectl/Kubectl";
 import "./main.css";
 import { RetinaCapture } from "./RetinaCapture/RetinaCapture";
@@ -84,6 +86,8 @@ function getVsCodeContent(rootElem: HTMLElement): JSX.Element {
         kaitoTest: () => <KaitoTest {...getInitialState()} />,
         createFleet: () => <CreateFleet {...getInitialState()} />,
         fleetProperties: () => <FleetProperties {...getInitialState()} />,
+        kickstartCluster: () => <KickstartCluster {...getInitialState()} />,
+        kickstartGuidedSetup: () => <KickstartGuidedSetup {...getInitialState()} />,
     };
 
     return rendererLookup[vscodeContentId]();

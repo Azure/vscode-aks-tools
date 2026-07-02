@@ -193,6 +193,11 @@
                     "default": "copilot",
                     "description": "Default language model vendor for Container Assist (e.g. copilot)."
                 },
+                "aks.kickstart.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable the Kickstart agent for AI-guided AKS Automatic deployment onboarding."
+                },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
                     "default": "v0.0.17",
@@ -293,6 +298,16 @@
             {
                 "command": "aks.attachAcrToCluster",
                 "title": "%Attach ACR to Cluster%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.checkRoleAssignmentPermissions",
+                "title": "%Check Role Assignment Permissions%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.checkDeploymentPermissions",
+                "title": "%Check Deployment Permissions%",
                 "category": "AKS"
             },
             {
@@ -485,6 +500,16 @@
                 "command": "aks.switchToStructuredMenu",
                 "title": "%Switch to Grouped Menu%",
                 "category": "AKS"
+            },
+            {
+                "command": "aks.kickstartFocus",
+                "title": "AKS: Launch Kickstart Agent",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.kickstartCluster",
+                "title": "AKS: Configure Kickstart Cluster",
+                "category": "AKS"
             }
         ],
         "menus": {
@@ -536,6 +561,14 @@
                 {
                     "command": "aks.deployAppWithAutomatedPipelineFromTree",
                     "when": "never"
+                },
+                {
+                    "command": "aks.kickstartFocus",
+                    "when": "config.aks.kickstart.enabled == true"
+                },
+                {
+                    "command": "aks.kickstartCluster",
+                    "when": "config.aks.kickstart.enabled == true"
                 }
             ],
             "explorer/context": [
@@ -1028,6 +1061,41 @@
                 "id": "aks.manageClusterSubMenu",
                 "label": "%Manage Cluster%"
             }
+        ],
+        "chatAgents": [
+            {
+                "name": "kickstart",
+                "description": "AI-guided onboarding to deploy your app on AKS Automatic. Walks you through discover, design, generate, review, handoff, and deploy.",
+                "path": "./agents/kickstart.agent.md",
+                "when": "config.aks.kickstart.enabled == true"
+            },
+            {
+                "name": "kickstart-reviewer",
+                "description": "Internal agent: Reviews Kickstart-generated deployment artifacts for correctness, security, and AKS Automatic compliance. Invoked by kickstart only.",
+                "path": "./agents/kickstart-reviewer.agent.md",
+                "when": "config.aks.kickstart.enabled == true"
+            }
+        ],
+        "chatSkills": [
+            { "path": "./skills/kickstart-discover/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-design/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-generate/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-review/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-handoff/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-deploy/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-configure-infra/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-cluster-status/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-samples/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-workload-identity/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-acr-integration/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-bicep-authoring/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-security-hardening/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+                { "path": "./skills/kickstart-pim-activation/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-github-pr-conventions/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-phase-acceleration/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-collaborator-voice/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-file-generation/SKILL.md", "when": "config.aks.kickstart.enabled == true" },
+            { "path": "./skills/kickstart-safeguard-checklist/SKILL.md", "when": "config.aks.kickstart.enabled == true" }
         ]
     },
     "scripts": {

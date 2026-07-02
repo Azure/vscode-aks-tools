@@ -11,6 +11,12 @@
                 "description": "The name of the Managed Cluster resource."
             }
         },
+        "nodeResourceGroup": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the resource group containing agent pool nodes. Supplied explicitly so it stays within the 80-character limit instead of relying on the AKS default."
+            }
+        },
         "location": {
             "type": "string",
             "metadata": {
@@ -53,6 +59,13 @@
             "metadata": {
                 "description": "The user principal id."
             }
+        },
+        "assignClusterAdminRole": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "When false, skip the Cluster Admin RBAC assignment so the deployment can succeed for callers without Microsoft.Authorization/roleAssignments/write on the resource group."
+            }
         }
     },
     "resources": [
@@ -64,6 +77,7 @@
             "name": "[parameters('resourceName')]",
             "dependsOn": [],
             "properties": {
+                "nodeResourceGroup": "[parameters('nodeResourceGroup')]",
                 "agentPoolProfiles": [
                     {
                         "name": "systempool",
@@ -77,6 +91,7 @@
         },
         {
             "type": "Microsoft.Authorization/roleAssignments",
+            "condition": "[parameters('assignClusterAdminRole')]",
             "apiVersion": "2022-04-01",
             "name": "[guid(resourceGroup().id)]",
             "dependsOn": [

@@ -1,0 +1,362 @@
+.page {
+    max-width: 52rem;
+    margin: 0 auto;
+}
+
+.inputContainer {
+    display: grid;
+    grid-template-columns: 12rem 20rem 8rem;
+    grid-gap: 1rem;
+    align-items: center;
+}
+
+.label {
+    grid-column: 1 / 2;
+}
+
+.midControl {
+    grid-column: 2 / 3;
+}
+
+.longControl {
+    grid-column: 2 / 4;
+    width: 20rem;
+}
+
+.sideControl {
+    grid-column: 3 / 4;
+}
+
+.validationMessage {
+    grid-column: 2 / 4;
+    margin-top: -0.5rem;
+}
+
+.fullWidth {
+    grid-column: 1 / 4;
+}
+
+.errorIndicator {
+    color: var(--vscode-testing-iconFailed);
+    padding-right: 5px;
+}
+
+.buttonContainer {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.5rem;
+}
+
+.secondaryButton {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.checklist {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.75rem;
+}
+
+.checkItem {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    column-gap: 0.5rem;
+}
+
+.checkItem svg {
+    margin-top: 0.2rem;
+}
+
+.checkTitle {
+    display: block;
+}
+
+.checkDetail {
+    display: block;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    margin-top: 0.15rem;
+}
+
+.checkPending {
+    color: var(--vscode-disabledForeground);
+}
+
+.checkRunning {
+    color: var(--vscode-progressBar-background);
+}
+
+.checkSucceeded {
+    color: var(--vscode-testing-iconPassed);
+}
+
+.checkWarning {
+    color: var(--vscode-list-warningForeground);
+}
+
+.checkFailed {
+    color: var(--vscode-testing-iconFailed);
+}
+
+.choiceLabel {
+    grid-column: 1 / 4;
+    margin-bottom: -0.5rem;
+}
+
+.fullWidthControl {
+    grid-column: 1 / 4;
+}
+
+.choiceGroup {
+    grid-column: 1 / 4;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.choiceCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex: 1 1 7rem;
+    min-width: 7rem;
+    padding: 0.85rem 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.choiceCard:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.choiceCardIcon {
+    font-size: 1.4rem;
+}
+
+.choiceCardText {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+
+.choiceCardSub {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+}
+
+.choiceSelected {
+    border-color: var(--vscode-focusBorder);
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.chipRow {
+    grid-column: 2 / 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: -0.5rem;
+}
+
+.chipLabel {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+.chip {
+    padding: 0.15rem 0.6rem;
+    border-radius: 1rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 0.9em;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.chip:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.chipSelected {
+    border-color: var(--vscode-focusBorder);
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.checkBody {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.activityContainer {
+    grid-column: 2 / 4;
+    margin-top: -0.5rem;
+}
+
+.activityEntries {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding-left: 0.25rem;
+}
+
+.activityEntry {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 0.4rem;
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.activityAction {
+    color: var(--vscode-foreground);
+}
+
+.activityEntryDetail {
+    color: var(--vscode-descriptionForeground);
+}
+
+.activityElapsed {
+    margin-left: auto;
+    padding-left: 0.5rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--vscode-descriptionForeground);
+}
+
+.permissionWarning {
+    grid-column: 2 / 4;
+    display: flex;
+    align-items: flex-start;
+    column-gap: 0.5rem;
+    margin-top: -0.25rem;
+    font-size: 0.9em;
+}
+
+.showAllToggle {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    column-gap: 0.4rem;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+/* ---------- GitHub repo browser ---------- */
+
+.ghSection {
+    grid-column: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--vscode-panel-border, var(--vscode-editorWidget-border));
+    border-radius: 6px;
+    background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+}
+
+.ghHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+}
+
+.ghHeaderTitle {
+    display: flex;
+    align-items: center;
+    column-gap: 0.5rem;
+    font-weight: 600;
+}
+
+.ghHeaderActions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    column-gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ghAccountPill {
+    display: inline-flex;
+    align-items: center;
+    column-gap: 0.35rem;
+    padding: 0.1rem 0.55rem;
+    border-radius: 1rem;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    font-size: 0.85em;
+}
+
+.ghLoading {
+    display: inline-flex;
+    align-items: center;
+    column-gap: 0.4rem;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+.ghEmptyHint {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
+.ghDropdown {
+    width: 100%;
+}
+
+.ghDivider {
+    display: flex;
+    align-items: center;
+    column-gap: 0.6rem;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0.25rem 0;
+}
+
+.ghDivider::before,
+.ghDivider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--vscode-panel-border, var(--vscode-editorWidget-border));
+}
+
+.ghManualField {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.35rem;
+}
+
+.ghManualInput {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ghErrorRow {
+    display: flex;
+    align-items: flex-start;
+    column-gap: 0.4rem;
+    color: var(--vscode-testing-iconFailed);
+    font-size: 0.9em;
+}

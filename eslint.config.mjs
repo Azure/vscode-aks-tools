@@ -68,6 +68,7 @@ export default [
                 "error",
                 {
                     ignoreRestSiblings: true,
+                    argsIgnorePattern: "^_",
                 },
             ],
 
