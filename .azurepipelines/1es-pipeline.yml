@@ -15,9 +15,6 @@ parameters:
     - name: publishVersion
       type: string
       default: 0.0.1
-    - name: token
-      type: string
-      default: ""
 
 extends:
     # The pipeline extends the 1ES PT which will inject different SDL and compliance tasks.
@@ -136,16 +133,21 @@ extends:
                         # PUBLISH
                         # =====================================================
 
-                        - script: |
-                              set -e
-                              VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-signed/" -type f -name "*.vsix" -print -quit)
-                              echo "Publishing VSIX package: $VSIX_PATH"
-                              MANIFEST_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
-                              SIGNATURE_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s"
-                              npx @vscode/vsce@latest publish --pat "$TOKEN" --packagePath "$VSIX_PATH" --manifestPath "$MANIFEST_PATH" --signaturePath "$SIGNATURE_PATH"
+                        - task: AzureCLI@2
                           displayName: "Publish VSIX to Marketplace"
+                          inputs:
+                              azureSubscription: AKS-VsCode-Release
+                              scriptType: bash
+                              scriptLocation: inlineScript
+                              inlineScript: |
+                                  set -e
+                                  VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-signed/" -type f -name "*.vsix" -print -quit)
+                                  echo "Publishing VSIX package: $VSIX_PATH"
+                                  MANIFEST_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
+                                  SIGNATURE_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s"
+                                  npx @vscode/vsce@latest publish --azure-credential --packagePath "$VSIX_PATH" --manifestPath "$MANIFEST_PATH" --signaturePath "$SIGNATURE_PATH"
                           env:
-                              TOKEN: ${{ parameters.token }}
+                              VSCE_AZURE_CREDENTIAL_TIMEOUT: 60000
 
                         - task: GithubRelease@1
                           displayName: "Create GitHub Release"
