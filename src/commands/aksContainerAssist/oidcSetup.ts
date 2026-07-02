@@ -38,6 +38,12 @@ const AKS_NAMESPACE_CONTRIBUTOR_ROLE_ID = "289d8817-ee69-43f1-a0af-43a45505b488"
 const ACR_PUSH_ROLE_ID = "8311e382-0749-4cb8-b61a-304f252e45ec";
 const ACR_TASKS_CONTRIBUTOR_ROLE_ID = "fb382eab-e894-4461-af04-94435c366c3f";
 
+// Namespace annotation keys — contract shared with AKS Desktop.
+// Keep in sync with ANNOTATION_WORKLOAD_IDENTITY / ANNOTATION_WORKLOAD_TENANT
+// in https://github.com/Azure/aks-desktop (usePipelineAnnotationSync.ts).
+const WORKLOAD_IDENTITY_CLIENT_ID_ANNOTATION = "aks-project/workload-identity-id";
+const WORKLOAD_IDENTITY_TENANT_ID_ANNOTATION = "aks-project/workload-identity-tenant";
+
 interface OIDCSetupResult {
     clientId: string;
     tenantId: string;
@@ -152,6 +158,23 @@ export async function setupOIDCForGitHub(
                     azureConfig.identityName,
                     repoInfo,
                 );
+
+                if (
+                    azureContext?.isManagedNamespace &&
+                    azureContext.namespace &&
+                    azureContext.clusterName &&
+                    azureContext.clusterResourceGroup
+                ) {
+                    progress.report({ message: l10n.t("Annotating managed namespace...") });
+                    await annotateManagedNamespaceWithIdentity(
+                        new ContainerServiceClient(credential, azureConfig.subscriptionId),
+                        azureContext.clusterResourceGroup,
+                        azureContext.clusterName,
+                        azureContext.namespace,
+                        identityResult.clientId,
+                        identityResult.tenantId,
+                    );
+                }
 
                 return {
                     clientId: identityResult.clientId,
@@ -779,6 +802,60 @@ async function createFederatedCredential(
         subject: subject,
         audiences: ["api://AzureADTokenExchange"],
     });
+}
+
+export async function annotateManagedNamespaceWithIdentity(
+    client: ContainerServiceClient,
+    clusterResourceGroup: string,
+    clusterName: string,
+    namespace: string,
+    clientId: string,
+    tenantId: string,
+): Promise<void> {
+    let existing;
+    try {
+        existing = await client.managedNamespaces.get(clusterResourceGroup, clusterName, namespace);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(
+            `Failed to read managed namespace ${namespace} for annotation; skipping workload-identity annotation: ${message}`,
+        );
+        void vscode.window.showWarningMessage(
+            l10n.t(
+                "Could not read managed namespace '{0}' to stamp workload-identity annotations. AKS Desktop may not detect this identity. Details: {1}",
+                namespace,
+                message,
+            ),
+        );
+        return;
+    }
+
+    const mergedProperties = {
+        ...existing.properties,
+        annotations: {
+            ...(existing.properties?.annotations ?? {}),
+            [WORKLOAD_IDENTITY_CLIENT_ID_ANNOTATION]: clientId,
+            [WORKLOAD_IDENTITY_TENANT_ID_ANNOTATION]: tenantId,
+        },
+    };
+
+    try {
+        const poller = client.managedNamespaces.createOrUpdate(clusterResourceGroup, clusterName, namespace, {
+            ...existing,
+            properties: mergedProperties,
+        });
+        await poller.pollUntilDone();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(`Failed to annotate managed namespace ${namespace} with workload identity metadata: ${message}`);
+        void vscode.window.showWarningMessage(
+            l10n.t(
+                "Failed to write workload-identity annotations to managed namespace '{0}'. AKS Desktop may not detect this identity. Details: {1}",
+                namespace,
+                message,
+            ),
+        );
+    }
 }
 
 async function displayOIDCResults(
