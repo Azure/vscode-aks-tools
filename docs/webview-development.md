@@ -26,7 +26,9 @@ Alternatively, if you are developing in VS Code and wish to use the inbuilt debu
 
 ### Developing the VS Code commands that launch the UI
 
-To debug the extension itself, hit `F5` to launch the `Extension` debug profile in a new VS Code Window. This will automatically build, bundle and minify both the `webview-ui` project and the extension.
+> **Prerequisite:** Run `npm run install:all` at least once before debugging (see [Initial Setup](#initial-setup)). A plain `npm install` does **not** install the `webview-ui` dependencies, so the webview build produces no assets and panels render blank.
+
+To debug the extension itself, hit `F5` to launch the `Extension` debug profile in a new VS Code Window. This will automatically build the `webview-ui` project (via `npm run build:webview`) and bundle the extension, so the assets in `/webview-ui/dist` are always present.
 
 The extension will not automatically update itself in response to code changes as you are debugging, so the best workflow here is to stop debugging, make changes, and launch the debugger again.
 
