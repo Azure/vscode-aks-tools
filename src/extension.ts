@@ -113,7 +113,9 @@ export async function activate(context: vscode.ExtensionContext) {
     activateAzureSessionProvider(context);
     const sessionProvider = getSessionProvider();
 
-    context.subscriptions.push(vscode.commands.registerCommand("aks.kickstartFocus", () => kickstartLaunch()));
+    context.subscriptions.push(
+        vscode.commands.registerCommand("aks.kickstart.launchExperience", () => kickstartLaunch()),
+    );
     context.subscriptions.push(
         vscode.commands.registerCommand("aks.kickstartCluster", (launchContext?: unknown) =>
             kickstartCluster(context, launchContext),
