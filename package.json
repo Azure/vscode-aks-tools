@@ -195,7 +195,7 @@
                 },
                 "aks.kickstart.enabled": {
                     "type": "boolean",
-                    "default": true,
+                    "default": false,
                     "description": "Enable the Kickstart agent for AI-guided AKS Automatic deployment onboarding."
                 },
                 "aks.aksmcpserver.releaseTag": {
