@@ -60,7 +60,6 @@ type AllWebviewDefinitions = {
     kaitoTest: KaitoTestDefinition;
     kickstartCluster: KickstartClusterDefinition;
     kickstartGuidedSetup: KickstartGuidedSetupDefinition;
-    automatedDeployments: AutomatedDeploymentsDefinition;
     createFleet: CreateFleetDefinition;
     fleetProperties: FleetProperties;
 };
