@@ -5,10 +5,10 @@ import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 
 export async function kickstartLaunch(): Promise<void> {
-    const config = vscode.workspace.getConfiguration("aks.kickstart");
-    if (!config.get<boolean>("enabled", true)) {
+    const config = vscode.workspace.getConfiguration("aks");
+    if (!config.get<boolean>("kickstartEnabledPreview", false)) {
         window.showWarningMessage(
-            "The Kickstart agent is disabled. Enable it via the 'aks.kickstart.enabled' setting.",
+            "The Kickstart agent is disabled. Enable it via the 'aks.kickstartEnabledPreview' setting.",
         );
         return;
     }

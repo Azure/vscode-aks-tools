@@ -5,7 +5,7 @@ This extension contributes two declarative Copilot chat agents defined in `agent
 ## kickstart
 
 **File**: `agents/kickstart.agent.md`
-**User-invocable**: Yes (gated by `aks.kickstart.enabled` setting)
+**User-invocable**: Yes (gated by `aks.kickstartEnabledPreview` setting)
 **Tools**: editFiles, search, codebase, fetch, runCommands, problems, usages, vscode_askQuestions, run_in_terminal, get_terminal_output, send_to_terminal, kill_terminal
 **Models**: Claude Sonnet 4, GPT-4o
 
@@ -40,7 +40,7 @@ Invokes: `/kickstart-review`, `/kickstart-safeguard-checklist`, `/kickstart-secu
 | Method | Command/Action | Effect |
 |---|---|---|
 | Agent picker | Select "kickstart" in Copilot dropdown | Starts Phase 1 |
-| Command palette | `AKS: Launch Kickstart Agent` (`aks.kickstartFocus`) | Hides sidebar/panel, opens chat, invokes kickstart |
+| Command palette | `AKS: Launch Kickstart Agent` (`aks.kickstart.launchExperience`) | Hides sidebar/panel, opens chat, invokes kickstart |
 | Prompt file | `kickstart.prompt.md` | Lightweight discovery flow |
 
 ## Skills

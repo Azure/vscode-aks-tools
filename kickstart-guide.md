@@ -34,17 +34,17 @@ User selects "kickstart" agent in Copilot
 The main agent is gated by a VS Code setting:
 
 ```json
-"aks.kickstart.enabled": true  // default
+"aks.kickstartEnabledPreview": false  // default; set true to enable (Preview)
 ```
 
-The `chatAgents` entry uses `"when": "config.aks.kickstart.enabled == true"` so the agent only appears in the Copilot agent picker when the setting is enabled. The reviewer sub-agent has no `when` clause — it's internal and only reachable via handoff.
+The `chatAgents` entry uses `"when": "config.aks.kickstartEnabledPreview == true"` so the agent only appears in the Copilot agent picker when the setting is enabled. The reviewer sub-agent has no `when` clause — it's internal and only reachable via handoff.
 
 ## Entry Points
 
 | Entry Point | How | What happens |
 |---|---|---|
 | **Agent picker** | User selects "kickstart" in Copilot's agent dropdown | Full agent prompt loads, starts at Phase 1 |
-| **Command palette** | User runs `AKS: Launch Kickstart Agent` (`aks.kickstartFocus`) | Hides sidebar/panel, opens chat, sends initial message to kickstart agent |
+| **Command palette** | User runs `AKS: Launch Kickstart Agent` (`aks.kickstart.launchExperience`) | Hides sidebar/panel, opens chat, sends initial message to kickstart agent |
 | **Prompt file** | User runs `kickstart.prompt.md` from the prompt picker | Lightweight version — invokes `/kickstart-discover` and starts the flow |
 
 ## Agent Handoffs
@@ -214,9 +214,9 @@ The agents use VS Code Copilot's built-in tools (not custom extension tools):
 ```
 ├── package.json                        # chatAgents + chatSkills + settings
 ├── tsconfig.json
-├── src/extension.ts                    # Activation + aks.kickstartFocus command
+├── src/extension.ts                    # Activation + aks.kickstart.launchExperience command
 ├── agents/
-│   ├── kickstart.agent.md              # Main agent (gated by kickstart.enabled)
+│   ├── kickstart.agent.md              # Main agent (gated by kickstartEnabledPreview)
 │   └── kickstart-reviewer.agent.md     # Internal reviewer sub-agent
 ├── skills/
 │   ├── kickstart-discover/SKILL.md     # Phase skills (7)

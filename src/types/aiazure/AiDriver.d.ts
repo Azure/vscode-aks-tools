@@ -240,9 +240,7 @@ export type TextReferenceChatResponsePart = {
 };
 
 export type DisplayableChatResponsePart =
-    | SimpleChatResponsePart
-    | ButtonChatResponsePart
-    | TextReferenceChatResponsePart;
+    SimpleChatResponsePart | ButtonChatResponsePart | TextReferenceChatResponsePart;
 
 export type PluginInvocationMetadata = { pluginName: string; functionName: string; parameterNames: string[] };
 
