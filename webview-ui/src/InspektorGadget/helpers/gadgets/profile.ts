@@ -12,7 +12,12 @@ import {
 
 // CPU
 type CpuProfileKey =
-    (typeof k8sKeys)[number] | (typeof commandKeys)[number] | "pid" | "user_stack" | "kern_stack" | "samples";
+    | (typeof k8sKeys)[number]
+    | (typeof commandKeys)[number]
+    | "pid"
+    | "user_stack"
+    | "kern_stack"
+    | "samples";
 const cpuProfileKeyMetadata: ItemMetadata<CpuProfileKey> = {
     ...k8sKeyMetadata,
     ...commandKeyMetadata,

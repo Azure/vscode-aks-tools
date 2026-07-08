@@ -201,7 +201,15 @@ export class ContainerAssistService {
                 name: appName,
                 namespace: targetNamespace,
                 language: moduleInfo.language as
-                    "java" | "dotnet" | "javascript" | "typescript" | "python" | "rust" | "go" | "other" | undefined,
+                    | "java"
+                    | "dotnet"
+                    | "javascript"
+                    | "typescript"
+                    | "python"
+                    | "rust"
+                    | "go"
+                    | "other"
+                    | undefined,
                 ports: moduleInfo.port ? [moduleInfo.port] : undefined,
                 detectedDependencies: moduleInfo.dependencies,
                 entryPoint: moduleInfo.entryPoint,
