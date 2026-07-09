@@ -20,6 +20,6 @@ These can all be run from the command line in the root of the repository (with `
 Some scripts are invoked by other scripts or tools, so need not be run directly, or are otherwise not required for general development tasks:
 
 - `vscode:prepublish`: used by the `vsce` command for packaging the extension into a `vsix` file for distribution.
-- `webpack-dev`: bundles the extension code in development mode. Since we currently have no conditional logic that depends on whether the extension is running in development or production, this may be redundant.
+- `webpack-dev`: builds the `webview-ui` project and then bundles the extension code in development mode (`--watch`). This is the `preLaunchTask` for the `Extension` debug profile (F5).
 - `test-compile`: compiles the extension typescript (after building the `webview-ui` project) without webpacking it. This is a prerequisite to running automated tests. It _could_ be moved into `test`, but keeping it separate would allow it to be used in the future as a prelaunch task for debugging the extension without webpacking it.
 - `watch`: not currently used as part of any workflow I'm aware of, but could potentially be useful for editing while debugging.

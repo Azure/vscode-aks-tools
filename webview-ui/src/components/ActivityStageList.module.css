@@ -1,0 +1,242 @@
+.checklist {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.75rem;
+}
+
+.checkItem {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    column-gap: 0.5rem;
+}
+
+.checkItem svg {
+    margin-top: 0.2rem;
+}
+
+.checkBody {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.checkTitle {
+    display: block;
+}
+
+.checkDetail {
+    display: block;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    margin-top: 0.15rem;
+}
+
+.checkPending {
+    color: var(--vscode-disabledForeground);
+}
+
+.checkRunning {
+    color: var(--vscode-progressBar-background);
+}
+
+.checkSucceeded {
+    color: var(--vscode-testing-iconPassed);
+}
+
+.checkWarning {
+    color: var(--vscode-list-warningForeground);
+}
+
+.checkFailed {
+    color: var(--vscode-testing-iconFailed);
+}
+
+.activityEntries {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding-left: 0.25rem;
+}
+
+.activityEntry {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: 0.4rem;
+    row-gap: 0.2rem;
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.activityCode {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.9em;
+    color: var(--vscode-textPreformat-foreground);
+    background: var(--vscode-textCodeBlock-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+    word-break: break-all;
+}
+
+.progressRow {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 0.5rem;
+    flex-basis: 100%;
+    width: 100%;
+    margin-top: 0.15rem;
+}
+
+.progressTrack {
+    flex: 1;
+    height: 0.4rem;
+    border-radius: 0.2rem;
+    background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.25));
+    border: 1px solid var(--vscode-widget-border);
+    overflow: hidden;
+}
+
+.progressFill {
+    display: block;
+    height: 100%;
+    background: var(--vscode-progressBar-background);
+    transition: width 0.3s ease;
+}
+
+.progressLabel {
+    font-variant-numeric: tabular-nums;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+}
+
+.activityAction {
+    color: var(--vscode-foreground);
+}
+
+.activityEntryDetail {
+    color: var(--vscode-descriptionForeground);
+}
+
+.activityStarted {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95em;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.8;
+    white-space: nowrap;
+}
+
+.activityElapsed {
+    margin-left: auto;
+    padding-left: 0.5rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--vscode-descriptionForeground);
+}
+
+.fullError {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.fullErrorToggle {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    column-gap: 0.35rem;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--vscode-textLink-foreground);
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+.fullErrorToggle:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+
+.fullErrorChevron {
+    font-size: 0.8em;
+}
+
+.fullErrorBody {
+    display: block;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    max-height: 16rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.85em;
+    color: var(--vscode-textPreformat-foreground);
+    background: var(--vscode-textCodeBlock-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 4px;
+}
+
+.entriesCollapse {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.entriesToggle {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    column-gap: 0.35rem;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--vscode-textLink-foreground);
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+.entriesToggle:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+
+.entriesChevron {
+    font-size: 0.8em;
+}
+
+.stageRetry {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    column-gap: 0.35rem;
+    margin-top: 0.35rem;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--vscode-textLink-foreground);
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+.stageRetry:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+
+.stageRetryIcon {
+    font-size: 0.85em;
+}

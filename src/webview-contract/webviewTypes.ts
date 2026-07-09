@@ -13,6 +13,8 @@ import { KaitoDefinition } from "./webviewDefinitions/kaito";
 import { KaitoModelsDefinition } from "./webviewDefinitions/kaitoModels";
 import { KaitoManageDefinition } from "./webviewDefinitions/kaitoManage";
 import { KaitoTestDefinition } from "./webviewDefinitions/kaitoTest";
+import { KickstartClusterDefinition } from "./webviewDefinitions/kickstartCluster";
+import { KickstartGuidedSetupDefinition } from "./webviewDefinitions/kickstartGuidedSetup";
 import { KubectlDefinition } from "./webviewDefinitions/kubectl";
 import { RetinaCaptureDefinition } from "./webviewDefinitions/retinaCapture";
 import { TCPDumpDefinition } from "./webviewDefinitions/tcpDump";
@@ -56,6 +58,8 @@ type AllWebviewDefinitions = {
     kaitoModels: KaitoModelsDefinition;
     kaitoManage: KaitoManageDefinition;
     kaitoTest: KaitoTestDefinition;
+    kickstartCluster: KickstartClusterDefinition;
+    kickstartGuidedSetup: KickstartGuidedSetupDefinition;
     createFleet: CreateFleetDefinition;
     fleetProperties: FleetProperties;
 };

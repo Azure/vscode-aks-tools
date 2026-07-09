@@ -193,6 +193,11 @@
                     "default": "copilot",
                     "description": "Default language model vendor for Container Assist (e.g. copilot)."
                 },
+                "aks.kickstartEnabledPreview": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Set to true to enable the Kickstart agent for AI-guided AKS Automatic deployment onboarding. (Preview feature)"
+                },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
                     "default": "v0.0.17",
@@ -293,6 +298,16 @@
             {
                 "command": "aks.attachAcrToCluster",
                 "title": "%Attach ACR to Cluster%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.checkRoleAssignmentPermissions",
+                "title": "%Check Role Assignment Permissions%",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.checkDeploymentPermissions",
+                "title": "%Check Deployment Permissions%",
                 "category": "AKS"
             },
             {
@@ -485,6 +500,16 @@
                 "command": "aks.switchToStructuredMenu",
                 "title": "%Switch to Grouped Menu%",
                 "category": "AKS"
+            },
+            {
+                "command": "aks.kickstart.launchExperience",
+                "title": "AKS: Launch Kickstart Agent",
+                "category": "AKS"
+            },
+            {
+                "command": "aks.kickstartCluster",
+                "title": "AKS: Configure Kickstart Cluster",
+                "category": "AKS"
             }
         ],
         "menus": {
@@ -536,6 +561,14 @@
                 {
                     "command": "aks.deployAppWithAutomatedPipelineFromTree",
                     "when": "never"
+                },
+                {
+                    "command": "aks.kickstart.launchExperience",
+                    "when": "config.aks.kickstartEnabledPreview == true"
+                },
+                {
+                    "command": "aks.kickstartCluster",
+                    "when": "config.aks.kickstartEnabledPreview == true"
                 }
             ],
             "explorer/context": [
@@ -1028,6 +1061,41 @@
                 "id": "aks.manageClusterSubMenu",
                 "label": "%Manage Cluster%"
             }
+        ],
+        "chatAgents": [
+            {
+                "name": "kickstart",
+                "description": "AI-guided onboarding to deploy your app on AKS Automatic. Walks you through discover, design, generate, review, handoff, and deploy.",
+                "path": "./agents/kickstart.agent.md",
+                "when": "config.aks.kickstartEnabledPreview == true"
+            },
+            {
+                "name": "kickstart-reviewer",
+                "description": "Internal agent: Reviews Kickstart-generated deployment artifacts for correctness, security, and AKS Automatic compliance. Invoked by kickstart only.",
+                "path": "./agents/kickstart-reviewer.agent.md",
+                "when": "config.aks.kickstartEnabledPreview == true"
+            }
+        ],
+        "chatSkills": [
+            { "path": "./skills/kickstart-discover/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-design/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-generate/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-review/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-handoff/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-deploy/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-configure-infra/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-cluster-status/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-samples/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-workload-identity/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-acr-integration/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-bicep-authoring/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-security-hardening/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+                { "path": "./skills/kickstart-pim-activation/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-github-pr-conventions/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-phase-acceleration/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-collaborator-voice/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-file-generation/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" },
+            { "path": "./skills/kickstart-safeguard-checklist/SKILL.md", "when": "config.aks.kickstartEnabledPreview == true" }
         ]
     },
     "scripts": {
@@ -1040,7 +1108,7 @@
         "vscode:prepublish": "npm run webpack",
         "package": "vsce package",
         "webpack": "npm run build:webview && webpack --mode production",
-        "webpack-dev": "webpack --mode development --watch",
+        "webpack-dev": "npm run build:webview && webpack --mode development --watch",
         "test-compile": "npm run build:webview && tsc -p ./ && cp resources/yaml/aks-deploy.template.yaml out/src/commands/aksContainerAssist/",
         "watch": "tsc -watch -p ./",
         "test": "npm run test-compile && node ./out/src/tests/runTests.js",
