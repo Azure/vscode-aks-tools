@@ -163,7 +163,7 @@
 <p>Some scripts are invoked by other scripts or tools, so need not be run directly, or are otherwise not required for general development tasks:</p>
 <ul>
 <li><code>vscode:prepublish</code>: used by the <code>vsce</code> command for packaging the extension into a <code>vsix</code> file for distribution.</li>
-<li><code>webpack-dev</code>: bundles the extension code in development mode. Since we currently have no conditional logic that depends on whether the extension is running in development or production, this may be redundant.</li>
+<li><code>webpack-dev</code>: builds the <code>webview-ui</code> project and then bundles the extension code in development mode (<code>--watch</code>). This is the <code>preLaunchTask</code> for the <code>Extension</code> debug profile (F5).</li>
 <li><code>test-compile</code>: compiles the extension typescript (after building the <code>webview-ui</code> project) without webpacking it. This is a prerequisite to running automated tests. It <em>could</em> be moved into <code>test</code>, but keeping it separate would allow it to be used in the future as a prelaunch task for debugging the extension without webpacking it.</li>
 <li><code>watch</code>: not currently used as part of any workflow I’m aware of, but could potentially be useful for editing while debugging.</li>
 </ul>

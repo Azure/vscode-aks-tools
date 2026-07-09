@@ -221,7 +221,7 @@
 <p>Some scripts are invoked by other scripts or tools, so need not be run directly, or are otherwise not required for general development tasks:</p>
 <ul>
 <li><code>vscode:prepublish</code>: used by the <code>vsce</code> command for packaging the extension into a <code>vsix</code> file for distribution.</li>
-<li><code>webpack-dev</code>: bundles the extension code in development mode. Since we currently have no conditional logic that depends on whether the extension is running in development or production, this may be redundant.</li>
+<li><code>webpack-dev</code>: builds the <code>webview-ui</code> project and then bundles the extension code in development mode (<code>--watch</code>). This is the <code>preLaunchTask</code> for the <code>Extension</code> debug profile (F5).</li>
 <li><code>test-compile</code>: compiles the extension typescript (after building the <code>webview-ui</code> project) without webpacking it. This is a prerequisite to running automated tests. It <em>could</em> be moved into <code>test</code>, but keeping it separate would allow it to be used in the future as a prelaunch task for debugging the extension without webpacking it.</li>
 <li><code>watch</code>: not currently used as part of any workflow I’m aware of, but could potentially be useful for editing while debugging.</li>
 </ul>
@@ -297,7 +297,10 @@ Rename <code>filename.vsix</code> to <code>filename.vsix.zip</code>.</li>
 <li>Hit <code>F5</code> to launch the <code>Webview UI</code> debug profile in a new browser window. This will automatically run the development server and attach a debugger.</li>
 </ol>
 <h3 id="developing-the-vs-code-commands-that-launch-the-ui"><a class="header" href="#developing-the-vs-code-commands-that-launch-the-ui">Developing the VS Code commands that launch the UI</a></h3>
-<p>To debug the extension itself, hit <code>F5</code> to launch the <code>Extension</code> debug profile in a new VS Code Window. This will automatically build, bundle and minify both the <code>webview-ui</code> project and the extension.</p>
+<blockquote>
+<p><strong>Prerequisite:</strong> Run <code>npm run install:all</code> at least once before debugging (see <a href="development/webview-development.html#initial-setup">Initial Setup</a>). A plain <code>npm install</code> does <strong>not</strong> install the <code>webview-ui</code> dependencies, so the webview build produces no assets and panels render blank.</p>
+</blockquote>
+<p>To debug the extension itself, hit <code>F5</code> to launch the <code>Extension</code> debug profile in a new VS Code Window. This will automatically build the <code>webview-ui</code> project (via <code>npm run build:webview</code>) and bundle the extension, so the assets in <code>/webview-ui/dist</code> are always present.</p>
 <p>The extension will not automatically update itself in response to code changes as you are debugging, so the best workflow here is to stop debugging, make changes, and launch the debugger again.</p>
 <h3 id="custom-ui-elements"><a class="header" href="#custom-ui-elements">Custom UI Elements</a></h3>
 <p>Most input components have been intentionally designed to be theme-aware by default, inheriting VS Code’s global design tokens to stay in sync with the user’s selected theme. This includes buttons (which can be styled using our <code>secondary-button</code> and <code>icon-button</code> classes), anchor tags, <code>&lt;option&gt;</code> elements, and common input types like <code>radio</code>, <code>checkbox</code>, and <code>text</code>.</p>
