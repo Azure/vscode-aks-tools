@@ -3,7 +3,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     groups:
       typescript-eslint:
         patterns:
@@ -11,7 +11,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/webview-ui"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     groups:
       typescript-eslint:
         patterns:
@@ -19,4 +19,4 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
