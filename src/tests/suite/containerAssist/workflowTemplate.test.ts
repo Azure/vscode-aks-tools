@@ -171,8 +171,8 @@ describe("Workflow Template Tests", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("buildImage:"), "Should have buildImage job");
-            assert.ok(result.includes("actions/checkout@v7"), "Should checkout code");
-            assert.ok(result.includes("azure/login@v3"), "Should login to Azure");
+            assert.ok(/actions\/checkout@[0-9a-f]{40}\b/.test(result), "Should checkout code (SHA-pinned)");
+            assert.ok(/azure\/login@[0-9a-f]{40}\b/.test(result), "Should login to Azure (SHA-pinned)");
             assert.ok(result.includes("az acr login"), "Should login to ACR");
             assert.ok(result.includes("az acr build"), "Should build and push image");
         });
@@ -187,7 +187,7 @@ describe("Workflow Template Tests", () => {
         it("should include kubelogin setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/use-kubelogin@v1"), "Should use kubelogin action");
+            assert.ok(/azure\/use-kubelogin@[0-9a-f]{40}\b/.test(result), "Should use kubelogin action (SHA-pinned)");
             assert.ok(result.includes("kubelogin-version"), "Should specify kubelogin version");
         });
 
@@ -206,14 +206,14 @@ describe("Workflow Template Tests", () => {
         it("should include AKS context setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/aks-set-context@v5"), "Should set AKS context");
+            assert.ok(/azure\/aks-set-context@[0-9a-f]{40}\b/.test(result), "Should set AKS context (SHA-pinned)");
             assert.ok(result.includes('use-kubelogin: "true"'), "Should enable kubelogin");
         });
 
         it("should include deployment step", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("Azure/k8s-deploy@v6"), "Should use k8s-deploy action");
+            assert.ok(/Azure\/k8s-deploy@[0-9a-f]{40}\b/.test(result), "Should use k8s-deploy action (SHA-pinned)");
             assert.ok(result.includes("action: deploy"), "Should specify deploy action");
         });
 
@@ -288,7 +288,7 @@ describe("Workflow Template Tests", () => {
         it("should use aks-set-context for non-managed namespaces", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/aks-set-context@v5"), "Should use aks-set-context");
+            assert.ok(/azure\/aks-set-context@[0-9a-f]{40}\b/.test(result), "Should use aks-set-context (SHA-pinned)");
             assert.ok(!result.includes("az aks namespace get-credentials"), "Should not use namespace get-credentials");
         });
 
@@ -457,9 +457,9 @@ describe("Multi-Container Workflow Template Tests", () => {
             assert.ok(!yaml.includes("azure/aks-set-context@"), "Should not use aks-set-context for managed ns");
         });
 
-        it("uses azure/aks-set-context@v5 for non-managed namespaces", () => {
+        it("uses a SHA-pinned azure/aks-set-context for non-managed namespaces", () => {
             const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
-            assert.ok(yaml.includes("azure/aks-set-context@v5"));
+            assert.ok(/azure\/aks-set-context@[0-9a-f]{40}\b/.test(yaml));
             assert.ok(!yaml.includes("az aks namespace get-credentials"));
         });
 
