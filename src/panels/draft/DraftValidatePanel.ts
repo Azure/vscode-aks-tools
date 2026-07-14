@@ -53,17 +53,8 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
     }
 
     private async handleDraftValidateRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const location = this.initialLocation?.trim();
-        if (!location) {
-            webview.postValidationResult({
-                result: l10n.t(
-                    "No manifest path was provided. Right-click a manifest file or your manifests folder and run Draft validate.",
-                ),
-            });
-            return;
-        }
-
-        const manifestPath = `.${path.sep}${location}`;
+        // The draftValidate command guarantees a valid file/folder selection before opening this panel.
+        const manifestPath = `.${path.sep}${this.initialLocation.trim()}`;
         const command = `draft validate --manifest "${manifestPath}"`;
 
         const execOptions: ShellOptions = {

@@ -176,6 +176,18 @@ export function isYamlManifestFile(location: string): boolean {
     return ext === ".yaml" || ext === ".yml";
 }
 
+/** Shown when Draft validate is invoked without a YAML manifest file or a folder of manifests. */
+export const DRAFT_VALIDATE_INVALID_SELECTION_MESSAGE =
+    "Draft validate needs a Kubernetes YAML manifest. Right-click a .yaml or .yml file, or a folder containing manifests, and run Draft validate.";
+
+/** A selection is validatable if it is a folder, or a .yaml/.yml file. Empty selections are not. */
+export function canRunDraftValidate(initialLocation: string, isDirectory: boolean): boolean {
+    if (!initialLocation) {
+        return false;
+    }
+    return isDirectory || isYamlManifestFile(initialLocation);
+}
+
 export async function draftValidate(_context: IActionContext, target: unknown): Promise<void> {
     const params = getDraftDockerfileParams(target);
     const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
@@ -186,24 +198,22 @@ export async function draftValidate(_context: IActionContext, target: unknown): 
     const { workspaceFolder, extension, draftBinaryPath } = commonDependencies;
     const initialLocation = params?.initialLocation || "";
 
-    // Reject non-YAML files up front so users get clear guidance instead of a cryptic
-    // Draft failure. Folders and empty selections fall through unchanged.
+    // Draft validate needs a YAML manifest file or a folder of manifests. Reject a missing
+    // selection or a non-YAML file up front with a single clear message, rather than opening
+    // an empty panel or handing a bad path to Draft.
+    let isDirectory = false;
     if (initialLocation) {
-        const resourceUri = Uri.file(join(workspaceFolder.uri.fsPath, initialLocation));
-        let isDirectory = false;
         try {
-            const stat = await workspace.fs.stat(resourceUri);
+            const stat = await workspace.fs.stat(Uri.file(join(workspaceFolder.uri.fsPath, initialLocation)));
             isDirectory = stat.type === FileType.Directory;
         } catch {
-            // Can't stat the path — let Draft surface the issue.
+            // Can't stat the path — fall back to the file-extension check below.
         }
+    }
 
-        if (!isDirectory && !isYamlManifestFile(initialLocation)) {
-            window.showErrorMessage(
-                "Draft validate can only check Kubernetes YAML manifests. Select a .yaml or .yml file, or a folder containing manifests.",
-            );
-            return;
-        }
+    if (!canRunDraftValidate(initialLocation, isDirectory)) {
+        window.showErrorMessage(DRAFT_VALIDATE_INVALID_SELECTION_MESSAGE);
+        return;
     }
 
     const panel = new DraftValidatePanel(extension.extensionUri);
