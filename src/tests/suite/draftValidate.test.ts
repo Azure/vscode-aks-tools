@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import * as shell from "../../commands/utils/shell";
 import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
 import { DraftValidateDataProvider } from "../../panels/draft/DraftValidatePanel";
-import { isYamlManifestFile } from "../../commands/draft/draftCommands";
+import { isYamlManifestFile, canRunDraftValidate } from "../../commands/draft/draftCommands";
 import { MessageSink } from "../../webview-contract/messaging";
 import { ToWebViewMsgDef } from "../../webview-contract/webviewDefinitions/draft/draftValidate";
 
@@ -19,6 +19,28 @@ describe("isYamlManifestFile", () => {
         for (const f of ["notes.txt", "Dockerfile", "config.json", "archive.yaml.bak", "", ".yamlfile"]) {
             assert.strictEqual(isYamlManifestFile(f), false, f);
         }
+    });
+});
+
+describe("canRunDraftValidate", () => {
+    it("accepts a folder (any name)", () => {
+        assert.strictEqual(canRunDraftValidate("k8s", true), true);
+        assert.strictEqual(canRunDraftValidate("some/nested/dir", true), true);
+    });
+
+    it("accepts a .yaml/.yml file", () => {
+        assert.strictEqual(canRunDraftValidate("k8s/deployment.yaml", false), true);
+        assert.strictEqual(canRunDraftValidate("App.YML", false), true);
+    });
+
+    it("rejects an empty selection (e.g. Command Palette / tree node)", () => {
+        assert.strictEqual(canRunDraftValidate("", false), false);
+        assert.strictEqual(canRunDraftValidate("", true), false);
+    });
+
+    it("rejects a non-YAML file", () => {
+        assert.strictEqual(canRunDraftValidate("notes.txt", false), false);
+        assert.strictEqual(canRunDraftValidate("Dockerfile", false), false);
     });
 });
 
@@ -48,16 +70,6 @@ describe("DraftValidate handler", () => {
     });
 
     afterEach(() => sandbox.restore());
-
-    it("does not run draft when no manifest location is provided", async () => {
-        const execStub = sandbox.stub(shell, "exec");
-
-        await runValidate("");
-
-        assert.ok(execStub.notCalled, "draft should not be invoked without a manifest path");
-        assert.ok(postValidationResult.calledOnce);
-        assert.match(postValidationResult.firstCall.args[0].result, /No manifest path was provided/);
-    });
 
     it("quotes the manifest path and tolerates non-zero exit codes (findings are not errors)", async () => {
         const execStub = sandbox
