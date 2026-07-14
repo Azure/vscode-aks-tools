@@ -1143,7 +1143,7 @@
         "@typescript-eslint/eslint-plugin": "^8.63.0",
         "@typescript-eslint/parser": "^8.32.1",
         "@vscode/l10n-dev": "^0.0.35",
-        "@vscode/test-electron": "^2.5.2",
+        "@vscode/test-electron": "^3.0.0",
         "@vscode/vsce": "^3.9.2",
         "chai": "^6.2.2",
         "copy-webpack-plugin": "^14.0.0",
