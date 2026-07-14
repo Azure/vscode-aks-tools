@@ -170,6 +170,12 @@ export async function draftWorkflow(_context: IActionContext, target: unknown): 
     panel.show(dataProvider);
 }
 
+/** Returns true if the given path points to a YAML manifest (.yaml/.yml). */
+export function isYamlManifestFile(location: string): boolean {
+    const ext = extname(location).toLowerCase();
+    return ext === ".yaml" || ext === ".yml";
+}
+
 export async function draftValidate(_context: IActionContext, target: unknown): Promise<void> {
     const params = getDraftDockerfileParams(target);
     const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
@@ -178,8 +184,30 @@ export async function draftValidate(_context: IActionContext, target: unknown): 
     }
 
     const { workspaceFolder, extension, draftBinaryPath } = commonDependencies;
+    const initialLocation = params?.initialLocation || "";
+
+    // Reject non-YAML files up front so users get clear guidance instead of a cryptic
+    // Draft failure. Folders and empty selections fall through unchanged.
+    if (initialLocation) {
+        const resourceUri = Uri.file(join(workspaceFolder.uri.fsPath, initialLocation));
+        let isDirectory = false;
+        try {
+            const stat = await workspace.fs.stat(resourceUri);
+            isDirectory = stat.type === FileType.Directory;
+        } catch {
+            // Can't stat the path — let Draft surface the issue.
+        }
+
+        if (!isDirectory && !isYamlManifestFile(initialLocation)) {
+            window.showErrorMessage(
+                "Draft validate can only check Kubernetes YAML manifests. Select a .yaml or .yml file, or a folder containing manifests.",
+            );
+            return;
+        }
+    }
+
     const panel = new DraftValidatePanel(extension.extensionUri);
-    const dataProvider = new DraftValidateDataProvider(workspaceFolder, draftBinaryPath, params?.initialLocation || "");
+    const dataProvider = new DraftValidateDataProvider(workspaceFolder, draftBinaryPath, initialLocation);
     panel.show(dataProvider);
 }
 
