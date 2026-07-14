@@ -36,6 +36,7 @@ jobs:
           marketplace.visualstudio.com:443
           nodejs.org:443
           objects.githubusercontent.com:443
+          packagefeedproxy.microsoft.io:443
           registry.npmjs.org:443
           update.code.visualstudio.com:443
           vscode.download.prss.microsoft.com:443
