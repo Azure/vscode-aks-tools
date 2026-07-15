@@ -11,6 +11,7 @@ import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinit
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { getLocalKubectlCpPath } from "./utilities/KubectlNetworkHelper";
+import { RETINA_CAPTURE_NODE_HOST_PATH } from "../commands/aksRetinaCapture/retinaCaptureCommand";
 import * as semver from "semver";
 import { l10n, commands, env } from "vscode";
 
@@ -138,14 +139,14 @@ spec:
   volumes:
   - name: mnt-captures
     hostPath:
-      path: /mnt/capture
+      path: ${RETINA_CAPTURE_NODE_HOST_PATH}
   containers:
   - name: node-explorer
     image: alpine
     command: ["sleep", "9999999999"]
     volumeMounts:
     - name: mnt-captures
-      mountPath: /mnt/capture
+      mountPath: ${RETINA_CAPTURE_NODE_HOST_PATH}
 `;
 
         const applyResult = await longRunning(l10n.t(`Deploying pod to capture {0} retina data.`, node), async () => {
@@ -184,7 +185,7 @@ spec:
         const nodeExplorerResult = await longRunning(
             l10n.t(`Copy captured data to local host location {0}.`, captureHostFolderName),
             async () => {
-                const cpcommand = `cp node-explorer-${node}:mnt/capture ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
+                const cpcommand = `cp node-explorer-${node}:${RETINA_CAPTURE_NODE_HOST_PATH.replace(/^\//, "")} ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
                 return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, cpcommand);
             },
         );
