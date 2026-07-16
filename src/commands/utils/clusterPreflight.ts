@@ -210,7 +210,7 @@ export async function checkAutomaticSkuQuota(
 ): Promise<Errorable<AutomaticSkuQuota>> {
     try {
         const client = getComputeManagementClient(sessionProvider, subscriptionId);
-        const usages = client.usage.list(location);
+        const usages = client.usageOperations.list(location);
         const candidateFamilies = new Set(AKS_AUTOMATIC_CANDIDATE_FAMILIES);
         let cores: VCpuQuota | null = null;
         const families: FamilyQuota[] = [];
