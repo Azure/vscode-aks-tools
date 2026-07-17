@@ -59,7 +59,6 @@ const config = {
                 {
                     from: "node_modules/containerization-assist-mcp/skills",
                     to: "skills",
-                    noErrorOnMissing: true,
                 },
             ],
         }),
