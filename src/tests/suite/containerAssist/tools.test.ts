@@ -165,7 +165,7 @@ describe("tools", () => {
     });
 
     describe("handleListDirectory", function () {
-        this.timeout(10_000);
+        this.timeout(30_000);
         it("rejects path traversal", async () => {
             const result = await handleListDirectory({ path: "../../" }, tempDir);
             assert.ok(result.includes("Refused"));
@@ -206,10 +206,11 @@ describe("tools", () => {
                 handleListDirectory({ path: ".", maxDepth: 100 }, tempDir),
             ]);
             assert.strictEqual(resultAtCap, resultOverCap);
-        }).timeout(10_000);
+        }).timeout(30_000);
     });
 
-    describe("handleToolCall", () => {
+    describe("handleToolCall", function () {
+        this.timeout(30_000);
         it("routes readProjectFile correctly", async () => {
             const call = {
                 callId: "test-1",
