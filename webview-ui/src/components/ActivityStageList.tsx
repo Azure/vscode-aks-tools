@@ -146,49 +146,130 @@ function CollapsibleEntries({ stage }: { stage: ActivitySnapshot }) {
 export function ActivityStageList({
     stages,
     onRetryStage,
+    hideEntriesWhenSucceeded = false,
 }: {
     stages: ActivitySnapshot[];
     onRetryStage?: (runId: number, stageId: string) => void;
+    /**
+     * When true, a succeeded stage renders only its title + one-line detail, hiding the leftover
+     * timing/action entries. Keeps compact check lists (e.g. preflight) from ballooning to several
+     * lines per check. Failed/warning stages always show their entries so problems stay visible.
+     */
+    hideEntriesWhenSucceeded?: boolean;
 }) {
     if (stages.length === 0) {
         return null;
     }
     return (
         <ul className={styles.checklist}>
-            {stages.map((stage) => (
-                <li key={stage.stage} className={styles.checkItem}>
-                    <FontAwesomeIcon
-                        className={statusClass[stage.status]}
-                        icon={statusIcon[stage.status]}
-                        spin={stage.status === "running"}
-                    />
-                    <span className={styles.checkBody}>
-                        <span className={styles.checkTitle}>{stage.title}</span>
-                        {stage.detail && <span className={styles.checkDetail}>{stage.detail}</span>}
-                        {stage.fullError && <StageFullError fullError={stage.fullError} />}
-                        {stage.entries.length > 0 &&
-                            (stage.collapsible && stage.entries.length > 1 ? (
-                                <CollapsibleEntries stage={stage} />
-                            ) : (
-                                <span className={styles.activityEntries}>
-                                    {stage.entries.map((entry) => (
-                                        <EntryRow key={entry.action} entry={entry} />
-                                    ))}
-                                </span>
-                            ))}
-                        {onRetryStage && (stage.status === "failed" || stage.status === "warning") && (
-                            <button
-                                type="button"
-                                className={styles.stageRetry}
-                                onClick={() => onRetryStage(stage.runId, stage.stage)}
-                            >
-                                <FontAwesomeIcon className={styles.stageRetryIcon} icon={faArrowRotateRight} />
-                                {l10n.t("Retry this step")}
-                            </button>
-                        )}
-                    </span>
-                </li>
-            ))}
+            {stages.map((stage) => {
+                const showEntries = !(hideEntriesWhenSucceeded && stage.status === "succeeded");
+                return (
+                    <li key={stage.stage} className={styles.checkItem}>
+                        <FontAwesomeIcon
+                            className={statusClass[stage.status]}
+                            icon={statusIcon[stage.status]}
+                            spin={stage.status === "running"}
+                        />
+                        <span className={styles.checkBody}>
+                            <span className={styles.checkTitle}>{stage.title}</span>
+                            {stage.detail && <span className={styles.checkDetail}>{stage.detail}</span>}
+                            {stage.fullError && <StageFullError fullError={stage.fullError} />}
+                            {showEntries &&
+                                stage.entries.length > 0 &&
+                                (stage.collapsible && stage.entries.length > 1 ? (
+                                    <CollapsibleEntries stage={stage} />
+                                ) : (
+                                    <span className={styles.activityEntries}>
+                                        {stage.entries.map((entry) => (
+                                            <EntryRow key={entry.action} entry={entry} />
+                                        ))}
+                                    </span>
+                                ))}
+                            {onRetryStage && (stage.status === "failed" || stage.status === "warning") && (
+                                <button
+                                    type="button"
+                                    className={styles.stageRetry}
+                                    onClick={() => onRetryStage(stage.runId, stage.stage)}
+                                >
+                                    <FontAwesomeIcon className={styles.stageRetryIcon} icon={faArrowRotateRight} />
+                                    {l10n.t("Retry this step")}
+                                </button>
+                            )}
+                        </span>
+                    </li>
+                );
+            })}
         </ul>
+    );
+}
+
+/**
+ * A titled, collapsible wrapper around an {@link ActivityStageList}. Auto-collapses to a one-line
+ * summary once every stage has succeeded; auto-expands while any stage is still running or has
+ * failed/warned so problems stay visible. The user can always toggle manually, and a manual choice
+ * sticks even as the underlying status changes.
+ */
+export function CollapsibleStageGroup({
+    title,
+    stages,
+    onRetryStage,
+}: {
+    title: string;
+    stages: ActivitySnapshot[];
+    onRetryStage?: (runId: number, stageId: string) => void;
+}) {
+    const [userOverride, setUserOverride] = useState<boolean | null>(null);
+
+    if (stages.length === 0) {
+        return null;
+    }
+
+    const total = stages.length;
+    const passed = stages.filter((s) => s.status === "succeeded").length;
+    const hasProblem = stages.some((s) => s.status === "failed" || s.status === "warning");
+    const running = stages.some((s) => s.status === "running" || s.status === "pending");
+    const allPassed = passed === total;
+
+    // Default: expanded while running or when something needs attention; collapsed once all pass.
+    const defaultExpanded = running || hasProblem || !allPassed;
+    const expanded = userOverride ?? defaultExpanded;
+
+    const summary = hasProblem
+        ? l10n.t("{0} of {1} checks need attention", total - passed, total)
+        : running
+          ? l10n.t("Running checks… {0} of {1} passed", passed, total)
+          : l10n.t("{0} of {1} checks passed", passed, total);
+
+    const summaryStatus: SetupStepStatus = hasProblem
+        ? stages.some((s) => s.status === "failed")
+            ? "failed"
+            : "warning"
+        : running
+          ? "running"
+          : "succeeded";
+
+    return (
+        <div className={styles.stageGroup}>
+            <button
+                type="button"
+                className={styles.stageGroupHeader}
+                aria-expanded={expanded}
+                onClick={() => setUserOverride(!expanded)}
+            >
+                <FontAwesomeIcon
+                    className={styles.stageGroupChevron}
+                    icon={expanded ? faChevronDown : faChevronRight}
+                />
+                <span className={styles.stageGroupTitle}>{title}</span>
+                <FontAwesomeIcon
+                    className={statusClass[summaryStatus]}
+                    icon={statusIcon[summaryStatus]}
+                    spin={summaryStatus === "running"}
+                />
+                <span className={styles.stageGroupSummary}>{summary}</span>
+            </button>
+            {expanded && <ActivityStageList stages={stages} onRetryStage={onRetryStage} hideEntriesWhenSucceeded />}
+        </div>
     );
 }

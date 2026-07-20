@@ -18,7 +18,7 @@ import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
 import styles from "./KickstartCluster.module.css";
-import { ActivityStageList, statusClass, statusIcon } from "../components/ActivityStageList";
+import { ActivityStageList, CollapsibleStageGroup, statusClass, statusIcon } from "../components/ActivityStageList";
 import { CostEstimateResult, EventDef, FlowActivity, ScanResult } from "./helpers/state";
 
 interface ClusterInputProps {
@@ -169,7 +169,9 @@ export function ClusterInput(props: ClusterInputProps) {
     const providerScanStages = subscriptionScanStages.filter((s) => s.stage === "providers");
     const regionScanStages = subscriptionScanStages.filter((s) => s.stage !== "providers");
     const preflightStages = props.activity.preflight?.stages ?? [];
-    const visiblePreflightStages = preflightStages.filter((s) => s.stage !== "role");
+    // Hide `role` (surfaced via the permission warning banner) and `providers` (already shown under
+    // the Subscription field during the scan) so the preflight block stays a compact check list.
+    const visiblePreflightStages = preflightStages.filter((s) => s.stage !== "role" && s.stage !== "providers");
     const preflightHasFailure = preflightStages.some((s) => s.status === "failed");
     const preflightRunning = preflightStages.length > 0 && props.preflightCanProceed === null;
     const preflightAttempted = preflightStages.length > 0 || props.preflightCanProceed !== null;
@@ -727,7 +729,7 @@ export function ClusterInput(props: ClusterInputProps) {
 
             {preflightAttempted && visiblePreflightStages.length > 0 && (
                 <div className={`${styles.activityContainer} ${styles.fullWidth}`}>
-                    <ActivityStageList stages={visiblePreflightStages} />
+                    <CollapsibleStageGroup title={l10n.t("Pre-flight checks")} stages={visiblePreflightStages} />
                 </div>
             )}
 
