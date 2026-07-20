@@ -68,6 +68,9 @@ export interface SearchableDropdownProps<T> {
     getValue: (item: T) => string;
     // Derive display + fuzzy-search text. Defaults to getValue.
     toLabel?: (item: T) => string;
+    // Derive default sort key (used when no search text, and as a tiebreaker on equal
+    // fuzzy scores). Defaults to toLabel/getValue. Sorted ascending, locale-aware.
+    sortKey?: (item: T) => string;
 }
 ```
 

@@ -13,7 +13,7 @@ import {
 } from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
 import { statusClass, statusIcon } from "../components/ActivityStageList";
 import { ProgressRing } from "../components/ProgressRing";
-import { TextWithDropdown } from "../components/TextWithDropdown";
+import { SearchableDropdown } from "../components/SearchableDropdown";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, isValid, isValueSet, unset } from "../utilities/validation";
 import { deriveAcrName, getValidatedAcrName, randomSuffix, renderValidationMessage } from "./ClusterInput";
@@ -211,13 +211,12 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
             );
         }
         return (
-            <TextWithDropdown
+            <SearchableDropdown
                 id="existing-cluster-dropdown"
                 className={styles.midControl}
                 items={props.clusters.map(clusterLabel)}
-                selectedItem={props.selectedCluster ? clusterLabel(props.selectedCluster) : null}
-                getAddItemText={() => ""}
-                allowAddItem={false}
+                selectedValue={props.selectedCluster ? clusterLabel(props.selectedCluster) : null}
+                getValue={(s) => s}
                 onSelect={handleClusterSelect}
             />
         );
@@ -243,13 +242,12 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
                     <label htmlFor="connected-acr-dropdown" className={styles.label}>
                         {l10n.t("Connected registry*")}
                     </label>
-                    <TextWithDropdown
+                    <SearchableDropdown
                         id="connected-acr-dropdown"
                         className={styles.midControl}
                         items={acrNames}
-                        selectedItem={effectiveAcrName}
-                        getAddItemText={() => ""}
-                        allowAddItem={false}
+                        selectedValue={effectiveAcrName}
+                        getValue={(s) => s}
                         onSelect={(value) => setSelectedAcrName(value)}
                     />
                     {selectedAcr && <span className={styles.hint}>{selectedAcr.loginServer}</span>}
@@ -346,13 +344,12 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
             <label htmlFor="existing-subscription-dropdown" className={styles.label}>
                 {l10n.t("Subscription*")}
             </label>
-            <TextWithDropdown
+            <SearchableDropdown
                 id="existing-subscription-dropdown"
                 className={styles.midControl}
                 items={subscriptionNames}
-                selectedItem={selectedSubscriptionName}
-                getAddItemText={() => ""}
-                allowAddItem={false}
+                selectedValue={selectedSubscriptionName}
+                getValue={(s) => s}
                 onSelect={handleSubscriptionSelect}
             />
 
