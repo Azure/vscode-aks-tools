@@ -29,8 +29,7 @@ import {
     ProjectType,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/kickstartGuidedSetup";
-import { CustomDropdown } from "../components/CustomDropdown";
-import { CustomDropdownOption } from "../components/CustomDropdownOption";
+import { SearchableDropdown } from "../components/SearchableDropdown";
 import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
@@ -214,31 +213,26 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
                     )}
 
                     {props.githubRepos && props.githubRepos.length > 0 && (
-                        <CustomDropdown
+                        <SearchableDropdown
                             id="github-repo-dropdown"
                             className={styles.ghDropdown}
-                            value={
+                            items={props.githubRepos}
+                            selectedValue={
                                 isValueSet(repoUrl) && props.githubRepos.some((r) => r.cloneUrl === repoUrl.value)
                                     ? repoUrl.value
-                                    : ""
+                                    : null
                             }
-                            onChange={(value) => {
+                            getValue={(repo) => repo.cloneUrl}
+                            toLabel={(repo) => {
+                                const name = repo.fullName.split("/").slice(1).join("/") || repo.fullName;
+                                return `${name}${repo.private ? "  •  private" : ""}${
+                                    repo.description ? `  —  ${repo.description}` : ""
+                                }`;
+                            }}
+                            onSelect={(value) => {
                                 if (value) setRepoUrl(valid(value));
                             }}
-                        >
-                            {props.githubRepos.map((repo) => {
-                                const name = repo.fullName.split("/").slice(1).join("/") || repo.fullName;
-                                return (
-                                    <CustomDropdownOption
-                                        key={repo.cloneUrl}
-                                        value={repo.cloneUrl}
-                                        label={`${name}${repo.private ? "  •  private" : ""}${
-                                            repo.description ? `  —  ${repo.description}` : ""
-                                        }`}
-                                    />
-                                );
-                            })}
-                        </CustomDropdown>
+                        />
                     )}
 
                     <div className={styles.ghDivider}>{l10n.t("or")}</div>
