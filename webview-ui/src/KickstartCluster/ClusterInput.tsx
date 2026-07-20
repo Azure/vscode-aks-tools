@@ -535,7 +535,7 @@ export function ClusterInput(props: ClusterInputProps) {
         if (!matchesRegion) {
             return (
                 <div className={styles.costPanel}>
-                    <span className={styles.costHeader}>{l10n.t("Base cost estimate (excludes workloads)")}</span>
+                    <span className={styles.costHeader}>{l10n.t("Estimated monthly cost")}</span>
                     <span className={styles.costLoading}>{l10n.t("Estimating costs for {0}…", currentLocation)}</span>
                 </div>
             );
@@ -544,7 +544,7 @@ export function ClusterInput(props: ClusterInputProps) {
         if (result.error || !result.estimate) {
             return (
                 <div className={styles.costPanel}>
-                    <span className={styles.costHeader}>{l10n.t("Base cost estimate (excludes workloads)")}</span>
+                    <span className={styles.costHeader}>{l10n.t("Estimated monthly cost")}</span>
                     <span className={styles.costError}>
                         <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
                         {result.error ?? l10n.t("Couldn't estimate the monthly cost for this region.")}
@@ -557,7 +557,7 @@ export function ClusterInput(props: ClusterInputProps) {
         return (
             <div className={styles.costPanel}>
                 <div className={styles.costHeaderRow}>
-                    <span className={styles.costHeader}>{l10n.t("Base cost estimate (excludes workloads)")}</span>
+                    <span className={styles.costHeader}>{l10n.t("Estimated monthly cost")}</span>
                     <span className={styles.costTotal}>
                         {formatCurrency(estimate.monthlyTotal, estimate.currencyCode)}
                         {estimate.isApproximate ? "*" : ""}
