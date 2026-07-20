@@ -225,7 +225,7 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
                             getValue={(repo) => repo.cloneUrl}
                             toLabel={(repo) => {
                                 const name = repo.fullName.split("/").slice(1).join("/") || repo.fullName;
-                                return `${name}${repo.private ? "  •  private" : ""}${
+                                return `${name}${repo.private ? " (private)" : ""}${
                                     repo.description ? `  —  ${repo.description}` : ""
                                 }`;
                             }}
