@@ -59,10 +59,56 @@ import {
 } from "../webview-contract/webviewDefinitions/kickstartShared";
 import { ActivityReporter, ActivitySink, CancellationToken } from "./kickstartActivity";
 
+// Region capacity-risk tiers for AKS Automatic system-pool availability. Ordering drives which
+// region we recommend first: `low` regions have ample open pool capacity, `medium` have shrinking
+// headroom, and `high` are capacity-constrained (system pools supportable well below entitlement)
+// and are deprioritised. Membership only — no raw capacity numbers are encoded, since those drift.
 const REGION_CAPACITY_RISK = {
-    low: ["eastus2", "westus3", "southcentralus", "canadacentral", "swedencentral", "japaneast"],
-    medium: ["centralus", "westus2"],
-    high: ["eastus", "westeurope", "southeastasia"],
+    low: [
+        "newzealandnorth",
+        "japanwest",
+        "canadacentral",
+        "swedencentral",
+        "eastasia",
+        "centralindia",
+        "australiacentral",
+        "eastus2",
+        "polandcentral",
+        "ukwest",
+        "westcentralus",
+        "koreacentral",
+        "switzerlandnorth",
+        "italynorth",
+    ],
+    medium: [
+        "southindia",
+        "southeastasia",
+        "australiaeast",
+        "northcentralus",
+        "norwayeast",
+        "francecentral",
+        "centralus",
+        "southcentralus",
+        "japaneast",
+        "canadaeast",
+        "brazilsouth",
+        "westus2",
+        "westus3",
+    ],
+    high: [
+        "eastus",
+        "westeurope",
+        "northeurope",
+        "koreasouth",
+        "germanywestcentral",
+        "westus",
+        "uksouth",
+        "eastus3",
+        "southcentralus2",
+        "southeastus",
+        "southwestus",
+        "qatarcentral",
+    ],
 };
 
 const PREFERRED_REGION_ORDER = [...REGION_CAPACITY_RISK.low, ...REGION_CAPACITY_RISK.medium];
