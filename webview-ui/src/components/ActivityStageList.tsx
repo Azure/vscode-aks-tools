@@ -71,19 +71,44 @@ function ProgressBar({ progress }: { progress: number }) {
     );
 }
 
+/**
+ * A chevron + label button that toggles a disclosure region. Shared by every collapsible in this
+ * file (stage full-error, capacity-check entries, and the preflight stage group) so the
+ * button/chevron markup and aria wiring live in exactly one place.
+ */
+function DisclosureButton({
+    expanded,
+    onToggle,
+    label,
+    className,
+}: {
+    expanded: boolean;
+    onToggle: () => void;
+    label: string;
+    className?: string;
+}) {
+    return (
+        <button
+            type="button"
+            className={`${styles.disclosureToggle} ${className ?? ""}`}
+            aria-expanded={expanded}
+            onClick={onToggle}
+        >
+            <FontAwesomeIcon className={styles.disclosureChevron} icon={expanded ? faChevronDown : faChevronRight} />
+            {label}
+        </button>
+    );
+}
+
 function StageFullError({ fullError }: { fullError: string }) {
     const [expanded, setExpanded] = useState(false);
     return (
         <span className={styles.fullError}>
-            <button
-                type="button"
-                className={styles.fullErrorToggle}
-                aria-expanded={expanded}
-                onClick={() => setExpanded((prev) => !prev)}
-            >
-                <FontAwesomeIcon className={styles.fullErrorChevron} icon={expanded ? faChevronDown : faChevronRight} />
-                {expanded ? l10n.t("Hide details") : l10n.t("More")}
-            </button>
+            <DisclosureButton
+                expanded={expanded}
+                onToggle={() => setExpanded((prev) => !prev)}
+                label={expanded ? l10n.t("Hide details") : l10n.t("More")}
+            />
             {expanded && <span className={styles.fullErrorBody}>{fullError}</span>}
         </span>
     );
@@ -123,15 +148,11 @@ function CollapsibleEntries({ stage }: { stage: ActivitySnapshot }) {
     const [expanded, setExpanded] = useState(false);
     return (
         <span className={styles.entriesCollapse}>
-            <button
-                type="button"
-                className={styles.entriesToggle}
-                aria-expanded={expanded}
-                onClick={() => setExpanded((prev) => !prev)}
-            >
-                <FontAwesomeIcon className={styles.entriesChevron} icon={expanded ? faChevronDown : faChevronRight} />
-                {expanded ? l10n.t("Hide Capacity Checks") : l10n.t("Show Capacity Checks")}
-            </button>
+            <DisclosureButton
+                expanded={expanded}
+                onToggle={() => setExpanded((prev) => !prev)}
+                label={expanded ? l10n.t("Hide Capacity Checks") : l10n.t("Show Capacity Checks")}
+            />
             {expanded && (
                 <span className={styles.activityEntries}>
                     {stage.entries.map((entry) => (
@@ -253,12 +274,12 @@ export function CollapsibleStageGroup({
         <div className={styles.stageGroup}>
             <button
                 type="button"
-                className={styles.stageGroupHeader}
+                className={`${styles.disclosureToggle} ${styles.stageGroupHeader}`}
                 aria-expanded={expanded}
                 onClick={() => setUserOverride(!expanded)}
             >
                 <FontAwesomeIcon
-                    className={styles.stageGroupChevron}
+                    className={styles.disclosureChevron}
                     icon={expanded ? faChevronDown : faChevronRight}
                 />
                 <span className={styles.stageGroupTitle}>{title}</span>
