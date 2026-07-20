@@ -13,7 +13,7 @@ import {
     Subscription,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/kickstartCluster";
-import { TextWithDropdown } from "../components/TextWithDropdown";
+import { SearchableDropdown } from "../components/SearchableDropdown";
 import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
@@ -460,13 +460,12 @@ export function ClusterInput(props: ClusterInputProps) {
             );
         }
         return (
-            <TextWithDropdown
+            <SearchableDropdown
                 id="location-dropdown"
                 className={styles.midControl}
                 items={props.locations}
-                selectedItem={currentLocation || null}
-                getAddItemText={() => ""}
-                allowAddItem={false}
+                selectedValue={currentLocation || null}
+                getValue={(s) => s}
                 onSelect={handleLocationSelect}
             />
         );
@@ -490,13 +489,12 @@ export function ClusterInput(props: ClusterInputProps) {
             );
         }
         return (
-            <TextWithDropdown
+            <SearchableDropdown
                 id="resource-group-dropdown"
                 className={styles.midControl}
                 items={props.resourceGroups.map((g) => g.name)}
-                selectedItem={existingResourceGroup || null}
-                getAddItemText={() => ""}
-                allowAddItem={false}
+                selectedValue={existingResourceGroup || null}
+                getValue={(s) => s}
                 onSelect={(value) => setExistingResourceGroup(value ?? "")}
             />
         );
@@ -604,13 +602,12 @@ export function ClusterInput(props: ClusterInputProps) {
                     <label htmlFor="subscription-dropdown" className={styles.label}>
                         {l10n.t("Subscription*")}
                     </label>
-                    <TextWithDropdown
+                    <SearchableDropdown
                         id="subscription-dropdown"
                         className={styles.midControl}
                         items={subscriptionNames}
-                        selectedItem={selectedSubscriptionName}
-                        getAddItemText={() => ""}
-                        allowAddItem={false}
+                        selectedValue={selectedSubscriptionName}
+                        getValue={(s) => s}
                         onSelect={handleSubscriptionSelect}
                     />
                     {providerScanStages.length > 0 && (
