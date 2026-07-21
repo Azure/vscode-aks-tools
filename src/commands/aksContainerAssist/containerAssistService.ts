@@ -1,7 +1,13 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { Errorable, failed } from "../utils/errorable";
-import { AnalyzeRepositoryResult, DeploymentResult, ExistingFilesCheckResult, ModuleAnalysisResult } from "./types";
+import {
+    AnalyzeRepositoryResult,
+    DeploymentArtifacts,
+    DeploymentResult,
+    ExistingFilesCheckResult,
+    ModuleAnalysisResult,
+} from "./types";
 import { logger } from "./logger";
 import * as l10n from "@vscode/l10n";
 import {
@@ -278,37 +284,41 @@ export class ContainerAssistService {
 
     async generateDeploymentFiles(
         folderPath: string,
-        acrLoginServer?: string,
+        imageRepositoryFor?: (moduleName: string) => string | undefined,
         namespace?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
         onProgress?: (message: string) => void,
+        artifacts: DeploymentArtifacts = { dockerfile: true, manifests: true },
     ): Promise<Errorable<DeploymentResult>> {
         const reportProgress = (message: string) => onProgress?.(message);
 
         const existingFiles = await this.checkExistingFiles(folderPath);
 
-        const skipDockerfile = existingFiles.hasDockerfile;
-        const skipK8sManifests = existingFiles.hasK8sManifests;
+        // Skip an artifact if it wasn't requested, or if it already exists on disk.
+        const skipDockerfile = !artifacts.dockerfile || existingFiles.hasDockerfile;
+        const skipK8sManifests = !artifacts.manifests || existingFiles.hasK8sManifests;
+
+        // Requested artifacts that already exist on disk are preserved (not regenerated).
+        const preserved = [
+            artifacts.dockerfile && existingFiles.hasDockerfile && "Dockerfile",
+            artifacts.manifests && existingFiles.hasK8sManifests && `${getK8sManifestFolder()}/ manifests`,
+        ].filter(Boolean) as string[];
 
         if (skipDockerfile && skipK8sManifests) {
-            const message = l10n.t(
-                "Deployment files already exist (Dockerfile and {0}/ manifests). No new files generated.",
-                getK8sManifestFolder(),
-            );
-            vscode.window.showInformationMessage(message);
+            if (preserved.length > 0) {
+                vscode.window.showInformationMessage(
+                    l10n.t("Deployment files already exist ({0}). No new files generated.", preserved.join(", ")),
+                );
+            }
             return {
                 succeeded: true,
                 result: { generatedFiles: [] },
             };
         }
 
-        if (skipDockerfile || skipK8sManifests) {
-            const existingList = [
-                skipDockerfile && "Dockerfile",
-                skipK8sManifests && `${getK8sManifestFolder()}/ manifests`,
-            ].filter(Boolean);
-            vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", existingList.join(", ")));
+        if (preserved.length > 0) {
+            vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", preserved.join(", ")));
         }
 
         const lmResult = await this.lmClient.ensureModel();
@@ -355,7 +365,7 @@ export class ContainerAssistService {
                 const manifestAppName = module.name;
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
                 const manifestNamespace = namespace || "default";
-                const imageRepository = acrLoginServer ? `${acrLoginServer}/${manifestAppName}` : undefined;
+                const imageRepository = imageRepositoryFor?.(manifestAppName);
                 const manifestsResult = await this.generateManifests(
                     module.modulePath,
                     manifestAppName,
