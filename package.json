@@ -1119,7 +1119,7 @@
         "package": "vsce package",
         "webpack": "npm run build:webview && webpack --mode production",
         "webpack-dev": "npm run build:webview && webpack --mode development --watch",
-        "test-compile": "npm run build:webview && tsc -p ./ && cp resources/yaml/aks-deploy.template.yaml out/src/commands/aksContainerAssist/ && rm -rf dist/skills && mkdir -p dist && cp -R node_modules/containerization-assist-mcp/skills dist/",
+        "test-compile": "npm run build:webview && tsc -p ./ && node -e \"const fs=require('fs');const path=require('path');const templateSrc=path.join('resources','yaml','aks-deploy.template.yaml');const templateDstDir=path.join('out','src','commands','aksContainerAssist');fs.mkdirSync(templateDstDir,{recursive:true});fs.copyFileSync(templateSrc,path.join(templateDstDir,path.basename(templateSrc)));fs.rmSync(path.join('dist','skills'),{recursive:true,force:true});fs.mkdirSync('dist',{recursive:true});fs.cpSync(path.join('node_modules','containerization-assist-mcp','skills'),path.join('dist','skills'),{recursive:true});\"",
         "watch": "tsc -watch -p ./",
         "test": "npm run test-compile && node ./out/src/tests/runTests.js",
         "test:fuzz": "npm run test-compile && mocha --require source-map-support/register 'out/src/tests/fuzz/**/*.test.js'",
