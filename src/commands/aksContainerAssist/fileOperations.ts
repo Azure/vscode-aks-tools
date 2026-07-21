@@ -84,6 +84,16 @@ const EXCLUDED_DIRS = new Set([
 /** Maximum directory depth for Dockerfile and manifest scanning. */
 const SCAN_MAX_DEPTH = 3;
 
+export function isExcludedModulePath(modulePath: string, rootPath: string): boolean {
+    const relative = path.relative(rootPath, modulePath);
+
+    if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+        return false;
+    }
+
+    return relative.split(path.sep).some((segment) => EXCLUDED_DIRS.has(segment));
+}
+
 /**
  * Searches recursively (up to 3 levels deep) for Dockerfiles under rootPath.
  * Returns absolute paths sorted shallowest-first; excluded dirs are skipped.
