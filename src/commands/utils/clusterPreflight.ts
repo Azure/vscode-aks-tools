@@ -111,12 +111,28 @@ export interface SkuZoneAvailability {
     regionZones: string[];
     usableZones: string[];
     sufficient: boolean;
+    /**
+     * True when this SKU is blocked by a `NotAvailableForSubscription` restriction (the family isn't
+     * enabled for the subscription in this region/zone) rather than a transient capacity/zone
+     * shortfall. Distinguishes "request SKU enablement" from "pick another region".
+     */
+    notAvailableForSubscription: boolean;
 }
 
 export interface AutomaticSkuZones {
     requiredZoneCount: number;
     offered: SkuZoneAvailability[];
-    restrictedZones: string[];
+    /**
+     * The largest number of usable availability zones any single offered SKU provides. This is the
+     * value that actually gates AKS Automatic (it needs one SKU with enough zones), unlike a union
+     * of restricted zones across SKUs, which overstates the restriction.
+     */
+    bestUsableZoneCount: number;
+    /**
+     * True when every offered SKU is blocked specifically by `NotAvailableForSubscription`, i.e. the
+     * region has the SKUs but they aren't enabled for this subscription. Drives a clearer message.
+     */
+    blockedForSubscription: boolean;
     sufficient: boolean;
 }
 
@@ -268,7 +284,6 @@ export async function checkAutomaticSkuZones(
 
         const skus = client.resourceSkus.list({ filter: `location eq '${location}'` });
         const offered: SkuZoneAvailability[] = [];
-        const restrictedZones = new Set<string>();
 
         for await (const sku of skus) {
             if (sku.resourceType !== "virtualMachines" || !sku.name) {
@@ -285,12 +300,18 @@ export async function checkAutomaticSkuZones(
             const regionZones = sortZones(locationInfo?.zones ?? []);
 
             // A "Location" restriction blocks the SKU across the whole region for this subscription;
-            // a "Zone" restriction blocks specific zones. Subtract both from the offered zones.
+            // a "Zone" restriction blocks specific zones. Subtract both from the offered zones. Track
+            // whether the blocking reason is subscription enablement (NotAvailableForSubscription) vs
+            // a capacity/region shortfall, so we can give the right guidance.
             let locationBlocked = false;
+            let notAvailableForSubscription = false;
             const blockedZones = new Set<string>();
             for (const restriction of sku.restrictions ?? []) {
                 if (!restrictionAppliesToLocation(restriction, normalizedLocation)) {
                     continue;
+                }
+                if (restriction.reasonCode === "NotAvailableForSubscription") {
+                    notAvailableForSubscription = true;
                 }
                 if (restriction.type === "Location") {
                     locationBlocked = true;
@@ -302,26 +323,29 @@ export async function checkAutomaticSkuZones(
             }
 
             const usableZones = locationBlocked ? [] : regionZones.filter((zone) => !blockedZones.has(zone));
-            for (const zone of regionZones) {
-                if (locationBlocked || blockedZones.has(zone)) {
-                    restrictedZones.add(zone);
-                }
-            }
 
             offered.push({
                 name: canonicalName,
                 regionZones,
                 usableZones,
                 sufficient: usableZones.length >= requiredZoneCount,
+                // Only meaningful when the SKU is actually short of usable zones.
+                notAvailableForSubscription: notAvailableForSubscription && usableZones.length < requiredZoneCount,
             });
         }
+
+        const bestUsableZoneCount = offered.reduce((max, sku) => Math.max(max, sku.usableZones.length), 0);
+        const shortfallSkus = offered.filter((sku) => !sku.sufficient);
+        const blockedForSubscription =
+            shortfallSkus.length > 0 && shortfallSkus.every((sku) => sku.notAvailableForSubscription);
 
         return {
             succeeded: true,
             result: {
                 requiredZoneCount,
                 offered,
-                restrictedZones: sortZones([...restrictedZones]),
+                bestUsableZoneCount,
+                blockedForSubscription,
                 sufficient: offered.some((sku) => sku.sufficient),
             },
         };
