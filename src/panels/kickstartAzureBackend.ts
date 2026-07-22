@@ -1007,7 +1007,7 @@ function summarizeZones(
         };
     }
 
-    const { offered, restrictedZones, requiredZoneCount, sufficient } = zones.result;
+    const { offered, bestUsableZoneCount, blockedForSubscription, requiredZoneCount, sufficient } = zones.result;
     if (sufficient) {
         return {
             status: "succeeded",
@@ -1031,26 +1031,29 @@ function summarizeZones(
         };
     }
 
-    if (restrictedZones.length > 0) {
+    // The SKUs exist in the region but aren't enabled for this subscription (NotAvailableForSubscription).
+    // That's an enablement/allocation issue, not a regional capacity gap, so guide toward requesting access.
+    if (blockedForSubscription) {
         return {
             status: "failed",
             detail: l10n.t(
-                "Your subscription is restricted from availability zone(s) {0} in {1}, leaving fewer than the {2} zones AKS Automatic requires. Choose another region or request zone access for this subscription.",
-                restrictedZones.join(", "),
+                "The VM sizes AKS Automatic needs aren't enabled for your subscription in {0} (they offer only {1} of the {2} required availability zones). Request access to these VM sizes for your subscription, or choose another region.",
                 location,
+                bestUsableZoneCount,
                 requiredZoneCount,
             ),
-            entryDetail: l10n.t("zone(s) {0} restricted", restrictedZones.join(", ")),
+            entryDetail: l10n.t("VM sizes not enabled for subscription"),
         };
     }
 
     return {
         status: "failed",
         detail: l10n.t(
-            "{0} doesn't support the {1} availability zones AKS Automatic requires for its VM sizes.",
-            location,
+            "The VM sizes AKS Automatic needs offer only {0} of the {1} availability zones it requires in {2}. Choose another region.",
+            bestUsableZoneCount,
             requiredZoneCount,
+            location,
         ),
-        entryDetail: l10n.t("fewer than {0} zones", requiredZoneCount),
+        entryDetail: l10n.t("{0} of {1} zones available", bestUsableZoneCount, requiredZoneCount),
     };
 }
