@@ -8,7 +8,7 @@ import {
 } from "../../webview-contract/webviewDefinitions/draft/draftValidate";
 import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
-import { ShellOptions, exec } from "../../commands/utils/shell";
+import { ShellOptions, exec, NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
 
 export class DraftValidatePanel extends BasePanel<"draftValidate"> {
@@ -53,11 +53,15 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
     }
 
     private async handleDraftValidateRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `draft validate --manifest .${path.sep}${this.initialLocation}`;
+        // The draftValidate command guarantees a valid file/folder selection before opening this panel.
+        const manifestPath = `.${path.sep}${this.initialLocation.trim()}`;
+        const command = `draft validate --manifest "${manifestPath}"`;
 
         const execOptions: ShellOptions = {
             workingDir: this.workspaceFolder.uri.fsPath,
             envPaths: [this.draftDirectory],
+            // draft validate exits non-zero when it finds violations; those are results, not a failure.
+            exitCodeBehaviour: NonZeroExitCodeBehaviour.Succeed,
         };
 
         const draftResult = await exec(command, execOptions);
@@ -66,7 +70,13 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
             return;
         }
 
-        const validationResults = draftResult.result.stdout;
+        // Findings can appear on stdout or stderr depending on the outcome; surface both.
+        const { stdout, stderr } = draftResult.result;
+        const validationResults =
+            [stdout, stderr]
+                .map((s) => s?.trim())
+                .filter((s) => s)
+                .join("\n\n") || l10n.t("Draft validate returned no output.");
 
         webview.postValidationResult({ result: validationResults });
     }

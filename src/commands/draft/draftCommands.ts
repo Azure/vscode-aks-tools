@@ -170,6 +170,24 @@ export async function draftWorkflow(_context: IActionContext, target: unknown): 
     panel.show(dataProvider);
 }
 
+/** Returns true if the given path points to a YAML manifest (.yaml/.yml). */
+export function isYamlManifestFile(location: string): boolean {
+    const ext = extname(location).toLowerCase();
+    return ext === ".yaml" || ext === ".yml";
+}
+
+/** Shown when Draft validate is invoked without a YAML manifest file or a folder of manifests. */
+export const DRAFT_VALIDATE_INVALID_SELECTION_MESSAGE =
+    "Draft validate needs a Kubernetes YAML manifest. Right-click a .yaml or .yml file, or a folder containing manifests, and run Draft validate.";
+
+/** A selection is validatable if it is a folder, or a .yaml/.yml file. Empty selections are not. */
+export function canRunDraftValidate(initialLocation: string, isDirectory: boolean): boolean {
+    if (!initialLocation) {
+        return false;
+    }
+    return isDirectory || isYamlManifestFile(initialLocation);
+}
+
 export async function draftValidate(_context: IActionContext, target: unknown): Promise<void> {
     const params = getDraftDockerfileParams(target);
     const commonDependencies = await getCommonDraftDependencies(params?.workspaceFolder);
@@ -178,8 +196,28 @@ export async function draftValidate(_context: IActionContext, target: unknown): 
     }
 
     const { workspaceFolder, extension, draftBinaryPath } = commonDependencies;
+    const initialLocation = params?.initialLocation || "";
+
+    // Draft validate needs a YAML manifest file or a folder of manifests. Reject a missing
+    // selection or a non-YAML file up front with a single clear message, rather than opening
+    // an empty panel or handing a bad path to Draft.
+    let isDirectory = false;
+    if (initialLocation) {
+        try {
+            const stat = await workspace.fs.stat(Uri.file(join(workspaceFolder.uri.fsPath, initialLocation)));
+            isDirectory = stat.type === FileType.Directory;
+        } catch {
+            // Can't stat the path — fall back to the file-extension check below.
+        }
+    }
+
+    if (!canRunDraftValidate(initialLocation, isDirectory)) {
+        window.showErrorMessage(DRAFT_VALIDATE_INVALID_SELECTION_MESSAGE);
+        return;
+    }
+
     const panel = new DraftValidatePanel(extension.extensionUri);
-    const dataProvider = new DraftValidateDataProvider(workspaceFolder, draftBinaryPath, params?.initialLocation || "");
+    const dataProvider = new DraftValidateDataProvider(workspaceFolder, draftBinaryPath, initialLocation);
     panel.show(dataProvider);
 }
 
