@@ -106,13 +106,13 @@
                 },
                 "azure.kubelogin.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.31",
+                    "default": "v0.2.19",
                     "title": "Kubelogin repository release tag",
-                    "description": "Release tag for the stable kubelogin tool release."
+                    "description": "Release tag for the stable kubelogin tool release. This value is also substituted into generated GitHub Actions workflows for the azure/use-kubelogin action's kubelogin-version input."
                 },
                 "azure.kubectlgadget.releaseTag": {
                     "type": "string",
-                    "default": "v0.51.0",
+                    "default": "v0.53.2",
                     "title": "Kubectl-gadget repository release tag",
                     "description": "Release tag for the stable kubectl-gadget tool."
                 },
@@ -138,13 +138,13 @@
                 },
                 "aks.drafttool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.38",
+                    "default": "v0.17.14",
                     "title": "Draft repository release tag",
                     "description": "Release tag for the stable Draft tool release."
                 },
                 "aks.retinatool.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.26",
+                    "default": "v1.2.2",
                     "title": "Retina repository release tag",
                     "description": "Release tag for the stable Retina tool release."
                 },
@@ -200,7 +200,7 @@
                 },
                 "aks.aksmcpserver.releaseTag": {
                     "type": "string",
-                    "default": "v0.0.17",
+                    "default": "v0.0.19",
                     "title": "AKS MCP Server repository release tag",
                     "description": "Release tag for the stable AKS MCP Server tool release."
                 },

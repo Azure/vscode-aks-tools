@@ -6,6 +6,9 @@ export async function run(): Promise<void> {
     // Create the mocha test
     const mocha = new Mocha({
         ui: "bdd",
+        // Integration tests use vscode.workspace.fs (extension-host RPC), which is slow
+        // on CI; Mocha's 2000ms default is too tight and causes flaky timeouts.
+        timeout: 20_000,
     });
 
     const testsRoot = path.resolve(__dirname);
