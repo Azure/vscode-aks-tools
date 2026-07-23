@@ -149,11 +149,48 @@
 <p>To make a new release and publish it to the marketplace you have to follow the following steps.</p>
 <ol>
 <li>Create a branch <code>publish-x.y.z</code></li>
-<li>Update <code>package.json</code> with the new version </li>
+<li>Update <code>package.json</code> with the new version</li>
+<li>Refresh the pinned third-party versions (see <a href="#pinned-third-party-versions">Pinned third-party versions</a> below)</li>
 <li>Add a section to <code>CHANGELOG.md</code> with the header <code>## [x.y.z]</code> (N.B: make sure to write the new version in square brackets as the <code>changelog-reader</code> action only works if the <code>CHANGELOG.md</code> file follows the <a href="https://github.com/olivierlacan/keep-a-changelog">Keep a Changelog standard</a>)</li>
 <li>Create a new PR, get approval and merge</li>
 <li>Run the <code>Build &amp; Publish</code> workflow manually from the GH Actions tab</li>
 </ol>
+<h3 id="pinned-third-party-versions"><a class="header" href="#pinned-third-party-versions">Pinned third-party versions</a></h3>
+<p>Two independent sets of external versions are baked into this extension. Both drift silently between releases and should be reviewed each cut.</p>
+<h4 id="cli-binaries-downloaded-on-demand"><a class="header" href="#cli-binaries-downloaded-on-demand">CLI binaries downloaded on demand</a></h4>
+<p>Defaults live in <code>package.json</code> under <code>contributes.configuration</code>. <code>azure.kubelogin.releaseTag</code> is the single source of truth for both the locally-downloaded kubelogin AND the <code>kubelogin-version</code> input in every generated GitHub Actions workflow — <code>workflowTemplate.ts</code> substitutes the setting value at generation time.</p>
+<div class="table-wrapper"><table><thead><tr><th>Setting</th><th>Upstream repo</th><th>Consumed by</th></tr></thead><tbody>
+<tr><td><code>azure.kubelogin.releaseTag</code></td><td><a href="https://github.com/Azure/kubelogin/releases">Azure/kubelogin</a></td><td>Local CLI download <strong>and</strong> substituted into generated workflows as <code>kubelogin-version</code></td></tr>
+<tr><td><code>azure.kubectlgadget.releaseTag</code></td><td><a href="https://github.com/inspektor-gadget/inspektor-gadget/releases">inspektor-gadget/inspektor-gadget</a></td><td>Local <code>kubectl-gadget</code> download</td></tr>
+<tr><td><code>aks.drafttool.releaseTag</code></td><td><a href="https://github.com/Azure/draft/releases">Azure/draft</a></td><td>Local Draft binary download (skip tags with no uploaded assets — Draft occasionally publishes a tag before its assets)</td></tr>
+<tr><td><code>aks.retinatool.releaseTag</code></td><td><a href="https://github.com/microsoft/retina/releases">microsoft/retina</a></td><td>Local <code>kubectl-retina</code> download</td></tr>
+<tr><td><code>aks.aksmcpserver.releaseTag</code></td><td><a href="https://github.com/Azure/aks-mcp/releases">Azure/aks-mcp</a></td><td>Local AKS MCP server binary download</td></tr>
+</tbody></table>
+</div>
+<pre><code class="language-sh">for repo in Azure/kubelogin Azure/aks-mcp Azure/draft microsoft/retina inspektor-gadget/inspektor-gadget; do
+  echo -n &quot;$repo: &quot;; gh api &quot;repos/$repo/releases/latest&quot; --jq '.tag_name'
+done
+</code></pre>
+<p>Before bumping, verify the target release actually has uploaded platform assets (<code>curl -sI</code> on a representative download URL and expect <code>HTTP/2 200</code>).</p>
+<h4 id="github-actions-pinned-in-workflow-templates"><a class="header" href="#github-actions-pinned-in-workflow-templates">GitHub Actions pinned in workflow templates</a></h4>
+<p>The templates under <code>resources/yaml/*.template.yaml</code> pin these action majors. Major tags receive minor/patch fixes automatically — bumping is only needed when a new major ships. When bumping, update all template files that reference the action and the corresponding assertions in <code>src/tests/suite/containerAssist/workflowTemplate.test.ts</code>.</p>
+<div class="table-wrapper"><table><thead><tr><th>Action</th><th>Upstream</th></tr></thead><tbody>
+<tr><td><code>actions/checkout</code></td><td><a href="https://github.com/actions/checkout/releases">actions/checkout</a></td></tr>
+<tr><td><code>azure/login</code></td><td><a href="https://github.com/Azure/login/releases">Azure/login</a></td></tr>
+<tr><td><code>azure/use-kubelogin</code></td><td><a href="https://github.com/Azure/use-kubelogin/releases">Azure/use-kubelogin</a></td></tr>
+<tr><td><code>azure/aks-set-context</code></td><td><a href="https://github.com/Azure/aks-set-context/releases">Azure/aks-set-context</a></td></tr>
+<tr><td><code>Azure/k8s-deploy</code></td><td><a href="https://github.com/Azure/k8s-deploy/releases">Azure/k8s-deploy</a></td></tr>
+</tbody></table>
+</div>
+<pre><code class="language-sh">grep -h &quot;uses:&quot; resources/yaml/*.template.yaml | sort -u
+for repo in actions/checkout Azure/login Azure/use-kubelogin Azure/aks-set-context Azure/k8s-deploy; do
+  echo -n &quot;$repo: &quot;
+  gh api &quot;repos/$repo/releases&quot; --jq \
+    '[.[] | select(.prerelease==false and .draft==false)] | .[0].tag_name'
+done
+</code></pre>
+<p>Skim the release notes of the target major before bumping. Recent Azure/* action majors have been pure Node.js runtime bumps (Node 20 → Node 24) and are safe. Watch for renamed/removed inputs or new required inputs.</p>
+<p><strong>Do not bump a version without a smoke test</strong> — generate a workflow via the extension, push it to a real branch on a real AKS cluster, and confirm the run succeeds. Bumping blindly is worse than staying pinned.</p>
 <h3 id="build--publish"><a class="header" href="#build--publish">Build &amp; Publish</a></h3>
 <p>The <code>Build &amp; Publish</code> workflow allows to create a new release, package it in a VSIX file and publish to the VSCode marketplace with a single click.</p>
 <p>The only requirement needed to run the workflow is to have a secret named <code>VS_MARKETPLACE_TOKEN</code> containing the Personal Access Token of the publisher. You can find more infos about how to create a publisher/token in the <a href="https://code.visualstudio.com/api/working-with-extensions/publishing-extension#create-a-publisher">official documentation</a></p>
