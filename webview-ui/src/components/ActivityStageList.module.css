@@ -33,7 +33,6 @@
     display: block;
     color: var(--vscode-descriptionForeground);
     font-size: 0.9em;
-    margin-top: 0.15rem;
 }
 
 .checkPending {
@@ -148,7 +147,7 @@
     margin-top: 0.25rem;
 }
 
-.fullErrorToggle {
+.disclosureToggle {
     display: inline-flex;
     align-items: center;
     align-self: flex-start;
@@ -162,12 +161,12 @@
     font-size: 0.9em;
 }
 
-.fullErrorToggle:hover {
+.disclosureToggle:hover {
     color: var(--vscode-textLink-activeForeground);
     text-decoration: underline;
 }
 
-.fullErrorChevron {
+.disclosureChevron {
     font-size: 0.8em;
 }
 
@@ -194,29 +193,6 @@
     margin-top: 0.25rem;
 }
 
-.entriesToggle {
-    display: inline-flex;
-    align-items: center;
-    align-self: flex-start;
-    column-gap: 0.35rem;
-    padding: 0;
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: var(--vscode-textLink-foreground);
-    font-family: inherit;
-    font-size: 0.9em;
-}
-
-.entriesToggle:hover {
-    color: var(--vscode-textLink-activeForeground);
-    text-decoration: underline;
-}
-
-.entriesChevron {
-    font-size: 0.8em;
-}
-
 .stageRetry {
     display: inline-flex;
     align-items: center;
@@ -239,4 +215,30 @@
 
 .stageRetryIcon {
     font-size: 0.85em;
+}
+
+.stageGroup {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.5rem;
+}
+
+.stageGroupHeader {
+    column-gap: 0.5rem;
+    color: var(--vscode-foreground);
+    font-size: inherit;
+    text-align: left;
+}
+
+.stageGroupHeader:hover {
+    text-decoration: none;
+}
+
+.stageGroupTitle {
+    font-weight: 600;
+}
+
+.stageGroupSummary {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
 }
