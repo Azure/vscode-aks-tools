@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as path from "path";
 import * as vscode from "vscode";
 import * as shell from "../../commands/utils/shell";
 import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
@@ -71,18 +72,19 @@ describe("DraftValidate handler", () => {
 
     afterEach(() => sandbox.restore());
 
-    it("quotes the manifest path and tolerates non-zero exit codes (findings are not errors)", async () => {
-        const execStub = sandbox
-            .stub(shell, "exec")
+    it("passes the manifest path as a separate argument and tolerates non-zero exit codes (findings are not errors)", async () => {
+        const execFileStub = sandbox
+            .stub(shell, "execFile")
             .resolves({ succeeded: true, result: { code: 3, stdout: "FAIL: replicas too low", stderr: "" } });
 
         await runValidate("my k8s/deployment.yaml");
 
-        const [command, options] = execStub.firstCall.args;
-        assert.match(
-            command as string,
-            /draft validate --manifest ".+deployment\.yaml"/,
-            "manifest path must be quoted",
+        const [executable, args, options] = execFileStub.firstCall.args;
+        assert.strictEqual(executable, "/tools/draft/draft", "the resolved draft binary path is invoked directly");
+        assert.deepStrictEqual(
+            args,
+            ["validate", "--manifest", `.${path.sep}my k8s/deployment.yaml`],
+            "the exact manifest path is passed as a separate argument",
         );
         assert.strictEqual(
             (options as shell.ShellOptions).exitCodeBehaviour,
@@ -93,7 +95,7 @@ describe("DraftValidate handler", () => {
 
     it("surfaces validation findings from stdout in the results panel", async () => {
         sandbox
-            .stub(shell, "exec")
+            .stub(shell, "execFile")
             .resolves({ succeeded: true, result: { code: 1, stdout: "FAIL: missing limits", stderr: "" } });
 
         await runValidate("k8s/deployment.yaml");
@@ -103,7 +105,7 @@ describe("DraftValidate handler", () => {
 
     it("combines stdout and stderr output", async () => {
         sandbox
-            .stub(shell, "exec")
+            .stub(shell, "execFile")
             .resolves({ succeeded: true, result: { code: 1, stdout: "stdout finding", stderr: "stderr note" } });
 
         await runValidate("k8s/deployment.yaml");
@@ -112,7 +114,7 @@ describe("DraftValidate handler", () => {
     });
 
     it("reports a placeholder when draft produces no output", async () => {
-        sandbox.stub(shell, "exec").resolves({ succeeded: true, result: { code: 0, stdout: "", stderr: "" } });
+        sandbox.stub(shell, "execFile").resolves({ succeeded: true, result: { code: 0, stdout: "", stderr: "" } });
 
         await runValidate("k8s/deployment.yaml");
 
@@ -120,7 +122,7 @@ describe("DraftValidate handler", () => {
     });
 
     it("shows an error message when draft cannot be executed", async () => {
-        sandbox.stub(shell, "exec").resolves({ succeeded: false, error: "draft binary not found" });
+        sandbox.stub(shell, "execFile").resolves({ succeeded: false, error: "draft binary not found" });
         const showError = sandbox.stub(vscode.window, "showErrorMessage");
 
         await runValidate("k8s/deployment.yaml");

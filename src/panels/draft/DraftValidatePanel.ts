@@ -8,7 +8,7 @@ import {
 } from "../../webview-contract/webviewDefinitions/draft/draftValidate";
 import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
-import { ShellOptions, exec, NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
+import { ShellOptions, execFile, NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
 
 export class DraftValidatePanel extends BasePanel<"draftValidate"> {
@@ -20,14 +20,11 @@ export class DraftValidatePanel extends BasePanel<"draftValidate"> {
 }
 
 export class DraftValidateDataProvider implements PanelDataProvider<"draftValidate"> {
-    readonly draftDirectory: string;
     constructor(
         readonly workspaceFolder: WorkspaceFolder,
         readonly draftBinaryPath: string,
         readonly initialLocation: string,
-    ) {
-        this.draftDirectory = path.dirname(draftBinaryPath);
-    }
+    ) {}
 
     getTitle(): string {
         return l10n.t(`Run Deployment Safeguards in {0}`, this.workspaceFolder.name);
@@ -54,17 +51,15 @@ export class DraftValidateDataProvider implements PanelDataProvider<"draftValida
 
     private async handleDraftValidateRequest(webview: MessageSink<ToWebViewMsgDef>) {
         // The draftValidate command guarantees a valid file/folder selection before opening this panel.
-        const manifestPath = `.${path.sep}${this.initialLocation.trim()}`;
-        const command = `draft validate --manifest "${manifestPath}"`;
+        const manifestPath = `.${path.sep}${this.initialLocation}`;
 
         const execOptions: ShellOptions = {
             workingDir: this.workspaceFolder.uri.fsPath,
-            envPaths: [this.draftDirectory],
             // draft validate exits non-zero when it finds violations; those are results, not a failure.
             exitCodeBehaviour: NonZeroExitCodeBehaviour.Succeed,
         };
 
-        const draftResult = await exec(command, execOptions);
+        const draftResult = await execFile(this.draftBinaryPath, ["validate", "--manifest", manifestPath], execOptions);
         if (failed(draftResult)) {
             window.showErrorMessage(draftResult.error);
             return;

@@ -45,6 +45,63 @@ export async function exec(cmd: string, options?: ShellOptions): Promise<Errorab
     }
 }
 
+/**
+ * Runs a binary without a shell, passing args as an array (immune to shell injection).
+ * A spawn failure is always an error; only real non-zero exits honor `exitCodeBehaviour`.
+ */
+export async function execFile(
+    executable: string,
+    args: string[],
+    options?: ShellOptions,
+): Promise<Errorable<ShellResult>> {
+    try {
+        const result = await execFileCore(executable, args, options || {});
+        const exitCodeBehaviour = options?.exitCodeBehaviour ?? NonZeroExitCodeBehaviour.Fail;
+        const succeeded = result.code === 0 || exitCodeBehaviour === NonZeroExitCodeBehaviour.Succeed;
+        if (succeeded) {
+            return { succeeded, result };
+        } else {
+            return {
+                succeeded,
+                error: `Command "${executable}" failed with exit code ${result.code}.\nStdout:\n${result.stdout}\nStderr:\n${result.stderr}`,
+            };
+        }
+    } catch (ex) {
+        return { succeeded: false, error: getErrorMessage(ex) };
+    }
+}
+
+function execFileCore(executable: string, args: string[], shellOptions: ShellOptions): Promise<ShellResult> {
+    const options = getExecOpts(shellOptions?.workingDir || null, shellOptions?.envPaths || []);
+
+    return new Promise<ShellResult>((resolve, reject) => {
+        const c = child.execFile(executable, args, options, function (err, stdout, stderr) {
+            const stdoutStr = typeof stdout === "string" ? stdout : (stdout?.toString() ?? "");
+            const stderrStr = typeof stderr === "string" ? stderr : (stderr?.toString() ?? "");
+            if (!err) {
+                resolve({ code: 0, stdout: stdoutStr, stderr: stderrStr });
+            } else if (typeof err.code === "number") {
+                // Process ran and exited non-zero.
+                resolve({ code: err.code, stdout: stdoutStr, stderr: stderrStr });
+            } else {
+                // Failed to spawn (e.g. ENOENT).
+                reject(err);
+            }
+        });
+
+        // Default to 'true' for silent.
+        const silent = shellOptions.silent === undefined ? true : shellOptions.silent;
+        if (!silent) {
+            c.stdout?.pipe(process.stdout);
+            c.stderr?.pipe(process.stderr);
+        }
+
+        if (shellOptions.stdin) {
+            c.stdin?.end(shellOptions.stdin);
+        }
+    });
+}
+
 function execCore(cmd: string, shellOptions: ShellOptions): Promise<ShellResult> {
     const options = getExecOpts(
         shellOptions?.workingDir || null,
