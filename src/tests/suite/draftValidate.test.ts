@@ -60,7 +60,8 @@ describe("DraftValidate handler", () => {
     }
 
     async function runValidate(initialLocation: string): Promise<void> {
-        const provider = makeProvider(initialLocation);
+        const normalizedLocation = initialLocation.split(/[\\/]/).join(path.sep);
+        const provider = makeProvider(normalizedLocation);
         const webview = { postValidationResult } as unknown as MessageSink<ToWebViewMsgDef>;
         await provider.getMessageHandler(webview).createDraftValidateRequest("", "createDraftValidateRequest");
     }
