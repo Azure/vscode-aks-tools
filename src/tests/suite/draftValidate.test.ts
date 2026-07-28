@@ -84,7 +84,7 @@ describe("DraftValidate handler", () => {
         assert.strictEqual(executable, "/tools/draft/draft", "the resolved draft binary path is invoked directly");
         assert.deepStrictEqual(
             args,
-            ["validate", "--manifest", `.${path.sep}my k8s/deployment.yaml`],
+            ["validate", "--manifest", `.${path.sep}my k8s${path.sep}deployment.yaml`],
             "the exact manifest path is passed as a separate argument",
         );
         assert.strictEqual(
