@@ -5,6 +5,7 @@ import { getKubernetesClusterInfo } from "../utils/clusters";
 import { getExtension, longRunning } from "../utils/host";
 import * as tmpfile from "../utils/tempfile";
 import path from "path";
+import * as os from "os";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
 import { getVersion, invokeKubectlCommand } from "../utils/kubectl";
@@ -12,6 +13,8 @@ import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCa
 import { failed } from "../utils/errorable";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { getReadySessionProvider } from "../../auth/azureAuth";
+import { buildRetinaCaptureCommand } from "./retinaCaptureCommand";
+import { exec } from "../utils/shell";
 
 export async function aksDownloadRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -86,14 +89,17 @@ export async function aksDownloadRetinaCapture(_context: IActionContext, target:
     }
 
     // Retina Run Capture
+    // Run kubectl-retina by absolute path with KUBECONFIG set: retina v1.x
+    // ignores the --kubeconfig flag for `capture create`.
     const capturename = `retina-capture-${clusterInfo.result.name.toLowerCase()}`;
     const retinaCaptureResult = await longRunning(
         `Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`,
         async () => {
-            return await invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile.filePath,
-                `retina capture create --namespace default --name ${capturename} --host-path /mnt/capture --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes}" --no-wait=false`,
+            return await exec(
+                `"${kubectlRetinaPath.result}" ${buildRetinaCaptureCommand({ captureName: capturename, nodeNames: selectedNodes })}`,
+                {
+                    envAdditions: { KUBECONFIG: kubeConfigFile.filePath },
+                },
             );
         },
     );
@@ -115,7 +121,9 @@ export async function aksDownloadRetinaCapture(_context: IActionContext, target:
         return;
     }
 
-    const foldername = `${capturename}_${new Date().toJSON().replaceAll(":", "")}`;
+    // Absolute path under the home dir; a bare name makes the Save dialog default
+    // to the filesystem root, where `kubectl cp` fails (read-only file system).
+    const foldername = path.join(os.homedir(), `${capturename}_${new Date().toJSON().replaceAll(":", "")}`);
 
     // find if node explorer pod is already exists
     let nodeExplorerPodExists = false;

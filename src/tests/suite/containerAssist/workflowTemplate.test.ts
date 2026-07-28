@@ -171,8 +171,8 @@ describe("Workflow Template Tests", () => {
             const result = renderWorkflowTemplate(validConfig);
 
             assert.ok(result.includes("buildImage:"), "Should have buildImage job");
-            assert.ok(result.includes("actions/checkout@v4"), "Should checkout code");
-            assert.ok(result.includes("azure/login@v2"), "Should login to Azure");
+            assert.ok(/actions\/checkout@[0-9a-f]{40}\b/.test(result), "Should checkout code (SHA-pinned)");
+            assert.ok(/azure\/login@[0-9a-f]{40}\b/.test(result), "Should login to Azure (SHA-pinned)");
             assert.ok(result.includes("az acr login"), "Should login to ACR");
             assert.ok(result.includes("az acr build"), "Should build and push image");
         });
@@ -187,21 +187,33 @@ describe("Workflow Template Tests", () => {
         it("should include kubelogin setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/use-kubelogin@v1"), "Should use kubelogin action");
+            assert.ok(/azure\/use-kubelogin@[0-9a-f]{40}\b/.test(result), "Should use kubelogin action (SHA-pinned)");
             assert.ok(result.includes("kubelogin-version"), "Should specify kubelogin version");
+        });
+
+        it("substitutes the kubelogin version placeholder with a well-formed release tag", () => {
+            // The template contains `kubelogin-version: "{ { KUBELOGINVERSION } }"` which
+            // must be replaced with the current `azure.kubelogin.releaseTag` setting value
+            // (or the package.json default fallback). Regression guard for a duplicate
+            // hard-coded version drifting from the settings default.
+            const result = renderWorkflowTemplate(validConfig);
+
+            assert.ok(!result.includes("KUBELOGINVERSION"), "Kubelogin placeholder should have been substituted");
+            const match = result.match(/kubelogin-version:\s*"(v\d+\.\d+\.\d+)"/);
+            assert.ok(match, "Rendered kubelogin-version should be a well-formed semver tag (vX.Y.Z)");
         });
 
         it("should include AKS context setup", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/aks-set-context@v4"), "Should set AKS context");
+            assert.ok(/azure\/aks-set-context@[0-9a-f]{40}\b/.test(result), "Should set AKS context (SHA-pinned)");
             assert.ok(result.includes('use-kubelogin: "true"'), "Should enable kubelogin");
         });
 
         it("should include deployment step", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("Azure/k8s-deploy@v5"), "Should use k8s-deploy action");
+            assert.ok(/Azure\/k8s-deploy@[0-9a-f]{40}\b/.test(result), "Should use k8s-deploy action (SHA-pinned)");
             assert.ok(result.includes("action: deploy"), "Should specify deploy action");
         });
 
@@ -276,7 +288,7 @@ describe("Workflow Template Tests", () => {
         it("should use aks-set-context for non-managed namespaces", () => {
             const result = renderWorkflowTemplate(validConfig);
 
-            assert.ok(result.includes("azure/aks-set-context@v4"), "Should use aks-set-context");
+            assert.ok(/azure\/aks-set-context@[0-9a-f]{40}\b/.test(result), "Should use aks-set-context (SHA-pinned)");
             assert.ok(!result.includes("az aks namespace get-credentials"), "Should not use namespace get-credentials");
         });
 
@@ -285,7 +297,7 @@ describe("Workflow Template Tests", () => {
             const result = renderWorkflowTemplate(managedConfig);
 
             assert.ok(
-                !result.includes("azure/aks-set-context@v4"),
+                !result.includes("azure/aks-set-context@"),
                 "Should not use aks-set-context for managed namespace",
             );
             assert.ok(result.includes("az aks namespace get-credentials"), "Should use namespace get-credentials");
@@ -400,16 +412,54 @@ describe("Multi-Container Workflow Template Tests", () => {
             assert.ok(yaml.includes("${{ github.sha }}"));
         });
 
+        it("substitutes the kubelogin version placeholder in every deploy job", () => {
+            // Every deploy job renders its own copy of the kubelogin setup, so a
+            // regression in the multi-container renderer could leave one job's
+            // placeholder unsubstituted while others are fine.
+            const cfg: MultiContainerWorkflowConfig = {
+                ...validMultiConfig,
+                containers: [
+                    {
+                        containerName: "api",
+                        dockerFile: "api/Dockerfile",
+                        buildContextPath: "api",
+                        deploymentManifestPath: "api/k8s",
+                    },
+                    {
+                        containerName: "web",
+                        dockerFile: "web/Dockerfile",
+                        buildContextPath: "web",
+                        deploymentManifestPath: "web/k8s",
+                    },
+                ],
+            };
+            const yaml = renderMultiContainerWorkflowTemplate(cfg);
+
+            assert.ok(!yaml.includes("KUBELOGINVERSION"), "No deploy job should contain an unsubstituted placeholder");
+            const matches = yaml.match(/kubelogin-version:\s*"v\d+\.\d+\.\d+"/g);
+            assert.ok(
+                matches && matches.length >= 2,
+                `Expected kubelogin-version in each deploy job; got ${matches?.length ?? 0}`,
+            );
+            // All rendered versions should agree — one config value, consistent across jobs.
+            const unique = new Set(matches);
+            assert.strictEqual(
+                unique.size,
+                1,
+                `All deploy jobs should use the same kubelogin version; got ${[...unique].join(", ")}`,
+            );
+        });
+
         it("uses az aks namespace get-credentials when isManagedNamespace is true", () => {
             const managed = { ...validMultiConfig, isManagedNamespace: true };
             const yaml = renderMultiContainerWorkflowTemplate(managed);
             assert.ok(yaml.includes("az aks namespace get-credentials"), "Should use managed-ns credential flow");
-            assert.ok(!yaml.includes("azure/aks-set-context@v4"), "Should not use aks-set-context for managed ns");
+            assert.ok(!yaml.includes("azure/aks-set-context@"), "Should not use aks-set-context for managed ns");
         });
 
-        it("uses azure/aks-set-context@v4 for non-managed namespaces", () => {
+        it("uses a SHA-pinned azure/aks-set-context for non-managed namespaces", () => {
             const yaml = renderMultiContainerWorkflowTemplate(validMultiConfig);
-            assert.ok(yaml.includes("azure/aks-set-context@v4"));
+            assert.ok(/azure\/aks-set-context@[0-9a-f]{40}\b/.test(yaml));
             assert.ok(!yaml.includes("az aks namespace get-credentials"));
         });
 

@@ -98,6 +98,79 @@ Known false positives (do NOT touch):
 
 If any hit doesn't fit the above, surface it to the user before editing.
 
+### 5b. Audit Pinned Third-Party Versions
+
+Independently of the extension's own version, the extension pins the versions of five external CLIs (downloaded on demand) and five GitHub Actions (baked into generated workflow templates). These drift silently between releases. Review them each cut and bump the defaults if a newer stable release exists with a matching platform-asset matrix.
+
+#### 5b.1. Downloaded CLI binaries
+
+Defaults live in `package.json` under `contributes.configuration`. `azure.kubelogin.releaseTag` is special: `workflowTemplate.ts` also substitutes its value into every generated workflow's `azure/use-kubelogin` step, so **the setting default IS the single source of truth** for both the local CLI and the CI kubelogin. No separate template value.
+
+```bash
+for repo in Azure/kubelogin Azure/aks-mcp Azure/draft microsoft/retina inspektor-gadget/inspektor-gadget; do
+  echo -n "$repo: "; gh api "repos/$repo/releases/latest" --jq '.tag_name'
+done
+```
+
+Compare against current `package.json` defaults:
+
+| Setting | Upstream |
+|---|---|
+| `azure.kubelogin.releaseTag` | Azure/kubelogin |
+| `azure.kubectlgadget.releaseTag` | inspektor-gadget/inspektor-gadget |
+| `aks.drafttool.releaseTag` | Azure/draft |
+| `aks.retinatool.releaseTag` | microsoft/retina |
+| `aks.aksmcpserver.releaseTag` | Azure/aks-mcp |
+
+**Before bumping, verify the target release actually has uploaded platform assets** (Linux/macOS/Windows amd64 + arm64). Some repos (notably Draft) publish tags before their release assets are uploaded — bumping to such a tag breaks every download attempt. Cheap check:
+
+```bash
+# Substitute repo + tag + a representative asset filename
+curl -sI -o /dev/null -w "%{http_code}\n" -L \
+  "https://github.com/Azure/draft/releases/download/<tag>/draft-linux-amd64"
+```
+
+If a bump is warranted, edit the `default:` in `package.json` `contributes.configuration.<setting>.default`. No other file needs to change (kubelogin substitution flows automatically via the placeholder).
+
+#### 5b.2. GitHub Actions pinned in workflow templates
+
+Templates under `resources/yaml/*.template.yaml` reference five actions with major-version pins. Major tags auto-receive minor/patch fixes, so bumping is only needed when a new major ships.
+
+```bash
+grep -h "uses:" resources/yaml/*.template.yaml | sort -u
+for repo in actions/checkout Azure/login Azure/use-kubelogin Azure/aks-set-context Azure/k8s-deploy; do
+  echo -n "$repo: "
+  gh api "repos/$repo/releases" --jq \
+    '[.[] | select(.prerelease==false and .draft==false)] | .[0].tag_name'
+done
+```
+
+**Before bumping a major**, skim the release notes of the target major on GitHub. Most Azure/* action majors in the last cycle have been pure Node.js runtime bumps (Node 20 → Node 24) — safe. Watch for:
+
+- Renamed/removed action inputs (would silently drop the value from generated YAML)
+- Changed default authentication behavior (especially `azure/login`, `Azure/aks-set-context`)
+- New required inputs
+
+If bumping, update all four workflow templates (`aks-deploy.template.yaml`, `aks-deploy-managed-ns.template.yaml`, `workflow-multi-deploy-job.template.yaml`, `workflow-multi-deploy-job-managed-ns.template.yaml`, plus `workflow-multi-build-job.template.yaml` for `checkout`/`login`). Then update the corresponding assertions in `src/tests/suite/containerAssist/workflowTemplate.test.ts` — they hard-code version numbers.
+
+#### 5b.3. Kubelogin cross-check
+
+After all bumps, verify that the setting default and any test fixtures agree:
+
+```bash
+grep -n "kubelogin" package.json src/commands/aksContainerAssist/workflowTemplate.ts
+```
+
+The setting default is the source of truth. `workflowTemplate.ts` reads it via `getKubeloginConfig()` at generation time; no hard-coded fallback is expected in that file. If someone reintroduced a `KUBELOGIN_FALLBACK_VERSION` constant, flag it — it recreates the two-source-of-truth drift that was fixed in the pin-bump PR.
+
+#### 5b.4. When to bump vs defer
+
+- **Always bump** if a version is more than 6 months stale — CVEs accumulate.
+- **Bump conservatively** for actions whose majors have shipped in the last 30 days — let the ecosystem shake out.
+- **Defer** if the release engineer can't validate the bump end-to-end (generate a workflow via the extension, push, confirm the run succeeds) on a real cluster before merge. Bumping without smoke-testing is worse than staying pinned.
+
+Include the version bumps in the release PR (same commit or a preceding PR). Note them in the What's New doc under a "Dependency updates" line so users know their generated workflows will change.
+
 ### 6. Create the New What's New Doc
 
 Path: `docs/book/src/release/whats-new-<x.y.z>.md`

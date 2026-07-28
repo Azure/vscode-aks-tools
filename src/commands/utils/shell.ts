@@ -11,6 +11,8 @@ export interface ShellResult {
 export interface ShellOptions {
     stdin?: string;
     envPaths?: string[];
+    /** Extra environment variables to set for the child process (merged over the inherited env). */
+    envAdditions?: { [key: string]: string };
     workingDir?: string;
     exitCodeBehaviour?: NonZeroExitCodeBehaviour;
     silent?: boolean;
@@ -44,7 +46,11 @@ export async function exec(cmd: string, options?: ShellOptions): Promise<Errorab
 }
 
 function execCore(cmd: string, shellOptions: ShellOptions): Promise<ShellResult> {
-    const options = getExecOpts(shellOptions?.workingDir || null, shellOptions?.envPaths || []);
+    const options = getExecOpts(
+        shellOptions?.workingDir || null,
+        shellOptions?.envPaths || [],
+        shellOptions?.envAdditions,
+    );
 
     return new Promise<ShellResult>((resolve) => {
         const c = child.exec(cmd, options, function (err, stdout, stderr) {
@@ -74,7 +80,11 @@ function execCore(cmd: string, shellOptions: ShellOptions): Promise<ShellResult>
     });
 }
 
-function getExecOpts(cwd: string | null, envPaths: string[]): child.ExecOptions {
+function getExecOpts(
+    cwd: string | null,
+    envPaths: string[],
+    envAdditions?: { [key: string]: string },
+): child.ExecOptions {
     const maxBuffer = 20 * 1024 * 1024; // Taken from shelljs
 
     let env = process.env;
@@ -82,6 +92,9 @@ function getExecOpts(cwd: string | null, envPaths: string[]): child.ExecOptions 
         env = { ...env, HOME: home() };
     }
     env = addEnvPaths(env, envPaths || []);
+    if (envAdditions) {
+        env = { ...env, ...envAdditions };
+    }
 
     return {
         cwd: cwd || resolve(process.cwd()),

@@ -6,8 +6,9 @@ import * as tmpfile from "../utils/tempfile";
 import path from "path";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
-import { invokeKubectlCommand } from "../utils/kubectl";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
+import { buildRetinaCaptureCommand } from "./retinaCaptureCommand";
+import { exec } from "../utils/shell";
 import { failed } from "../utils/errorable";
 import { getClusterDiagnosticSettings, validatePrerequisites } from "../utils/clusters";
 import { getAksClusterTreeNode } from "../utils/clusters";
@@ -105,14 +106,21 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
     }
 
     // Retina Run Capture
+    // Run kubectl-retina by absolute path with KUBECONFIG set: retina v1.x
+    // ignores the --kubeconfig flag for `capture create`.
     const captureName = `retina-capture-${clusterInfo.result.name.toLowerCase()}`;
     const retinaCaptureResult = await longRunning(
         `Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`,
         async () => {
-            return await invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile.filePath,
-                `retina capture create --namespace default --name ${captureName} --node-selectors "kubernetes.io/os=linux" --node-names "${selectedNodes.result}" --no-wait=false --blob-upload="${sasUri}"`,
+            return await exec(
+                `"${kubectlRetinaPath.result}" ${buildRetinaCaptureCommand({
+                    captureName,
+                    nodeNames: selectedNodes.result,
+                    blobUploadSasUri: sasUri,
+                })}`,
+                {
+                    envAdditions: { KUBECONFIG: kubeConfigFile.filePath },
+                },
             );
         },
     );
