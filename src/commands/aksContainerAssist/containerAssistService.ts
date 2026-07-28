@@ -22,6 +22,7 @@ import {
     ensureDirectory,
     getK8sManifestFolder,
     isExcludedModulePath,
+    getEffectiveExcludedDirs,
 } from "./fileOperations";
 import {
     DOCKERFILE_SYSTEM_PROMPT,
@@ -88,9 +89,13 @@ export class ContainerAssistService {
             const analysis: RepositoryAnalysis = result.value;
             logger.toolResponse("analyzeRepo", analysis);
 
+            // Exclude static dirs plus the repo's .gitignore entries, so build-output
+            // modules (e.g. Next.js `.next/`) from the SDK walker are filtered out.
+            const excludedDirs = await getEffectiveExcludedDirs(folderPath);
+
             const modules: ModuleAnalysisResult[] = (analysis.modules || [])
                 .filter((module) => {
-                    if (isExcludedModulePath(module.modulePath, folderPath)) {
+                    if (isExcludedModulePath(module.modulePath, folderPath, excludedDirs)) {
                         logger.info(`Skipping module in excluded directory: ${module.modulePath}`);
                         return false;
                     }
