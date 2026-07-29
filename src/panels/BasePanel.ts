@@ -1,4 +1,4 @@
-import { Disposable, Uri, ViewColumn, Webview, window } from "vscode";
+import { Disposable, Uri, ViewColumn, Webview, WebviewPanel, window } from "vscode";
 import { reporter } from "../commands/utils/reporter";
 import { encodeState } from "../webview-contract/initialState";
 import {
@@ -49,7 +49,7 @@ export abstract class BasePanel<TContent extends ContentId> {
         readonly webviewCommandKeys: CommandKeys<ToWebviewMsgDef<TContent>>,
     ) {}
 
-    show(dataProvider: PanelDataProvider<TContent>, ...disposables: Disposable[]) {
+    show(dataProvider: PanelDataProvider<TContent>, ...disposables: Disposable[]): WebviewPanel {
         const panelOptions = {
             enableScripts: true,
             // Restrict the webview to only load resources from the `webview-ui/dist` directory
@@ -87,6 +87,8 @@ export abstract class BasePanel<TContent extends ContentId> {
         // Set the HTML content for the webview panel
         const initialState = dataProvider.getInitialState();
         panel.webview.html = this.getWebviewContent(panel.webview, this.extensionUri, title, initialState);
+
+        return panel;
     }
 
     private getWebviewContent(

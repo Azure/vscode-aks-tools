@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { expect } from "chai";
 import { MessageHandler } from "../../webview-contract/messaging";
 import { CssRule, InitialState, ToVsCodeMsgDef } from "../../webview-contract/webviewDefinitions/testStyleViewer";
 import { BasePanel, PanelDataProvider } from "../../panels/BasePanel";
@@ -11,19 +12,28 @@ const extensionUriResult = errmap(extensionPathResult, (p) => vscode.Uri.file(p)
 
 describe("Webview Styles", () => {
     it("should contain css variables and rules", async () => {
-        import("chai").then((chai) => chai.expect(succeeded(extensionUriResult)).to.be.true);
+        expect(succeeded(extensionUriResult)).to.equal(true);
 
         const extensionUri = (extensionUriResult as Succeeded<vscode.Uri>).result;
         const panel = new StyleTestPanel(extensionUri);
         const dataProvider = new StyleTestDataProvider();
-        panel.show(dataProvider);
+        const webviewPanel = panel.show(dataProvider);
 
-        const cssVars = await dataProvider.cssVarsPromise;
-        const rules = await dataProvider.rulesPromise;
+        try {
+            const cssVars = await dataProvider.cssVarsPromise;
+            const rules = await dataProvider.rulesPromise;
 
-        // Place breakpoint here to see CSS variables and rules in test host webview.
-        import("chai").then((chai) => chai.expect(cssVars).to.not.be.empty);
-        import("chai").then((chai) => chai.expect(rules).to.not.be.empty);
+            // Place breakpoint here to see CSS variables and rules in test host webview.
+            expect(cssVars).to.have.length.greaterThan(0);
+            expect(rules).to.have.length.greaterThan(0);
+        } finally {
+            // Dispose the webview panel so the renderer-side frame is torn down when the test
+            // ends. A leaked, live webview lingers for the rest of the suite; the workbench
+            // later tries to post to the orphaned frame ("Render frame was disposed before
+            // WebFrameMain could be accessed"), which precedes the renderer crash seen on the
+            // slow Windows CI runner.
+            webviewPanel.dispose();
+        }
     });
 });
 
