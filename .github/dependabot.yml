@@ -4,6 +4,11 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    # Bake newly released versions for 1 week before proposing them. This gives an
+    # internal evaluation window and avoids proposing versions that are not yet
+    # mirrored in the internal package feed proxy.
+    cooldown:
+      default-days: 7
     groups:
       typescript-eslint:
         patterns:
@@ -12,6 +17,8 @@ updates:
     directory: "/webview-ui"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     groups:
       typescript-eslint:
         patterns:
@@ -20,3 +27,5 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
