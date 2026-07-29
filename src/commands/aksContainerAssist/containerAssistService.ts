@@ -207,7 +207,15 @@ export class ContainerAssistService {
                 name: appName,
                 namespace: targetNamespace,
                 language: moduleInfo.language as
-                    "java" | "dotnet" | "javascript" | "typescript" | "python" | "rust" | "go" | "other" | undefined,
+                    | "java"
+                    | "dotnet"
+                    | "javascript"
+                    | "typescript"
+                    | "python"
+                    | "rust"
+                    | "go"
+                    | "other"
+                    | undefined,
                 ports: moduleInfo.port ? [moduleInfo.port] : undefined,
                 detectedDependencies: moduleInfo.dependencies,
                 entryPoint: moduleInfo.entryPoint,
@@ -302,7 +310,7 @@ export class ContainerAssistService {
         // Requested artifacts that already exist on disk are preserved (not regenerated).
         const preserved = [
             artifacts.dockerfile && existingFiles.hasDockerfile && "Dockerfile",
-            artifacts.manifests && existingFiles.hasK8sManifests && `${getK8sManifestFolder()}/ manifests`,
+            artifacts.manifests && existingFiles.hasK8sManifests && "Kubernetes manifests",
         ].filter(Boolean) as string[];
 
         if (skipDockerfile && skipK8sManifests) {
@@ -361,6 +369,19 @@ export class ContainerAssistService {
         }
 
         if (!skipK8sManifests) {
+            if (modules.length > 1 && imageRepositoryFor) {
+                const resolvedRepos = modules.map((m) => imageRepositoryFor(m.name)).filter(Boolean);
+                const allIdentical = resolvedRepos.length > 1 && new Set(resolvedRepos).size === 1;
+                if (allIdentical) {
+                    vscode.window.showWarningMessage(
+                        l10n.t(
+                            "Multiple modules were detected but a single image reference ({0}) will be used for all of them. Update the generated manifests if each module needs a distinct image.",
+                            resolvedRepos[0]!,
+                        ),
+                    );
+                }
+            }
+
             for (const module of modules) {
                 const manifestAppName = module.name;
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
