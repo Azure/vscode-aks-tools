@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 import {
     buildArgoCDAppYaml,
     buildReadmeMarkdown,
+    resolveOutputDirUri,
     writeArgoCDArtifacts,
 } from "../../../commands/aksArgoCD/argoCDDeployment";
 
@@ -167,6 +168,51 @@ describe("argoCDDeployment", () => {
             } finally {
                 fs.rmSync(rootDir, { recursive: true, force: true });
             }
+        });
+    });
+
+    describe("resolveOutputDirUri", () => {
+        const base = () => vscode.Uri.file(tempDir);
+
+        it("returns the target folder when the path is empty", () => {
+            const uri = resolveOutputDirUri(base(), "");
+            assert.strictEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
+        });
+
+        it("returns the target folder when the path is whitespace", () => {
+            const uri = resolveOutputDirUri(base(), "   ");
+            assert.strictEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
+        });
+
+        it("joins a simple relative path", () => {
+            const uri = resolveOutputDirUri(base(), "argocd");
+            assert.strictEqual(uri.fsPath, path.join(tempDir, "argocd"));
+        });
+
+        it("joins a nested relative path", () => {
+            const uri = resolveOutputDirUri(base(), "manifests/gitops/argocd");
+            assert.strictEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
+        });
+
+        it("normalises Windows-style backslash separators", () => {
+            const uri = resolveOutputDirUri(base(), "manifests\\gitops\\argocd");
+            assert.strictEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
+        });
+
+        it("rejects '..' traversal", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "../escape"), /must not contain/i);
+        });
+
+        it("rejects '..' traversal nested inside the path", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "a/../../escape"), /must not contain/i);
+        });
+
+        it("rejects a POSIX absolute path", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "/etc/passwd"), /must be relative/i);
+        });
+
+        it("rejects a Windows absolute path", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "C:\\Windows\\Temp"), /must be relative/i);
         });
     });
 });

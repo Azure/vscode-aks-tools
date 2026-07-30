@@ -94,7 +94,7 @@ export const getArgoCDDeploymentPluginResponse =
             description:
                 "Argo CD is a GitOps controller: it watches a Git repository for your Kubernetes manifests and " +
                 "continuously syncs the AKS cluster to match. " +
-                "Use the button below to generate an Argo CD Application manifest (application.yaml) that points Argo CD at your manifests.",
+                "Use the button below to generate an Argo CD Application manifest (a `<app-name>.yaml` file) that points Argo CD at your manifests.",
             descriptionInstructions:
                 "Explain that Argo CD is a GitOps controller that syncs the cluster to manifests stored in a Git repository. " +
                 "The generated Application manifest can point at manifests in the same repository as the app or a separate repository — " +

@@ -73,7 +73,7 @@ The integration provides four commands, all prefixed with **AKS:**
    - **App name** — validated as `[a-z0-9][a-z0-9-]*`.
    - **Manifest repo URL** — the Git repo Argo CD will watch. Enter manually, browse a local folder (reads `.git/config` origin automatically), or browse your GitHub repos (authenticates via VS Code's built-in GitHub provider). This can be the same repo as your application source or a separate one.
    - **Manifest path** — the path within the repo that contains your Kubernetes manifests.
-   - **Output path** — where to save the generated `application.yaml` in your workspace.
+   - **Output path** — where to save the generated `<app-name>.yaml` manifest in your workspace.
    - **Target namespace** — where your workloads will be deployed.
    - **Include a setup guide (README)?** — optional, off by default. When enabled, a short `<app-name>-README.md` with install / UI-access / day-2 steps is written alongside the manifest.
 4. The extension writes `<app-name>.yaml` — the Argo CD Application CR with all placeholders substituted — and opens it in the editor. There is no blocking pre-generate dialog; a non-modal notification with a **Learn More** link appears once the file is created.
@@ -166,7 +166,7 @@ The scaffolded `Application` manifests work unchanged with the upstream-parity f
 
 - **High availability (HA)** — chosen at install time via the managed extension or upstream Helm chart; no change required to the generated YAML.
 - **Hub-and-spoke / multi-cluster** — the *Create Argo CD Application* command generates a `spec.destination.server` you can point at a remote spoke cluster from a central hub.
-- **`ApplicationSet`** — the scaffolder currently emits a single `Application`. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), hand-author an `ApplicationSet` alongside the generated `application.yaml`; the *Apply Argo CD Application to Cluster* command accepts any `argoproj.io/v1alpha1` resource.
+- **`ApplicationSet`** — the scaffolder currently emits a single `Application`. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), hand-author an `ApplicationSet` alongside the generated `<app-name>.yaml` manifest; the *Apply Argo CD Application to Cluster* command accepts any `argoproj.io/v1alpha1` resource.
 
 ---
 

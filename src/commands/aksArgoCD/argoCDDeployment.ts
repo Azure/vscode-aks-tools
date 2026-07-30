@@ -5,8 +5,9 @@
  * within it) for Kubernetes manifests and continuously syncs the AKS cluster
  * to match that desired state.
  *
- * This command generates an Argo CD Application manifest (application.yaml)
- * that points Argo CD at wherever your Kubernetes manifests live. The
+ * This command generates an Argo CD Application manifest (written as
+ * `<app-name>.yaml`) that points Argo CD at wherever your Kubernetes manifests
+ * live. The
  * manifests can be in the same repository as your application source or in a
  * separate repository — the user chooses the repository URL and the path.
  *
@@ -625,7 +626,7 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
         const folders = vscode.workspace.workspaceFolders;
         if (!folders || folders.length === 0) {
             vscode.window.showErrorMessage(
-                l10n.t("You must have a workspace open to create an Argo CD deployment manifest."),
+                l10n.t("You must have a workspace open to create an Argo CD Application manifest."),
             );
             return;
         }
@@ -670,14 +671,16 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     );
     if (!manifestPath) return;
 
-    // Where to write the generated application.yaml (relative to the workspace).
-    const outputPath =
-        (await vscode.window.showInputBox({
-            prompt: l10n.t("Where to save the generated application.yaml (relative to this workspace)"),
-            placeHolder: "argocd",
-            value: "argocd",
-            ignoreFocusOut: true,
-        })) ?? "";
+    // Where to save the generated manifest (relative to the workspace).
+    // Cancelling (Escape) returns undefined — abort rather than silently
+    // writing to the workspace root.
+    const outputPath = await vscode.window.showInputBox({
+        prompt: l10n.t("Where to save the generated Argo CD Application manifest (relative to this workspace)"),
+        placeHolder: "argocd",
+        value: "argocd",
+        ignoreFocusOut: true,
+    });
+    if (outputPath === undefined) return;
 
     // Optionally generate a short setup guide (README). Off by default —
     // experienced users can skip it; newcomers can opt in for install /
@@ -686,7 +689,7 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
     const NO = l10n.t("No");
     const readmeChoice = await vscode.window.showQuickPick(
         [
-            { label: NO, description: l10n.t("Just generate application.yaml") },
+            { label: NO, description: l10n.t("Just generate the Argo CD Application manifest") },
             { label: YES, description: l10n.t("Also add a short setup guide for reference") },
         ],
         {
@@ -814,6 +817,42 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
 }
 
 /**
+ * Resolves a user-supplied, workspace-relative output path to a URI, guarding
+ * against escaping the workspace folder.
+ *
+ * - Normalises both `/` and `\` separators (so Windows-style input works).
+ * - Rejects absolute paths and `..` traversal that would resolve outside the
+ *   target workspace folder.
+ *
+ * Throws an Error (surfaced to the user) when the path is unsafe.
+ */
+export function resolveOutputDirUri(targetFolderUri: vscode.Uri, outputPath: string): vscode.Uri {
+    const trimmed = (outputPath ?? "").trim();
+    if (trimmed === "") {
+        return targetFolderUri;
+    }
+
+    // Normalise separators and split into segments, dropping empties/".".
+    const segments = trimmed
+        .replace(/\\/g, "/")
+        .split("/")
+        .filter((s) => s !== "" && s !== ".");
+
+    // Reject absolute paths (POSIX "/foo", Windows "C:\...", or UNC).
+    const isAbsolute = trimmed.startsWith("/") || trimmed.startsWith("\\") || /^[a-zA-Z]:/.test(trimmed);
+    if (isAbsolute) {
+        throw new Error(l10n.t("Output path must be relative to the workspace: {0}", outputPath));
+    }
+
+    // Reject any parent-directory traversal.
+    if (segments.includes("..")) {
+        throw new Error(l10n.t("Output path must not contain '..': {0}", outputPath));
+    }
+
+    return vscode.Uri.joinPath(targetFolderUri, ...segments);
+}
+
+/**
  * Computes the output directory/URIs, creates the directory (recursively,
  * like `mkdir -p`), and writes the Argo CD Application manifest — plus an
  * optional setup guide.
@@ -833,9 +872,7 @@ export async function writeArgoCDArtifacts(params: {
     namespace: string;
     includeReadme: boolean;
 }): Promise<{ outDirUri: vscode.Uri; applicationYamlUri: vscode.Uri; readmeUri?: vscode.Uri }> {
-    const outDirUri = params.outputPath
-        ? vscode.Uri.joinPath(params.targetFolderUri, params.outputPath)
-        : params.targetFolderUri;
+    const outDirUri = resolveOutputDirUri(params.targetFolderUri, params.outputPath);
     const applicationYamlUri = vscode.Uri.joinPath(outDirUri, `${params.appName}.yaml`);
 
     const applicationYaml = buildArgoCDAppYaml({
