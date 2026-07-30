@@ -319,6 +319,7 @@ export async function selectClusterAcr(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     cluster: Cluster,
+    placeHolder?: string,
 ): Promise<AzureResource | undefined> {
     const allAcrs = await longRunning(l10n.t("Loading Azure Container Registries..."), () =>
         fetchSubscriptionAcrs(sessionProvider, subscriptionId),
@@ -354,13 +355,15 @@ export async function selectClusterAcr(
         : l10n.t("Container Registry ({0} available)", acrsToShow.length);
 
     const selected = await vscode.window.showQuickPick(acrItems, {
-        placeHolder: l10n.t("Select Azure Container Registry for cluster '{0}'", cluster.name),
+        placeHolder: placeHolder ?? l10n.t("Select Azure Container Registry for cluster '{0}'", cluster.name),
         title,
     });
 
     // Show confirmation dialog if user cancelled
     if (!selected) {
-        return showWizardExitConfirmation(() => selectClusterAcr(sessionProvider, subscriptionId, cluster));
+        return showWizardExitConfirmation(() =>
+            selectClusterAcr(sessionProvider, subscriptionId, cluster, placeHolder),
+        );
     }
 
     // If the selected ACR is not yet attached, warn and offer to assign AcrPull automatically.
@@ -625,6 +628,14 @@ interface ImageSourceSelection {
     customImage?: string;
 }
 
+/** Validates a user-supplied container image reference. Returns an error message, or undefined if valid. */
+function validateImageReference(value: string): string | undefined {
+    const image = value.trim();
+    if (!image) return l10n.t("Image reference is required");
+    if (/\s/.test(image)) return l10n.t("Image reference cannot contain spaces");
+    return undefined;
+}
+
 /** Prompts for a full container image reference (registry/repository[:tag]) to use in the manifests. */
 async function promptForCustomImage(): Promise<string | undefined> {
     const image = await vscode.window.showInputBox({
@@ -633,12 +644,7 @@ async function promptForCustomImage(): Promise<string | undefined> {
         ),
         placeHolder: "ghcr.io/org/app:latest",
         ignoreFocusOut: true,
-        validateInput: (value) => {
-            const v = value?.trim() ?? "";
-            if (!v) return l10n.t("Image reference is required");
-            if (/\s/.test(v)) return l10n.t("Image reference cannot contain spaces");
-            return undefined;
-        },
+        validateInput: validateImageReference,
     });
 
     // Show confirmation dialog if user cancelled
@@ -653,26 +659,14 @@ async function selectAcrImageSource(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     cluster: Cluster,
+    placeHolder?: string,
 ): Promise<ImageSourceSelection | undefined> {
-    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
+    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster, placeHolder);
     return acr ? { acrName: acr.name, acrResourceGroup: acr.resourceGroup } : undefined;
 }
 
-/**
- * Resolves the container image source for the manifests. When `requireAcr` is true (a workflow is
- * also generated, which builds/pushes to ACR) an ACR must be selected; otherwise the user may
- * instead point the manifests at an existing image reference (GHCR, Docker Hub, etc.).
- */
-async function selectImageSource(
-    sessionProvider: ReadyAzureSessionProvider,
-    subscriptionId: string,
-    cluster: Cluster,
-    requireAcr: boolean,
-): Promise<ImageSourceSelection | undefined> {
-    if (requireAcr) {
-        return selectAcrImageSource(sessionProvider, subscriptionId, cluster);
-    }
-
+/** Asks the user whether the manifests should point at an ACR or an existing image reference. */
+async function promptForImageSource(): Promise<"acr" | "custom" | undefined> {
     const acrChoice = {
         label: l10n.t("$(cloud) Use an Azure Container Registry"),
         description: l10n.t("Select an ACR attached to the cluster"),
@@ -690,18 +684,43 @@ async function selectImageSource(
     });
 
     if (!picked) {
-        return showWizardExitConfirmation(() =>
-            selectImageSource(sessionProvider, subscriptionId, cluster, requireAcr),
+        return showWizardExitConfirmation(() => promptForImageSource());
+    }
+
+    return picked.sourceType;
+}
+
+/**
+ * Resolves the container image source for the manifests. When `requireAcr` is true (a workflow is
+ * also generated, which builds/pushes to ACR) an ACR must be selected; otherwise the user may
+ * instead point the manifests at an existing image reference (GHCR, Docker Hub, etc.).
+ */
+async function selectImageSource(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+    requireAcr: boolean,
+): Promise<ImageSourceSelection | undefined> {
+    if (requireAcr) {
+        // A workflow is also being generated: it builds and pushes the image to ACR, so an
+        // existing image reference isn't an option here — explain why only ACR is offered.
+        return selectAcrImageSource(
+            sessionProvider,
+            subscriptionId,
+            cluster,
+            l10n.t("The GitHub workflow builds and pushes the image to ACR, so a registry is required"),
         );
     }
 
-    if (picked.sourceType === "acr") {
+    const sourceType = await promptForImageSource();
+    if (!sourceType) return undefined;
+
+    if (sourceType === "acr") {
         return selectAcrImageSource(sessionProvider, subscriptionId, cluster);
     }
 
     const customImage = await promptForCustomImage();
-    if (!customImage) return undefined;
-    return { customImage };
+    return customImage ? { customImage } : undefined;
 }
 
 /**
