@@ -59,16 +59,122 @@ import {
 } from "../webview-contract/webviewDefinitions/kickstartShared";
 import { ActivityReporter, ActivitySink, CancellationToken } from "./kickstartActivity";
 
+// Region capacity-risk tiers for AKS Automatic system-pool availability. Ordering drives which
+// region we recommend first: `low` regions have ample open pool capacity, `medium` have shrinking
+// headroom, and `high` are capacity-constrained (system pools supportable well below entitlement)
+// and are deprioritised. Membership only — no raw capacity numbers are encoded, since those drift.
 const REGION_CAPACITY_RISK = {
-    low: ["eastus2", "westus3", "southcentralus", "canadacentral", "swedencentral", "japaneast"],
-    medium: ["centralus", "westus2"],
-    high: ["eastus", "westeurope", "southeastasia"],
+    low: [
+        "newzealandnorth",
+        "japanwest",
+        "canadacentral",
+        "swedencentral",
+        "eastasia",
+        "centralindia",
+        "australiacentral",
+        "eastus2",
+        "polandcentral",
+        "ukwest",
+        "westcentralus",
+        "koreacentral",
+        "switzerlandnorth",
+        "italynorth",
+    ],
+    medium: [
+        "southindia",
+        "southeastasia",
+        "australiaeast",
+        "northcentralus",
+        "norwayeast",
+        "francecentral",
+        "centralus",
+        "southcentralus",
+        "japaneast",
+        "canadaeast",
+        "brazilsouth",
+        "westus2",
+        "westus3",
+    ],
+    high: [
+        "eastus",
+        "westeurope",
+        "northeurope",
+        "koreasouth",
+        "germanywestcentral",
+        "westus",
+        "uksouth",
+        "eastus3",
+        "southcentralus2",
+        "southeastus",
+        "southwestus",
+        "qatarcentral",
+    ],
 };
 
 const PREFERRED_REGION_ORDER = [...REGION_CAPACITY_RISK.low, ...REGION_CAPACITY_RISK.medium];
 const HIGH_RISK_REGIONS = new Set(REGION_CAPACITY_RISK.high);
 
 const MAX_SUGGESTED_REGIONS = 3;
+
+// Regions are probed in priority order through a fixed worker window rather than all at once, so a
+// large PREFERRED_REGION_ORDER can't flood ARM with quota+zones calls (each region = 2 calls) and
+// trigger throttling. Tuned as a balance between scan latency and ARM pressure.
+const SCAN_CONCURRENCY = 5;
+
+/**
+ * Runs `worker` over `items` in order with at most `concurrency` in flight, stopping early once
+ * `shouldStop(results)` returns true. Because callers pass a priority-ordered list, this scans just
+ * enough of the head to satisfy demand instead of the whole list. Results preserve input order for
+ * the items that were actually processed. Cancellation is honored between scheduling decisions.
+ */
+async function scanWithConcurrencyUntil<TIn, TOut>(
+    items: TIn[],
+    concurrency: number,
+    worker: (item: TIn, index: number) => Promise<TOut>,
+    shouldStop: (results: TOut[]) => boolean,
+    token: CancellationToken,
+): Promise<TOut[]> {
+    const results: TOut[] = [];
+    const indexed = new Map<number, TOut>();
+    let nextIndex = 0;
+    let stopped = false;
+    const inFlight = new Set<Promise<void>>();
+
+    const collect = () => {
+        // Drain completed results in input order so early-exit decisions see a stable prefix.
+        for (let i = 0; indexed.has(i); i++) {
+            results.push(indexed.get(i)!);
+            indexed.delete(i);
+        }
+    };
+
+    while (!stopped && (nextIndex < items.length || inFlight.size > 0)) {
+        while (!stopped && inFlight.size < concurrency && nextIndex < items.length) {
+            token.throwIfCancelled();
+            const index = nextIndex++;
+            const task = worker(items[index], index).then((out) => {
+                indexed.set(index, out);
+            });
+            const tracked = task.finally(() => inFlight.delete(tracked));
+            inFlight.add(tracked);
+        }
+
+        if (inFlight.size > 0) {
+            await Promise.race(inFlight);
+        }
+        collect();
+        token.throwIfCancelled();
+
+        if (shouldStop(results)) {
+            stopped = true;
+        }
+    }
+
+    // Let any still-running probes settle so their reported activity entries finish cleanly.
+    await Promise.allSettled(inFlight);
+    collect();
+    return results;
+}
 
 function compareRegionsByCapacityRisk(a: string, b: string): number {
     const rank = (region: string): number => {
@@ -278,8 +384,13 @@ export async function runSubscriptionScan(
     }
 
     const capacityStage = reporter.stage("quota", l10n.t("Regional capacity"), { collapsible: true });
-    const scannedResults = await Promise.all(
-        PREFERRED_REGION_ORDER.map((location) =>
+    // Probe regions in priority order with bounded concurrency, stopping once we have enough
+    // recommendable regions. PREFERRED_REGION_ORDER is risk-ranked (best first), so the early-exit
+    // still yields the same top suggestions while avoiding a flood of ARM calls across all regions.
+    const scannedResults = await scanWithConcurrencyUntil(
+        PREFERRED_REGION_ORDER,
+        SCAN_CONCURRENCY,
+        (location) =>
             capacityStage
                 .run(
                     l10n.t("Checking capacity in {0}", location),
@@ -310,7 +421,9 @@ export async function runSubscriptionScan(
                     (r) => r.entryDetail,
                 )
                 .then((r) => r.regionResult),
-        ),
+        // Stop once enough regions have cleared to fill the suggestion slots.
+        (results) => results.filter((r) => r.status === "succeeded").length >= MAX_SUGGESTED_REGIONS,
+        token,
     );
     token.throwIfCancelled();
 
@@ -894,7 +1007,7 @@ function summarizeZones(
         };
     }
 
-    const { offered, restrictedZones, requiredZoneCount, sufficient } = zones.result;
+    const { offered, bestUsableZoneCount, blockedForSubscription, requiredZoneCount, sufficient } = zones.result;
     if (sufficient) {
         return {
             status: "succeeded",
@@ -918,26 +1031,29 @@ function summarizeZones(
         };
     }
 
-    if (restrictedZones.length > 0) {
+    // The SKUs exist in the region but aren't enabled for this subscription (NotAvailableForSubscription).
+    // That's an enablement/allocation issue, not a regional capacity gap, so guide toward requesting access.
+    if (blockedForSubscription) {
         return {
             status: "failed",
             detail: l10n.t(
-                "Your subscription is restricted from availability zone(s) {0} in {1}, leaving fewer than the {2} zones AKS Automatic requires. Choose another region or request zone access for this subscription.",
-                restrictedZones.join(", "),
+                "The VM sizes AKS Automatic needs aren't enabled for your subscription in {0} (they offer only {1} of the {2} required availability zones). Request access to these VM sizes for your subscription, or choose another region.",
                 location,
+                bestUsableZoneCount,
                 requiredZoneCount,
             ),
-            entryDetail: l10n.t("zone(s) {0} restricted", restrictedZones.join(", ")),
+            entryDetail: l10n.t("VM sizes not enabled for subscription"),
         };
     }
 
     return {
         status: "failed",
         detail: l10n.t(
-            "{0} doesn't support the {1} availability zones AKS Automatic requires for its VM sizes.",
-            location,
+            "The VM sizes AKS Automatic needs offer only {0} of the {1} availability zones it requires in {2}. Choose another region.",
+            bestUsableZoneCount,
             requiredZoneCount,
+            location,
         ),
-        entryDetail: l10n.t("fewer than {0} zones", requiredZoneCount),
+        entryDetail: l10n.t("{0} of {1} zones available", bestUsableZoneCount, requiredZoneCount),
     };
 }
