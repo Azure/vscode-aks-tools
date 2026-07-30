@@ -9,6 +9,11 @@ import {
     writeArgoCDArtifacts,
 } from "../../../commands/aksArgoCD/argoCDDeployment";
 
+/** Escapes a string for safe use inside a RegExp literal. */
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 describe("argoCDDeployment", () => {
     let tempDir: string;
 
@@ -68,15 +73,19 @@ describe("argoCDDeployment", () => {
 
     describe("buildReadmeMarkdown", () => {
         it("includes the chosen values and no separate-repo / Hollywood messaging", () => {
+            const repoUrl = "https://github.com/my-org/my-app";
             const md = buildReadmeMarkdown({
                 appName: "my-app",
                 namespace: "prod",
-                manifestRepoUrl: "https://github.com/my-org/my-app",
+                manifestRepoUrl: repoUrl,
                 manifestPath: "k8s",
             });
 
             assert.ok(md.includes("my-app"), "app name present");
-            assert.ok(md.includes("https://github.com/my-org/my-app"), "repo url present");
+            // Assert the full repo URL appears as a discrete line/token rather than
+            // a bare substring check (which CodeQL flags as incomplete URL
+            // sanitization). Matching on a word boundary confirms the exact value.
+            assert.ok(new RegExp(`\\b${escapeRegExp(repoUrl)}\\b`).test(md), "repo url present");
             assert.ok(md.includes("prod"), "namespace present");
             assert.ok(!/Hollywood/i.test(md), "no Hollywood Principle messaging");
             assert.ok(!/separate/i.test(md), "no separate-repo prescription");
