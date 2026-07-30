@@ -547,7 +547,7 @@ export function ClusterInput(props: ClusterInputProps) {
                     <span className={styles.costHeader}>{l10n.t("Base cost estimate (excludes workloads)")}</span>
                     <span className={styles.costError}>
                         <FontAwesomeIcon className={styles.checkWarning} icon={faExclamationTriangle} />
-                        {result.error ?? l10n.t("Couldn't estimate the monthly cost for this region.")}
+                        {result.error ?? l10n.t("Couldn't estimate the base cost for this region.")}
                     </span>
                 </div>
             );
