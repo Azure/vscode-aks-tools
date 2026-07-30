@@ -248,24 +248,28 @@ async function findProjectRoot(startPath: string, workspaceRoot: string): Promis
 async function showContainerAssistQuickPick(
     defaultActions: ContainerAssistAction[] = [],
 ): Promise<ContainerAssistAction[] | undefined> {
+    const dockerfilePicked = defaultActions.includes(ContainerAssistAction.GenerateDockerfile);
+    const manifestsPicked = defaultActions.includes(ContainerAssistAction.GenerateManifests);
+    const workflowPicked = defaultActions.includes(ContainerAssistAction.GenerateWorkflow);
+
     const items: ContainerAssistQuickPickItem[] = [
         {
             label: l10n.t("$(file) Generate Dockerfile"),
             description: l10n.t("Analyze the app and generate a Dockerfile"),
             action: ContainerAssistAction.GenerateDockerfile,
-            picked: defaultActions.includes(ContainerAssistAction.GenerateDockerfile),
+            picked: dockerfilePicked,
         },
         {
             label: l10n.t("$(file-code) Generate Kubernetes Manifests"),
             description: l10n.t("Generate Kubernetes deployment manifests for the app"),
             action: ContainerAssistAction.GenerateManifests,
-            picked: defaultActions.includes(ContainerAssistAction.GenerateManifests),
+            picked: manifestsPicked,
         },
         {
             label: l10n.t("$(github-action) Generate GitHub Workflow"),
             description: l10n.t("Create GitHub Actions workflow for CI/CD to AKS"),
             action: ContainerAssistAction.GenerateWorkflow,
-            picked: defaultActions.includes(ContainerAssistAction.GenerateWorkflow),
+            picked: workflowPicked,
         },
     ];
 
