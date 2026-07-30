@@ -175,6 +175,76 @@ async function detectArgoCDAuthMode(
 }
 
 // ---------------------------------------------------------------------------
+// Helper: detect the local port Argo CD is configured to be served on
+//
+// When Argo CD is installed with the argocd-server Service set to ClusterIP
+// and `global.domain` (or `url`) in the argocd-cm ConfigMap set to something
+// like `localhost:9000`, the Entra ID app registration's redirect URI is
+// tied to that exact port.  Port-forwarding on the hard-coded default 8080
+// then breaks SSO because the browser lands on a port the redirect URI does
+// not expect.  We therefore read the configured port and use it for the local
+// side of the port-forward so the opened URL matches the SSO configuration.
+// ---------------------------------------------------------------------------
+
+/** Default local port used when Argo CD does not declare a specific one. */
+const DEFAULT_ARGOCD_LOCAL_PORT = 8080;
+
+/**
+ * Extracts the TCP port from an Argo CD `url` / `global.domain` value.
+ *
+ * Accepts values with or without a scheme, e.g.:
+ *   "https://localhost:9000"  -> 9000
+ *   "localhost:9000"          -> 9000
+ *   "argocd.example.com:8443" -> 8443
+ *   "https://localhost"       -> undefined (no explicit port)
+ *   ""                        -> undefined
+ *
+ * Returns undefined when no valid port (1-65535) is present.
+ */
+export function parseArgoCDPort(value: string | undefined): number | undefined {
+    if (!value) return undefined;
+
+    // Strip any scheme, path, query and surrounding quotes/whitespace.
+    let hostPort = value.trim().replace(/^"|"$/g, "");
+    hostPort = hostPort.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, ""); // remove scheme://
+    hostPort = hostPort.split("/")[0]; // drop any path
+
+    // Match a trailing :<port> (avoids matching an IPv6 body — best effort;
+    // Argo CD domains are hostnames, not bracketed IPv6 literals).
+    const match = hostPort.match(/:(\d{1,5})$/);
+    if (!match) return undefined;
+
+    const port = Number(match[1]);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return undefined;
+    return port;
+}
+
+/**
+ * Reads the argocd-cm ConfigMap and returns the local port Argo CD is
+ * configured to serve on (from `url`, falling back to `global.domain`).
+ * Falls back to {@link DEFAULT_ARGOCD_LOCAL_PORT} when nothing is configured.
+ */
+async function detectArgoCDConfiguredPort(
+    kubectl: k8s.APIAvailable<k8s.KubectlV1>,
+    kubeConfigFile: string,
+): Promise<number> {
+    const read = async (key: string): Promise<string> => {
+        const result = await invokeKubectlCommand(
+            kubectl,
+            kubeConfigFile,
+            `get configmap argocd-cm -n argocd --ignore-not-found -o jsonpath="{.data['${key}']}"`,
+            NonZeroExitCodeBehaviour.Succeed,
+        );
+        return failed(result) ? "" : result.result.stdout.trim().replace(/^"|"$/g, "");
+    };
+
+    // Prefer the explicit `url`; fall back to `global.domain`.
+    const url = await read("url");
+    const port = parseArgoCDPort(url) ?? parseArgoCDPort(await read("global\\.domain"));
+    return port ?? DEFAULT_ARGOCD_LOCAL_PORT;
+}
+
+// ---------------------------------------------------------------------------
 // Helper: fetch Argo CD initial admin credentials from the cluster
 // ---------------------------------------------------------------------------
 
@@ -236,10 +306,11 @@ async function openArgoCDUI(
     kubeConfigFile: string,
     clusterName: string,
 ): Promise<void> {
-    // Detect auth mode and (for the password path) fetch credentials in parallel
-    // with the LoadBalancer probe so we don't add extra round-trips.
-    const [authMode, lbResult] = await Promise.all([
+    // Detect auth mode, the configured local port, and (for the password path)
+    // probe the LoadBalancer in parallel so we don't add extra round-trips.
+    const [authMode, configuredPort, lbResult] = await Promise.all([
         detectArgoCDAuthMode(kubectl, kubeConfigFile),
+        detectArgoCDConfiguredPort(kubectl, kubeConfigFile),
         longRunning(l10n.t("Checking for Argo CD external address on '{0}'…", clusterName), () =>
             invokeKubectlCommand(
                 kubectl,
@@ -279,7 +350,7 @@ async function openArgoCDUI(
             return;
         }
 
-        uiUrl = "https://localhost:8080";
+        uiUrl = `https://localhost:${configuredPort}`;
         needsPortForward = true;
     }
 
@@ -319,19 +390,26 @@ async function openArgoCDUI(
 
     if (needsPortForward) {
         // Start the port-forward and show the terminal — the user can see the
-        // "Forwarding from 127.0.0.1:8080 -> 8080" line appear.
+        // "Forwarding from 127.0.0.1:<port> -> 443" line appear.
         // We must NOT open the browser immediately; the kubectl process needs a
         // moment to bind the port.  Instead, show a notification with an
         // "Open Browser" button so the user clicks it once the tunnel is ready.
+        //
+        // The local port matches the port Argo CD is configured to be served on
+        // (argocd-cm url / global.domain). This keeps the opened URL aligned
+        // with the Entra ID redirect URI so SSO does not break (issue #2322).
         const terminal = vscode.window.createTerminal({ name: `Argo CD UI — ${clusterName}` });
-        terminal.sendText(`kubectl port-forward svc/argocd-server -n argocd 8080:443 --kubeconfig="${kubeConfigFile}"`);
+        terminal.sendText(
+            `kubectl port-forward svc/argocd-server -n argocd ${configuredPort}:443 --kubeconfig="${kubeConfigFile}"`,
+        );
         terminal.show();
 
         const OPEN_BROWSER = l10n.t("Open Browser");
         const action = await vscode.window.showInformationMessage(
             l10n.t(
-                "Port-forward started in terminal 'Argo CD UI — {0}'.\n\nWait for 'Forwarding from 127.0.0.1:8080' to appear in the terminal, then click Open Browser.",
+                "Port-forward started in terminal 'Argo CD UI — {0}'.\n\nWait for 'Forwarding from 127.0.0.1:{1}' to appear in the terminal, then click Open Browser.",
                 clusterName,
+                configuredPort,
             ),
             OPEN_BROWSER,
         );

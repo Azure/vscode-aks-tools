@@ -98,7 +98,7 @@ The integration provides four commands, all prefixed with **AKS:**
 
 - If Argo CD is installed via the **Azure-managed extension** with Entra ID OIDC configured, the dialog prompts you to sign in with your Microsoft account — no admin password is fetched.
 - If the `argocd-server` Service has a **LoadBalancer** with an external IP, the extension opens `https://<address>` directly.
-- If the Service is **ClusterIP** (common for local setups), the extension starts a `kubectl port-forward` in an integrated terminal and shows an **Open Browser** button once the tunnel is ready.
+- If the Service is **ClusterIP** (common for local setups), the extension starts a `kubectl port-forward` in an integrated terminal and shows an **Open Browser** button once the tunnel is ready. The local port matches the port Argo CD is configured to serve on (read from the `argocd-cm` ConfigMap's `url` / `global.domain`, defaulting to `8080`), so the opened URL stays aligned with the Entra ID redirect URI and SSO does not break.
 
 ### Configure Workload Identity for Azure (recommended)
 
