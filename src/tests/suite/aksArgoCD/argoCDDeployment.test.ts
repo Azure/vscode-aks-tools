@@ -174,29 +174,36 @@ describe("argoCDDeployment", () => {
     describe("resolveOutputDirUri", () => {
         const base = () => vscode.Uri.file(tempDir);
 
+        // On Windows, vscode.Uri.file(...).fsPath lowercases the drive letter
+        // (e.g. "c:\\...") while Node's path.join preserves the original case
+        // ("C:\\..."). Normalise the drive letter so comparisons are stable
+        // across platforms.
+        const norm = (p: string) => p.replace(/^[a-zA-Z]:/, (m) => m.toLowerCase());
+        const assertPathEqual = (actual: string, expected: string) => assert.strictEqual(norm(actual), norm(expected));
+
         it("returns the target folder when the path is empty", () => {
             const uri = resolveOutputDirUri(base(), "");
-            assert.strictEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
+            assertPathEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
         });
 
         it("returns the target folder when the path is whitespace", () => {
             const uri = resolveOutputDirUri(base(), "   ");
-            assert.strictEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
+            assertPathEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
         });
 
         it("joins a simple relative path", () => {
             const uri = resolveOutputDirUri(base(), "argocd");
-            assert.strictEqual(uri.fsPath, path.join(tempDir, "argocd"));
+            assertPathEqual(uri.fsPath, path.join(tempDir, "argocd"));
         });
 
         it("joins a nested relative path", () => {
             const uri = resolveOutputDirUri(base(), "manifests/gitops/argocd");
-            assert.strictEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
+            assertPathEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
         });
 
         it("normalises Windows-style backslash separators", () => {
             const uri = resolveOutputDirUri(base(), "manifests\\gitops\\argocd");
-            assert.strictEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
+            assertPathEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
         });
 
         it("rejects '..' traversal", () => {
