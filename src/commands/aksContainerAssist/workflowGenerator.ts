@@ -143,7 +143,7 @@ async function collectWorkflowConfiguration(
         isManagedNamespace,
         workflowName,
     } = azureContext;
-    if (!clusterName || !clusterResourceGroup || !namespace || !workflowName) {
+    if (!clusterName || !clusterResourceGroup || !namespace || !workflowName || !acrName || !acrResourceGroup) {
         logger.error("collectWorkflowConfiguration called with incomplete Azure context");
         return undefined;
     }
@@ -358,8 +358,8 @@ async function collectMultiContainerWorkflowConfiguration(
     return {
         workflowName: workflowName!,
         branchName: "main",
-        acrResourceGroup,
-        azureContainerRegistry: acrName,
+        acrResourceGroup: acrResourceGroup!,
+        azureContainerRegistry: acrName!,
         clusterName: clusterName!,
         clusterResourceGroup: clusterResourceGroup!,
         namespace: namespace!,

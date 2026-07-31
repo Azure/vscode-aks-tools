@@ -6,12 +6,19 @@ export interface ContainerAssistOptions {
 }
 
 export enum ContainerAssistAction {
-    GenerateDeployment = "generateDeployment",
+    GenerateDockerfile = "generateDockerfile",
+    GenerateManifests = "generateManifests",
     GenerateWorkflow = "generateWorkflow",
 }
 
 export interface ContainerAssistQuickPickItem extends vscode.QuickPickItem {
     action: ContainerAssistAction;
+}
+
+/** Which deployment artifacts to generate. */
+export interface DeploymentArtifacts {
+    dockerfile: boolean;
+    manifests: boolean;
 }
 
 export interface DeploymentResult {

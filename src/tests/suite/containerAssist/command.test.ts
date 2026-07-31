@@ -178,10 +178,12 @@ describe("runContainerAssist Command", () => {
 
         await runContainerAssist({} as IActionContext, testUri);
 
-        assert.strictEqual(capturedItems.length, 2);
-        assert.ok(capturedItems[0].label.includes("Generate Deployment Files"));
-        assert.ok(capturedItems[1].label.includes("Generate GitHub Workflow"));
-        assert.strictEqual(capturedItems[0].action, ContainerAssistAction.GenerateDeployment);
-        assert.strictEqual(capturedItems[1].action, ContainerAssistAction.GenerateWorkflow);
+        assert.strictEqual(capturedItems.length, 3);
+        assert.ok(capturedItems[0].label.includes("Generate Dockerfile"));
+        assert.ok(capturedItems[1].label.includes("Generate Kubernetes Manifests"));
+        assert.ok(capturedItems[2].label.includes("Generate GitHub Workflow"));
+        assert.strictEqual(capturedItems[0].action, ContainerAssistAction.GenerateDockerfile);
+        assert.strictEqual(capturedItems[1].action, ContainerAssistAction.GenerateManifests);
+        assert.strictEqual(capturedItems[2].action, ContainerAssistAction.GenerateWorkflow);
     });
 });
