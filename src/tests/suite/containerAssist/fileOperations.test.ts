@@ -6,6 +6,9 @@ import {
     scanForDockerfiles,
     scanForK8sManifests,
     scanManifestsForModulePaths,
+    loadGitignoreDirs,
+    getEffectiveExcludedDirs,
+    isExcludedModulePath,
 } from "../../../commands/aksContainerAssist/fileOperations";
 
 describe("fileOperations", () => {
@@ -371,6 +374,125 @@ describe("fileOperations", () => {
             const rel = path.relative(workspaceRoot, hits[0]);
             assert.ok(!rel.startsWith(".."), `Manifest path should be inside workspace; got ${rel}`);
             assert.ok(rel.endsWith(path.join("services", "api", "k8s", "deployment.yaml")));
+        });
+    });
+
+    describe("loadGitignoreDirs", () => {
+        it("returns an empty set when no .gitignore exists", async () => {
+            const dir = path.join(tempDir, "gi-none");
+            fs.mkdirSync(dir);
+
+            const result = await loadGitignoreDirs(dir);
+
+            assert.strictEqual(result.size, 0);
+        });
+
+        it("extracts plain directory names, including anchored and trailing-slash forms", async () => {
+            const dir = path.join(tempDir, "gi-plain");
+            fs.mkdirSync(dir);
+            fs.writeFileSync(path.join(dir, ".gitignore"), ["mybuild/", "/generated", "cache"].join("\n"));
+
+            const result = await loadGitignoreDirs(dir);
+
+            assert.ok(result.has("mybuild"));
+            assert.ok(result.has("generated"));
+            assert.ok(result.has("cache"));
+        });
+
+        it("ignores blanks, comments, negations, globs, and nested paths", async () => {
+            const dir = path.join(tempDir, "gi-skip");
+            fs.mkdirSync(dir);
+            fs.writeFileSync(
+                path.join(dir, ".gitignore"),
+                ["", "# a comment", "!keep", "*.log", "build/**", "nested/path/", "logs"].join("\n"),
+            );
+
+            const result = await loadGitignoreDirs(dir);
+
+            assert.ok(result.has("logs"));
+            assert.ok(!result.has("keep"));
+            assert.ok(!result.has("*.log"));
+            assert.ok(!result.has("build"));
+            assert.ok(!result.has("nested"));
+            assert.ok(!result.has("path"));
+        });
+    });
+
+    describe("getEffectiveExcludedDirs", () => {
+        it("merges the static exclusion set with .gitignore entries", async () => {
+            const dir = path.join(tempDir, "eff-merge");
+            fs.mkdirSync(dir);
+            fs.writeFileSync(path.join(dir, ".gitignore"), "mybuild/\n");
+
+            const result = await getEffectiveExcludedDirs(dir);
+
+            assert.ok(result.has("node_modules"), "static entry should be present");
+            assert.ok(result.has("mybuild"), "gitignore entry should be present");
+        });
+
+        it("falls back to the static set when no .gitignore exists", async () => {
+            const dir = path.join(tempDir, "eff-none");
+            fs.mkdirSync(dir);
+
+            const result = await getEffectiveExcludedDirs(dir);
+
+            assert.ok(result.has("node_modules"));
+        });
+    });
+
+    describe("scanForDockerfiles + .gitignore", () => {
+        it("skips a Dockerfile inside a directory listed in .gitignore", async () => {
+            const dir = path.join(tempDir, "gi-docker");
+            fs.mkdirSync(dir);
+            fs.writeFileSync(path.join(dir, ".gitignore"), "mybuild/\n");
+            fs.mkdirSync(path.join(dir, "mybuild"), { recursive: true });
+            fs.mkdirSync(path.join(dir, "src"), { recursive: true });
+            fs.writeFileSync(path.join(dir, "mybuild", "Dockerfile"), "FROM node:20");
+            fs.writeFileSync(path.join(dir, "src", "Dockerfile"), "FROM node:20");
+
+            const result = await scanForDockerfiles(dir);
+
+            assert.strictEqual(result.length, 1);
+            assert.ok(result[0].includes("src"));
+        });
+
+        it("finds the Dockerfile when the directory is not gitignored", async () => {
+            const dir = path.join(tempDir, "gi-docker-nomatch");
+            fs.mkdirSync(dir);
+            fs.writeFileSync(path.join(dir, ".gitignore"), "somethingelse/\n");
+            fs.mkdirSync(path.join(dir, "mybuild"), { recursive: true });
+            fs.writeFileSync(path.join(dir, "mybuild", "Dockerfile"), "FROM node:20");
+
+            const result = await scanForDockerfiles(dir);
+
+            assert.strictEqual(result.length, 1);
+            assert.ok(result[0].includes("mybuild"));
+        });
+    });
+
+    describe("isExcludedModulePath", () => {
+        const root = path.join(path.sep, "repo");
+
+        it("returns false for the root itself", () => {
+            assert.strictEqual(isExcludedModulePath(root, root), false);
+        });
+
+        it("returns false for paths outside the root", () => {
+            assert.strictEqual(isExcludedModulePath(path.join(path.sep, "other", "app"), root), false);
+        });
+
+        it("matches a static excluded segment by default", () => {
+            assert.strictEqual(isExcludedModulePath(path.join(root, ".next", "standalone"), root), true);
+        });
+
+        it("does not match a non-excluded module by default", () => {
+            assert.strictEqual(isExcludedModulePath(path.join(root, "services", "api"), root), false);
+        });
+
+        it("honors an extra excluded set passed in (e.g. from .gitignore)", () => {
+            const excluded = new Set(["mybuild"]);
+            assert.strictEqual(isExcludedModulePath(path.join(root, "mybuild", "app"), root, excluded), true);
+            assert.strictEqual(isExcludedModulePath(path.join(root, "services"), root, excluded), false);
         });
     });
 });

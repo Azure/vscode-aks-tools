@@ -57,7 +57,7 @@ export async function checkExistingFiles(folderPath: string): Promise<ExistingFi
 }
 
 /** Directories to skip during recursive scans (build artifacts, dependencies, etc.) */
-const EXCLUDED_DIRS = new Set([
+export const EXCLUDED_DIRS = new Set([
     "node_modules",
     ".git",
     "dist",
@@ -85,19 +85,84 @@ const EXCLUDED_DIRS = new Set([
 const SCAN_MAX_DEPTH = 3;
 
 /**
+ * Parses `<rootPath>/.gitignore` and returns the plain, single-segment directory
+ * names it lists (e.g. `dist/`, `/build`, `.next`). Globs, negations, comments, and
+ * nested paths are ignored, matching the basename-based `EXCLUDED_DIRS` model.
+ * A missing or unreadable `.gitignore` yields an empty set.
+ */
+export async function loadGitignoreDirs(rootPath: string): Promise<Set<string>> {
+    const dirs = new Set<string>();
+
+    try {
+        const content = await fs.readFile(path.join(rootPath, ".gitignore"), "utf-8");
+
+        for (const raw of content.split(/\r?\n/)) {
+            const line = raw.trim();
+
+            // Skip blanks, comments, and negations.
+            if (line === "" || line.startsWith("#") || line.startsWith("!")) {
+                continue;
+            }
+
+            // Skip glob patterns.
+            if (/[*?[\]]/.test(line)) {
+                continue;
+            }
+
+            // Strip anchoring/trailing slashes; keep single-segment names only.
+            const name = line.replace(/^\/+/, "").replace(/\/+$/, "");
+            if (name !== "" && !name.includes("/")) {
+                dirs.add(name);
+            }
+        }
+    } catch {
+        // No/unreadable .gitignore: fall back to the static set.
+    }
+
+    return dirs;
+}
+
+/** Static {@link EXCLUDED_DIRS} plus any plain directory entries in the root's `.gitignore`. */
+export async function getEffectiveExcludedDirs(rootPath: string): Promise<Set<string>> {
+    const gitignoreDirs = await loadGitignoreDirs(rootPath);
+    return new Set([...EXCLUDED_DIRS, ...gitignoreDirs]);
+}
+
+export function isExcludedModulePath(
+    modulePath: string,
+    rootPath: string,
+    excluded: Set<string> = EXCLUDED_DIRS,
+): boolean {
+    const relative = path.relative(rootPath, modulePath);
+
+    if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+        return false;
+    }
+
+    return relative.split(path.sep).some((segment) => excluded.has(segment));
+}
+
+/**
  * Searches recursively (up to 3 levels deep) for Dockerfiles under rootPath.
  * Returns absolute paths sorted shallowest-first; excluded dirs are skipped.
  */
 export async function scanForDockerfiles(rootPath: string): Promise<string[]> {
     const dockerfiles: string[] = [];
+    const excluded = await getEffectiveExcludedDirs(rootPath);
 
     const isDockerfile = (_filePath: string, fileName: string): boolean => fileName === "Dockerfile";
 
-    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, (filePath, fileName) => {
-        if (isDockerfile(filePath, fileName)) {
-            dockerfiles.push(filePath);
-        }
-    });
+    await walkDirectory(
+        rootPath,
+        SCAN_MAX_DEPTH,
+        0,
+        (filePath, fileName) => {
+            if (isDockerfile(filePath, fileName)) {
+                dockerfiles.push(filePath);
+            }
+        },
+        excluded,
+    );
 
     return dockerfiles.sort((left, right) => left.split(path.sep).length - right.split(path.sep).length);
 }
@@ -109,18 +174,25 @@ export async function scanForDockerfiles(rootPath: string): Promise<string[]> {
  */
 export async function scanForK8sManifests(rootPath: string): Promise<string[]> {
     const manifests: string[] = [];
+    const excluded = await getEffectiveExcludedDirs(rootPath);
 
     const isYamlFile = (fileName: string): boolean => fileName.endsWith(".yaml") || fileName.endsWith(".yml");
 
-    await walkDirectory(rootPath, SCAN_MAX_DEPTH, 0, async (filePath, fileName) => {
-        if (!isYamlFile(fileName)) {
-            return;
-        }
+    await walkDirectory(
+        rootPath,
+        SCAN_MAX_DEPTH,
+        0,
+        async (filePath, fileName) => {
+            if (!isYamlFile(fileName)) {
+                return;
+            }
 
-        if (await isKubernetesManifest(filePath)) {
-            manifests.push(filePath);
-        }
-    });
+            if (await isKubernetesManifest(filePath)) {
+                manifests.push(filePath);
+            }
+        },
+        excluded,
+    );
 
     return manifests;
 }
@@ -157,6 +229,7 @@ async function walkDirectory(
     maxDepth: number,
     currentDepth: number,
     onFile: (filePath: string, name: string) => void | Promise<void>,
+    excluded: Set<string> = EXCLUDED_DIRS,
 ): Promise<void> {
     if (currentDepth > maxDepth) {
         return;
@@ -170,8 +243,8 @@ async function walkDirectory(
 
             if (entry.isFile()) {
                 await onFile(fullPath, entry.name);
-            } else if (entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name)) {
-                await walkDirectory(fullPath, maxDepth, currentDepth + 1, onFile);
+            } else if (entry.isDirectory() && !excluded.has(entry.name)) {
+                await walkDirectory(fullPath, maxDepth, currentDepth + 1, onFile, excluded);
             }
         }
     } catch {

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { logger } from "./logger";
+import { EXCLUDED_DIRS, getEffectiveExcludedDirs } from "./fileOperations";
 
 // --- Tool Definitions ---
 
@@ -90,22 +91,6 @@ function isPathTraversal(relativePath: string, workspaceRoot?: string): boolean 
     return false;
 }
 
-// --- Excluded directories for listDirectory ---
-
-const EXCLUDED_DIRS = new Set([
-    "node_modules",
-    ".git",
-    "dist",
-    "build",
-    "target",
-    "bin",
-    "obj",
-    "__pycache__",
-    "venv",
-    ".next",
-    ".nuxt",
-]);
-
 // --- Tool Handlers ---
 
 const DEFAULT_MAX_LINES = 150;
@@ -164,10 +149,11 @@ export async function handleListDirectory(
     const maxDepth = Math.min(input.maxDepth ?? DEFAULT_MAX_DEPTH, HARD_CAP_MAX_DEPTH);
     const absolutePath = path.join(workspaceRoot, relativePath);
     const dirUri = vscode.Uri.file(absolutePath);
+    const excluded = await getEffectiveExcludedDirs(workspaceRoot);
 
     try {
         const entries: string[] = [];
-        await walkDirectory(dirUri, "", maxDepth, 0, entries);
+        await walkDirectory(dirUri, "", maxDepth, 0, entries, excluded);
 
         if (entries.length === 0) {
             return `Directory: ${relativePath}\n(empty directory)`;
@@ -185,6 +171,7 @@ async function walkDirectory(
     maxDepth: number,
     currentDepth: number,
     entries: string[],
+    excluded: Set<string> = EXCLUDED_DIRS,
 ): Promise<void> {
     if (entries.length >= MAX_ENTRIES) {
         return;
@@ -207,13 +194,13 @@ async function walkDirectory(
         }
 
         if (type === vscode.FileType.Directory) {
-            if (EXCLUDED_DIRS.has(name)) {
+            if (excluded.has(name)) {
                 continue;
             }
             entries.push(`${prefix}${name}/`);
             if (currentDepth < maxDepth) {
                 const childUri = vscode.Uri.joinPath(dirUri, name);
-                await walkDirectory(childUri, `${prefix}  `, maxDepth, currentDepth + 1, entries);
+                await walkDirectory(childUri, `${prefix}  `, maxDepth, currentDepth + 1, entries, excluded);
             }
         } else {
             entries.push(`${prefix}${name}`);

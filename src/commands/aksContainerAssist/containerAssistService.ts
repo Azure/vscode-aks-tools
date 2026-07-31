@@ -16,7 +16,14 @@ import {
 
 import { LMClient } from "./lmClient";
 import { extractContent, parseManifestsFromLMResponse, fixManifestImageReferences } from "./contentParser";
-import { checkExistingFiles, writeFile, ensureDirectory, getK8sManifestFolder } from "./fileOperations";
+import {
+    checkExistingFiles,
+    writeFile,
+    ensureDirectory,
+    getK8sManifestFolder,
+    isExcludedModulePath,
+    getEffectiveExcludedDirs,
+} from "./fileOperations";
 import {
     DOCKERFILE_SYSTEM_PROMPT,
     K8S_MANIFEST_SYSTEM_PROMPT,
@@ -82,16 +89,28 @@ export class ContainerAssistService {
             const analysis: RepositoryAnalysis = result.value;
             logger.toolResponse("analyzeRepo", analysis);
 
-            const modules: ModuleAnalysisResult[] = (analysis.modules || []).map((module) => ({
-                name: module.name,
-                modulePath: module.modulePath,
-                language: module.language,
-                framework: module.frameworks?.[0]?.name,
-                port: module.ports?.[0],
-                buildCommand: module.buildSystems?.[0]?.type,
-                dependencies: module.dependencies,
-                entryPoint: module.entryPoint,
-            }));
+            // Exclude static dirs plus the repo's .gitignore entries, so build-output
+            // modules (e.g. Next.js `.next/`) from the SDK walker are filtered out.
+            const excludedDirs = await getEffectiveExcludedDirs(folderPath);
+
+            const modules: ModuleAnalysisResult[] = (analysis.modules || [])
+                .filter((module) => {
+                    if (isExcludedModulePath(module.modulePath, folderPath, excludedDirs)) {
+                        logger.info(`Skipping module in excluded directory: ${module.modulePath}`);
+                        return false;
+                    }
+                    return true;
+                })
+                .map((module) => ({
+                    name: module.name,
+                    modulePath: module.modulePath,
+                    language: module.language,
+                    framework: module.frameworks?.[0]?.name,
+                    port: module.ports?.[0],
+                    buildCommand: module.buildSystems?.[0]?.type,
+                    dependencies: module.dependencies,
+                    entryPoint: module.entryPoint,
+                }));
 
             const isMonorepo = analysis.isMonorepo ?? modules.length > 1;
 
