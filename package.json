@@ -1202,7 +1202,7 @@
         "@vscode/l10n": "^0.0.18",
         "containerization-assist-mcp": "^1.4.1",
         "decompress": "^4.2.1",
-        "js-yaml": "^4.2.0",
+        "js-yaml": "^5.2.2",
         "libsodium-wrappers": "^0.8.4",
         "move-file": "^4.1.0",
         "node-fetch": "^3.3.2",
