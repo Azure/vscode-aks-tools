@@ -3,29 +3,39 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "cron"
+      cronjob: "0 8 1,15 * *"
     # Bake newly released versions for 1 week before proposing them. This gives an
     # internal evaluation window and avoids proposing versions that are not yet
     # mirrored in the internal package feed proxy.
     cooldown:
       default-days: 7
     groups:
-      typescript-eslint:
-        patterns:
-          - "@typescript-eslint/*"
+      npm-root:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "npm"
     directory: "/webview-ui"
     schedule:
-      interval: "monthly"
+      interval: "cron"
+      cronjob: "0 8 1,15 * *"
     cooldown:
       default-days: 7
     groups:
-      typescript-eslint:
-        patterns:
-          - "@typescript-eslint/*"
+      npm-webview-ui:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "cron"
+      cronjob: "0 8 1,15 * *"
     cooldown:
       default-days: 7
+    groups:
+      github-actions:
+        update-types:
+          - "minor"
+          - "patch"
