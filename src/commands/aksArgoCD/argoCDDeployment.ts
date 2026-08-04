@@ -117,9 +117,22 @@ kubectl apply -f ${params.appName}.yaml
 
 ## 3. Access the Argo CD UI
 
+Use the extension's **AKS: Argo CD Post-Deploy Actions** command. It reads the
+port Argo CD is actually configured on and port-forwards to match — which
+matters when the UI is served behind Entra ID SSO, because the app
+registration's redirect URI is tied to that exact port.
+
+To do it by hand, look up the configured URL first:
+
 \`\`\`bash
-kubectl -n argocd port-forward svc/argocd-server 8080:443
-# then open https://localhost:8080
+kubectl -n argocd get cm argocd-cm -o jsonpath='{.data.url}'
+\`\`\`
+
+Then forward that port (Argo CD defaults to \`8080\` when no URL is set):
+
+\`\`\`bash
+kubectl -n argocd port-forward svc/argocd-server <port>:443
+# then open https://localhost:<port>
 \`\`\`
 
 For OSS installs, get the initial admin password with:
@@ -156,6 +169,10 @@ function isSystemNamespace(name: string): boolean {
 /**
  * Prompts for a required, single-line string.  Returns undefined if the user
  * cancels or leaves the field blank.
+ *
+ * The result is trimmed: validation already runs against the trimmed value, so
+ * returning the raw input would let surrounding whitespace through into
+ * generated filenames and manifest fields (e.g. `my-app .yaml`).
  */
 async function promptRequired(
     prompt: string,
@@ -163,7 +180,7 @@ async function promptRequired(
     value?: string,
     validate?: (v: string) => string | undefined,
 ): Promise<string | undefined> {
-    return vscode.window.showInputBox({
+    const result = await vscode.window.showInputBox({
         prompt,
         placeHolder,
         value,
@@ -173,6 +190,7 @@ async function promptRequired(
             return validate ? validate(v.trim()) : undefined;
         },
     });
+    return result?.trim();
 }
 
 /**

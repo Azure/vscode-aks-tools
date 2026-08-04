@@ -91,6 +91,27 @@ describe("argoCDDeployment", () => {
             assert.ok(!/Hollywood/i.test(md), "no Hollywood Principle messaging");
             assert.ok(!/separate/i.test(md), "no separate-repo prescription");
         });
+
+        it("does not hardcode a port-forward on 8080", () => {
+            const md = buildReadmeMarkdown({
+                appName: "my-app",
+                namespace: "prod",
+                manifestRepoUrl: "https://github.com/my-org/my-app",
+                manifestPath: "k8s",
+            });
+
+            // Argo CD may be served on a non-default port; the app registration's
+            // redirect URI is tied to it, so a hardcoded 8080 breaks Entra ID SSO.
+            assert.ok(
+                !/port-forward\s+svc\/argocd-server\s+8080:/.test(md),
+                "README must not hardcode a port-forward on 8080",
+            );
+            assert.ok(!/localhost:8080/.test(md), "README must not hardcode localhost:8080");
+            // It should instead point at the command that resolves the real port...
+            assert.ok(/Post-Deploy Actions/.test(md), "points at the post-deploy command");
+            // ...and show how to look the port up manually.
+            assert.ok(/argocd-cm/.test(md), "shows how to read the configured port from argocd-cm");
+        });
     });
 
     describe("writeArgoCDArtifacts", () => {
