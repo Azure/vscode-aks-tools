@@ -1,12 +1,12 @@
-### Inspektor Gadget
+# Inspektor Gadget
 
-### Deploy and Undeploy InspektorGadget
+## Deploy and Undeploy InspektorGadget
 
 Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Gadget** to deploy the gadget into your cluster. You can deploy and undeploy the gadget from this page.
 
 ![Inspektor Gadget main menu access](../resources/inspector-gadget-main-menu.png)
 
-### Profile, Top, Trace and Snapshot Inspektor Gadget Commands
+## Profile, Top, Trace and Snapshot Inspektor Gadget Commands
 
 Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Gadget**, then choose **Gadget Commands** to use non-interactive Top, Trace, Profile or Snapshot commands for your cluster.
 
@@ -16,7 +16,7 @@ Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Ga
 
 ![Cloud explorer extension menu](../resources/inspector-gadget-3.png)
 
-### New Troubleshooting Menu Items
+## New Troubleshooting Menu Items
 
 The Inspektor Gadget integration now includes specialized menu items for common troubleshooting scenarios. If Inspektor Gadget is not deployed, the extension will prompt you to deploy it as below.
 
@@ -26,17 +26,17 @@ Depending on the context, the appropriate gadget will be selected automatically 
 
 ![Inspektor Gadget dialog](../resources/ig-gadget-dialog.png)
 
-### Investigate DNS
+## Investigate DNS
 Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Investigate DNS** to troubleshoot DNS-related issues in your cluster. This provides specialized tools for monitoring DNS queries and identifying connectivity problems.
 
 ![DNS investigation menu](../resources/inspector-gadget-dns.png)
 
-### Real-time TCP Monitoring
+## Real-time TCP Monitoring
 Select **Real-time TCP Monitoring** to monitor TCP connections and network traffic in real-time. This helps identify network bottlenecks and connection issues.
 
 ![Real-time TCP monitoring](../resources/inspector-gadget-tcp.png)
 
-### Troubleshoot Resource Utilization
+## Troubleshoot Resource Utilization
 Use **Troubleshoot Resource Utilization** to analyze CPU, memory, and other resource usage patterns across your cluster. This helps identify resource constraints and optimization opportunities.
 
 ![Resource utilization troubleshooting](../resources/ig-resource-utilization-troubleshooting.png)
@@ -47,7 +47,7 @@ The Troubleshoot Resource Utilization menu includes the following sub-options:
 - **Investigate Block I/O intensive processes**: Detect processes with high disk usage to identify potential performance bottlenecks.
 - **Profile CPU**: Take samples of stack traces to analyze performance issues and identify resource-intensive processes.
 
-### Improve Security of My Cluster
+## Improve Security of My Cluster
 Select **Improve Security of My Cluster** to access the `trace_exec` gadget under the hood to monitor when new processes are executed.
 
 ![Security improvement tools](../resources/ig-improve-security.png)

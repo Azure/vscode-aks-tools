@@ -1,4 +1,4 @@
-## Installation
+# Installation
 
 1. Download and install the [Azure Kubernetes Service extension](https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-aks-tools) for Visual Studio Code.
 
