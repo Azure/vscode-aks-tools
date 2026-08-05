@@ -2,7 +2,7 @@
 
 Actively monitor the the status of all KAITO deployments on the cluster, retrieve logs, test the inference servers, and delete/redeploy models.
 
-### Manage KAITO Deployments
+## Manage KAITO Deployments
 
 Right-click your AKS cluster > **Develop & Deploy** > **Deploy a LLM with KAITO** > **Manage KAITO Models**.
 
@@ -14,7 +14,7 @@ For your selected deployment, click **Get Logs** to  access the latest logs from
 
 To delete a model, select **Delete Workspace** (or **Cancel** for ongoing deployments). For failed deployments, choose **Re-deploy Default CRD** to remove the current deployment and restart the model deployment process from scratch.
 
-### Test a Model
+## Test a Model
 
 On your desired model, select **Test** to access the model testing page.
 

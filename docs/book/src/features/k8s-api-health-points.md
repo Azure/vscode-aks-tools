@@ -1,6 +1,6 @@
-### Kubernetes API Health Endpoints
+# Kubernetes API Health Endpoints
 
-### Run Kubernetes API Health Endpoints
+## Run Kubernetes API Health Endpoints
 
 Right-click your AKS cluster > **Develop & Deploy** > **Run Kubectl Commands**. Select and run health check commands from the *Health* section as shown in the image below. Currently we provide:
 

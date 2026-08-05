@@ -1,6 +1,6 @@
 # Collect TCP Dumps from AKS Cluster Linux Nodes
 
-### Collect TCP Dumps
+## Collect TCP Dumps
 
 Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Collect TCP Dumps** to capture TCP dumps for any Linux node and download them to your local machine with ease.
 

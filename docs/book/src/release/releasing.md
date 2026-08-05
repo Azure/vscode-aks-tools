@@ -1,4 +1,4 @@
-## How to Release
+# How to Release
 
 To make a new release and publish it to the marketplace you have to follow the following steps.
 
@@ -9,11 +9,11 @@ To make a new release and publish it to the marketplace you have to follow the f
 5. Create a new PR, get approval and merge
 6. Run the `Build & Publish` workflow manually from the GH Actions tab
 
-### Pinned third-party versions
+## Pinned third-party versions
 
 Two independent sets of external versions are baked into this extension. Both drift silently between releases and should be reviewed each cut.
 
-#### CLI binaries downloaded on demand
+### CLI binaries downloaded on demand
 
 Defaults live in `package.json` under `contributes.configuration`. `azure.kubelogin.releaseTag` is the single source of truth for both the locally-downloaded kubelogin AND the `kubelogin-version` input in every generated GitHub Actions workflow — `workflowTemplate.ts` substitutes the setting value at generation time.
 
@@ -33,7 +33,7 @@ done
 
 Before bumping, verify the target release actually has uploaded platform assets (`curl -sI` on a representative download URL and expect `HTTP/2 200`).
 
-#### GitHub Actions pinned in workflow templates
+### GitHub Actions pinned in workflow templates
 
 The templates under `resources/yaml/*.template.yaml` pin these action majors. Major tags receive minor/patch fixes automatically — bumping is only needed when a new major ships. When bumping, update all template files that reference the action and the corresponding assertions in `src/tests/suite/containerAssist/workflowTemplate.test.ts`.
 
@@ -58,7 +58,7 @@ Skim the release notes of the target major before bumping. Recent Azure/* action
 
 **Do not bump a version without a smoke test** — generate a workflow via the extension, push it to a real branch on a real AKS cluster, and confirm the run succeeds. Bumping blindly is worse than staying pinned.
 
-### Build & Publish 
+## Build & Publish 
 
 The `Build & Publish` workflow allows to create a new release, package it in a VSIX file and publish to the VSCode marketplace with a single click.
 

@@ -1,6 +1,6 @@
 # Compare 2 AKS Cluster within Same Subscription
 
-### Compare AKS Clusters
+## Compare AKS Clusters
 
 Right-click your Azure subscription > **Compare AKS Cluster** to use VS Code diff to compare json object of 2 AKS clusters.
 

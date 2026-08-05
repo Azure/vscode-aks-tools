@@ -1,6 +1,6 @@
 # Manage Cluster Operations
 
-### Run cluster operations from your AKS cluster
+## Run cluster operations from your AKS cluster
 
 Right-click your AKS cluster > **Manage Cluster** to run cluster operations:
 
