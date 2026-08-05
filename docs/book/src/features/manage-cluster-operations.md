@@ -1,10 +1,11 @@
-# Run Managed Cluster Operations
+# Manage Cluster Operations
 
-### Run Managed Cluster Operations from your AKS cluster
+### Run cluster operations from your AKS cluster
 
-Right click on your AKS cluster and click on **Managed Cluster Operations** to easily run few managed cluster operations on your cluster. Currently we have enable following operations:
+Right-click your AKS cluster > **Manage Cluster** to run cluster operations:
 
-- Abort Last Operation
 - Delete Cluster
 - Reconcile Cluster
 - Rotate Cluster Certificate
+
+To abort an in-progress operation, open **Show Properties** and use the abort action on the cluster or agent pool.

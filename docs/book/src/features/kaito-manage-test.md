@@ -4,7 +4,7 @@ Actively monitor the the status of all KAITO deployments on the cluster, retriev
 
 ### Manage KAITO Deployments
 
-Right click on your desired AKS cluster and select **Deploy an LLM with KAITO** and then click on **Manage KAITO Models**.
+Right-click your AKS cluster > **Develop & Deploy** > **Deploy a LLM with KAITO** > **Manage KAITO Models**.
 
 ![Manage Page](../resources/kaito-manage-page.png)
 
