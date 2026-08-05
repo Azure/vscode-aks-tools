@@ -223,15 +223,6 @@ This supports a full path from local generation to reviewable GitHub PR with min
 
 The generated workflow annotates resources in your cluster after each deployment. These annotations use the `aks-project/` prefix, which is a shared schema read by both this extension and aks-desktop.
 
-### Namespace annotations
-
-Applied once per deployment run to the target namespace via `kubectl annotate namespace`:
-
-| Annotation | Value | Description |
-|---|---|---|
-| `aks-project/workload-identity-id` | `${{ secrets.AZURE_CLIENT_ID }}` | Client ID of the managed identity used for workload identity federation. Stored on the namespace because identity config is per-namespace, not per-deployment. |
-| `aks-project/workload-identity-tenant` | `${{ secrets.AZURE_TENANT_ID }}` | Azure AD tenant ID associated with the managed identity. |
-
 ### Deployment annotations
 
 Applied to all deployments in the namespace via `kubectl annotate deployment --all`:
