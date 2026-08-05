@@ -91,7 +91,7 @@ The integration provides four commands, all prefixed with **AKS:**
    2. Resolves the active kubectl context (no subscription or cluster picker needed).
    3. Checks that Argo CD is installed (looks for the `argocd` namespace).
    4. Confirms the apply action.
-   5. Runs `kubectl apply -n argocd -f <file>`.
+   5. Runs `kubectl apply -n <namespace> -f <file> --validate=false`. Validation is skipped because Argo CD CRDs may not be present on the client.
 4. After a successful apply, a notification offers four actions:
 
 ### Open Argo CD UI
@@ -151,12 +151,12 @@ For **Azure DevOps** or **ACR** sources, prefer the *Configure Workload Identity
 
 ## Copilot Chat Integration
 
-A GitHub Copilot chat skill is registered so you can ask questions like:
+An Azure AI Agent plugin (`argoCDDeploymentPlugin`) is registered for GitHub Copilot for Azure, so you can ask questions like:
 
 - *"How do I set up Argo CD on my AKS cluster?"*
 - *"Create an Argo CD deployment for my cluster"*
 
-The skill explains the GitOps principle and offers a button to launch the scaffold command directly from chat.
+The plugin explains the GitOps principle and offers a button to launch the scaffold command directly from chat.
 
 ---
 
