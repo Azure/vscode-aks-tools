@@ -319,6 +319,7 @@ export async function selectClusterAcr(
     sessionProvider: ReadyAzureSessionProvider,
     subscriptionId: string,
     cluster: Cluster,
+    placeHolder?: string,
 ): Promise<AzureResource | undefined> {
     const allAcrs = await longRunning(l10n.t("Loading Azure Container Registries..."), () =>
         fetchSubscriptionAcrs(sessionProvider, subscriptionId),
@@ -354,13 +355,15 @@ export async function selectClusterAcr(
         : l10n.t("Container Registry ({0} available)", acrsToShow.length);
 
     const selected = await vscode.window.showQuickPick(acrItems, {
-        placeHolder: l10n.t("Select Azure Container Registry for cluster '{0}'", cluster.name),
+        placeHolder: placeHolder ?? l10n.t("Select Azure Container Registry for cluster '{0}'", cluster.name),
         title,
     });
 
     // Show confirmation dialog if user cancelled
     if (!selected) {
-        return showWizardExitConfirmation(() => selectClusterAcr(sessionProvider, subscriptionId, cluster));
+        return showWizardExitConfirmation(() =>
+            selectClusterAcr(sessionProvider, subscriptionId, cluster, placeHolder),
+        );
     }
 
     // If the selected ACR is not yet attached, warn and offer to assign AcrPull automatically.
@@ -602,8 +605,15 @@ export async function promptForWorkflowName(appName: string): Promise<string | u
 
 export interface AzureContext {
     subscriptionId: string;
-    acrName: string;
-    acrResourceGroup: string;
+    /** ACR name — set when the image is sourced from an Azure Container Registry. */
+    acrName?: string;
+    /** ACR resource group — set when the image is sourced from an Azure Container Registry. */
+    acrResourceGroup?: string;
+    /**
+     * Full container image reference (e.g. `ghcr.io/org/app:latest`) to use in the generated
+     * manifests when the user opts out of ACR. Mutually exclusive with `acrName`.
+     */
+    customImage?: string;
     clusterName?: string;
     clusterResourceGroup?: string;
     namespace?: string;
@@ -611,9 +621,111 @@ export interface AzureContext {
     workflowName?: string;
 }
 
+/** The resolved container image source: either an ACR or a user-supplied image reference. */
+interface ImageSourceSelection {
+    acrName?: string;
+    acrResourceGroup?: string;
+    customImage?: string;
+}
+
+/** Validates a user-supplied container image reference. Returns an error message, or undefined if valid. */
+function validateImageReference(value: string): string | undefined {
+    const image = value.trim();
+    if (!image) return l10n.t("Image reference is required");
+    if (/\s/.test(image)) return l10n.t("Image reference cannot contain spaces");
+    return undefined;
+}
+
+/** Prompts for a full container image reference (registry/repository[:tag]) to use in the manifests. */
+async function promptForCustomImage(): Promise<string | undefined> {
+    const image = await vscode.window.showInputBox({
+        prompt: l10n.t(
+            "Enter the full container image reference to use in the manifests (e.g. ghcr.io/org/app:latest).",
+        ),
+        placeHolder: "ghcr.io/org/app:latest",
+        ignoreFocusOut: true,
+        validateInput: validateImageReference,
+    });
+
+    // Show confirmation dialog if user cancelled
+    if (!image) {
+        return showWizardExitConfirmation(() => promptForCustomImage());
+    }
+
+    return image.trim();
+}
+
+async function selectAcrImageSource(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+    placeHolder?: string,
+): Promise<ImageSourceSelection | undefined> {
+    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster, placeHolder);
+    return acr ? { acrName: acr.name, acrResourceGroup: acr.resourceGroup } : undefined;
+}
+
+/** Asks the user whether the manifests should point at an ACR or an existing image reference. */
+async function promptForImageSource(): Promise<"acr" | "custom" | undefined> {
+    const acrChoice = {
+        label: l10n.t("$(cloud) Use an Azure Container Registry"),
+        description: l10n.t("Select an ACR attached to the cluster"),
+        sourceType: "acr" as const,
+    };
+    const customChoice = {
+        label: l10n.t("$(link) Use an existing image reference"),
+        description: l10n.t("Point manifests at an image you already have (e.g. GHCR, Docker Hub)"),
+        sourceType: "custom" as const,
+    };
+
+    const picked = await vscode.window.showQuickPick([acrChoice, customChoice], {
+        placeHolder: l10n.t("Select the container image source for the manifests"),
+        title: l10n.t("Container Image Source"),
+    });
+
+    if (!picked) {
+        return showWizardExitConfirmation(() => promptForImageSource());
+    }
+
+    return picked.sourceType;
+}
+
 /**
- * Shared tail for both collectAzureContext paths: prompts for ACR, namespace, and optionally
- * workflow name given an already-resolved session provider, subscription ID, and cluster.
+ * Resolves the container image source for the manifests. When `requireAcr` is true (a workflow is
+ * also generated, which builds/pushes to ACR) an ACR must be selected; otherwise the user may
+ * instead point the manifests at an existing image reference (GHCR, Docker Hub, etc.).
+ */
+async function selectImageSource(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    cluster: Cluster,
+    requireAcr: boolean,
+): Promise<ImageSourceSelection | undefined> {
+    if (requireAcr) {
+        // A workflow is also being generated: it builds and pushes the image to ACR, so an
+        // existing image reference isn't an option here — explain why only ACR is offered.
+        return selectAcrImageSource(
+            sessionProvider,
+            subscriptionId,
+            cluster,
+            l10n.t("The GitHub workflow builds and pushes the image to ACR, so a registry is required"),
+        );
+    }
+
+    const sourceType = await promptForImageSource();
+    if (!sourceType) return undefined;
+
+    if (sourceType === "acr") {
+        return selectAcrImageSource(sessionProvider, subscriptionId, cluster);
+    }
+
+    const customImage = await promptForCustomImage();
+    return customImage ? { customImage } : undefined;
+}
+
+/**
+ * Shared tail for both collectAzureContext paths: prompts for namespace, image source, and
+ * optionally workflow name given an already-resolved session provider, subscription ID, and cluster.
  */
 async function collectAzureContextForCluster(
     sessionProvider: ReadyAzureSessionProvider,
@@ -626,13 +738,16 @@ async function collectAzureContextForCluster(
     const namespaceSelection = await selectClusterNamespace(sessionProvider, subscriptionId, cluster, namespaceData);
     if (!namespaceSelection) return undefined;
 
-    const acr = await selectClusterAcr(sessionProvider, subscriptionId, cluster);
-    if (!acr) return undefined;
+    // ACR is mandatory when a workflow is also generated (it builds/pushes the image to ACR);
+    // for deployment-only, the user may instead point the manifests at an existing image.
+    const imageSource = await selectImageSource(sessionProvider, subscriptionId, cluster, hasWorkflow);
+    if (!imageSource) return undefined;
 
     const baseContext: AzureContext = {
         subscriptionId,
-        acrName: acr.name,
-        acrResourceGroup: acr.resourceGroup,
+        acrName: imageSource.acrName,
+        acrResourceGroup: imageSource.acrResourceGroup,
+        customImage: imageSource.customImage,
         clusterName: cluster.name,
         clusterResourceGroup: cluster.resourceGroup,
         namespace: namespaceSelection.name,
@@ -672,7 +787,8 @@ export async function collectAzureContext(
 /**
  * Collects Azure context when invoked from the AKS cluster tree.
  * Subscription and cluster are already known from the tree node, so we skip those prompts.
- * Always prompts for ACR and namespace; additionally prompts for workflow name when hasWorkflow is true.
+ * Always prompts for namespace and image source; ACR is required only when hasWorkflow is true,
+ * in which case it additionally prompts for the workflow name.
  */
 export async function collectAzureContextFromTree(
     subscriptionId: string,

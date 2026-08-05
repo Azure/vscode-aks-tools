@@ -36,8 +36,8 @@ export class InspektorGadgetPanel extends BasePanel<"gadget"> {
         });
     }
 
-    public show(dataProvider: PanelDataProvider<"gadget">, ...disposables: vscode.Disposable[]): void {
-        super.show(dataProvider, ...disposables);
+    public show(dataProvider: PanelDataProvider<"gadget">, ...disposables: vscode.Disposable[]): vscode.WebviewPanel {
+        return super.show(dataProvider, ...disposables);
     }
 
     public showWithConfig(

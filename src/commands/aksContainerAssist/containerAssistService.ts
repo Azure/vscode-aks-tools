@@ -1,7 +1,13 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { Errorable, failed } from "../utils/errorable";
-import { AnalyzeRepositoryResult, DeploymentResult, ExistingFilesCheckResult, ModuleAnalysisResult } from "./types";
+import {
+    AnalyzeRepositoryResult,
+    DeploymentArtifacts,
+    DeploymentResult,
+    ExistingFilesCheckResult,
+    ModuleAnalysisResult,
+} from "./types";
 import { logger } from "./logger";
 import * as l10n from "@vscode/l10n";
 import {
@@ -16,7 +22,14 @@ import {
 
 import { LMClient } from "./lmClient";
 import { extractContent, parseManifestsFromLMResponse, fixManifestImageReferences } from "./contentParser";
-import { checkExistingFiles, writeFile, ensureDirectory, getK8sManifestFolder } from "./fileOperations";
+import {
+    checkExistingFiles,
+    writeFile,
+    ensureDirectory,
+    getK8sManifestFolder,
+    isExcludedModulePath,
+    getEffectiveExcludedDirs,
+} from "./fileOperations";
 import {
     DOCKERFILE_SYSTEM_PROMPT,
     K8S_MANIFEST_SYSTEM_PROMPT,
@@ -82,16 +95,28 @@ export class ContainerAssistService {
             const analysis: RepositoryAnalysis = result.value;
             logger.toolResponse("analyzeRepo", analysis);
 
-            const modules: ModuleAnalysisResult[] = (analysis.modules || []).map((module) => ({
-                name: module.name,
-                modulePath: module.modulePath,
-                language: module.language,
-                framework: module.frameworks?.[0]?.name,
-                port: module.ports?.[0],
-                buildCommand: module.buildSystems?.[0]?.type,
-                dependencies: module.dependencies,
-                entryPoint: module.entryPoint,
-            }));
+            // Exclude static dirs plus the repo's .gitignore entries, so build-output
+            // modules (e.g. Next.js `.next/`) from the SDK walker are filtered out.
+            const excludedDirs = await getEffectiveExcludedDirs(folderPath);
+
+            const modules: ModuleAnalysisResult[] = (analysis.modules || [])
+                .filter((module) => {
+                    if (isExcludedModulePath(module.modulePath, folderPath, excludedDirs)) {
+                        logger.info(`Skipping module in excluded directory: ${module.modulePath}`);
+                        return false;
+                    }
+                    return true;
+                })
+                .map((module) => ({
+                    name: module.name,
+                    modulePath: module.modulePath,
+                    language: module.language,
+                    framework: module.frameworks?.[0]?.name,
+                    port: module.ports?.[0],
+                    buildCommand: module.buildSystems?.[0]?.type,
+                    dependencies: module.dependencies,
+                    entryPoint: module.entryPoint,
+                }));
 
             const isMonorepo = analysis.isMonorepo ?? modules.length > 1;
 
@@ -278,37 +303,41 @@ export class ContainerAssistService {
 
     async generateDeploymentFiles(
         folderPath: string,
-        acrLoginServer?: string,
+        imageRepositoryFor?: (moduleName: string) => string | undefined,
         namespace?: string,
         signal?: AbortSignal,
         token?: vscode.CancellationToken,
         onProgress?: (message: string) => void,
+        artifacts: DeploymentArtifacts = { dockerfile: true, manifests: true },
     ): Promise<Errorable<DeploymentResult>> {
         const reportProgress = (message: string) => onProgress?.(message);
 
         const existingFiles = await this.checkExistingFiles(folderPath);
 
-        const skipDockerfile = existingFiles.hasDockerfile;
-        const skipK8sManifests = existingFiles.hasK8sManifests;
+        // Skip an artifact if it wasn't requested, or if it already exists on disk.
+        const skipDockerfile = !artifacts.dockerfile || existingFiles.hasDockerfile;
+        const skipK8sManifests = !artifacts.manifests || existingFiles.hasK8sManifests;
+
+        // Requested artifacts that already exist on disk are preserved (not regenerated).
+        const preserved = [
+            artifacts.dockerfile && existingFiles.hasDockerfile && "Dockerfile",
+            artifacts.manifests && existingFiles.hasK8sManifests && "Kubernetes manifests",
+        ].filter(Boolean) as string[];
 
         if (skipDockerfile && skipK8sManifests) {
-            const message = l10n.t(
-                "Deployment files already exist (Dockerfile and {0}/ manifests). No new files generated.",
-                getK8sManifestFolder(),
-            );
-            vscode.window.showInformationMessage(message);
+            if (preserved.length > 0) {
+                vscode.window.showInformationMessage(
+                    l10n.t("Deployment files already exist ({0}). No new files generated.", preserved.join(", ")),
+                );
+            }
             return {
                 succeeded: true,
                 result: { generatedFiles: [] },
             };
         }
 
-        if (skipDockerfile || skipK8sManifests) {
-            const existingList = [
-                skipDockerfile && "Dockerfile",
-                skipK8sManifests && `${getK8sManifestFolder()}/ manifests`,
-            ].filter(Boolean);
-            vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", existingList.join(", ")));
+        if (preserved.length > 0) {
+            vscode.window.showInformationMessage(l10n.t("Existing {0} will be preserved.", preserved.join(", ")));
         }
 
         const lmResult = await this.lmClient.ensureModel();
@@ -351,11 +380,24 @@ export class ContainerAssistService {
         }
 
         if (!skipK8sManifests) {
+            if (modules.length > 1 && imageRepositoryFor) {
+                const resolvedRepos = modules.map((m) => imageRepositoryFor(m.name)).filter(Boolean);
+                const allIdentical = resolvedRepos.length > 1 && new Set(resolvedRepos).size === 1;
+                if (allIdentical) {
+                    vscode.window.showWarningMessage(
+                        l10n.t(
+                            "Multiple modules were detected but a single image reference ({0}) will be used for all of them. Update the generated manifests if each module needs a distinct image.",
+                            resolvedRepos[0]!,
+                        ),
+                    );
+                }
+            }
+
             for (const module of modules) {
                 const manifestAppName = module.name;
                 reportProgress(l10n.t("Generating Kubernetes manifests for {0}...", module.name));
                 const manifestNamespace = namespace || "default";
-                const imageRepository = acrLoginServer ? `${acrLoginServer}/${manifestAppName}` : undefined;
+                const imageRepository = imageRepositoryFor?.(manifestAppName);
                 const manifestsResult = await this.generateManifests(
                     module.modulePath,
                     manifestAppName,

@@ -43,6 +43,22 @@ export function TestStyleViewer(initialState: InitialState) {
                 .sort();
         }
 
+        // VS Code 1.130+ wraps its injected default webview styles in a CSS `@layer` block,
+        // so the `_defaultStyles` sheet exposes a single top-level CSSLayerBlockRule instead of
+        // flat CSSStyleRules. Recurse into any grouping rule (@layer / @media / @supports) to
+        // collect the actual style rules; reading only top-level rules yields an empty list.
+        function collectStyleRules(rules: CSSRuleList): CSSStyleRule[] {
+            const collected: CSSStyleRule[] = [];
+            for (const rule of [...rules]) {
+                if (isStyleRule(rule)) {
+                    collected.push(rule);
+                } else if ("cssRules" in rule) {
+                    collected.push(...collectStyleRules((rule as CSSGroupingRule).cssRules));
+                }
+            }
+            return collected;
+        }
+
         function getCssRules(): CssRule[] {
             const defaultStyleSheetNode = getStyleSheetNode();
             const [defaultStyleSheet] = [...document.styleSheets].filter((s) => s.ownerNode === defaultStyleSheetNode);
@@ -50,7 +66,7 @@ export function TestStyleViewer(initialState: InitialState) {
                 return [];
             }
 
-            return [...defaultStyleSheet.cssRules].filter<CSSStyleRule>(isStyleRule).map((r) => ({
+            return collectStyleRules(defaultStyleSheet.cssRules).map((r) => ({
                 selector: r.selectorText,
                 text: r.cssText,
             }));
