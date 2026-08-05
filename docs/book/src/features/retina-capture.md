@@ -2,13 +2,13 @@
 
 ## Run Retina Capture
 
-Right click on your AKS cluster and select **Troubleshoot Network Health** and then click on **Run Retina Capture** to capture logs like iptables-rules, [ip-resrouces.txt and other key distributed captures form this azure networking tool](https://retina.sh/docs/captures/cli#file-and-directory-structure-inside-the-tarball) for any Linux nodes in yout AKS cluster.
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Run Retina Capture** to capture logs like iptables-rules, [ip-resrouces.txt and other key distributed captures form this azure networking tool](https://retina.sh/docs/captures/cli#file-and-directory-structure-inside-the-tarball) for any Linux nodes in yout AKS cluster.
 
 There are two options to run the capture:
 
 ### Download the capture locally
 
-#### Step 1: Right-click on your AKS cluster and select **Troubleshoot Network Health** > **Run Retina Capture** > **Download Artifacts Locally**
+#### Step 1: Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Run Retina Capture** > **Download Artifacts Locally**
 
 ![Step 1: Menu](../resources/right-click-download-retina-capture.png)
 
@@ -30,7 +30,7 @@ Before uploading the capture to Azure Storage, ensure the following prerequisite
 
 3. A container is created within the storage account to store the capture.
 
-#### Step 1: Right-click on your AKS cluster and select **Troubleshoot Network Health** > **Run Retina Capture** > **Upload Artifacts to Blob Storage**
+#### Step 1: Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Run Retina Capture** > **Upload Artifacts to Blob Storage**
 
 ![Step 1: Menu](../resources/right-click-upload-retina-capture.png)
 

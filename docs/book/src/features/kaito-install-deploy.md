@@ -4,7 +4,7 @@ The KAITO integration enables seamless installation of KAITO onto your clusters,
 
 ### Install KAITO
 
-Right click on your desired AKS cluster and select **Deploy an LLM with KAITO** and then click on **Install KAITO** to open up the KAITO installation page. 
+Right-click your AKS cluster > **Develop & Deploy** > **Deploy a LLM with KAITO** > **Install KAITO** to open the KAITO installation page. 
 
 ![Installation Page](../resources/kaito-installation-page.png)
 
@@ -14,7 +14,7 @@ Once on the page, click **Install KAITO** and the KAITO installation process wil
 
 ### Deploy a model
 
-Right click on an AKS cluster that has KAITO successfully installed and select **Deploy an LLM with KAITO** and then click on **Create KAITO Workspace** to open the KAITO model deployment page.
+On a cluster that already has KAITO installed, right-click the cluster > **Develop & Deploy** > **Deploy a LLM with KAITO** > **Create KAITO Workspace** to open the KAITO model deployment page.
 
 ![Deployment Page](../resources/kaito-deploy-page.png)
 

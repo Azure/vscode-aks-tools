@@ -2,7 +2,7 @@
 
 ### AKS Diagnostics
 
-Right click on your AKS cluster and click on **Run AKS Diagnostics** to display diagnostics information based on your AKS cluster's backend telemetry for:
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Run AKS Diagnostics** to display diagnostics information based on your AKS cluster's backend telemetry for:
 
 - Best Practices
 - Create, Upgrade, Delete and Scale issues

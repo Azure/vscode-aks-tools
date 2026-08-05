@@ -2,13 +2,13 @@
 
 ### Deploy and Undeploy InspektorGadget
 
-Right click on your AKS cluster and select **Show Inspektor Gadget** to easily deploy gadget into your cluster. The Show Inspektor Gadget command has been moved to the main context menu for easier access. Users can easily one-click deploy and undeploy gadget from this feature.
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Gadget** to deploy the gadget into your cluster. You can deploy and undeploy the gadget from this page.
 
 ![Inspektor Gadget main menu access](../resources/inspector-gadget-main-menu.png)
 
 ### Profile, Top, Trace and Snapshot Inspektor Gadget Commands
 
-Right-click on your AKS cluster and select **Show Inspektor Gadget** and choose **Gadget Commands** to easily use non-interactive Top, Trace, Profile or Snapshot commands for your cluster.
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Gadget**, then choose **Gadget Commands** to use non-interactive Top, Trace, Profile or Snapshot commands for your cluster.
 
 ![Cloud explorer extension menu](../resources/inspector-gadget-1.png)
 
@@ -27,7 +27,7 @@ Depending on the context, the appropriate gadget will be selected automatically 
 ![Inspektor Gadget dialog](../resources/ig-gadget-dialog.png)
 
 ### Investigate DNS
-Right-click on your AKS cluster and select **Investigate DNS** to troubleshoot DNS-related issues in your cluster. This provides specialized tools for monitoring DNS queries and identifying connectivity problems.
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Investigate DNS** to troubleshoot DNS-related issues in your cluster. This provides specialized tools for monitoring DNS queries and identifying connectivity problems.
 
 ![DNS investigation menu](../resources/inspector-gadget-dns.png)
 
