@@ -224,7 +224,7 @@ export function parseArgoCDPort(value: string | undefined): number | undefined {
  * configured to serve on (from `url`, falling back to `global.domain`).
  * Falls back to {@link DEFAULT_ARGOCD_LOCAL_PORT} when nothing is configured.
  */
-async function detectArgoCDConfiguredPort(
+export async function detectArgoCDConfiguredPort(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFile: string,
 ): Promise<number> {
@@ -296,7 +296,10 @@ async function getArgoCDAdminCredentials(
  * 2. Checks the argocd-server Service for an external LoadBalancer IP/hostname.
  * 3. If found, opens https://<ip-or-hostname> directly.
  * 4. Otherwise, starts a port-forward in an integrated terminal and opens
- *    https://localhost:8080 — the user must keep that terminal open.
+ *    https://localhost:<port> — the user must keep that terminal open. The port
+ *    comes from the argocd-cm ConfigMap (`url`, falling back to `global.domain`)
+ *    and defaults to 8080; using the configured one keeps the opened URL aligned
+ *    with the Entra ID SSO redirect URI, which is tied to that exact port.
  *
  * SSO path  — no credentials are fetched; the browser redirects to Microsoft login.
  * Password path — fetches and displays the initial admin password before opening.

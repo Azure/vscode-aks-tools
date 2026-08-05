@@ -8,6 +8,8 @@ import {
     buildReadmeMarkdown,
     resolveOutputDirUri,
     writeArgoCDArtifacts,
+    validateManifestPath,
+    normalizeManifestPath,
 } from "../../../commands/aksArgoCD/argoCDDeployment";
 
 /** Escapes a string for safe use inside a RegExp literal. */
@@ -241,6 +243,58 @@ describe("argoCDDeployment", () => {
 
         it("rejects a Windows absolute path", () => {
             assert.throws(() => resolveOutputDirUri(base(), "C:\\Windows\\Temp"), /must be relative/i);
+        });
+    });
+});
+
+describe("manifest path validation", () => {
+    describe("normalizeManifestPath", () => {
+        it("converts backslashes to forward slashes for git paths", () => {
+            assert.strictEqual(normalizeManifestPath("k8s\\overlays\\prod"), "k8s/overlays/prod");
+        });
+
+        it("collapses duplicate separators and strips './' and trailing slashes", () => {
+            assert.strictEqual(normalizeManifestPath("./k8s//overlays/"), "k8s/overlays");
+        });
+
+        it("trims surrounding whitespace", () => {
+            assert.strictEqual(normalizeManifestPath("  k8s  "), "k8s");
+        });
+    });
+
+    describe("validateManifestPath", () => {
+        it("accepts ordinary repo-relative paths", () => {
+            assert.strictEqual(validateManifestPath("k8s"), undefined);
+            assert.strictEqual(validateManifestPath("k8s/overlays/prod"), undefined);
+            assert.strictEqual(validateManifestPath("charts/my-app.v2"), undefined);
+            assert.strictEqual(validateManifestPath("k8s\\overlays\\prod"), undefined);
+        });
+
+        it("rejects absolute paths", () => {
+            assert.match(String(validateManifestPath("/etc/passwd")), /relative/i);
+            assert.match(String(validateManifestPath("C:\\secrets")), /relative/i);
+            // A UNC path normalises to a leading slash and is caught the same way.
+            assert.match(String(validateManifestPath("\\\\server\\share")), /relative/i);
+        });
+
+        it("rejects parent-directory traversal", () => {
+            assert.match(String(validateManifestPath("../../etc")), /\.\./);
+            assert.match(String(validateManifestPath("k8s/../../secrets")), /\.\./);
+        });
+
+        it("rejects values that would break the unquoted YAML 'path:' field", () => {
+            // Leading YAML indicators.
+            assert.ok(validateManifestPath("*anchor") !== undefined, "leading '*' rejected");
+            assert.ok(validateManifestPath("{a: b}") !== undefined, "leading '{' rejected");
+            assert.ok(validateManifestPath("- item") !== undefined, "leading '-' rejected");
+            assert.ok(validateManifestPath("#comment") !== undefined, "leading '#' rejected");
+            // An embedded ": " turns the scalar into a mapping.
+            assert.ok(validateManifestPath("k8s: overlays") !== undefined, "embedded ': ' rejected");
+        });
+
+        it("rejects an empty or whitespace-only path", () => {
+            assert.ok(validateManifestPath("   ") !== undefined);
+            assert.ok(validateManifestPath("./") !== undefined);
         });
     });
 });

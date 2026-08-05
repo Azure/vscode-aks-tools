@@ -105,7 +105,7 @@ kubectl -n argocd get pods
 \`\`\`
 
 If it is not installed, see the [Argo CD getting started guide](https://argo-cd.readthedocs.io/en/stable/getting_started/)
-or install the Azure-managed Argo CD extension.
+or install the [Azure-managed Argo CD extension](https://learn.microsoft.com/azure/azure-arc/kubernetes/conceptual-gitops-argocd).
 
 ## 2. Apply the Application
 
@@ -152,6 +152,7 @@ argocd app sync ${params.appName}    # force a manual sync if needed
 
 - [Argo CD docs](https://argo-cd.readthedocs.io/en/stable/)
 - [Getting started](https://argo-cd.readthedocs.io/en/stable/getting_started/)
+- [GitOps with Argo CD on AKS and Arc-enabled Kubernetes](https://learn.microsoft.com/azure/azure-arc/kubernetes/conceptual-gitops-argocd)
 `;
 }
 
@@ -191,6 +192,56 @@ async function promptRequired(
         },
     });
     return result?.trim();
+}
+
+/**
+ * Normalises a repository-relative path for use in the generated manifest.
+ *
+ * Git paths always use forward slashes, so `\` is converted; duplicate
+ * separators, a leading `./` and any trailing `/` are removed so the value
+ * written to `spec.source.path` is canonical.
+ */
+export function normalizeManifestPath(value: string): string {
+    return value
+        .trim()
+        .replace(/\\/g, "/")
+        .replace(/\/{2,}/g, "/")
+        .replace(/^\.\//, "")
+        .replace(/\/+$/, "");
+}
+
+/**
+ * Validates the in-repository manifest path.
+ *
+ * This value is interpolated into `spec.source.path` unquoted, so it has to be
+ * both a sane repo-relative path and YAML-safe. `appName` and `namespace` were
+ * already validated; this field was not, despite being the one that reaches the
+ * generated manifest.
+ *
+ * Returns an error message, or undefined when the value is acceptable.
+ */
+export function validateManifestPath(value: string): string | undefined {
+    const path = normalizeManifestPath(value);
+
+    if (path === "") {
+        return l10n.t("Enter a path inside the repository, for example 'k8s'.");
+    }
+    // eslint-disable-next-line no-control-regex
+    if (/[\u0000-\u001f\u007f]/.test(path)) {
+        return l10n.t("Path must not contain control characters.");
+    }
+    if (path.startsWith("/") || /^[a-zA-Z]:/.test(path)) {
+        return l10n.t("Use a path relative to the repository root, not an absolute path.");
+    }
+    if (path.split("/").includes("..")) {
+        return l10n.t("Path must not contain '..'.");
+    }
+    // Leading YAML indicators, or an embedded ": ", would break the unquoted
+    // `path:` value in the generated manifest.
+    if (/^[-?:,[\]{}#&*!|>'"%@`]/.test(path) || path.includes(": ")) {
+        return l10n.t("Path contains characters that are not valid here. Use letters, digits, '-', '_', '.' and '/'.");
+    }
+    return undefined;
 }
 
 /**
@@ -682,12 +733,15 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
 
     // Path inside the repo where the Kubernetes manifests live. Ask explicitly
     // so we don't assume a layout the user then has to correct in the YAML.
-    const manifestPath = await promptRequired(
+    const manifestPathInput = await promptRequired(
         l10n.t("Path within the repository that contains your Kubernetes manifests"),
         "k8s",
         "k8s",
+        validateManifestPath,
     );
-    if (!manifestPath) return;
+    if (!manifestPathInput) return;
+    // Canonicalise separators before the value reaches `spec.source.path`.
+    const manifestPath = normalizeManifestPath(manifestPathInput);
 
     // Where to save the generated manifest (relative to the workspace).
     // Cancelling (Escape) returns undefined — abort rather than silently
