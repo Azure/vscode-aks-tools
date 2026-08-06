@@ -146,6 +146,15 @@ extends:
                           retryCountOnTaskFailure: 3
 
                         - task: AzureCLI@2
+                          displayName: "Get AzDO User ID"
+                          inputs:
+                              azureSubscription: AKS-VsCode-Release
+                              scriptType: pscore
+                              scriptLocation: inlineScript
+                              inlineScript: |
+                                  az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me --resource 499b84ac-1321-427f-aa17-267ca6975798
+
+                        - task: AzureCLI@2
                           displayName: "Publish VSIX to Marketplace"
                           inputs:
                               azureSubscription: AKS-VsCode-Release
