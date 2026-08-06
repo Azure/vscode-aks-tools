@@ -4,8 +4,6 @@
 
 Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Gadget** to deploy the gadget into your cluster. You can deploy and undeploy the gadget from this page.
 
-![Inspektor Gadget main menu access](../resources/inspector-gadget-main-menu.png)
-
 ## Profile, Top, Trace and Snapshot Inspektor Gadget Commands
 
 Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Gadget**, then choose **Gadget Commands** to use non-interactive Top, Trace, Profile or Snapshot commands for your cluster.
