@@ -119,6 +119,14 @@ function linksOf(file) {
     for (const match of text.matchAll(/!?\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
         links.push({ target: match[1], line: lineAt(text, match.index), isImage: match[0].startsWith("!") });
     }
+    // markdown allows raw HTML, and several pages use <img> to control size.
+    // Missing these made referenced images look orphaned.
+    for (const match of text.matchAll(/<img\b[^>]*?\ssrc\s*=\s*["']([^"']+)["']/gi)) {
+        links.push({ target: match[1], line: lineAt(text, match.index), isImage: true });
+    }
+    for (const match of text.matchAll(/<a\b[^>]*?\shref\s*=\s*["']([^"']+)["']/gi)) {
+        links.push({ target: match[1], line: lineAt(text, match.index), isImage: false });
+    }
     return links;
 }
 
