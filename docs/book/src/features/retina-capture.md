@@ -10,8 +10,6 @@ There are two options to run the capture:
 
 #### Step 1: Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Run Retina Capture** > **Download Artifacts Locally**
 
-![Step 1: Menu](../resources/right-click-download-retina-capture.png)
-
 #### Step 2: Select the nodes on which you want to run the capture
 
 ![Step 2: Select Nodes to Run Retina](../resources/retina-select-nodes.png)
@@ -31,8 +29,6 @@ Before uploading the capture to Azure Storage, ensure the following prerequisite
 3. A container is created within the storage account to store the capture.
 
 #### Step 1: Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Run Retina Capture** > **Upload Artifacts to Blob Storage**
-
-![Step 1: Menu](../resources/right-click-upload-retina-capture.png)
 
 #### Step 2: Select the storage account where you want to upload the capture
 
