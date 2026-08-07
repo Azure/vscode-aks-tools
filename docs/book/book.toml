@@ -6,6 +6,11 @@ src = "src"
 title = "Visual Studio Code AKS Tools"
 description = "Display Azure Kubernetes Services within VS Code"
 
+# Fail the build when SUMMARY.md references a page that does not exist. Without this,
+# mdBook silently creates a stub and publishes a blank page.
+[build]
+create-missing = false
+
 [preprocessor.toc]
 command = "mdbook-toc"
 
