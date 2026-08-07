@@ -1489,8 +1489,7 @@ This allows gradual rollout, internal validation, and user feedback collection w
 <div style="break-before: page; page-break-before: always;"></div><h1 id="argo-cd-gitops-integration"><a class="header" href="#argo-cd-gitops-integration">Argo CD GitOps Integration</a></h1>
 <p>The Argo CD integration brings a complete GitOps workflow to AKS clusters directly inside VS Code. Argo CD must be <strong>pre-installed</strong> on your cluster — the extension checks for its presence and directs you to the <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/">official docs</a> if it is missing.</p>
 <blockquote>
-<p><strong>GitOps “Hollywood Principle”</strong> — <em>Don’t call us, we’ll call you.</em>
-Your cluster never pushes. Argo CD continuously pulls desired state from a dedicated Git config repository and reconciles it automatically.</p>
+<p><strong>GitOps in one line</strong> — Argo CD is a controller that watches a Git repository for your Kubernetes manifests and continuously syncs the cluster to match them.</p>
 </blockquote>
 <hr />
 <h2 id="feature-flag-1"><a class="header" href="#feature-flag-1">Feature Flag</a></h2>
@@ -1524,41 +1523,35 @@ Your cluster never pushes. Argo CD continuously pulls desired state from a dedic
 <ul>
 <li>A Kubernetes cluster with Argo CD installed via <strong>either</strong> of the <a href="features/argocd-gitops-integration.html#installation-options">Installation options</a> above.</li>
 <li><code>kubectl</code> available on your PATH (the extension uses the active kubectl context).</li>
-<li>A <strong>separate GitOps config repository</strong> — Argo CD manifests should live apart from your application source code.</li>
+<li>A Git repository containing your Kubernetes manifests. These can live in the same repository as your application source or in a separate repository — whichever fits your workflow.</li>
 </ul>
 <hr />
 <h2 id="commands"><a class="header" href="#commands">Commands</a></h2>
 <p>The integration provides four commands, all prefixed with <strong>AKS:</strong></p>
 <div class="table-wrapper"><table><thead><tr><th>Command</th><th>Where it appears</th><th>Description</th></tr></thead><tbody>
-<tr><td><strong>AKS: Create Argo CD GitOps Pipeline</strong></td><td>Command Palette, Explorer folder context menu</td><td>Scaffold an annotated Argo CD Application manifest in a config repo</td></tr>
+<tr><td><strong>AKS: Create Argo CD Application</strong></td><td>Command Palette, Explorer folder context menu</td><td>Generate an annotated Argo CD Application manifest pointing at a repo which contains Kubernetes manifests or a Helm chart to be deployed</td></tr>
 <tr><td><strong>AKS: Apply Argo CD Application to Cluster</strong></td><td>Explorer YAML file context menu, Editor context menu</td><td>Apply an Application YAML to the active cluster</td></tr>
 <tr><td><strong>AKS: Check Argo CD Status</strong></td><td>AKS cluster tree right-click menu</td><td>Show Argo CD pod and service health in an output channel</td></tr>
 <tr><td><strong>AKS: Argo CD Post-Deploy Actions</strong></td><td>Shown after a successful apply, or from the Command Palette</td><td>Open UI (SSO-aware), configure Azure Workload Identity (when source is ACR / Azure DevOps), connect a private GitHub repo, or open the Argo CD sync guide</td></tr>
 </tbody></table>
 </div>
 <hr />
-<h2 id="scaffold-a-gitops-config-repository"><a class="header" href="#scaffold-a-gitops-config-repository">Scaffold a GitOps Config Repository</a></h2>
+<h2 id="create-an-argo-cd-application"><a class="header" href="#create-an-argo-cd-application">Create an Argo CD Application</a></h2>
 <ol>
 <li>Open the <strong>Command Palette</strong> (<code>Cmd+Shift+P</code> on macOS / <code>Ctrl+Shift+P</code> on Windows/Linux).</li>
-<li>Run <strong>AKS: Create Argo CD GitOps Pipeline</strong>.</li>
-<li>If you are inside an application source repository (detected by the presence of <code>Dockerfile</code>, <code>package.json</code>, <code>go.mod</code>, etc.), the extension warns you and offers to open a separate config repo folder instead.</li>
+<li>Run <strong>AKS: Create Argo CD Application</strong>.</li>
 <li>Fill in the prompted parameters:
 <ul>
 <li><strong>App name</strong> — validated as <code>[a-z0-9][a-z0-9-]*</code>.</li>
-<li><strong>GitOps config repo URL</strong> — enter manually, browse a local folder (reads <code>.git/config</code> origin automatically), or browse your GitHub repos (authenticates via VS Code’s built-in GitHub provider).</li>
-<li><strong>Source repo URL</strong> (optional) — same picker options.</li>
-<li><strong>Target cluster API server URL</strong>.</li>
+<li><strong>Manifest repo URL</strong> — the Git repo Argo CD will watch. Enter manually, browse a local folder (reads <code>.git/config</code> origin automatically), or browse your GitHub repos (authenticates via VS Code’s built-in GitHub provider). This can be the same repo as your application source or a separate one.</li>
+<li><strong>Manifest path</strong> — the path within the repo that contains your Kubernetes manifests.</li>
+<li><strong>Output path</strong> — where to save the generated <code>&lt;app-name&gt;.yaml</code> manifest in your workspace.</li>
 <li><strong>Target namespace</strong> — where your workloads will be deployed.</li>
-<li><strong>Container image</strong> and <strong>port</strong>.</li>
+<li><strong>Include a setup guide (README)?</strong> — optional, off by default. When enabled, a short <code>&lt;app-name&gt;-README.md</code> with install / UI-access / day-2 steps is written alongside the manifest.</li>
 </ul>
 </li>
-<li>The extension scaffolds an <code>apps/&lt;name&gt;/</code> directory containing:
-<ul>
-<li><code>application.yaml</code> — the Argo CD Application CR with all placeholders substituted.</li>
-<li><code>README.md</code> — step-by-step setup guide covering install, UI access, repo registration, day-2 workflow, and monitoring commands.</li>
-</ul>
-</li>
-<li>A notification offers quick-open buttons for the generated files.</li>
+<li>The extension writes <code>&lt;app-name&gt;.yaml</code> — the Argo CD Application CR with all placeholders substituted — and opens it in the editor. There is no blocking pre-generate dialog; a non-modal notification with a <strong>Learn More</strong> link appears once the file is created.</li>
+<li>A notification offers to apply the manifest to the cluster.</li>
 </ol>
 <hr />
 <h2 id="apply-an-application-yaml-to-a-cluster"><a class="header" href="#apply-an-application-yaml-to-a-cluster">Apply an Application YAML to a Cluster</a></h2>
@@ -1584,7 +1577,7 @@ Your cluster never pushes. Argo CD continuously pulls desired state from a dedic
 <ul>
 <li>If Argo CD is installed via the <strong>Azure-managed extension</strong> with Entra ID OIDC configured, the dialog prompts you to sign in with your Microsoft account — no admin password is fetched.</li>
 <li>If the <code>argocd-server</code> Service has a <strong>LoadBalancer</strong> with an external IP, the extension opens <code>https://&lt;address&gt;</code> directly.</li>
-<li>If the Service is <strong>ClusterIP</strong> (common for local setups), the extension starts a <code>kubectl port-forward</code> in an integrated terminal and shows an <strong>Open Browser</strong> button once the tunnel is ready.</li>
+<li>If the Service is <strong>ClusterIP</strong> (common for local setups), the extension starts a <code>kubectl port-forward</code> in an integrated terminal and shows an <strong>Open Browser</strong> button once the tunnel is ready. The local port matches the port Argo CD is configured to serve on (read from the <code>argocd-cm</code> ConfigMap’s <code>url</code> / <code>global.domain</code>, defaulting to <code>8080</code>), so the opened URL stays aligned with the Entra ID redirect URI and SSO does not break.</li>
 </ul>
 <h3 id="configure-workload-identity-for-azure-recommended"><a class="header" href="#configure-workload-identity-for-azure-recommended">Configure Workload Identity for Azure (recommended)</a></h3>
 <p>Shown only when <strong>both</strong> conditions hold:</p>
@@ -1650,8 +1643,8 @@ Your cluster never pushes. Argo CD continuously pulls desired state from a dedic
 <p>The scaffolded <code>Application</code> manifests work unchanged with the upstream-parity features of the Azure-managed extension:</p>
 <ul>
 <li><strong>High availability (HA)</strong> — chosen at install time via the managed extension or upstream Helm chart; no change required to the generated YAML.</li>
-<li><strong>Hub-and-spoke / multi-cluster</strong> — the <em>Create Argo CD GitOps Pipeline</em> command prompts for a target cluster API server URL, which becomes <code>spec.destination.server</code> and can point at a remote spoke cluster from a central hub.</li>
-<li><strong><code>ApplicationSet</code></strong> — the scaffolder currently emits a single <code>Application</code>. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), hand-author an <code>ApplicationSet</code> alongside the generated <code>application.yaml</code>; the <em>Apply Argo CD Application to Cluster</em> command accepts any <code>argoproj.io/v1alpha1</code> resource.</li>
+<li><strong>Hub-and-spoke / multi-cluster</strong> — the <em>Create Argo CD Application</em> command generates a <code>spec.destination.server</code> you can point at a remote spoke cluster from a central hub.</li>
+<li><strong><code>ApplicationSet</code></strong> — the scaffolder currently emits a single <code>Application</code>. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), hand-author an <code>ApplicationSet</code> alongside the generated <code>&lt;app-name&gt;.yaml</code> manifest; the <em>Apply Argo CD Application to Cluster</em> command accepts any <code>argoproj.io/v1alpha1</code> resource.</li>
 </ul>
 <hr />
 <h2 id="security-notes"><a class="header" href="#security-notes">Security Notes</a></h2>
