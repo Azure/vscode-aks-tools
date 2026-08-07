@@ -290,8 +290,6 @@ grep -rn "What's New in <prev>" docs/   # must return zero matches
 
 Update it only if the user explicitly says the process changed (e.g., new pipeline, new required step, new secret).
 
-`docs/maintenance/README.md` currently mirrors `releasing.md`. If you update one, mirror the change to the other and tell the user.
-
 ### 10. CHANGELOG.md — DO NOT UPDATE
 
 Per the deprecation notice at the top of `CHANGELOG.md` (as of 1.6.14), the changelog is no longer maintained. Release notes live in:

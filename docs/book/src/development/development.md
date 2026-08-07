@@ -1,6 +1,6 @@
 # Package Scripts
 
-This gives an overview of the `npm` scripts available for development and release of the extension. See the `scripts` block in [package.json](../package.json).
+This gives an overview of the `npm` scripts available for development and release of the extension. See the `scripts` block in [package.json](../../../../package.json).
 
 These can all be run from the command line in the root of the repository (with `npm` installed), using `npm run {script-name}`.
 
@@ -10,8 +10,8 @@ These can all be run from the command line in the root of the repository (with `
 
 ## Development and Testing
 
-- [`dev-webview`](./webview-development.md#developing-the-ui): for concurrent development/debugging of webview UX.
-- `build-webview`: bundles and minifies the webview UX for consumption by the extension.
+- [`dev:webview`](./webview-development.md#developing-the-ui): for concurrent development/debugging of webview UX.
+- `build:webview`: bundles and minifies the webview UX for consumption by the extension.
 - `webpack`: builds and packages the extension.
 - `test`: runs automated tests.
 
