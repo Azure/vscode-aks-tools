@@ -1,3 +1,27 @@
+#!/usr/bin/env node
+/**
+ * Documentation checks that need knowledge of package.json.
+ *
+ * Deliberately does NOT check links, images, anchors, or SUMMARY completeness.
+ * `lychee --offline --include-fragments` covers the first three and handles raw
+ * HTML and URL fragments properly; `mdbook build` with `create-missing = false`
+ * fails on a SUMMARY entry with no page. Both run in CI. Duplicating them here
+ * was worse, not better: an earlier version of this file missed images
+ * referenced with <img> tags, which lychee caught.
+ *
+ * Checks:
+ *   identifiers   command IDs in prose that package.json does not contribute
+ *   menu-paths    menu breadcrumbs that do not match the real menu
+ *   coverage      commands documented nowhere in prose (warning)
+ *   orphans       images no page references (warning)
+ *
+ * Usage:
+ *   node scripts/docs-check.js                  all checks
+ *   node scripts/docs-check.js menu-paths       named checks only
+ *
+ * Errors exit 1. Warnings do not.
+ */
+
 "use strict";
 
 /**
@@ -20,7 +44,6 @@ const { loc, contributes, walk: walkMenus, DEFAULT_SIMPLIFIED } = require("./lib
 const REPO_ROOT = path.resolve(__dirname, "..");
 const DOCS_ROOT = path.join(REPO_ROOT, "docs");
 const BOOK_SRC = path.join(DOCS_ROOT, "book", "src");
-const SUMMARY = path.join(BOOK_SRC, "SUMMARY.md");
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"];
 
@@ -57,11 +80,6 @@ const imageFiles = () => walk(DOCS_ROOT, (f) => IMAGE_EXTENSIONS.includes(path.e
 
 const rel = (p) => path.relative(REPO_ROOT, p);
 
-/** Strip fenced code blocks so their contents are not treated as prose. */
-function withoutFencedCode(text) {
-    return text.replace(/^```[\s\S]*?^```/gm, (block) => block.replace(/[^\n]/g, " "));
-}
-
 /** Line number of a character offset. */
 function lineAt(text, index) {
     return text.slice(0, index).split("\n").length;
@@ -77,39 +95,6 @@ function withoutUrls(text) {
         .replace(/https?:\/\/\S+/g, blank)
         .replace(/\]\([^)]*\)/g, blank)
         .replace(/<[^>\s]+>/g, blank);
-}
-
-/**
- * Slugify a heading the way mdbook does: lowercase, drop anything that is not
- * alphanumeric/space/hyphen, collapse spaces to hyphens.
- */
-function slugify(heading) {
-    return heading
-        .replace(/`([^`]*)`/g, "$1")
-        .replace(/[*_]/g, "")
-        .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9 -]/g, "")
-        .trim()
-        .replace(/\s+/g, "-");
-}
-
-/** All heading anchors in a markdown file, including mdbook's duplicate suffixes. */
-function anchorsOf(file) {
-    const text = withoutFencedCode(fs.readFileSync(file, "utf8"));
-    const seen = new Map();
-    const anchors = new Set();
-    for (const match of text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
-        const base = slugify(match[1]);
-        if (!base) {
-            continue;
-        }
-        const count = seen.get(base) ?? 0;
-        seen.set(base, count + 1);
-        anchors.add(count === 0 ? base : `${base}-${count}`);
-    }
-    return anchors;
 }
 
 /** Every `[text](target)` link in a file, with its line number. */
@@ -177,88 +162,6 @@ function registeredInSource() {
 // ---------------------------------------------------------------------------
 
 const checks = {};
-
-checks.links = (report) => {
-    for (const file of markdownFiles()) {
-        const dir = path.dirname(file);
-        for (const { target, line, isImage } of linksOf(file)) {
-            if (isImage || /^(https?:|mailto:|#)/.test(target)) {
-                continue;
-            }
-            const [filePart] = target.split("#");
-            if (!filePart) {
-                continue;
-            }
-            const resolved = path.resolve(dir, filePart);
-            if (!fs.existsSync(resolved)) {
-                report.error(`${rel(file)}:${line}`, `link target does not exist: ${target}`);
-            }
-        }
-    }
-};
-
-checks.images = (report) => {
-    for (const file of markdownFiles()) {
-        const dir = path.dirname(file);
-        for (const { target, line, isImage } of linksOf(file)) {
-            if (!isImage || /^https?:/.test(target)) {
-                continue;
-            }
-            if (!fs.existsSync(path.resolve(dir, target.split("#")[0]))) {
-                report.error(`${rel(file)}:${line}`, `image does not exist: ${target}`);
-            }
-        }
-    }
-};
-
-checks.anchors = (report) => {
-    const cache = new Map();
-    const anchorsFor = (file) => {
-        if (!cache.has(file)) {
-            cache.set(file, anchorsOf(file));
-        }
-        return cache.get(file);
-    };
-
-    for (const file of markdownFiles()) {
-        const dir = path.dirname(file);
-        for (const { target, line, isImage } of linksOf(file)) {
-            if (isImage || /^(https?:|mailto:)/.test(target) || !target.includes("#")) {
-                continue;
-            }
-            const [filePart, fragment] = target.split("#");
-            if (!fragment) {
-                continue;
-            }
-            const targetFile = filePart ? path.resolve(dir, filePart) : file;
-            if (!targetFile.endsWith(".md") || !fs.existsSync(targetFile)) {
-                continue; // missing file already reported by the links check
-            }
-            if (!anchorsFor(targetFile).has(fragment.toLowerCase())) {
-                report.error(`${rel(file)}:${line}`, `anchor not found in ${path.basename(targetFile)}: #${fragment}`);
-            }
-        }
-    }
-};
-
-checks.summary = (report) => {
-    if (!fs.existsSync(SUMMARY)) {
-        report.error(rel(SUMMARY), "SUMMARY.md is missing");
-        return;
-    }
-    for (const { target, line } of linksOf(SUMMARY)) {
-        if (/^https?:/.test(target)) {
-            continue;
-        }
-        const resolved = path.resolve(BOOK_SRC, target.split("#")[0]);
-        if (!fs.existsSync(resolved)) {
-            report.error(
-                `${rel(SUMMARY)}:${line}`,
-                `entry points at a missing page: ${target} (mdbook create-missing would render this blank)`,
-            );
-        }
-    }
-};
 
 checks.identifiers = (report) => {
     const { commands, settings, submenus } = contributions();
