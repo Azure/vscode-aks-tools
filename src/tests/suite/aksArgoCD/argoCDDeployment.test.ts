@@ -1,0 +1,300 @@
+import * as assert from "assert";
+import * as path from "path";
+import * as fs from "fs";
+import * as os from "os";
+import * as vscode from "vscode";
+import {
+    buildArgoCDAppYaml,
+    buildReadmeMarkdown,
+    resolveOutputDirUri,
+    writeArgoCDArtifacts,
+    validateManifestPath,
+    normalizeManifestPath,
+} from "../../../commands/aksArgoCD/argoCDDeployment";
+
+/** Escapes a string for safe use inside a RegExp literal. */
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+describe("argoCDDeployment", () => {
+    let tempDir: string;
+
+    before(() => {
+        // buildArgoCDAppYaml reads the YAML template via getExtensionPath(),
+        // which resolves from the registered extension's path — no activation
+        // required (activation is skipped in the test host, which lacks the
+        // vscode-kubernetes-tools dependency).
+        tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "argocd-test-"));
+    });
+
+    after(() => {
+        if (tempDir) {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    describe("buildArgoCDAppYaml", () => {
+        it("substitutes all placeholders", () => {
+            const yaml = buildArgoCDAppYaml({
+                appName: "my-app",
+                configRepoUrl: "https://github.com/my-org/my-app",
+                clusterServer: "https://kubernetes.default.svc",
+                namespace: "prod",
+                appPath: "k8s",
+            });
+
+            assert.ok(yaml.includes("name: my-app"), "app name substituted");
+            assert.ok(yaml.includes("repoURL: https://github.com/my-org/my-app"), "repo url substituted");
+            assert.ok(yaml.includes("server: https://kubernetes.default.svc"), "cluster server substituted");
+            assert.ok(yaml.includes("namespace: prod"), "namespace substituted");
+            assert.ok(yaml.includes("path: k8s"), "manifest path substituted");
+        });
+
+        it("leaves no unresolved template tokens", () => {
+            const yaml = buildArgoCDAppYaml({
+                appName: "a",
+                configRepoUrl: "u",
+                clusterServer: "s",
+                namespace: "n",
+                appPath: "p",
+            });
+            assert.ok(!/\{\{[A-Z_]+\}\}/.test(yaml), "no {{PLACEHOLDER}} tokens remain");
+        });
+
+        it("does not emit a source-repo annotation (opinion-free)", () => {
+            const yaml = buildArgoCDAppYaml({
+                appName: "a",
+                configRepoUrl: "u",
+                clusterServer: "s",
+                namespace: "n",
+                appPath: "p",
+            });
+            assert.ok(!yaml.includes("source-repo"), "no source-repo annotation");
+        });
+    });
+
+    describe("buildReadmeMarkdown", () => {
+        it("includes the chosen values and no separate-repo / Hollywood messaging", () => {
+            const repoUrl = "https://github.com/my-org/my-app";
+            const md = buildReadmeMarkdown({
+                appName: "my-app",
+                namespace: "prod",
+                manifestRepoUrl: repoUrl,
+                manifestPath: "k8s",
+            });
+
+            assert.ok(md.includes("my-app"), "app name present");
+            // Assert the full repo URL appears as a discrete line/token rather than
+            // a bare substring check (which CodeQL flags as incomplete URL
+            // sanitization). Matching on a word boundary confirms the exact value.
+            assert.ok(new RegExp(`\\b${escapeRegExp(repoUrl)}\\b`).test(md), "repo url present");
+            assert.ok(md.includes("prod"), "namespace present");
+            assert.ok(!/Hollywood/i.test(md), "no Hollywood Principle messaging");
+            assert.ok(!/separate/i.test(md), "no separate-repo prescription");
+        });
+
+        it("does not hardcode a port-forward on 8080", () => {
+            const md = buildReadmeMarkdown({
+                appName: "my-app",
+                namespace: "prod",
+                manifestRepoUrl: "https://github.com/my-org/my-app",
+                manifestPath: "k8s",
+            });
+
+            // Argo CD may be served on a non-default port; the app registration's
+            // redirect URI is tied to it, so a hardcoded 8080 breaks Entra ID SSO.
+            assert.ok(
+                !/port-forward\s+svc\/argocd-server\s+8080:/.test(md),
+                "README must not hardcode a port-forward on 8080",
+            );
+            assert.ok(!/localhost:8080/.test(md), "README must not hardcode localhost:8080");
+            // It should instead point at the command that resolves the real port...
+            assert.ok(/Post-Deploy Actions/.test(md), "points at the post-deploy command");
+            // ...and show how to look the port up manually.
+            assert.ok(/argocd-cm/.test(md), "shows how to read the configured port from argocd-cm");
+        });
+    });
+
+    describe("writeArgoCDArtifacts", () => {
+        function baseParams(outputPath: string, includeReadme: boolean) {
+            return {
+                targetFolderUri: vscode.Uri.file(tempDir),
+                outputPath,
+                appName: "my-app",
+                manifestRepoUrl: "https://github.com/my-org/my-app",
+                manifestPath: "k8s",
+                clusterServer: "https://kubernetes.default.svc",
+                namespace: "default",
+                includeReadme,
+            };
+        }
+
+        it("creates the output folder and writes application.yaml", async () => {
+            const outDir = "argocd";
+            const result = await writeArgoCDArtifacts(baseParams(outDir, false));
+
+            const expectedDir = path.join(tempDir, outDir);
+            assert.ok(fs.existsSync(expectedDir), "output directory was created");
+            assert.ok(fs.statSync(expectedDir).isDirectory(), "output path is a directory");
+            assert.ok(fs.existsSync(path.join(expectedDir, "my-app.yaml")), "application.yaml written");
+            assert.strictEqual(result.readmeUri, undefined, "no README when not requested");
+        });
+
+        it("creates nested output folders recursively (mkdir -p behavior)", async () => {
+            const outDir = path.join("manifests", "gitops", "argocd");
+            await writeArgoCDArtifacts(baseParams(outDir, false));
+
+            const expectedDir = path.join(tempDir, outDir);
+            assert.ok(fs.existsSync(expectedDir), "nested output directory chain created");
+            assert.ok(fs.existsSync(path.join(expectedDir, "my-app.yaml")), "application.yaml written in nested dir");
+        });
+
+        it("writes the README when includeReadme is true", async () => {
+            const outDir = "with-readme";
+            const result = await writeArgoCDArtifacts(baseParams(outDir, true));
+
+            const expectedDir = path.join(tempDir, outDir);
+            assert.ok(fs.existsSync(path.join(expectedDir, "my-app.yaml")), "application.yaml written");
+            assert.ok(fs.existsSync(path.join(expectedDir, "my-app-README.md")), "README written");
+            assert.ok(result.readmeUri, "readmeUri returned");
+        });
+
+        it("does not error when the output folder already exists", async () => {
+            const outDir = "pre-existing";
+            fs.mkdirSync(path.join(tempDir, outDir));
+
+            // Should not throw.
+            await writeArgoCDArtifacts(baseParams(outDir, false));
+
+            assert.ok(
+                fs.existsSync(path.join(tempDir, outDir, "my-app.yaml")),
+                "application.yaml written into existing folder",
+            );
+        });
+
+        it("writes to the workspace root when outputPath is empty", async () => {
+            // Use a dedicated root so we don't collide with other cases.
+            const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "argocd-root-"));
+            try {
+                await writeArgoCDArtifacts({
+                    targetFolderUri: vscode.Uri.file(rootDir),
+                    outputPath: "",
+                    appName: "root-app",
+                    manifestRepoUrl: "https://github.com/my-org/my-app",
+                    manifestPath: "k8s",
+                    clusterServer: "https://kubernetes.default.svc",
+                    namespace: "default",
+                    includeReadme: false,
+                });
+                assert.ok(fs.existsSync(path.join(rootDir, "root-app.yaml")), "yaml written at root");
+            } finally {
+                fs.rmSync(rootDir, { recursive: true, force: true });
+            }
+        });
+    });
+
+    describe("resolveOutputDirUri", () => {
+        const base = () => vscode.Uri.file(tempDir);
+
+        // On Windows, vscode.Uri.file(...).fsPath lowercases the drive letter
+        // (e.g. "c:\\...") while Node's path.join preserves the original case
+        // ("C:\\..."). Normalise the drive letter so comparisons are stable
+        // across platforms.
+        const norm = (p: string) => p.replace(/^[a-zA-Z]:/, (m) => m.toLowerCase());
+        const assertPathEqual = (actual: string, expected: string) => assert.strictEqual(norm(actual), norm(expected));
+
+        it("returns the target folder when the path is empty", () => {
+            const uri = resolveOutputDirUri(base(), "");
+            assertPathEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
+        });
+
+        it("returns the target folder when the path is whitespace", () => {
+            const uri = resolveOutputDirUri(base(), "   ");
+            assertPathEqual(uri.fsPath, vscode.Uri.file(tempDir).fsPath);
+        });
+
+        it("joins a simple relative path", () => {
+            const uri = resolveOutputDirUri(base(), "argocd");
+            assertPathEqual(uri.fsPath, path.join(tempDir, "argocd"));
+        });
+
+        it("joins a nested relative path", () => {
+            const uri = resolveOutputDirUri(base(), "manifests/gitops/argocd");
+            assertPathEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
+        });
+
+        it("normalises Windows-style backslash separators", () => {
+            const uri = resolveOutputDirUri(base(), "manifests\\gitops\\argocd");
+            assertPathEqual(uri.fsPath, path.join(tempDir, "manifests", "gitops", "argocd"));
+        });
+
+        it("rejects '..' traversal", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "../escape"), /must not contain/i);
+        });
+
+        it("rejects '..' traversal nested inside the path", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "a/../../escape"), /must not contain/i);
+        });
+
+        it("rejects a POSIX absolute path", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "/etc/passwd"), /must be relative/i);
+        });
+
+        it("rejects a Windows absolute path", () => {
+            assert.throws(() => resolveOutputDirUri(base(), "C:\\Windows\\Temp"), /must be relative/i);
+        });
+    });
+});
+
+describe("manifest path validation", () => {
+    describe("normalizeManifestPath", () => {
+        it("converts backslashes to forward slashes for git paths", () => {
+            assert.strictEqual(normalizeManifestPath("k8s\\overlays\\prod"), "k8s/overlays/prod");
+        });
+
+        it("collapses duplicate separators and strips './' and trailing slashes", () => {
+            assert.strictEqual(normalizeManifestPath("./k8s//overlays/"), "k8s/overlays");
+        });
+
+        it("trims surrounding whitespace", () => {
+            assert.strictEqual(normalizeManifestPath("  k8s  "), "k8s");
+        });
+    });
+
+    describe("validateManifestPath", () => {
+        it("accepts ordinary repo-relative paths", () => {
+            assert.strictEqual(validateManifestPath("k8s"), undefined);
+            assert.strictEqual(validateManifestPath("k8s/overlays/prod"), undefined);
+            assert.strictEqual(validateManifestPath("charts/my-app.v2"), undefined);
+            assert.strictEqual(validateManifestPath("k8s\\overlays\\prod"), undefined);
+        });
+
+        it("rejects absolute paths", () => {
+            assert.match(String(validateManifestPath("/etc/passwd")), /relative/i);
+            assert.match(String(validateManifestPath("C:\\secrets")), /relative/i);
+            // A UNC path normalises to a leading slash and is caught the same way.
+            assert.match(String(validateManifestPath("\\\\server\\share")), /relative/i);
+        });
+
+        it("rejects parent-directory traversal", () => {
+            assert.match(String(validateManifestPath("../../etc")), /\.\./);
+            assert.match(String(validateManifestPath("k8s/../../secrets")), /\.\./);
+        });
+
+        it("rejects values that would break the unquoted YAML 'path:' field", () => {
+            // Leading YAML indicators.
+            assert.ok(validateManifestPath("*anchor") !== undefined, "leading '*' rejected");
+            assert.ok(validateManifestPath("{a: b}") !== undefined, "leading '{' rejected");
+            assert.ok(validateManifestPath("- item") !== undefined, "leading '-' rejected");
+            assert.ok(validateManifestPath("#comment") !== undefined, "leading '#' rejected");
+            // An embedded ": " turns the scalar into a mapping.
+            assert.ok(validateManifestPath("k8s: overlays") !== undefined, "embedded ': ' rejected");
+        });
+
+        it("rejects an empty or whitespace-only path", () => {
+            assert.ok(validateManifestPath("   ") !== undefined);
+            assert.ok(validateManifestPath("./") !== undefined);
+        });
+    });
+});
