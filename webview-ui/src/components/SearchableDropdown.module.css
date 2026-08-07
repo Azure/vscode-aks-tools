@@ -1,0 +1,78 @@
+.dropdown {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.inputField {
+    position: relative;
+    width: 100%;
+}
+
+.selectedValue {
+    width: 100%;
+    padding-right: 1.8rem !important;
+    box-sizing: border-box;
+}
+
+.selectedValue:hover {
+    cursor: pointer;
+}
+
+.arrowIcon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.listbox {
+    position: absolute;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    left: 0;
+    list-style: none;
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-focusBorder);
+    border-radius: 2px;
+    box-sizing: border-box;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+.dropUp {
+    bottom: 100%;
+    top: auto;
+    box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.hidden {
+    display: none;
+}
+
+.listboxItem {
+    cursor: pointer;
+    padding: 2px 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.listboxItem:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.highlighted {
+    background: var(--vscode-list-activeSelectionBackground);
+}
+
+.empty {
+    padding: 2px 5px;
+    color: var(--vscode-descriptionForeground);
+    cursor: default;
+}
