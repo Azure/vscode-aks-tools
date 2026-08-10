@@ -7,8 +7,8 @@
  *   "Create an Argo CD deployment for my cluster"
  *   "gitops deployment argo cd aks"
  *
- * …the agent invokes this skill, which replies with a rich message explaining
- * the Hollywood / GitOps principle and renders a chat command button that
+ * …the agent invokes this skill, which replies with a short message explaining
+ * that Argo CD is a GitOps controller and renders a chat command button that
  * launches aks.draftArgoCDDeployment.
  *
  * Reference: https://argo-cd.readthedocs.io/en/stable/
