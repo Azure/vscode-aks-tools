@@ -4,13 +4,14 @@ The Argo CD integration brings a complete GitOps workflow to AKS clusters direct
 
 > **GitOps in one line** — Argo CD is a controller that watches a Git repository for your Kubernetes manifests and continuously syncs the cluster to match them.
 
+<!-- toc -->
+
 ---
 
-## Feature Flag
+## Turning the Argo CD commands off
 
-All Argo CD commands are gated behind a feature flag and **enabled by default**.
-
-If you want to hide Argo CD commands, set:
+The Argo CD commands are available by default. If you don't use Argo CD and would
+rather not see them, add this to your settings:
 
 ```json
 {
@@ -18,9 +19,8 @@ If you want to hide Argo CD commands, set:
 }
 ```
 
-Default value: `true`
-
-After changing this setting, reload the VS Code window (`Developer: Reload Window`).
+Then reload the VS Code window (`Developer: Reload Window`) for the change to take
+effect.
 
 ---
 
@@ -166,7 +166,7 @@ The scaffolded `Application` manifests work unchanged with the upstream-parity f
 
 - **High availability (HA)** — chosen at install time via the managed extension or upstream Helm chart; no change required to the generated YAML.
 - **Hub-and-spoke / multi-cluster** — the *Create Argo CD Application* command generates a `spec.destination.server` you can point at a remote spoke cluster from a central hub.
-- **`ApplicationSet`** — the scaffolder currently emits a single `Application`. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), hand-author an `ApplicationSet` alongside the generated `<app-name>.yaml` manifest; the *Apply Argo CD Application to Cluster* command accepts any `argoproj.io/v1alpha1` resource.
+- **`ApplicationSet`** — the extension generates a single `Application`. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), write an `ApplicationSet` yourself alongside the generated `<app-name>.yaml` manifest; the *Apply Argo CD Application to Cluster* command accepts any `argoproj.io/v1alpha1` resource.
 
 ---
 

@@ -1,22 +1,14 @@
 # Simplified AKS Menu Structure
 
-The AKS extension uses a role-based cluster context menu organization as the default experience.
+When you right-click an AKS cluster, the commands are grouped by the kind of task you
+are doing rather than listed all at once. This is how the menu behaves by default.
 
-## Setting
+If you preferred the old flat list, run **AKS: Switch to Classic Menu** — see
+[Switching between Classic and Grouped menus](#switching-between-classic-and-grouped-menus).
 
-```json
-{
-  "aks.simplifiedMenuStructure": true
-}
-```
+## How commands are grouped
 
-Default value: `true`
-
-After changing this setting, reload the VS Code window. You can also switch modes via the commands **AKS: Switch to Classic Menu** and **AKS: Switch to Grouped Menu** without editing settings directly.
-
-## What changes when enabled
-
-Instead of many top-level commands, cluster actions are grouped into three submenus:
+Rather than one long list of top-level commands, cluster actions sit in three submenus:
 
 - `Develop & Deploy`
 - `Troubleshoot & Diagnose`
@@ -35,7 +27,7 @@ These stay top-level: `Show In Azure Portal`, `Show Properties`, `AKS Quick Acti
 `Manage Cluster`
 : Show Properties, Show In Azure Portal, Delete Cluster, Rotate Cluster Certificate, Reconcile Cluster.
 
-## Container Assist in the new menu
+## Where the Container Assist commands appear
 
 With `aks.containerAssistEnabledPreview` enabled (the default), `AKS: Migrate Application to AKS` appears under `Develop & Deploy`. With a workspace folder also open, `AKS: Generate Dockerfiles and K8s Manifests for App` and `AKS: Deploy App with Automated Pipeline` appear alongside it.
 
@@ -56,9 +48,19 @@ Both commands are available in:
 
 After running either command, VS Code prompts you to reload the window. The new menu layout takes effect after the reload.
 
-## Backward compatibility
+## Changing it in Settings instead
 
-Setting `aks.simplifiedMenuStructure` to `false` restores the classic menu, where every command sits at the top level of the cluster context menu.
+If you would rather set this directly, the menu is controlled by
+`aks.simplifiedMenuStructure`. Set it to `false` for the classic flat menu, where every
+command sits at the top level:
+
+```json
+{
+  "aks.simplifiedMenuStructure": false
+}
+```
+
+Reload the VS Code window afterwards.
 
 ## Screenshots
 

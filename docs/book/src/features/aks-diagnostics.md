@@ -14,4 +14,4 @@ Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Run AKS Diagnosti
 
 To perform further checks on your AKS cluster to troubleshoot and get recommended solutions, click on the AKS Diagnostics link at the top of the page to open it for the selected cluster. For more information on AKS Diagnostics, visit [AKS Diagnostics Overview](https://docs.microsoft.com/azure/aks/concepts-diagnostics). 
 
-![AKS Diagnostics Webview](../resources/aks-diagnostics-webview.png)
+![AKS Diagnostics results panel](../resources/aks-diagnostics-webview.png)

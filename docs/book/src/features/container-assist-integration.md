@@ -1,7 +1,7 @@
-# Deploying Apps to AKS with GitHub Actions and Container Assist (Alpha Preview)
+# Deploying Apps to AKS with GitHub Actions and Container Assist (Preview)
 
 > **Please Note**
-> This is an **Alpha Preview** feature. Behavior, prompts, and generated output may change between releases.
+> This is a **preview** feature. Behavior, prompts, and generated output may change between releases.
 >
 > **AI Notice**
 > Container Assist uses AI models to analyze project context and generate deployment files. Always review generated files before use, and do not include secrets or sensitive data in source files used for generation. See [AI Data Flow and Privacy](./container-assist-ai-data-flow.md) for details on what data is sent to AI models.
@@ -10,6 +10,8 @@
 > This experience is built on [Azure/containerization-assist](https://github.com/Azure/containerization-assist), which combines AI generation with a specialized containerization toolchain and knowledge/policy guidance for Docker and Kubernetes workflows.
 
 Container Assist is a preview workflow in the AKS VS Code extension that helps generate deployment assets for AKS directly from your project.
+
+<!-- toc -->
 
 ## Detailed documentation
 
@@ -114,25 +116,22 @@ Container Assist uses the [containerization-assist SDK](https://github.com/Azure
 | **Rust** | `Cargo.toml` |
 | **.NET (C#)** | `*.csproj` |
 
-The SDK also reads additional files for context when present (such as `Dockerfile`, `docker-compose.yml`, `application.properties`, `application.yml`), but these are not required for language detection.
+Container Assist also reads additional files for context when present (such as `Dockerfile`, `docker-compose.yml`, `application.properties`, `application.yml`), but these are not required for language detection.
 
-If your project type is not in the list above, the SDK classifies it as `other` and generation results may be less accurate.
+If your project type is not in the list above, it is treated as `other`, and the generated files may be less accurate.
 
-## Feature flag
+## Turning Container Assist off
 
-From `2.1.0`, this preview feature is enabled by default.
-
-You can still explicitly control it in VS Code settings:
+Container Assist is available by default. If you would rather not see its commands,
+add this to your settings and reload the window:
 
 ```json
 {
-  "aks.containerAssistEnabledPreview": true
+  "aks.containerAssistEnabledPreview": false
 }
 ```
 
-Default value: `true`
-
-This can also be enabled from the VS Code Settings UI.
+You can also change this from the VS Code Settings UI.
 
 ![Container Assist Flag from User Setting](../resources/container-assist/container-assist-user-settings-flag.png)
 

@@ -24,7 +24,7 @@
     - [AI Data Flow and Privacy](./features/container-assist-ai-data-flow.md)
     - [GitHub Workflow and OIDC Setup](./features/container-assist-github-workflow.md)
   - [AKS plugins for GitHub Copilot for Azure](./features/aks-plugins-github-copilot.md)
-  - [Use Simplified AKS Menu Structure (Feature Flag)](./features/simplified-menu-structure.md)
+  - [Use Simplified AKS Menu Structure](./features/simplified-menu-structure.md)
   - [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)
   - [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
   - [Create AKS Fleet Manager from VS Code](./features/aks-fleet-manager.md)
@@ -37,7 +37,7 @@
   - [Pinned versions](./reference/pinned-versions.md)
 
 - [Release](./release.md)
-  - [What's New in 2.1.0](./release/whats-new-2.1.0.md)
+  - [What's New in 2.4.0](./release/whats-new-2.4.0.md)
   - [Releasing Information](./release/releasing.md)
 - [Contributing](./contributing.md)
 - [Telemetery](./telemetery.md)

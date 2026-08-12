@@ -10,11 +10,9 @@
 
 ## Telemetry
 
-This extension collects telemetry data to help us build a better experience for building applications with Azure Kubernetes Service and VS Code. We only collect the following data:
+This extension sends usage data to Microsoft to help us understand which features are used and where they fail. We record which commands you run, which screens you open and what you do in them, and how far the GitHub Copilot for Azure integration gets. See [Telemetry](https://azure.github.io/vscode-aks-tools/telemetery.html) for the full list.
 
-* Which commands are executed.
-
-We do not collect any information about image names, paths, etc. Read our [privacy statement](https://privacy.microsoft.com/privacystatement) to learn more. If you don’t wish to send usage data to Microsoft, set the `telemetry.telemetryLevel` setting to `off`. (`telemetry.enableTelemetry` was deprecated in VS Code 1.61.) Learn more in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
+We do not collect anything that identifies your code or your Azure resources — no cluster or resource names, file paths, image names, form input, or the contents of your manifests, Dockerfiles or source code. To turn telemetry off, set `telemetry.telemetryLevel` to `off` in your VS Code settings; this applies to VS Code and all extensions. (The older `telemetry.enableTelemetry` setting was replaced in VS Code 1.61.) See the [VS Code FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting) and our [privacy statement](https://privacy.microsoft.com/privacystatement).
 
 ## Contributing
 
