@@ -24,22 +24,9 @@
 
 "use strict";
 
-/**
- * Documentation consistency checker.
- *
- * Validates the docs tree against itself and against package.json, which is the
- * source of truth for command IDs, settings, and menu structure.
- *
- * Usage:
- *   node scripts/docs-check.js              run every check
- *   node scripts/docs-check.js links images run only the named checks
- *
- * Exits non-zero if any check reports an error. Warnings never fail the run.
- */
-
 const fs = require("fs");
 const path = require("path");
-const { loc, contributes, walk: walkMenus, DEFAULT_SIMPLIFIED } = require("./lib/menu-graph");
+const { loc, pkg, contributes, walk: walkMenus, DEFAULT_SIMPLIFIED } = require("./lib/menu-graph");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 const DOCS_ROOT = path.join(REPO_ROOT, "docs");
@@ -119,17 +106,12 @@ function linksOf(file) {
 // package.json facts
 // ---------------------------------------------------------------------------
 
+// package.json is read once by lib/menu-graph, which also owns %placeholder%
+// resolution. Resolving titles a second time here meant two implementations that
+// disagreed on a missing NLS key: loc() throws, the old local copy fell back to
+// the raw "%key%" string and let it through.
 function contributions() {
-    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
-    const nls = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.nls.json"), "utf8"));
-    const contributes = pkg.contributes ?? {};
-
-    const resolveTitle = (title) =>
-        typeof title === "string" && title.startsWith("%") && title.endsWith("%")
-            ? (nls[title.slice(1, -1)] ?? title)
-            : title;
-
-    const commands = new Map((contributes.commands ?? []).map((c) => [c.command, resolveTitle(c.title)]));
+    const commands = new Map((contributes.commands ?? []).map((c) => [c.command, loc(c.title)]));
 
     const settings = new Set();
     const configuration = contributes.configuration ?? {};
@@ -197,6 +179,8 @@ checks.identifiers = (report) => {
     }
 };
 
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 checks.coverage = (report) => {
     const { commands } = contributions();
     // generated reference pages list every command, so counting them would make
@@ -204,19 +188,45 @@ checks.coverage = (report) => {
     const corpus = bookFiles()
         .filter((f) => !rel(f).includes(`${path.sep}reference${path.sep}`))
         .map((f) => fs.readFileSync(f, "utf8"))
-        .join("\n")
-        .toLowerCase();
+        .join("\n");
 
     for (const [id, title] of commands) {
-        if (corpus.includes(id.toLowerCase())) {
+        // the command ID is distinctive enough to count on its own
+        if (corpus.includes(id)) {
             continue;
         }
-        const plainTitle = String(title ?? "")
+
+        const plain = String(title ?? "")
             .replace(/^AKS:\s*/i, "")
-            .toLowerCase();
-        if (plainTitle && corpus.includes(plainTitle)) {
+            .trim();
+        if (!plain) {
+            report.warn("coverage", `command documented nowhere: ${id}`);
             continue;
         }
+
+        // A title only counts when it stands alone as a UI string — **Bold**,
+        // `code`, a heading, or a list item naming just that command. A plain
+        // substring match treated any prose containing "storage" as
+        // documentation for the Storage detector, and likewise for Best
+        // Practices, Node Health and Profile CPU, so the check passed for
+        // commands that are documented nowhere.
+        // Titles ending in an ellipsis are conventionally written without it in
+        // prose ("AKS: Sign in to Azure" for "Sign in to Azure...").
+        const base = plain.replace(/\.{3}$/, "");
+        const t = escapeRe(base) + (base === plain ? "" : "(?:\\.{3})?");
+        const documented = new RegExp(
+            [
+                `\\*\\*\\s*(?:AKS:\\s*)?${t}\\s*\\*\\*`,
+                `\`\\s*(?:AKS:\\s*)?${t}\\s*\``,
+                `^#{1,6}\\s*(?:AKS:\\s*)?${t}\\s*$`,
+                `^\\s*[-*]\\s+(?:AKS:\\s*)?${t}\\s*$`,
+            ].join("|"),
+            "im",
+        );
+        if (documented.test(corpus)) {
+            continue;
+        }
+
         report.warn("coverage", `command documented nowhere: ${id} ("${title}")`);
     }
 };
@@ -244,21 +254,34 @@ checks.orphans = (report) => {
 const CLASSIC_MARKER = "docs-check: classic-menu";
 const BOLD_CHAIN = /(?:\*\*[^*\n]+\*\*)(?:\s*>\s*\*\*[^*\n]+\*\*)+/g;
 // a single bold segment is only a menu path when the prose anchors it to a
-// right-click, which is what catches a command documented on the wrong node
-const RIGHT_CLICK = /right[- ]click[^.\n*]*?>\s*(\*\*[^*\n]+\*\*(?:\s*>\s*\*\*[^*\n]+\*\*)*)/gi;
+// right-click, which is what catches a command documented on the wrong node.
+// group 1 is the text naming the node, group 2 the breadcrumb.
+const RIGHT_CLICK = /right[- ]click([^.\n*]*?)>\s*(\*\*[^*\n]+\*\*(?:\s*>\s*\*\*[^*\n]+\*\*)*)/gi;
 
-function crumbsIn(line) {
-    const out = new Set();
-    for (const m of line.matchAll(RIGHT_CLICK)) out.add(m[1]);
-    for (const m of line.match(BOLD_CHAIN) || []) out.add(m);
-    return [...out];
+/**
+ * Which tree node the prose leading up to a breadcrumb refers to.
+ *
+ * Only the text before the breadcrumb is considered. Scanning the whole line
+ * misread ordinary sentences: "Right-click your AKS cluster > **Manage Cluster**
+ * > **Delete Cluster**. This removes the fleet member too." resolved to the
+ * fleet node and failed a correct page.
+ */
+function nodeFromContext(before) {
+    if (/\bfleets?\b/i.test(before)) return "fleet";
+    if (/\bsubscriptions?\b/i.test(before)) return "subscription";
+    return "cluster";
 }
 
-/** Which tree node the surrounding prose says to right-click. */
-function rootOf(line) {
-    if (/\bfleet\b/i.test(line)) return "fleet";
-    if (/\bsubscription\b/i.test(line)) return "subscription";
-    return "cluster";
+/** Breadcrumbs in a line, each paired with the node its lead-in names. */
+function crumbsIn(line) {
+    const out = new Map();
+    for (const m of line.matchAll(RIGHT_CLICK)) {
+        out.set(m[2], nodeFromContext(m[1]));
+    }
+    for (const m of line.matchAll(BOLD_CHAIN)) {
+        if (!out.has(m[0])) out.set(m[0], nodeFromContext(line.slice(0, m.index)));
+    }
+    return [...out].map(([crumb, root]) => ({ crumb, root }));
 }
 
 checks["menu-paths"] = (report) => {
@@ -285,14 +308,13 @@ checks["menu-paths"] = (report) => {
         const allowClassic = text.includes(CLASSIC_MARKER);
 
         text.split("\n").forEach((line, index) => {
-            for (const match of crumbsIn(line)) {
+            for (const { crumb: match, root } of crumbsIn(line)) {
                 const labels = [...match.matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1].trim());
                 if (!labels.some((l) => menuLabels.has(l))) {
                     continue;
                 }
                 const where = `${rel(file)}:${index + 1}`;
                 const crumb = labels.join(" > ");
-                const root = rootOf(line);
 
                 if (dflt.has(`${root}|${crumb}`)) {
                     continue;

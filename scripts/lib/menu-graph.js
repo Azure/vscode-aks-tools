@@ -90,15 +90,42 @@ function nodeOf(conjuncts) {
 }
 
 /**
+ * Collapses the equivalent boolean forms VS Code accepts into `{ key, negated }`:
+ * `key`, `!key`, `key == true`, `key != false`, `key == false`, `key != true`.
+ *
+ * Without this, `config.aks.simplifiedMenuStructure == true` would not match the
+ * menu-mode rule below and would be reported as an ordinary runtime flag, putting
+ * the command in both menu columns. package.json already uses the `== true` form
+ * for other settings, so this is one edit away from happening.
+ */
+function normaliseBoolean(conjunct) {
+    let negated = false;
+    let key = conjunct.trim();
+    while (key.startsWith("!")) {
+        negated = !negated;
+        key = key.slice(1).trim();
+    }
+    const comparison = /^(.*?)\s*(==|!=)\s*(true|false)$/.exec(key);
+    if (comparison) {
+        key = comparison[1].trim();
+        const assertsTrue = (comparison[2] === "==") === (comparison[3] === "true");
+        if (!assertsTrue) negated = !negated;
+    }
+    return { key, negated };
+}
+
+/**
  * How a single conjunct is interpreted, in match order:
  *   satisfied  false means the disjunct cannot hold in this menu mode
  *   flag       true means it is a runtime condition to report, not to evaluate
  * A conjunct matching nothing here is a view/viewItem predicate, handled by nodeOf.
  */
 const CONJUNCT_RULES = [
-    { match: (c) => c === MENU_MODE_KEY, satisfied: (simplified) => simplified },
-    { match: (c) => c === `!${MENU_MODE_KEY}`, satisfied: (simplified) => !simplified },
-    { match: (c) => /^config\./.test(c) || /^workspaceFolderCount/.test(c), flag: true },
+    {
+        match: (n) => n.key === MENU_MODE_KEY,
+        satisfied: (simplified, n) => (n.negated ? !simplified : simplified),
+    },
+    { match: (n) => /^config\./.test(n.key) || /^workspaceFolderCount/.test(n.key), flag: true },
 ];
 
 /** Satisfiable disjuncts of a `when` clause under a fixed menu mode. */
@@ -113,13 +140,14 @@ function evaluateWhen(when, simplified) {
         let ok = true;
         for (const raw of conjuncts) {
             const c = stripOuterParens(raw);
-            const rule = CONJUNCT_RULES.find((r) => r.match(c));
+            const normalised = normaliseBoolean(c);
+            const rule = CONJUNCT_RULES.find((r) => r.match(normalised));
             if (!rule) {
                 continue;
             }
             if (rule.flag) {
                 flags.push(c);
-            } else if (!rule.satisfied(simplified)) {
+            } else if (!rule.satisfied(simplified, normalised)) {
                 ok = false;
             }
         }
@@ -183,6 +211,7 @@ module.exports = {
     loc,
     splitTop,
     stripOuterParens,
+    normaliseBoolean,
     evaluateWhen,
     submenuById,
     menus,

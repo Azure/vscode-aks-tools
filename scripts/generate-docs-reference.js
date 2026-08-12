@@ -33,6 +33,7 @@ const {
     loc,
     splitTop,
     stripOuterParens,
+    normaliseBoolean,
     submenuById,
     menus,
     walk: walkMenus,
@@ -103,10 +104,9 @@ const CONDITION_RULES = [
 ];
 
 function renderCondition(condition) {
-    const negated = condition.startsWith("!");
-    const bare = condition.replace(/^!/, "").replace(/\s*==\s*true$/, "");
-    const rule = CONDITION_RULES.find((r) => r.match.test(bare));
-    return (negated ? "not " : "") + rule.render(bare);
+    const { key, negated } = normaliseBoolean(condition);
+    const rule = CONDITION_RULES.find((r) => r.match.test(key));
+    return (negated ? "not " : "") + rule.render(key);
 }
 
 const friendlyFlag = renderCondition;
