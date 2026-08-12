@@ -8,15 +8,17 @@ Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Ga
 
 Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Show Inspektor Gadget**, then choose **Gadget Commands** to use non-interactive Top, Trace, Profile or Snapshot commands for your cluster.
 
-![Cloud explorer extension menu](../resources/inspector-gadget-1.png)
+![Inspektor Gadget page with deploy and undeploy controls](../resources/inspector-gadget-1.png)
 
-![Cloud explorer extension menu](../resources/inspector-gadget-2.png)
+![Choosing a gadget command](../resources/inspector-gadget-2.png)
 
-![Cloud explorer extension menu](../resources/inspector-gadget-3.png)
+![Gadget command results](../resources/inspector-gadget-3.png)
 
-## New Troubleshooting Menu Items
+## Shortcuts for common troubleshooting scenarios
 
-The Inspektor Gadget integration now includes specialized menu items for common troubleshooting scenarios. If Inspektor Gadget is not deployed, the extension will prompt you to deploy it as below.
+Alongside the general gadget commands, the menu offers shortcuts for the problems you
+are most likely to be investigating. If Inspektor Gadget is not yet deployed to the
+cluster, the extension offers to deploy it first.
 
 ![Inspektor Gadget deployment prompt](../resources/ig-deploy-prompt.png)
 
