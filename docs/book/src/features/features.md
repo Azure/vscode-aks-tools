@@ -29,7 +29,6 @@ For the full list of commands and where each one lives, see the
 - [Run Kubectl Commands](./run-kubectl-command.md)
 - [Install Azure Service Operator](./install-azureserviceoperator.md)
 - [Deployment Tools: Draft Tool Integration](./draft-integration.md)
-- [Create GitHub Workflow](./create-gh-workflow.md) (deprecated)
 - [Argo CD GitOps Integration](./argocd-gitops-integration.md)
 - [Container Assist (Preview)](./container-assist-integration.md)
   - [Azure Resources and Permissions](./container-assist-azure-resources.md)

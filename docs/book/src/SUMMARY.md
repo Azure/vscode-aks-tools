@@ -9,7 +9,6 @@
   - [Add AKS clusters to kubeconfig](./features/merge-save-kubeconfig.md)
   - [Perform AKS Diagnostics checks on your AKS cluster](./features/aks-diagnostics.md)
   - [Install Azure Service Operator on your AKS cluster](./features/install-azureserviceoperator.md)
-  - [Create GitHub Workflow from your AKS cluster (deprecated)](./features/create-gh-workflow.md)
   - [Show Properties, Show in Azure Portal, Start/Stop](./features/show-properties-azureportal-start-stop.md)
   - [Run Kubectl Commands from your AKS cluster](./features/run-kubectl-command.md)
   - [Manage Cluster Operations](./features/manage-cluster-operations.md)

@@ -18,19 +18,19 @@ A dash means the command has no entry in that menu and is reachable only from th
 | Title | Command ID | Shown when |
 |---|---|---|
 | AKS Quick Actions | `aks.quickActions` | always |
-| AKS: AKS: Configure Kickstart Cluster | `aks.kickstartCluster` | `aks.kickstartEnabledPreview` |
-| AKS: AKS: Launch Kickstart Agent | `aks.kickstart.launchExperience` | `aks.kickstartEnabledPreview` |
 | AKS: Apply Argo CD Application to Cluster | `aks.argoCDApplyApp` | a YAML file in the active editor, `aks.argoCDEnabled` |
 | AKS: Argo CD Post-Deploy Actions | `aks.argoCDPostApplyActions` | `aks.argoCDEnabled` |
 | AKS: Attach ACR to Cluster | `aks.attachAcrToCluster` | always |
 | AKS: Check Argo CD Status | `aks.argoCDCheckStatus` | `aks.argoCDEnabled` |
 | AKS: Check Deployment Permissions | `aks.checkDeploymentPermissions` | always |
 | AKS: Check Role Assignment Permissions | `aks.checkRoleAssignmentPermissions` | always |
+| AKS: Configure Kickstart Cluster | `aks.kickstartCluster` | `aks.kickstartEnabledPreview` |
 | AKS: Create a GitHub Workflow | `aks.draftWorkflow` | an open workspace folder |
 | AKS: Create Argo CD GitOps Pipeline | `aks.draftArgoCDDeployment` | an open workspace folder, `aks.argoCDEnabled` |
 | AKS: Deploy App with Automated Pipeline | `aks.deployAppWithAutomatedPipeline` | always |
 | AKS: Deploy application to AKS (Preview) | `aks.runContainerAssist` | always |
 | AKS: Generate Dockerfiles and K8s Manifests for App | `aks.containerizeApp` | always |
+| AKS: Launch Kickstart Agent | `aks.kickstart.launchExperience` | `aks.kickstartEnabledPreview` |
 | AKS: Migrate Application to AKS | `aks.migrateAndModernizeApp` | always |
 | AKS: Run Deployment Safeguards YAML Validation | `aks.aksDraftValidate` | always |
 | AKS: Select cluster... | `aks.clusterFilter` | always |
@@ -139,8 +139,8 @@ Hidden from the palette (invoked from a menu or another command): `aks.refreshSu
 | Create a GitHub Workflow | `aks.draftWorkflow` | AKS cluster node > Develop & Deploy | AKS cluster node > Deployment Tools | an open workspace folder |
 | Run Eraser Image Cleanup | `aks.eraserTool` | AKS cluster node > Troubleshoot & Diagnose<br>Kubernetes explorer cluster node | AKS cluster node<br>Kubernetes explorer cluster node | — |
 | Install Azure Service Operator | `aks.installAzureServiceOperator` | AKS cluster node > Develop & Deploy<br>Kubernetes explorer cluster node | AKS cluster node<br>Kubernetes explorer cluster node | — |
-| AKS: Launch Kickstart Agent | `aks.kickstart.launchExperience` | — | — | — |
-| AKS: Configure Kickstart Cluster | `aks.kickstartCluster` | — | — | — |
+| Launch Kickstart Agent | `aks.kickstart.launchExperience` | — | — | — |
+| Configure Kickstart Cluster | `aks.kickstartCluster` | — | — | — |
 | AKS: Migrate Application to AKS | `aks.migrateAndModernizeApp` | AKS cluster node > Develop & Deploy | AKS cluster node | `aks.containerAssistEnabledPreview` |
 | AKS Quick Actions | `aks.quickActions` | AKS cluster node | — | — |
 | Refresh Subscription | `aks.refreshSubscription` | Subscription node | Subscription node | — |
