@@ -11,7 +11,7 @@ Configure these in **Settings** (`Ctrl+,` / `Cmd+,`) or in `settings.json`.
 |---|---|---|---|
 | `aks.aksmcpserver.enabledComponents` | string | `"az_cli,monitor,fleet,network,compute,detectors,advisor,inspektorgadget,kubectl"` | Comma-separated list of enabled components (empty means all components enabled). Available: az_cli, monitor, fleet, network, compute, detectors, advisor, inspektorgadget, kubectl, helm, cilium, hubble. Some components require local CLI tools (e.g. helm, cilium, hubble). |
 | `aks.aksmcpserver.releaseTag` | string | `"v0.0.19"` | Release tag for the stable AKS MCP Server tool release. |
-| `aks.argoCDEnabled` | boolean | `true` | Enable Argo CD GitOps integration commands (Create Argo CD GitOps Pipeline, Apply Argo CD Application, Check Argo CD Status, Post-Deploy Actions). Requires reload after changing. |
+| `aks.argoCDEnabled` | boolean | `true` | Enable Argo CD GitOps integration commands (Create Argo CD Application, Apply Argo CD Application, Check Argo CD Status, Post-Deploy Actions). Requires reload after changing. |
 | `aks.containerAssist.enableGitHubIntegration` | boolean | `true` | Enable Git staging and GitHub PR creation for generated container and K8s files. |
 | `aks.containerAssist.k8sManifestFolder` | string | `"k8s"` | Folder name for generated Kubernetes manifests (relative to project root). |
 | `aks.containerAssist.modelFamily` | string | `"gpt-5.2-codex"` | Default language model family for Container Assist (e.g. gpt-5.2, claude-sonnet). |

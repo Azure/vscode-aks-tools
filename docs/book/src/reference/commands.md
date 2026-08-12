@@ -26,7 +26,7 @@ A dash means the command has no entry in that menu and is reachable only from th
 | AKS: Check Role Assignment Permissions | `aks.checkRoleAssignmentPermissions` | always |
 | AKS: Configure Kickstart Cluster | `aks.kickstartCluster` | `aks.kickstartEnabledPreview` |
 | AKS: Create a GitHub Workflow | `aks.draftWorkflow` | an open workspace folder |
-| AKS: Create Argo CD GitOps Pipeline | `aks.draftArgoCDDeployment` | an open workspace folder, `aks.argoCDEnabled` |
+| AKS: Create Argo CD Application | `aks.draftArgoCDDeployment` | an open workspace folder, `aks.argoCDEnabled` |
 | AKS: Deploy App with Automated Pipeline | `aks.deployAppWithAutomatedPipeline` | always |
 | AKS: Deploy application to AKS (Preview) | `aks.runContainerAssist` | always |
 | AKS: Generate Dockerfiles and K8s Manifests for App | `aks.containerizeApp` | always |
@@ -135,7 +135,7 @@ Hidden from the palette (invoked from a menu or another command): `aks.refreshSu
 | Create Cluster From Azure Portal | `aks.createClusterNavToAzurePortal` | Subscription node > Create Cluster | Subscription node > Create Cluster | — |
 | AKS: Deploy App with Automated Pipeline | `aks.deployAppWithAutomatedPipeline` | — | — | — |
 | AKS: Deploy App with Automated Pipeline | `aks.deployAppWithAutomatedPipelineFromTree` | AKS cluster node > Develop & Deploy | AKS cluster node | `aks.containerAssistEnabledPreview`, an open workspace folder |
-| AKS: Create Argo CD GitOps Pipeline | `aks.draftArgoCDDeployment` | — | — | — |
+| AKS: Create Argo CD Application | `aks.draftArgoCDDeployment` | — | — | — |
 | Create a GitHub Workflow | `aks.draftWorkflow` | AKS cluster node > Develop & Deploy | AKS cluster node > Deployment Tools | an open workspace folder |
 | Run Eraser Image Cleanup | `aks.eraserTool` | AKS cluster node > Troubleshoot & Diagnose<br>Kubernetes explorer cluster node | AKS cluster node<br>Kubernetes explorer cluster node | — |
 | Install Azure Service Operator | `aks.installAzureServiceOperator` | AKS cluster node > Develop & Deploy<br>Kubernetes explorer cluster node | AKS cluster node<br>Kubernetes explorer cluster node | — |
