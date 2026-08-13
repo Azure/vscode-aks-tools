@@ -39,7 +39,7 @@ extends:
                   - job: HostJob
                     variables:
                         NPM_CONFIG_REGISTRY: https://packagefeedproxy.microsoft.io/npm/
-                        NPM_CONFIG_REPLACE_REGISTRY_HOST: always
+                        NPM_CONFIG_REPLACE_REGISTRY_HOST: npmjs
                     templateContext:
                         outputs:
                             - output: pipelineArtifact
@@ -83,7 +83,7 @@ extends:
 
                         - script: |
                               set -e
-                              npx @vscode/vsce@latest package
+                              npx vsce package
                               VSIX_PATH=$(find . -type f -name "*.vsix" -print -quit)
                               if [ -z "$VSIX_PATH" ]; then
                                 echo "ERROR: No .vsix file found!" >&2
@@ -102,7 +102,7 @@ extends:
                               set -e
                               VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-signed/" -type f -name "*.vsix" -print -quit)
                               echo "Generating manifest for: $VSIX_PATH"
-                              npx @vscode/vsce@latest generate-manifest -i "$VSIX_PATH" -o "$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
+                              npx vsce generate-manifest -i "$VSIX_PATH" -o "$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
                           displayName: "Generate extension manifest"
 
                         - script: |
@@ -174,7 +174,7 @@ extends:
                         #           echo "Publishing VSIX package: $VSIX_PATH"
                         #           MANIFEST_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
                         #           SIGNATURE_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s"
-                        #           npx @vscode/vsce@latest publish --azure-credential --packagePath "$VSIX_PATH" --manifestPath "$MANIFEST_PATH" --signaturePath "$SIGNATURE_PATH"
+                        #           npx vsce publish --azure-credential --packagePath "$VSIX_PATH" --manifestPath "$MANIFEST_PATH" --signaturePath "$SIGNATURE_PATH"
                         #   env:
                         #       VSCE_AZURE_CREDENTIAL_TIMEOUT: 60000
 
