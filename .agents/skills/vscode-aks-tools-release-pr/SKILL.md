@@ -290,7 +290,9 @@ grep -rn "What's New in <prev>" docs/   # must return zero matches
 
 Update it only if the user explicitly says the process changed (e.g., new pipeline, new required step, new secret).
 
-`docs/maintenance/README.md` currently mirrors `releasing.md`. If you update one, mirror the change to the other and tell the user.
+`docs/book/src/release/releasing.md` is the only copy of the release process. A duplicate
+at `docs/maintenance/README.md` was deleted; do not recreate it. `docs/book/src/` is the
+single source of truth for all documentation.
 
 ### 10. CHANGELOG.md — DO NOT UPDATE
 

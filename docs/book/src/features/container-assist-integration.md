@@ -1,7 +1,7 @@
-# Deploying Apps to AKS with GitHub Actions and Container Assist (Alpha Preview)
+# Deploying Apps to AKS with GitHub Actions and Container Assist (Preview)
 
 > **Please Note**
-> This is an **Alpha Preview** feature. Behavior, prompts, and generated output may change between releases.
+> This is a **preview** feature. Behavior, prompts, and generated output may change between releases.
 >
 > **AI Notice**
 > Container Assist uses AI models to analyze project context and generate deployment files. Always review generated files before use, and do not include secrets or sensitive data in source files used for generation. See [AI Data Flow and Privacy](./container-assist-ai-data-flow.md) for details on what data is sent to AI models.
@@ -10,6 +10,8 @@
 > This experience is built on [Azure/containerization-assist](https://github.com/Azure/containerization-assist), which combines AI generation with a specialized containerization toolchain and knowledge/policy guidance for Docker and Kubernetes workflows.
 
 Container Assist is a preview workflow in the AKS VS Code extension that helps generate deployment assets for AKS directly from your project.
+
+<!-- toc -->
 
 ## Detailed documentation
 
@@ -114,25 +116,22 @@ Container Assist uses the [containerization-assist SDK](https://github.com/Azure
 | **Rust** | `Cargo.toml` |
 | **.NET (C#)** | `*.csproj` |
 
-The SDK also reads additional files for context when present (such as `Dockerfile`, `docker-compose.yml`, `application.properties`, `application.yml`), but these are not required for language detection.
+Container Assist also reads additional files for context when present (such as `Dockerfile`, `docker-compose.yml`, `application.properties`, `application.yml`), but these are not required for language detection.
 
-If your project type is not in the list above, the SDK classifies it as `other` and generation results may be less accurate.
+If your project type is not in the list above, it is treated as `other`, and the generated files may be less accurate.
 
-## Feature flag
+## Turning Container Assist off
 
-From `2.1.0`, this preview feature is enabled by default.
-
-You can still explicitly control it in VS Code settings:
+Container Assist is available by default. If you would rather not see its commands,
+add this to your settings and reload the window:
 
 ```json
 {
-  "aks.containerAssistEnabledPreview": true
+  "aks.containerAssistEnabledPreview": false
 }
 ```
 
-Default value: `true`
-
-This can also be enabled from the VS Code Settings UI.
+You can also change this from the VS Code Settings UI.
 
 ![Container Assist Flag from User Setting](../resources/container-assist/container-assist-user-settings-flag.png)
 
@@ -140,13 +139,11 @@ This can also be enabled from the VS Code Settings UI.
 
 Container Assist can be launched from:
 
-- Explorer folder context menu: `AKS: Deploy application to AKS (Preview)`
-- AKS cluster context menu: `AKS: Run Container Assist (Preview)`
+- Explorer folder context menu: `AKS: Migrate Application to AKS`, `AKS: Generate Dockerfiles and K8s Manifests for App`, `AKS: Deploy App with Automated Pipeline`
+- AKS cluster context menu, under **Develop & Deploy**: the same three commands
 
-The AKS cluster context menu entry is shown when:
-
-- `aks.containerAssistEnabledPreview` is `true` (default in `2.1.0`)
-- At least one workspace folder is open
+The Explorer entries require `aks.containerAssistEnabledPreview` (enabled by default) and a folder selection.
+On the cluster menu, `AKS: Migrate Application to AKS` needs only the setting; the other two also need an open workspace folder.
 
 ## User flow and options
 
@@ -224,15 +221,6 @@ This supports a full path from local generation to reviewable GitHub PR with min
 ## Deployment annotations
 
 The generated workflow annotates resources in your cluster after each deployment. These annotations use the `aks-project/` prefix, which is a shared schema read by both this extension and aks-desktop.
-
-### Namespace annotations
-
-Applied once per deployment run to the target namespace via `kubectl annotate namespace`:
-
-| Annotation | Value | Description |
-|---|---|---|
-| `aks-project/workload-identity-id` | `${{ secrets.AZURE_CLIENT_ID }}` | Client ID of the managed identity used for workload identity federation. Stored on the namespace because identity config is per-namespace, not per-deployment. |
-| `aks-project/workload-identity-tenant` | `${{ secrets.AZURE_TENANT_ID }}` | Azure AD tenant ID associated with the managed identity. |
 
 ### Deployment annotations
 

@@ -6,3 +6,4 @@ vsix
 *.vsix
 .DS_Store
 planning/
+bin/

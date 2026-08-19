@@ -8,7 +8,7 @@ Container Assist uses a two-phase architecture:
 
 1. **Phase 1 -- Local analysis (no network calls):** The `containerization-assist-mcp/sdk` runs entirely on your machine. It scans your project filesystem to detect languages, frameworks, dependencies, ports, and entry points. No data leaves your machine during this phase.
 
-2. **Phase 2 -- Cloud AI generation:** The SDK's analysis results are formatted into prompts and sent to a VS Code Language Model (via the `vscode.lm` API) to generate Dockerfiles and Kubernetes manifests. This phase involves cloud AI calls.
+2. **Phase 2 -- Cloud AI generation:** The results of that local analysis are formatted into prompts and sent to a VS Code Language Model (via the `vscode.lm` API) to generate Dockerfiles and Kubernetes manifests. This phase involves cloud AI calls.
 
 
 ## What AI Models Are Used

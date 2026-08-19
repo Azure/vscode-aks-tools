@@ -12,10 +12,10 @@ Container Assist operates across multiple resource groups and requires both reso
 |------|-------|-------------|-----|
 | **Owner** | Subscription | **Yes** | Has full resource management and role assignment permissions. |
 | **Contributor + User Access Administrator** | Subscription | **Yes** | Contributor handles resource creation; User Access Administrator handles role assignments. |
-| **Contributor** (alone) | Subscription | **No** | Can create resource groups, managed identities, and federated credentials, but **cannot assign RBAC roles**. All 9 role assignments will fail. |
+| **Contributor** (alone) | Subscription | **No** | Can create resource groups, managed identities, and federated credentials, but **cannot assign RBAC roles**. All role assignments will fail. |
 | **Contributor** (alone) | Resource group | **No** | Cannot list clusters/ACRs across the subscription, cannot create the OIDC resource group, and cannot assign roles. |
 
-> **Why Contributor alone is not enough:** The Contributor role explicitly excludes `Microsoft.Authorization/roleAssignments/write`. Container Assist assigns up to 9 RBAC roles across multiple resources (see [Role Assignments](#role-assignments) below). Without role assignment permissions, the OIDC setup completes partially -- the managed identity and federated credential are created, but the pipeline will fail at runtime because the identity lacks access to the cluster and ACR. The extension warns you which roles could not be assigned so you can request them from an admin.
+> **Why Contributor alone is not enough:** The Contributor role explicitly excludes `Microsoft.Authorization/roleAssignments/write`. Container Assist assigns up to 5 RBAC roles: one in stage 1, plus four in stage 2, whose user-namespace and managed-namespace paths are mutually exclusive (see [Role Assignments](#role-assignments) below). Without role assignment permissions, the OIDC setup completes partially -- the managed identity and federated credential are created, but the pipeline will fail at runtime because the identity lacks access to the cluster and ACR. The extension warns you which roles could not be assigned so you can request them from an admin.
 
 ### Why subscription-level access is needed
 

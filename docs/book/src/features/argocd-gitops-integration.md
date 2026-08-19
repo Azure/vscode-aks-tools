@@ -4,13 +4,14 @@ The Argo CD integration brings a complete GitOps workflow to AKS clusters direct
 
 > **GitOps in one line** — Argo CD is a controller that watches a Git repository for your Kubernetes manifests and continuously syncs the cluster to match them.
 
+<!-- toc -->
+
 ---
 
-## Feature Flag
+## Turning the Argo CD commands off
 
-All Argo CD commands are gated behind a feature flag and **enabled by default**.
-
-If you want to hide Argo CD commands, set:
+The Argo CD commands are available by default. If you don't use Argo CD and would
+rather not see them, add this to your settings:
 
 ```json
 {
@@ -18,9 +19,8 @@ If you want to hide Argo CD commands, set:
 }
 ```
 
-Default value: `true`
-
-After changing this setting, reload the VS Code window (`Developer: Reload Window`).
+Then reload the VS Code window (`Developer: Reload Window`) for the change to take
+effect.
 
 ---
 
@@ -60,7 +60,7 @@ The integration provides four commands, all prefixed with **AKS:**
 |---------|-----------------|-------------|
 | **AKS: Create Argo CD Application** | Command Palette, Explorer folder context menu | Generate an annotated Argo CD Application manifest pointing at a repo which contains Kubernetes manifests or a Helm chart to be deployed |
 | **AKS: Apply Argo CD Application to Cluster** | Explorer YAML file context menu, Editor context menu | Apply an Application YAML to the active cluster |
-| **AKS: Check Argo CD Status** | AKS cluster tree right-click menu | Show Argo CD pod and service health in an output channel |
+| **AKS: Check Argo CD Status** | AKS cluster > **Develop & Deploy** | Show Argo CD pod and service health in an output channel |
 | **AKS: Argo CD Post-Deploy Actions** | Shown after a successful apply, or from the Command Palette | Open UI (SSO-aware), configure Azure Workload Identity (when source is ACR / Azure DevOps), connect a private GitHub repo, or open the Argo CD sync guide |
 
 ---
@@ -91,7 +91,7 @@ The integration provides four commands, all prefixed with **AKS:**
    2. Resolves the active kubectl context (no subscription or cluster picker needed).
    3. Checks that Argo CD is installed (looks for the `argocd` namespace).
    4. Confirms the apply action.
-   5. Runs `kubectl apply -n argocd -f <file>`.
+   5. Runs `kubectl apply -n <namespace> -f <file> --validate=false`. Validation is skipped because Argo CD CRDs may not be present on the client.
 4. After a successful apply, a notification offers four actions:
 
 ### Open Argo CD UI
@@ -138,7 +138,7 @@ For **Azure DevOps** or **ACR** sources, prefer the *Configure Workload Identity
 
 ## Check Argo CD Status
 
-1. In the AKS cluster tree, right-click a cluster node.
+1. Right-click your AKS cluster > **Develop & Deploy**.
 2. Select **AKS: Check Argo CD Status**.
 3. The **Argo CD** output channel shows:
    - Whether the `argocd` namespace exists.
@@ -151,12 +151,12 @@ For **Azure DevOps** or **ACR** sources, prefer the *Configure Workload Identity
 
 ## Copilot Chat Integration
 
-A GitHub Copilot chat skill is registered so you can ask questions like:
+An Azure AI Agent plugin (`argoCDDeploymentPlugin`) is registered for GitHub Copilot for Azure, so you can ask questions like:
 
 - *"How do I set up Argo CD on my AKS cluster?"*
 - *"Create an Argo CD deployment for my cluster"*
 
-The skill explains the GitOps principle and offers a button to launch the scaffold command directly from chat.
+The plugin explains the GitOps principle and offers a button to launch the scaffold command directly from chat.
 
 ---
 
@@ -166,7 +166,7 @@ The scaffolded `Application` manifests work unchanged with the upstream-parity f
 
 - **High availability (HA)** — chosen at install time via the managed extension or upstream Helm chart; no change required to the generated YAML.
 - **Hub-and-spoke / multi-cluster** — the *Create Argo CD Application* command generates a `spec.destination.server` you can point at a remote spoke cluster from a central hub.
-- **`ApplicationSet`** — the scaffolder currently emits a single `Application`. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), hand-author an `ApplicationSet` alongside the generated `<app-name>.yaml` manifest; the *Apply Argo CD Application to Cluster* command accepts any `argoproj.io/v1alpha1` resource.
+- **`ApplicationSet`** — the extension generates a single `Application`. For generator-driven, multi-cluster rollouts (cluster generator, Git generator, etc.), write an `ApplicationSet` yourself alongside the generated `<app-name>.yaml` manifest; the *Apply Argo CD Application to Cluster* command accepts any `argoproj.io/v1alpha1` resource.
 
 ---
 
