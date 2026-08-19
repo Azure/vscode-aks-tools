@@ -140,54 +140,56 @@ extends:
                               PendingAnalysisWaitTimeoutMinutes: 5
 
                         # =====================================================
-                        # PUBLISH (disabled while validating CFS npm routing)
+                        # PUBLISH
                         # =====================================================
 
-                        # - script: |
-                        #       set -e
-                        #       if ! command -v az >/dev/null 2>&1; then
-                        #         echo "Azure CLI not found on the agent image. Installing..."
-                        #         sudo tdnf install -y azure-cli || tdnf install -y azure-cli
-                        #       fi
-                        #       az version
-                        #   displayName: "Install Azure CLI"
-                        #   retryCountOnTaskFailure: 3
+                        # The 1ES Azure Linux 3 pool image does not ship the Azure CLI, but the
+                        # AzureCLI@2 tasks below require `az` to already be on the PATH.
+                        - script: |
+                              set -e
+                              if ! command -v az >/dev/null 2>&1; then
+                                echo "Azure CLI not found on the agent image. Installing..."
+                                sudo tdnf install -y azure-cli || tdnf install -y azure-cli
+                              fi
+                              az version
+                          displayName: "Install Azure CLI"
+                          retryCountOnTaskFailure: 3
 
-                        # - task: AzureCLI@2
-                        #   displayName: "Get AzDO User ID"
-                        #   inputs:
-                        #       azureSubscription: AKS-VsCode-Release
-                        #       scriptType: pscore
-                        #       scriptLocation: inlineScript
-                        #       inlineScript: |
-                        #           az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me --resource 499b84ac-1321-427f-aa17-267ca6975798
+                        - task: AzureCLI@2
+                          displayName: "Get AzDO User ID"
+                          inputs:
+                              azureSubscription: AKS-VsCode-Release
+                              scriptType: pscore
+                              scriptLocation: inlineScript
+                              inlineScript: |
+                                  az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me --resource 499b84ac-1321-427f-aa17-267ca6975798
 
-                        # - task: AzureCLI@2
-                        #   displayName: "Publish VSIX to Marketplace"
-                        #   inputs:
-                        #       azureSubscription: AKS-VsCode-Release
-                        #       scriptType: bash
-                        #       scriptLocation: inlineScript
-                        #       inlineScript: |
-                        #           set -e
-                        #           VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-signed/" -type f -name "*.vsix" -print -quit)
-                        #           echo "Publishing VSIX package: $VSIX_PATH"
-                        #           MANIFEST_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
-                        #           SIGNATURE_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s"
-                        #           npx vsce publish --azure-credential --packagePath "$VSIX_PATH" --manifestPath "$MANIFEST_PATH" --signaturePath "$SIGNATURE_PATH"
-                        #   env:
-                        #       VSCE_AZURE_CREDENTIAL_TIMEOUT: 60000
+                        - task: AzureCLI@2
+                          displayName: "Publish VSIX to Marketplace"
+                          inputs:
+                              azureSubscription: AKS-VsCode-Release
+                              scriptType: bash
+                              scriptLocation: inlineScript
+                              inlineScript: |
+                                  set -e
+                                  VSIX_PATH=$(find "$(Pipeline.Workspace)/vscode-extension-signed/" -type f -name "*.vsix" -print -quit)
+                                  echo "Publishing VSIX package: $VSIX_PATH"
+                                  MANIFEST_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.manifest"
+                                  SIGNATURE_PATH="$(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s"
+                                  npx vsce publish --azure-credential --packagePath "$VSIX_PATH" --manifestPath "$MANIFEST_PATH" --signaturePath "$SIGNATURE_PATH"
+                          env:
+                              VSCE_AZURE_CREDENTIAL_TIMEOUT: 60000
 
-                        # - task: GithubRelease@1
-                        #   displayName: "Create GitHub Release"
-                        #   inputs:
-                        #       gitHubConnection: AKS-VsCode-Release-GH-SVC
-                        #       repositoryName: Azure/vscode-aks-tools
-                        #       action: create
-                        #       title: ${{ parameters.publishVersion }}
-                        #       tagSource: userSpecifiedTag
-                        #       tag: ${{ parameters.publishVersion }}
-                        #       assets: |
-                        #           $(Pipeline.Workspace)/vscode-extension-signed/vscode-aks-tools-*.vsix
-                        #           $(Pipeline.Workspace)/vscode-extension-signed/extension.manifest
-                        #           $(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s
+                        - task: GithubRelease@1
+                          displayName: "Create GitHub Release"
+                          inputs:
+                              gitHubConnection: AKS-VsCode-Release-GH-SVC
+                              repositoryName: Azure/vscode-aks-tools
+                              action: create
+                              title: ${{ parameters.publishVersion }}
+                              tagSource: userSpecifiedTag
+                              tag: ${{ parameters.publishVersion }}
+                              assets: |
+                                  $(Pipeline.Workspace)/vscode-extension-signed/vscode-aks-tools-*.vsix
+                                  $(Pipeline.Workspace)/vscode-extension-signed/extension.manifest
+                                  $(Pipeline.Workspace)/vscode-extension-signed/extension.signature.p7s
