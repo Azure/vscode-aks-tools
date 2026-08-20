@@ -140,13 +140,11 @@ This can also be enabled from the VS Code Settings UI.
 
 Container Assist can be launched from:
 
-- Explorer folder context menu: `AKS: Deploy application to AKS (Preview)`
-- AKS cluster context menu: `AKS: Run Container Assist (Preview)`
+- Explorer folder context menu: `AKS: Migrate Application to AKS`, `AKS: Generate Dockerfiles and K8s Manifests for App`, `AKS: Deploy App with Automated Pipeline`
+- AKS cluster context menu, under **Develop & Deploy**: the same three commands
 
-The AKS cluster context menu entry is shown when:
-
-- `aks.containerAssistEnabledPreview` is `true` (default in `2.1.0`)
-- At least one workspace folder is open
+The Explorer entries require `aks.containerAssistEnabledPreview` (enabled by default) and a folder selection.
+On the cluster menu, `AKS: Migrate Application to AKS` needs only the setting; the other two also need an open workspace folder.
 
 ## User flow and options
 

@@ -2,7 +2,7 @@
 
 The extension allows you to create AKS Fleet Manager resources and visualize them in the tree view.
 
-### Create an AKS Fleet Manager
+## Create an AKS Fleet Manager
 - Right-click on the subscription where you want to create a Fleet.
 - Choose **Fleet Manager**, then select **Create Fleet**.
 

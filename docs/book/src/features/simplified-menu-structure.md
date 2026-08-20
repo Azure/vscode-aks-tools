@@ -22,27 +22,22 @@ Instead of many top-level commands, cluster actions are grouped into three subme
 - `Troubleshoot & Diagnose`
 - `Manage Cluster`
 
-Direct commands `Show In Azure Portal` and `Show Properties` remain available.
+These stay top-level: `Show In Azure Portal`, `Show Properties`, `AKS Quick Actions`, and `Switch to Classic Menu`.
 
 ## Menu grouping overview
 
 `Develop & Deploy`
-: Run Kubectl commands, Container Assist (preview), Attach ACR, Create GitHub Workflow, KAITO submenu, Install Azure Service Operator.
+: Run Kubectl Commands, Attach ACR to Cluster, Create a GitHub Workflow, Run Deployment Safeguards YAML Validation, Install Azure Service Operator, the **Deploy a LLM with KAITO** submenu, Check Argo CD Status (with `aks.argoCDEnabled`), and the Container Assist commands (with `aks.containerAssistEnabledPreview`).
 
 `Troubleshoot & Diagnose`
-: AKS Diagnostics submenu, Inspektor Gadget, network troubleshooting submenu, resource utilization submenu, Eraser Tool, security submenu.
+: The **Run AKS Diagnostics**, **Troubleshoot Network Health**, **Troubleshoot Resource Utilization**, and **Improve security of my cluster** submenus, plus Show Inspektor Gadget and Run Eraser Image Cleanup.
 
 `Manage Cluster`
-: Show properties, show in portal, delete cluster, rotate certificate, reconcile cluster.
+: Show Properties, Show In Azure Portal, Delete Cluster, Rotate Cluster Certificate, Reconcile Cluster.
 
 ## Container Assist in the new menu
 
-When both feature flags are enabled:
-
-- `aks.simplifiedMenuStructure = true`
-- `aks.containerAssistEnabledPreview = true` (default in `2.1.0`)
-
-and a workspace folder is open, `AKS: Run Container Assist (Preview)` appears under `Develop & Deploy`.
+With `aks.containerAssistEnabledPreview` enabled (the default), `AKS: Migrate Application to AKS` appears under `Develop & Deploy`. With a workspace folder also open, `AKS: Generate Dockerfiles and K8s Manifests for App` and `AKS: Deploy App with Automated Pipeline` appear alongside it.
 
 ## Switching between Classic and Grouped menus
 
@@ -63,15 +58,7 @@ After running either command, VS Code prompts you to reload the window. The new 
 
 ## Backward compatibility
 
-When `aks.simplifiedMenuStructure` is `false`, the previous menu organization stays active.
-This allows gradual rollout, internal validation, and user feedback collection without breaking existing workflows.
-
-## Suggested rollout plan
-
-1. Keep default `false` for broad compatibility.
-2. Enable in dogfood or preview cohorts.
-3. Collect feedback on discoverability and click depth.
-4. Promote to default once validated.
+Setting `aks.simplifiedMenuStructure` to `false` restores the classic menu, where every command sits at the top level of the cluster context menu.
 
 ## Screenshots
 
