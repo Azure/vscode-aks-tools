@@ -1,6 +1,6 @@
 # Webview Development
 
-For commands that require a webview (see [guidance](https://code.visualstudio.com/api/extension-guides/webview#should-i-use-a-webview) on where this is appropriate), the [`webview-ui`](../webview-ui/) project provides the necessary tooling to develop the front end.
+For commands that require a webview (see [guidance](https://code.visualstudio.com/api/extension-guides/webview#should-i-use-a-webview) on where this is appropriate), the [`webview-ui`](../../../../webview-ui/) project provides the necessary tooling to develop the front end.
 
 ## Initial Setup
 
@@ -47,4 +47,4 @@ These components help us maintain a clean, unified look without relying on exter
 
 ## Building for release
 
-The process for this is unaffected by the webview setup. The `npm run webpack` and `vsce package` commands will ensure the `webpack-ui` project is built and bundled.
+The process for this is unaffected by the webview setup. The `npm run webpack` and `vsce package` commands will ensure the `webview-ui` project is built and bundled.
