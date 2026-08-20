@@ -26,6 +26,16 @@ Never assume a flat repo. Apps often live in nested or monorepo layouts (`src/<s
 
 Use `codebase`/`search` to confirm each path actually exists — do not infer it from the language alone. Surface this map to the user and let them correct it before proceeding.
 
+## Build environment
+
+All container images are built with **`az acr build`** — server-side on the ACR remote task builders. Never `docker build`. Kickstart runs in Azure Cloud Shell, which has no Docker daemon, and a single remote build path keeps behavior identical everywhere.
+
+Cloud Shell constraints to honor:
+
+- Clone into `~/clouddrive/` (persistent, ~5 GB) rather than the ephemeral home dir.
+- `az acr build` needs the Phase 2 ACR to exist and the caller to hold `AcrPush` (or `Container Registry Tasks Contributor`) — see `/kickstart-handoff`.
+- Keep `az acr build` in the foreground so its streamed log holds an idle session open, and keep `.dockerignore` tight (the whole build context uploads on every build).
+
 ## What to collect
 
 - App name
@@ -43,4 +53,4 @@ Use `codebase`/`search` to confirm each path actually exists — do not infer it
 - When the answer is open-ended (app name), use `allowFreeformInput: true`.
 
 ## Exit Criteria
-You know the app name, language, framework, port, key deps, env vars, CI status, and a confirmed per-service structure map (build context + entry point + existing Dockerfile path) for every deployable service. Announce: "Discovery complete — moving to Configure Infrastructure."
+You know the app name, language, framework, port, key deps, env vars, CI status, a confirmed per-service structure map (build context + entry point + existing Dockerfile path) for every deployable service. Announce: "Discovery complete — moving to Configure Infrastructure."

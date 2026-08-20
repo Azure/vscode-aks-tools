@@ -6,9 +6,88 @@ disable-model-invocation: true
 
 # AKS Deployment Safeguard Checklist
 
-This skill provides a comprehensive checklist for validating generated Kubernetes manifests against AKS security and deployment best practices. Use this during the Review phase to ensure all generated configurations comply with organizational policies.
+This skill provides a comprehensive checklist for validating generated Kubernetes manifests. Use this during the Review phase.
 
-## Safeguard Rules
+It has **two parts**, and they are not interchangeable:
+
+- **Part A — AKS Deployment Safeguards.** The policies AKS Automatic actually enforces at admission. Some **mutate** your object instead of rejecting it, so a manifest that omits them will be silently rewritten by the cluster. Generate these correctly up front (see `/kickstart-generate`) so the mutators are no-ops.
+- **Part B — Pod security & deployment best practice.** Additional hardening checks Kickstart applies. Valuable, but *not* the AKS Deployment Safeguards policy set — don't conflate the two when reporting.
+
+---
+
+# Part A — AKS Deployment Safeguards (policy-enforced)
+
+| # | Safeguard policy | Severity | Mutation outcome if available |
+|---|---|---|---|
+| A1 | Cannot Edit Individual Nodes | HIGH | N/A — rejected, not mutated |
+| A2 | Containers CPU and memory resource **requests** must be defined | HIGH | **Mutates** — sets default CPU/memory requests and enforces minimums |
+| A3 | Must have anti-affinity rules or `topologySpreadConstraints` set | MEDIUM | **Mutates** — adds pod anti-affinity + topology spread constraints (multi-replica workloads) |
+| A4 | No AKS-specific labels | MEDIUM | N/A |
+| A5 | Containers should only use allowed images | HIGH | N/A |
+| A6 | Reserved system pool taints | MEDIUM | **Mutates** — removes the `CriticalAddonsOnly` taint/toleration from user node pool workloads |
+| A7 | Containers have readiness or liveness probes configured | HIGH | N/A |
+| A8 | Clusters should use CSI driver StorageClass | MEDIUM | N/A |
+| A9 | Services should use unique selectors | HIGH | N/A |
+| A10 | Container images should not include `latest` tag | HIGH | N/A |
+
+### A1: cannot-edit-individual-nodes
+- **Check**: No manifest, script, or command targets an individual Node — no `kind: Node` objects, no `kubectl label/taint/cordon node`, no `nodeSelector`/`nodeName` pinning to a specific node name. Use node pools and pool-level labels instead.
+- [ ] Pass / Fail
+
+### A2: require-requests  *(mutating)*
+- **Check**: Every container (including init containers and sidecars) declares `resources.requests.cpu` **and** `resources.requests.memory`. Limits alone are not sufficient.
+- **If omitted**: the injected defaults are large — **CPU `500m` and memory `2048Mi` (2Gi) per container**, set as both request and limit. On a multi-container pod that is a real scheduling and cost surprise, so always declare requests explicitly.
+- **Enforced minimums**: CPU `100m`, memory `100Mi`. Values below these are raised. If a request ends up above its limit the request is capped to the limit to keep the QoS class valid.
+- [ ] Pass / Fail
+
+### A3: require-spread-or-anti-affinity  *(mutating)*
+- **Applies to**: multi-replica workloads. The policy error reads `Deployment with 2 replicas should have either podAntiAffinity or topologySpreadConstraints set` — single-replica workloads aren't flagged. Generate the constraints anyway, so scaling up later doesn't silently trigger a mutation.
+- **Check**: Each Deployment/StatefulSet sets `spec.template.spec.topologySpreadConstraints` **or** `affinity.podAntiAffinity`. Prefer topology spread on `kubernetes.io/hostname` with `whenUnsatisfiable: ScheduleAnyway`.
+- **If omitted**: AKS adds a preferred pod anti-affinity rule (weight 100, topology key `kubernetes.io/hostname`) plus a topology spread constraint (`maxSkew: 1`, `whenUnsatisfiable: ScheduleAnyway`). It picks the selector label by priority — `app`, then `app.kubernetes.io/name`, else a generated `default-antiaffinity-applabel=<workload-name>`. The mutator skips a workload entirely if *either* pod anti-affinity or any topology spread constraint already exists.
+- [ ] Pass / Fail
+
+### A4: no-aks-specific-labels
+- **Check**: No object sets a `kubernetes.azure.com/*` **label**. These are reserved for AKS (`Label kubernetes.azure.com is reserved for AKS use only`).
+- **Scope**: labels only. The policy does not inspect `metadata.annotations` — the safeguards docs name the annotation field explicitly where they mean it (e.g. the AppArmor rule). Even so, don't put `kubernetes.azure.com/*` in an annotation; the prefix is reserved by convention regardless of which field is enforced.
+- `azure.workload.identity/*` labels and annotations are **not** covered by this rule and are required for Workload Identity.
+- [ ] Pass / Fail
+
+### A5: allowed-images-only
+- **Check**: Every image resolves to a registry the cluster permits — normally the Phase 2 ACR (`<acr>.azurecr.io/...`). Flag any third-party image (`docker.io/...`, `ghcr.io/...`) that must first be brought in with `az acr import`.
+- [ ] Pass / Fail
+
+### A6: reserved-system-pool-taints  *(mutating)*
+- **Check**: No app workload declares a `CriticalAddonsOnly` toleration, and no user node pool config sets that taint. AKS uses it to keep customer pods off the system pool.
+- **If present**: AKS removes it, so any scheduling you based on it will not hold.
+- [ ] Pass / Fail
+
+### A7: require-probes
+- **Check**: Every container defines a `readinessProbe` **or** `livenessProbe` (Kickstart generates both). The path and port must match the app's real health endpoint from the structure map — not a guessed `/healthz`.
+- [ ] Pass / Fail
+
+### A8: csi-storageclass
+- **Check**: the policy evaluates the StorageClass **provisioner**, not its name. In-tree `kubernetes.io/azure-disk` and `kubernetes.io/azure-file` are rejected (`Storage class <name> use intree provisioner ... is not allowed`); use `disk.csi.azure.com` or `file.csi.azure.com`.
+- In practice: set `storageClassName` on every PVC to a CSI-backed class (`managed-csi`, `managed-csi-premium`, `azurefile-csi`) rather than relying on an unset default, and verify the class's provisioner if it's cluster-custom.
+- [ ] Pass / Fail (N/A when no PVCs)
+
+### A9: unique-service-selectors
+- **Check**: No two Services share a selector, and each Service's selector matches exactly one workload. In monorepos do not reuse `app: <appName>` across services — use `app: <serviceName>` or `app.kubernetes.io/name` + `app.kubernetes.io/component`.
+- [ ] Pass / Fail
+
+### A10: no-latest-tag
+- **Check**: No image reference ends in `:latest` or omits a tag (an untagged image resolves to `latest`). Applies to init containers and sidecars too.
+- [ ] Pass / Fail
+
+---
+
+### Enforcement caveats
+
+- **Gatekeeper runs fail-open.** If the admission webhook doesn't respond, validation is skipped and a non-compliant workload is admitted. Safeguards are a backstop, not a guarantee — generate compliant manifests rather than relying on enforcement to catch mistakes.
+- **All or nothing.** Safeguards can't be enabled selectively; turning on `Warn` or `Enforce` activates every policy. Namespaces can be excluded, but on AKS Automatic the level can't be lowered from `Enforce`.
+
+---
+
+# Part B — Pod security & best practice
 
 ### Rule: no-privileged
 - **Severity**: HIGH
@@ -18,7 +97,7 @@ This skill provides a comprehensive checklist for validating generated Kubernete
 
 ### Rule: require-limits
 - **Severity**: MEDIUM
-- **Description**: All containers must declare resource limits (CPU and memory).
+- **Description**: All containers must declare resource limits (CPU and memory). Requests are covered separately by the policy-enforced **A2**.
 - **Check**: Verify that `spec.containers[*].resources.limits` is defined for all containers
 - [ ] Pass / Fail
 
@@ -26,12 +105,6 @@ This skill provides a comprehensive checklist for validating generated Kubernete
 - **Severity**: HIGH
 - **Description**: Pods must not use hostPath volumes.
 - **Check**: Verify that `spec.volumes[*].hostPath` is null or not present
-- [ ] Pass / Fail
-
-### Rule: no-latest-tag
-- **Severity**: HIGH
-- **Description**: Container images must not use the ':latest' tag.
-- **Check**: Verify that `spec.containers[*].image` does not end with `:latest`
 - [ ] Pass / Fail
 
 ### Rule: no-privilege-escalation
@@ -111,12 +184,21 @@ This skill provides a comprehensive checklist for validating generated Kubernete
 When possible, use the `runCommands` tool to validate manifests programmatically:
 
 ```bash
-# Dry-run validation against K8s API schemas
+# Schema-only validation (works with no cluster)
 kubectl apply --dry-run=client -f k8s/
+
+# BEST: server dry-run runs the real admission webhooks — this is what actually
+# evaluates Part A, and it shows you the mutated result before you commit to it.
+kubectl apply --dry-run=server -f k8s/
+
+# Diff your YAML against what the cluster would store (reveals safeguard mutations)
+kubectl diff -f k8s/
 
 # Validate with kubeconform (if installed)
 kubeconform -strict -summary k8s/*.yaml
 ```
+
+`--dry-run=server` requires cluster credentials (Phase 6). Before that, evaluate Part A by reading the manifests.
 
 ## Review Instructions
 
@@ -130,8 +212,24 @@ When reviewing manifests, use this checklist to validate each safeguard rule:
 3. **Report results** in a summary table showing rule ID, status, and any notes
 4. **Block on failures**: Any FAIL on a **HIGH-severity** rule must be fixed before the manifest proceeds to deployment
 5. **Address medium-severity failures**: MEDIUM-severity FAILs should be resolved or explicitly justified before proceeding
+6. **Never leave a mutating safeguard (A2, A3, A6) to the cluster.** A FAIL there won't block admission — AKS will quietly rewrite the object, so the deployed state stops matching the generated YAML and later `kubectl diff` output becomes confusing. Fix these in the manifest even though they "would work anyway."
+7. **Report Part A and Part B separately** so the user can see policy compliance distinctly from hardening advice.
 
 ## Example Review Output
+
+**Part A — AKS Deployment Safeguards**
+
+```
+| ID | Safeguard | Severity | Mutating | Status | Notes |
+|----|-----------|----------|----------|--------|-------|
+| A2 | require-requests | HIGH | yes | ✓ PASS | cpu 100m / memory 128Mi on all containers |
+| A3 | spread-or-anti-affinity | MEDIUM | yes | ✓ PASS | topologySpreadConstraints on hostname |
+| A9 | unique-service-selectors | HIGH | no | ✗ FAIL | api and worker Services both select app: store |
+| A10 | no-latest-tag | HIGH | no | ✓ PASS | pinned tag v1.2.3 |
+| ... | ... | ... | ... | ... | ... |
+```
+
+**Part B — Pod security & best practice**
 
 ```
 | Rule ID | Severity | Status | Notes |
@@ -139,7 +237,6 @@ When reviewing manifests, use this checklist to validate each safeguard rule:
 | no-privileged | HIGH | ✓ PASS | securityContext.privileged is false |
 | require-limits | MEDIUM | ✓ PASS | All containers have CPU/memory limits |
 | no-hostpath | HIGH | ✓ PASS | No hostPath volumes defined |
-| no-latest-tag | HIGH | ✓ PASS | Image uses pinned tag v1.2.3 |
 | ... | ... | ... | ... |
 ```
 
@@ -152,4 +249,4 @@ When reviewing manifests, use this checklist to validate each safeguard rule:
 
 ---
 
-*Last updated: Safeguards from `packages/pack-aks-automatic/src/safeguards.json`*
+*Part A: AKS Automatic Deployment Safeguards policy set (mutation outcomes per AKS docs). Part B: `packages/pack-aks-automatic/src/safeguards.json`.*

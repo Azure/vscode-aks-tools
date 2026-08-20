@@ -66,7 +66,7 @@ Handle each starting point (ask via `vscode_askQuestions` only when it wasn't al
     }]
   }
   ```
-  Clone with `run_in_terminal`, then load `/kickstart-samples` for the pre-filled profile and confirm it with the user. **Skip Phase 1's questions** — go straight to **Phase 2 (Configure Infrastructure)**. Do NOT ask the user for app name, port, language, or any discovery questions — but still run the quick structure scan from `/kickstart-samples` to confirm each service's build context, Dockerfile path, and entry point before generating anything.
+  Clone with `run_in_terminal`, then load `/kickstart-samples` for the pre-filled profile and confirm it with the user. **Skip Phase 1's questions** — go straight to **Phase 2 (Configure Infrastructure)**. Do NOT ask the user for app name, port, language, or any discovery questions — but still run the quick structure scan from `/kickstart-samples` to confirm each service's build context, Dockerfile path, and entry point, before generating anything.
 - **Use my current workspace**: Proceed to **Phase 1 (Discover)**.
 
 ## Phases
@@ -85,15 +85,15 @@ Follow `/kickstart-configure-infra`. Do NOT pick subscriptions or run `az aks cr
 Follow `/kickstart-design`. Present architecture summary (container strategy, AKS Automatic, Gateway API, Workload Identity, ACR, monitoring). Get user approval via `vscode_askQuestions`. Run `/kickstart-cluster-status` before transitioning.
 
 ### 4 — Generate
-Follow `/kickstart-generate`. Produce Dockerfile (reuse an existing one when present), K8s manifests (`k8s/`), Bicep (`infra/`), GitHub Actions workflow — driven by the structure map, with every `COPY`/`ADD` path validated against the build context. Use actual resource names from Phase 2. Pin image tags — never `:latest`. Build and inspect each image (confirm the entry point landed) before exiting. Run `/kickstart-cluster-status` before transitioning.
+Follow `/kickstart-generate`. Produce Dockerfile (reuse an existing one when present), K8s manifests (`k8s/`), Bicep (`infra/`), GitHub Actions workflow — driven by the structure map, with every `COPY`/`ADD` path validated against the build context. Use actual resource names from Phase 2. Pin image tags — never `:latest`. Emit manifests that already satisfy the mutating AKS Deployment Safeguards (CPU/memory **requests**, `topologySpreadConstraints` or pod anti-affinity, unique per-service Service selectors, probes, CSI `storageClassName`, no `kubernetes.azure.com/*` labels or `CriticalAddonsOnly` toleration). Build each image with `az acr build` (server-side; never `docker build`) and assert the entry point with a `RUN test -f` line in the Dockerfile before exiting. Run `/kickstart-cluster-status` before transitioning.
 
 ### 5 — Review
-Follow `/kickstart-review`. Show the Dockerfile source→destination map for confirmation and verify the image builds with the entry point present, then run `/kickstart-safeguard-checklist` validation. Present pass/fail/warn checklist. Fix failures before proceeding. Run `/kickstart-cluster-status` before transitioning.
+Follow `/kickstart-review`. Show the Dockerfile source→destination map for confirmation and verify the image builds with the entry point present via `az acr build` plus its build-time entry-point assertion — then run `/kickstart-safeguard-checklist` validation. Present pass/fail/warn checklist. Fix failures before proceeding. Run `/kickstart-cluster-status` before transitioning.
 
 ### 6 — Pre-Deploy Check
 Follow `/kickstart-handoff` — it carries the full strict-order playbook: cluster readiness (6a), metadata detection (6b), ACR attachment verification (6c — idempotent; the registry is usually already attached during cluster setup), kubelogin (6d), and the consolidated permission probes (6e–6g) via the bundled `aks.checkDeploymentPermissions` command. Escalate through `/kickstart-pim-activation` whenever a role assignment returns 403. Confirm readiness with the user via `vscode_askQuestions` before deploying.
 
 ### 7 — Deploy
-Follow `/kickstart-deploy` — build & push to ACR (using each service's build context and Dockerfile path from the structure map, never `.`), get credentials, apply manifests, then verify and health-check the running app (hit its endpoint, compare expected vs actual — not just pod readiness), executed step by step via `run_in_terminal` with confirmation between each and error classification on failure.
+Follow `/kickstart-deploy` — build & push to ACR with `az acr build` (server-side, never `docker build`; using each service's build context and Dockerfile path from the structure map, never `.`), get credentials, apply manifests, then verify and health-check the running app (hit its endpoint, compare expected vs actual — not just pod readiness), executed step by step via `run_in_terminal` with confirmation between each and error classification on failure.
 
 Once the app is running, offer to commit the generated artifacts (Dockerfile, `k8s/`, `infra/`, workflow). If the user wants to commit or open a PR, follow `/kickstart-github-pr-conventions` for branch naming, Conventional Commits, and PR structure.
