@@ -29,6 +29,45 @@ Load these for detailed patterns as you author each artifact:
 
 **K8s Manifests** (`k8s/`): `namespace.yaml`, `deployment.yaml` (resource requests **and** limits, probes, `runAsNonRoot`, Workload Identity labels, env from ConfigMap/Secret), `service.yaml` (ClusterIP), `httproute.yaml` (Gateway API, not Ingress). See `/kickstart-workload-identity`.
 
+### Stamp generated resources with kickstart provenance
+
+Every resource kickstart generates carries a marker so it can be identified later — both by a human reading the repo and by `kubectl` queries against a live cluster.
+
+**Kubernetes objects** — a label for identity, an annotation for the version:
+
+```yaml
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: aks-kickstart
+  annotations:
+    kickstart.aks.azure.com/version: "<extension version>"
+```
+
+Rules for placement, which matter more than the choice of field:
+
+- Put both on the **object's own `metadata`** (Deployment, Service, HTTPRoute, ServiceAccount, ConfigMap...), **not** on `spec.template.metadata`. Anything on the pod template — label or annotation — changes the pod-template hash and forces a full rollout on the next version bump. (`kubectl rollout restart` works precisely by writing a pod-template annotation.)
+- Never put either in `spec.selector` or in a Service selector. `spec.selector` is immutable after creation, and a version in a selector would make the Deployment un-updatable. It also collides with the unique-selector safeguard (A9).
+- `app.kubernetes.io/managed-by` is the convention already used elsewhere in this extension, and its neutral prefix keeps it clear of the reserved `kubernetes.azure.com/*` namespace blocked by safeguard A4. The version is an **annotation** rather than a label because label values are capped at 63 chars and reject `+`, so a semver with build metadata (`2.4.0+abc123`) would be an invalid label value but is a perfectly fine annotation.
+
+**Dockerfile** — OCI labels in the final stage. Use a kickstart-specific key for the generator version; `org.opencontainers.image.version` means the *application's* version, not the tool's:
+
+```dockerfile
+LABEL org.opencontainers.image.source="<repo url, if known>" \
+      com.azure.aks.kickstart.generated="true" \
+      com.azure.aks.kickstart.version="<extension version>"
+```
+
+**Bicep** — Azure resources take `tags`:
+
+```bicep
+tags: {
+  'managed-by': 'aks-kickstart'
+  'kickstart-version': '<extension version>'
+}
+```
+
+If you can't determine the extension version, emit the `managed-by` label / `generated` LABEL / `managed-by` tag and **omit the version entirely** — a wrong version is worse than an absent one, since it misattributes which release produced the artifact. Never guess or hardcode a version number.
+
 ### Generate safeguard-compliant manifests up front
 
 AKS Automatic enforces **Deployment Safeguards**, and several of them *mutate* your manifest on apply. If you don't emit these yourself, the cluster silently rewrites the object and the Phase 7 `kubectl get`/`diff` output won't match what you generated. Emit all of the following by default — see `/kickstart-safeguard-checklist` for the authoritative rule list and mutation outcomes.
@@ -65,6 +104,7 @@ AKS Automatic enforces **Deployment Safeguards**, and several of them *mutate* y
 - Use actual resource names from the Configure phase.
 - Never use `:latest` tags.
 - Honor each service's build context and entry point from the structure map; reuse existing Dockerfiles instead of duplicating them.
+- Stamp every generated resource with the kickstart provenance marker above (object metadata only — never the pod template or a selector).
 - All K8s manifests must comply with AKS deployment safeguards (restricted pod security, no privileged, no hostPath) **and** must pre-satisfy the mutating safeguards above so the cluster doesn't rewrite them on apply.
 - Build images with `az acr build` only — never `docker build`.
 - After writing all files, confirm with user via `vscode_askQuestions`.

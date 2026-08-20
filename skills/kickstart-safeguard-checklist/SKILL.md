@@ -21,7 +21,7 @@ It has **two parts**, and they are not interchangeable:
 |---|---|---|---|
 | A1 | Cannot Edit Individual Nodes | HIGH | N/A — rejected, not mutated |
 | A2 | Containers CPU and memory resource **requests** must be defined | HIGH | **Mutates** — sets default CPU/memory requests and enforces minimums |
-| A3 | Must have anti-affinity rules or `topologySpreadConstraints` set | MEDIUM | **Mutates** — adds pod anti-affinity + topology spread constraints |
+| A3 | Must have anti-affinity rules or `topologySpreadConstraints` set | MEDIUM | **Mutates** — adds pod anti-affinity + topology spread constraints (multi-replica workloads) |
 | A4 | No AKS-specific labels | MEDIUM | N/A |
 | A5 | Containers should only use allowed images | HIGH | N/A |
 | A6 | Reserved system pool taints | MEDIUM | **Mutates** — removes the `CriticalAddonsOnly` taint/toleration from user node pool workloads |
@@ -36,16 +36,20 @@ It has **two parts**, and they are not interchangeable:
 
 ### A2: require-requests  *(mutating)*
 - **Check**: Every container (including init containers and sidecars) declares `resources.requests.cpu` **and** `resources.requests.memory`. Limits alone are not sufficient.
-- **If omitted**: AKS injects defaults and raises anything below the enforced minimum — your applied object will differ from your YAML.
+- **If omitted**: the injected defaults are large — **CPU `500m` and memory `2048Mi` (2Gi) per container**, set as both request and limit. On a multi-container pod that is a real scheduling and cost surprise, so always declare requests explicitly.
+- **Enforced minimums**: CPU `100m`, memory `100Mi`. Values below these are raised. If a request ends up above its limit the request is capped to the limit to keep the QoS class valid.
 - [ ] Pass / Fail
 
 ### A3: require-spread-or-anti-affinity  *(mutating)*
+- **Applies to**: multi-replica workloads. The policy error reads `Deployment with 2 replicas should have either podAntiAffinity or topologySpreadConstraints set` — single-replica workloads aren't flagged. Generate the constraints anyway, so scaling up later doesn't silently trigger a mutation.
 - **Check**: Each Deployment/StatefulSet sets `spec.template.spec.topologySpreadConstraints` **or** `affinity.podAntiAffinity`. Prefer topology spread on `kubernetes.io/hostname` with `whenUnsatisfiable: ScheduleAnyway`.
-- **If omitted**: AKS adds its own anti-affinity and spread constraints, which can change scheduling behavior you didn't plan for.
+- **If omitted**: AKS adds a preferred pod anti-affinity rule (weight 100, topology key `kubernetes.io/hostname`) plus a topology spread constraint (`maxSkew: 1`, `whenUnsatisfiable: ScheduleAnyway`). It picks the selector label by priority — `app`, then `app.kubernetes.io/name`, else a generated `default-antiaffinity-applabel=<workload-name>`. The mutator skips a workload entirely if *either* pod anti-affinity or any topology spread constraint already exists.
 - [ ] Pass / Fail
 
 ### A4: no-aks-specific-labels
-- **Check**: No object sets a `kubernetes.azure.com/*` label. These are reserved for AKS. (`azure.workload.identity/*` labels and annotations are **not** covered by this rule and are required for Workload Identity.)
+- **Check**: No object sets a `kubernetes.azure.com/*` **label**. These are reserved for AKS (`Label kubernetes.azure.com is reserved for AKS use only`).
+- **Scope**: labels only. The policy does not inspect `metadata.annotations` — the safeguards docs name the annotation field explicitly where they mean it (e.g. the AppArmor rule). Even so, don't put `kubernetes.azure.com/*` in an annotation; the prefix is reserved by convention regardless of which field is enforced.
+- `azure.workload.identity/*` labels and annotations are **not** covered by this rule and are required for Workload Identity.
 - [ ] Pass / Fail
 
 ### A5: allowed-images-only
@@ -62,7 +66,8 @@ It has **two parts**, and they are not interchangeable:
 - [ ] Pass / Fail
 
 ### A8: csi-storageclass
-- **Check**: Every PersistentVolumeClaim sets `storageClassName` to a CSI-backed class (`managed-csi`, `managed-csi-premium`, `azurefile-csi`). No in-tree provisioners, no reliance on an unset default.
+- **Check**: the policy evaluates the StorageClass **provisioner**, not its name. In-tree `kubernetes.io/azure-disk` and `kubernetes.io/azure-file` are rejected (`Storage class <name> use intree provisioner ... is not allowed`); use `disk.csi.azure.com` or `file.csi.azure.com`.
+- In practice: set `storageClassName` on every PVC to a CSI-backed class (`managed-csi`, `managed-csi-premium`, `azurefile-csi`) rather than relying on an unset default, and verify the class's provisioner if it's cluster-custom.
 - [ ] Pass / Fail (N/A when no PVCs)
 
 ### A9: unique-service-selectors
@@ -72,6 +77,13 @@ It has **two parts**, and they are not interchangeable:
 ### A10: no-latest-tag
 - **Check**: No image reference ends in `:latest` or omits a tag (an untagged image resolves to `latest`). Applies to init containers and sidecars too.
 - [ ] Pass / Fail
+
+---
+
+### Enforcement caveats
+
+- **Gatekeeper runs fail-open.** If the admission webhook doesn't respond, validation is skipped and a non-compliant workload is admitted. Safeguards are a backstop, not a guarantee — generate compliant manifests rather than relying on enforcement to catch mistakes.
+- **All or nothing.** Safeguards can't be enabled selectively; turning on `Warn` or `Enforce` activates every policy. Namespaces can be excluded, but on AKS Automatic the level can't be lowered from `Enforce`.
 
 ---
 

@@ -16,6 +16,8 @@ Validate every artifact against security, correctness, and AKS Automatic complia
 
 **K8s Manifests**: `runAsNonRoot: true`, no privileged containers, resource requests+limits, liveness/readiness probes, `topologySpreadConstraints` or anti-affinity, unique per-Service selectors, CSI `storageClassName` on any PVC, no `kubernetes.azure.com/*` labels, no `CriticalAddonsOnly` toleration, Gateway API HTTPRoute (not Ingress), Workload Identity labels+SA, namespace specified. Run the full `/kickstart-safeguard-checklist` — the mutating safeguards there must already be satisfied in the YAML, not left to the cluster.
 
+**Provenance**: every generated K8s object carries `app.kubernetes.io/managed-by: aks-kickstart` on its own `metadata.labels` (not the pod template, not any selector); Dockerfiles carry the `com.azure.aks.kickstart.*` LABELs; Bicep resources carry the `managed-by` tag. A version marker is present and correct, or absent — never guessed.
+
 **Bicep**: API versions pinned, parameterized env values, secure defaults (TLS 1.2+), outputs defined.
 
 **GitHub Actions**: OIDC auth, minimal `permissions`, environment protection for prod.
