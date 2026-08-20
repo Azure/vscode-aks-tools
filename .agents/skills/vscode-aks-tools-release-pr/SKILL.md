@@ -290,10 +290,6 @@ grep -rn "What's New in <prev>" docs/   # must return zero matches
 
 Update it only if the user explicitly says the process changed (e.g., new pipeline, new required step, new secret).
 
-`docs/book/src/release/releasing.md` is the only copy of the release process. A duplicate
-at `docs/maintenance/README.md` was deleted; do not recreate it. `docs/book/src/` is the
-single source of truth for all documentation.
-
 ### 10. CHANGELOG.md — DO NOT UPDATE
 
 Per the deprecation notice at the top of `CHANGELOG.md` (as of 1.6.14), the changelog is no longer maintained. Release notes live in:
