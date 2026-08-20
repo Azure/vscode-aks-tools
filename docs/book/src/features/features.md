@@ -4,12 +4,13 @@ Once you successfully log in with your Azure Account, you can view all AKS clust
 
 ## Release spotlight
 
-This release adds two configurable experiences:
+This release adds the following experiences:
 
 - [Container Assist Integration (Preview)](./container-assist-integration.md)
+- [Containerization Assist Skills for Copilot Chat (Preview)](./containerization-assist-skills.md)
 - [Simplified AKS Menu Structure (Feature Flag)](./simplified-menu-structure.md)
 
-These can be enabled independently:
+Container Assist and the simplified menu can be enabled independently:
 
 ```json
 {
@@ -19,6 +20,7 @@ These can be enabled independently:
 ```
 
 From `2.1.0`, `aks.containerAssistEnabledPreview` is enabled by default.
+The Containerization Assist skills require no feature flag or additional setup.
 
 Container Assist release screenshots:
 
