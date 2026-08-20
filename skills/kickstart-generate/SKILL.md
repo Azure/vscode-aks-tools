@@ -40,21 +40,21 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: aks-kickstart
   annotations:
-    kickstart.aks.azure.com/version: "<extension version>"
+    kickstart.aks.azure.com/version: "v1"
 ```
 
 Rules for placement, which matter more than the choice of field:
 
 - Put both on the **object's own `metadata`** (Deployment, Service, HTTPRoute, ServiceAccount, ConfigMap...), **not** on `spec.template.metadata`. Anything on the pod template — label or annotation — changes the pod-template hash and forces a full rollout on the next version bump. (`kubectl rollout restart` works precisely by writing a pod-template annotation.)
 - Never put either in `spec.selector` or in a Service selector. `spec.selector` is immutable after creation, and a version in a selector would make the Deployment un-updatable. It also collides with the unique-selector safeguard (A9).
-- `app.kubernetes.io/managed-by` is the convention already used elsewhere in this extension, and its neutral prefix keeps it clear of the reserved `kubernetes.azure.com/*` namespace blocked by safeguard A4. The version is an **annotation** rather than a label because label values are capped at 63 chars and reject `+`, so a semver with build metadata (`2.4.0+abc123`) would be an invalid label value but is a perfectly fine annotation.
+- `app.kubernetes.io/managed-by` is the convention already used elsewhere in this extension, and its neutral prefix keeps it clear of the reserved `kubernetes.azure.com/*` namespace blocked by safeguard A4. The version stays an **annotation** rather than a label: it's read, never selected on, and label values reject `+`, so it can't hold a semver with build metadata if this later tracks a real release.
 
 **Dockerfile** — OCI labels in the final stage. Use a kickstart-specific key for the generator version; `org.opencontainers.image.version` means the *application's* version, not the tool's:
 
 ```dockerfile
 LABEL org.opencontainers.image.source="<repo url, if known>" \
       com.azure.aks.kickstart.generated="true" \
-      com.azure.aks.kickstart.version="<extension version>"
+      com.azure.aks.kickstart.version="v1"
 ```
 
 **Bicep** — Azure resources take `tags`:
@@ -62,11 +62,11 @@ LABEL org.opencontainers.image.source="<repo url, if known>" \
 ```bicep
 tags: {
   'managed-by': 'aks-kickstart'
-  'kickstart-version': '<extension version>'
+  'kickstart-version': 'v1'
 }
 ```
 
-If you can't determine the extension version, emit the `managed-by` label / `generated` LABEL / `managed-by` tag and **omit the version entirely** — a wrong version is worse than an absent one, since it misattributes which release produced the artifact. Never guess or hardcode a version number.
+**The version is the literal string `v1`** — it versions the kickstart artifact *contract* (this label/annotation scheme and the shape of what kickstart emits), not the extension release. Write `v1` verbatim; do not substitute the extension version, a semver, or a date. It changes only when the generated-artifact contract changes in a way consumers need to detect.
 
 ### Generate safeguard-compliant manifests up front
 
