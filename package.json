@@ -1130,7 +1130,6 @@
         "@eslint/eslintrc": "^3.3.6",
         "@eslint/js": "^10.0.1",
         "@types/chai": "^5.2.3",
-        "@types/decompress": "^4.2.7",
         "@types/js-yaml": "^4.0.9",
         "@types/libsodium-wrappers": "^0.8.2",
         "@types/mocha": "^10.0.10",
@@ -1201,7 +1200,6 @@
         "@vscode/extension-telemetry": "^1.5.2",
         "@vscode/l10n": "^0.0.18",
         "containerization-assist-mcp": "^1.5.0",
-        "decompress": "^4.2.1",
         "js-yaml": "^5.2.3",
         "libsodium-wrappers": "^0.8.4",
         "move-file": "^4.1.0",
@@ -1209,9 +1207,11 @@
         "rxjs": "^7.8.2",
         "semver": "^7.8.5",
         "sinon": "^22.1.0",
+        "tar": "^7.5.21",
         "tmp": "^0.2.7",
         "uuid": "^14.0.0",
-        "vscode-kubernetes-tools-api": "^1.0.0"
+        "vscode-kubernetes-tools-api": "^1.0.0",
+        "yauzl": "^3.4.0"
     },
     "repository": {
         "type": "git",
