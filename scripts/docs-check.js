@@ -26,7 +26,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { loc, pkg, contributes, walk: walkMenus, DEFAULT_SIMPLIFIED } = require("./lib/menu-graph");
+const { loc, contributes, walk: walkMenus, DEFAULT_SIMPLIFIED } = require("./lib/menu-graph");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 const DOCS_ROOT = path.join(REPO_ROOT, "docs");
@@ -84,6 +84,22 @@ function withoutUrls(text) {
         .replace(/<[^>\s]+>/g, blank);
 }
 
+/**
+ * Blank out fenced code blocks, keeping the fences so line numbers stay accurate.
+ *
+ * Samples are quoted from elsewhere: a settings.json snippet naming another
+ * extension's `azure.*` key, or YAML carrying an `aks.*` annotation, is not a
+ * claim about what this extension contributes, and should not be a hard error.
+ * Inline code is left alone — the docs use it to name real commands, and the
+ * coverage check relies on that.
+ */
+function withoutFencedCode(text) {
+    const blank = (m) => m.replace(/[^\n]/g, " ");
+    return text.replace(/^([ \t]*)(`{3,}|~{3,})[^\n]*\n([\s\S]*?)^[ \t]*\2[^\n]*$/gm, (match, indent, fence, body) =>
+        match.replace(body, blank(body)),
+    );
+}
+
 /** Every `[text](target)` link in a file, with its line number. */
 function linksOf(file) {
     const text = fs.readFileSync(file, "utf8");
@@ -123,7 +139,7 @@ function contributions() {
 
     const submenus = new Set((contributes.submenus ?? []).map((s) => s.id));
 
-    return { version: pkg.version, commands, settings, submenus };
+    return { commands, settings, submenus };
 }
 
 /** Command IDs registered in src/ but possibly not declared in contributes.commands. */
@@ -154,7 +170,7 @@ checks.identifiers = (report) => {
 
     for (const file of bookFiles()) {
         const raw = fs.readFileSync(file, "utf8");
-        const text = withoutUrls(raw);
+        const text = withoutFencedCode(withoutUrls(raw));
         for (const match of text.matchAll(
             /(?<![\w.])((?:aks|azure)\.[a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)*)\b/g,
         )) {
@@ -250,7 +266,7 @@ checks.orphans = (report) => {
 
 // Menu breadcrumbs written as **A** > **B** > **C**. Docs describe the default
 // (grouped) menu; a page that documents the classic layout opts out with the
-// marker below.
+// marker below, which is documented for docs authors in docs/package-scripts.md.
 const CLASSIC_MARKER = "docs-check: classic-menu";
 const BOLD_CHAIN = /(?:\*\*[^*\n]+\*\*)(?:\s*>\s*\*\*[^*\n]+\*\*)+/g;
 // a single bold segment is only a menu path when the prose anchors it to a
@@ -355,7 +371,8 @@ function main() {
     if (unknown.length) {
         console.error(`Unknown check(s): ${unknown.join(", ")}`);
         console.error(`Available: ${Object.keys(checks).join(", ")}`);
-        process.exit(2);
+        process.exitCode = 2;
+        return;
     }
 
     let errors = 0;
@@ -381,7 +398,10 @@ function main() {
     }
 
     console.log(`\n${errors} error(s), ${warnings} warning(s)`);
-    process.exit(errors ? 1 : 0);
+    // `process.exit()` here would discard buffered stdout when it is a pipe
+    // rather than a TTY, which is how CI runs this. Setting the code and
+    // returning lets node flush and exit on its own.
+    process.exitCode = errors ? 1 : 0;
 }
 
 main();
