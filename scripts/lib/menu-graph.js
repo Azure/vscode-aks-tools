@@ -70,13 +70,18 @@ function stripOuterParens(s) {
 /**
  * Tree nodes a `when` clause can target, in match order. Adding a node type is
  * a new row here rather than a new branch.
+ *
+ * Every row accepts both the regex form (`viewItem =~ /aks\.cluster/i`) and the
+ * equality form (`viewItem == aks.subscription`), which package.json already uses.
+ * When only the subscription row tolerated `==`, the equality form of the others
+ * fell through to "any" and rendered as `Any > ...` with nothing flagged.
  */
 const NODE_PATTERNS = [
-    [/viewItem\s*=~\s*\/aks\\?\.cluster/i, "cluster"],
+    [/viewItem\s*[=~]+\s*\/?aks\\?\.cluster/i, "cluster"],
     [/viewItem\s*[=~]+\s*\/?aks\\?\.subscription/i, "subscription"],
-    [/viewItem\s*=~\s*\/aks\\?\.fleet/i, "fleet"],
+    [/viewItem\s*[=~]+\s*\/?aks\\?\.fleet/i, "fleet"],
     [/vsKubernetes/i, "k8s-cluster"],
-    [/viewItem\s*=~\s*\/Azure\/i/, "azure"],
+    [/viewItem\s*[=~]+\s*\/?Azure/, "azure"],
 ];
 
 /**
@@ -115,12 +120,23 @@ function normaliseBoolean(conjunct) {
 }
 
 /**
+ * Context keys VS Code treats as permanently false. `false` is the documented
+ * form; `never` is an undefined context key, so falsy, and this repo uses both.
+ * An entry gated on either is hidden, and must not be reported as reachable.
+ */
+const NEVER_KEYS = new Set(["false", "never"]);
+
+/**
  * How a single conjunct is interpreted, in match order:
  *   satisfied  false means the disjunct cannot hold in this menu mode
  *   flag       true means it is a runtime condition to report, not to evaluate
  * A conjunct matching nothing here is a view/viewItem predicate, handled by nodeOf.
  */
 const CONJUNCT_RULES = [
+    {
+        match: (n) => NEVER_KEYS.has(n.key.toLowerCase()),
+        satisfied: (_simplified, n) => n.negated,
+    },
     {
         match: (n) => n.key === MENU_MODE_KEY,
         satisfied: (simplified, n) => (n.negated ? !simplified : simplified),
@@ -176,9 +192,11 @@ function walk(simplified) {
     const active = new Set();
 
     const visit = (bucket, breadcrumb, node, flags) => {
-        const key = `${bucket}|${breadcrumb.join(">")}`;
-        if (active.has(key)) return; // submenu cycle guard
-        active.add(key);
+        // `active` is the set of submenus on the current stack. Keying it on the
+        // bucket alone is what makes the guard work: the earlier key included the
+        // breadcrumb, which grows on every hop, so it was fresh on each recursion
+        // and an A -> B -> A pair recursed until the stack overflowed.
+        active.add(bucket);
 
         for (const entry of menus[bucket] || []) {
             for (const hit of evaluateWhen(entry.when, simplified)) {
@@ -187,6 +205,10 @@ function walk(simplified) {
                 if (entry.submenu) {
                     const sub = submenuById.get(entry.submenu);
                     if (!sub) throw new Error(`menu references unknown submenu ${entry.submenu}`);
+                    // Checked before the label is recorded, not just before the
+                    // recursion, so a cycle contributes no path at all rather
+                    // than one dangling breadcrumb that re-enters a submenu.
+                    if (active.has(entry.submenu)) continue; // submenu cycle guard
                     const crumb = [...breadcrumb, loc(sub.label)];
                     labelPaths.add(`${childNode}|${crumb.join(" > ")}`);
                     visit(entry.submenu, crumb, childNode, childFlags);
@@ -198,7 +220,7 @@ function walk(simplified) {
                 }
             }
         }
-        active.delete(key);
+        active.delete(bucket);
     };
 
     visit("view/item/context", [], "any", []);

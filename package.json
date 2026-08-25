@@ -1111,6 +1111,7 @@
         "docs:check": "node scripts/docs-check.js",
         "docs:reference": "node scripts/generate-docs-reference.js",
         "docs:reference:check": "node scripts/generate-docs-reference.js --check",
+        "test:scripts": "mocha 'scripts/**/*.test.js'",
         "dev:webview": "cd webview-ui && npm run dev",
         "build:webview": "cd webview-ui && npm run build",
         "vscode:prepublish": "npm run webpack",
