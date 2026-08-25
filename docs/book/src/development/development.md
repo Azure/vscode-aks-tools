@@ -14,6 +14,33 @@ These can all be run from the command line in the root of the repository (with `
 - `build:webview`: bundles and minifies the webview UX for consumption by the extension.
 - `webpack`: builds and packages the extension.
 - `test`: runs automated tests.
+- `test:scripts`: runs the unit tests for the `scripts/` tooling. Plain node and mocha, so no compile step.
+
+## Documentation
+
+These validate this book against what `package.json` actually contributes, so command IDs, setting names and menu paths in prose cannot drift from the extension.
+
+- `docs:check`: runs all documentation checks. Pass names to run a subset, for example `npm run docs:check menu-paths`.
+    - `identifiers`: flags an `aks.*` or `azure.*` identifier in prose that `package.json` does not contribute. Fenced code blocks are skipped, so a sample quoting another extension's settings is not an error.
+    - `menu-paths`: flags a menu breadcrumb that does not match the real menu.
+    - `coverage`: warns about a command documented nowhere in prose.
+    - `orphans`: warns about an image no page references.
+- `docs:reference`: regenerates the reference pages under `src/reference/`. These carry a `DO NOT EDIT` header — change the generator or `package.json`, not the output.
+- `docs:reference:check`: fails if those pages are stale. Run `docs:reference` and commit the result.
+
+Links, images, anchors and `SUMMARY.md` completeness are deliberately **not** checked here. `lychee --offline --include-fragments` covers the first three and handles raw HTML and URL fragments properly, and `mdbook build` with `create-missing = false` fails on a `SUMMARY.md` entry with no page.
+
+### Documenting the classic menu
+
+The menu layout depends on the `aks.simplifiedMenuStructure` setting, which defaults to `true`. `menu-paths` validates breadcrumbs against that default.
+
+A page that deliberately documents the classic layout (the setting turned off) opts out by including this marker anywhere in the file, usually in an HTML comment:
+
+```markdown
+<!-- docs-check: classic-menu -->
+```
+
+Breadcrumbs on that page are then accepted if they match either menu. Use it only for pages genuinely about the classic layout — a breadcrumb that is simply out of date should be fixed, not marked.
 
 ## Not for Running Directly
 
