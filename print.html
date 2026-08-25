@@ -221,7 +221,43 @@
 <li><code>build:webview</code>: bundles and minifies the webview UX for consumption by the extension.</li>
 <li><code>webpack</code>: builds and packages the extension.</li>
 <li><code>test</code>: runs automated tests.</li>
+<li><code>test:scripts</code>: runs the unit tests for the <code>scripts/</code> tooling. Plain node and mocha, so no compile step.</li>
 </ul>
+<h2 id="documentation"><a class="header" href="#documentation">Documentation</a></h2>
+<p>These validate this book against what <code>package.json</code> actually contributes, so command IDs, setting names and menu paths in prose cannot drift from the extension.</p>
+<ul>
+<li><code>docs:check</code>: runs all documentation checks. Pass names to run a subset, for example <code>npm run docs:check menu-paths</code>.
+<ul>
+<li><code>identifiers</code>: flags an <code>aks.*</code> or <code>azure.*</code> identifier in prose that <code>package.json</code> does not contribute. Fenced code blocks are skipped, so a sample quoting another extension’s settings is not an error.</li>
+<li><code>menu-paths</code>: flags a menu breadcrumb that does not match the real menu.</li>
+<li><code>menu-syntax</code>: flags menu navigation written as prose instead of <code>**A** &gt; **B**</code>. See below.</li>
+<li><code>coverage</code>: warns about a command documented nowhere in prose.</li>
+<li><code>orphans</code>: warns about an image no page references.</li>
+</ul>
+</li>
+<li><code>docs:reference</code>: regenerates the reference pages under <code>src/reference/</code>. These carry a <code>DO NOT EDIT</code> header — change the generator or <code>package.json</code>, not the output.</li>
+<li><code>docs:reference:check</code>: fails if those pages are stale. Run <code>docs:reference</code> and commit the result.</li>
+</ul>
+<p>Links, images, anchors and <code>SUMMARY.md</code> completeness are deliberately <strong>not</strong> checked here. <code>lychee --offline --include-fragments</code> covers the first three and handles raw HTML and URL fragments properly, and <code>mdbook build</code> with <code>create-missing = false</code> fails on a <code>SUMMARY.md</code> entry with no page.</p>
+<h3 id="writing-menu-navigation"><a class="header" href="#writing-menu-navigation">Writing menu navigation</a></h3>
+<p>Write navigation with <code>&gt;</code> between the steps, and bold each one:</p>
+<pre><code class="language-markdown">Right-click your AKS cluster &gt; **Troubleshoot &amp; Diagnose** &gt; **Troubleshoot Network Health** &gt; **Collect TCP Dumps**
+</code></pre>
+<p>Not as prose:</p>
+<pre><code class="language-markdown">Right-click your AKS cluster and select **Troubleshoot &amp; Diagnose** and then
+click on **Collect TCP Dumps**
+</code></pre>
+<p><code>menu-paths</code> only recognises the first form, so an instruction written the second way is skipped rather than validated — the page can go stale and nothing reports it. <code>menu-syntax</code> exists to make that a visible error instead of silence.</p>
+<p>The convention is not only for the tooling. <code>&gt;</code> states where the menu ends, which prose cannot: “click <strong>Create Cluster</strong> and select <strong>Create Standard Cluster</strong>” reads as two menu levels, but the second is a button in the wizard the first opens. Writing the menu part with <code>&gt;</code> and leaving the rest as prose keeps that boundary clear for readers too.</p>
+<p>If a line mentions right-click without giving an instruction — naming the context menu, say — put this marker on the page:</p>
+<pre><code class="language-markdown">&lt;!-- docs-check: not-a-menu --&gt;
+</code></pre>
+<h3 id="documenting-the-classic-menu"><a class="header" href="#documenting-the-classic-menu">Documenting the classic menu</a></h3>
+<p>The menu layout depends on the <code>aks.simplifiedMenuStructure</code> setting, which defaults to <code>true</code>. <code>menu-paths</code> validates breadcrumbs against that default.</p>
+<p>A page that deliberately documents the classic layout (the setting turned off) opts out by including this marker anywhere in the file, usually in an HTML comment:</p>
+<pre><code class="language-markdown">&lt;!-- docs-check: classic-menu --&gt;
+</code></pre>
+<p>Breadcrumbs on that page are then accepted if they match either menu. Use it only for pages genuinely about the classic layout — a breadcrumb that is simply out of date should be fixed, not marked.</p>
 <h2 id="not-for-running-directly"><a class="header" href="#not-for-running-directly">Not for Running Directly</a></h2>
 <p>Some scripts are invoked by other scripts or tools, so need not be run directly, or are otherwise not required for general development tasks:</p>
 <ul>
