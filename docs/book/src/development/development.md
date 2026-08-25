@@ -23,12 +23,38 @@ These validate this book against what `package.json` actually contributes, so co
 - `docs:check`: runs all documentation checks. Pass names to run a subset, for example `npm run docs:check menu-paths`.
     - `identifiers`: flags an `aks.*` or `azure.*` identifier in prose that `package.json` does not contribute. Fenced code blocks are skipped, so a sample quoting another extension's settings is not an error.
     - `menu-paths`: flags a menu breadcrumb that does not match the real menu.
+    - `menu-syntax`: flags menu navigation written as prose instead of `**A** > **B**`. See below.
     - `coverage`: warns about a command documented nowhere in prose.
     - `orphans`: warns about an image no page references.
 - `docs:reference`: regenerates the reference pages under `src/reference/`. These carry a `DO NOT EDIT` header — change the generator or `package.json`, not the output.
 - `docs:reference:check`: fails if those pages are stale. Run `docs:reference` and commit the result.
 
 Links, images, anchors and `SUMMARY.md` completeness are deliberately **not** checked here. `lychee --offline --include-fragments` covers the first three and handles raw HTML and URL fragments properly, and `mdbook build` with `create-missing = false` fails on a `SUMMARY.md` entry with no page.
+
+### Writing menu navigation
+
+Write navigation with `>` between the steps, and bold each one:
+
+```markdown
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Collect TCP Dumps**
+```
+
+Not as prose:
+
+```markdown
+Right-click your AKS cluster and select **Troubleshoot & Diagnose** and then
+click on **Collect TCP Dumps**
+```
+
+`menu-paths` only recognises the first form, so an instruction written the second way is skipped rather than validated — the page can go stale and nothing reports it. `menu-syntax` exists to make that a visible error instead of silence.
+
+The convention is not only for the tooling. `>` states where the menu ends, which prose cannot: "click **Create Cluster** and select **Create Standard Cluster**" reads as two menu levels, but the second is a button in the wizard the first opens. Writing the menu part with `>` and leaving the rest as prose keeps that boundary clear for readers too.
+
+If a line mentions right-click without giving an instruction — naming the context menu, say — put this marker on the page:
+
+```markdown
+<!-- docs-check: not-a-menu -->
+```
 
 ### Documenting the classic menu
 

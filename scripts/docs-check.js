@@ -359,6 +359,85 @@ checks["menu-paths"] = (report) => {
     }
 };
 
+/**
+ * Navigation must be written as **A** > **B**, not joined by prose.
+ *
+ * `menu-paths` recognises a breadcrumb only when `>` separates the steps, so an
+ * instruction written "and select **X** and then click on **Y**" is skipped
+ * rather than validated. That failure is silent, which is the same shape of
+ * problem the menu checks exist to prevent: 26 of the 28 right-click
+ * instructions naming a bold UI element were invisible to `menu-paths`.
+ *
+ * Teaching the parser the connector phrases was tried and rejected. Prose does
+ * not distinguish a menu hop from a step inside a wizard — both are written
+ * "and select" — so `**Create Cluster** and select **Create Standard Cluster**`
+ * reads as a two-level menu path when the second is a button in the dialog the
+ * first opens. `>` lets the author state that boundary, and the phrase list
+ * would never be complete anyway.
+ *
+ * This check knows nothing about the menu, only about the convention, so it
+ * cannot make that mistake.
+ */
+const NOT_A_MENU = "docs-check: not-a-menu";
+// Anchored at the end of the previous step, so group 1 is the connector that
+// led to this bold segment.
+const NAV_STEP = /([^*\n]*?)(\*\*[^*\n]+\*\*)/gy;
+
+/**
+ * The first prose-connected step in a right-click instruction, or null.
+ *
+ * A line `menu-paths` can already read is exempt whatever its connectors:
+ * reporting it here as well would duplicate, against the same line, an error
+ * `menu-paths` already raises.
+ */
+function proseNavIn(line) {
+    if (crumbsIn(line).length) {
+        return null;
+    }
+    for (const anchor of line.matchAll(/right[- ]click/gi)) {
+        // Only text after the right-click counts. A page describing "the **AKS
+        // cluster context menu** (right-click ...)" names a bold UI element
+        // without giving an instruction, and is not a breadcrumb.
+        NAV_STEP.lastIndex = anchor.index + anchor[0].length;
+        let step;
+        while ((step = NAV_STEP.exec(line))) {
+            const [, connector, bold] = step;
+            // a sentence boundary ends the instruction
+            if (connector.includes(".")) {
+                break;
+            }
+            if (!connector.trimEnd().endsWith(">")) {
+                return { connector: connector.trim(), bold };
+            }
+            NAV_STEP.lastIndex = step.index + step[0].length;
+        }
+    }
+    return null;
+}
+
+checks["menu-syntax"] = (report) => {
+    for (const file of bookFiles()) {
+        const raw = fs.readFileSync(file, "utf8");
+        if (raw.includes(NOT_A_MENU)) {
+            continue;
+        }
+        // a bold chain inside a code sample is not an instruction
+        withoutFencedCode(raw)
+            .split("\n")
+            .forEach((line, index) => {
+                const hit = proseNavIn(line);
+                if (!hit) {
+                    return;
+                }
+                report.error(
+                    `${rel(file)}:${index + 1}`,
+                    "write menu navigation as `**A** > **B**`, not prose: " +
+                        `"...${hit.connector} ${hit.bold}" — otherwise menu-paths cannot check it`,
+                );
+            });
+    }
+};
+
 // ---------------------------------------------------------------------------
 // runner
 // ---------------------------------------------------------------------------
@@ -404,4 +483,10 @@ function main() {
     process.exitCode = errors ? 1 : 0;
 }
 
-main();
+// Running the file executes the checks; requiring it exposes the line-level
+// parsers so they can be tested without a book on disk.
+if (require.main === module) {
+    main();
+}
+
+module.exports = { crumbsIn, proseNavIn, withoutFencedCode, withoutUrls };
