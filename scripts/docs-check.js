@@ -321,7 +321,10 @@ checks["menu-paths"] = (report) => {
 
     for (const file of bookFiles()) {
         const text = fs.readFileSync(file, "utf8");
-        const allowClassic = text.includes(CLASSIC_MARKER);
+        // Looked for outside code fences, so a page documenting the marker does
+        // not thereby opt itself out. Line scanning below still uses the raw
+        // text: a menu path quoted in a fence should still be correct.
+        const allowClassic = withoutFencedCode(text).includes(CLASSIC_MARKER);
 
         text.split("\n").forEach((line, index) => {
             for (const { crumb: match, root } of crumbsIn(line)) {
@@ -418,23 +421,24 @@ function proseNavIn(line) {
 checks["menu-syntax"] = (report) => {
     for (const file of bookFiles()) {
         const raw = fs.readFileSync(file, "utf8");
-        if (raw.includes(NOT_A_MENU)) {
+        // a bold chain inside a code sample is not an instruction
+        const text = withoutFencedCode(raw);
+        // Checked against the same blanked text, so the page documenting this
+        // marker does not opt itself out of the check it describes.
+        if (text.includes(NOT_A_MENU)) {
             continue;
         }
-        // a bold chain inside a code sample is not an instruction
-        withoutFencedCode(raw)
-            .split("\n")
-            .forEach((line, index) => {
-                const hit = proseNavIn(line);
-                if (!hit) {
-                    return;
-                }
-                report.error(
-                    `${rel(file)}:${index + 1}`,
-                    "write menu navigation as `**A** > **B**`, not prose: " +
-                        `"...${hit.connector} ${hit.bold}" — otherwise menu-paths cannot check it`,
-                );
-            });
+        text.split("\n").forEach((line, index) => {
+            const hit = proseNavIn(line);
+            if (!hit) {
+                return;
+            }
+            report.error(
+                `${rel(file)}:${index + 1}`,
+                "write menu navigation as `**A** > **B**`, not prose: " +
+                    `"...${hit.connector} ${hit.bold}" — otherwise menu-paths cannot check it`,
+            );
+        });
     }
 };
 
