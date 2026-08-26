@@ -74,8 +74,8 @@ The main agent follows seven phases in strict order. Each phase has a dedicated 
 | 1. Discover | `/kickstart-discover` | Collect app name, language, framework, deps, port, env vars, Dockerfile/CI status; map each service's build context, entry point, and existing Dockerfile path | Enough info to propose architecture + structure mapped |
 | 2. Configure | `/kickstart-configure-infra` | Create new or select existing Azure resources (RG, AKS cluster, ACR). Cluster creates with `--no-wait` | Resources selected/creating |
 | 3. Design | `/kickstart-design` | Propose AKS Automatic architecture, get user approval | User approves |
-| 4. Generate | `/kickstart-generate` | Create Dockerfile (reuse existing, validate COPY/ADD paths, build & inspect image), K8s manifests, Bicep, GHA workflow | All files written + image builds |
-| 5. Review | `/kickstart-review` | Confirm Dockerfile source→destination map, verify image builds, validate artifacts against safeguards + security | All checks pass |
+| 4. Generate | `/kickstart-generate` | Create Dockerfile (reuse existing, validate COPY/ADD paths, build remotely with ACR), K8s manifests, Bicep, GHA workflow | All files written + ACR build succeeds |
+| 5. Review | `/kickstart-review` | Confirm Dockerfile source→destination map resolves the entry point, verify ACR build, validate artifacts against safeguards + security | All checks pass |
 | 6. Pre-Deploy | `/kickstart-handoff` | Verify cluster ready, ACR attached, final summary | Cluster provisioned, user confirms |
 | 7. Deploy | `/kickstart-deploy` | Build (per-service context + Dockerfile path), push, apply with `az` and `kubectl`, health-check endpoint | App running + endpoint verified |
 

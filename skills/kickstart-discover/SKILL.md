@@ -28,13 +28,9 @@ Use `codebase`/`search` to confirm each path actually exists — do not infer it
 
 ## Build environment
 
-All container images are built with **`az acr build`** — server-side on the ACR remote task builders. Never `docker build`. Kickstart runs in Azure Cloud Shell, which has no Docker daemon, and a single remote build path keeps behavior identical everywhere.
+Prefer **`az acr build`** for container images. It builds on ACR's remote task builders, avoids depending on a local Docker daemon, and uses the same build-and-push path in every environment.
 
-Cloud Shell constraints to honor:
-
-- Clone into `~/clouddrive/` (persistent, ~5 GB) rather than the ephemeral home dir.
-- `az acr build` needs the Phase 2 ACR to exist and the caller to hold `AcrPush` (or `Container Registry Tasks Contributor`) — see `/kickstart-handoff`.
-- Keep `az acr build` in the foreground so its streamed log holds an idle session open, and keep `.dockerignore` tight (the whole build context uploads on every build).
+`az acr build` needs the Phase 2 ACR to exist and the caller to hold the required ACR build and push permissions. Keep `.dockerignore` tight because the whole build context uploads on every build.
 
 ## What to collect
 

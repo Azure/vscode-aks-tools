@@ -90,7 +90,7 @@ AKS Automatic enforces **Deployment Safeguards**, and several of them *mutate* y
 - **Readiness *and* liveness probes** on every container — use the real health path and port from the structure map, never a guessed `/healthz`.
 - **Unique Service selectors** — each Service must select exactly one workload. In a monorepo do **not** reuse `app: <appName>` across services; use `app: <serviceName>` (or `app.kubernetes.io/name` + `app.kubernetes.io/component`) so no two Services overlap.
 - **No AKS-specific labels** — never set `kubernetes.azure.com/*` labels on your own objects. (`azure.workload.identity/*` labels and annotations are fine and required.)
-- **No reserved system-pool taints/tolerations** — do not add a `CriticalAddonsOnly` toleration to app pods; it would place them on the system pool and AKS strips it anyway.
+- **No reserved system-pool taints** — never configure `CriticalAddonsOnly` on a user node pool. Also do not add a matching toleration to app pods: a toleration permits, but does not force, scheduling onto a matching tainted node and is inappropriate for ordinary workloads.
 - **CSI StorageClass for any PVC** — set `storageClassName` explicitly to a CSI class (`managed-csi`, `managed-csi-premium`, `azurefile-csi`); never rely on an in-tree or unset default.
 - **Pinned image tags** — no `:latest` anywhere, including init containers and sidecars.
 - **Allowed images only** — every image must come from the Phase 2 ACR (`<acr>.azurecr.io/...`) if the cluster restricts registries; flag any third-party image (Redis, Postgres, RabbitMQ) that would need importing via `az acr import`.
@@ -106,25 +106,22 @@ AKS Automatic enforces **Deployment Safeguards**, and several of them *mutate* y
 - Honor each service's build context and entry point from the structure map; reuse existing Dockerfiles instead of duplicating them.
 - Stamp every generated resource with the kickstart provenance marker above (object metadata only — never the pod template or a selector).
 - All K8s manifests must comply with AKS deployment safeguards (restricted pod security, no privileged, no hostPath) **and** must pre-satisfy the mutating safeguards above so the cluster doesn't rewrite them on apply.
-- Build images with `az acr build` only — never `docker build`.
+- Prefer `az acr build` for image builds instead of `docker build`.
 - After writing all files, confirm with user via `vscode_askQuestions`.
 
 ## Validate the build (before exit)
 
-Do not hand off unbuilt artifacts. Build every Dockerfile with **`az acr build`** — server-side on the ACR remote task builders. Never `docker build`; there is no Docker daemon in Cloud Shell, and one build path keeps the validated image and the deployed image identical.
+Do not hand off unbuilt artifacts. Build every Dockerfile with **`az acr build`** on the ACR remote task builders. Prefer this over `docker build` so validation does not depend on a local daemon and uses the same build-and-push path as deployment.
 
-1. **Build in ACR** from the service's own build context. This also catches missing `COPY`/`ADD` sources:
+1. **Preflight ACR permissions before the first build.** Invoke `aks.checkDeploymentPermissions` via `vscode/runCommand` with the Phase 2 resource names, `probeScope: "user"`, and `silent: true`. Inspect the `acr-push` and `acr-tasks` probes. If either fails, offer its included remediation; if role assignment returns 403, follow `/kickstart-pim-activation`. Do not wait until Pre-Deploy to surface an ACR permission failure.
+2. **Build in ACR** from the service's own build context. This catches missing `COPY`/`ADD` sources:
    ```bash
    az acr build --registry <acr> --image kickstart-validate/<svc>:check -f <dockerfilePath> <buildContext>
    ```
-2. **Assert the entry point at build time.** Add to the Dockerfile's final stage so a wrong path fails the ACR build itself:
-   ```dockerfile
-   RUN test -f <entrypointPath>
-   ```
-   The assertion runs before the cluster exists, so a wrong path is caught immediately.
-3. If the build fails or the assertion trips, fix the Dockerfile/paths and rebuild — do not proceed to Review with a broken image.
+3. **Verify the final image layout from the Dockerfile.** Reconcile every final-stage `COPY`/`ADD` destination with `WORKDIR` and `CMD`/`ENTRYPOINT`, then present that source→destination map in Review. Do not inject `RUN test -f` into the final stage: distroless and `scratch` images have no shell, and a path-existence check does not prove the entry point landed in the intended directory.
+4. If the build fails or the source→destination map does not resolve the entry point, fix the Dockerfile/paths and rebuild — do not proceed to Review with a broken image.
 
 Keep `.dockerignore` tight: the entire build context is uploaded to ACR on every build.
 
 ## Exit Criteria
-All artifacts written, every Dockerfile builds via `az acr build`, and the build-time entry-point assertion passes. Announce: "Artifacts generated and build-validated — moving to Review."
+All artifacts written, ACR build permissions confirmed, every Dockerfile builds via `az acr build`, and the final-stage source→destination map resolves the entry point. Announce: "Artifacts generated and build-validated — moving to Review."

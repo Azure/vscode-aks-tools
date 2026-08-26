@@ -12,7 +12,7 @@ Validate every artifact against security, correctness, and AKS Automatic complia
 
 **Dockerfile**: Multi-stage build, pinned base image, non-root user, `.dockerignore` present. Build context + every `COPY`/`ADD` source→destination resolves to real files; `CMD`/`ENTRYPOINT` runs the actual entry point; the image builds and the entry point is present in the built image.
 
-**Dockerfile build**: built with `az acr build` (never `docker build`), with a `RUN test -f <entrypoint>` assertion in the final stage.
+**Dockerfile build**: built with `az acr build`; final-stage `COPY`/`ADD` destinations, `WORKDIR`, and `CMD`/`ENTRYPOINT` collectively resolve the real entry point. Do not require a shell-based assertion in distroless or `scratch` images.
 
 **K8s Manifests**: `runAsNonRoot: true`, no privileged containers, resource requests+limits, liveness/readiness probes, `topologySpreadConstraints` or anti-affinity, unique per-Service selectors, CSI `storageClassName` on any PVC, no `kubernetes.azure.com/*` labels, no `CriticalAddonsOnly` toleration, Gateway API HTTPRoute (not Ingress), Workload Identity labels+SA, namespace specified. Run the full `/kickstart-safeguard-checklist` — the mutating safeguards there must already be satisfied in the YAML, not left to the cluster.
 
@@ -30,7 +30,7 @@ Validate every artifact against security, correctness, and AKS Automatic complia
    |---|---|---|---|---|
    | `src/order-service` | `package.json`, `src/` | `/app` | `/app/server.js` | 3000 |
 
-   Then confirm (or run) the build validation from `/kickstart-generate`: the image must build via `az acr build`, and the Dockerfile's build-time `RUN test -f <entrypointPath>` assertion must be present and passing. A missing assertion or a failed build is a FAIL. Do not ask for `docker build` / `docker run` output — images are always built server-side in ACR.
+   Then confirm (or run) the build validation from `/kickstart-generate`: the image must build via `az acr build`, and the final-stage source→destination map must resolve the declared entry point. A failed build or unresolved entry point is a FAIL. Do not require local Docker output; prefer the server-side ACR build.
 
 2. Run `/kickstart-safeguard-checklist` for the full safeguard rule set.
 3. Run validation via `run_in_terminal`:

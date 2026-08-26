@@ -24,7 +24,7 @@ It has **two parts**, and they are not interchangeable:
 | A3 | Must have anti-affinity rules or `topologySpreadConstraints` set | MEDIUM | **Mutates** — adds pod anti-affinity + topology spread constraints (multi-replica workloads) |
 | A4 | No AKS-specific labels | MEDIUM | N/A |
 | A5 | Containers should only use allowed images | HIGH | N/A |
-| A6 | Reserved system pool taints | MEDIUM | **Mutates** — removes the `CriticalAddonsOnly` taint/toleration from user node pool workloads |
+| A6 | Reserved system pool taints | MEDIUM | **Mutates** — removes the `CriticalAddonsOnly` taint from user node pools |
 | A7 | Containers have readiness or liveness probes configured | HIGH | N/A |
 | A8 | Clusters should use CSI driver StorageClass | MEDIUM | N/A |
 | A9 | Services should use unique selectors | HIGH | N/A |
@@ -57,9 +57,10 @@ It has **two parts**, and they are not interchangeable:
 - [ ] Pass / Fail
 
 ### A6: reserved-system-pool-taints  *(mutating)*
-- **Check**: No app workload declares a `CriticalAddonsOnly` toleration, and no user node pool config sets that taint. AKS uses it to keep customer pods off the system pool.
-- **If present**: AKS removes it, so any scheduling you based on it will not hold.
-- [ ] Pass / Fail
+- **Applies to**: Node and node-pool configuration, not Pod tolerations. The policy evaluates node `spec.taints` and excludes system pools by their `kubernetes.azure.com/mode` label.
+- **Check**: No generated user node pool config sets the `CriticalAddonsOnly` taint. AKS reserves it for system pools.
+- **If present**: AKS removes the taint from the user pool.
+- [ ] Pass / Fail (N/A when no user node pool configuration is generated)
 
 ### A7: require-probes
 - **Check**: Every container defines a `readinessProbe` **or** `livenessProbe` (Kickstart generates both). The path and port must match the app's real health endpoint from the structure map — not a guessed `/healthz`.
@@ -88,6 +89,12 @@ It has **two parts**, and they are not interchangeable:
 ---
 
 # Part B — Pod security & best practice
+
+### Rule: no-system-pool-toleration
+- **Severity**: MEDIUM
+- **Description**: Ordinary app pods should not tolerate the system pool's `CriticalAddonsOnly` taint. A toleration permits scheduling onto a matching tainted node but does not attract the pod there; this is a Kickstart best practice, not the A6 policy check.
+- **Check**: Verify app workloads do not declare a `CriticalAddonsOnly` toleration.
+- [ ] Pass / Fail
 
 ### Rule: no-privileged
 - **Severity**: HIGH
