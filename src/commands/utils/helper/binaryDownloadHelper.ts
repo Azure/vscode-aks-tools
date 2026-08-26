@@ -65,9 +65,28 @@ function extractFileFromZip(archivePath: string, entryPath: string, destPath: st
                 return;
             }
 
-            let found = false;
+            // Settle exactly once, always closing the archive first. An open handle
+            // leaks a file descriptor and, on Windows, blocks the caller from
+            // deleting the archive afterwards.
+            let settled = false;
+            const finish = (error?: Error) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                try {
+                    zipFile.close();
+                } catch {
+                    // Already closed, or never fully opened; nothing to release.
+                }
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve();
+                }
+            };
 
-            zipFile.on("error", reject);
+            zipFile.on("error", finish);
 
             zipFile.on("entry", (entry: yauzl.Entry) => {
                 if (toArchiveEntryPath(entry.fileName) !== wantedEntry) {
@@ -75,25 +94,20 @@ function extractFileFromZip(archivePath: string, entryPath: string, destPath: st
                     return;
                 }
 
-                found = true;
+                // First match wins: we stop requesting entries, so a duplicate name
+                // later in the archive is never read.
                 zipFile.openReadStream(entry, (streamError, readStream) => {
                     if (streamError || !readStream) {
-                        reject(streamError ?? new Error(`Failed to read ${wantedEntry} from archive.`));
+                        finish(streamError ?? new Error(`Failed to read ${wantedEntry} from archive.`));
                         return;
                     }
 
-                    pipeline(readStream, fs.createWriteStream(destPath)).then(() => {
-                        zipFile.close();
-                        resolve();
-                    }, reject);
+                    pipeline(readStream, fs.createWriteStream(destPath)).then(() => finish(), finish);
                 });
             });
 
-            zipFile.on("end", () => {
-                if (!found) {
-                    reject(new Error(`Archive does not contain an entry named ${wantedEntry}.`));
-                }
-            });
+            // Only reached when no entry matched, since a match stops the iteration.
+            zipFile.on("end", () => finish(new Error(`Archive does not contain an entry named ${wantedEntry}.`)));
 
             zipFile.readEntry();
         });
@@ -111,8 +125,11 @@ async function extractFileFromTarball(archivePath: string, entryPath: string, de
     await tar.list({
         file: archivePath,
         onReadEntry: (entry) => {
-            if (toArchiveEntryPath(entry.path) !== wantedEntry) {
-                // Leave it unconsumed; tar drains entries we don't attach to.
+            // First match wins. A tar is append-only, so the same path may legally
+            // appear more than once; attaching twice would start two concurrent
+            // writes to `destPath` and interleave them. Entries we don't attach to
+            // are drained by tar, so parsing continues either way.
+            if (writeCompleted || toArchiveEntryPath(entry.path) !== wantedEntry) {
                 return;
             }
 
@@ -196,8 +213,13 @@ async function downloadTool(
                 error: `Failed to extract ${downloadSpec.pathToBinaryInArchive} from ${downloadFilePath}: ${error}`,
             };
         } finally {
-            // Remove the archive whether or not extraction succeeded.
+            // Remove the archive whether or not extraction succeeded, and drop the
+            // download-once marker along with it. `download.once()` keeps an
+            // in-memory Completed flag per destination: deleting the file while that
+            // flag stands would make every retry skip the download and then fail on
+            // the missing archive, for the lifetime of the window.
             fs.rmSync(downloadFilePath, { force: true });
+            download.clear(downloadFilePath);
         }
     } else {
         await moveFile(downloadFilePath, binaryFilePath);
