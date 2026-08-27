@@ -2,7 +2,7 @@
 
 ## Show in Azure Portal
 
-Right-click your AKS cluster > **Show in Azure Portal** to navigate to AKS cluster overview page in Azure Portal.
+Right-click your AKS cluster > **Show In Azure Portal** to navigate to AKS cluster overview page in Azure Portal.
 
 ## Show Properties
 
