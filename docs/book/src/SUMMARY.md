@@ -23,6 +23,8 @@
     - [Azure Resources and Permissions](./features/container-assist-azure-resources.md)
     - [AI Data Flow and Privacy](./features/container-assist-ai-data-flow.md)
     - [GitHub Workflow and OIDC Setup](./features/container-assist-github-workflow.md)
+  - [Containerization Assist Skills for Copilot Chat (Preview)](./features/containerization-assist-skills.md)
+  - [Kickstart Agent for AKS Automatic (Preview)](./features/kickstart-agent.md)
   - [AKS plugins for GitHub Copilot for Azure](./features/aks-plugins-github-copilot.md)
   - [Use Simplified AKS Menu Structure (Feature Flag)](./features/simplified-menu-structure.md)
   - [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)

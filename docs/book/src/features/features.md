@@ -34,12 +34,14 @@ For the full list of commands and where each one lives, see the
   - [Azure Resources and Permissions](./container-assist-azure-resources.md)
   - [AI Data Flow and Privacy](./container-assist-ai-data-flow.md)
   - [GitHub Workflow and OIDC Setup](./container-assist-github-workflow.md)
+- [Containerization Assist Skills for Copilot Chat (Preview)](./containerization-assist-skills.md)
 
 ## AI and models
 
 - [Install and Deploy KAITO Models](./kaito-install-deploy.md)
 - [Manage and Test KAITO Deployments](./kaito-manage-test.md)
 - [AKS MCP Server](./aks-mcp-server-integration.md)
+- [Kickstart Agent for AKS Automatic (Preview)](./kickstart-agent.md)
 - [AKS Plugins for GitHub Copilot for Azure](./aks-plugins-github-copilot.md)
 
 ## Fleet and configuration
