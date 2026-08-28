@@ -32,22 +32,22 @@ Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Netw
 ![DNS investigation menu](../resources/inspector-gadget-dns.png)
 
 ## Real-time TCP Monitoring
-Select **Real-time TCP Monitoring** to monitor TCP connections and network traffic in real-time. This helps identify network bottlenecks and connection issues.
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Real-time TCP Monitoring** to monitor TCP connections and network traffic in real-time. This helps identify network bottlenecks and connection issues.
 
 ![Real-time TCP monitoring](../resources/inspector-gadget-tcp.png)
 
 ## Troubleshoot Resource Utilization
-Use **Troubleshoot Resource Utilization** to analyze CPU, memory, and other resource usage patterns across your cluster. This helps identify resource constraints and optimization opportunities.
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Resource Utilization** to analyze CPU, memory, and other resource usage patterns across your cluster. This helps identify resource constraints and optimization opportunities.
 
 ![Resource utilization troubleshooting](../resources/ig-resource-utilization-troubleshooting.png)
 
 The Troubleshoot Resource Utilization menu includes the following sub-options:
 
 - **Identify files being read and written to**: Monitor file system operations to understand which processes are accessing specific files.
-- **Investigate Block I/O intensive processes**: Detect processes with high disk usage to identify potential performance bottlenecks.
+- **Investigate Block I/O**: a submenu containing **Identify Block I/O intensive processes**, which detects processes with high disk usage to identify potential performance bottlenecks.
 - **Profile CPU**: Take samples of stack traces to analyze performance issues and identify resource-intensive processes.
 
-## Improve Security of My Cluster
-Select **Improve Security of My Cluster** to access the `trace_exec` gadget under the hood to monitor when new processes are executed.
+## Improve security of my cluster
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Improve security of my cluster** > **View processes executed in the kernel** to use the `trace_exec` gadget under the hood to monitor when new processes are executed.
 
 ![Security improvement tools](../resources/ig-improve-security.png)

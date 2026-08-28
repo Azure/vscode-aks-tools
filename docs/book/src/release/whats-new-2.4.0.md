@@ -6,12 +6,16 @@ Full release history is on the
 
 ## GitOps with Argo CD, no setup required
 
-Argo CD is now available out of the box — you no longer need to turn on a setting
-first. Right-click a cluster and use **AKS: Create Argo CD Application** to scaffold an
-application, then **AKS: Apply Argo CD Application to Cluster** to deploy it and
-**AKS: Check Argo CD Status** to see how the sync is going. Argo CD itself still needs
-to be installed on your cluster; if it isn't, the extension tells you and points you at
-the install steps.
+Argo CD is now available out of the box — you no longer need to turn on a setting first.
+
+- **AKS: Create Argo CD Application** scaffolds an application — on a folder's context
+  menu in the Explorer, or from the Command Palette.
+- **AKS: Apply Argo CD Application to Cluster** deploys the generated YAML — on a YAML
+  file's context menu in the Explorer or editor.
+- Right-click your AKS cluster > **Develop & Deploy** > **AKS: Check Argo CD Status** to see how the sync is going.
+
+Argo CD itself still needs to be installed on your cluster; if it isn't, the extension
+tells you and points you at the install steps.
 
 See [Argo CD GitOps Integration](../features/argocd-gitops-integration.md).
 
@@ -50,9 +54,9 @@ See [Container Assist Integration (Preview)](../features/container-assist-integr
 
 ## Cluster commands are grouped by task
 
-Right-clicking a cluster now shows three groups — **Develop & Deploy**,
-**Troubleshoot & Diagnose** and **Manage Cluster** — instead of one long list, so
-there is less to scan when you know what kind of task you are doing.
+The cluster context menu now groups commands into **Develop & Deploy**,
+**Troubleshoot & Diagnose** and **Manage Cluster**, so there is less to scan when you
+know what kind of task you are doing.
 
 If you prefer the old layout, run **AKS: Switch to Classic Menu** at any time.
 

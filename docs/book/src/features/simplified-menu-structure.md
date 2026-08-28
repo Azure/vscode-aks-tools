@@ -3,7 +3,7 @@
 When you right-click an AKS cluster, the commands are grouped by the kind of task you
 are doing rather than listed all at once. This is how the menu behaves by default.
 
-If you preferred the old flat list, run **AKS: Switch to Classic Menu** — see
+If you preferred the previous layout, run **AKS: Switch to Classic Menu** — see
 [Switching between Classic and Grouped menus](#switching-between-classic-and-grouped-menus).
 
 ## How commands are grouped
@@ -51,8 +51,12 @@ After running either command, VS Code prompts you to reload the window. The new 
 ## Changing it in Settings instead
 
 If you would rather set this directly, the menu is controlled by
-`aks.simplifiedMenuStructure`. Set it to `false` for the classic flat menu, where every
-command sits at the top level:
+`aks.simplifiedMenuStructure`. Set it to `false` for the classic menu, where commands
+and their submenus — **Run AKS Diagnostics**, **Deployment Tools**, **Managed Cluster
+Operations**, **Troubleshoot Network Health**, **Troubleshoot Resource Utilization**,
+**Improve security of my cluster**, **Deploy a LLM with KAITO** and **Collect TCP Dump**
+— sit directly on the cluster context menu instead of being grouped into the three
+role-based submenus:
 
 ```json
 {
