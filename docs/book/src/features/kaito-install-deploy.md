@@ -10,7 +10,7 @@ Right-click your AKS cluster > **Develop & Deploy** > **Deploy a LLM with KAITO*
 
 Once on the page, click **Install KAITO** and the KAITO installation process will begin. Once KAITO has been successfully installed, you will be prompted with a "Generate Workspace" button that will redirect you to the model deployment page.
 
-![Successfull Installation](../resources/kaito-installation-success.png)
+![Successful Installation](../resources/kaito-installation-success.png)
 
 ## Deploy a model
 

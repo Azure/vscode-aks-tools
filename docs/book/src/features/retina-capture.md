@@ -2,7 +2,7 @@
 
 ## Run Retina Capture
 
-Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Run Retina Capture** to capture logs like iptables-rules, [ip-resrouces.txt and other key distributed captures form this azure networking tool](https://retina.sh/docs/captures/cli#file-and-directory-structure-inside-the-tarball) for any Linux nodes in yout AKS cluster.
+Right-click your AKS cluster > **Troubleshoot & Diagnose** > **Troubleshoot Network Health** > **Run Retina Capture** to capture logs like iptables-rules, [ip-resources.txt and other key distributed captures from this Azure networking tool](https://retina.sh/docs/captures/cli#file-and-directory-structure-inside-the-tarball) for any Linux nodes in your AKS cluster.
 
 There are two options to run the capture:
 

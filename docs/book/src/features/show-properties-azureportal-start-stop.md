@@ -14,7 +14,7 @@ This page now also enable information box for the users to quickly see available
 
 ![Abort operation](../resources/show-properties-abort.png)
 ![Reconcile operation](../resources/show-properties-reconcile.png)
-![Kuberentes version information](../resources/show-properties-page-k8s-available-versions.png)
+![Kubernetes version information](../resources/show-properties-page-k8s-available-versions.png)
 
 ## Create cluster from Azure Portal
 
