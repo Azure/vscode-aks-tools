@@ -4,6 +4,9 @@ import * as fs from "fs";
 import { moveFile } from "move-file";
 import { Errorable, failed } from "../errorable";
 import path from "path";
+import { pipeline } from "stream/promises";
+import * as tar from "tar";
+import * as yauzl from "yauzl";
 import { longRunning } from "../host";
 
 function getToolBaseInstallFolder(toolName: string): string {
@@ -37,6 +40,126 @@ function isArchive(downloadSpec: DownloadSpec): downloadSpec is ArchiveDownloadS
     return downloadSpec.isCompressed;
 }
 
+/**
+ * Archive entry paths are always '/'-separated, but `pathToBinaryInArchive` is
+ * built with `path.join`, which yields '\' on Windows. Compare in one form.
+ */
+function toArchiveEntryPath(filePath: string): string {
+    return filePath.split(path.sep).join("/").replace(/^\.\//, "");
+}
+
+/**
+ * Extracts a single known entry from a zip, streaming it straight to `destPath`.
+ *
+ * Only the entry we asked for is written, and it is written to a path we
+ * computed ourselves, so a malicious archive cannot direct a write elsewhere
+ * (the Zip Slip / hardlink class of bug).
+ */
+function extractFileFromZip(archivePath: string, entryPath: string, destPath: string): Promise<void> {
+    const wantedEntry = toArchiveEntryPath(entryPath);
+
+    return new Promise((resolve, reject) => {
+        yauzl.open(archivePath, { lazyEntries: true }, (openError, zipFile) => {
+            if (openError || !zipFile) {
+                reject(openError ?? new Error("Failed to open archive."));
+                return;
+            }
+
+            // Settle exactly once, always closing the archive first. An open handle
+            // leaks a file descriptor and, on Windows, blocks the caller from
+            // deleting the archive afterwards.
+            let settled = false;
+            const finish = (error?: Error) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                try {
+                    zipFile.close();
+                } catch {
+                    // Already closed, or never fully opened; nothing to release.
+                }
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve();
+                }
+            };
+
+            zipFile.on("error", finish);
+
+            zipFile.on("entry", (entry: yauzl.Entry) => {
+                if (toArchiveEntryPath(entry.fileName) !== wantedEntry) {
+                    zipFile.readEntry();
+                    return;
+                }
+
+                // First match wins: we stop requesting entries, so a duplicate name
+                // later in the archive is never read.
+                zipFile.openReadStream(entry, (streamError, readStream) => {
+                    if (streamError || !readStream) {
+                        finish(streamError ?? new Error(`Failed to read ${wantedEntry} from archive.`));
+                        return;
+                    }
+
+                    pipeline(readStream, fs.createWriteStream(destPath)).then(() => finish(), finish);
+                });
+            });
+
+            // Only reached when no entry matched, since a match stops the iteration.
+            zipFile.on("end", () => finish(new Error(`Archive does not contain an entry named ${wantedEntry}.`)));
+
+            zipFile.readEntry();
+        });
+    });
+}
+
+/**
+ * Extracts a single known entry from a gzipped tarball. Same guarantee as
+ * `extractFileFromZip`: one entry, written only to `destPath`.
+ */
+async function extractFileFromTarball(archivePath: string, entryPath: string, destPath: string): Promise<void> {
+    const wantedEntry = toArchiveEntryPath(entryPath);
+    let writeCompleted: Promise<void> | undefined;
+
+    await tar.list({
+        file: archivePath,
+        onReadEntry: (entry) => {
+            // First match wins. A tar is append-only, so the same path may legally
+            // appear more than once; attaching twice would start two concurrent
+            // writes to `destPath` and interleave them. Entries we don't attach to
+            // are drained by tar, so parsing continues either way.
+            if (writeCompleted || toArchiveEntryPath(entry.path) !== wantedEntry) {
+                return;
+            }
+
+            writeCompleted = pipeline(entry, fs.createWriteStream(destPath));
+        },
+    });
+
+    if (!writeCompleted) {
+        throw new Error(`Archive does not contain an entry named ${wantedEntry}.`);
+    }
+
+    await writeCompleted;
+}
+
+async function extractBinaryFromArchive(archivePath: string, entryPath: string, destPath: string): Promise<void> {
+    const lowerCaseArchivePath = archivePath.toLowerCase();
+
+    if (lowerCaseArchivePath.endsWith(".zip")) {
+        await extractFileFromZip(archivePath, entryPath, destPath);
+        return;
+    }
+
+    if (lowerCaseArchivePath.endsWith(".tar.gz") || lowerCaseArchivePath.endsWith(".tgz")) {
+        await extractFileFromTarball(archivePath, entryPath, destPath);
+        return;
+    }
+
+    throw new Error(`Unsupported archive format: ${path.basename(archivePath)}. Expected .zip, .tar.gz or .tgz.`);
+}
+
 export async function getToolBinaryPath(
     toolName: string,
     version: string,
@@ -51,12 +174,13 @@ export async function getToolBinaryPath(
     }
 
     return await longRunning(`Downloading ${toolName} to ${binaryFilePath}.`, () =>
-        downloadTool(toolName, binaryFilePath, downloadSpec),
+        downloadTool(toolName, binaryFolder, binaryFilePath, downloadSpec),
     );
 }
 
 async function downloadTool(
     toolName: string,
+    binaryFolder: string,
     binaryFilePath: string,
     downloadSpec: DownloadSpec,
 ): Promise<Errorable<string>> {
@@ -73,23 +197,30 @@ async function downloadTool(
     }
 
     if (isArchive(downloadSpec)) {
-        const { default: decompress } = await import("decompress");
+        // Extract to a temporary path alongside the destination and rename only on
+        // success, so a failed extraction can't leave a truncated binary at
+        // `binaryFilePath` for the `existsSync` check above to find next time.
+        fs.mkdirSync(binaryFolder, { recursive: true });
+        const partialFilePath = `${binaryFilePath}.partial`;
 
         try {
-            await decompress(downloadFilePath, downloadFolder);
+            await extractBinaryFromArchive(downloadFilePath, downloadSpec.pathToBinaryInArchive, partialFilePath);
+            fs.renameSync(partialFilePath, binaryFilePath);
         } catch (error) {
+            fs.rmSync(partialFilePath, { force: true });
             return {
                 succeeded: false,
-                error: `Failed to unzip binary ${downloadFilePath} to ${downloadFolder}: ${error}`,
+                error: `Failed to extract ${downloadSpec.pathToBinaryInArchive} from ${downloadFilePath}: ${error}`,
             };
+        } finally {
+            // Remove the archive whether or not extraction succeeded, and drop the
+            // download-once marker along with it. `download.once()` keeps an
+            // in-memory Completed flag per destination: deleting the file while that
+            // flag stands would make every retry skip the download and then fail on
+            // the missing archive, for the lifetime of the window.
+            fs.rmSync(downloadFilePath, { force: true });
+            download.clear(downloadFilePath);
         }
-
-        // Remove zip.
-        fs.unlinkSync(downloadFilePath);
-
-        // Move extracted binary to where we want it.
-        const unzippedBinaryFilePath = path.join(downloadFolder, downloadSpec.pathToBinaryInArchive);
-        await moveFile(unzippedBinaryFilePath, binaryFilePath);
     } else {
         await moveFile(downloadFilePath, binaryFilePath);
     }
