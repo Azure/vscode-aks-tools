@@ -60,7 +60,7 @@ The integration provides four commands, all prefixed with **AKS:**
 |---------|-----------------|-------------|
 | **AKS: Create Argo CD Application** | Command Palette, Explorer folder context menu | Generate an annotated Argo CD Application manifest pointing at a repo which contains Kubernetes manifests or a Helm chart to be deployed |
 | **AKS: Apply Argo CD Application to Cluster** | Explorer YAML file context menu, Editor context menu | Apply an Application YAML to the active cluster |
-| **AKS: Check Argo CD Status** | AKS cluster tree right-click menu | Show Argo CD pod and service health in an output channel |
+| **AKS: Check Argo CD Status** | AKS cluster > **Develop & Deploy** | Show Argo CD pod and service health in an output channel |
 | **AKS: Argo CD Post-Deploy Actions** | Shown after a successful apply, or from the Command Palette | Open UI (SSO-aware), configure Azure Workload Identity (when source is ACR / Azure DevOps), connect a private GitHub repo, or open the Argo CD sync guide |
 
 ---
@@ -138,7 +138,7 @@ For **Azure DevOps** or **ACR** sources, prefer the *Configure Workload Identity
 
 ## Check Argo CD Status
 
-1. In the AKS cluster tree, right-click a cluster node.
+1. Right-click your AKS cluster > **Develop & Deploy**.
 2. Select **AKS: Check Argo CD Status**.
 3. The **Argo CD** output channel shows:
    - Whether the `argocd` namespace exists.

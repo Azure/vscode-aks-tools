@@ -1,67 +1,50 @@
-## Features
+# Features
 
-Once you successfully log in with your Azure Account, you can view all AKS clusters in your Azure subscriptions(s) under the section named **Azure**. You can right click on your AKS cluster and click a menu item to perform following actions.  
+Once you sign in with your Azure account, your AKS clusters appear under the **Azure**
+section of the Cloud Explorer. Right-click a cluster to reach these actions. Cluster
+commands are grouped under **Develop & Deploy**, **Troubleshoot & Diagnose**, and
+**Manage Cluster** — see [Simplified AKS Menu Structure](./simplified-menu-structure.md).
 
-## Release spotlight
+For the full list of commands and where each one lives, see the
+[command reference](../reference/commands.md).
 
-This release adds the following experiences:
+## Cluster access and properties
 
-- [Container Assist Integration (Preview)](./container-assist-integration.md)
+- [Merge and Save Into Kubeconfig](./merge-save-kubeconfig.md)
+- [Show Properties, Show in Azure Portal](./show-properties-azureportal-start-stop.md)
+- [Compare 2 AKS Clusters within the Same Subscription](./aks-compare-cluster.md)
+- [Manage Cluster Operations](./manage-cluster-operations.md)
+
+## Troubleshooting and diagnostics
+
+- [AKS Diagnostics](./aks-diagnostics.md)
+- [Kubernetes API Health Endpoints](./k8s-api-health-points.md)
+- [Inspektor Gadget](./inspektor-gadget.md)
+- [Collect TCP Dumps](./tcp-dumps.md)
+- [Run Retina Distributed Capture](./retina-capture.md)
+- [Garbage Collection Using Eraser Image Cleanup Tool](./image-cleaner-eraser-tool.md)
+
+## Develop and deploy
+
+- [Run Kubectl Commands](./run-kubectl-command.md)
+- [Install Azure Service Operator](./install-azureserviceoperator.md)
+- [Deployment Tools: Draft Tool Integration](./draft-integration.md)
+- [Argo CD GitOps Integration](./argocd-gitops-integration.md)
+- [Container Assist (Preview)](./container-assist-integration.md)
+  - [Azure Resources and Permissions](./container-assist-azure-resources.md)
+  - [AI Data Flow and Privacy](./container-assist-ai-data-flow.md)
+  - [GitHub Workflow and OIDC Setup](./container-assist-github-workflow.md)
 - [Containerization Assist Skills for Copilot Chat (Preview)](./containerization-assist-skills.md)
-- [Simplified AKS Menu Structure (Feature Flag)](./simplified-menu-structure.md)
 
-Container Assist and the simplified menu can be enabled independently:
+## AI and models
 
-```json
-{
-	"aks.containerAssistEnabledPreview": true,
-	"aks.simplifiedMenuStructure": true
-}
-```
+- [Install and Deploy KAITO Models](./kaito-install-deploy.md)
+- [Manage and Test KAITO Deployments](./kaito-manage-test.md)
+- [AKS MCP Server](./aks-mcp-server-integration.md)
+- [Kickstart Agent for AKS Automatic (Preview)](./kickstart-agent.md)
+- [AKS Plugins for GitHub Copilot for Azure](./aks-plugins-github-copilot.md)
 
-From `2.1.0`, `aks.containerAssistEnabledPreview` is enabled by default.
-The Containerization Assist skills require no feature flag or additional setup.
+## Fleet and configuration
 
-Container Assist release screenshots:
-
-![Container Assist menu in AKS cluster context menu](../resources/container-assist/container-assist-commands-1.png)
-
-![Container Assist workspace menu entry](../resources/container-assist/container-assist-workspacemenu.png)
-
-Menu simplification release screenshots:
-
-![Classic AKS cluster context menu](../resources/new-menu-structure/simplified-menu-1.png)
-
-![Simplified AKS cluster context menu](../resources/new-menu-structure/simplified-menu-2.png)
-
-![Cloud explorer extension menu](../resources/right-click-menu.png)
-
-![Cloud explorer extension menu](../resources/right-click-menu-workflow.png)
-
-![Cloud explorer extension menu](../resources/right-click-menu-kubectl.png)
-
-![Cloud explorer extension menu](../resources/right-click-menu-managedoperations.png)
-
-![Cloud explorer extension menu](../resources/inspector-gadget-main-menu.png)
-
-![Cloud explorer extension menu](../resources/right-click-subscription.png)
-
-![Cloud explorer health check panel](../resources/kubectl-command-panel.png)
-
-![Cloud explorer new inspektor gadget panel](../resources/inspector-gadget-1.png)
-
-![Cloud explorer create cluster webview](../resources/create-cluster-webview.png)
-
-![Cloud explorer tcp menu](../resources/right-click-tcp-dump-collect.png)
-
-![Cloud explorer tcp dump webview](../resources/tcp-dump-linux-node.png)
-
-![Cloud explorer tcp dump filter interface](../resources/tcp-dump-filter-interface.png)
-
-![Cloud explorer tcp dump filter interface enhanced](../resources/tcp-dump-filter-interface1.png)
-
-![AKS Show Properties webview](../resources/show-properties-reconcile.png)
-
-![Cloud Explorer Compare AKS Cluster](../resources/aks-compare-cluster-result.png)
-
-![Cloud Explorer Run Retina Capture on AKS Cluster](../resources/retina-success-run-download.png)
+- [AKS Fleet Manager](./aks-fleet-manager.md)
+- [Simplified AKS Menu Structure](./simplified-menu-structure.md)

@@ -503,12 +503,12 @@
             },
             {
                 "command": "aks.kickstart.launchExperience",
-                "title": "AKS: Launch Kickstart Agent",
+                "title": "Launch Kickstart Agent",
                 "category": "AKS"
             },
             {
                 "command": "aks.kickstartCluster",
-                "title": "AKS: Configure Kickstart Cluster",
+                "title": "Configure Kickstart Cluster",
                 "category": "AKS"
             }
         ],
