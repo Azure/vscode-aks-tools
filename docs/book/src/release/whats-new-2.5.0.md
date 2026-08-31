@@ -1,7 +1,7 @@
-# What's New in 2.4.0
+# What's New in 2.5.0
 
-Everything added since `2.1.0`, across the `2.2.0`, `2.3.0` and `2.4.0` releases.
-Full release history is on the
+Everything added since `2.1.0`, across the `2.2.0`, `2.3.0`, `2.4.0` and `2.5.0`
+releases. Full release history is on the
 [GitHub Releases](https://github.com/Azure/vscode-aks-tools/releases) page.
 
 ## GitOps with Argo CD, no setup required
@@ -9,7 +9,10 @@ Full release history is on the
 Argo CD is now available out of the box — you no longer need to turn on a setting first.
 
 - **AKS: Create Argo CD Application** scaffolds an application — on a folder's context
-  menu in the Explorer, or from the Command Palette.
+  menu in the Explorer, or from the Command Palette. It asks you where your manifests
+  are and where to write the output, and generates `<app-name>.yaml`. It no longer
+  assumes your manifests live in a separate repository, and the README it produces is
+  now optional.
 - **AKS: Apply Argo CD Application to Cluster** deploys the generated YAML — on a YAML
   file's context menu in the Explorer or editor.
 - Right-click your AKS cluster > **Develop & Deploy** > **AKS: Check Argo CD Status** to see how the sync is going.

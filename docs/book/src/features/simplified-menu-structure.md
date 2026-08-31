@@ -51,12 +51,11 @@ After running either command, VS Code prompts you to reload the window. The new 
 ## Changing it in Settings instead
 
 If you would rather set this directly, the menu is controlled by
-`aks.simplifiedMenuStructure`. Set it to `false` for the classic menu, where commands
-and their submenus — **Run AKS Diagnostics**, **Deployment Tools**, **Managed Cluster
+`aks.simplifiedMenuStructure`. Set it to `false` for the classic menu, where seven
+submenus — **Run AKS Diagnostics**, **Deployment Tools**, **Managed Cluster
 Operations**, **Troubleshoot Network Health**, **Troubleshoot Resource Utilization**,
-**Improve security of my cluster**, **Deploy a LLM with KAITO** and **Collect TCP Dump**
-— sit directly on the cluster context menu instead of being grouped into the three
-role-based submenus:
+**Improve security of my cluster** and **Deploy a LLM with KAITO** — sit directly on the
+cluster context menu instead of being grouped into the three role-based submenus:
 
 ```json
 {

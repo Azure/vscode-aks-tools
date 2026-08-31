@@ -41,6 +41,14 @@ order to generate deployment files for you. That is a different thing from the u
 data described here, and it is covered separately in
 [AI Data Flow and Privacy](./features/container-assist-ai-data-flow.md).
 
+## How it is sent
+
+The extension uses the standard VS Code telemetry library
+([`@vscode/extension-telemetry`](https://www.npmjs.com/package/@vscode/extension-telemetry)),
+which sends the events above to Azure Application Insights. That library is what
+enforces your VS Code telemetry setting, so nothing leaves your machine when telemetry
+is off.
+
 ## Turning it off
 
 Set `telemetry.telemetryLevel` to `off` in your VS Code settings. This turns off
