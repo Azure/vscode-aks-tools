@@ -14,8 +14,8 @@ Guides users through deploying an application to AKS Automatic in seven sequenti
 1. **Discover** — Understand the app (language, deps, ports, env vars) and map each service's structure (build context, entry point, existing Dockerfile path)
 2. **Configure Infrastructure** — Create new or select existing Azure resources (RG, AKS, ACR). Cluster creates with `--no-wait` to run in background.
 3. **Design** — Propose target architecture, get approval
-4. **Generate** — Create Dockerfile (reuse existing when present, validate every COPY/ADD path, build & inspect the image), K8s manifests, Bicep, GitHub Actions workflow
-5. **Review** — Validate artifacts against safeguards and security checks, confirm the Dockerfile source→destination map, verify the image builds
+4. **Generate** — Create Dockerfile (reuse existing when present, validate every COPY/ADD path, build remotely with ACR), K8s manifests, Bicep, GitHub Actions workflow
+5. **Review** — Validate artifacts against safeguards and security checks, confirm the Dockerfile source→destination map resolves the entry point, verify the ACR build succeeds
 6. **Pre-Deploy Check** — Verify cluster is ready, ACR attached
 7. **Deploy** — Build (per-service build context + Dockerfile path, never `.`), push, apply with `az` CLI and `kubectl`, then health-check the running app
 

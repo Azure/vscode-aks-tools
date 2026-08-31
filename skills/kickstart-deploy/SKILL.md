@@ -11,12 +11,16 @@ Deploy using Azure CLI and `kubectl`. Execute each step via `run_in_terminal`, c
 ## Steps
 
 1. **Build and push**: `az acr build --registry <acr> --image <image>:<tag> -f <dockerfilePath> <buildContext>`
+   Prefer `az acr build` over `docker build` + `docker push`. It runs on ACR's remote task builders, avoids a local Docker daemon dependency, and keeps the pushed digest and deployed image on one build path.
    Use the build context and Dockerfile path from the structure map — never assume repo root (`.`). For monorepos, build each service from its own context. Tag with a version (e.g. v1.0.0), never `:latest`.
+   Requires the ACR build and push permissions verified in Generate and Pre-Deploy. Make sure `.dockerignore` excludes bulk because the whole context is uploaded on each build.
+   Third-party images the app depends on (Redis, Postgres, RabbitMQ) can't be `az acr build`-ed — bring them in with `az acr import --name <acr> --source docker.io/library/<img>:<tag> --image <img>:<tag>`.
 
 2. **Get credentials**: `az aks get-credentials --resource-group <rg> --name <cluster> --overwrite-existing`
    kubelogin handles AAD auth automatically (verified in Pre-Deploy Check). Never use `--admin`.
 
-3. **Apply manifests**: `kubectl apply -f k8s/`
+3. **Apply manifests**: preview with `kubectl apply --dry-run=server -f k8s/`, then `kubectl apply -f k8s/`.
+   Expect mutation: AKS Automatic's Deployment Safeguards rewrite on admission — missing CPU/memory requests get defaults and missing spread rules get anti-affinity/topology constraints. If Phase 4 generated compliant manifests these are no-ops; if `kubectl get -o yaml` differs from your file, inspect the safeguard mutation before treating it as a bug.
 
 4. **Verify**: `kubectl get pods -n <namespace>` and `kubectl get services -n <namespace>`
    If pods not Ready, run `kubectl describe pod <name>` and `kubectl logs <name>` to diagnose.
@@ -33,6 +37,7 @@ Classify failures:
 - **config** — missing or invalid configuration (subscription, RG, cluster, ACR, manifest)
 - **dependency** — missing CLI tool, extension, or container image
 - **cluster** — pod CrashLoopBackOff, ImagePullBackOff, scheduling, quota
+- **safeguard** — admission rejected by a Deployment Safeguard (e.g. `:latest` tag, non-CSI StorageClass, duplicate Service selector, AKS-reserved label, node edit). Fix the manifest to satisfy the rule; never disable the policy.
 
 Provide specific `az` or `kubectl` fix commands. Offer retry via `vscode_askQuestions`.
 

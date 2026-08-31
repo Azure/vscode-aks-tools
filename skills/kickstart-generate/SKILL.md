@@ -27,7 +27,74 @@ Load these for detailed patterns as you author each artifact:
 
 **Dockerfile**: Multi-stage build, pinned base image (never `:latest`), non-root user, `.dockerignore`. `COPY`/`ADD` paths validated against the build context; `CMD` runs the real entry point.
 
-**K8s Manifests** (`k8s/`): `namespace.yaml`, `deployment.yaml` (resource limits, probes, `runAsNonRoot`, Workload Identity labels, env from ConfigMap/Secret), `service.yaml` (ClusterIP), `httproute.yaml` (Gateway API, not Ingress). See `/kickstart-workload-identity`.
+**K8s Manifests** (`k8s/`): `namespace.yaml`, `deployment.yaml` (resource requests **and** limits, probes, `runAsNonRoot`, Workload Identity labels, env from ConfigMap/Secret), `service.yaml` (ClusterIP), `httproute.yaml` (Gateway API, not Ingress). See `/kickstart-workload-identity`.
+
+### Stamp generated resources with kickstart provenance
+
+Every resource kickstart generates carries a marker so it can be identified later — both by a human reading the repo and by `kubectl` queries against a live cluster.
+
+**Kubernetes objects** — a label for identity, an annotation for the version:
+
+```yaml
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: aks-kickstart
+  annotations:
+    kickstart.aks.azure.com/version: "v1"
+```
+
+Rules for placement, which matter more than the choice of field:
+
+- Put both on the **object's own `metadata`** (Deployment, Service, HTTPRoute, ServiceAccount, ConfigMap...), **not** on `spec.template.metadata`. Anything on the pod template — label or annotation — changes the pod-template hash and forces a full rollout on the next version bump. (`kubectl rollout restart` works precisely by writing a pod-template annotation.)
+- Never put either in `spec.selector` or in a Service selector. `spec.selector` is immutable after creation, and a version in a selector would make the Deployment un-updatable. It also collides with the unique-selector safeguard (A9).
+- `app.kubernetes.io/managed-by` is the convention already used elsewhere in this extension, and its neutral prefix keeps it clear of the reserved `kubernetes.azure.com/*` namespace blocked by safeguard A4. The version stays an **annotation** rather than a label: it's read, never selected on, and label values reject `+`, so it can't hold a semver with build metadata if this later tracks a real release.
+
+**Dockerfile** — OCI labels in the final stage. Use a kickstart-specific key for the generator version; `org.opencontainers.image.version` means the *application's* version, not the tool's:
+
+```dockerfile
+LABEL org.opencontainers.image.source="<repo url, if known>" \
+      com.azure.aks.kickstart.generated="true" \
+      com.azure.aks.kickstart.version="v1"
+```
+
+**Bicep** — Azure resources take `tags`:
+
+```bicep
+tags: {
+  'managed-by': 'aks-kickstart'
+  'kickstart-version': 'v1'
+}
+```
+
+**The version is the literal string `v1`** — it versions the kickstart artifact *contract* (this label/annotation scheme and the shape of what kickstart emits), not the extension release. Write `v1` verbatim; do not substitute the extension version, a semver, or a date. It changes only when the generated-artifact contract changes in a way consumers need to detect.
+
+### Generate safeguard-compliant manifests up front
+
+AKS Automatic enforces **Deployment Safeguards**, and several of them *mutate* your manifest on apply. If you don't emit these yourself, the cluster silently rewrites the object and the Phase 7 `kubectl get`/`diff` output won't match what you generated. Emit all of the following by default — see `/kickstart-safeguard-checklist` for the authoritative rule list and mutation outcomes.
+
+- **CPU + memory `requests` on every container** (mutating if omitted), alongside limits:
+  ```yaml
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+  ```
+- **`topologySpreadConstraints` or pod anti-affinity** (mutating if omitted). Prefer topology spread:
+  ```yaml
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels: { app: <service> }
+  ```
+- **Readiness *and* liveness probes** on every container — use the real health path and port from the structure map, never a guessed `/healthz`.
+- **Unique Service selectors** — each Service must select exactly one workload. In a monorepo do **not** reuse `app: <appName>` across services; use `app: <serviceName>` (or `app.kubernetes.io/name` + `app.kubernetes.io/component`) so no two Services overlap.
+- **No AKS-specific labels** — never set `kubernetes.azure.com/*` labels on your own objects. (`azure.workload.identity/*` labels and annotations are fine and required.)
+- **No reserved system-pool taints** — never configure `CriticalAddonsOnly` on a user node pool. Also do not add a matching toleration to app pods: a toleration permits, but does not force, scheduling onto a matching tainted node and is inappropriate for ordinary workloads.
+- **CSI StorageClass for any PVC** — set `storageClassName` explicitly to a CSI class (`managed-csi`, `managed-csi-premium`, `azurefile-csi`); never rely on an in-tree or unset default.
+- **Pinned image tags** — no `:latest` anywhere, including init containers and sidecars.
+- **Allowed images only** — every image must come from the Phase 2 ACR (`<acr>.azurecr.io/...`) if the cluster restricts registries; flag any third-party image (Redis, Postgres, RabbitMQ) that would need importing via `az acr import`.
+- **Never edit individual nodes** — no node-targeted manifests, `kubectl label node`, `kubectl taint node`, or node-name `nodeSelector`. Use node pools instead.
 
 **Bicep** (`infra/main.bicep`): AKS Automatic + ACR + Managed Identity + federated credential. Parameterized, pinned API versions. ARM resource IDs follow `/subscriptions/{sub}/resourceGroups/{rg}/providers/{ns}/{type}/{name}`. See `/kickstart-bicep-authoring` and `/kickstart-acr-integration`.
 
@@ -37,18 +104,24 @@ Load these for detailed patterns as you author each artifact:
 - Use actual resource names from the Configure phase.
 - Never use `:latest` tags.
 - Honor each service's build context and entry point from the structure map; reuse existing Dockerfiles instead of duplicating them.
-- All K8s manifests must comply with AKS deployment safeguards (restricted pod security, no privileged, no hostPath).
+- Stamp every generated resource with the kickstart provenance marker above (object metadata only — never the pod template or a selector).
+- All K8s manifests must comply with AKS deployment safeguards (restricted pod security, no privileged, no hostPath) **and** must pre-satisfy the mutating safeguards above so the cluster doesn't rewrite them on apply.
+- Prefer `az acr build` for image builds instead of `docker build`.
 - After writing all files, confirm with user via `vscode_askQuestions`.
 
 ## Validate the build (before exit)
 
-Do not hand off unbuilt artifacts. For each Dockerfile, build and inspect before announcing completion:
+Do not hand off unbuilt artifacts. Build every Dockerfile with **`az acr build`** on the ACR remote task builders. Prefer this over `docker build` so validation does not depend on a local daemon and uses the same build-and-push path as deployment.
 
-1. **Build** from the service's build context:
-   - Local Docker/Podman daemon available: `docker build -t kickstart-validate-<svc>:check -f <dockerfilePath> <buildContext>`.
-   - Otherwise build in ACR (also catches missing `COPY` sources): `az acr build --registry <acr> --image kickstart-validate/<svc>:check -f <dockerfilePath> <buildContext>`.
-2. **Inspect contents** (when built locally): `docker run --rm kickstart-validate-<svc>:check ls -la <workdir>` — confirm the entry point and expected files landed where the app runs from. A build that succeeds but places files in the wrong dir is exactly the failure this step catches.
-3. If the build fails or the entry point is missing, fix the Dockerfile/paths and rebuild — do not proceed to Review with a broken image.
+1. **Preflight ACR permissions before the first build.** Invoke `aks.checkDeploymentPermissions` via `vscode/runCommand` with the Phase 2 resource names, `probeScope: "user"`, and `silent: true`. Inspect the `acr-push` and `acr-tasks` probes. If either fails, offer its included remediation; if role assignment returns 403, follow `/kickstart-pim-activation`. Do not wait until Pre-Deploy to surface an ACR permission failure.
+2. **Build in ACR** from the service's own build context. This catches missing `COPY`/`ADD` sources:
+   ```bash
+   az acr build --registry <acr> --image kickstart-validate/<svc>:check -f <dockerfilePath> <buildContext>
+   ```
+3. **Verify the final image layout from the Dockerfile.** Reconcile every final-stage `COPY`/`ADD` destination with `WORKDIR` and `CMD`/`ENTRYPOINT`, then present that source→destination map in Review. Do not inject `RUN test -f` into the final stage: distroless and `scratch` images have no shell, and a path-existence check does not prove the entry point landed in the intended directory.
+4. If the build fails or the source→destination map does not resolve the entry point, fix the Dockerfile/paths and rebuild — do not proceed to Review with a broken image.
+
+Keep `.dockerignore` tight: the entire build context is uploaded to ACR on every build.
 
 ## Exit Criteria
-All artifacts written, every Dockerfile builds, and the entry point is confirmed present in the image. Announce: "Artifacts generated and build-validated — moving to Review."
+All artifacts written, ACR build permissions confirmed, every Dockerfile builds via `az acr build`, and the final-stage source→destination map resolves the entry point. Announce: "Artifacts generated and build-validated — moving to Review."

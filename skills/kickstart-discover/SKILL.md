@@ -26,6 +26,12 @@ Never assume a flat repo. Apps often live in nested or monorepo layouts (`src/<s
 
 Use `codebase`/`search` to confirm each path actually exists — do not infer it from the language alone. Surface this map to the user and let them correct it before proceeding.
 
+## Build environment
+
+Prefer **`az acr build`** for container images. It builds on ACR's remote task builders, avoids depending on a local Docker daemon, and uses the same build-and-push path in every environment.
+
+`az acr build` needs the Phase 2 ACR to exist and the caller to hold the required ACR build and push permissions. Keep `.dockerignore` tight because the whole build context uploads on every build.
+
 ## What to collect
 
 - App name
@@ -43,4 +49,4 @@ Use `codebase`/`search` to confirm each path actually exists — do not infer it
 - When the answer is open-ended (app name), use `allowFreeformInput: true`.
 
 ## Exit Criteria
-You know the app name, language, framework, port, key deps, env vars, CI status, and a confirmed per-service structure map (build context + entry point + existing Dockerfile path) for every deployable service. Announce: "Discovery complete — moving to Configure Infrastructure."
+You know the app name, language, framework, port, key deps, env vars, CI status, a confirmed per-service structure map (build context + entry point + existing Dockerfile path) for every deployable service. Announce: "Discovery complete — moving to Configure Infrastructure."
