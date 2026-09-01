@@ -8,7 +8,7 @@ argument-hint: "Target version (e.g., 2.1.0). Optionally describe release highli
 
 Prepare a `publish-x.y.z` release PR for the [Azure/vscode-aks-tools](https://github.com/Azure/vscode-aks-tools) VS Code extension.
 
-This skill ONLY prepares the source changes needed for the release PR. The actual marketplace publish is handled by the internal 1ES signed pipeline (`.github/workflows/1es-pipeline.yml`) — do not attempt to run it.
+This skill ONLY prepares the source changes needed for the release PR. The actual marketplace publish is handled by the internal 1ES signed pipeline (`.azurepipelines/1es-pipeline.yml`) — do not attempt to run it.
 
 ## When to Use
 
@@ -371,5 +371,5 @@ Report this to the user before declaring done:
 - Project version lives in: root `package.json` + root `package-lock.json` only
 - `webview-ui/package.json` is private, stays at `0.0.0`
 - `.vscode/tasks.json` `"version": "2.0.0"` is schema, not project version
-- Publish workflow: `.github/workflows/1es-pipeline.yml` (internal signed pipeline)
+- Publish pipeline: `.azurepipelines/1es-pipeline.yml` (internal 1ES signed pipeline, run from Azure DevOps)
 - `CHANGELOG.md` deprecated since 1.6.14
