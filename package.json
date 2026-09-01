@@ -1190,7 +1190,7 @@
         "@azure/arm-containerservice": "25.4.0",
         "@azure/arm-containerservicefleet": "^2.1.0",
         "@azure/arm-features": "^3.1.0",
-        "@azure/arm-monitor": "^7.0.0",
+        "@azure/arm-monitor": "^8.0.0",
         "@azure/arm-msi": "^2.2.0",
         "@azure/arm-resourcegraph": "^5.0.0",
         "@azure/arm-resources": "^8.0.0",
