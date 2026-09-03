@@ -33,6 +33,7 @@ Run these before pushing. Each has a corresponding CI job.
 - `lint-fix:all`: the same, applying autofixes.
 - `test`: the **Build** workflow runs this on Linux, macOS and Windows. On Linux it needs a display, so CI wraps it as `xvfb-run -a npm run test`.
 - `test:fuzz`: the **Fuzzing Tests** workflow runs this on every pull request, and nightly.
+- `docs:check`, `docs:reference:check`: the **Docs Check** workflow runs both when a pull request touches `docs/`, `scripts/`, `package.json`, `package.nls.json` or `resources/`. See [Documentation](#documentation).
 - `prettier-format`: formats the repository with Prettier.
 
 **Prettier Check** is the one exception to "each has a CI job that will fail the PR". It only triggers when a pull request touches a `.ts` or `.tsx` file, but the job itself checks `.json`, `.css` and `.md` as well. A documentation-only pull request is therefore never format-checked, so run `prettier-format` regardless of what you changed.
@@ -41,7 +42,7 @@ Pull requests are also limited to **1200 changed lines** by the **PR Size Checke
 
 ## Documentation
 
-These validate this book against what `package.json` actually contributes, so command IDs, setting names and menu paths in prose cannot drift from the extension.
+These validate this book against what `package.json` actually contributes, so command IDs, setting names and menu paths in prose cannot drift from the extension. The **Docs Check** workflow runs `docs:check` and `docs:reference:check` on any pull request that touches either side.
 
 - `docs:check`: runs all documentation checks. Pass names to run a subset, for example `npm run docs:check menu-paths`.
     - `identifiers`: flags an `aks.*` or `azure.*` identifier in prose that `package.json` does not contribute. Fenced code blocks are skipped, so a sample quoting another extension's settings is not an error.

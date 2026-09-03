@@ -33,13 +33,15 @@ for working on the UI.
 npm run lint:all          # lint step in the Build workflow
 npm test                  # Build workflow
 npm run test:fuzz         # Fuzzing Tests workflow
+npm run docs:check        # Docs Check workflow
 npm run prettier-format   # Prettier Check workflow
 ```
 
-The first three run on every pull request and will fail it. **Prettier Check** only
-runs when the pull request touches a `.ts` or `.tsx` file, but when it does run it
-checks `.json`, `.css` and `.md` too, so format everything before pushing rather
-than only what triggered it.
+**Build** and **Fuzzing Tests** run on every pull request. **Docs Check** runs on any
+pull request touching `docs/`, `scripts/`, `package.json`, `package.nls.json` or
+`resources/`. **Prettier Check** only runs when the pull request touches a `.ts` or
+`.tsx` file, but when it does run it checks `.json`, `.css` and `.md` too, so format
+everything before pushing rather than only what triggered it.
 
 Pull requests are capped at **1200 changed lines** by the PR Size Checker workflow.
 Prefer splitting the work. If a larger change is genuinely unavoidable, include
@@ -62,5 +64,6 @@ npm run docs:reference    # regenerate
 npm run docs:check        # command IDs, command names and menu paths in prose
 ```
 
-Neither runs in CI yet, so run them yourself when you change `package.json` or the
-book.
+Neither is run by the pre-commit hook, so run them yourself when you change
+`package.json` or the book. The **Docs Check** workflow runs both on any pull request
+touching `docs/`, `scripts/`, `package.json`, `package.nls.json` or `resources/`.
