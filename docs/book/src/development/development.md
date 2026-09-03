@@ -27,13 +27,17 @@ These can all be run from the command line in the root of the repository (with `
 
 ## Checks that gate a pull request
 
-Run these before pushing; each has a corresponding CI job that will fail the PR.
+Run these before pushing. Each has a corresponding CI job.
 
-- `prettier-format`: formats the repository with Prettier. The **Prettier Check** workflow fails if anything is unformatted.
 - `lint:all`: lints both the extension and `webview-ui`. The **Build** workflow runs a lint step.
 - `lint-fix:all`: the same, applying autofixes.
+- `test`: the **Build** workflow runs this on Linux, macOS and Windows. On Linux it needs a display, so CI wraps it as `xvfb-run -a npm run test`.
+- `test:fuzz`: the **Fuzzing Tests** workflow runs this on every pull request, and nightly.
+- `prettier-format`: formats the repository with Prettier.
 
-Pull requests are also limited to **1200 changed lines** by the **PR Size Checker** workflow. Include `[skip pr-size]` in the commit message only when a larger change is genuinely unavoidable.
+**Prettier Check** is the one exception to "each has a CI job that will fail the PR". It only triggers when a pull request touches a `.ts` or `.tsx` file, but the job itself checks `.json`, `.css` and `.md` as well. A documentation-only pull request is therefore never format-checked, so run `prettier-format` regardless of what you changed.
+
+Pull requests are also limited to **1200 changed lines** by the **PR Size Checker** workflow. Include `[skip pr-size]` in the most recent commit message only when a larger change is genuinely unavoidable — the workflow reads that commit, not the whole branch.
 
 ## Documentation
 
@@ -41,6 +45,7 @@ These validate this book against what `package.json` actually contributes, so co
 
 - `docs:check`: runs all documentation checks. Pass names to run a subset, for example `npm run docs:check menu-paths`.
     - `identifiers`: flags an `aks.*` or `azure.*` identifier in prose that `package.json` does not contribute. Fenced code blocks are skipped, so a sample quoting another extension's settings is not an error.
+    - `titles`: flags a bold command label beginning `AKS:` that names no contributed command. See below.
     - `menu-paths`: flags a menu breadcrumb that does not match the real menu.
     - `menu-syntax`: flags menu navigation written as prose instead of `**A** > **B**`. See below.
     - `coverage`: warns about a command documented nowhere in prose.
@@ -49,6 +54,20 @@ These validate this book against what `package.json` actually contributes, so co
 - `docs:reference:check`: fails if those pages are stale. Run `docs:reference` and commit the result.
 
 Links, images, anchors and `SUMMARY.md` completeness are deliberately **not** checked here. `lychee --offline --include-fragments` covers the first three and handles raw HTML and URL fragments properly, and `mdbook build` with `create-missing = false` fails on a `SUMMARY.md` entry with no page.
+
+### Naming a command
+
+Write a command name in bold, exactly as `package.json` contributes it:
+
+```markdown
+Run **AKS: Create Argo CD Application** from the Command Palette.
+```
+
+`titles` checks every bold label beginning `AKS:` against the contributed commands and submenus, so a page cannot go on using a name the extension dropped. Both the palette form (`AKS: Create a GitHub Workflow`) and the menu form (`Create a GitHub Workflow`) are accepted, because menus show the title without its category.
+
+The check is deliberately limited to the `AKS:` prefix. Any bold string could be a command name, but most are ordinary emphasis, and guessing which is which produces false positives that train people to ignore the check. The prefix is only ever written when a command is meant.
+
+This closes a gap the other checks left. `identifiers` validates IDs and `menu-paths` validates breadcrumbs, but a command named by title alone was checked by neither — which is how a page kept naming a command for months after it was renamed, with every check passing.
 
 ### Writing menu navigation
 
@@ -93,7 +112,7 @@ Some scripts are invoked by other scripts or tools, so need not be run directly,
 
 - `vscode:prepublish`: used by the `vsce` command for packaging the extension into a `vsix` file for distribution.
 - `webpack-dev`: builds the `webview-ui` project and then bundles the extension code in development mode (`--watch`). This is the `preLaunchTask` for the `Extension` debug profile (F5).
-- `test-compile`: compiles the extension typescript (after building the `webview-ui` project) without webpacking it, then copies `resources/yaml/aks-deploy.template.yaml` next to the compiled output. This is a prerequisite to running automated tests.
+- `test-compile`: compiles the extension typescript (after building the `webview-ui` project) without webpacking it, then runs `scripts/prepare-test-assets.js`, which copies `resources/yaml/aks-deploy.template.yaml` next to the compiled output and the `containerization-assist-mcp` skills into `dist/skills`. This is a prerequisite to running automated tests.
 - `lint`: lints the extension only. `lint:all` is usually what you want.
 - `eslint-inspector`: opens the ESLint config inspector for debugging lint rules.
 - `watch`: not used by any current workflow, but can be useful for editing while debugging.

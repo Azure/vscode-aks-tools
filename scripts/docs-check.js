@@ -11,6 +11,7 @@
  *
  * Checks:
  *   identifiers   command IDs in prose that package.json does not contribute
+ *   titles        command names in prose that package.json does not contribute
  *   menu-paths    menu breadcrumbs that do not match the real menu
  *   coverage      commands documented nowhere in prose (warning)
  *   orphans       images no page references (warning)
@@ -196,6 +197,81 @@ checks.identifiers = (report) => {
 };
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Command names in prose that no longer exist.
+ *
+ * `identifiers` checks IDs and `menu-paths` checks breadcrumbs, but a command
+ * named by its title and nothing else was checked by neither. A page can call a
+ * command something it has not been called since it was renamed and every check
+ * still passes, which is how `AKS: Create Argo CD GitOps Pipeline` survived a
+ * clean run after #2353 renamed it.
+ *
+ * Scoped to labels beginning `AKS:` on purpose. Every bold string is a candidate
+ * command name in principle, but most are ordinary emphasis, and guessing which
+ * is which produces false positives that train people to ignore the check. The
+ * `AKS:` prefix is only ever written when a command is meant, so it identifies
+ * the intent without needing an opt-out marker.
+ *
+ * Both forms are accepted. The Command Palette shows `category: title`, menus
+ * show the bare title, and pages legitimately use either.
+ */
+const COMMAND_LABEL = /\*\*(AKS:\s*[^*\n]+)\*\*/g;
+
+/** Bold command labels on a line. */
+function commandLabelsIn(line) {
+    return [...line.matchAll(COMMAND_LABEL)].map((m) => m[1].trim());
+}
+
+/**
+ * A command title as prose writes it: no `AKS:` prefix, no trailing ellipsis.
+ * Titles ending in an ellipsis are conventionally written without it, matching
+ * the allowance `coverage` already makes.
+ */
+function bareTitle(label) {
+    return label
+        .replace(/^AKS:\s*/i, "")
+        .replace(/\.{3}$/, "")
+        .trim();
+}
+
+/** Every label a page may legitimately use for a command or submenu. */
+function knownCommandLabels() {
+    const known = new Set();
+    for (const command of contributes.commands ?? []) {
+        const title = loc(command.title);
+        known.add(title);
+        if (command.category) {
+            known.add(`${loc(command.category)}: ${title}`);
+        }
+    }
+    for (const submenu of contributes.submenus ?? []) {
+        known.add(loc(submenu.label));
+    }
+    return known;
+}
+
+checks.titles = (report) => {
+    const known = knownCommandLabels();
+    const knownBare = new Set([...known].map(bareTitle));
+
+    for (const file of bookFiles()) {
+        // The generated reference lists every command by definition, so checking
+        // it would only ever restate what the generator just wrote.
+        if (rel(file).includes(`${path.sep}reference${path.sep}`)) {
+            continue;
+        }
+        const text = withoutFencedCode(fs.readFileSync(file, "utf8"));
+        text.split("\n").forEach((line, index) => {
+            for (const label of commandLabelsIn(line)) {
+                if (known.has(label) || knownBare.has(bareTitle(label))) {
+                    continue;
+                }
+                report.error(`${rel(file)}:${index + 1}`, `no command is named "${label}"`);
+            }
+        });
+    }
+};
 
 checks.coverage = (report) => {
     const { commands } = contributions();
@@ -493,4 +569,12 @@ if (require.main === module) {
     main();
 }
 
-module.exports = { crumbsIn, proseNavIn, withoutFencedCode, withoutUrls };
+module.exports = {
+    bareTitle,
+    commandLabelsIn,
+    crumbsIn,
+    knownCommandLabels,
+    proseNavIn,
+    withoutFencedCode,
+    withoutUrls,
+};
