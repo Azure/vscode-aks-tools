@@ -14,7 +14,7 @@ This page now also enable information box for the users to quickly see available
 
 ![Abort operation](../resources/show-properties-abort.png)
 ![Reconcile operation](../resources/show-properties-reconcile.png)
-![Kuberentes version information](../resources/show-properties-page-k8s-available-versions.png)
+![Kubernetes version information](../resources/show-properties-page-k8s-available-versions.png)
 
 ## Create cluster from Azure Portal
 
@@ -36,4 +36,4 @@ Right-click your Azure subscription > **Create Cluster** > **Create Cluster From
 
 Right-click your AKS cluster > **Show Properties** to display the AKS cluster properties. Within the page there will be **Stop/Start Cluster** button to perform the start or stop the cluster operation.
 
-![Start or Stop Cluster From Properties Webview](../resources/aks-startstop-cluster.png)
+![Start and stop buttons on the cluster properties page](../resources/aks-startstop-cluster.png)

@@ -8,4 +8,4 @@ Right-click your AKS cluster > **Develop & Deploy** > **Install Azure Service Op
 
 For more information on Azure Service Operator, visit [Azure Service Operator (for Kubernetes)](https://github.com/Azure/azure-service-operator). If you are experiencing issues with Azure Service Operator, visit [Azure Service Operator (ASO) troubleshooting](https://github.com/Azure/azure-service-operator/blob/master/docs/troubleshooting.md).
 
-![Azure Service Operator Webview](../resources/azure-service-operator-screenshot.png)
+![Azure Service Operator installation panel](../resources/azure-service-operator-screenshot.png)

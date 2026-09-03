@@ -1,19 +1,63 @@
 # Telemetry
 
-## Telemetry
+This extension sends usage data to Microsoft to help us understand which features are
+used and where they fail, so we can improve them. This page describes exactly what is
+and is not sent. Telemetry respects your VS Code telemetry setting — if you have
+already turned telemetry off in VS Code, this extension sends nothing.
 
-This extension collects telemetry data to help us build a better experience for building applications with Azure Kubernetes Service and VS Code. We only collect the following data:
+## What we collect
 
-* Which commands are executed.
-* Events pertaining to GitHub Copilot for Azure (@azure) handlers
-    * Which VS Code command ID was used to enable handler
-    * Whether or not if a subscription was selected
-    * Whether or not a manifest file was selected
-    * Whether or not a cluster was selected
-    * Which cluster option was selected (see `SelectClusterOptions` type)
-    * Whether or not a manifest deployment was cancelled
-    * Whether or not a manifest deployment was successful
-    * Whether or not the success manifest deployment link was clicked
-    * Whether or not a cluster was successfully created
+**Which features you use**
 
-We do not collect any information about image names, paths, etc. Read our [privacy statement](https://privacy.microsoft.com/privacystatement) to learn more. If you don’t wish to send usage data to Microsoft, you can set the `telemetry.enableTelemetry` setting to `false`. Learn more in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
+* Which extension commands you run.
+* Which screen you opened and which action you took in it — for example, that you
+  opened the Create Cluster screen and started a cluster creation. What you typed into
+  the form is not included.
+* Whether creating a cluster succeeded.
+
+**How the GitHub Copilot for Azure (`@azure`) integration went**
+
+When you ask `@azure` to do something that involves AKS, we record how far the
+conversation got, so we can find where it breaks down:
+
+* Which extension feature the request used.
+* Whether you selected a subscription, a cluster, and a manifest file.
+* Which of the cluster choices you picked.
+* Whether you cancelled the deployment.
+* Whether the deployment succeeded, and whether you clicked the link shown afterwards.
+
+## What we do not collect
+
+We do not collect anything that identifies your code or your Azure resources. That
+includes:
+
+* Cluster, resource group, subscription and registry names.
+* File paths, image names and container registry contents.
+* Anything you type into a form in the extension.
+* The contents of your manifests, Dockerfiles or source code.
+
+Container Assist does send your source code and project details to a language model in
+order to generate deployment files for you. That is a different thing from the usage
+data described here, and it is covered separately in
+[AI Data Flow and Privacy](./features/container-assist-ai-data-flow.md).
+
+## How it is sent
+
+The extension uses the standard VS Code telemetry library
+([`@vscode/extension-telemetry`](https://www.npmjs.com/package/@vscode/extension-telemetry)),
+which sends the events above to Azure Application Insights. That library is what
+enforces your VS Code telemetry setting, so nothing leaves your machine when telemetry
+is off.
+
+## Turning it off
+
+Set `telemetry.telemetryLevel` to `off` in your VS Code settings. This turns off
+telemetry for VS Code and every extension, including this one. If you have used the
+older `telemetry.enableTelemetry` setting, note that VS Code replaced it in version
+1.61.
+
+See the
+[VS Code telemetry FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting)
+for details, and the
+[Microsoft privacy statement](https://privacy.microsoft.com/privacystatement) for how
+Microsoft handles the data.

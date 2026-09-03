@@ -17,8 +17,13 @@ Two workflow templates exist, selected automatically based on your namespace typ
 
 | Namespace Type | Template | Difference |
 |----------------|----------|------------|
-| **User namespace** (standard) | `aks-deploy.template.yaml` | Uses `azure/aks-set-context@v4` to get kubeconfig |
+| **User namespace** (standard) | `aks-deploy.template.yaml` | Uses `azure/aks-set-context` to get kubeconfig |
 | **Managed namespace** | `aks-deploy-managed-ns.template.yaml` | Uses `az aks namespace get-credentials` + `kubelogin convert-kubeconfig` (managed namespaces are not yet supported by `aks-set-context`) |
+
+Every action in these templates is pinned to a commit SHA rather than a tag. The tables
+below name the actions without versions, because those move; for the version each one is
+currently pinned to, see [Pinned versions](../reference/pinned-versions.md), which is
+generated from the templates themselves.
 
 ## Workflow Configuration Values
 
@@ -44,8 +49,8 @@ The following values are injected into the workflow template. All deployment-spe
 
 | Step | Action / Command | Purpose |
 |------|-----------------|---------|
-| 1. Checkout | `actions/checkout@v4` | Clone the repository |
-| 2. Azure login | `azure/login@v2` | OIDC login using `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` from GitHub secrets |
+| 1. Checkout | `actions/checkout` | Clone the repository |
+| 2. Azure login | `azure/login` | OIDC login using `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` from GitHub secrets |
 | 3. Log into ACR | `az acr login -n <ACR>` | Authenticate Docker to the Azure Container Registry |
 | 4. Build and push image | `az acr build --image <ACR>.azurecr.io/<container>:<sha> --registry <ACR> -g <RG> -f <Dockerfile> <context>` | Cloud-build the image using ACR Tasks and push to ACR |
 
@@ -55,13 +60,12 @@ The following values are injected into the workflow template. All deployment-spe
 
 | Step | Action / Command | Purpose |
 |------|-----------------|---------|
-| 1. Checkout | `actions/checkout@v4` | Clone the repository |
-| 2. Azure login | `azure/login@v2` | OIDC login (same as build job) |
-| 3. Set up kubelogin | `azure/use-kubelogin@v1` | Install kubelogin for non-interactive Azure AD authentication |
-| 4. Get K8s context | `azure/aks-set-context@v4` (user namespace) or `az aks namespace get-credentials` (managed namespace) | Fetch kubeconfig for the target cluster/namespace |
-| 5. Deploy application | `Azure/k8s-deploy@v5` | Apply Kubernetes manifests with the built image |
-| 6. Annotate namespace | `kubectl annotate namespace` | Set `aks-project/workload-identity-id` and `aks-project/workload-identity-tenant` |
-| 7. Annotate deployment | `kubectl annotate deployment --all` | Set traceability annotations (see [Deployment Annotations](./container-assist-integration.md#deployment-annotations)) |
+| 1. Checkout | `actions/checkout` | Clone the repository |
+| 2. Azure login | `azure/login` | OIDC login (same as build job) |
+| 3. Set up kubelogin | `azure/use-kubelogin` | Install kubelogin for non-interactive Azure AD authentication |
+| 4. Get K8s context | `azure/aks-set-context` (user namespace) or `az aks namespace get-credentials` (managed namespace) | Fetch kubeconfig for the target cluster/namespace |
+| 5. Deploy application | `Azure/k8s-deploy` | Apply Kubernetes manifests with the built image |
+| 6. Annotate deployment | `kubectl annotate deployment --all` | Set traceability annotations (see [Deployment Annotations](./container-assist-integration.md#deployment-annotations)) |
 
 ### GitHub Actions Permissions
 
@@ -143,7 +147,7 @@ The namespace type affects multiple aspects of the generated workflow and OIDC c
 | Aspect | User Namespace | Managed Namespace |
 |--------|---------------|-------------------|
 | **Workflow template** | `aks-deploy.template.yaml` | `aks-deploy-managed-ns.template.yaml` |
-| **Kubeconfig method** | `azure/aks-set-context@v4` action | `az aks namespace get-credentials` CLI command + `kubelogin convert-kubeconfig` |
+| **Kubeconfig method** | `azure/aks-set-context` action | `az aks namespace get-credentials` CLI command + `kubelogin convert-kubeconfig` |
 | **Role scope for K8s access** | Cluster-level (conditional on Azure RBAC) | Namespace-level (always) |
 | **AKS Namespace Contributor** | Not assigned | Assigned (needed for namespace-scoped kubeconfig) |
 | **AKS Cluster User Role** | Assigned at resource group level | Not assigned |

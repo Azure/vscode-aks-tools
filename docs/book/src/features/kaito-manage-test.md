@@ -1,6 +1,6 @@
 # Manage and Test KAITO Deployments
 
-Actively monitor the the status of all KAITO deployments on the cluster, retrieve logs, test the inference servers, and delete/redeploy models.
+Actively monitor the status of all KAITO deployments on the cluster, retrieve logs, test the inference servers, and delete/redeploy models.
 
 ## Manage KAITO Deployments
 

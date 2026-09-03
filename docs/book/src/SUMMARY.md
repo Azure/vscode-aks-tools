@@ -26,7 +26,7 @@
   - [Containerization Assist Skills for Copilot Chat (Preview)](./features/containerization-assist-skills.md)
   - [Kickstart Agent for AKS Automatic (Preview)](./features/kickstart-agent.md)
   - [AKS plugins for GitHub Copilot for Azure](./features/aks-plugins-github-copilot.md)
-  - [Use Simplified AKS Menu Structure (Feature Flag)](./features/simplified-menu-structure.md)
+  - [Use Simplified AKS Menu Structure](./features/simplified-menu-structure.md)
   - [Install and Deploy KAITO Models](./features/kaito-install-deploy.md)
   - [Manage and Test KAITO Deployments](./features/kaito-manage-test.md)
   - [Create AKS Fleet Manager from VS Code](./features/aks-fleet-manager.md)
@@ -39,7 +39,7 @@
   - [Pinned versions](./reference/pinned-versions.md)
 
 - [Release](./release.md)
-  - [What's New in 2.1.0](./release/whats-new-2.1.0.md)
+  - [What's New in 2.5.0](./release/whats-new-2.5.0.md)
   - [Releasing Information](./release/releasing.md)
 - [Contributing](./contributing.md)
 - [Telemetery](./telemetery.md)
