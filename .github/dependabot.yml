@@ -12,6 +12,11 @@ updates:
       default-days: 7
     groups:
       npm-root:
+        # Excluded so it gets its own PR: bumping @types/vscode forces a
+        # matching engines.vscode bump, which raises the minimum VS Code
+        # version and needs a deliberate decision.
+        exclude-patterns:
+          - "@types/vscode"
         update-types:
           - "minor"
           - "patch"
