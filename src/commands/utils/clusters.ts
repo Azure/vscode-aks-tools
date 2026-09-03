@@ -26,7 +26,7 @@ import { invokeKubectlCommand } from "./kubectl";
 import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
 import { ClusterFilter } from "./config";
-import { DiagnosticSettingsResourceCollection } from "@azure/arm-monitor";
+import { DiagnosticSettingsResource } from "@azure/arm-monitor";
 import { parseResource } from "../../azure-api-utils";
 import * as k8s from "vscode-kubernetes-tools-api";
 
@@ -940,11 +940,14 @@ export async function getClusters(
 export async function getClusterDiagnosticSettings(
     sessionProvider: ReadyAzureSessionProvider,
     clusterNode: AksClusterTreeNode,
-): Promise<DiagnosticSettingsResourceCollection | undefined> {
+): Promise<DiagnosticSettingsResource[] | undefined> {
     try {
         // Get diagnostic setting via diagnostic monitor
         const client = getMonitorClient(sessionProvider, clusterNode.subscriptionId);
-        const diagnosticSettings = await client.diagnosticSettings.list(clusterNode.armId);
+        const diagnosticSettings: DiagnosticSettingsResource[] = [];
+        for await (const diagnosticSetting of client.diagnosticSettings.list(clusterNode.armId)) {
+            diagnosticSettings.push(diagnosticSetting);
+        }
 
         return diagnosticSettings;
     } catch (e) {
@@ -954,7 +957,7 @@ export async function getClusterDiagnosticSettings(
 }
 
 export async function chooseStorageAccount(
-    diagnosticSettings: DiagnosticSettingsResourceCollection,
+    diagnosticSettings: DiagnosticSettingsResource[],
     placeholderText: string,
 ): Promise<string | void> {
     /*
@@ -962,11 +965,11 @@ export async function chooseStorageAccount(
           1. For the scenario of 1 storage account in diagnostic settings - Pick the storageId resource and get SAS.
           2. For the scenario for more than 1 then show VsCode quickPick to select and get SAS of selected.
     */
-    if (!diagnosticSettings || !diagnosticSettings.value) return undefined;
+    if (!diagnosticSettings || diagnosticSettings.length === 0) return undefined;
 
-    if (diagnosticSettings.value.length === 1) {
+    if (diagnosticSettings.length === 1) {
         // In case of only one storage account associated, use the one (1) as default storage account
-        const selectedStorageAccount = diagnosticSettings.value![0].storageAccountId!;
+        const selectedStorageAccount = diagnosticSettings[0].storageAccountId;
         if (!selectedStorageAccount) {
             vscode.window.showInformationMessage("Diagnostic setting does not have storage account associated.");
             return;
@@ -982,9 +985,9 @@ export async function chooseStorageAccount(
 
     const storageAccountNameToStorageIdArray: { id: string; label: string }[] = [];
 
-    diagnosticSettings.value?.forEach((item) => {
+    diagnosticSettings.forEach((item) => {
         if (item.storageAccountId) {
-            const { name } = parseResource(item.storageAccountId!);
+            const { name } = parseResource(item.storageAccountId);
             if (!name) {
                 vscode.window.showInformationMessage(`Storage Id is malformed: ${item.storageAccountId}`);
                 return;

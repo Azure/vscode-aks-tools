@@ -45,7 +45,7 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
 
     // Get diagnostic settings for the cluster
     const clusterDiagnosticSettings = await getClusterDiagnosticSettings(sessionProvider, clusterNode.result);
-    if (!clusterDiagnosticSettings || !clusterDiagnosticSettings.value?.length) {
+    if (!clusterDiagnosticSettings || clusterDiagnosticSettings.length === 0) {
         vscode.window.showErrorMessage(
             "No storage account is found. Please attach a storage account in the Diagnostic settings of your cluster under the Monitoring blade in the portal.",
         );
