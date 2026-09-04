@@ -12,7 +12,15 @@
 
 const assert = require("node:assert/strict");
 
-const { crumbsIn, proseNavIn, withoutFencedCode, withoutUrls } = require("./docs-check");
+const {
+    bareTitle,
+    commandLabelsIn,
+    crumbsIn,
+    knownCommandLabels,
+    proseNavIn,
+    withoutFencedCode,
+    withoutUrls,
+} = require("./docs-check");
 
 describe("crumbsIn", () => {
     it("reads a chain anchored to a right-click", () => {
@@ -136,5 +144,64 @@ describe("withoutUrls", () => {
     it("preserves line count", () => {
         const input = "a\nhttps://example.com/x\nb";
         assert.equal(withoutUrls(input).split("\n").length, 3);
+    });
+});
+
+describe("commandLabelsIn", () => {
+    it("reads a bold command label", () => {
+        assert.deepEqual(commandLabelsIn("Run **AKS: Create Argo CD Application** from the palette."), [
+            "AKS: Create Argo CD Application",
+        ]);
+    });
+
+    it("reads every label on the line", () => {
+        const line = "| **AKS: Create a GitHub Workflow** | and **AKS: Run Deployment Safeguards YAML Validation** |";
+        assert.deepEqual(commandLabelsIn(line), [
+            "AKS: Create a GitHub Workflow",
+            "AKS: Run Deployment Safeguards YAML Validation",
+        ]);
+    });
+
+    // most bold text is ordinary emphasis; flagging it would produce false
+    // positives that train people to ignore the check
+    it("ignores bold that does not name a command", () => {
+        assert.deepEqual(commandLabelsIn("The **Health** section lists **four** commands."), []);
+    });
+
+    it("ignores a menu label written without the prefix", () => {
+        assert.deepEqual(commandLabelsIn("Right-click your AKS cluster > **Develop & Deploy**"), []);
+    });
+});
+
+describe("bareTitle", () => {
+    it("drops the category prefix", () => {
+        assert.equal(bareTitle("AKS: Check Argo CD Status"), "Check Argo CD Status");
+    });
+
+    // prose writes "AKS: Sign in to Azure" for a title of "Sign in to Azure..."
+    it("drops a trailing ellipsis", () => {
+        assert.equal(bareTitle("Sign in to Azure..."), "Sign in to Azure");
+    });
+});
+
+describe("knownCommandLabels", () => {
+    const known = knownCommandLabels();
+
+    it("accepts a title that carries its own prefix", () => {
+        assert.ok(known.has("AKS: Create Argo CD Application"));
+    });
+
+    // the palette shows "category: title", menus show the bare title
+    it("accepts both forms of a title with a separate category", () => {
+        assert.ok(known.has("Create a GitHub Workflow"));
+        assert.ok(known.has("AKS: Create a GitHub Workflow"));
+    });
+
+    it("accepts submenu labels", () => {
+        assert.ok(known.has("Develop & Deploy"));
+    });
+
+    it("rejects a name the extension does not use", () => {
+        assert.ok(!known.has("AKS: Create Argo CD GitOps Pipeline"));
     });
 });
