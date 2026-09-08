@@ -51,6 +51,8 @@ jobs:
         npm run install:all
     - name: Lint
       run: npm run lint:all
+    - name: Test webview lint configuration
+      run: npm run test:lint --prefix webview-ui
     - name: Smoke test (Linux)
       run: xvfb-run -a npm run test
       if: runner.os == 'Linux'

@@ -6,6 +6,31 @@ For commands that require a webview (see [guidance](https://code.visualstudio.co
 
 Run `npm run install:all` to install package dependencies for both the extension and webview project.
 
+### Linting
+
+Use Node.js 22 or newer. Run `npm run lint:all` from the repository root and
+`npm run test:lint --prefix webview-ui` for the lint configuration regression tests.
+
+The webview uses `@eslint-react/eslint-plugin` with ESLint 10 instead of
+`eslint-plugin-react`, whose published peer dependency range does not support ESLint 10.
+Both projects install with normal npm peer validation; no package downgrade or peer override is needed.
+
+The React configuration explicitly maps the previous recommended checks rather than enabling
+the replacement plugin's broader recommended preset. `eslint-plugin-react-hooks` remains
+responsible for Hooks checks, preserving existing rule names and suppression comments.
+
+This migration is not exact rule parity:
+
+- Missing keys, JSX comment text, children props, unsafe target links, unknown DOM properties,
+  state mutation, conflicting inner HTML/children, and deprecated lifecycle/DOM API checks remain enabled.
+- Display-name checks cover anonymous wrapped components and now also contexts, rather than all
+  component forms checked by the old plugin.
+- TypeScript and React 19 types cover duplicate explicit JSX attributes, unresolved JSX names,
+  typed props, string refs, removed `isMounted` calls, and missing class render returns. These checks
+  require the TypeScript build, not just lint, and cannot protect untyped `any` usage.
+- The old `react/no-unescaped-entities` check has no equivalent in the replacement plugin and is
+  no longer enforced. TypeScript does not cover valid JSX text containing unescaped quotes/apostrophes.
+
 ## Development/Debugging
 
 ### File structure

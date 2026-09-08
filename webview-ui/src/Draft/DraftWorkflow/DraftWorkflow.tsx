@@ -1,4 +1,4 @@
-import { FormEvent, useEffect } from "react";
+import { FormEvent, Fragment, useEffect } from "react";
 import {
     CreateParams,
     InitialState,
@@ -818,8 +818,8 @@ export function DraftWorkflow(initialState: InitialState) {
 
                             <label className={styles.label}>Overrides</label>
                             {state.helmParamsState.selectedOverrides.map((o, i) => (
-                                <>
-                                    <div key={i} className={styles.control} style={{ display: "flex" }}>
+                                <Fragment key={i}>
+                                    <div className={styles.control} style={{ display: "flex" }}>
                                         <input
                                             type="text"
                                             id={`override-key-input-${i}`}
@@ -858,7 +858,7 @@ export function DraftWorkflow(initialState: InitialState) {
                                             {o.value.message}
                                         </span>
                                     )}
-                                </>
+                                </Fragment>
                             ))}
                             <div
                                 className={

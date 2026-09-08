@@ -7,6 +7,7 @@
     "dev": "vite",
     "lint": "eslint ./src",
     "lint-fix": "eslint ./src --fix",
+    "test:lint": "node --test eslint.config.test.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
@@ -22,14 +23,14 @@
     "rehype-raw": "^7.0.0"
   },
   "devDependencies": {
+    "@eslint-react/eslint-plugin": "^5.19.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@types/vscode-webview": "^1.57.5",
-    "@typescript-eslint/eslint-plugin": "^8.68.0",
-    "@typescript-eslint/parser": "^8.32.1",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
     "@vitejs/plugin-react": "^6.1.0",
     "eslint": "^10.9.1",
-    "eslint-plugin-react": "^7.37.5",
     "typescript": "^6.0.3",
     "eslint-plugin-react-hooks": "^7.1.1",
     "vite-plugin-checker": "^0.14.5",

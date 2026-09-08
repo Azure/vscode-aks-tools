@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import { InitialState } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
 import { useStateManagement } from "../utilities/state";
 import { stateUpdater, vscode } from "./state";
@@ -58,7 +58,7 @@ export function ClusterProperties(initialState: InitialState) {
 
             {clusterInfo &&
                 clusterInfo.agentPoolProfiles.map((ap) => (
-                    <>
+                    <Fragment key={ap.name}>
                         <h3>
                             {l10n.t("Agent Pool:")} {ap.name}
                         </h3>
@@ -68,7 +68,7 @@ export function ClusterProperties(initialState: InitialState) {
                             profileInfo={ap}
                             clusterOperationRequested={state.clusterOperationRequested}
                         />
-                    </>
+                    </Fragment>
                 ))}
         </>
     );

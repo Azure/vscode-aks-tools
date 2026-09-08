@@ -1,4 +1,5 @@
 import { fixupConfigRules, fixupPluginRules } from "@eslint/compat";
+import eslintReact from "@eslint-react/eslint-plugin";
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import globals from "globals";
 import tsParser from "@typescript-eslint/parser";
@@ -20,14 +21,31 @@ export default [
         ignores: ["**/node_modules/", "**/dist/", "**/*.js", "**/*.cjs"],
     },
     ...fixupConfigRules(
-        compat.extends(
-            "eslint:recommended",
-            "plugin:@typescript-eslint/recommended",
-            "plugin:react/recommended",
-            "plugin:react/jsx-runtime",
-            "plugin:react-hooks/recommended",
-        ),
+        compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:react-hooks/recommended"),
     ),
+    {
+        files: ["**/*.{ts,tsx}"],
+        plugins: { "@eslint-react": eslintReact },
+        // Map the previous React checks; migration gaps are documented in webview-development.md.
+        rules: {
+            "@eslint-react/no-missing-component-display-name": "error",
+            "@eslint-react/no-missing-context-display-name": "error",
+            "@eslint-react/no-missing-key": "error",
+            "@eslint-react/dom-no-unsafe-target-blank": "error",
+            "@eslint-react/dom-no-unknown-property": "error",
+            "@eslint-react/jsx-no-comment-textnodes": "error",
+            "@eslint-react/jsx-no-children-prop": "error",
+            "@eslint-react/dom-no-dangerously-set-innerhtml-with-children": "error",
+            "@eslint-react/no-direct-mutation-state": "error",
+            "@eslint-react/no-component-will-mount": "error",
+            "@eslint-react/no-component-will-receive-props": "error",
+            "@eslint-react/no-component-will-update": "error",
+            "@eslint-react/dom-no-find-dom-node": "error",
+            "@eslint-react/dom-no-render": "error",
+            "@eslint-react/dom-no-hydrate": "error",
+            "@eslint-react/dom-no-render-return-value": "error",
+        },
+    },
     {
         plugins: {
             "@typescript-eslint": fixupPluginRules(typescriptEslint),
@@ -48,12 +66,6 @@ export default [
                 ecmaFeatures: {
                     jsx: true,
                 },
-            },
-        },
-
-        settings: {
-            react: {
-                version: "detect",
             },
         },
 
