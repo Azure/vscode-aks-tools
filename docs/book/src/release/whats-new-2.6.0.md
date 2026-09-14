@@ -33,9 +33,9 @@ actually performed.
 - **Images are always built with `az acr build`**, server-side on ACR's remote task
   builders. There is one build path, so the image that gets validated is the image that
   gets deployed.
-- **Your entry point is verified during the build** via a `RUN test -f` assertion in the
-  Dockerfile. A missing entry point now fails the ACR build directly, before a cluster
-  even exists.
+- **Your entry point is verified before deployment** by reconciling the Dockerfile's
+  final-stage `COPY`/`ADD` destinations with `WORKDIR` and `CMD`/`ENTRYPOINT`; an
+  unresolved entry point fails validation before a cluster even exists.
 - **Deployment Safeguards review covers the full policy set**, so the review phase no
   longer passes manifests that the cluster would reject.
 
