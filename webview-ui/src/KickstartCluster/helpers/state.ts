@@ -14,6 +14,8 @@ import {
 } from "../../../../src/webview-contract/webviewDefinitions/kickstartCluster";
 import { WebviewStateUpdater } from "../../utilities/state";
 import { getWebviewMessageContext } from "../../utilities/vscode";
+import { Validatable, unset, valid } from "../../utilities/validation";
+import { getValidatedAcrName, getValidatedClusterName, randomSuffix } from "./formFields";
 
 export enum Stage {
     Uninitialized,
@@ -50,6 +52,45 @@ export type CostEstimateResult = {
 
 export type ClusterMode = "createNew" | "useExisting";
 
+/**
+ * The create-new form's field values. Held in reducer state rather than component state because
+ * `Stage.Provisioning` unmounts `ClusterInput` — keeping it local meant "Back to setup" after a
+ * failed run came back to an empty form with freshly regenerated resource names.
+ */
+export type ClusterFormState = {
+    appName: string;
+    location: Validatable<string>;
+    isNewResourceGroup: boolean;
+    existingResourceGroup: string;
+    newResourceGroupName: Validatable<string>;
+    clusterName: Validatable<string>;
+    acrName: Validatable<string>;
+    /** Stable per-session suffix for derived names; must not change across remounts. */
+    uniqueSuffix: string;
+    /** Set once the user edits a field, to stop the auto-derive effects overwriting them. */
+    rgEdited: boolean;
+    clusterNameEdited: boolean;
+    acrNameEdited: boolean;
+};
+
+function createClusterForm(initialState: InitialState): ClusterFormState {
+    const suffix = randomSuffix(4);
+    const { appName, suggestedLocation, suggestedClusterName, suggestedAcrName } = initialState.launchContext;
+    return {
+        appName: appName ? `${appName}-${suffix}` : "",
+        location: suggestedLocation ? valid(suggestedLocation) : unset(),
+        isNewResourceGroup: true,
+        existingResourceGroup: "",
+        newResourceGroupName: unset(),
+        clusterName: suggestedClusterName ? getValidatedClusterName(suggestedClusterName) : unset(),
+        acrName: suggestedAcrName ? getValidatedAcrName(suggestedAcrName) : unset(),
+        uniqueSuffix: suffix,
+        rgEdited: false,
+        clusterNameEdited: !!suggestedClusterName,
+        acrNameEdited: !!suggestedAcrName,
+    };
+}
+
 export type KickstartClusterState = InitialState & {
     stage: Stage;
     mode: ClusterMode;
@@ -83,6 +124,7 @@ export type KickstartClusterState = InitialState & {
      */
     clusterChatReady: boolean;
     costEstimate: CostEstimateResult | null;
+    clusterForm: ClusterFormState;
 };
 
 export type EventDef = {
@@ -98,6 +140,7 @@ export type EventDef = {
     retryProvisioning: void;
     retryProvisioningStage: void;
     backToSetup: void;
+    updateClusterForm: Partial<ClusterFormState>;
 };
 
 function applySnapshot(existing: FlowActivity | undefined, snapshot: ActivitySnapshot): FlowActivity {
@@ -140,6 +183,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
         finishResult: null,
         clusterChatReady: false,
         costEstimate: null,
+        clusterForm: createClusterForm(initialState),
     }),
     vscodeMessageHandler: {
         getSubscriptionsResponse: (state, args) => {
@@ -212,6 +256,7 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
     },
     eventHandler: {
         setLoading: (state) => ({ ...state, stage: Stage.Loading }),
+        updateClusterForm: (state, args) => ({ ...state, clusterForm: { ...state.clusterForm, ...args } }),
         setMode: (state, args) => ({ ...state, mode: args.mode, errorMessage: null }),
         setSubscriptionSelected: (state, args) => ({
             ...state,
@@ -232,6 +277,8 @@ export const stateUpdater: WebviewStateUpdater<"kickstartCluster", EventDef, Kic
             existingReadinessKey: null,
             costEstimate: null,
             activity: { ...state.activity, subscriptionScan: undefined, preflight: undefined },
+            // Region and existing-RG choices belong to the previous subscription.
+            clusterForm: { ...state.clusterForm, location: unset(), existingResourceGroup: "" },
         }),
         setExistingClusterSelected: (state, args) => ({
             ...state,
