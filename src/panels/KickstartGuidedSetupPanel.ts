@@ -11,6 +11,11 @@ import {
 import { TelemetryDefinition, ToWebviewMessageSink } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 
+/** GitHub's max page size for the repo list endpoint. */
+const REPO_PAGE_SIZE = 100;
+/** Cap total pages so users with thousands of repos don't stall the wizard. */
+const MAX_REPO_PAGES = 3;
+
 export class KickstartGuidedSetupPanel extends BasePanel<"kickstartGuidedSetup"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kickstartGuidedSetup", {
@@ -51,15 +56,24 @@ export class KickstartGuidedSetupDataProvider implements PanelDataProvider<"kick
         });
 
         return {
-            finishRequest: (args) => this.handleFinish(args),
-            // User-initiated, so we may prompt for the `repo` scope.
-            listGitHubReposRequest: () => this.fetchRepos(webview, { prompt: true }),
+            finishRequest: (args) => this.handleFinish(webview, args),
+            // User-initiated calls pass `prompt: true`, so we may prompt for the `repo` scope.
+            listGitHubReposRequest: (args) => this.fetchRepos(webview, { prompt: args.prompt }),
         };
     }
 
-    private async handleFinish(selections: GuidedSetupSelections) {
-        await handoffToChat(selections);
-        vscode.window.showInformationMessage(l10n.t("Continuing AKS Kickstart in the chat view."));
+    private async handleFinish(
+        webview: ToWebviewMessageSink<"kickstartGuidedSetup">,
+        selections: GuidedSetupSelections,
+    ) {
+        try {
+            await handoffToChat(selections);
+            vscode.window.showInformationMessage(l10n.t("Continuing AKS Kickstart in the chat view."));
+        } catch (e) {
+            webview.postErrorNotification({
+                message: l10n.t("Couldn't open the Kickstart chat: {0}", String(e)),
+            });
+        }
     }
 
     /**
@@ -81,10 +95,9 @@ export class KickstartGuidedSetupDataProvider implements PanelDataProvider<"kick
 
         if (!session) {
             webview.postGitHubReposError({
-                message: l10n.t(
-                    "No GitHub account with `repo` access is signed in. Sign in via the Accounts menu to see your repositories.",
-                ),
+                message: l10n.t("Sign in to GitHub to browse your repositories, or paste a repository URL below."),
                 signedInUser: null,
+                needsSignIn: true,
             });
             return;
         }
@@ -93,24 +106,43 @@ export class KickstartGuidedSetupDataProvider implements PanelDataProvider<"kick
 
         try {
             const octokit = new Octokit({ auth: session.accessToken });
-            const { data } = await octokit.rest.repos.listForAuthenticatedUser({
-                per_page: 100,
-                sort: "updated",
-                type: "owner",
-            });
+
+            // `pushed` (not `updated`): GitHub bumps `updated_at` on any repo-record change — stars,
+            // description, rename — so it reads as random. `type: "owner"` keeps the list to the
+            // user's own repos; org membership can pull in thousands they've never touched.
+            const repos = [];
+            for (let page = 1; page <= MAX_REPO_PAGES; page++) {
+                const { data } = await octokit.rest.repos.listForAuthenticatedUser({
+                    per_page: REPO_PAGE_SIZE,
+                    page,
+                    sort: "pushed",
+                    direction: "desc",
+                    type: "owner",
+                });
+                repos.push(
+                    ...data.map((r) => ({
+                        fullName: r.full_name,
+                        description: r.description,
+                        cloneUrl: r.clone_url,
+                        private: r.private,
+                        pushedAt: r.pushed_at ?? null,
+                    })),
+                );
+                if (data.length < REPO_PAGE_SIZE) {
+                    break;
+                }
+            }
+
             webview.postGitHubReposLoaded({
-                repos: data.map((r) => ({
-                    fullName: r.full_name,
-                    description: r.description,
-                    cloneUrl: r.clone_url,
-                    private: r.private,
-                })),
+                repos,
                 signedInUser,
+                hasMore: repos.length >= REPO_PAGE_SIZE * MAX_REPO_PAGES,
             });
         } catch (e) {
             webview.postGitHubReposError({
                 message: l10n.t("Failed to fetch GitHub repositories: {0}", String(e)),
                 signedInUser,
+                needsSignIn: false,
             });
         }
     }

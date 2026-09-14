@@ -45,6 +45,9 @@ interface GuidedSetupInputProps {
     githubReposLoading: boolean;
     githubReposError: string | null;
     githubSignedInUser: string | null;
+    githubReposTruncated: boolean;
+    githubNeedsSignIn: boolean;
+    isFinishing: boolean;
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
 }
@@ -89,9 +92,29 @@ const SAMPLE_ICONS: Record<string, typeof faCircle> = {
 
 const LANGUAGE_OPTIONS: string[] = ["React", "Node.js", "Python", "Go", "Java", ".NET", "Rust"];
 
+/** Coarse "2 days ago" style hint so the pushed-at ordering is visible in the list. */
+function formatPushedAt(iso: string | null): string | null {
+    if (!iso) return null;
+    const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+    if (!Number.isFinite(days) || days < 0) return null;
+    if (days === 0) return l10n.t("today");
+    if (days === 1) return l10n.t("yesterday");
+    if (days < 30) return l10n.t("{0}d ago", days);
+    if (days < 365) return l10n.t("{0}mo ago", Math.floor(days / 30));
+    return l10n.t("{0}y ago", Math.floor(days / 365));
+}
+
+function buildRepoLabel(repo: GitHubRepo): string {
+    // Owner is the signed-in user for every row (`type: "owner"`), so show just the repo segment.
+    const name = repo.fullName.split("/").slice(1).join("/") || repo.fullName;
+    const meta = [formatPushedAt(repo.pushedAt), repo.private ? l10n.t("private") : null].filter(Boolean).join("  •  ");
+    return `${name}${meta ? `  •  ${meta}` : ""}${repo.description ? `  —  ${repo.description}` : ""}`;
+}
+
 export function GuidedSetupInput(props: GuidedSetupInputProps) {
     const availableAppSources = APP_SOURCE_ORDER.filter((kind) => kind !== "workspace" || !props.workspaceIsEmpty);
-    const [appSourceKind, setAppSourceKind] = useState<AppSourceKind>(availableAppSources[0]);
+    // Starts unselected: defaulting to "repo" made the wizard fire a GitHub auth prompt on open.
+    const [appSourceKind, setAppSourceKind] = useState<AppSourceKind | null>(null);
     const [repoUrl, setRepoUrl] = useState<Validatable<string>>(unset());
     const [projectType, setProjectType] = useState<ProjectType | null>(null);
     const [language, setLanguage] = useState<string | null>(null);
@@ -110,10 +133,15 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
             props.githubReposError === null
         ) {
             props.eventHandlers.onSetGitHubReposLoading();
-            props.vscode.postListGitHubReposRequest();
+            props.vscode.postListGitHubReposRequest({ prompt: false });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [appSourceKind]);
+
+    function handleGitHubSignIn() {
+        props.eventHandlers.onSetGitHubReposLoading();
+        props.vscode.postListGitHubReposRequest({ prompt: true });
+    }
 
     function buildAppSource(): AppSource | null {
         switch (appSourceKind) {
@@ -128,6 +156,8 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
             }
             case "workspace":
                 return { kind: "workspace" };
+            default:
+                return null;
         }
     }
 
@@ -207,6 +237,14 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
                         </span>
                     )}
 
+                    {props.githubNeedsSignIn && !props.githubReposLoading && (
+                        <div className={styles.ghHeaderActions}>
+                            <button type="button" onClick={handleGitHubSignIn}>
+                                {l10n.t("Sign in to GitHub")}
+                            </button>
+                        </div>
+                    )}
+
                     {props.githubRepos && props.githubRepos.length === 0 && (
                         <span className={styles.ghEmptyHint}>
                             {l10n.t("No repositories were found for this GitHub account.")}
@@ -226,19 +264,22 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
                                 if (value) setRepoUrl(valid(value));
                             }}
                         >
-                            {props.githubRepos.map((repo) => {
-                                const name = repo.fullName.split("/").slice(1).join("/") || repo.fullName;
-                                return (
-                                    <CustomDropdownOption
-                                        key={repo.cloneUrl}
-                                        value={repo.cloneUrl}
-                                        label={`${name}${repo.private ? "  •  private" : ""}${
-                                            repo.description ? `  —  ${repo.description}` : ""
-                                        }`}
-                                    />
-                                );
-                            })}
+                            {props.githubRepos.map((repo) => (
+                                <CustomDropdownOption
+                                    key={repo.cloneUrl}
+                                    value={repo.cloneUrl}
+                                    label={buildRepoLabel(repo)}
+                                />
+                            ))}
                         </CustomDropdown>
+                    )}
+
+                    {props.githubReposTruncated && (
+                        <span className={styles.ghEmptyHint}>
+                            {l10n.t(
+                                "Showing your most recently updated repositories. If you don't see the one you want, paste its URL below.",
+                            )}
+                        </span>
                     )}
 
                     <div className={styles.ghDivider}>{l10n.t("or")}</div>
@@ -353,7 +394,9 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
             )}
 
             <div className={`${styles.buttonContainer} ${styles.fullWidth}`}>
-                <button type="submit">{l10n.t("Continue")}</button>
+                <button type="submit" disabled={props.isFinishing}>
+                    {props.isFinishing ? l10n.t("Opening chat…") : l10n.t("Continue")}
+                </button>
             </div>
         </form>
     );
