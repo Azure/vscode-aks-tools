@@ -1,0 +1,64 @@
+name: Docs Check
+
+# The documentation restates package.json in prose: command titles, menu paths,
+# setting defaults, pinned tool versions. Nothing verified those restatements
+# before merge, so they drifted. These checks run whenever either side changes.
+#
+# The scripts have no npm dependencies, so there is no install step.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "scripts/**"
+      - "package.json"
+      - "package.nls.json"
+      - "resources/**"
+      - ".github/workflows/docs-check.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "scripts/**"
+      - "package.json"
+      - "package.nls.json"
+      - "resources/**"
+      - ".github/workflows/docs-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  docs-check:
+    name: Documentation checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          disable-telemetry: true
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      # Fails if package.json changed without regenerating docs/book/src/reference/.
+      # Fix with: npm run docs:reference
+      - name: Generated reference is up to date
+        run: npm run docs:reference:check
+
+      # Command IDs that do not exist, and menu breadcrumbs that do not match the
+      # menu package.json actually declares. Warnings do not fail the run.
+      - name: Documentation checks
+        run: npm run docs:check
