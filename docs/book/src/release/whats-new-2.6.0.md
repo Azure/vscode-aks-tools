@@ -55,8 +55,8 @@ they stay aligned.
 - **Factual errors are fixed and stale screenshots removed.** Commands that were never
   reachable are no longer documented as if they were, commands that existed but were
   undocumented now are, and pinned versions are stated rather than implied.
-- **`npm run docs:check` and `npm run docs:reference:check`** run in CI to catch broken
-  links, orphaned pages, and reference drift.
+- **`npm run docs:check` and `npm run docs:reference:check`** catch menu/orphan and generated-reference drift
+  when run, but are not currently wired into CI.
 
 See [Reference](../reference.md) and [Development](../development.md).
 
