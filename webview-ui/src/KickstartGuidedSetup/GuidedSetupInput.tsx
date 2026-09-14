@@ -29,13 +29,13 @@ import {
     ProjectType,
     ToVsCodeMsgDef,
 } from "../../../src/webview-contract/webviewDefinitions/kickstartGuidedSetup";
-import { CustomDropdown } from "../components/CustomDropdown";
-import { CustomDropdownOption } from "../components/CustomDropdownOption";
+import { SearchableDropdown, SearchableDropdownItem } from "../components/SearchableDropdown";
 import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
-import { Validatable, hasMessage, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
+import { Validatable, hasMessage, invalid, isValid, unset, valid } from "../utilities/validation";
 import styles from "./KickstartGuidedSetup.module.css";
 import { EventDef } from "./helpers/state";
+import { normalizeRepoUrl } from "./helpers/repoUrl";
 
 interface GuidedSetupInputProps {
     samples: KickstartSample[];
@@ -104,17 +104,27 @@ function formatPushedAt(iso: string | null): string | null {
     return l10n.t("{0}y ago", Math.floor(days / 365));
 }
 
-function buildRepoLabel(repo: GitHubRepo): string {
+function toRepoItem(repo: GitHubRepo): SearchableDropdownItem {
     // Owner is the signed-in user for every row (`type: "owner"`), so show just the repo segment.
     const name = repo.fullName.split("/").slice(1).join("/") || repo.fullName;
-    const meta = [formatPushedAt(repo.pushedAt), repo.private ? l10n.t("private") : null].filter(Boolean).join("  •  ");
-    return `${name}${meta ? `  •  ${meta}` : ""}${repo.description ? `  —  ${repo.description}` : ""}`;
+    return {
+        value: repo.cloneUrl,
+        label: name,
+        detail: repo.description ?? undefined,
+        meta: formatPushedAt(repo.pushedAt) ?? undefined,
+        badge: repo.private ? l10n.t("private") : undefined,
+    };
 }
 
 export function GuidedSetupInput(props: GuidedSetupInputProps) {
     const availableAppSources = APP_SOURCE_ORDER.filter((kind) => kind !== "workspace" || !props.workspaceIsEmpty);
     // Starts unselected: defaulting to "repo" made the wizard fire a GitHub auth prompt on open.
     const [appSourceKind, setAppSourceKind] = useState<AppSourceKind | null>(null);
+    // The list and the paste field are two ways to set one value, so they're tracked separately and
+    // each clears the other. Previously both wrote the same state, which made the "or" divider a lie.
+    const [listSelection, setListSelection] = useState<string | null>(null);
+    const [manualUrl, setManualUrl] = useState<string>("");
+    const [manualUrlNote, setManualUrlNote] = useState<string | null>(null);
     const [repoUrl, setRepoUrl] = useState<Validatable<string>>(unset());
     const [projectType, setProjectType] = useState<ProjectType | null>(null);
     const [language, setLanguage] = useState<string | null>(null);
@@ -141,6 +151,33 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
     function handleGitHubSignIn() {
         props.eventHandlers.onSetGitHubReposLoading();
         props.vscode.postListGitHubReposRequest({ prompt: true });
+    }
+
+    function handleListSelect(value: string | null) {
+        setListSelection(value);
+        setManualUrl("");
+        setManualUrlNote(null);
+        setRepoUrl(value ? valid(value) : unset());
+    }
+
+    function handleManualUrlChange(raw: string) {
+        setManualUrl(raw);
+        setListSelection(null);
+
+        if (raw.trim() === "") {
+            setManualUrlNote(null);
+            setRepoUrl(unset());
+            return;
+        }
+
+        const result = normalizeRepoUrl(raw);
+        if (result.ok) {
+            setManualUrlNote(result.note);
+            setRepoUrl(valid(result.url));
+        } else {
+            setManualUrlNote(null);
+            setRepoUrl(invalid(raw, result.message));
+        }
     }
 
     function buildAppSource(): AppSource | null {
@@ -215,7 +252,7 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
                             {props.githubReposLoading && (
                                 <span className={styles.ghLoading}>
                                     <FontAwesomeIcon icon={faSpinner} spin />
-                                    {l10n.t("Loading…")}
+                                    {l10n.t("Loading\u2026")}
                                 </span>
                             )}
                             {props.githubSignedInUser && (
@@ -252,52 +289,47 @@ export function GuidedSetupInput(props: GuidedSetupInputProps) {
                     )}
 
                     {props.githubRepos && props.githubRepos.length > 0 && (
-                        <CustomDropdown
-                            id="github-repo-dropdown"
-                            className={styles.ghDropdown}
-                            value={
-                                isValueSet(repoUrl) && props.githubRepos.some((r) => r.cloneUrl === repoUrl.value)
-                                    ? repoUrl.value
-                                    : ""
-                            }
-                            onChange={(value) => {
-                                if (value) setRepoUrl(valid(value));
-                            }}
-                        >
-                            {props.githubRepos.map((repo) => (
-                                <CustomDropdownOption
-                                    key={repo.cloneUrl}
-                                    value={repo.cloneUrl}
-                                    label={buildRepoLabel(repo)}
-                                />
-                            ))}
-                        </CustomDropdown>
-                    )}
-
-                    {props.githubReposTruncated && (
-                        <span className={styles.ghEmptyHint}>
-                            {l10n.t(
-                                "Showing your most recently updated repositories. If you don't see the one you want, paste its URL below.",
-                            )}
-                        </span>
+                        <>
+                            <SearchableDropdown
+                                id="github-repo-dropdown"
+                                className={styles.ghDropdown}
+                                items={props.githubRepos.map(toRepoItem)}
+                                selectedValue={listSelection}
+                                placeholder={l10n.t("Search your repositories\u2026")}
+                                noMatchesText={l10n.t("No repositories match that search.")}
+                                onSelect={handleListSelect}
+                            />
+                            <span className={styles.ghEmptyHint}>
+                                {props.githubReposTruncated
+                                    ? l10n.t(
+                                          "Sorted by most recently pushed. Only your most recent repositories are listed \u2014 use the field below for anything else.",
+                                      )
+                                    : l10n.t("Sorted by most recently pushed.")}
+                            </span>
+                        </>
                     )}
 
                     <div className={styles.ghDivider}>{l10n.t("or")}</div>
 
                     <div className={styles.ghManualField}>
-                        <label htmlFor="repo-url-input">{l10n.t("Paste a repository URL*")}</label>
+                        <label htmlFor="repo-url-input">
+                            {props.githubRepos && props.githubRepos.length > 0
+                                ? l10n.t("Not listed? Paste any repository URL")
+                                : l10n.t("Paste a repository URL*")}
+                        </label>
                         <input
                             type="text"
                             id="repo-url-input"
                             className={styles.ghManualInput}
-                            value={isValueSet(repoUrl) ? repoUrl.value : ""}
+                            value={manualUrl}
                             placeholder="https://github.com/owner/repo"
-                            onInput={(e) => {
-                                const v = e.currentTarget.value;
-                                setRepoUrl(v ? valid(v) : missing<string>(l10n.t("A repository URL is required.")));
-                            }}
+                            onInput={(e) => handleManualUrlChange(e.currentTarget.value)}
                         />
                         {renderValidationMessage(repoUrl)}
+                        {manualUrlNote && <span className={styles.ghEmptyHint}>{manualUrlNote}</span>}
+                        <span className={styles.ghEmptyHint}>
+                            {l10n.t("Works with GitHub, GitLab, Azure DevOps, or any Git clone URL.")}
+                        </span>
                     </div>
                 </div>
             )}
