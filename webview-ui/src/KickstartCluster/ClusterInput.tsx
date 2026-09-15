@@ -5,7 +5,6 @@ import * as l10n from "@vscode/l10n";
 import { MessageSink } from "../../../src/webview-contract/messaging";
 import {
     ActivityFlow,
-    ClusterLaunchContext,
     ClusterSelections,
     DeploymentPermissionsSummary,
     ResourceGroup,
@@ -16,10 +15,20 @@ import {
 import { TextWithDropdown } from "../components/TextWithDropdown";
 import { Maybe, isNothing, just, nothing } from "../utilities/maybe";
 import { EventHandlers } from "../utilities/state";
-import { Validatable, hasMessage, invalid, isValid, isValueSet, missing, unset, valid } from "../utilities/validation";
+import { Validatable, hasMessage, isValid, isValueSet, missing, valid } from "../utilities/validation";
 import styles from "./KickstartCluster.module.css";
 import { ActivityStageList, statusClass, statusIcon } from "../components/ActivityStageList";
-import { CostEstimateResult, EventDef, FlowActivity, ScanResult } from "./helpers/state";
+import { ClusterFormState, CostEstimateResult, EventDef, FlowActivity, ScanResult } from "./helpers/state";
+import {
+    MAX_NODE_RESOURCE_GROUP_LENGTH,
+    deriveAcrName,
+    deriveClusterName,
+    getNodeResourceGroupName,
+    getValidatedAcrName,
+    getValidatedClusterName,
+    getValidatedRgName,
+    toBaseName,
+} from "./helpers/formFields";
 
 interface ClusterInputProps {
     subscriptions: Subscription[];
@@ -36,7 +45,8 @@ interface ClusterInputProps {
     preflightDeployment: DeploymentPermissionsSummary | null;
     /** Incremented each time the user clicks "Re-check permissions"; causes preflight to re-fire. */
     preflightGeneration: number;
-    launchContext: ClusterLaunchContext;
+    /** Form field values, held in reducer state so they survive the Provisioning remount. */
+    form: ClusterFormState;
     costEstimate: CostEstimateResult | null;
     eventHandlers: EventHandlers<EventDef>;
     vscode: MessageSink<ToVsCodeMsgDef>;
@@ -44,71 +54,6 @@ interface ClusterInputProps {
 
 const QUESTION_ORDER = ["subscription", "region", "resourceGroup", "clusterName", "acrName"] as const;
 type QuestionId = (typeof QUESTION_ORDER)[number];
-
-function getValidatedClusterName(value: string): Validatable<string> {
-    if (!value) return missing<string>(l10n.t("Cluster name is required."));
-    if (value.length > 63) return invalid(value, l10n.t("Cluster name must be at most 63 characters long."));
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$/.test(value)) {
-        return invalid(
-            value,
-            l10n.t(
-                "Only letters, numbers, dashes, and underscores are allowed. The first and last character must be a letter or number.",
-            ),
-        );
-    }
-    return valid(value);
-}
-
-export function getValidatedAcrName(value: string): Validatable<string> {
-    if (!value) return missing<string>(l10n.t("Registry name is required."));
-    if (!/^[a-zA-Z0-9]{5,50}$/.test(value)) {
-        return invalid(value, l10n.t("Registry name must be 5-50 alphanumeric characters (no dashes)."));
-    }
-    return valid(value);
-}
-
-function getValidatedRgName(value: string): Validatable<string> {
-    if (!value) return missing<string>(l10n.t("Resource group name is required."));
-    if (value.length > 90) return invalid(value, l10n.t("Resource group name must be at most 90 characters."));
-    if (!/^[-\w._()]+$/.test(value) || value.endsWith(".")) {
-        return invalid(value, l10n.t("Resource group name contains invalid characters."));
-    }
-    return valid(value);
-}
-
-// AKS auto-generates the node resource group as MC_<rg>_<cluster>_<location>. Azure caps that name at
-// 80 characters. We supply a truncated name at deploy time (see generateNodeResourceGroup in
-// ClusterSpecCreationBuilder) so it never fails preflight, but we also warn here so the user can pick
-// shorter names up front instead of getting a silently truncated node resource group.
-const MAX_NODE_RESOURCE_GROUP_LENGTH = 80;
-
-function getNodeResourceGroupName(resourceGroupName: string, clusterName: string, location: string): string {
-    return `MC_${resourceGroupName}_${clusterName}_${location}`;
-}
-
-export function randomSuffix(length: number): string {
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
-}
-
-function deriveClusterName(resourceGroupName: string, suffix: string): string {
-    const base = resourceGroupName.replace(/[^a-zA-Z0-9_-]/g, "").replace(/^[-_]+|[-_]+$/g, "") || "aks";
-    if (!suffix) return base.slice(0, 63).replace(/[-_]+$/g, "");
-    return `${base.slice(0, 63 - suffix.length - 1)}-${suffix}`;
-}
-
-export function deriveAcrName(resourceGroupName: string, suffix: string): string {
-    const base = resourceGroupName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "acr";
-    return `${base.slice(0, 50 - suffix.length)}${suffix}`;
-}
-
-function toBaseName(appName: string): string {
-    return appName
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-}
 
 function formatCurrency(value: number, currencyCode: string): string {
     try {
@@ -133,32 +78,23 @@ export function renderValidationMessage(field: Validatable<unknown>) {
 }
 
 export function ClusterInput(props: ClusterInputProps) {
-    const [uniqueSuffix] = useState(() => randomSuffix(4));
-    const [appName, setAppName] = useState<string>(
-        props.launchContext.appName ? `${props.launchContext.appName}-${uniqueSuffix}` : "",
-    );
-    const [location, setLocation] = useState<Validatable<string>>(
-        props.launchContext.suggestedLocation ? valid(props.launchContext.suggestedLocation) : unset(),
-    );
-    const [isNewResourceGroup, setIsNewResourceGroup] = useState(true);
-    const [existingResourceGroup, setExistingResourceGroup] = useState<string>("");
-    const [newResourceGroupName, setNewResourceGroupName] = useState<Validatable<string>>(unset());
-    const [clusterName, setClusterName] = useState<Validatable<string>>(
-        props.launchContext.suggestedClusterName
-            ? getValidatedClusterName(props.launchContext.suggestedClusterName)
-            : unset(),
-    );
-    const [acrName, setAcrName] = useState<Validatable<string>>(
-        props.launchContext.suggestedAcrName ? getValidatedAcrName(props.launchContext.suggestedAcrName) : unset(),
-    );
+    const {
+        appName,
+        location,
+        isNewResourceGroup,
+        existingResourceGroup,
+        newResourceGroupName,
+        clusterName,
+        acrName,
+        uniqueSuffix,
+    } = props.form;
+    const updateForm = props.eventHandlers.onUpdateClusterForm;
+
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [showAllQuestions, setShowAllQuestions] = useState(false);
     const lastPreflightKeyRef = useRef<string | null>(null);
     const autoSelectedScanRef = useRef<number | null>(null);
     const estimateRegionRef = useRef<string | null>(null);
-    const rgEditedRef = useRef(false);
-    const clusterNameEditedRef = useRef(!!props.launchContext.suggestedClusterName);
-    const acrNameEditedRef = useRef(!!props.launchContext.suggestedAcrName);
 
     const subscriptionSelected = !!props.selectedSubscriptionId;
     const subscriptionNames = props.subscriptions.map((s) => s.name);
@@ -212,8 +148,9 @@ export function ClusterInput(props: ClusterInputProps) {
             return;
         }
         const region = scan.recommendedRegion;
-        const timer = window.setTimeout(() => setLocation(valid(region)), 0);
+        const timer = window.setTimeout(() => updateForm({ location: valid(region) }), 0);
         return () => window.clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.scan, location]);
 
     useEffect(() => {
@@ -223,36 +160,42 @@ export function ClusterInput(props: ClusterInputProps) {
         }
         const base = toBaseName(seed) || "aks-app";
         const timer = window.setTimeout(() => {
-            if (isNewResourceGroup && !rgEditedRef.current) {
-                setNewResourceGroupName(getValidatedRgName(`${base}-rg`));
+            const next: Partial<ClusterFormState> = {};
+            if (isNewResourceGroup && !props.form.rgEdited) {
+                next.newResourceGroupName = getValidatedRgName(`${base}-rg`);
             }
-            if (!clusterNameEditedRef.current) {
-                setClusterName(getValidatedClusterName(deriveClusterName(base, "")));
+            if (!props.form.clusterNameEdited) {
+                next.clusterName = getValidatedClusterName(deriveClusterName(base, ""));
             }
-            if (!acrNameEditedRef.current) {
-                setAcrName(getValidatedAcrName(deriveAcrName(base, "")));
+            if (!props.form.acrNameEdited) {
+                next.acrName = getValidatedAcrName(deriveAcrName(base, ""));
             }
+            if (Object.keys(next).length > 0) updateForm(next);
         }, 0);
         return () => window.clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [appName, isNewResourceGroup]);
 
     useEffect(() => {
         if (appName.trim() || !isNewResourceGroup || !isValid(newResourceGroupName)) {
             return;
         }
-        if (clusterNameEditedRef.current && acrNameEditedRef.current) {
+        if (props.form.clusterNameEdited && props.form.acrNameEdited) {
             return;
         }
         const resourceGroupName = newResourceGroupName.value;
         const timer = window.setTimeout(() => {
-            if (!clusterNameEditedRef.current) {
-                setClusterName(getValidatedClusterName(deriveClusterName(resourceGroupName, uniqueSuffix)));
+            const next: Partial<ClusterFormState> = {};
+            if (!props.form.clusterNameEdited) {
+                next.clusterName = getValidatedClusterName(deriveClusterName(resourceGroupName, uniqueSuffix));
             }
-            if (!acrNameEditedRef.current) {
-                setAcrName(getValidatedAcrName(deriveAcrName(resourceGroupName, uniqueSuffix)));
+            if (!props.form.acrNameEdited) {
+                next.acrName = getValidatedAcrName(deriveAcrName(resourceGroupName, uniqueSuffix));
             }
+            if (Object.keys(next).length > 0) updateForm(next);
         }, 0);
         return () => window.clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [newResourceGroupName, isNewResourceGroup, uniqueSuffix, appName]);
 
     // Auto-run preflight in the background whenever the user has supplied enough to probe
@@ -313,13 +256,12 @@ export function ClusterInput(props: ClusterInputProps) {
         if (newSubscriptionId === (props.selectedSubscriptionId ?? "")) {
             return;
         }
-        setLocation(unset());
-        setExistingResourceGroup("");
+        // The reducer clears the region and existing-RG choice, which belonged to the old subscription.
         props.eventHandlers.onSetSubscriptionSelected({ subscriptionId: newSubscriptionId });
     }
 
     function handleLocationSelect(value: string | null) {
-        setLocation(value ? valid(value) : missing<string>(l10n.t("Region is required.")));
+        updateForm({ location: value ? valid(value) : missing<string>(l10n.t("Region is required.")) });
     }
 
     const resolved: Record<QuestionId, boolean> = {
@@ -382,12 +324,14 @@ export function ClusterInput(props: ClusterInputProps) {
     }
 
     function markRequiredFieldErrors() {
+        const next: Partial<ClusterFormState> = {};
         if (!isValueSet(clusterName)) {
-            setClusterName(getValidatedClusterName(""));
+            next.clusterName = getValidatedClusterName("");
         }
         if (!isValueSet(acrName)) {
-            setAcrName(getValidatedAcrName(""));
+            next.acrName = getValidatedAcrName("");
         }
+        if (Object.keys(next).length > 0) updateForm(next);
     }
 
     function handleSubmit(e: FormEvent) {
@@ -447,6 +391,7 @@ export function ClusterInput(props: ClusterInputProps) {
             return (
                 <input
                     type="text"
+                    id="location-dropdown"
                     className={styles.midControl}
                     value=""
                     placeholder={l10n.t("Select a subscription first")}
@@ -456,7 +401,14 @@ export function ClusterInput(props: ClusterInputProps) {
         }
         if (props.locations === null) {
             return (
-                <input type="text" className={styles.midControl} value="" placeholder={l10n.t("Loading…")} disabled />
+                <input
+                    type="text"
+                    id="location-dropdown"
+                    className={styles.midControl}
+                    value=""
+                    placeholder={l10n.t("Loading…")}
+                    disabled
+                />
             );
         }
         return (
@@ -477,6 +429,7 @@ export function ClusterInput(props: ClusterInputProps) {
             return (
                 <input
                     type="text"
+                    id="resource-group-dropdown"
                     className={styles.midControl}
                     value=""
                     placeholder={l10n.t("Select a subscription first")}
@@ -486,7 +439,14 @@ export function ClusterInput(props: ClusterInputProps) {
         }
         if (props.resourceGroups === null) {
             return (
-                <input type="text" className={styles.midControl} value="" placeholder={l10n.t("Loading…")} disabled />
+                <input
+                    type="text"
+                    id="resource-group-dropdown"
+                    className={styles.midControl}
+                    value=""
+                    placeholder={l10n.t("Loading…")}
+                    disabled
+                />
             );
         }
         return (
@@ -497,7 +457,7 @@ export function ClusterInput(props: ClusterInputProps) {
                 selectedItem={existingResourceGroup || null}
                 getAddItemText={() => ""}
                 allowAddItem={false}
-                onSelect={(value) => setExistingResourceGroup(value ?? "")}
+                onSelect={(value) => updateForm({ existingResourceGroup: value ?? "" })}
             />
         );
     }
@@ -597,7 +557,7 @@ export function ClusterInput(props: ClusterInputProps) {
                 className={styles.longControl}
                 value={appName}
                 placeholder={l10n.t("e.g. inventory-api")}
-                onInput={(e) => setAppName(e.currentTarget.value)}
+                onInput={(e) => updateForm({ appName: e.currentTarget.value })}
             />
             {isVisible("subscription") && (
                 <>
@@ -639,7 +599,10 @@ export function ClusterInput(props: ClusterInputProps) {
 
             {isVisible("resourceGroup") && (
                 <>
-                    <label htmlFor="resource-group-dropdown" className={styles.label}>
+                    <label
+                        htmlFor={isNewResourceGroup ? "new-resource-group-input" : "resource-group-dropdown"}
+                        className={styles.label}
+                    >
                         {l10n.t("Resource group*")}
                     </label>
                     {isNewResourceGroup ? (
@@ -650,8 +613,10 @@ export function ClusterInput(props: ClusterInputProps) {
                             value={isValueSet(newResourceGroupName) ? newResourceGroupName.value : ""}
                             placeholder={l10n.t("New resource group name")}
                             onInput={(e) => {
-                                rgEditedRef.current = true;
-                                setNewResourceGroupName(getValidatedRgName(e.currentTarget.value));
+                                updateForm({
+                                    rgEdited: true,
+                                    newResourceGroupName: getValidatedRgName(e.currentTarget.value),
+                                });
                             }}
                         />
                     ) : (
@@ -660,7 +625,7 @@ export function ClusterInput(props: ClusterInputProps) {
                     <button
                         type="button"
                         className={styles.sideControl}
-                        onClick={() => setIsNewResourceGroup((v) => !v)}
+                        onClick={() => updateForm({ isNewResourceGroup: !isNewResourceGroup })}
                     >
                         {isNewResourceGroup ? l10n.t("Use existing") : l10n.t("Create new")}
                     </button>
@@ -679,8 +644,10 @@ export function ClusterInput(props: ClusterInputProps) {
                         className={styles.longControl}
                         value={isValueSet(clusterName) ? clusterName.value : ""}
                         onInput={(e) => {
-                            clusterNameEditedRef.current = true;
-                            setClusterName(getValidatedClusterName(e.currentTarget.value));
+                            updateForm({
+                                clusterNameEdited: true,
+                                clusterName: getValidatedClusterName(e.currentTarget.value),
+                            });
                         }}
                     />
                     {renderValidationMessage(clusterName)}
@@ -708,8 +675,10 @@ export function ClusterInput(props: ClusterInputProps) {
                         className={styles.longControl}
                         value={isValueSet(acrName) ? acrName.value : ""}
                         onInput={(e) => {
-                            acrNameEditedRef.current = true;
-                            setAcrName(getValidatedAcrName(e.currentTarget.value));
+                            updateForm({
+                                acrNameEdited: true,
+                                acrName: getValidatedAcrName(e.currentTarget.value),
+                            });
                         }}
                     />
                     {renderValidationMessage(acrName)}

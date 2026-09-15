@@ -1,0 +1,144 @@
+.container {
+    position: relative;
+    width: 100%;
+}
+
+.inputRow {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 1.9rem;
+    padding: 0 2.2rem 0 9px;
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    border-radius: 2px;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: none;
+}
+
+.input:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.arrowIcon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--vscode-input-foreground);
+}
+
+.clearButton {
+    position: absolute;
+    right: 26px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border: none;
+    border-radius: 2px;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+}
+
+.clearButton:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-input-foreground);
+}
+
+.listbox {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+    margin: 2px 0 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 16rem;
+    overflow-y: auto;
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-focusBorder);
+    border-radius: 2px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.hidden {
+    display: none;
+}
+
+.option {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.15rem;
+    padding: 4px 9px;
+    cursor: pointer;
+}
+
+.option:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.optionActive {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.optionHeader {
+    display: flex;
+    align-items: baseline;
+    column-gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.optionLabel {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.optionMeta {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+.optionBadge {
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0 4px;
+    border: 1px solid var(--vscode-panel-border, var(--vscode-editorWidget-border));
+    border-radius: 2px;
+    opacity: 0.85;
+}
+
+.optionDetail {
+    font-size: 0.85em;
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.noMatches {
+    padding: 6px 9px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
