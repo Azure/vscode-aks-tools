@@ -7,8 +7,7 @@ import path from "path";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
-import { buildRetinaCaptureCommand } from "./retinaCaptureCommand";
-import { exec } from "../utils/shell";
+import { runRetinaCapture } from "./retinaCaptureCommand";
 import { failed } from "../utils/errorable";
 import { getClusterDiagnosticSettings, validatePrerequisites } from "../utils/clusters";
 import { getAksClusterTreeNode } from "../utils/clusters";
@@ -112,12 +111,13 @@ export async function aksUploadRetinaCapture(_context: IActionContext, target: u
     const retinaCaptureResult = await longRunning(
         `Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`,
         async () => {
-            return await exec(
-                `"${kubectlRetinaPath.result}" ${buildRetinaCaptureCommand({
+            return await runRetinaCapture(
+                kubectlRetinaPath.result,
+                {
                     captureName,
                     nodeNames: selectedNodes.result,
                     blobUploadSasUri: sasUri,
-                })}`,
+                },
                 {
                     envAdditions: { KUBECONFIG: kubeConfigFile.filePath },
                 },

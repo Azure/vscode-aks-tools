@@ -13,8 +13,7 @@ import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCa
 import { failed } from "../utils/errorable";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { buildRetinaCaptureCommand } from "./retinaCaptureCommand";
-import { exec } from "../utils/shell";
+import { runRetinaCapture } from "./retinaCaptureCommand";
 
 export async function aksDownloadRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -95,8 +94,9 @@ export async function aksDownloadRetinaCapture(_context: IActionContext, target:
     const retinaCaptureResult = await longRunning(
         `Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`,
         async () => {
-            return await exec(
-                `"${kubectlRetinaPath.result}" ${buildRetinaCaptureCommand({ captureName: capturename, nodeNames: selectedNodes })}`,
+            return await runRetinaCapture(
+                kubectlRetinaPath.result,
+                { captureName: capturename, nodeNames: selectedNodes },
                 {
                     envAdditions: { KUBECONFIG: kubeConfigFile.filePath },
                 },

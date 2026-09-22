@@ -72,7 +72,11 @@ export async function execFile(
 }
 
 function execFileCore(executable: string, args: string[], shellOptions: ShellOptions): Promise<ShellResult> {
-    const options = getExecOpts(shellOptions?.workingDir || null, shellOptions?.envPaths || []);
+    const options = getExecOpts(
+        shellOptions?.workingDir || null,
+        shellOptions?.envPaths || [],
+        shellOptions?.envAdditions,
+    );
 
     return new Promise<ShellResult>((resolve, reject) => {
         const c = child.execFile(executable, args, options, function (err, stdout, stderr) {
