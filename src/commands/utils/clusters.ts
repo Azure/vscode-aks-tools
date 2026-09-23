@@ -23,6 +23,7 @@ import { Errorable, map as errmap, failed, getErrorMessage, succeeded } from "./
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
 import { invokeKubectlCommand } from "./kubectl";
+import { isValidK8sName, validateK8sName } from "./kubernetesNames";
 import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
 import { ClusterFilter } from "./config";
@@ -889,14 +890,28 @@ export async function filterPodImage(
 
         return pods;
     });
-    return { succeeded: true, result: result.filter((pod) => pod.imageName.startsWith(imageNameStartsWith)) };
+
+    const matchingPods = result.filter((pod) => pod.imageName.startsWith(imageNameStartsWith));
+
+    // These reach later kubectl command strings.
+    for (const pod of matchingPods) {
+        const validNamespace = validateK8sName(pod.nameSpace, "label", "namespace");
+        if (failed(validNamespace)) {
+            return validNamespace;
+        }
+
+        const validPodName = validateK8sName(pod.podName, "subdomain", "pod");
+        if (failed(validPodName)) {
+            return validPodName;
+        }
+    }
+
+    return { succeeded: true, result: matchingPods };
 }
 
 //Must meet RFC 1123: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 export function validateNamespaceName(namespace: string): boolean {
-    if (namespace.length > 63) return false;
-    const namespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-    return namespaceRegex.test(namespace);
+    return isValidK8sName(namespace, "label");
 }
 
 function isDefinedManagedCluster(cluster: azcs.ManagedCluster): cluster is DefinedManagedCluster {
