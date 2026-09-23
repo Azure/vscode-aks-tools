@@ -1162,7 +1162,7 @@
         "globals": "^17.12.0",
         "husky": "^9.1.7",
         "lint-staged": "^17.5.0",
-        "mocha": "^11.8.0",
+        "mocha": "^12.0.1",
         "node-loader": "^2.1.0",
         "prettier": "^3.9.6",
         "sinon": "^22.1.0",
