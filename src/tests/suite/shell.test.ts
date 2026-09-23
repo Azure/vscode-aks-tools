@@ -12,7 +12,13 @@ describe("execFile", () => {
                 'process.stdout.write(JSON.stringify({ args: process.argv.slice(1), env: process.env["AKS_TEST_VALUE"] }))',
                 ...args,
             ],
-            { envAdditions: { AKS_TEST_VALUE: envValue } },
+            {
+                envAdditions: {
+                    // process.execPath is Electron in the extension host, so launch it as Node for this fixture.
+                    ELECTRON_RUN_AS_NODE: "1",
+                    AKS_TEST_VALUE: envValue,
+                },
+            },
         );
 
         if (!result.succeeded) {

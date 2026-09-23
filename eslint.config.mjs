@@ -90,6 +90,14 @@ export default [
             ],
 
             "no-underscore-dangle": "error",
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector: 'CallExpression[callee.name="exec"][arguments.0.type="TemplateLiteral"]',
+                    message:
+                        "Do not build shell command strings from values. Use execFile(binary, argsArray); see docs/book/src/development/development.md.",
+                },
+            ],
             "no-var": "error",
             "prefer-const": "error",
             "prefer-template": "error",
