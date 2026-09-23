@@ -3,7 +3,7 @@ import { relative } from "path";
 import { l10n, Uri, commands, window, workspace, env } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as semver from "semver";
-import { failed, map as errmap, Errorable } from "../commands/utils/errorable";
+import { failed, map as errmap, bind, Errorable } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { KubectlVersion, getExecOutput, invokeKubectlCommand } from "../commands/utils/kubectl";
@@ -17,6 +17,7 @@ import {
     ToWebViewMsgDef,
 } from "../webview-contract/webviewDefinitions/tcpDump";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
+import { isValidK8sName, validateK8sNames } from "../commands/utils/kubernetesNames";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 
 const debugPodNamespace = "default";
@@ -114,17 +115,31 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
     }
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+        // Node names arrive back over the webview channel and reach kubectl command strings.
+        // Checked here so no handler can miss it.
+        const guardNode =
+            <TArgs extends { node: NodeName }, TResult>(handler: (args: TArgs) => TResult) =>
+            (args: TArgs) => {
+                if (!isValidK8sName(args.node, "subdomain")) {
+                    window.showErrorMessage(
+                        l10n.t("Refusing to run a command for the invalid node name: {0}", args.node),
+                    );
+                    return undefined;
+                }
+                return handler(args);
+            };
+
         return {
-            checkNodeState: (args) => this.handleCheckNodeState(args.node, webview),
-            startDebugPod: (args) => this.handleStartDebugPod(args.node, webview),
-            deleteDebugPod: (args) => this.handleDeleteDebugPod(args.node, webview),
-            startCapture: (args) => this.handleStartCapture(args.node, args.capture, args.filters, webview),
-            stopCapture: (args) => this.handleStopCapture(args.node, args.capture, webview),
-            downloadCaptureFile: (args) => this.handleDownloadCaptureFile(args.node, args.capture, webview),
+            checkNodeState: guardNode((args) => this.handleCheckNodeState(args.node, webview)),
+            startDebugPod: guardNode((args) => this.handleStartDebugPod(args.node, webview)),
+            deleteDebugPod: guardNode((args) => this.handleDeleteDebugPod(args.node, webview)),
+            startCapture: guardNode((args) => this.handleStartCapture(args.node, args.capture, args.filters, webview)),
+            stopCapture: guardNode((args) => this.handleStopCapture(args.node, args.capture, webview)),
+            downloadCaptureFile: guardNode((args) => this.handleDownloadCaptureFile(args.node, args.capture, webview)),
             openFolder: (args) => this.handleOpenFolder(args),
-            getInterfaces: (args) => this.handleGetInterfaces(args.node, webview),
+            getInterfaces: guardNode((args) => this.handleGetInterfaces(args.node, webview)),
             getAllNodes: () => this.handleGetAllNodes(webview),
-            getFilterPodsForNode: (args) => this.handleGetFilterPodsForNode(args.node, webview),
+            getFilterPodsForNode: guardNode((args) => this.handleGetFilterPodsForNode(args.node, webview)),
         };
     }
 
@@ -507,7 +522,8 @@ spec:
     private async handleGetAllNodes(webview: MessageSink<ToWebViewMsgDef>) {
         const command = `get node --no-headers -o custom-columns=":metadata.name"`;
         const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
-        const nodenames = errmap(output, (sr) => sr.stdout.trim().split("\n"));
+        const lines = errmap(output, (sr) => sr.stdout.trim().split("\n"));
+        const nodenames = bind(lines, (names) => validateK8sNames(names, "subdomain", "node"));
         webview.postGetAllNodesResponse({
             succeeded: nodenames.succeeded,
             errorMessage: failed(nodenames) ? nodenames.error : null,

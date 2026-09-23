@@ -90,10 +90,13 @@ export default [
             ],
 
             "no-underscore-dangle": "error",
+
+            // Matches the call, not just a template-literal argument: `const command = ...;
+            // exec(command)` is the usual style here. Member calls like regex.exec() are unaffected.
             "no-restricted-syntax": [
                 "error",
                 {
-                    selector: 'CallExpression[callee.name="exec"][arguments.0.type="TemplateLiteral"]',
+                    selector: 'CallExpression[callee.name="exec"]',
                     message:
                         "Do not build shell command strings from values. Use execFile(binary, argsArray); see docs/book/src/development/development.md.",
                 },
