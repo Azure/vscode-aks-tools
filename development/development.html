@@ -169,6 +169,17 @@
 <li><code>test:scripts</code>: runs the unit tests for the <code>scripts/</code> tooling. Plain node and mocha, so no compile step.</li>
 <li><code>test:fuzz</code>: runs the fuzzing test suite.</li>
 </ul>
+<h3 id="running-external-tools-safely"><a class="header" href="#running-external-tools-safely">Running external tools safely</a></h3>
+<p>Treat values from kubeconfig files, cluster resources, workspaces, webviews, and
+service responses as untrusted when invoking a local executable. Pass the binary
+and an argument array to <code>execFile</code> from <code>src/commands/utils/shell.ts</code>; do not
+interpolate those values into a command string passed to <code>exec</code>. Quoting a value
+inside a shell command is not a substitute because quoting rules differ between
+platforms and values can contain quote-breaking shell metacharacters.</p>
+<p>Add a regression test containing representative Unix and Windows metacharacters
+whenever an external-tool invocation accepts values outside the extension’s
+control. The test should verify both argument boundaries and that the execution
+path uses <code>execFile</code>.</p>
 <h2 id="checks-that-gate-a-pull-request"><a class="header" href="#checks-that-gate-a-pull-request">Checks that gate a pull request</a></h2>
 <p>Run these before pushing. Each has a corresponding CI job.</p>
 <ul>
