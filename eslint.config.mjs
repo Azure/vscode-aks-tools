@@ -90,6 +90,23 @@ export default [
             ],
 
             "no-underscore-dangle": "error",
+
+            // Matches the call, not just a template-literal argument: `const command = ...;
+            // exec(command)` is the usual style here. Member calls like regex.exec() are unaffected.
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector: 'CallExpression[callee.name="exec"]',
+                    message:
+                        "Do not build shell command strings from values. Use execFile(binary, argsArray); see docs/book/src/development/development.md.",
+                },
+                {
+                    // The string form reaches a shell via the kubernetes-tools dependency.
+                    selector: 'CallExpression[callee.name="invokeKubectlCommand"]',
+                    message:
+                        "Do not build kubectl command strings. Use invokeKubectlCommandArgs(kubectl, kubeConfigFile, argsArray); see docs/book/src/development/development.md.",
+                },
+            ],
             "no-var": "error",
             "prefer-const": "error",
             "prefer-template": "error",

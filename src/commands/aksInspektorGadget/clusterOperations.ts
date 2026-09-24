@@ -1,6 +1,7 @@
 import * as k8s from "vscode-kubernetes-tools-api";
-import { Errorable, map as errmap, bindAsync, bindAll, failed } from "../utils/errorable";
-import { invokeKubectlCommand, streamKubectlOutput } from "../utils/kubectl";
+import { Errorable, map as errmap, bind, bindAsync, bindAll, failed } from "../utils/errorable";
+import { invokeKubectlCommandArgs, streamKubectlOutput } from "../utils/kubectl";
+import { validateK8sName, validateK8sNames } from "../utils/kubernetesNames";
 import { KubernetesClusterInfo } from "../utils/clusters";
 import { OutputStream } from "../utils/commands";
 import { asFlatItems, parseOutputLine } from "./traceItems";
@@ -33,7 +34,7 @@ export class KubectlClusterOperations implements ClusterOperations {
     ) {}
 
     async getGadgetVersion(): Promise<Errorable<GadgetVersion>> {
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget version");
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, ["gadget", "version"]);
 
         function setNullIfNotInstalled(version: string) {
             return version === "not available" ? null : version;
@@ -59,24 +60,37 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     async deploy(): Promise<Errorable<GadgetVersion>> {
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget deploy");
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, ["gadget", "deploy"]);
         return bindAsync(commandResult, () => this.getGadgetVersion());
     }
 
     async undeploy(): Promise<Errorable<GadgetVersion>> {
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget undeploy");
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, ["gadget", "undeploy"]);
         return bindAsync(commandResult, () => this.getGadgetVersion());
     }
 
     async runTrace(gadgetArguments: GadgetArguments): Promise<Errorable<TraceOutputItem[]>> {
-        const command = this.getKubectlArgs(gadgetArguments).join(" ");
-        const shellResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
+        const validArguments = validateGadgetFilters(gadgetArguments);
+        if (failed(validArguments)) {
+            return validArguments;
+        }
+
+        const shellResult = await invokeKubectlCommandArgs(
+            this.kubectl,
+            this.kubeConfigFile,
+            this.getKubectlArgs(gadgetArguments),
+        );
         const linesResult = errmap(shellResult, (r) => r.stdout.split("\n"));
         const arraysResult = bindAll(linesResult, parseOutputLine);
         return errmap(arraysResult, (arrays) => arrays.flatMap((arrays) => arrays).flatMap(asFlatItems));
     }
 
     watchTrace(gadgetArguments: GadgetArguments): Promise<Errorable<OutputStream>> {
+        const validArguments = validateGadgetFilters(gadgetArguments);
+        if (failed(validArguments)) {
+            return Promise.resolve(validArguments);
+        }
+
         const args = this.getKubectlArgs(gadgetArguments);
         return streamKubectlOutput(this.kubectl, this.kubeConfigFile, args);
     }
@@ -120,36 +134,80 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     async getNodes(): Promise<Errorable<string[]>> {
-        const command = `get node --no-headers -o custom-columns=":metadata.name"`;
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        return errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
+        const args = ["get", "node", "--no-headers", "-o", "custom-columns=:metadata.name"];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
+        const lines = errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
+        return bind(lines, (names) => validateK8sNames(names, "subdomain", "node"));
     }
 
     async getNamespaces(): Promise<Errorable<string[]>> {
-        const command = `get ns --no-headers -o custom-columns=":metadata.name"`;
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        return errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
+        const args = ["get", "ns", "--no-headers", "-o", "custom-columns=:metadata.name"];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
+        const lines = errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
+        return bind(lines, (names) => validateK8sNames(names, "label", "namespace"));
     }
 
     async getPods(namespace: string): Promise<Errorable<string[]>> {
-        const command = `get pod -n ${namespace} --no-headers -o custom-columns=":metadata.name"`;
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        return errmap(commandResult, (sr) =>
-            sr.stdout
-                .trim()
-                .split("\n")
-                .filter((s) => s.length > 0),
-        );
+        const validNamespace = validateK8sName(namespace, "label", "namespace");
+        if (failed(validNamespace)) {
+            return validNamespace;
+        }
+
+        const args = ["get", "pod", "-n", validNamespace.result, "--no-headers", "-o", "custom-columns=:metadata.name"];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
+        const lines = errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
+        return bind(lines, (names) => validateK8sNames(names, "subdomain", "pod"));
     }
 
     async getContainers(namespace: string, podName: string): Promise<Errorable<string[]>> {
-        const command = `get pod -n ${namespace} ${podName} -o jsonpath={.spec.containers[*].name}`;
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        return errmap(commandResult, (sr) =>
-            sr.stdout
-                .trim()
-                .split(" ")
-                .filter((s) => s.length > 0),
-        );
+        const validNamespace = validateK8sName(namespace, "label", "namespace");
+        if (failed(validNamespace)) {
+            return validNamespace;
+        }
+
+        const validPodName = validateK8sName(podName, "subdomain", "pod");
+        if (failed(validPodName)) {
+            return validPodName;
+        }
+
+        const args = [
+            "get",
+            "pod",
+            "-n",
+            validNamespace.result,
+            validPodName.result,
+            "-o",
+            "jsonpath={.spec.containers[*].name}",
+        ];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
+        const names = errmap(commandResult, (sr) => sr.stdout.trim().split(" "));
+        return bind(names, (containerNames) => validateK8sNames(containerNames, "label", "container"));
     }
+}
+
+/** Re-checks trace filter names, which arrive over the webview channel. */
+export function validateGadgetFilters(gadgetArguments: GadgetArguments): Errorable<void> {
+    const { nodeName, namespace, podName, containerName } = gadgetArguments.filters;
+
+    const checks: Errorable<string>[] = [];
+    if (nodeName) {
+        checks.push(validateK8sName(nodeName, "subdomain", "node"));
+    }
+    // Default and All are numeric enum members; only a string is an actual namespace name.
+    if (typeof namespace === "string" && namespace.length > 0) {
+        checks.push(validateK8sName(namespace, "label", "namespace"));
+    }
+    if (podName) {
+        checks.push(validateK8sName(podName, "subdomain", "pod"));
+    }
+    if (containerName) {
+        checks.push(validateK8sName(containerName, "label", "container"));
+    }
+
+    const firstFailure = checks.find(failed);
+    if (firstFailure !== undefined && failed(firstFailure)) {
+        return firstFailure;
+    }
+
+    return { succeeded: true, result: undefined };
 }

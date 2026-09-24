@@ -8,13 +8,13 @@ import path from "path";
 import * as os from "os";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
-import { getVersion, invokeKubectlCommand } from "../utils/kubectl";
+import { getVersion, invokeKubectlCommandArgs } from "../utils/kubectl";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
 import { failed } from "../utils/errorable";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { getReadySessionProvider } from "../../auth/azureAuth";
-import { buildRetinaCaptureCommand } from "./retinaCaptureCommand";
-import { exec } from "../utils/shell";
+import { runRetinaCapture } from "./retinaCaptureCommand";
+import { toSafeK8sNameFragment } from "../utils/kubernetesNames";
 
 export async function aksDownloadRetinaCapture(_context: IActionContext, target: unknown): Promise<void> {
     const kubectl = await k8s.extension.kubectl.v1;
@@ -91,12 +91,15 @@ export async function aksDownloadRetinaCapture(_context: IActionContext, target:
     // Retina Run Capture
     // Run kubectl-retina by absolute path with KUBECONFIG set: retina v1.x
     // ignores the --kubeconfig flag for `capture create`.
-    const capturename = `retina-capture-${clusterInfo.result.name.toLowerCase()}`;
+    // The cluster name is a kubeconfig context name for non-AKS nodes, so it is arbitrary
+    // text. It becomes a Kubernetes object name and the default Download folder below.
+    const capturename = `retina-capture-${toSafeK8sNameFragment(clusterInfo.result.name, 48)}`;
     const retinaCaptureResult = await longRunning(
         `Retina Distributed Capture running for cluster ${clusterInfo.result.name}.`,
         async () => {
-            return await exec(
-                `"${kubectlRetinaPath.result}" ${buildRetinaCaptureCommand({ captureName: capturename, nodeNames: selectedNodes })}`,
+            return await runRetinaCapture(
+                kubectlRetinaPath.result,
+                { captureName: capturename, nodeNames: selectedNodes },
                 {
                     envAdditions: { KUBECONFIG: kubeConfigFile.filePath },
                 },
@@ -127,11 +130,14 @@ export async function aksDownloadRetinaCapture(_context: IActionContext, target:
 
     // find if node explorer pod is already exists
     let nodeExplorerPodExists = false;
-    const nodeExplorerPod = await invokeKubectlCommand(
-        kubectl,
-        kubeConfigFile.filePath,
-        `get pods -n default -l app=node-explorer`,
-    );
+    const nodeExplorerPod = await invokeKubectlCommandArgs(kubectl, kubeConfigFile.filePath, [
+        "get",
+        "pods",
+        "-n",
+        "default",
+        "-l",
+        "app=node-explorer",
+    ]);
 
     if (
         nodeExplorerPod.succeeded &&

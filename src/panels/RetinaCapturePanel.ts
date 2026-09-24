@@ -4,13 +4,14 @@ import { Uri, window } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
-import { KubectlVersion, invokeKubectlCommand } from "../commands/utils/kubectl";
+import { KubectlVersion, invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
 import { MessageHandler } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { getLocalKubectlCpPath } from "./utilities/KubectlNetworkHelper";
+import { validateK8sNames } from "../commands/utils/kubernetesNames";
 import { RETINA_CAPTURE_NODE_HOST_PATH } from "../commands/aksRetinaCapture/retinaCaptureCommand";
 import * as semver from "semver";
 import { l10n, commands, env } from "vscode";
@@ -61,11 +62,21 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     }
 
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
+        // Comma-separated, arrives over the webview channel, reaches kubectl command strings.
+        const guardNodes = (handler: (node: string) => void) => (node: string) => {
+            const nodes = validateK8sNames(node.split(","), "subdomain", "node");
+            if (failed(nodes)) {
+                window.showErrorMessage(nodes.error);
+                return;
+            }
+            handler(nodes.result.join(","));
+        };
+
         return {
-            handleCaptureFileDownload: (node: string) => this.handleCaptureFileDownload(node),
-            deleteRetinaNodeExplorer: (node: string) => {
+            handleCaptureFileDownload: guardNodes((node: string) => this.handleCaptureFileDownload(node)),
+            deleteRetinaNodeExplorer: guardNodes((node: string) => {
                 this.handleDeleteRetinaNodeExplorer(node);
-            },
+            }),
         };
     }
 
@@ -85,8 +96,8 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         }
 
         const deleteResult = await longRunning(`${l10n.t("Deleting pod")} node-explorer-${node}.`, async () => {
-            const command = `delete pod node-explorer-${node}`;
-            return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
+            const args = ["delete", "pod", `node-explorer-${node}`];
+            return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
         });
 
         if (failed(deleteResult)) {
@@ -151,8 +162,8 @@ spec:
 
         const applyResult = await longRunning(l10n.t(`Deploying pod to capture {0} retina data.`, node), async () => {
             return await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
-                const command = `apply -f ${podSpecFile}`;
-                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
+                const args = ["apply", "-f", podSpecFile];
+                return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
             });
         });
 
@@ -163,8 +174,16 @@ spec:
         const waitResult = await longRunning(
             `${l10n.t("waiting for pod to get ready")} node-explorer-${node}.`,
             async () => {
-                const command = `wait pod -n default --for=condition=ready --timeout=300s node-explorer-${node}`;
-                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
+                const args = [
+                    "wait",
+                    "pod",
+                    "-n",
+                    "default",
+                    "--for=condition=ready",
+                    "--timeout=300s",
+                    `node-explorer-${node}`,
+                ];
+                return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
             },
         );
 
@@ -180,13 +199,18 @@ spec:
            'request-timeout' option otherwise. */
         const clientVersion = this.kubectlVersion!.clientVersion.gitVersion.replace(/^v/, "");
         const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
-        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
+        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? ["--retries", "99"] : ["--request-timeout=10m"];
         const captureHostFolderName = `${localCpPath}-${node}`;
         const nodeExplorerResult = await longRunning(
             l10n.t(`Copy captured data to local host location {0}.`, captureHostFolderName),
             async () => {
-                const cpcommand = `cp node-explorer-${node}:${RETINA_CAPTURE_NODE_HOST_PATH.replace(/^\//, "")} ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
-                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, cpcommand);
+                const args = [
+                    "cp",
+                    `node-explorer-${node}:${RETINA_CAPTURE_NODE_HOST_PATH.replace(/^\//, "")}`,
+                    captureHostFolderName,
+                    ...cpEOFAvoidanceFlag,
+                ];
+                return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
             },
         );
 

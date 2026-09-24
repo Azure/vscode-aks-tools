@@ -10,7 +10,7 @@ import {
 } from "../../webview-contract/webviewDefinitions/draft/draftDockerfile";
 import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
-import { ShellOptions, exec } from "../../commands/utils/shell";
+import { ShellOptions, execFile } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
 import { OpenFileOptions } from "../../webview-contract/webviewDefinitions/shared/fileSystemTypes";
 import { launchDraftCommand } from "./commandUtils";
@@ -138,17 +138,23 @@ export class DraftDockerfileDataProvider implements PanelDataProvider<"draftDock
             BUILDERVERSION: builderImageTag,
         };
 
-        const variableArgs = Object.entries(variables)
-            .map(([key, value]) => `--variable ${key}=${value}`)
-            .join(" ");
-        const command = `draft create --language ${language} --dockerfile-only ${variableArgs} --destination .${path.sep}${location}`;
+        const variableArgs = Object.entries(variables).flatMap(([key, value]) => ["--variable", `${key}=${value}`]);
+        const args = [
+            "create",
+            "--language",
+            language,
+            "--dockerfile-only",
+            ...variableArgs,
+            "--destination",
+            `.${path.sep}${location}`,
+        ];
 
         const execOptions: ShellOptions = {
             workingDir: this.workspaceFolder.uri.fsPath,
             envPaths: [this.draftDirectory],
         };
 
-        const draftResult = await exec(command, execOptions);
+        const draftResult = await execFile(this.draftBinaryPath, args, execOptions);
         if (failed(draftResult)) {
             window.showErrorMessage(draftResult.error);
             return;

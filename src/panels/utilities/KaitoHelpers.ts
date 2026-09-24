@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed, Errorable } from "../../commands/utils/errorable";
-import { invokeKubectlCommand } from "../../commands/utils/kubectl";
+import { invokeKubectlCommandArgs } from "../../commands/utils/kubectl";
 import { longRunning } from "../../commands/utils/host";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { filterPodImage, getKubernetesClusterInfo, getAksClusterTreeNode } from "../../commands/utils/clusters";
@@ -55,8 +55,8 @@ export async function isPodReady(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFilePath: string,
 ) {
-    const command = `get pod ${podName} -n ${nameSpace} -o jsonpath="{.status.containerStatuses[*].ready}"`;
-    const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
+    const args = ["get", "pod", podName, "-n", nameSpace, "-o", "jsonpath={.status.containerStatuses[*].ready}"];
+    const kubectlresult = await invokeKubectlCommandArgs(kubectl, kubeConfigFilePath, args);
     if (failed(kubectlresult)) {
         vscode.window.showErrorMessage(kubectlresult.error);
         return false;
@@ -195,8 +195,9 @@ export async function getWorkspaceRuntime(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     namespace: string,
 ): Promise<string> {
-    const command = `--kubeconfig="${kubeConfigFilePath}" get workspace -n ${namespace} ${modelName} -o json`;
-    const kubectlresult = await kubectl.api.invokeCommand(command);
+    const args = ["get", "workspace", "-n", namespace, modelName, "-o", "json"];
+    const result = await invokeKubectlCommandArgs(kubectl, kubeConfigFilePath, args);
+    const kubectlresult = result.succeeded ? result.result : undefined;
     if (kubectlresult && kubectlresult.code === 0) {
         const json = JSON.parse(kubectlresult.stdout);
         const runtime = json.metadata?.annotations?.["kaito.sh/runtime"];
@@ -223,8 +224,7 @@ export async function deployModel(
 ): Promise<Errorable<KubectlV1.ShellResult>> {
     const tempFilePath = join(tmpdir(), `kaito-deployment-${Date.now()}.yaml`);
     writeFileSync(tempFilePath, yaml, "utf8");
-    const command = `apply -f ${tempFilePath}`;
-    const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFilePath, command);
+    const kubectlresult = await invokeKubectlCommandArgs(kubectl, kubeConfigFilePath, ["apply", "-f", tempFilePath]);
     unlinkSync(tempFilePath);
     if (failed(kubectlresult)) {
         return { succeeded: false, error: kubectlresult.error };

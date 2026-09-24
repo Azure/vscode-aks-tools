@@ -117,6 +117,7 @@
                     "description": "Release tag for the stable kubectl-gadget tool."
                 },
                 "azure.customkubectl.commands": {
+                    "scope": "application",
                     "type": "array",
                     "title": "Custom Kubectl commands",
                     "items": {
