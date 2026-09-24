@@ -25,6 +25,20 @@ These can all be run from the command line in the root of the repository (with `
 - `test:scripts`: runs the unit tests for the `scripts/` tooling. Plain node and mocha, so no compile step.
 - `test:fuzz`: runs the fuzzing test suite.
 
+### Running external tools safely
+
+Treat values from kubeconfig files, cluster resources, workspaces, webviews, and
+service responses as untrusted when invoking a local executable. Pass the binary
+and an argument array to `execFile` from `src/commands/utils/shell.ts`; do not
+interpolate those values into a command string passed to `exec`. Quoting a value
+inside a shell command is not a substitute because quoting rules differ between
+platforms and values can contain quote-breaking shell metacharacters.
+
+Add a regression test containing representative Unix and Windows metacharacters
+whenever an external-tool invocation accepts values outside the extension's
+control. The test should verify both argument boundaries and that the execution
+path uses `execFile`.
+
 ## Checks that gate a pull request
 
 Run these before pushing. Each has a corresponding CI job.
