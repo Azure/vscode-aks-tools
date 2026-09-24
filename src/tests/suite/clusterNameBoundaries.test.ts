@@ -4,7 +4,6 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import * as kubectlModule from "../../commands/utils/kubectl";
 import { KubectlClusterOperations, validateGadgetFilters } from "../../commands/aksInspektorGadget/clusterOperations";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
-import { isSafeLocalCapturePath } from "../../panels/RetinaCapturePanel";
 import { NamespaceSelection } from "../../webview-contract/webviewDefinitions/inspektorGadget";
 
 /**
@@ -23,14 +22,14 @@ describe("Cluster-supplied name boundaries", () => {
     const hostileNode = "aks-np1-12345678-vmss000000$(touch /tmp/aks-pwned)";
     const hostileNamespace = "default& calc.exe & rem ";
 
-    const fakeKubectl = {} as k8s.APIAvailable<k8s.KubectlV1>;
+    const fakeKubectl = { api: {} } as k8s.APIAvailable<k8s.KubectlV1>;
     const clusterInfo = { name: "test-cluster", kubeconfigYaml: "" };
 
     let invokeStub: sinon.SinonStub;
 
     function stubKubectlStdout(stdout: string) {
         invokeStub = sinon
-            .stub(kubectlModule, "invokeKubectlCommand")
+            .stub(kubectlModule, "invokeKubectlCommandArgs")
             .resolves({ succeeded: true, result: { code: 0, stdout, stderr: "" } });
     }
 
@@ -186,38 +185,6 @@ describe("Cluster-supplied name boundaries", () => {
 
             assert.ok(result.succeeded);
             assert.deepStrictEqual(result.result, ["aks-node-1", "aks-node-2"]);
-        });
-    });
-
-    describe("Retina download path", () => {
-        it("accepts ordinary paths on both platforms", () => {
-            assert.ok(isSafeLocalCapturePath("/Users/me/captures/retina-capture-prod_2026"));
-            assert.ok(isSafeLocalCapturePath("C:\\Users\\me\\captures\\retina"));
-            assert.ok(isSafeLocalCapturePath("..\\Users\\me\\capture"));
-            assert.ok(isSafeLocalCapturePath("./relative/path-1"));
-        });
-
-        it("refuses a path carrying shell punctuation", () => {
-            const payloads = [
-                "/tmp/out; touch /tmp/pwned",
-                "/tmp/out$(touch /tmp/pwned)",
-                "/tmp/out`touch /tmp/pwned`",
-                "/tmp/out & calc.exe",
-                "/tmp/out|tee /tmp/pwned",
-                '/tmp/out" --flag "',
-            ];
-
-            for (const payload of payloads) {
-                assert.strictEqual(isSafeLocalCapturePath(payload), false, `should refuse: ${payload}`);
-            }
-        });
-
-        it("refuses a path containing a space, which breaks the unquoted cp command today", () => {
-            assert.strictEqual(isSafeLocalCapturePath("C:\\Users\\John Smith\\capture"), false);
-        });
-
-        it("refuses an empty path", () => {
-            assert.strictEqual(isSafeLocalCapturePath(""), false);
         });
     });
 });

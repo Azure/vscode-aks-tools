@@ -4,7 +4,7 @@ import { Uri, window } from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
 import { longRunning } from "../commands/utils/host";
-import { KubectlVersion, invokeKubectlCommand } from "../commands/utils/kubectl";
+import { KubectlVersion, invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import { withOptionalTempFile } from "../commands/utils/tempfile";
 import { MessageHandler } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
@@ -23,16 +23,6 @@ export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
             getAllNodesResponse: [],
         });
     }
-}
-
-/**
- * True if a download path can go into the `kubectl cp` command string below without the
- * shell re-interpreting it. Stopgap until that path is passed as its own argv element;
- * tracked in #2429. A path containing a space already fails today, silently.
- */
-export function isSafeLocalCapturePath(localPath: string): boolean {
-    // Drive letters, either separator, dots, word characters, hyphens and @.
-    return localPath.length > 0 && !/[^\w.:/\\@+-]/.test(localPath);
 }
 
 export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture"> {
@@ -106,8 +96,8 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         }
 
         const deleteResult = await longRunning(`${l10n.t("Deleting pod")} node-explorer-${node}.`, async () => {
-            const command = `delete pod node-explorer-${node}`;
-            return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
+            const args = ["delete", "pod", `node-explorer-${node}`];
+            return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
         });
 
         if (failed(deleteResult)) {
@@ -128,16 +118,6 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         }
 
         const localCpPath = getLocalKubectlCpPath(localCaptureUri);
-
-        if (!isSafeLocalCapturePath(localCpPath)) {
-            window.showErrorMessage(
-                l10n.t(
-                    "Cannot download to '{0}'. Choose a folder whose path has no spaces or shell punctuation.",
-                    localCpPath,
-                ),
-            );
-            return;
-        }
 
         const nodes = node.split(",");
         for (const node of nodes) {
@@ -182,8 +162,8 @@ spec:
 
         const applyResult = await longRunning(l10n.t(`Deploying pod to capture {0} retina data.`, node), async () => {
             return await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
-                const command = `apply -f ${podSpecFile}`;
-                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
+                const args = ["apply", "-f", podSpecFile];
+                return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
             });
         });
 
@@ -194,8 +174,16 @@ spec:
         const waitResult = await longRunning(
             `${l10n.t("waiting for pod to get ready")} node-explorer-${node}.`,
             async () => {
-                const command = `wait pod -n default --for=condition=ready --timeout=300s node-explorer-${node}`;
-                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, command);
+                const args = [
+                    "wait",
+                    "pod",
+                    "-n",
+                    "default",
+                    "--for=condition=ready",
+                    "--timeout=300s",
+                    `node-explorer-${node}`,
+                ];
+                return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
             },
         );
 
@@ -211,13 +199,18 @@ spec:
            'request-timeout' option otherwise. */
         const clientVersion = this.kubectlVersion!.clientVersion.gitVersion.replace(/^v/, "");
         const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
-        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
+        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? ["--retries", "99"] : ["--request-timeout=10m"];
         const captureHostFolderName = `${localCpPath}-${node}`;
         const nodeExplorerResult = await longRunning(
             l10n.t(`Copy captured data to local host location {0}.`, captureHostFolderName),
             async () => {
-                const cpcommand = `cp node-explorer-${node}:${RETINA_CAPTURE_NODE_HOST_PATH.replace(/^\//, "")} ${captureHostFolderName} ${cpEOFAvoidanceFlag}`;
-                return await invokeKubectlCommand(this.kubectl!, this.kubeConfigFilePath, cpcommand);
+                const args = [
+                    "cp",
+                    `node-explorer-${node}:${RETINA_CAPTURE_NODE_HOST_PATH.replace(/^\//, "")}`,
+                    captureHostFolderName,
+                    ...cpEOFAvoidanceFlag,
+                ];
+                return await invokeKubectlCommandArgs(this.kubectl!, this.kubeConfigFilePath, args);
             },
         );
 

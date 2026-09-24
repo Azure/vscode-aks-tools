@@ -13,7 +13,7 @@ import {
     ToWebViewMsgDef,
     azureToASOCloudMap,
 } from "../webview-contract/webviewDefinitions/azureServiceOperator";
-import { invokeKubectlCommand } from "../commands/utils/kubectl";
+import { invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import path from "path";
 import * as fs from "fs/promises";
 import { createTempFile } from "../commands/utils/tempfile";
@@ -134,8 +134,8 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         // From installation instructions:
         // https://azure.github.io/azure-service-operator/#installation
         const asoCrdYamlFile = "https://github.com/jetstack/cert-manager/releases/download/v1.12.1/cert-manager.yaml";
-        const kubectlArgs = `create -f ${asoCrdYamlFile}`;
-        const shellOutput = await invokeKubectlCommand(
+        const kubectlArgs = ["create", "-f", asoCrdYamlFile];
+        const shellOutput = await invokeKubectlCommandArgs(
             this.kubectl,
             this.kubeConfigFilePath,
             kubectlArgs,
@@ -153,7 +153,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const succeeded = shellOutput.result.code === 0;
         const errorMessage = succeeded ? null : l10n.t("Installing cert-manager failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
-        const command = `kubectl ${kubectlArgs}`;
+        const command = `kubectl ${kubectlArgs.join(" ")}`;
         webview.postInstallCertManagerResponse({
             succeeded,
             errorMessage,
@@ -165,8 +165,8 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const deployments = ["cert-manager", "cert-manager-cainjector", "cert-manager-webhook"];
         const promiseResults = await Promise.all(
             deployments.map(async (d) => {
-                const kubectlArgs = `rollout status -n cert-manager deploy/${d} --timeout=240s`;
-                const shellOutput = await invokeKubectlCommand(
+                const kubectlArgs = ["rollout", "status", "-n", "cert-manager", `deploy/${d}`, "--timeout=240s"];
+                const shellOutput = await invokeKubectlCommandArgs(
                     this.kubectl,
                     this.kubeConfigFilePath,
                     kubectlArgs,
@@ -212,8 +212,8 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         // updating an existing installation. Instead we will use create to fail if it is already installed.
         // This also means we don't need the '--server-side=true' argument, which affects change tracking (there will be no changes if
         // the operator does not exist).
-        const kubectlArgs = `create -f ${asoYamlFile} --request-timeout 120s`;
-        const shellOutput = await invokeKubectlCommand(
+        const kubectlArgs = ["create", "-f", asoYamlFile, "--request-timeout", "120s"];
+        const shellOutput = await invokeKubectlCommandArgs(
             this.kubectl,
             this.kubeConfigFilePath,
             kubectlArgs,
@@ -231,7 +231,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const succeeded = shellOutput.result.code === 0;
         const errorMessage = succeeded ? null : l10n.t("Installing operator resource failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
-        const command = `kubectl ${kubectlArgs}`;
+        const command = `kubectl ${kubectlArgs.join(" ")}`;
         webview.postInstallOperatorResponse({
             succeeded,
             errorMessage,
@@ -278,8 +278,8 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const templateYamlFile = await createTempFile(settings, "yaml");
 
         // Use a larger-than-default request timeout here, because cert-manager-cainjector is still busy updating resources, increasing response times.
-        const kubectlArgs = `apply -f ${templateYamlFile.filePath} --request-timeout 120s`;
-        const shellOutput = await invokeKubectlCommand(
+        const kubectlArgs = ["apply", "-f", templateYamlFile.filePath, "--request-timeout", "120s"];
+        const shellOutput = await invokeKubectlCommandArgs(
             this.kubectl,
             this.kubeConfigFilePath,
             kubectlArgs,
@@ -297,7 +297,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const succeeded = shellOutput.result.code === 0;
         const errorMessage = succeeded ? null : l10n.t("Installing operator settings failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
-        const command = `kubectl ${kubectlArgs}`;
+        const command = `kubectl ${kubectlArgs.join(" ")}`;
         webview.postInstallOperatorSettingsResponse({
             succeeded,
             errorMessage,
@@ -306,9 +306,15 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
     }
 
     private async handleWaitForControllerManagerRequest(webview: MessageSink<ToWebViewMsgDef>): Promise<void> {
-        const kubectlArgs =
-            "rollout status -n azureserviceoperator-system deploy/azureserviceoperator-controller-manager --timeout=240s";
-        const shellOutput = await invokeKubectlCommand(
+        const kubectlArgs = [
+            "rollout",
+            "status",
+            "-n",
+            "azureserviceoperator-system",
+            "deploy/azureserviceoperator-controller-manager",
+            "--timeout=240s",
+        ];
+        const shellOutput = await invokeKubectlCommandArgs(
             this.kubectl,
             this.kubeConfigFilePath,
             kubectlArgs,
@@ -326,7 +332,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
         const succeeded = shellOutput.result.code === 0;
         const errorMessage = succeeded ? null : l10n.t("Waiting for ASO Controller Manager failed, see error output.");
         const { stdout, stderr } = shellOutput.result;
-        const command = `kubectl ${kubectlArgs}`;
+        const command = `kubectl ${kubectlArgs.join(" ")}`;
         webview.postWaitForControllerManagerResponse({
             succeeded,
             errorMessage,

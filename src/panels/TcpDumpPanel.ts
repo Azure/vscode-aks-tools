@@ -6,7 +6,7 @@ import * as semver from "semver";
 import { failed, map as errmap, bind, Errorable } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { KubectlVersion, getExecOutput, invokeKubectlCommand } from "../commands/utils/kubectl";
+import { KubectlVersion, getExecOutput, invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import {
     CaptureFilters,
     CompletedCapture,
@@ -258,8 +258,7 @@ spec:
     hostPID: true`;
 
         const applyResult = await withOptionalTempFile(createPodYaml, "YAML", async (podSpecFile) => {
-            const command = `apply -f ${podSpecFile}`;
-            return await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+            return await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, ["apply", "-f", podSpecFile]);
         });
 
         if (failed(applyResult)) {
@@ -303,8 +302,8 @@ spec:
     }
 
     private async handleDeleteDebugPod(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `delete pod -n ${debugPodNamespace} ${getPodName(node)}`;
-        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = ["delete", "pod", "-n", debugPodNamespace, getPodName(node)];
+        const output = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         if (failed(output)) {
             webview.postDeleteDebugPodResponse({
                 node,
@@ -460,11 +459,16 @@ spec:
         // 'request-timeout' option otherwise.
         const clientVersion = this.kubectlVersion.clientVersion.gitVersion.replace(/^v/, "");
         const isRetriesOptionSupported = semver.parse(clientVersion) && semver.gte(clientVersion, "1.23.0");
-        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? "--retries 99" : "--request-timeout=10m";
-        const command = `cp -n ${debugPodNamespace} ${getPodName(
-            node,
-        )}:${captureFileBasePath}${captureName}.cap ${localCpPath} ${cpEOFAvoidanceFlag}`;
-        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const cpEOFAvoidanceFlag = isRetriesOptionSupported ? ["--retries", "99"] : ["--request-timeout=10m"];
+        const args = [
+            "cp",
+            "-n",
+            debugPodNamespace,
+            `${getPodName(node)}:${captureFileBasePath}${captureName}.cap`,
+            localCpPath,
+            ...cpEOFAvoidanceFlag,
+        ];
+        const output = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         if (failed(output)) {
             webview.postDownloadCaptureFileResponse({
                 node,
@@ -520,8 +524,8 @@ spec:
     }
 
     private async handleGetAllNodes(webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `get node --no-headers -o custom-columns=":metadata.name"`;
-        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = ["get", "node", "--no-headers", "-o", "custom-columns=:metadata.name"];
+        const output = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         const lines = errmap(output, (sr) => sr.stdout.trim().split("\n"));
         const nodenames = bind(lines, (names) => validateK8sNames(names, "subdomain", "node"));
         webview.postGetAllNodesResponse({
@@ -536,11 +540,16 @@ spec:
         // purposes, it doesn't really make sense to include those which use the host's network namespace, since they
         // will all have the same IP address (that of the host). For this reason we exclude pods with hostNetwork==true.
         //
-        // From https://kubernetes.io/docs/reference/kubectl/jsonpath/
-        // > On Windows, you must double quote any JSONPath template that contains spaces (not single quote ...).
-        // > This in turn means that you must use a single quote or escaped double quote around any literals in the template
-        const command = `get pods --all-namespaces --field-selector spec.nodeName=${node} -o jsonpath="{range .items[*]}{.metadata.name}{'\\t'}{.status.podIP}{'\\t'}{.spec.hostNetwork}{'\\n'}{end}"`;
-        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        // The template is a single argv element, so it needs no shell quoting.
+        const args = [
+            "get",
+            "pods",
+            "--all-namespaces",
+            `--field-selector=spec.nodeName=${node}`,
+            "-o",
+            "jsonpath={range .items[*]}{.metadata.name}{'\\t'}{.status.podIP}{'\\t'}{.spec.hostNetwork}{'\\n'}{end}",
+        ];
+        const output = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         const pods = errmap(
             output,
             (sr) =>
@@ -559,20 +568,28 @@ spec:
     }
 
     private async getPodNames(): Promise<Errorable<string[]>> {
-        const command = `get pod -n ${debugPodNamespace} --no-headers -o custom-columns=":metadata.name"`;
-        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = ["get", "pod", "-n", debugPodNamespace, "--no-headers", "-o", "custom-columns=:metadata.name"];
+        const output = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         return errmap(output, (sr) => sr.stdout.trim().split("\n"));
     }
 
     private async waitForPodReady(node: NodeName): Promise<Errorable<void>> {
-        const command = `wait pod -n ${debugPodNamespace} --for=condition=ready --timeout=300s ${getPodName(node)}`;
-        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = [
+            "wait",
+            "pod",
+            "-n",
+            debugPodNamespace,
+            "--for=condition=ready",
+            "--timeout=300s",
+            getPodName(node),
+        ];
+        const output = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         return errmap(output, () => undefined);
     }
 
     private async waitForPodDeleted(node: NodeName): Promise<Errorable<void>> {
-        const command = `wait pod -n ${debugPodNamespace} --for=delete --timeout=300s ${getPodName(node)}`;
-        const output = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = ["wait", "pod", "-n", debugPodNamespace, "--for=delete", "--timeout=300s", getPodName(node)];
+        const output = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         return errmap(output, () => undefined);
     }
 

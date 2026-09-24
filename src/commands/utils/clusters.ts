@@ -22,7 +22,7 @@ import { getAksClient, getMonitorClient, listAll } from "./arm";
 import { Errorable, map as errmap, failed, getErrorMessage, succeeded } from "./errorable";
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
-import { invokeKubectlCommand } from "./kubectl";
+import { invokeKubectlCommandArgs } from "./kubectl";
 import { isValidK8sName, validateK8sName } from "./kubernetesNames";
 import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
@@ -625,8 +625,8 @@ export async function getClusterNamespaces(
     }
 
     return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `get namespace --no-headers -o custom-columns=":metadata.name"`;
-        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        const args = ["get", "namespace", "--no-headers", "-o", "custom-columns=:metadata.name"];
+        const output = await invokeKubectlCommandArgs(kubectl, kubeconfigPath, args);
         return errmap(output, (sr) => sr.stdout.trim().split("\n"));
     });
 }
@@ -649,8 +649,7 @@ export async function getClusterNamespacesWithTypes(
     }
 
     return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `get namespace -o json`;
-        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        const output = await invokeKubectlCommandArgs(kubectl, kubeconfigPath, ["get", "namespace", "-o", "json"]);
         return errmap(output, (sr) => {
             try {
                 const namespacesJson = JSON.parse(sr.stdout);
@@ -726,8 +725,7 @@ export async function createClusterNamespace(
     }
 
     return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `create namespace ${namespace}`;
-        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        const output = await invokeKubectlCommandArgs(kubectl, kubeconfigPath, ["create", "namespace", namespace]);
 
         if (output.succeeded) {
             return { succeeded: true, result: `Namespace ${namespace} created` };
@@ -837,8 +835,8 @@ export async function filterPodName(
     }
 
     const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `get pods --all-namespaces --no-headers -o custom-columns=":metadata.name"`;
-        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        const args = ["get", "pods", "--all-namespaces", "--no-headers", "-o", "custom-columns=:metadata.name"];
+        const output = await invokeKubectlCommandArgs(kubectl, kubeconfigPath, args);
         return errmap(output, (sr) => sr.stdout.trim().split("\n"));
     });
 
@@ -870,8 +868,14 @@ export async function filterPodImage(
     }
 
     const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `get pods -A -o jsonpath="{range .items[*]}{.metadata.namespace};{.metadata.name};{.spec.containers[*].image};{end}"`;
-        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
+        const args = [
+            "get",
+            "pods",
+            "-A",
+            "-o",
+            "jsonpath={range .items[*]}{.metadata.namespace};{.metadata.name};{.spec.containers[*].image};{end}",
+        ];
+        const output = await invokeKubectlCommandArgs(kubectl, kubeconfigPath, args);
         if (failed(output)) {
             vscode.window.showErrorMessage(output.error);
             return [];

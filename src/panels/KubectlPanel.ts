@@ -3,7 +3,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { failed } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { invokeKubectlCommand } from "../commands/utils/kubectl";
+import { invokeKubectlCommandArgs, parseKubectlCommandArgs } from "../commands/utils/kubectl";
 import {
     InitialState,
     PresetCommand,
@@ -65,11 +65,16 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
             command = command.replace("kubectl", "").trim();
         }
 
-        if (command.includes("jsonpath")) {
-            command = this.transformCommandForJSONPath(command);
+        // Saved commands come from the azure.customkubectl.commands setting, so they are not
+        // necessarily something this user typed. Parse into an argument array and run without
+        // a shell, so metacharacters in a command cannot execute.
+        const args = parseKubectlCommandArgs(command);
+        if (failed(args)) {
+            await this.sendResponse(webview, command, null, args.error);
+            return;
         }
 
-        const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args.result);
 
         if (failed(kubectlresult)) {
             await this.sendResponse(webview, command, null, kubectlresult.error);
@@ -97,19 +102,5 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
 
     private async handleDeleteCustomCommandRequest(name: string) {
         await deleteKubectlCustomCommand(name);
-    }
-
-    private transformCommandForJSONPath(command: string): string {
-        // Regular expression to match JSONPATH expressions
-        const jsonpathRegex = /-o jsonpath='([^']+)'/g;
-
-        // Function to escape JSONPATH expression
-        const escapeJsonpath = (jsonpath: string): string => jsonpath.replaceAll('"', '\\"').replaceAll("'", '"');
-
-        // Replace JSONPATH expressions in the command
-        return command.replace(jsonpathRegex, (_match, jsonpath) => {
-            const escapedJsonpath = escapeJsonpath(jsonpath);
-            return `-o jsonpath="${escapedJsonpath}"`;
-        });
     }
 }

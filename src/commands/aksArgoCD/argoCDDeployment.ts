@@ -28,7 +28,7 @@ import { getExtensionPath, longRunning } from "../utils/host";
 import { failed } from "../utils/errorable";
 import { createTempFile } from "../utils/tempfile";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommandArgs } from "../utils/kubectl";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
 import { resolveCurrentKubectlContext } from "./argoCDApplyApp";
 
@@ -786,10 +786,10 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
             const tmpKubeconfig = await createTempFile(ctx.kubeconfigYaml, "yaml");
             try {
                 const nsResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
-                    invokeKubectlCommand(
+                    invokeKubectlCommandArgs(
                         kubectl,
                         tmpKubeconfig.filePath,
-                        `get namespace -o json`,
+                        ["get", "namespace", "-o", "json"],
                         NonZeroExitCodeBehaviour.Succeed,
                     ),
                 );

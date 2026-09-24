@@ -100,6 +100,12 @@ export default [
                     message:
                         "Do not build shell command strings from values. Use execFile(binary, argsArray); see docs/book/src/development/development.md.",
                 },
+                {
+                    // The string form reaches a shell via the kubernetes-tools dependency.
+                    selector: 'CallExpression[callee.name="invokeKubectlCommand"]',
+                    message:
+                        "Do not build kubectl command strings. Use invokeKubectlCommandArgs(kubectl, kubeConfigFile, argsArray); see docs/book/src/development/development.md.",
+                },
             ],
             "no-var": "error",
             "prefer-const": "error",

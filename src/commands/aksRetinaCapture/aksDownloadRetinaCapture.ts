@@ -8,7 +8,7 @@ import path from "path";
 import * as os from "os";
 import { ensureDirectoryInPath } from "../utils/env";
 import { getRetinaBinaryPath } from "../utils/helper/retinaBinaryDownload";
-import { getVersion, invokeKubectlCommand } from "../utils/kubectl";
+import { getVersion, invokeKubectlCommandArgs } from "../utils/kubectl";
 import { RetinaCapturePanel, RetinaCaptureProvider } from "../../panels/RetinaCapturePanel";
 import { failed } from "../utils/errorable";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
@@ -130,11 +130,14 @@ export async function aksDownloadRetinaCapture(_context: IActionContext, target:
 
     // find if node explorer pod is already exists
     let nodeExplorerPodExists = false;
-    const nodeExplorerPod = await invokeKubectlCommand(
-        kubectl,
-        kubeConfigFile.filePath,
-        `get pods -n default -l app=node-explorer`,
-    );
+    const nodeExplorerPod = await invokeKubectlCommandArgs(kubectl, kubeConfigFile.filePath, [
+        "get",
+        "pods",
+        "-n",
+        "default",
+        "-l",
+        "app=node-explorer",
+    ]);
 
     if (
         nodeExplorerPod.succeeded &&

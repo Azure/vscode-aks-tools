@@ -1,7 +1,7 @@
 import { platform } from "os";
 import { Uri, workspace } from "vscode";
 import { relative } from "path";
-import { invokeKubectlCommand } from "../../commands/utils/kubectl";
+import { invokeKubectlCommandArgs } from "../../commands/utils/kubectl";
 import { Errorable, map as errmap, bind } from "../../commands/utils/errorable";
 import { validateK8sNames } from "../../commands/utils/kubernetesNames";
 import * as k8s from "vscode-kubernetes-tools-api";
@@ -30,8 +30,8 @@ export async function getLinuxNodes(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFile: string,
 ): Promise<Errorable<string[]>> {
-    const command = `get node -l kubernetes.io/os=linux --no-headers -o custom-columns=":metadata.name"`;
-    const commandResult = await invokeKubectlCommand(kubectl, kubeConfigFile, command);
+    const args = ["get", "node", "-l", "kubernetes.io/os=linux", "--no-headers", "-o", "custom-columns=:metadata.name"];
+    const commandResult = await invokeKubectlCommandArgs(kubectl, kubeConfigFile, args);
     const lines = errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
     return bind(lines, (names) => validateK8sNames(names, "subdomain", "node"));
 }

@@ -8,7 +8,7 @@ import { getPortalResourceUrl } from "../utils/env";
 import { Errorable, failed } from "../utils/errorable";
 import { checkExtension, handleExtensionDoesNotExist } from "../utils/ghCopilotHandlers";
 import { longRunning } from "../utils/host";
-import { invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommandArgs } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
 import { logGitHubCopilotPluginEvent } from "../../plugins/shared/telemetry/logger";
 import { getAIRecommendationsInfoState } from "../utils/config";
@@ -189,7 +189,7 @@ async function deployApplicationToCluster(
     // Execute the deployment command
     const result = await longRunning(
         `Deploying application to cluster: ${cluster.clusterName} in progress...`,
-        async () => invokeKubectlCommand(kubectl, kubeConfigFile.filePath, `apply -f "${manifestPath}"`),
+        async () => invokeKubectlCommandArgs(kubectl, kubeConfigFile.filePath, ["apply", "-f", manifestPath]),
     );
 
     // Check for errors during the kubectl command execution
