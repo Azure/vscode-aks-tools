@@ -5,7 +5,7 @@ import { getAksClient, getComputeManagementClient } from "../commands/utils/arm"
 import { failed } from "../commands/utils/errorable";
 import { validateK8sName } from "../commands/utils/kubernetesNames";
 import { longRunning } from "../commands/utils/host";
-import { invokeKubectlCommand } from "../commands/utils/kubectl";
+import { invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoModels";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
@@ -261,8 +261,8 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
                 return;
             }
             await longRunning(l10n.t(`Checking if workspace exists...`), async () => {
-                const getCommand = `get workspace workspace-${model}`;
-                getResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, getCommand);
+                const getArgs = ["get", "workspace", `workspace-${model}`];
+                getResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, getArgs);
             });
             if (getResult === null || failed(getResult)) {
                 // Deployment cancellation check
@@ -355,10 +355,10 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
 
     // Returns current state of workspace associated with given model
     private async getProgress(model: string): Promise<InitialState> {
-        const command = `get workspace workspace-${model} -o json`;
-        let kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = ["get", "workspace", `workspace-${model}`, "-o", "json"];
+        let kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         if (failed(kubectlresult)) {
-            kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+            kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
             if (failed(kubectlresult)) {
                 // Error message only produced if kubeconfig file is still present (it's removed upon panel closing)
                 // This is to prevent error messages from appearing when the user closes the panel
