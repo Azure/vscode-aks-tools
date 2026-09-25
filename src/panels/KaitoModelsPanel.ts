@@ -3,6 +3,7 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient, getComputeManagementClient } from "../commands/utils/arm";
 import { failed } from "../commands/utils/errorable";
+import { validateK8sName } from "../commands/utils/kubernetesNames";
 import { longRunning } from "../commands/utils/host";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
@@ -82,11 +83,23 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+        // Reaches `get workspace workspace-${model}`.
+        const guardModel = (model: string | undefined): boolean => {
+            const validModel = validateK8sName(model ?? "", "subdomain", "model");
+            if (failed(validModel)) {
+                vscode.window.showErrorMessage(validModel.error);
+                return false;
+            }
+            return true;
+        };
+
         return {
             generateCRDRequest: (params) => {
+                if (!guardModel(params.model)) return;
                 this.handleGenerateCRDRequest(params.model);
             },
             deployKaitoRequest: (params) => {
+                if (!guardModel(params.model)) return;
                 this.handleDeployKaitoRequest(params.model, params.yaml, params.gpu, webview);
             },
             resetStateRequest: () => {
