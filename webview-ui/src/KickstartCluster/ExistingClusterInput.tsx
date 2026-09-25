@@ -16,7 +16,8 @@ import { ProgressRing } from "../components/ProgressRing";
 import { TextWithDropdown } from "../components/TextWithDropdown";
 import { EventHandlers } from "../utilities/state";
 import { Validatable, isValid, isValueSet, unset } from "../utilities/validation";
-import { deriveAcrName, getValidatedAcrName, randomSuffix, renderValidationMessage } from "./ClusterInput";
+import { deriveAcrName, getValidatedAcrName, randomSuffix } from "./helpers/formFields";
+import { renderValidationMessage } from "./ClusterInput";
 import { EventDef } from "./helpers/state";
 import styles from "./KickstartCluster.module.css";
 
@@ -187,6 +188,7 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
             return (
                 <input
                     type="text"
+                    id="existing-cluster-dropdown"
                     className={styles.midControl}
                     value=""
                     placeholder={l10n.t("Select a subscription first")}
@@ -196,13 +198,21 @@ export function ExistingClusterInput(props: ExistingClusterInputProps) {
         }
         if (props.clusters === null) {
             return (
-                <input type="text" className={styles.midControl} value="" placeholder={l10n.t("Loading…")} disabled />
+                <input
+                    type="text"
+                    id="existing-cluster-dropdown"
+                    className={styles.midControl}
+                    value=""
+                    placeholder={l10n.t("Loading…")}
+                    disabled
+                />
             );
         }
         if (props.clusters.length === 0) {
             return (
                 <input
                     type="text"
+                    id="existing-cluster-dropdown"
                     className={styles.midControl}
                     value=""
                     placeholder={l10n.t("No clusters found in this subscription")}

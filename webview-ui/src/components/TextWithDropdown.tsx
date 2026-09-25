@@ -62,11 +62,19 @@ function TextOnly(props: TextOnlyProps) {
     }
 
     if (props.allowAddItem === false) {
-        return <input type="text" className={props.className} value={props.selectedItem || ""} disabled />;
+        return (
+            <input type="text" id={props.id} className={props.className} value={props.selectedItem || ""} disabled />
+        );
     }
 
     return (
-        <input type="text" className={props.className} onInput={handleTextChange} value={props.selectedItem || ""} />
+        <input
+            type="text"
+            id={props.id}
+            className={props.className}
+            onInput={handleTextChange}
+            value={props.selectedItem || ""}
+        />
     );
 }
 
@@ -78,6 +86,9 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
     const [allItems, setAllItems] = useState([...props.items]);
 
     const listboxRef = useRef<HTMLOListElement>(null);
+    const focusTimerRef = useRef<number | undefined>(undefined);
+
+    useEffect(() => () => window.clearTimeout(focusTimerRef.current), []);
 
     useEffect(() => {
         // If there are any items (including the selected item) in props that aren't in allItems, reset allItems
@@ -120,7 +131,7 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
         // This is admittedly not completely robust, but:
         // 1. The consequences of getting the timing wrong are minor (user might need to expand the listbox again).
         // 2. The delay is only noticable when tabbing into the field (click events are processed immediately).
-        setTimeout(() => {
+        focusTimerRef.current = window.setTimeout(() => {
             setIsExpanded(true);
         }, 250);
     }
@@ -199,10 +210,12 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
     }
 
     const displayListbox = isExpanded && selectionItems.length > 0;
+    const listboxId = props.id ? `${props.id}-listbox` : undefined;
+    const optionId = (index: number) => (props.id ? `${props.id}-option-${index}` : undefined);
+    const activeIndex = selectionItems.findIndex((item) => item.isSelected);
 
     return (
         <div
-            role="combobox"
             style={{ position: "relative" }}
             className={props.className}
             onFocus={handleFocus}
@@ -212,6 +225,12 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
             <div className={styles.inputField}>
                 <input
                     type="text"
+                    id={props.id}
+                    role="combobox"
+                    aria-expanded={displayListbox}
+                    aria-controls={listboxId}
+                    aria-activedescendant={displayListbox && activeIndex !== -1 ? optionId(activeIndex) : undefined}
+                    aria-autocomplete="list"
                     className={styles.selectedValue}
                     onInput={handleTextChange}
                     value={inputText}
@@ -234,13 +253,18 @@ function NonLazyTextWithDropdown(props: NonLazyTextWithDropdownProps) {
             </div>
 
             <ol
+                id={listboxId}
+                role="listbox"
                 className={`${styles.listbox} ${displayListbox ? "" : styles.hidden}`}
                 tabIndex={-1}
                 onFocus={handleListboxFocus}
                 ref={listboxRef}
             >
-                {selectionItems.map((item) => (
+                {selectionItems.map((item, index) => (
                     <li
+                        id={optionId(index)}
+                        role="option"
+                        aria-selected={item.isSelected}
                         className={`${styles.listboxItem} ${item.isSelected ? styles.selected : ""}`}
                         onClick={(e) => handleItemClick(e, item)}
                         key={item.value}

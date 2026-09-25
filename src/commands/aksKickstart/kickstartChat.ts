@@ -49,27 +49,24 @@ async function openMaximizedChat(startNewChat: boolean): Promise<void> {
 
 function buildContextSummary(selections: GuidedSetupSelections): string {
     const lines: string[] = [];
+    const appSource = selections.appSource;
 
-    switch (selections.appSource.kind) {
+    switch (appSource.kind) {
         case "repo":
             lines.push("- **Starting point:** existing GitHub repository");
-            lines.push(`- **Repository URL:** ${selections.appSource.repoUrl}`);
+            lines.push(`- **Repository URL:** ${appSource.repoUrl}`);
             break;
         case "new":
             lines.push("- **Starting point:** build something new");
-            if (selections.appSource.projectType) {
-                lines.push(`- **Project type:** ${selections.appSource.projectType}`);
-            }
-            if (selections.appSource.language) {
-                lines.push(`- **Language / framework:** ${selections.appSource.language}`);
-            }
-            if (selections.appSource.projectIdea) {
-                lines.push(`- **App idea:** ${selections.appSource.projectIdea}`);
+            lines.push(`- **Project type:** ${appSource.projectType}`);
+            lines.push(`- **Language / framework:** ${appSource.language}`);
+            if (appSource.projectIdea) {
+                lines.push(`- **App idea:** ${appSource.projectIdea}`);
             }
             break;
         case "sample":
             lines.push("- **Starting point:** example sample");
-            lines.push(`- **Sample:** ${selections.appSource.sampleLabel} (${selections.appSource.sampleRepoUrl})`);
+            lines.push(`- **Sample:** ${appSource.sampleLabel} (${appSource.sampleRepoUrl})`);
             break;
         case "workspace":
             lines.push("- **Starting point:** the current VS Code workspace");

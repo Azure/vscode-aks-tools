@@ -14,6 +14,10 @@ export type KickstartGuidedSetupState = InitialState & {
     githubReposLoading: boolean;
     githubReposError: string | null;
     githubSignedInUser: string | null;
+    /** True when the repo list was capped before exhausting the user's repos. */
+    githubReposTruncated: boolean;
+    /** True when listing failed purely because no GitHub session is available. */
+    githubNeedsSignIn: boolean;
 };
 
 export type EventDef = {
@@ -30,21 +34,26 @@ export const stateUpdater: WebviewStateUpdater<"kickstartGuidedSetup", EventDef,
         githubReposLoading: false,
         githubReposError: null,
         githubSignedInUser: null,
+        githubReposTruncated: false,
+        githubNeedsSignIn: false,
     }),
     vscodeMessageHandler: {
-        errorNotification: (state, args) => ({ ...state, errorMessage: args.message }),
+        errorNotification: (state, args) => ({ ...state, errorMessage: args.message, stage: Stage.CollectingInput }),
         gitHubReposLoaded: (state, args) => ({
             ...state,
             githubRepos: args.repos,
             githubReposLoading: false,
             githubReposError: null,
             githubSignedInUser: args.signedInUser,
+            githubReposTruncated: args.hasMore,
+            githubNeedsSignIn: false,
         }),
         gitHubReposError: (state, args) => ({
             ...state,
             githubReposLoading: false,
             githubReposError: args.message,
             githubSignedInUser: args.signedInUser ?? state.githubSignedInUser,
+            githubNeedsSignIn: args.needsSignIn,
         }),
     },
     eventHandler: {

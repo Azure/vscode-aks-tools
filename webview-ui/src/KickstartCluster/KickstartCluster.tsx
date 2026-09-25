@@ -137,7 +137,7 @@ export function KickstartCluster(initialState: InitialState) {
                                 preflightRole={state.preflightRole}
                                 preflightDeployment={state.preflightDeployment}
                                 preflightGeneration={state.preflightGeneration}
-                                launchContext={state.launchContext}
+                                form={state.clusterForm}
                                 costEstimate={state.costEstimate}
                                 eventHandlers={eventHandlers}
                                 vscode={vscode}
