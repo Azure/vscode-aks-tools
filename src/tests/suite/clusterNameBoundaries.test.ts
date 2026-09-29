@@ -3,8 +3,7 @@ import * as sinon from "sinon";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as kubectlModule from "../../commands/utils/kubectl";
 import { KubectlClusterOperations, validateGadgetFilters } from "../../commands/aksInspektorGadget/clusterOperations";
-import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
-import { isSafeLocalCapturePath } from "../../panels/RetinaCapturePanel";
+import { getLinuxNodes, isSafeLocalCapturePath } from "../../panels/utilities/KubectlNetworkHelper";
 import { NamespaceSelection } from "../../webview-contract/webviewDefinitions/inspektorGadget";
 
 /**
@@ -34,6 +33,10 @@ describe("Cluster-supplied name boundaries", () => {
             .resolves({ succeeded: true, result: { code: 0, stdout, stderr: "" } });
     }
 
+    function resourceList(names: string[]) {
+        return JSON.stringify({ items: names.map((name) => ({ metadata: { name } })) });
+    }
+
     afterEach(() => {
         sinon.restore();
     });
@@ -44,7 +47,7 @@ describe("Cluster-supplied name boundaries", () => {
 
     describe("Inspektor Gadget", () => {
         it("refuses a hostile node name served by the API server", async () => {
-            stubKubectlStdout(`aks-node-1\n${hostileNode}\naks-node-3`);
+            stubKubectlStdout(resourceList(["aks-node-1", hostileNode, "aks-node-3"]));
 
             const result = await operations().getNodes();
 
@@ -52,8 +55,16 @@ describe("Cluster-supplied name boundaries", () => {
             assert.ok(result.error.includes("node"), `error should name the resource: ${result.error}`);
         });
 
+        it("does not trim a hostile leading newline from cluster output", async () => {
+            stubKubectlStdout(resourceList(["\nwhoami"]));
+
+            const result = await operations().getNodes();
+
+            assert.ok(!result.succeeded);
+        });
+
         it("refuses a hostile namespace served by the API server", async () => {
-            stubKubectlStdout(`default\n${hostileNamespace}`);
+            stubKubectlStdout(resourceList(["default", hostileNamespace]));
 
             const result = await operations().getNamespaces();
 
@@ -61,7 +72,7 @@ describe("Cluster-supplied name boundaries", () => {
         });
 
         it("accepts ordinary names unchanged", async () => {
-            stubKubectlStdout("aks-node-1\naks-node-2\n");
+            stubKubectlStdout(resourceList(["aks-node-1", "aks-node-2"]));
 
             const result = await operations().getNodes();
 
@@ -70,7 +81,7 @@ describe("Cluster-supplied name boundaries", () => {
         });
 
         it("returns an empty list when the cluster has no nodes", async () => {
-            stubKubectlStdout("");
+            stubKubectlStdout(resourceList([]));
 
             const result = await operations().getNodes();
 
@@ -79,7 +90,7 @@ describe("Cluster-supplied name boundaries", () => {
         });
 
         it("refuses a hostile namespace argument before running kubectl", async () => {
-            stubKubectlStdout("some-pod");
+            stubKubectlStdout(resourceList(["some-pod"]));
 
             const result = await operations().getPods(hostileNamespace);
 
@@ -88,7 +99,7 @@ describe("Cluster-supplied name boundaries", () => {
         });
 
         it("refuses a hostile pod name argument before running kubectl", async () => {
-            stubKubectlStdout("nginx");
+            stubKubectlStdout(JSON.stringify({ spec: { containers: [{ name: "nginx" }] } }));
 
             const result = await operations().getContainers("default", hostileNode);
 
@@ -97,7 +108,11 @@ describe("Cluster-supplied name boundaries", () => {
         });
 
         it("refuses hostile container names served by the API server", async () => {
-            stubKubectlStdout(`nginx sidecar$(touch /tmp/aks-pwned)`);
+            stubKubectlStdout(
+                JSON.stringify({
+                    spec: { containers: [{ name: "nginx" }, { name: "sidecar$(touch /tmp/aks-pwned)" }] },
+                }),
+            );
 
             const result = await operations().getContainers("default", "my-pod");
 
@@ -168,11 +183,45 @@ describe("Cluster-supplied name boundaries", () => {
 
             assert.ok(result.succeeded);
         });
+
+        it("rejects every dynamic field that could alter the command", () => {
+            const hostileArguments = [
+                { ...baseArguments, gadgetCategory: "trace; whoami" },
+                { ...baseArguments, gadgetResource: "dns$(whoami)" },
+                { ...baseArguments, filters: { ...baseArguments.filters, labels: { app: "x; whoami" } } },
+                { ...baseArguments, sortString: "pid; whoami" },
+                { ...baseArguments, maxRows: "1; whoami" as unknown as number },
+            ];
+
+            for (const args of hostileArguments) {
+                assert.ok(!validateGadgetFilters(args).succeeded);
+            }
+        });
+
+        it("rejects names with leading whitespace rather than executing the original value", () => {
+            const result = validateGadgetFilters({
+                ...baseArguments,
+                filters: { ...baseArguments.filters, nodeName: "\nnode-1" },
+            });
+            assert.ok(!result.succeeded);
+        });
+
+        it("does not invoke the blocking command for a hostile non-name field", async () => {
+            stubKubectlStdout("");
+
+            const result = await operations().runTrace({
+                ...baseArguments,
+                gadgetResource: "dns; whoami",
+            });
+
+            assert.ok(!result.succeeded);
+            assert.ok(invokeStub.notCalled);
+        });
     });
 
     describe("Retina node listing", () => {
         it("refuses a hostile node name", async () => {
-            stubKubectlStdout(`aks-node-1\n${hostileNode}`);
+            stubKubectlStdout(resourceList(["aks-node-1", hostileNode]));
 
             const result = await getLinuxNodes(fakeKubectl, "/tmp/kubeconfig");
 
@@ -180,7 +229,7 @@ describe("Cluster-supplied name boundaries", () => {
         });
 
         it("accepts ordinary node names", async () => {
-            stubKubectlStdout("aks-node-1\naks-node-2");
+            stubKubectlStdout(resourceList(["aks-node-1", "aks-node-2"]));
 
             const result = await getLinuxNodes(fakeKubectl, "/tmp/kubeconfig");
 

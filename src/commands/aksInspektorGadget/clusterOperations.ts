@@ -1,7 +1,7 @@
 import * as k8s from "vscode-kubernetes-tools-api";
 import { Errorable, map as errmap, bind, bindAsync, bindAll, failed } from "../utils/errorable";
 import { invokeKubectlCommand, streamKubectlOutput } from "../utils/kubectl";
-import { validateK8sName, validateK8sNames } from "../utils/kubernetesNames";
+import { validateK8sName, validateK8sNames, validateK8sNamesJson } from "../utils/kubernetesNames";
 import { KubernetesClusterInfo } from "../utils/clusters";
 import { OutputStream } from "../utils/commands";
 import { asFlatItems, parseOutputLine } from "./traceItems";
@@ -70,12 +70,12 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     async runTrace(gadgetArguments: GadgetArguments): Promise<Errorable<TraceOutputItem[]>> {
-        const validArguments = validateGadgetFilters(gadgetArguments);
+        const validArguments = validateGadgetArguments(gadgetArguments);
         if (failed(validArguments)) {
             return validArguments;
         }
 
-        const command = this.getKubectlArgs(gadgetArguments).join(" ");
+        const command = this.getKubectlArgs(validArguments.result).join(" ");
         const shellResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
         const linesResult = errmap(shellResult, (r) => r.stdout.split("\n"));
         const arraysResult = bindAll(linesResult, parseOutputLine);
@@ -83,18 +83,19 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     watchTrace(gadgetArguments: GadgetArguments): Promise<Errorable<OutputStream>> {
-        const validArguments = validateGadgetFilters(gadgetArguments);
+        const validArguments = validateGadgetArguments(gadgetArguments);
         if (failed(validArguments)) {
             return Promise.resolve(validArguments);
         }
 
-        const args = this.getKubectlArgs(gadgetArguments);
+        const args = this.getKubectlArgs(validArguments.result);
         return streamKubectlOutput(this.kubectl, this.kubeConfigFile, args);
     }
 
     private getKubectlArgs(args: GadgetArguments): string[] {
         const config = getKubectlGadgetConfig();
-        const tag = failed(config) ? "latest" : config.result.releaseTag;
+        const configuredTag = failed(config) ? "latest" : config.result.releaseTag;
+        const tag = /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(configuredTag) ? configuredTag : "latest";
         const gadgetImageName = `${args.gadgetCategory}_${args.gadgetResource.replace(/-/g, "")}:${tag}`;
         const pluginCommand = ["gadget", "run", gadgetImageName, "-o", "json"];
         const nodeNameFilter = args.filters.nodeName ? ["--node", args.filters.nodeName] : [];
@@ -131,17 +132,15 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     async getNodes(): Promise<Errorable<string[]>> {
-        const command = `get node --no-headers -o custom-columns=":metadata.name"`;
+        const command = "get node -o json";
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        const lines = errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
-        return bind(lines, (names) => validateK8sNames(names, "subdomain", "node"));
+        return bind(commandResult, (sr) => validateK8sNamesJson(sr.stdout, "subdomain", "node"));
     }
 
     async getNamespaces(): Promise<Errorable<string[]>> {
-        const command = `get ns --no-headers -o custom-columns=":metadata.name"`;
+        const command = "get ns -o json";
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        const lines = errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
-        return bind(lines, (names) => validateK8sNames(names, "label", "namespace"));
+        return bind(commandResult, (sr) => validateK8sNamesJson(sr.stdout, "label", "namespace"));
     }
 
     async getPods(namespace: string): Promise<Errorable<string[]>> {
@@ -150,10 +149,9 @@ export class KubectlClusterOperations implements ClusterOperations {
             return validNamespace;
         }
 
-        const command = `get pod -n ${validNamespace.result} --no-headers -o custom-columns=":metadata.name"`;
+        const command = `get pod -n ${validNamespace.result} -o json`;
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        const lines = errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
-        return bind(lines, (names) => validateK8sNames(names, "subdomain", "pod"));
+        return bind(commandResult, (sr) => validateK8sNamesJson(sr.stdout, "subdomain", "pod"));
     }
 
     async getContainers(namespace: string, podName: string): Promise<Errorable<string[]>> {
@@ -167,27 +165,74 @@ export class KubectlClusterOperations implements ClusterOperations {
             return validPodName;
         }
 
-        const command = `get pod -n ${validNamespace.result} ${validPodName.result} -o jsonpath={.spec.containers[*].name}`;
+        const command = `get pod -n ${validNamespace.result} ${validPodName.result} -o json`;
         const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
-        const names = errmap(commandResult, (sr) => sr.stdout.trim().split(" "));
-        return bind(names, (containerNames) => validateK8sNames(containerNames, "label", "container"));
+        return bind(commandResult, (sr) => {
+            try {
+                const pod = JSON.parse(sr.stdout) as { spec?: { containers?: Array<{ name?: unknown }> } };
+                if (!Array.isArray(pod.spec?.containers)) {
+                    return { succeeded: false, error: "The cluster returned an invalid pod definition." };
+                }
+                const names = pod.spec.containers.map((container) => container.name);
+                if (names.some((name) => typeof name !== "string")) {
+                    return { succeeded: false, error: "The cluster returned an invalid container name." };
+                }
+                return validateK8sNames(names as string[], "label", "container");
+            } catch {
+                return { succeeded: false, error: "The cluster returned invalid JSON for a pod." };
+            }
+        });
     }
 }
 
-/** Re-checks trace filter names, which arrive over the webview channel. */
-export function validateGadgetFilters(gadgetArguments: GadgetArguments): Errorable<void> {
+const GADGET_RESOURCES: Readonly<Record<string, readonly string[]>> = {
+    profile: ["cpu"],
+    snapshot: ["process", "socket"],
+    top: ["block-io", "file", "tcp"],
+    trace: ["dns", "exec", "tcp"],
+};
+const LABEL_PREFIX_PATTERN = /^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$/;
+const LABEL_NAME_PATTERN = /^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$/;
+const LABEL_VALUE_PATTERN = /^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$/;
+const SORT_PATTERN = /^-?[A-Za-z0-9][A-Za-z0-9./]*(?:,-?[A-Za-z0-9][A-Za-z0-9./]*)*$/;
+
+/** Re-checks a complete trace request after it crosses the webview boundary. */
+export function validateGadgetArguments(gadgetArguments: GadgetArguments): Errorable<GadgetArguments> {
+    if (
+        typeof gadgetArguments.gadgetCategory !== "string" ||
+        typeof gadgetArguments.gadgetResource !== "string" ||
+        typeof gadgetArguments.filters !== "object" ||
+        gadgetArguments.filters === null
+    ) {
+        return { succeeded: false, error: "The trace request is malformed." };
+    }
+
+    const allowedResources = GADGET_RESOURCES[gadgetArguments.gadgetCategory];
+    if (!allowedResources?.includes(gadgetArguments.gadgetResource)) {
+        return { succeeded: false, error: "The trace request contains an unsupported gadget." };
+    }
+
     const { nodeName, namespace, podName, containerName } = gadgetArguments.filters;
 
     const checks: Errorable<string>[] = [];
+    if (nodeName !== undefined && typeof nodeName !== "string") {
+        return { succeeded: false, error: "The trace request contains an invalid node name." };
+    }
     if (nodeName) {
         checks.push(validateK8sName(nodeName, "subdomain", "node"));
     }
     // Default and All are numeric enum members; only a string is an actual namespace name.
-    if (typeof namespace === "string" && namespace.length > 0) {
+    if (typeof namespace === "string") {
         checks.push(validateK8sName(namespace, "label", "namespace"));
+    }
+    if (podName !== undefined && typeof podName !== "string") {
+        return { succeeded: false, error: "The trace request contains an invalid pod name." };
     }
     if (podName) {
         checks.push(validateK8sName(podName, "subdomain", "pod"));
+    }
+    if (containerName !== undefined && typeof containerName !== "string") {
+        return { succeeded: false, error: "The trace request contains an invalid container name." };
     }
     if (containerName) {
         checks.push(validateK8sName(containerName, "label", "container"));
@@ -198,5 +243,50 @@ export function validateGadgetFilters(gadgetArguments: GadgetArguments): Errorab
         return firstFailure;
     }
 
-    return { succeeded: true, result: undefined };
+    if (
+        typeof namespace !== "string" &&
+        namespace !== NamespaceSelection.Default &&
+        namespace !== NamespaceSelection.All
+    ) {
+        return { succeeded: false, error: "The trace request contains an invalid namespace selection." };
+    }
+
+    const labels = gadgetArguments.filters.labels;
+    if (labels !== undefined && (typeof labels !== "object" || labels === null || Array.isArray(labels))) {
+        return { succeeded: false, error: "The trace request contains an invalid label selector." };
+    }
+    for (const [key, value] of Object.entries(labels ?? {})) {
+        const keyParts = key.split("/");
+        const name = keyParts.at(-1) ?? "";
+        const prefix = keyParts.length === 2 ? keyParts[0] : undefined;
+        const validKey =
+            keyParts.length <= 2 &&
+            name.length <= 63 &&
+            LABEL_NAME_PATTERN.test(name) &&
+            (prefix === undefined || (prefix.length <= 253 && LABEL_PREFIX_PATTERN.test(prefix)));
+        if (typeof value !== "string" || value.length > 63 || !validKey || !LABEL_VALUE_PATTERN.test(value)) {
+            return { succeeded: false, error: "The trace request contains an invalid label selector." };
+        }
+    }
+
+    if (
+        gadgetArguments.sortString !== undefined &&
+        (typeof gadgetArguments.sortString !== "string" || !SORT_PATTERN.test(gadgetArguments.sortString))
+    ) {
+        return { succeeded: false, error: "The trace request contains an invalid sort expression." };
+    }
+
+    for (const [name, value] of [
+        ["maximum row count", gadgetArguments.maxRows],
+        ["timeout", gadgetArguments.timeout],
+    ] as const) {
+        if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) {
+            return { succeeded: false, error: `The trace request contains an invalid ${name}.` };
+        }
+    }
+
+    return { succeeded: true, result: gadgetArguments };
 }
+
+// Retained as the public name used by existing callers and tests.
+export const validateGadgetFilters = validateGadgetArguments;

@@ -84,23 +84,23 @@ export class KaitoModelsPanelDataProvider implements PanelDataProvider<"kaitoMod
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         // Reaches `get workspace workspace-${model}`.
-        const guardModel = (model: string | undefined): boolean => {
+        const guardModel = (model: string | undefined): string | null => {
             const validModel = validateK8sName(model ?? "", "subdomain", "model");
             if (failed(validModel)) {
                 vscode.window.showErrorMessage(validModel.error);
-                return false;
+                return null;
             }
-            return true;
+            return validModel.result;
         };
 
         return {
             generateCRDRequest: (params) => {
-                if (!guardModel(params.model)) return;
                 this.handleGenerateCRDRequest(params.model);
             },
             deployKaitoRequest: (params) => {
-                if (!guardModel(params.model)) return;
-                this.handleDeployKaitoRequest(params.model, params.yaml, params.gpu, webview);
+                const model = guardModel(params.model);
+                if (model === null) return;
+                this.handleDeployKaitoRequest(model, params.yaml, params.gpu, webview);
             },
             resetStateRequest: () => {
                 this.handleResetStateRequest(webview);

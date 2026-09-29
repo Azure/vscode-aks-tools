@@ -10,7 +10,7 @@ import { MessageHandler } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { getLocalKubectlCpPath } from "./utilities/KubectlNetworkHelper";
+import { getLocalKubectlCpPath, isSafeLocalCapturePath } from "./utilities/KubectlNetworkHelper";
 import { validateK8sNames } from "../commands/utils/kubernetesNames";
 import { RETINA_CAPTURE_NODE_HOST_PATH } from "../commands/aksRetinaCapture/retinaCaptureCommand";
 import * as semver from "semver";
@@ -23,16 +23,6 @@ export class RetinaCapturePanel extends BasePanel<"retinaCapture"> {
             getAllNodesResponse: [],
         });
     }
-}
-
-/**
- * True if a download path can go into the `kubectl cp` command string below without the
- * shell re-interpreting it. Stopgap until that path is passed as its own argv element;
- * tracked in #2429. A path containing a space already fails today, silently.
- */
-export function isSafeLocalCapturePath(localPath: string): boolean {
-    // Drive letters, either separator, dots, word characters, hyphens and @.
-    return localPath.length > 0 && !/[^\w.:/\\@+-]/.test(localPath);
 }
 
 export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture"> {

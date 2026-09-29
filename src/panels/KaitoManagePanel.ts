@@ -64,20 +64,20 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
         // Cluster-supplied, returned over the webview channel, reach kubectl command strings.
-        const guard = (model: string, namespace: string): boolean => {
+        const guard = (model: string, namespace: string): { model: string; namespace: string } | null => {
             const validModel = validateK8sName(model, "subdomain", "workspace");
             if (failed(validModel)) {
                 vscode.window.showErrorMessage(validModel.error);
-                return false;
+                return null;
             }
 
             const validNamespace = validateK8sName(namespace, "label", "namespace");
             if (failed(validNamespace)) {
                 vscode.window.showErrorMessage(validNamespace.error);
-                return false;
+                return null;
             }
 
-            return true;
+            return { model: validModel.result, namespace: validNamespace.result };
         };
 
         return {
@@ -85,23 +85,27 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
                 this.handleMonitorUpdateRequest(webview);
             },
             deleteWorkspaceRequest: (params) => {
-                if (!guard(params.model, params.namespace)) return;
-                this.handleDeleteWorkspaceRequest(params.model, params.namespace, webview);
+                const valid = guard(params.model, params.namespace);
+                if (valid === null) return;
+                this.handleDeleteWorkspaceRequest(valid.model, valid.namespace, webview);
             },
             redeployWorkspaceRequest: (params) => {
-                if (!guard(params.modelName, params.namespace)) return;
-                this.handleRedeployWorkspaceRequest(params.modelName, params.modelYaml, params.namespace, webview);
+                const valid = guard(params.modelName, params.namespace);
+                if (valid === null) return;
+                this.handleRedeployWorkspaceRequest(valid.model, params.modelYaml, valid.namespace, webview);
             },
             getLogsRequest: () => {
                 this.handleGetLogsRequest();
             },
             testWorkspaceRequest: (params) => {
-                if (!guard(params.modelName, params.namespace)) return;
-                this.handleTestWorkspaceRequest(params.modelName, params.namespace);
+                const valid = guard(params.modelName, params.namespace);
+                if (valid === null) return;
+                this.handleTestWorkspaceRequest(valid.model, valid.namespace);
             },
             portForwardRequest: (params) => {
-                if (!guard(params.modelName, params.namespace)) return;
-                this.handlePortForwardRequest(params.modelName, params.namespace);
+                const valid = guard(params.modelName, params.namespace);
+                if (valid === null) return;
+                this.handlePortForwardRequest(valid.model, valid.namespace);
             },
         };
     }

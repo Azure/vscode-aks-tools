@@ -870,28 +870,37 @@ export async function filterPodImage(
     }
 
     const result = await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `get pods -A -o jsonpath="{range .items[*]}{.metadata.namespace};{.metadata.name};{.spec.containers[*].image};{end}"`;
+        const command = "get pods -A -o json";
         const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
         if (failed(output)) {
             vscode.window.showErrorMessage(output.error);
             return [];
         }
 
-        const strOutput = output.result.stdout;
-        const pods = strOutput
-            .trim()
-            .split(";")
-            .reduce<{ nameSpace: string; podName: string; imageName: string }[]>((acc, val, index, arr) => {
-                if (index % 3 === 0 && arr[index + 1] && arr[index + 2]) {
-                    acc.push({ nameSpace: val, podName: arr[index + 1], imageName: arr[index + 2] });
-                }
-                return acc;
-            }, []);
-
-        return pods;
+        try {
+            const list = JSON.parse(output.result.stdout) as {
+                items?: Array<{
+                    metadata?: { namespace?: unknown; name?: unknown };
+                    spec?: { containers?: Array<{ image?: unknown }> };
+                }>;
+            };
+            if (!Array.isArray(list.items)) return [];
+            return list.items.flatMap((pod) => {
+                const nameSpace = pod.metadata?.namespace;
+                const podName = pod.metadata?.name;
+                const images = pod.spec?.containers?.map((container) => container.image) ?? [];
+                if (typeof nameSpace !== "string" || typeof podName !== "string") return [];
+                return images
+                    .filter((image): image is string => typeof image === "string")
+                    .map((imageName) => ({ nameSpace, podName, imageName }));
+            });
+        } catch {
+            return [];
+        }
     });
 
     const matchingPods = result.filter((pod) => pod.imageName.startsWith(imageNameStartsWith));
+    const validatedPods = [];
 
     // These reach later kubectl command strings.
     for (const pod of matchingPods) {
@@ -904,9 +913,15 @@ export async function filterPodImage(
         if (failed(validPodName)) {
             return validPodName;
         }
+
+        validatedPods.push({
+            ...pod,
+            nameSpace: validNamespace.result,
+            podName: validPodName.result,
+        });
     }
 
-    return { succeeded: true, result: matchingPods };
+    return { succeeded: true, result: validatedPods };
 }
 
 //Must meet RFC 1123: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names

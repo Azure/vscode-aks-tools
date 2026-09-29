@@ -49,6 +49,10 @@ describe("Kubernetes name validation", () => {
             assert.strictEqual(isValidK8sName("a".repeat(254), "subdomain"), false);
         });
 
+        it("matches Kubernetes subdomain compatibility for long components", () => {
+            assert.strictEqual(isValidK8sName("a".repeat(64), "subdomain"), true);
+        });
+
         it("applies DNS-1123 structural rules", () => {
             assert.strictEqual(isValidK8sName("-leading", "label"), false);
             assert.strictEqual(isValidK8sName("trailing-", "label"), false);
@@ -63,8 +67,8 @@ describe("Kubernetes name validation", () => {
     });
 
     describe("validateK8sNames", () => {
-        it("passes through valid names and drops the blank line kubectl emits for empty lists", () => {
-            const result = validateK8sNames(["node1", "", "  ", "node2"], "subdomain", "node");
+        it("passes through valid names and drops the blank entry kubectl emits for empty lists", () => {
+            const result = validateK8sNames(["node1", "", "node2"], "subdomain", "node");
             assert.ok(result.succeeded);
             assert.deepStrictEqual(result.result, ["node1", "node2"]);
         });
@@ -80,6 +84,11 @@ describe("Kubernetes name validation", () => {
             assert.ok(!result.succeeded, "a hostile name must not be silently filtered out");
             assert.ok(result.error.includes("node"), "error should name the resource");
             assert.ok(result.error.includes("touch /tmp/pwned"), "error should show the rejected value");
+        });
+
+        it("rejects whitespace instead of validating a trimmed value", () => {
+            const result = validateK8sNames([" node1"], "subdomain", "node");
+            assert.ok(!result.succeeded);
         });
 
         it("quotes the rejected value so metacharacters are visible", () => {

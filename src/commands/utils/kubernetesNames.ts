@@ -12,6 +12,7 @@ import { Errorable } from "./errorable";
 export type K8sNameFormat = "label" | "subdomain";
 
 const LABEL_PATTERN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+const SUBDOMAIN_PATTERN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
 const MAX_LABEL_LENGTH = 63;
 const MAX_SUBDOMAIN_LENGTH = 253;
 
@@ -25,11 +26,9 @@ export function isValidK8sName(value: string, format: K8sNameFormat): boolean {
         return false;
     }
 
-    // Label by label: one regex for the whole subdomain needs nested quantifiers, which
-    // risks catastrophic backtracking on attacker-chosen input.
-    return value
-        .split(".")
-        .every((label) => label.length > 0 && label.length <= MAX_LABEL_LENGTH && LABEL_PATTERN.test(label));
+    // Match Kubernetes' IsDNS1123Subdomain validator. Unlike DNS labels, Kubernetes
+    // does not impose a separate 63-character limit on each dot-delimited component.
+    return SUBDOMAIN_PATTERN.test(value);
 }
 
 /**
@@ -42,7 +41,9 @@ export function validateK8sNames(
     format: K8sNameFormat,
     resourceDescription: string,
 ): Errorable<string[]> {
-    const result = names.map((name) => name.trim()).filter((name) => name.length > 0);
+    // Callers remove kubectl's trailing line ending before splitting. Do not trim an
+    // individual value: validating one representation and executing another is unsafe.
+    const result = names.filter((name) => name.length > 0);
 
     const invalid = result.find((name) => !isValidK8sName(name, format));
     if (invalid !== undefined) {
@@ -60,6 +61,10 @@ export function validateK8sNames(
 
 /** Validates a single name read back from the cluster. */
 export function validateK8sName(name: string, format: K8sNameFormat, resourceDescription: string): Errorable<string> {
+    if (name.trim().length === 0) {
+        return { succeeded: false, error: `The cluster returned an empty ${resourceDescription} name.` };
+    }
+
     const validated = validateK8sNames([name], format, resourceDescription);
     if (!validated.succeeded) {
         return validated;
@@ -70,6 +75,28 @@ export function validateK8sName(name: string, format: K8sNameFormat, resourceDes
     }
 
     return { succeeded: true, result: validated.result[0] };
+}
+
+/** Parses a Kubernetes list response without losing delimiters embedded in a hostile name. */
+export function validateK8sNamesJson(
+    json: string,
+    format: K8sNameFormat,
+    resourceDescription: string,
+): Errorable<string[]> {
+    try {
+        const parsed = JSON.parse(json) as { items?: Array<{ metadata?: { name?: unknown } }> };
+        if (!Array.isArray(parsed.items)) {
+            return { succeeded: false, error: "The cluster returned an invalid Kubernetes resource list." };
+        }
+
+        const names = parsed.items.map((item) => item.metadata?.name);
+        if (names.some((name) => typeof name !== "string")) {
+            return { succeeded: false, error: `The cluster returned an invalid ${resourceDescription} name.` };
+        }
+        return validateK8sNames(names as string[], format, resourceDescription);
+    } catch {
+        return { succeeded: false, error: "The cluster returned invalid JSON for a Kubernetes resource list." };
+    }
 }
 
 /** Quoted so metacharacters are visible, truncated so a payload cannot flood the error. */
