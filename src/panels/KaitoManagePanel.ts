@@ -7,6 +7,7 @@ import { InitialState } from "../webview-contract/webviewDefinitions/kaitoManage
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { invokeKubectlCommand } from "../commands/utils/kubectl";
 import { failed } from "../commands/utils/errorable";
+import { validateK8sName } from "../commands/utils/kubernetesNames";
 import { longRunning } from "../commands/utils/host";
 import { getConditions, convertAgeToMinutes, deployModel, getClusterIP } from "./utilities/KaitoHelpers";
 import { filterPodImage } from "../commands/utils/clusters";
@@ -62,24 +63,49 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
+        // Cluster-supplied, returned over the webview channel, reach kubectl command strings.
+        const guard = (model: string, namespace: string): { model: string; namespace: string } | null => {
+            const validModel = validateK8sName(model, "subdomain", "workspace");
+            if (failed(validModel)) {
+                vscode.window.showErrorMessage(validModel.error);
+                return null;
+            }
+
+            const validNamespace = validateK8sName(namespace, "label", "namespace");
+            if (failed(validNamespace)) {
+                vscode.window.showErrorMessage(validNamespace.error);
+                return null;
+            }
+
+            return { model: validModel.result, namespace: validNamespace.result };
+        };
+
         return {
             monitorUpdateRequest: () => {
                 this.handleMonitorUpdateRequest(webview);
             },
             deleteWorkspaceRequest: (params) => {
-                this.handleDeleteWorkspaceRequest(params.model, params.namespace, webview);
+                const valid = guard(params.model, params.namespace);
+                if (valid === null) return;
+                this.handleDeleteWorkspaceRequest(valid.model, valid.namespace, webview);
             },
             redeployWorkspaceRequest: (params) => {
-                this.handleRedeployWorkspaceRequest(params.modelName, params.modelYaml, params.namespace, webview);
+                const valid = guard(params.modelName, params.namespace);
+                if (valid === null) return;
+                this.handleRedeployWorkspaceRequest(valid.model, params.modelYaml, valid.namespace, webview);
             },
             getLogsRequest: () => {
                 this.handleGetLogsRequest();
             },
             testWorkspaceRequest: (params) => {
-                this.handleTestWorkspaceRequest(params.modelName, params.namespace);
+                const valid = guard(params.modelName, params.namespace);
+                if (valid === null) return;
+                this.handleTestWorkspaceRequest(valid.model, valid.namespace);
             },
             portForwardRequest: (params) => {
-                this.handlePortForwardRequest(params.modelName, params.namespace);
+                const valid = guard(params.modelName, params.namespace);
+                if (valid === null) return;
+                this.handlePortForwardRequest(valid.model, valid.namespace);
             },
         };
     }
@@ -184,17 +210,33 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         const models = [];
         const data = JSON.parse(kubectlresult.result.stdout);
         for (const item of data.items) {
+            const name = item.metadata?.name;
+            const namespace = item.metadata?.namespace ?? "default";
+
+            // Drop anything the API server could not have assigned, before it is shown.
+            const validName = validateK8sName(String(name ?? ""), "subdomain", "workspace");
+            if (failed(validName)) {
+                vscode.window.showErrorMessage(validName.error);
+                continue;
+            }
+
+            const validNamespace = validateK8sName(String(namespace), "label", "namespace");
+            if (failed(validNamespace)) {
+                vscode.window.showErrorMessage(validNamespace.error);
+                continue;
+            }
+
             const conditions: Array<{ type: string; status: string }> = item.status?.conditions || [];
             const { resourceReady, inferenceReady, workspaceReady } = getConditions(conditions);
             // The data below is used to indicate the progress of the active model deployment
             models.push({
-                name: item.metadata?.name,
+                name: validName.result,
                 instance: item.resource?.instanceType,
                 resourceReady: resourceReady,
                 inferenceReady: inferenceReady,
                 workspaceReady: workspaceReady,
                 age: convertAgeToMinutes(item.metadata?.creationTimestamp),
-                namespace: item.metadata?.namespace ?? "default",
+                namespace: validNamespace.result,
             });
         }
 

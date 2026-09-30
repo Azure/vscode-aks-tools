@@ -2,7 +2,8 @@ import { platform } from "os";
 import { Uri, workspace } from "vscode";
 import { relative } from "path";
 import { invokeKubectlCommand } from "../../commands/utils/kubectl";
-import { Errorable, map as errmap } from "../../commands/utils/errorable";
+import { Errorable, bind } from "../../commands/utils/errorable";
+import { validateK8sNamesJson } from "../../commands/utils/kubernetesNames";
 import * as k8s from "vscode-kubernetes-tools-api";
 
 export function getLocalKubectlCpPath(fileUri: Uri): string {
@@ -25,11 +26,17 @@ export function getLocalKubectlCpPath(fileUri: Uri): string {
     return relative(workingDirectory, fileUri.fsPath);
 }
 
+/** Stopgap for shell-backed kubectl cp calls, until #2429 provides an argv API. */
+export function isSafeLocalCapturePath(localPath: string): boolean {
+    // Drive letters, either separator, dots, word characters, hyphens and @.
+    return localPath.length > 0 && !/[^\w.:/\\@+-]/.test(localPath);
+}
+
 export async function getLinuxNodes(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFile: string,
 ): Promise<Errorable<string[]>> {
-    const command = `get node -l kubernetes.io/os=linux --no-headers -o custom-columns=":metadata.name"`;
+    const command = "get node -l kubernetes.io/os=linux -o json";
     const commandResult = await invokeKubectlCommand(kubectl, kubeConfigFile, command);
-    return errmap(commandResult, (sr) => sr.stdout.trim().split("\n"));
+    return bind(commandResult, (sr) => validateK8sNamesJson(sr.stdout, "subdomain", "node"));
 }

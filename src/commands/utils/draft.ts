@@ -1,7 +1,7 @@
 import { Errorable, combine, failed } from "./errorable";
 import { DeploymentSpecType } from "../../webview-contract/webviewDefinitions/draft/types";
 import path from "path";
-import { ShellOptions, exec } from "./shell";
+import { ShellOptions, execFile } from "./shell";
 import { parseJson } from "./json";
 import { dirSync } from "tmp";
 
@@ -51,18 +51,28 @@ async function getDeploymentFiles(
         SERVICEPORT: 80,
     };
 
-    const variableArgs = Object.entries(variables)
-        .map(([key, value]) => `--variable ${key}=${value}`)
-        .join(" ");
+    const variableArgs = Object.entries(variables).flatMap(([key, value]) => ["--variable", `${key}=${value}`]);
 
     const language = "java"; // So it doesn't attempt to autodetect the language
-    const command = `draft create --language ${language} --deployment-only --deploy-type ${deploymentType} ${variableArgs} --destination ${destDir} --dry-run --silent`;
+    const args = [
+        "create",
+        "--language",
+        language,
+        "--deployment-only",
+        "--deploy-type",
+        deploymentType,
+        ...variableArgs,
+        "--destination",
+        destDir,
+        "--dry-run",
+        "--silent",
+    ];
 
     const execOptions: ShellOptions = {
         envPaths: [path.dirname(draftBinaryPath)],
     };
 
-    const shellResult = await exec(command, execOptions);
+    const shellResult = await execFile(draftBinaryPath, args, execOptions);
     if (failed(shellResult)) {
         return shellResult;
     }

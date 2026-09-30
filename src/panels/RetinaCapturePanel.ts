@@ -10,7 +10,8 @@ import { MessageHandler } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef } from "../webview-contract/webviewDefinitions/retinaCapture";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import { getLocalKubectlCpPath } from "./utilities/KubectlNetworkHelper";
+import { getLocalKubectlCpPath, isSafeLocalCapturePath } from "./utilities/KubectlNetworkHelper";
+import { validateK8sNames } from "../commands/utils/kubernetesNames";
 import { RETINA_CAPTURE_NODE_HOST_PATH } from "../commands/aksRetinaCapture/retinaCaptureCommand";
 import * as semver from "semver";
 import { l10n, commands, env } from "vscode";
@@ -61,11 +62,21 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     }
 
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
+        // Comma-separated, arrives over the webview channel, reaches kubectl command strings.
+        const guardNodes = (handler: (node: string) => void) => (node: string) => {
+            const nodes = validateK8sNames(node.split(","), "subdomain", "node");
+            if (failed(nodes)) {
+                window.showErrorMessage(nodes.error);
+                return;
+            }
+            handler(nodes.result.join(","));
+        };
+
         return {
-            handleCaptureFileDownload: (node: string) => this.handleCaptureFileDownload(node),
-            deleteRetinaNodeExplorer: (node: string) => {
+            handleCaptureFileDownload: guardNodes((node: string) => this.handleCaptureFileDownload(node)),
+            deleteRetinaNodeExplorer: guardNodes((node: string) => {
                 this.handleDeleteRetinaNodeExplorer(node);
-            },
+            }),
         };
     }
 
@@ -107,6 +118,16 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
         }
 
         const localCpPath = getLocalKubectlCpPath(localCaptureUri);
+
+        if (!isSafeLocalCapturePath(localCpPath)) {
+            window.showErrorMessage(
+                l10n.t(
+                    "Cannot download to '{0}'. Choose a folder whose path has no spaces or shell punctuation.",
+                    localCpPath,
+                ),
+            );
+            return;
+        }
 
         const nodes = node.split(",");
         for (const node of nodes) {

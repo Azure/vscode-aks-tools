@@ -13,7 +13,7 @@ import {
 } from "../../webview-contract/webviewDefinitions/draft/draftDeployment";
 import { TelemetryDefinition } from "../../webview-contract/webviewTypes";
 import { MessageHandler, MessageSink } from "../../webview-contract/messaging";
-import { exec, ShellOptions } from "../../commands/utils/shell";
+import { execFile, ShellOptions } from "../../commands/utils/shell";
 import { failed } from "../../commands/utils/errorable";
 import { OpenFileOptions } from "../../webview-contract/webviewDefinitions/shared/fileSystemTypes";
 import { getClusterNamespaces } from "../../commands/utils/clusters";
@@ -278,19 +278,28 @@ export class DraftDeploymentDataProvider implements PanelDataProvider<"draftDepl
             SERVICEPORT: args.servicePort,
         };
 
-        const variableArgs = Object.entries(variables)
-            .map(([key, value]) => `--variable ${key}=${value}`)
-            .join(" ");
+        const variableArgs = Object.entries(variables).flatMap(([key, value]) => ["--variable", `${key}=${value}`]);
 
         const language = "java"; // So it doesn't attempt to autodetect the language
-        const command = `draft create --language ${language} --deployment-only --deploy-type ${args.deploymentSpecType} ${variableArgs} --destination .${path.sep}${args.location} --skip-file-detection`;
+        const draftArgs = [
+            "create",
+            "--language",
+            language,
+            "--deployment-only",
+            "--deploy-type",
+            args.deploymentSpecType,
+            ...variableArgs,
+            "--destination",
+            `.${path.sep}${args.location}`,
+            "--skip-file-detection",
+        ];
 
         const execOptions: ShellOptions = {
             workingDir: this.workspaceFolder.uri.fsPath,
             envPaths: [path.dirname(this.draftBinaryPath)],
         };
 
-        const shellResult = await exec(command, execOptions);
+        const shellResult = await execFile(this.draftBinaryPath, draftArgs, execOptions);
         if (failed(shellResult)) {
             window.showErrorMessage(shellResult.error);
             return;

@@ -39,6 +39,23 @@ whenever an external-tool invocation accepts values outside the extension's
 control. The test should verify both argument boundaries and that the execution
 path uses `execFile`.
 
+### Validating cluster object names
+
+Names served by a cluster's API server are untrusted for the same reason. kubectl does
+no client-side validation on read, so a hostile or compromised endpoint can return any
+bytes for `metadata.name`.
+
+Use `validateK8sNames` / `validateK8sName` from `src/commands/utils/kubernetesNames.ts`
+on node, namespace, pod, container and custom-resource names as soon as they are read
+back from the cluster, and again on any that return over the webview channel. A
+conforming API server only ever assigns DNS-1123 names, so rejecting anything else costs
+nothing for real clusters.
+
+Some kubectl calls still build command strings, because the `KubectlV1.invokeCommand`
+API the kubernetes-tools dependency exposes only accepts a string and runs it through a
+shell. Boundary validation is what keeps those safe today; prefer the array-based
+`streamKubectlOutput` lane where a streaming result works.
+
 ## Checks that gate a pull request
 
 Run these before pushing. Each has a corresponding CI job.
