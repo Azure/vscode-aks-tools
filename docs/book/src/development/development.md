@@ -51,10 +51,11 @@ back from the cluster, and again on any that return over the webview channel. A
 conforming API server only ever assigns DNS-1123 names, so rejecting anything else costs
 nothing for real clusters.
 
-Some kubectl calls still build command strings, because the `KubectlV1.invokeCommand`
-API the kubernetes-tools dependency exposes only accepts a string and runs it through a
-shell. Boundary validation is what keeps those safe today; prefer the array-based
-`streamKubectlOutput` lane where a streaming result works.
+Invoke kubectl with `invokeKubectlCommandArgs(kubectl, kubeConfigFile, args)` from
+`src/commands/utils/kubectl.ts`, which spawns with an argument array and no shell. The
+string form, `invokeKubectlCommand`, reaches a shell through the kubernetes-tools
+dependency and an eslint rule rejects it; the only exception is the Run Kubectl Command
+panel, where the command is what the user typed.
 
 ## Checks that gate a pull request
 
