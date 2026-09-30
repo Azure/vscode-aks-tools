@@ -29,13 +29,17 @@ export async function getExecOutput(
     kubeConfigFile: string,
     namespace: string,
     pod: string,
-    podCommand: string,
+    podArgs: string[],
 ): Promise<Errorable<KubectlV1.ShellResult>> {
-    // kubeconfig goes first here: it belongs to kubectl, not to the command run in the pod.
-    // podCommand is still split on whitespace because callers pass a command line for the
-    // container, not an argument array; it is extension-controlled in every current caller.
-    const args = ["--kubeconfig", kubeConfigFile, "exec", "-n", namespace, pod, "--", ...podCommand.split(" ")];
-    return invokeKubectlCommandArgs(kubectl, kubeConfigFile, args, NonZeroExitCodeBehaviour.Fail);
+    // kubeconfig goes first here: everything after "--" is passed to the command in the pod,
+    // so appending it last, as invokeKubectlCommandArgs does, would hand it to that command.
+    const execArgs = ["exec", "-n", namespace, pod, "--", ...podArgs];
+    return runKubectl(
+        kubectl,
+        ["--kubeconfig", kubeConfigFile, ...execArgs],
+        `kubectl ${execArgs.join(" ")}`,
+        NonZeroExitCodeBehaviour.Fail,
+    );
 }
 
 /**
@@ -49,12 +53,22 @@ export async function invokeKubectlCommandArgs(
     args: string[],
     exitCodeBehaviour?: NonZeroExitCodeBehaviour,
 ): Promise<Errorable<KubectlV1.ShellResult>> {
-    const behaviour = exitCodeBehaviour ?? NonZeroExitCodeBehaviour.Fail;
-    const internal = asInternal(kubectl.api);
-
     // kubeconfig goes last: kubectl plugins do not accept it before the plugin name.
-    const fullArgs = [...args, "--kubeconfig", kubeConfigFile];
-    const description = `kubectl ${args.join(" ")}`;
+    return runKubectl(
+        kubectl,
+        [...args, "--kubeconfig", kubeConfigFile],
+        `kubectl ${args.join(" ")}`,
+        exitCodeBehaviour ?? NonZeroExitCodeBehaviour.Fail,
+    );
+}
+
+async function runKubectl(
+    kubectl: APIAvailable<KubectlV1>,
+    fullArgs: string[],
+    description: string,
+    behaviour: NonZeroExitCodeBehaviour,
+): Promise<Errorable<KubectlV1.ShellResult>> {
+    const internal = asInternal(kubectl.api);
 
     if (failed(internal)) {
         return { succeeded: false, error: `Failed to run "${description}": ${internal.error}` };

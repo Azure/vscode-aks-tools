@@ -321,7 +321,7 @@ spec:
         filters: CaptureFilters,
         webview: MessageSink<ToWebViewMsgDef>,
     ) {
-        let podCommand: string;
+        let podCommand: string[];
         try {
             podCommand = getTcpDumpPodCommand(capture, filters);
         } catch (error) {
@@ -371,7 +371,7 @@ spec:
             return;
         }
 
-        const podCommand = `/bin/sh -c "kill ${captureProcess.pid}"`;
+        const podCommand = ["/bin/sh", "-c", `kill ${captureProcess.pid}`];
         const killOutput = await getExecOutput(
             this.kubectl,
             this.kubeConfigFilePath,
@@ -495,7 +495,7 @@ spec:
     }
 
     private async handleGetInterfaces(node: NodeName, webview: MessageSink<ToWebViewMsgDef>) {
-        const podCommand = `/bin/sh -c "tcpdump --list-interfaces"`;
+        const podCommand = ["/bin/sh", "-c", "tcpdump --list-interfaces"];
         const output = await getExecOutput(
             this.kubectl,
             this.kubeConfigFilePath,
@@ -588,7 +588,7 @@ spec:
     }
 
     private async installDebugTools(node: NodeName): Promise<Errorable<void>> {
-        const podCommand = `/bin/sh -c "apt-get update && apt-get install -y tcpdump procps"`;
+        const podCommand = ["/bin/sh", "-c", "apt-get update && apt-get install -y tcpdump procps"];
         const output = await getExecOutput(
             this.kubectl,
             this.kubeConfigFilePath,
@@ -601,7 +601,7 @@ spec:
 
     private async getRunningCaptures(node: NodeName): Promise<Errorable<TcpDumpProcess[]>> {
         // List all processes without header columns, including PID, command and args (which contains the command)
-        const podCommand = "ps -e -o pid= -o comm= -o args=";
+        const podCommand = ["ps", "-e", "-o", "pid=", "-o", "comm=", "-o", "args="];
         const output = await getExecOutput(
             this.kubectl,
             this.kubeConfigFilePath,
@@ -628,8 +628,18 @@ spec:
         node: NodeName,
         runningCaptures: string[],
     ): Promise<Errorable<CompletedCapture[]>> {
-        // Use 'find' rather than 'ls' (http://mywiki.wooledge.org/ParsingLs)
-        const podCommand = `find ${captureDir} -type f -name ${captureFilePrefix}*.cap -printf "%p\\t%k\\n"`;
+        // Use 'find' rather than 'ls' (http://mywiki.wooledge.org/ParsingLs).
+        // No shell, so the -name glob reaches find unexpanded and -printf handles the escapes.
+        const podCommand = [
+            "find",
+            captureDir,
+            "-type",
+            "f",
+            "-name",
+            `${captureFilePrefix}*.cap`,
+            "-printf",
+            "%p\\t%k\\n",
+        ];
         const output = await getExecOutput(
             this.kubectl,
             this.kubeConfigFilePath,

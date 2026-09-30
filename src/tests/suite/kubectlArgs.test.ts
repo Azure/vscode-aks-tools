@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { invokeKubectlCommandArgs } from "../../commands/utils/kubectl";
+import { getExecOutput, invokeKubectlCommandArgs } from "../../commands/utils/kubectl";
 import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
 
 /**
@@ -162,5 +162,31 @@ describe("invokeKubectlCommandArgs", () => {
 
         assert.ok(result.succeeded, "should still work without legacySpawnAsChild");
         assert.strictEqual(observedArgs?.[2], hostile, "the payload must stay one argument in the fallback too");
+    });
+});
+
+describe("getExecOutput", () => {
+    it("passes the pod command as separate arguments, with kubeconfig before exec", async () => {
+        const { kubectl, calls } = fakeKubectl(() => fakeChildProcess("eth0", "", 0));
+
+        const result = await getExecOutput(kubectl, "/tmp/kubeconfig", "default", "debug-node", [
+            "/bin/sh",
+            "-c",
+            "tcpdump --list-interfaces",
+        ]);
+
+        assert.ok(result.succeeded, "should succeed");
+        assert.deepStrictEqual(calls[0], [
+            "--kubeconfig",
+            "/tmp/kubeconfig",
+            "exec",
+            "-n",
+            "default",
+            "debug-node",
+            "--",
+            "/bin/sh",
+            "-c",
+            "tcpdump --list-interfaces",
+        ]);
     });
 });
