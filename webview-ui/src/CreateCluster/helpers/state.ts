@@ -88,4 +88,5 @@ export const vscode = getWebviewMessageContext<"createCluster">({
     createClusterRequest: null,
     getLocationsRequest: null,
     getResourceGroupsRequest: null,
+    mergeKubeconfigRequest: null,
 });

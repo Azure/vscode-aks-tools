@@ -8,7 +8,6 @@ import {
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { setAssetContext } from "./assets";
-import { getReadySessionProvider } from "./auth/azureAuth";
 import { activateAzureSessionProvider, getSessionProvider } from "./auth/azureSessionProvider";
 import { registerUriHandler } from "./uriHandler";
 import { selectSubscriptions, selectTenant, signInToAzure } from "./commands/aksAccount/aksAccount";
@@ -53,11 +52,8 @@ import {
 } from "./commands/detectors/detectors";
 import { draftValidate, draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
 import refreshSubscription from "./commands/refreshSubscriptions";
-import { getKubeconfigYaml, getManagedCluster } from "./commands/utils/clusters";
-import { failed } from "./commands/utils/errorable";
-import { longRunning } from "./commands/utils/host";
+import { getClusterKubeconfig } from "./commands/utils/clusters";
 import { Reporter, reporter } from "./commands/utils/reporter";
-import { AksClusterTreeNode } from "./tree/aksClusterTreeItem";
 import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
 import { getPlugins } from "./plugins/getPlugins";
@@ -319,38 +315,6 @@ export async function registerAzureServiceNodes(context: vscode.ExtensionContext
 
     const azureResourceNodeContributor = new AzureResourceNodeContributor(clusterExplorer.api, kubectl.api);
     clusterExplorer.api.registerNodeContributor(azureResourceNodeContributor);
-}
-
-async function getClusterKubeconfig(treeNode: AksClusterTreeNode): Promise<string | undefined> {
-    const sessionProvider = await getReadySessionProvider();
-    if (failed(sessionProvider)) {
-        vscode.window.showErrorMessage(sessionProvider.error);
-        return;
-    }
-
-    const properties = await longRunning(l10n.t(`Getting properties for cluster {0}.`, treeNode.name), () =>
-        getManagedCluster(sessionProvider.result, treeNode.subscriptionId, treeNode.resourceGroupName, treeNode.name),
-    );
-    if (failed(properties)) {
-        vscode.window.showErrorMessage(properties.error);
-        return undefined;
-    }
-
-    const kubeconfig = await longRunning(l10n.t(`Retrieving kubeconfig for cluster {0}.`, treeNode.name), () =>
-        getKubeconfigYaml(
-            sessionProvider.result,
-            treeNode.subscriptionId,
-            treeNode.resourceGroupName,
-            properties.result,
-        ),
-    );
-
-    if (failed(kubeconfig)) {
-        vscode.window.showErrorMessage(kubeconfig.error);
-        return undefined;
-    }
-
-    return kubeconfig.result;
 }
 
 function registerCommandWithTelemetry(command: string, callback: CommandCallback) {

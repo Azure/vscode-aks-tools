@@ -41,6 +41,7 @@ export function getCreateClusterScenarios() {
                     args.name,
                     webview,
                 ),
+            mergeKubeconfigRequest: () => {},
         };
     }
 

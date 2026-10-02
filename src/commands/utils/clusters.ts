@@ -29,6 +29,7 @@ import { ClusterFilter } from "./config";
 import { DiagnosticSettingsResource } from "@azure/arm-monitor";
 import { parseResource } from "../../azure-api-utils";
 import * as k8s from "vscode-kubernetes-tools-api";
+import * as l10n from "@vscode/l10n";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
@@ -213,6 +214,40 @@ export async function getKubeconfigYaml(
     return managedCluster.aadProfile
         ? getAadKubeconfig(client, resourceGroup, managedCluster.name)
         : getNonAadKubeconfig(client, resourceGroup, managedCluster.name);
+}
+
+export async function getClusterKubeconfig(
+    treeNode: Pick<AksClusterTreeNode, "subscriptionId" | "resourceGroupName" | "name">,
+): Promise<string | undefined> {
+    const sessionProvider = await getReadySessionProvider();
+    if (failed(sessionProvider)) {
+        vscode.window.showErrorMessage(sessionProvider.error);
+        return;
+    }
+
+    const properties = await longRunning(l10n.t(`Getting properties for cluster {0}.`, treeNode.name), () =>
+        getManagedCluster(sessionProvider.result, treeNode.subscriptionId, treeNode.resourceGroupName, treeNode.name),
+    );
+    if (failed(properties)) {
+        vscode.window.showErrorMessage(properties.error);
+        return undefined;
+    }
+
+    const kubeconfig = await longRunning(l10n.t(`Retrieving kubeconfig for cluster {0}.`, treeNode.name), () =>
+        getKubeconfigYaml(
+            sessionProvider.result,
+            treeNode.subscriptionId,
+            treeNode.resourceGroupName,
+            properties.result,
+        ),
+    );
+
+    if (failed(kubeconfig)) {
+        vscode.window.showErrorMessage(kubeconfig.error);
+        return undefined;
+    }
+
+    return kubeconfig.result;
 }
 
 /**
