@@ -1,7 +1,7 @@
 import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
-import { Uri, window } from "vscode";
+import { Uri, commands, window } from "vscode";
 import { getEnvironment } from "../auth/azureAuth";
 import { AzureAuthenticationSession, ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient, getResourceManagementClient } from "../commands/utils/arm";
@@ -23,6 +23,7 @@ import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCr
 import { reporter } from "../commands/utils/reporter";
 import { getFilteredClusters } from "../commands/utils/config";
 import { addItemToClusterFilter } from "../commands/utils/clusterfilter";
+import { getClusterKubeconfig } from "../commands/utils/clusters";
 import * as l10n from "@vscode/l10n";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
@@ -67,6 +68,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             getResourceGroupsRequest: false,
             getLocationsRequest: false,
             createClusterRequest: true,
+            mergeKubeconfigRequest: true,
         };
     }
 
@@ -83,7 +85,16 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
                     args.preset,
                     webview,
                 ),
+            mergeKubeconfigRequest: (args) => this.handleMergeKubeconfigRequest(args.resourceGroupName, args.name),
         };
+    }
+
+    private async handleMergeKubeconfigRequest(resourceGroupName: string, name: string) {
+        await commands.executeCommand("kubernetes.cloudExplorer.mergeIntoKubeconfig", {
+            nodeType: "contributed",
+            provider: { getKubeconfigYaml: getClusterKubeconfig },
+            value: { subscriptionId: this.subscriptionId, resourceGroupName, name },
+        });
     }
 
     private async handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
