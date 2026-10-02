@@ -471,5 +471,8 @@
   "$(plus) Create new {0}...": "$(plus) Create new {0}...",
   "$(add) Create...": "$(add) Create...",
   "Click to view resource": "Click to view resource",
-  "Azure Activity": "Azure Activity"
+  "Azure Activity": "Azure Activity",
+  "Failed to merge cluster {0} into kubeconfig: {1}": "Failed to merge cluster {0} into kubeconfig: {1}",
+  "Merge into Kubeconfig": "Merge into Kubeconfig",
+  "Another kubeconfig merge is in progress. Try again when it finishes.": "Another kubeconfig merge is in progress. Try again when it finishes."
 }
