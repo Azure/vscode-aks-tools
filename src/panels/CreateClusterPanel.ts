@@ -299,6 +299,7 @@ async function createCluster(
     // event name for telemetry reporter
     const eventName = commandId === "aks.createCluster" ? "command" : "aks.ghcp";
 
+    let deploymentPortalUrl: string | null = null;
     try {
         // Create deployment using the generic resources API with deployment resource type
         const deploymentResourceId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
@@ -311,7 +312,7 @@ async function createCluster(
             },
         );
         const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
-        const deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
+        deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
         webview.postProgressUpdate({
             event: ProgressEventType.InProgress,
             operationDescription,
@@ -320,46 +321,57 @@ async function createCluster(
             createdCluster: null,
         });
 
-        poller.onProgress((state) => {
-            if (state.status === "canceled") {
-                webview.postProgressUpdate({
-                    event: ProgressEventType.Cancelled,
-                    operationDescription,
-                    errorMessage: null,
-                    deploymentPortalUrl,
-                    createdCluster: null,
-                });
-            } else if (state.status === "failed") {
-                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "false" });
-                const errorMessage = state.error ? getErrorMessage(state.error) : "Unknown error";
-                window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
-                webview.postProgressUpdate({
-                    event: ProgressEventType.Failed,
-                    operationDescription,
-                    errorMessage,
-                    deploymentPortalUrl,
-                    createdCluster: null,
-                });
-            } else if (state.status === "succeeded") {
-                reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "true" });
-                window.showInformationMessage(l10n.t(`Successfully created AKS cluster {0}.`, name));
-                const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
-                webview.postProgressUpdate({
-                    event: ProgressEventType.Success,
-                    operationDescription,
-                    errorMessage: null,
-                    deploymentPortalUrl,
-                    createdCluster: {
-                        portalUrl: getPortalResourceUrl(environment, armId),
-                    },
-                });
-            }
-        });
-        await poller.pollUntilDone();
+        const state = await waitForDeployment(poller);
+        if (state.status === "canceled") {
+            webview.postProgressUpdate({
+                event: ProgressEventType.Cancelled,
+                operationDescription,
+                errorMessage: null,
+                deploymentPortalUrl,
+                createdCluster: null,
+            });
+        } else if (state.status === "failed") {
+            reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "false" });
+            const errorMessage = describeError(state.error);
+            window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
+            webview.postProgressUpdate({
+                event: ProgressEventType.Failed,
+                operationDescription,
+                errorMessage,
+                deploymentPortalUrl,
+                createdCluster: null,
+            });
+        } else {
+            reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "true" });
+            window.showInformationMessage(l10n.t(`Successfully created AKS cluster {0}.`, name));
+            const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
+            webview.postProgressUpdate({
+                event: ProgressEventType.Success,
+                operationDescription,
+                errorMessage: null,
+                deploymentPortalUrl,
+                createdCluster: {
+                    portalUrl: getPortalResourceUrl(environment, armId),
+                },
+            });
+        }
     } catch (ex) {
-        const errorMessage = isInvalidTemplateDeploymentError(ex)
-            ? getInvalidTemplateErrorMessage(ex)
-            : getErrorMessage(ex);
+        const errorMessage = describeError(ex);
+        if (deploymentPortalUrl) {
+            // The deployment was submitted but its status couldn't be read, so it may still succeed.
+            window.showWarningMessage(
+                l10n.t(`Couldn't get the status of AKS cluster {0}. Check the deployment in the Azure portal.`, name),
+            );
+            webview.postProgressUpdate({
+                event: ProgressEventType.TrackingLost,
+                operationDescription,
+                errorMessage,
+                deploymentPortalUrl,
+                createdCluster: null,
+            });
+            return;
+        }
+
         window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
@@ -369,6 +381,49 @@ async function createCluster(
             createdCluster: null,
         });
     }
+}
+
+const statusRetryCount = 3;
+const statusRetryDelayMs = 10000;
+
+type DeploymentPoller = {
+    pollUntilDone(): Promise<unknown>;
+    isDone(): boolean;
+    getOperationState(): { status: string; error?: Error };
+};
+
+// Retries status checks that fail before the deployment finishes (e.g. network errors).
+async function waitForDeployment(poller: DeploymentPoller) {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            await poller.pollUntilDone();
+        } catch (ex) {
+            if (!poller.isDone()) {
+                if (attempt >= statusRetryCount) {
+                    throw ex;
+                }
+                await new Promise((resolve) => setTimeout(resolve, statusRetryDelayMs));
+                continue;
+            }
+        }
+
+        return poller.getOperationState();
+    }
+}
+
+// Returns a readable error message, with a fallback when the message is empty.
+function describeError(ex: unknown): string {
+    if (ex === undefined || ex === null) {
+        return "No error details were returned.";
+    }
+
+    const message = isInvalidTemplateDeploymentError(ex) ? getInvalidTemplateErrorMessage(ex) : getErrorMessage(ex);
+    if (message.trim()) {
+        return message;
+    }
+
+    const code = (ex as { code?: unknown }).code;
+    return code ? `No error details were returned (error code: ${String(code)}).` : "No error details were returned.";
 }
 
 function getInvalidTemplateErrorMessage(ex: InvalidTemplateDeploymentRestError): string {
