@@ -480,5 +480,8 @@
   "Couldn't Get Cluster Creation Status": "Couldn't Get Cluster Creation Status",
   "The deployment may still be running. Check its status in the Azure portal.": "The deployment may still be running. Check its status in the Azure portal.",
   "No error details were returned.": "No error details were returned.",
-  "No error details were returned (error code: {0}).": "No error details were returned (error code: {0})."
+  "No error details were returned (error code: {0}).": "No error details were returned (error code: {0}).",
+  "Failed to merge cluster {0} into kubeconfig: {1}": "Failed to merge cluster {0} into kubeconfig: {1}",
+  "Merge into Kubeconfig": "Merge into Kubeconfig",
+  "Another kubeconfig merge is in progress. Try again when it finishes.": "Another kubeconfig merge is in progress. Try again when it finishes."
 }
