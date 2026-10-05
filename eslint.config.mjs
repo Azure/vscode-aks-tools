@@ -106,6 +106,12 @@ export default [
                     message:
                         "Do not build kubectl command strings. Use invokeKubectlCommandArgs(kubectl, kubeConfigFile, argsArray); see docs/book/src/development/development.md.",
                 },
+                {
+                    // The dependency's string API, which runs in a shell.
+                    selector: 'CallExpression[callee.type="MemberExpression"][callee.property.name="invokeCommand"]',
+                    message:
+                        "kubectl.api.invokeCommand runs its string in a shell. Use invokeKubectlCommandArgs(kubectl, kubeConfigFile, argsArray); see docs/book/src/development/development.md.",
+                },
             ],
             "no-var": "error",
             "prefer-const": "error",

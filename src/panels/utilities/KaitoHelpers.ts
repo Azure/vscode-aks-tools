@@ -2,12 +2,14 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { failed, Errorable } from "../../commands/utils/errorable";
 import { invokeKubectlCommandArgs } from "../../commands/utils/kubectl";
+import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
 import { longRunning } from "../../commands/utils/host";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { filterPodImage, getKubernetesClusterInfo, getAksClusterTreeNode } from "../../commands/utils/clusters";
 import { join } from "path";
 import { writeFileSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
+import { isIP } from "net";
 import { KubectlV1 } from "vscode-kubernetes-tools-api";
 import { Succeeded } from "../../commands/utils/errorable";
 import * as tmpfile from "../../commands/utils/tempfile";
@@ -89,8 +91,8 @@ export async function getKaitoPods(
     return kaitoPods.result;
 }
 
-export async function createCurlPodCommand(
-    kubeConfigFilePath: string,
+/** `kubectl run` arguments for a curl pod that sends the query. Use with `invokeKubectlPodCommandArgs`. */
+export function createCurlPodArgs(
     podName: string,
     modelName: string,
     clusterIP: string,
@@ -101,92 +103,68 @@ export async function createCurlPodCommand(
     repetitionPenalty: number,
     maxLength: number,
     runtime: string = "vllm",
-) {
+): string[] {
     modelName = modelName.startsWith("workspace-") ? modelName.replace("workspace-", "") : modelName;
     if (modelName.startsWith("phi-3-5")) {
         modelName = modelName.replace("phi-3-5", "phi-3.5");
     } else if (modelName.startsWith("qwen-2-5")) {
         modelName = modelName.replace("qwen-2-5", "qwen2.5");
     }
-    // Command for windows platforms (Needs custom character escaping)
-    if (process.platform === "win32") {
-        let windowsCreateCommand;
-        if (runtime === "transformers") {
-            windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
---image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d "{\\"model\\":\\"${modelName}\\", \\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
-\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
-\\"repetition_penalty\\":${repetitionPenalty}, \\"max_tokens\\":${maxLength}}"`;
-        } else {
-            windowsCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
---image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
-"Content-Type: application/json" -d "{\\"model\\":\\"${modelName}\\", \\"prompt\\":\\"${escapeSpecialChars(prompt)}\\", \
-\\"temperature\\":${temperature}, \\"top_p\\":${topP}, \\"top_k\\":${topK}, \
-\\"repetition_penalty\\":${repetitionPenalty}, \\"max_tokens\\":${maxLength}}"`;
-        }
-        return windowsCreateCommand;
-    } else {
-        // Command for UNIX platforms (Should work for all other process.platform return values besides win32)
-        let unixCreateCommand;
-        if (runtime === "transformers") {
-            unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
---image=curlimages/curl -- curl -X POST http://${clusterIP}/chat -H "accept: application/json" -H \
-"Content-Type: application/json" -d '{"model":"${modelName}", "prompt":"${escapeSpecialChars(prompt)}", \
-"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "repetition_penalty":${repetitionPenalty}, \
- "max_tokens":${maxLength}}'`;
-        } else {
-            unixCreateCommand = `--kubeconfig="${kubeConfigFilePath}" run -it --restart=Never ${podName} \
---image=curlimages/curl -- curl -X POST http://${clusterIP}/v1/completions -H "accept: application/json" -H \
-"Content-Type: application/json" -d '{"model":"${modelName}", "prompt":"${escapeSpecialChars(prompt)}", \
-"temperature":${temperature}, "top_p":${topP}, "top_k":${topK}, "repetition_penalty":${repetitionPenalty}, \
- "max_tokens":${maxLength}}'`;
-        }
-        return unixCreateCommand;
-    }
+
+    const endpoint = runtime === "transformers" ? "chat" : "v1/completions";
+    const host = isIP(clusterIP) === 6 ? `[${clusterIP}]` : clusterIP;
+    const body = JSON.stringify({
+        model: modelName,
+        prompt,
+        temperature,
+        top_p: topP,
+        top_k: topK,
+        repetition_penalty: repetitionPenalty,
+        max_tokens: maxLength,
+    });
+
+    return [
+        "run",
+        "-it",
+        "--restart=Never",
+        podName,
+        "--image=curlimages/curl",
+        "--",
+        "curl",
+        "-X",
+        "POST",
+        `http://${host}/${endpoint}`,
+        "-H",
+        "accept: application/json",
+        "-H",
+        "Content-Type: application/json",
+        "-d",
+        body,
+    ];
 }
 
-export function deleteCurlPodCommand(kubeConfigFilePath: string, podName: string) {
-    const deleteCommand = `--kubeconfig="${kubeConfigFilePath}" delete pod ${podName}`;
-    return deleteCommand;
-}
-
-export function getCurlPodLogsCommand(kubeConfigFilePath: string, podName: string) {
-    const logsCommand = `--kubeconfig="${kubeConfigFilePath}" logs ${podName}`;
-    return logsCommand;
-}
-
-// Sanitizing the input string
-function escapeSpecialChars(input: string) {
-    return input
-        .replace(/\\/g, "\\\\") // Escape backslashes
-        .replace(/"/g, '\\"') // Escape double quotes
-        .replace(/'/g, "") // Remove single quotes
-        .replace(/\n/g, "\\n") // Escape newlines
-        .replace(/\r/g, "\\r") // Escape carriage returns
-        .replace(/\t/g, "\\t") // Escape tabs
-        .replace(/\f/g, "\\f") // Escape form feeds
-        .replace(/`/g, "") // Remove backticks
-        .replace(/\0/g, "\\0"); // Escape null characters
-}
-
-// returns the cluster IP for the model
+// returns the cluster IP for the model, or "" if it cannot be read
 export async function getClusterIP(
     kubeConfigFilePath: string,
     modelName: string,
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     namespace: string,
 ) {
-    void namespace;
-    const ipCommand = `--kubeconfig="${kubeConfigFilePath}" get svc -n ${namespace} ${modelName} -o jsonpath="{.spec.clusterIP}" `;
-    const ipResult = await kubectl.api.invokeCommand(ipCommand);
-    if (ipResult && ipResult.code === 0) {
-        return ipResult.stdout;
-    } else if (ipResult === undefined) {
-        vscode.window.showErrorMessage(`Failed to get cluster IP for model ${modelName}`);
-    } else if (ipResult.code !== 0) {
-        vscode.window.showErrorMessage(`Failed to connect to cluster: ${ipResult.code}\nError: ${ipResult.stderr}`);
+    const args = ["get", "svc", "-n", namespace, modelName, "-o", "jsonpath={.spec.clusterIP}"];
+    const ipResult = await invokeKubectlCommandArgs(kubectl, kubeConfigFilePath, args);
+    if (failed(ipResult)) {
+        vscode.window.showErrorMessage(`Failed to get cluster IP for model ${modelName}: ${ipResult.error}`);
+        return "";
     }
-    return "";
+
+    // Cluster-supplied value used in the curl URL; accept only an IP.
+    const clusterIP = ipResult.result.stdout.trim();
+    if (isIP(clusterIP) === 0) {
+        vscode.window.showErrorMessage(`Service ${modelName} returned an invalid cluster IP: ${clusterIP}`);
+        return "";
+    }
+
+    return clusterIP;
 }
 
 export async function getWorkspaceRuntime(
@@ -196,9 +174,15 @@ export async function getWorkspaceRuntime(
     namespace: string,
 ): Promise<string> {
     const args = ["get", "workspace", "-n", namespace, modelName, "-o", "json"];
-    const result = await invokeKubectlCommandArgs(kubectl, kubeConfigFilePath, args);
-    const kubectlresult = result.succeeded ? result.result : undefined;
-    if (kubectlresult && kubectlresult.code === 0) {
+    // Succeed so the exit code and stderr reach the error below.
+    const result = await invokeKubectlCommandArgs(kubectl, kubeConfigFilePath, args, NonZeroExitCodeBehaviour.Succeed);
+    if (failed(result)) {
+        vscode.window.showErrorMessage(`Failed to get runtime for model ${modelName}: ${result.error}`);
+        return "vllm";
+    }
+
+    const kubectlresult = result.result;
+    if (kubectlresult.code === 0) {
         const json = JSON.parse(kubectlresult.stdout);
         const runtime = json.metadata?.annotations?.["kaito.sh/runtime"];
         if (runtime === "transformers") {
@@ -206,9 +190,7 @@ export async function getWorkspaceRuntime(
         } else {
             return "vllm";
         }
-    } else if (kubectlresult === undefined) {
-        vscode.window.showErrorMessage(`Failed to get runtime for model ${modelName}`);
-    } else if (kubectlresult.code !== 0) {
+    } else {
         vscode.window.showErrorMessage(
             `Failed to connect to cluster: ${kubectlresult.code}\nError: ${kubectlresult.stderr}`,
         );

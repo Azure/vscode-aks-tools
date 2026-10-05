@@ -106,6 +106,8 @@ function resolveFileUri(target: unknown): vscode.Uri | undefined {
 export async function resolveCurrentKubectlContext(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
 ): Promise<{ contextName: string; kubeconfigYaml: string } | undefined> {
+    // Constant commands on the default kubeconfig, which invokeKubectlCommandArgs does not support.
+    // eslint-disable-next-line no-restricted-syntax
     const ctxResult = await kubectl.api.invokeCommand("config current-context");
     if (!ctxResult || ctxResult.code !== 0) {
         vscode.window.showErrorMessage(
@@ -124,6 +126,7 @@ export async function resolveCurrentKubectlContext(
         return undefined;
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     const cfgResult = await kubectl.api.invokeCommand("config view --minify --flatten -o yaml");
     if (!cfgResult || cfgResult.code !== 0) {
         vscode.window.showErrorMessage(l10n.t("Could not read kubeconfig for context '{0}'.", contextName));

@@ -6,13 +6,10 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contract/webviewDefinitions/kaitoTest";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
-import {
-    createCurlPodCommand,
-    deleteCurlPodCommand,
-    getClusterIP,
-    getCurlPodLogsCommand,
-    getWorkspaceRuntime,
-} from "./utilities/KaitoHelpers";
+import { createCurlPodArgs, getClusterIP, getWorkspaceRuntime } from "./utilities/KaitoHelpers";
+import { invokeKubectlCommandArgs, invokeKubectlPodCommandArgs } from "../commands/utils/kubectl";
+import { NonZeroExitCodeBehaviour } from "../commands/utils/shell";
+import { failed } from "../commands/utils/errorable";
 import { l10n } from "vscode";
 
 export class KaitoTestPanel extends BasePanel<"kaitoTest"> {
@@ -120,9 +117,8 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     this.kubectl,
                     this.namespace,
                 );
-                // this command creates a curl pod and executes the query
-                const createCommand = await createCurlPodCommand(
-                    this.kubeConfigFilePath,
+                // this creates a curl pod and executes the query
+                const createArgs = createCurlPodArgs(
                     podName,
                     this.modelName,
                     clusterIP,
@@ -134,20 +130,29 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     maxLength,
                     runtime,
                 );
-                console.log(createCommand);
+                console.log(createArgs.join(" "));
                 // used to delete the curl pod after query is complete
-                const deleteCommand = deleteCurlPodCommand(this.kubeConfigFilePath, podName);
-
-                // retrieve the result of curl request from the pod
-                const logsCommand = getCurlPodLogsCommand(this.kubeConfigFilePath, podName);
+                const deleteArgs = ["delete", "pod", podName];
 
                 // create the curl pod
-                await this.kubectl.api.invokeCommand(createCommand);
+                await invokeKubectlPodCommandArgs(
+                    this.kubectl,
+                    this.kubeConfigFilePath,
+                    createArgs,
+                    NonZeroExitCodeBehaviour.Succeed,
+                );
 
                 // retrieve the logs from the curl pod
-                const logsResult = await this.kubectl.api.invokeCommand(logsCommand);
-                if (logsResult && logsResult.code === 0) {
-                    const parsedOutput = JSON.parse(logsResult.stdout);
+                const logsResult = await invokeKubectlCommandArgs(
+                    this.kubectl,
+                    this.kubeConfigFilePath,
+                    ["logs", podName],
+                    NonZeroExitCodeBehaviour.Succeed,
+                );
+                if (failed(logsResult)) {
+                    vscode.window.showErrorMessage(l10n.t(`Failed to connect to cluster`));
+                } else if (logsResult.result.code === 0) {
+                    const parsedOutput = JSON.parse(logsResult.result.stdout);
                     let responseText;
                     if (runtime === "transformers") {
                         responseText = parsedOutput.Result;
@@ -159,20 +164,27 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                         modelName: this.modelName,
                         output: responseText,
                     });
-                } else if (logsResult) {
-                    vscode.window.showErrorMessage(
-                        `Failed to retrieve logs: ${logsResult.code}\nError: ${logsResult.stderr}`,
-                    );
                 } else {
-                    vscode.window.showErrorMessage(l10n.t(`Failed to connect to cluster`));
+                    vscode.window.showErrorMessage(
+                        `Failed to retrieve logs: ${logsResult.result.code}\nError: ${logsResult.result.stderr}`,
+                    );
                 }
-                await this.kubectl.api.invokeCommand(deleteCommand);
+                await invokeKubectlCommandArgs(
+                    this.kubectl,
+                    this.kubeConfigFilePath,
+                    deleteArgs,
+                    NonZeroExitCodeBehaviour.Succeed,
+                );
                 this.isQueryInProgress = false;
                 return;
             } catch (error) {
                 // deletes pod if an error occurs during log retrieval
-                const failsafeDeletion = deleteCurlPodCommand(this.kubeConfigFilePath, podName);
-                await this.kubectl.api.invokeCommand(failsafeDeletion);
+                await invokeKubectlCommandArgs(
+                    this.kubectl,
+                    this.kubeConfigFilePath,
+                    ["delete", "pod", podName],
+                    NonZeroExitCodeBehaviour.Succeed,
+                );
 
                 // display error & reset query status
                 vscode.window.showErrorMessage(`Error during operation: ${error}`);

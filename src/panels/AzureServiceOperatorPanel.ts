@@ -174,7 +174,7 @@ export class AzureServiceOperatorDataProvider implements PanelDataProvider<"aso"
                 );
                 return errmap<k8s.KubectlV1.ShellResult, k8s.KubectlV1.ShellResult & CommandResult>(
                     shellOutput,
-                    (sr) => ({ ...sr, command: `kubectl ${kubectlArgs}` }),
+                    (sr) => ({ ...sr, command: `kubectl ${kubectlArgs.join(" ")}` }),
                 );
             }),
         );

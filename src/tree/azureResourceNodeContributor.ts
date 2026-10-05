@@ -71,6 +71,8 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
     // which might be null (shortNames[0] in this case) is right at the end.
     // This means we end up with a blank line at the start of the output, but it's otherwise consistent.
     const command = `get crd -o jsonpath="{range .items[*]}{\\"\\n\\"}{.metadata.name}{\\" \\"}{.spec.names.kind}{\\" \\"}{.spec.names.singular}{\\" \\"}{.spec.names.plural}{\\" \\"}{.spec.group}{\\" \\"}{.spec.names.shortNames[0]}{end}"`;
+    // Constant command on the default kubeconfig.
+    // eslint-disable-next-line no-restricted-syntax
     const crdShellResult = await kubectl.invokeCommand(command);
     if (crdShellResult === undefined) {
         return { succeeded: false, error: `Failed to run kubectl command: ${command}` };

@@ -3,7 +3,9 @@ import { Errorable, failed, getErrorMessage, map } from "./errorable";
 import { OutputStream } from "./commands";
 import { Observable, concat, of } from "rxjs";
 import { NonZeroExitCodeBehaviour } from "./shell";
-import { ChildProcess } from "child_process";
+import { ChildProcess, spawn } from "child_process";
+import * as vscode from "vscode";
+import { l10n } from "vscode";
 
 export type K8sVersion = {
     major: string;
@@ -31,14 +33,21 @@ export async function getExecOutput(
     pod: string,
     podArgs: string[],
 ): Promise<Errorable<KubectlV1.ShellResult>> {
-    // kubeconfig goes first here: everything after "--" is passed to the command in the pod,
-    // so appending it last, as invokeKubectlCommandArgs does, would hand it to that command.
-    const execArgs = ["exec", "-n", namespace, pod, "--", ...podArgs];
+    return invokeKubectlPodCommandArgs(kubectl, kubeConfigFile, ["exec", "-n", namespace, pod, "--", ...podArgs]);
+}
+
+/** Like `invokeKubectlCommandArgs`, with `--kubeconfig` first for commands that use "--". */
+export async function invokeKubectlPodCommandArgs(
+    kubectl: APIAvailable<KubectlV1>,
+    kubeConfigFile: string,
+    args: string[],
+    exitCodeBehaviour?: NonZeroExitCodeBehaviour,
+): Promise<Errorable<KubectlV1.ShellResult>> {
     return runKubectl(
         kubectl,
-        ["--kubeconfig", kubeConfigFile, ...execArgs],
-        `kubectl ${execArgs.join(" ")}`,
-        NonZeroExitCodeBehaviour.Fail,
+        ["--kubeconfig", kubeConfigFile, ...args],
+        `kubectl ${args.join(" ")}`,
+        exitCodeBehaviour ?? NonZeroExitCodeBehaviour.Fail,
     );
 }
 
@@ -88,7 +97,7 @@ async function runKubectl(
             return { succeeded: false, error: `Failed to run "${description}": kubectl could not be started.` };
         }
 
-        const result = await readChildProcess(child);
+        const result = await readChildProcess(respawnIfQuotedPath(child, fullArgs));
         if (result.code !== 0 && behaviour === NonZeroExitCodeBehaviour.Fail) {
             return {
                 succeeded: false,
@@ -138,18 +147,76 @@ function invokeViaObservedCommand(
     });
 }
 
+// legacySpawnAsChild quotes kubectl paths containing spaces, so the launch fails with
+// ENOENT. Relaunch with the unquoted path.
+function respawnIfQuotedPath(child: ChildProcess, args: string[]): ChildProcess {
+    const file = child.spawnfile;
+    if (typeof file !== "string" || file.length < 2 || !file.startsWith('"') || !file.endsWith('"')) {
+        return child;
+    }
+
+    child.on("error", () => {}); // expected ENOENT
+    return spawn(file.slice(1, -1), args, { cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath });
+}
+
 function readChildProcess(child: ChildProcess): Promise<KubectlV1.ShellResult> {
     return new Promise<KubectlV1.ShellResult>((resolve, reject) => {
         let stdout = "";
         let stderr = "";
+        const authMonitor = createAuthPromptMonitor();
 
         child.stdout?.on("data", (chunk) => (stdout += chunk.toString()));
-        child.stderr?.on("data", (chunk) => (stderr += chunk.toString()));
+        child.stderr?.on("data", (chunk) => {
+            const text = chunk.toString();
+            stderr += text;
+            authMonitor.onStderr(text);
+        });
         child.on("error", reject);
         // `code` is null when the process was killed by a signal; report that as a failure
         // rather than as a success, which a 0 default would imply.
-        child.on("close", (code) => resolve({ code: code ?? 1, stdout, stderr }));
+        child.on("close", (code) => {
+            authMonitor.onExit(code);
+            resolve({ code: code ?? 1, stdout, stderr });
+        });
     });
+}
+
+// Azure AD device login URLs, as matched by vscode-kubernetes-tools.
+const AUTH_PROMPT_PATTERN =
+    /https:\/\/(?:[a-z0-9-]+\.)?microsoft(?:online)?\.com\/(?:device|devicelogin|common\/oauth2\/deviceauth)/i;
+
+let authNotificationShown = false;
+
+/** Shows device login prompts from stderr while kubectl is still running. */
+export function createAuthPromptMonitor(): { onStderr(text: string): void; onExit(code: number | null): void } {
+    let pending = "";
+    let promptDetected = false;
+
+    return {
+        onStderr(text: string) {
+            pending += text;
+            let newlineIndex = pending.indexOf("\n");
+            while (newlineIndex !== -1) {
+                const line = pending.slice(0, newlineIndex).trim();
+                pending = pending.slice(newlineIndex + 1);
+                if (AUTH_PROMPT_PATTERN.test(line) && !authNotificationShown) {
+                    authNotificationShown = true;
+                    promptDetected = true;
+                    vscode.window.showWarningMessage(l10n.t("Authentication required: {0}", line));
+                    // Show one prompt for concurrent calls.
+                    setTimeout(() => (authNotificationShown = false), 1000);
+                }
+                newlineIndex = pending.indexOf("\n");
+            }
+        },
+        onExit(code: number | null) {
+            if (promptDetected && code === 0) {
+                vscode.window.showInformationMessage(
+                    l10n.t("Authentication successful. You may need to refresh or retry your last action."),
+                );
+            }
+        },
+    };
 }
 
 export async function getKubectlJsonResult<T>(

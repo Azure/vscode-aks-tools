@@ -1,5 +1,9 @@
 import * as assert from "assert";
+import { spawn } from "child_process";
 import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { getExecOutput, invokeKubectlCommandArgs } from "../../commands/utils/kubectl";
 import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
@@ -162,6 +166,66 @@ describe("invokeKubectlCommandArgs", () => {
 
         assert.ok(result.succeeded, "should still work without legacySpawnAsChild");
         assert.strictEqual(observedArgs?.[2], hostile, "the payload must stay one argument in the fallback too");
+    });
+});
+
+describe("invokeKubectlCommandArgs with a kubectl path containing spaces", () => {
+    let dir: string;
+    let bin: string;
+
+    before(function () {
+        // Shebang scripts can be spawned without a shell only on Unix.
+        if (process.platform === "win32") {
+            this.skip();
+        }
+
+        // Stand-in kubectl under a path with a space; echoes its arguments.
+        dir = fs.mkdtempSync(path.join(os.tmpdir(), "kubectl dir "));
+        bin = path.join(dir, "kubectl");
+        fs.writeFileSync(bin, "#!/bin/sh\nprintf '%s\\n' \"$@\"\n", { mode: 0o755 });
+    });
+
+    after(() => {
+        if (dir) {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("runs the unquoted path when the dependency launches a quoted one", async () => {
+        // Mirrors the dependency: await, then spawn the quoted path without a shell.
+        const { kubectl, calls } = fakeKubectl(() => undefined);
+        const internal = (kubectl.api as unknown as { kubectl: Record<string, unknown> }).kubectl;
+        internal.legacySpawnAsChild = async (args: string[]) => {
+            calls.push(args);
+            await Promise.resolve();
+            return spawn(`"${bin}"`, args);
+        };
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pod", "a b; $(x)"]);
+
+        assert.ok(result.succeeded, result.succeeded ? "" : result.error);
+        assert.deepStrictEqual(result.result.stdout.trimEnd().split("\n"), [
+            "get",
+            "pod",
+            "a b; $(x)",
+            "--kubeconfig",
+            "/tmp/kubeconfig",
+        ]);
+        assert.strictEqual(calls.length, 1, "the dependency should still be asked to launch kubectl");
+    });
+});
+
+describe("invokeKubectlCommandArgs with an unquoted kubectl path", () => {
+    it("reads the dependency's process and starts no other", async () => {
+        const { kubectl } = fakeKubectl(() => {
+            const child = fakeChildProcess("from the dependency", "", 0);
+            return Object.assign(child, { spawnfile: "/usr/local/bin/kubectl" });
+        });
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["version"]);
+
+        assert.ok(result.succeeded, result.succeeded ? "" : result.error);
+        assert.strictEqual(result.result.stdout, "from the dependency");
     });
 });
 
