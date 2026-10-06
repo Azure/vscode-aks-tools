@@ -91,7 +91,7 @@ export async function getKaitoPods(
     return kaitoPods.result;
 }
 
-/** `kubectl run` arguments for a curl pod that sends the query. Use with `invokeKubectlPodCommandArgs`. */
+/** `kubectl run` arguments for a curl pod that sends the query. Use with `invokeKubectlCommandArgs`. */
 export function createCurlPodArgs(
     podName: string,
     modelName: string,
@@ -165,6 +165,16 @@ export async function getClusterIP(
     }
 
     return clusterIP;
+}
+
+/** Parses a port number (1-65535) from kubectl output, or returns undefined. */
+export function parsePort(value: string): number | undefined {
+    const trimmed = value.trim();
+    if (!/^\d{1,5}$/.test(trimmed)) {
+        return undefined;
+    }
+    const port = Number(trimmed);
+    return port >= 1 && port <= 65535 ? port : undefined;
 }
 
 export async function getWorkspaceRuntime(

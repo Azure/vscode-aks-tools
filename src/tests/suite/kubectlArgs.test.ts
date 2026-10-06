@@ -4,9 +4,21 @@ import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as sinon from "sinon";
+import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { getExecOutput, invokeKubectlCommandArgs, parseKubectlCommandArgs } from "../../commands/utils/kubectl";
+import {
+    correctedKubectlPath,
+    createAuthPromptMonitor,
+    getExecOutput,
+    invokeKubectlCommandArgs,
+    MAX_KUBECTL_OUTPUT_BYTES,
+    parseKubectlCommandArgs,
+} from "../../commands/utils/kubectl";
 import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
+import { KubectlDataProvider } from "../../panels/KubectlPanel";
+import { MessageSink } from "../../webview-contract/messaging";
+import { ToWebViewMsgDef } from "../../webview-contract/webviewDefinitions/kubectl";
 
 /**
  * A stand-in for the ChildProcess that legacySpawnAsChild returns. Emits the given
@@ -161,32 +173,133 @@ describe("invokeKubectlCommandArgs", () => {
         assert.strictEqual(child.stdout.listenerCount("data"), 0);
     });
 
-    it("falls back to the array-based observe lane, never to a shell string", async () => {
-        let observedArgs: string[] | undefined;
+    it("fails rather than fall back to a shell string when legacySpawnAsChild is missing", async () => {
         const api = {
             invokeCommand: async () => {
-                throw new Error("the string lane no longer exists and must never be reached");
+                throw new Error("the string lane must never be reached");
             },
-            kubectl: {
-                observeCommand: async (args: string[]) => {
-                    observedArgs = args;
-                    return {
-                        lines: { subscribe: (o: { complete: () => void }) => o.complete() },
-                        terminate: () => {},
-                    };
-                },
-            },
+            kubectl: { observeCommand: async () => {} },
         } as unknown as k8s.KubectlV1;
 
-        const hostile = "node$(touch /tmp/pwned)";
         const result = await invokeKubectlCommandArgs({ api } as k8s.APIAvailable<k8s.KubectlV1>, "/tmp/kubeconfig", [
-            "delete",
+            "get",
             "pod",
-            hostile,
         ]);
 
-        assert.ok(result.succeeded, "should still work without legacySpawnAsChild");
-        assert.strictEqual(observedArgs?.[2], hostile, "the payload must stay one argument in the fallback too");
+        assert.ok(!result.succeeded);
+        assert.ok(result.error.includes("update the Kubernetes extension"), result.error);
+    });
+
+    it("stops kubectl and fails when output exceeds the limit", async () => {
+        let killed = false;
+        const big = Buffer.alloc(MAX_KUBECTL_OUTPUT_BYTES + 1);
+        const { kubectl } = fakeKubectl(() =>
+            Object.assign(fakeChildProcess([big], "", null), { kill: () => (killed = true) }),
+        );
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pods", "-A"]);
+
+        assert.ok(killed, "kubectl should be stopped");
+        assert.ok(!result.succeeded);
+        assert.ok(result.error.includes("exceeded"), result.error);
+    });
+});
+
+describe("correctedKubectlPath", () => {
+    it("leaves an unquoted path alone", () => {
+        assert.strictEqual(correctedKubectlPath("C:\\tools\\kubectl.exe"), undefined);
+        assert.strictEqual(correctedKubectlPath("/usr/local/bin/kubectl"), undefined);
+    });
+
+    it("removes the quotes the dependency adds to a path with spaces", () => {
+        assert.strictEqual(correctedKubectlPath('"/Users/John Smith/bin/kubectl"'), "/Users/John Smith/bin/kubectl");
+        assert.strictEqual(
+            correctedKubectlPath('"C:\\Program Files\\kubectl\\kubectl.exe"'),
+            "C:\\Program Files\\kubectl\\kubectl.exe",
+        );
+    });
+
+    it("undoes the duplicate .exe the dependency adds on Windows", () => {
+        assert.strictEqual(
+            correctedKubectlPath('"C:\\Program Files\\kubectl\\kubectl.exe.exe"', "win32"),
+            "C:\\Program Files\\kubectl\\kubectl.exe",
+        );
+        assert.strictEqual(
+            correctedKubectlPath('"C:\\Users\\John Smith\\.vs-kubernetes\\tools\\kubectl\\KUBECTL.EXE.exe"', "win32"),
+            "C:\\Users\\John Smith\\.vs-kubernetes\\tools\\kubectl\\KUBECTL.EXE",
+        );
+    });
+
+    it("keeps .exe.exe on other platforms, where the dependency adds nothing", () => {
+        assert.strictEqual(
+            correctedKubectlPath('"/opt/my tools/kubectl.exe.exe"', "linux"),
+            "/opt/my tools/kubectl.exe.exe",
+        );
+    });
+});
+
+describe("createAuthPromptMonitor", () => {
+    afterEach(() => sinon.restore());
+
+    it("shows a generic prompt and puts the device login line in the output panel", () => {
+        const warning = sinon.stub(vscode.window, "showWarningMessage");
+        const channel = { appendLine: sinon.spy(), show: sinon.spy() };
+        sinon.stub(vscode.window, "createOutputChannel").returns(channel as unknown as vscode.LogOutputChannel);
+        const line =
+            "To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code ABC123.";
+
+        const monitor = createAuthPromptMonitor();
+        monitor.onStderr(line.slice(0, 20));
+        monitor.onStderr(`${line.slice(20)}\n`);
+
+        assert.ok(channel.appendLine.calledOnceWith(line));
+        assert.ok(warning.calledOnce);
+        assert.ok(!String(warning.firstCall.args[0]).includes("ABC123"), "stderr text must not be in the notification");
+    });
+});
+
+describe("KubectlDataProvider", () => {
+    async function argsFor(command: string): Promise<string[]> {
+        const { kubectl, calls } = fakeKubectl(() => fakeChildProcess("", "", 0));
+        const provider = new KubectlDataProvider(kubectl, "/tmp/kubeconfig", "cluster", []);
+        const webview = { postRunCommandResponse: () => {} } as unknown as MessageSink<ToWebViewMsgDef>;
+        provider.getMessageHandler(webview).runCommandRequest({ command }, "runCommandRequest");
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return calls[0];
+    }
+
+    it("puts --kubeconfig before a -- separator, so it does not reach the pod", async () => {
+        assert.deepStrictEqual(await argsFor("exec mypod -- ls"), [
+            "exec",
+            "mypod",
+            "--kubeconfig",
+            "/tmp/kubeconfig",
+            "--",
+            "ls",
+        ]);
+    });
+
+    it("keeps --kubeconfig after a plugin name, which kubectl requires", async () => {
+        assert.deepStrictEqual(await argsFor("node-shell mynode -- uname -a"), [
+            "node-shell",
+            "mynode",
+            "--kubeconfig",
+            "/tmp/kubeconfig",
+            "--",
+            "uname",
+            "-a",
+        ]);
+    });
+
+    it("drops a leading kubectl but keeps kubectl inside other arguments", async () => {
+        assert.deepStrictEqual(await argsFor("kubectl get pods -n kubectl-system"), [
+            "get",
+            "pods",
+            "-n",
+            "kubectl-system",
+            "--kubeconfig",
+            "/tmp/kubeconfig",
+        ]);
     });
 });
 
@@ -251,7 +364,7 @@ describe("invokeKubectlCommandArgs with an unquoted kubectl path", () => {
 });
 
 describe("getExecOutput", () => {
-    it("passes the pod command as separate arguments, with kubeconfig before exec", async () => {
+    it("passes the pod command as separate arguments, with kubeconfig before the separator", async () => {
         const { kubectl, calls } = fakeKubectl(() => fakeChildProcess("eth0", "", 0));
 
         const result = await getExecOutput(kubectl, "/tmp/kubeconfig", "default", "debug-node", [
@@ -262,12 +375,12 @@ describe("getExecOutput", () => {
 
         assert.ok(result.succeeded, "should succeed");
         assert.deepStrictEqual(calls[0], [
-            "--kubeconfig",
-            "/tmp/kubeconfig",
             "exec",
             "-n",
             "default",
             "debug-node",
+            "--kubeconfig",
+            "/tmp/kubeconfig",
             "--",
             "/bin/sh",
             "-c",

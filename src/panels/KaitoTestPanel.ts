@@ -7,7 +7,7 @@ import { InitialState, ToVsCodeMsgDef, ToWebViewMsgDef } from "../webview-contra
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import { createCurlPodArgs, getClusterIP, getWorkspaceRuntime } from "./utilities/KaitoHelpers";
-import { invokeKubectlCommandArgs, invokeKubectlPodCommandArgs } from "../commands/utils/kubectl";
+import { invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import { NonZeroExitCodeBehaviour } from "../commands/utils/shell";
 import { failed } from "../commands/utils/errorable";
 import { l10n } from "vscode";
@@ -135,7 +135,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                 const deleteArgs = ["delete", "pod", podName];
 
                 // create the curl pod
-                await invokeKubectlPodCommandArgs(
+                await invokeKubectlCommandArgs(
                     this.kubectl,
                     this.kubeConfigFilePath,
                     createArgs,

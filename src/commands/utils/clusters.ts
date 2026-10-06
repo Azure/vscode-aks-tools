@@ -23,7 +23,7 @@ import { Errorable, map as errmap, failed, getErrorMessage, succeeded } from "./
 import { getKubeloginBinaryPath } from "./helper/kubeloginDownload";
 import { longRunning } from "./host";
 import { invokeKubectlCommandArgs } from "./kubectl";
-import { isValidK8sName, validateK8sName } from "./kubernetesNames";
+import { isValidK8sName, validateK8sName, validateK8sNames, validateK8sNamesJson } from "./kubernetesNames";
 import { withOptionalTempFile } from "./tempfile";
 import { getResources } from "./azureResources";
 import { ClusterFilter } from "./config";
@@ -627,7 +627,10 @@ export async function getClusterNamespaces(
     return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
         const args = ["get", "namespace", "--no-headers", "-o", "custom-columns=:metadata.name"];
         const output = await invokeKubectlCommandArgs(kubectl, kubeconfigPath, args);
-        return errmap(output, (sr) => sr.stdout.trim().split("\n"));
+        if (failed(output)) {
+            return output;
+        }
+        return validateK8sNames(output.result.stdout.trimEnd().split("\n"), "label", "namespace");
     });
 }
 
@@ -650,6 +653,14 @@ export async function getClusterNamespacesWithTypes(
 
     return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
         const output = await invokeKubectlCommandArgs(kubectl, kubeconfigPath, ["get", "namespace", "-o", "json"]);
+        if (failed(output)) {
+            return output;
+        }
+        // Namespace names end up in generated workflows and kubectl arguments.
+        const validNames = validateK8sNamesJson(output.result.stdout, "label", "namespace");
+        if (failed(validNames)) {
+            return validNames;
+        }
         return errmap(output, (sr) => {
             try {
                 const namespacesJson = JSON.parse(sr.stdout);
@@ -900,7 +911,7 @@ export async function filterPodImage(
     const matchingPods = result.filter((pod) => pod.imageName.startsWith(imageNameStartsWith));
     const validatedPods = [];
 
-    // These reach later kubectl command strings.
+    // These reach later kubectl arguments.
     for (const pod of matchingPods) {
         const validNamespace = validateK8sName(pod.nameSpace, "label", "namespace");
         if (failed(validNamespace)) {

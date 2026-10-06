@@ -86,7 +86,7 @@ export class TcpDumpDataProvider implements PanelDataProvider<"tcpDump"> {
     }
 
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-        // Node names arrive back over the webview channel and reach kubectl command strings.
+        // Node names arrive back over the webview channel and reach kubectl arguments.
         // Checked here so no handler can miss it.
         const guardNode =
             <TArgs extends { node: NodeName }, TResult>(handler: (args: TArgs) => TResult) =>

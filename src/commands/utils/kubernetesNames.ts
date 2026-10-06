@@ -3,9 +3,9 @@ import { Errorable } from "./errorable";
 /**
  * Validation for object names served by a Kubernetes API server. kubectl does no
  * client-side validation on read, so a hostile endpoint can return anything for
- * `metadata.name`, and several features interpolate those names into kubectl command
- * strings that run through a shell. A conforming API server only ever assigns DNS-1123
- * names. See docs/book/src/development/development.md.
+ * `metadata.name`. Names end up in kubectl arguments, terminal commands, generated
+ * workflows and vscode-kubernetes-tools commands that run through a shell. A conforming
+ * API server only ever assigns DNS-1123 names. See docs/book/src/development/development.md.
  */
 
 /** `label` covers namespaces and containers; `subdomain` covers nodes, pods and CRDs. */

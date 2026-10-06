@@ -112,6 +112,12 @@ export default [
                     message:
                         "kubectl.api.invokeCommand runs its string in a shell. Use invokeKubectlCommandArgs(kubectl, kubeConfigFile, argsArray); see docs/book/src/development/development.md.",
                 },
+                {
+                    // Terminal text runs in the user's shell.
+                    selector: 'CallExpression[callee.type="MemberExpression"][callee.property.name="sendText"]',
+                    message:
+                        "terminal.sendText runs its text in a shell. Validate every value in it and add an eslint-disable comment saying why it is safe; see docs/book/src/development/development.md.",
+                },
             ],
             "no-var": "error",
             "prefer-const": "error",

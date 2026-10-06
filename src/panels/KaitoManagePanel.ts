@@ -9,7 +9,7 @@ import { invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import { failed } from "../commands/utils/errorable";
 import { validateK8sName } from "../commands/utils/kubernetesNames";
 import { longRunning } from "../commands/utils/host";
-import { getConditions, convertAgeToMinutes, deployModel, getClusterIP } from "./utilities/KaitoHelpers";
+import { getConditions, convertAgeToMinutes, deployModel, getClusterIP, parsePort } from "./utilities/KaitoHelpers";
 import { filterPodImage } from "../commands/utils/clusters";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient } from "../commands/utils/arm";
@@ -63,7 +63,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-        // Cluster-supplied, returned over the webview channel, reach kubectl command strings.
+        // Cluster-supplied, returned over the webview channel, reach kubectl arguments and a terminal command.
         const guard = (model: string, namespace: string): { model: string; namespace: string } | null => {
             const validModel = validateK8sName(model, "subdomain", "workspace");
             if (failed(validModel)) {
@@ -300,7 +300,12 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             vscode.window.showErrorMessage(l10n.t(`Error getting port: {0}`, kubectlresult.error));
             return undefined;
         }
-        return kubectlresult.result.stdout;
+        // The port comes from the cluster and is typed into a terminal, so accept only a port number.
+        const port = parsePort(kubectlresult.result.stdout);
+        if (port === undefined) {
+            vscode.window.showErrorMessage(l10n.t(`Service {0} returned an invalid port.`, serviceName));
+        }
+        return port;
     }
 
     // prompt the user for port number
@@ -365,6 +370,9 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             isTransient: false,
         });
         terminal.show();
+        // modelName and namespace are validated names, localPort and servicePort are numbers,
+        // and the kubeconfig path is a temp file this extension created.
+        // eslint-disable-next-line no-restricted-syntax
         terminal.sendText(portForwardCommand);
     }
 }

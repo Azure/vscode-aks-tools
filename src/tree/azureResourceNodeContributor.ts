@@ -1,6 +1,7 @@
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as vscode from "vscode";
-import { Errorable } from "../commands/utils/errorable";
+import { Errorable, failed } from "../commands/utils/errorable";
+import { validateK8sName } from "../commands/utils/kubernetesNames";
 
 export class AzureResourceNodeContributor implements k8s.ClusterExplorerV1.NodeContributor {
     constructor(
@@ -64,7 +65,7 @@ interface CustomResource {
     readonly abbreviation: string;
 }
 
-async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Errorable<CustomResource[]>> {
+export async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Errorable<CustomResource[]>> {
     // Some kubectl versions discard everything after a null/missing value within a jsonpath `range`,
     // meaning trailing newlines get omitted from the output and we can't split lines correctly.
     // For this reason, we make the newline the *first* component of the range, and ensure the value
@@ -140,5 +141,17 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
 
     // Filter the custom resources to only include Azure resources
     const azureResources = customResources.filter((r) => approvedGroups.has(r.group));
+
+    // vscode-kubernetes-tools builds shell commands from the abbreviation when a folder is
+    // expanded, so reject any name a conforming API server could not have returned.
+    for (const r of azureResources) {
+        for (const name of [r.name, r.abbreviation]) {
+            const valid = validateK8sName(name, "subdomain", "custom resource");
+            if (failed(valid)) {
+                return valid;
+            }
+        }
+    }
+
     return { succeeded: true, result: azureResources };
 }

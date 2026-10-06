@@ -61,20 +61,17 @@ export class KubectlDataProvider implements PanelDataProvider<"kubectl"> {
     }
 
     private async handleRunCommandRequest(command: string, webview: MessageSink<ToWebViewMsgDef>) {
-        if (command.includes("kubectl")) {
-            command = command.replace("kubectl", "").trim();
-        }
-
         // Saved commands come from the azure.customkubectl.commands setting, so they are not
         // necessarily something this user typed. Parse into an argument array and run without
         // a shell, so metacharacters in a command cannot execute.
-        const args = parseKubectlCommandArgs(command);
-        if (failed(args)) {
-            await this.sendResponse(webview, command, null, args.error);
+        const parsed = parseKubectlCommandArgs(command);
+        if (failed(parsed)) {
+            await this.sendResponse(webview, command, null, parsed.error);
             return;
         }
 
-        const kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args.result);
+        const args = parsed.result[0] === "kubectl" ? parsed.result.slice(1) : parsed.result;
+        const kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
 
         if (failed(kubectlresult)) {
             await this.sendResponse(webview, command, null, kubectlresult.error);

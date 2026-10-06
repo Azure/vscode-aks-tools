@@ -26,6 +26,7 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
 import { getExtensionPath, longRunning } from "../utils/host";
 import { failed } from "../utils/errorable";
+import { isValidK8sName } from "../utils/kubernetesNames";
 import { createTempFile } from "../utils/tempfile";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { invokeKubectlCommandArgs } from "../utils/kubectl";
@@ -801,9 +802,12 @@ export async function draftArgoCDDeployment(_context: IActionContext, target: un
                     } catch {
                         // fall through to fallback
                     }
-                    // Filter out system namespaces, keep "default".
+                    // Filter out system namespaces, keep "default". Drop names a conforming API
+                    // server could not return, since the choice ends up in the Application manifest.
                     rawItems = rawItems.filter(
-                        (ns) => ns.metadata.name === "default" || !isSystemNamespace(ns.metadata.name),
+                        (ns) =>
+                            isValidK8sName(ns.metadata.name, "label") &&
+                            (ns.metadata.name === "default" || !isSystemNamespace(ns.metadata.name)),
                     );
                     const names = rawItems.map((ns) => ns.metadata.name);
                     // Ensure "default" is always present.

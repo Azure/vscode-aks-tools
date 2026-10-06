@@ -5,6 +5,8 @@ import * as kubectlModule from "../../commands/utils/kubectl";
 import { KubectlClusterOperations, validateGadgetFilters } from "../../commands/aksInspektorGadget/clusterOperations";
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { NamespaceSelection } from "../../webview-contract/webviewDefinitions/inspektorGadget";
+import { getAzureServiceResourceTypes } from "../../tree/azureResourceNodeContributor";
+import { parsePort } from "../../panels/utilities/KaitoHelpers";
 
 /**
  * Guards the boundaries where names served by a cluster's API server enter the
@@ -236,5 +238,48 @@ describe("Cluster-supplied name boundaries", () => {
             assert.ok(result.succeeded);
             assert.deepStrictEqual(result.result, ["aks-node-1", "aks-node-2"]);
         });
+    });
+});
+
+describe("Azure Services tree", () => {
+    // Fields are space-separated, newline first: name, kind, singular, plural, group, shortName.
+    function kubectlReturning(...lines: string[]) {
+        const stdout = lines.map((l) => `\n${l}`).join("");
+        return { invokeCommand: async () => ({ code: 0, stdout, stderr: "" }) } as unknown as k8s.KubectlV1;
+    }
+
+    it("accepts Azure CRDs with valid names", async () => {
+        const result = await getAzureServiceResourceTypes(
+            kubectlReturning("vaults.keyvault.azure.com Vault vault vaults keyvault.azure.com kv"),
+        );
+
+        assert.ok(result.succeeded);
+        assert.deepStrictEqual(
+            result.result.map((r) => r.abbreviation),
+            ["kv"],
+        );
+    });
+
+    it("refuses a hostile short name, which vscode-kubernetes-tools runs in a shell", async () => {
+        const result = await getAzureServiceResourceTypes(
+            kubectlReturning(
+                "vaults.keyvault.azure.com Vault vault vaults keyvault.azure.com kv$(touch${IFS}/tmp/pwned)",
+            ),
+        );
+
+        assert.ok(!result.succeeded);
+    });
+});
+
+describe("parsePort", () => {
+    it("accepts a port number", () => {
+        assert.strictEqual(parsePort("8080"), 8080);
+        assert.strictEqual(parsePort("80\n"), 80);
+    });
+
+    it("rejects anything else, so it cannot alter the port-forward terminal command", () => {
+        for (const value of ["", "0", "65536", "80; touch /tmp/pwned #", "8o", "-1", "1e3", " "]) {
+            assert.strictEqual(parsePort(value), undefined, JSON.stringify(value));
+        }
     });
 });

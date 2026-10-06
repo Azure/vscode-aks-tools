@@ -431,6 +431,8 @@ async function openArgoCDUI(
         // (argocd-cm url / global.domain). This keeps the opened URL aligned
         // with the Entra ID redirect URI so SSO does not break (issue #2322).
         const terminal = vscode.window.createTerminal({ name: `Argo CD UI — ${clusterName}` });
+        // configuredPort is a number and callers in this extension pass a temp kubeconfig they created.
+        // eslint-disable-next-line no-restricted-syntax
         terminal.sendText(
             `kubectl port-forward svc/argocd-server -n argocd ${configuredPort}:443 --kubeconfig="${kubeConfigFile}"`,
         );

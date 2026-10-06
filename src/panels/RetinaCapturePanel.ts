@@ -62,7 +62,7 @@ export class RetinaCaptureProvider implements PanelDataProvider<"retinaCapture">
     }
 
     getMessageHandler(): MessageHandler<ToVsCodeMsgDef> {
-        // Comma-separated, arrives over the webview channel, reaches kubectl command strings.
+        // Comma-separated, arrives over the webview channel, reaches kubectl arguments.
         const guardNodes = (handler: (node: string) => void) => (node: string) => {
             const nodes = validateK8sNames(node.split(","), "subdomain", "node");
             if (failed(nodes)) {

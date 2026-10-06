@@ -52,13 +52,22 @@ conforming API server only ever assigns DNS-1123 names, so rejecting anything el
 nothing for real clusters.
 
 Invoke kubectl with `invokeKubectlCommandArgs(kubectl, kubeConfigFile, args)` from
-`src/commands/utils/kubectl.ts`, which spawns with an argument array and no shell. For
-commands with a `--` separator, such as `exec` or `run`, use `invokeKubectlPodCommandArgs`,
-which places `--kubeconfig` before the separator. The kubernetes-tools string API,
+`src/commands/utils/kubectl.ts`, which spawns with an argument array and no shell. It adds
+`--kubeconfig` at the end, or before a `--` separator so that it does not reach the command
+run in the pod. The kubernetes-tools string API,
 `kubectl.api.invokeCommand`, runs in a shell and an eslint rule rejects it. The only
 exceptions are constant commands on the default kubeconfig, each marked with an
 `eslint-disable` comment. The Run Kubectl Command panel splits what the user typed with
 `parseKubectlCommandArgs`, so pipes and redirection are not supported there.
+
+Some paths still reach a shell: commands sent to a terminal with `terminal.sendText`, and
+vscode-kubernetes-tools tree nodes, which build kubectl strings from the resource names
+they are given. Validate any cluster-supplied value before it reaches one of these, for
+example a port with `parsePort` or a name with `isValidK8sName`. An eslint rule flags
+`sendText`, so each use needs an `eslint-disable` comment saying why its values are safe.
+
+kubectl output is capped at 20 MiB, the limit the shell path used. Larger output stops
+kubectl and returns an error.
 
 ## Checks that gate a pull request
 
