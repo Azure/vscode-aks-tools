@@ -471,5 +471,12 @@
   "$(plus) Create new {0}...": "$(plus) Create new {0}...",
   "$(add) Create...": "$(add) Create...",
   "Click to view resource": "Click to view resource",
-  "Azure Activity": "Azure Activity"
+  "Azure Activity": "Azure Activity",
+  "Couldn't get the status of AKS cluster {0}. Check the deployment in the Azure portal.": "Couldn't get the status of AKS cluster {0}. Check the deployment in the Azure portal.",
+  "Cluster name:": "Cluster name:",
+  "Resource group:": "Resource group:",
+  "Region:": "Region:",
+  "Preset:": "Preset:",
+  "Couldn't Get Cluster Creation Status": "Couldn't Get Cluster Creation Status",
+  "The deployment may still be running. Check its status in the Azure portal.": "The deployment may still be running. Check its status in the Azure portal."
 }

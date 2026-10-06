@@ -15,6 +15,7 @@ export enum Stage {
     Creating,
     Failed,
     Succeeded,
+    TrackingLost,
 }
 
 export type CreateClusterState = InitialState & {
@@ -81,6 +82,8 @@ function getStageAndMessage(
             return { stage: Stage.Failed, message: errorMessage };
         case ProgressEventType.Success:
             return { stage: Stage.Succeeded, message: null };
+        case ProgressEventType.TrackingLost:
+            return { stage: Stage.TrackingLost, message: errorMessage };
     }
 }
 
