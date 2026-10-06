@@ -5,22 +5,22 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as k8s from "vscode-kubernetes-tools-api";
-import { getExecOutput, invokeKubectlCommandArgs } from "../../commands/utils/kubectl";
+import { getExecOutput, invokeKubectlCommandArgs, parseKubectlCommandArgs } from "../../commands/utils/kubectl";
 import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
 
 /**
  * A stand-in for the ChildProcess that legacySpawnAsChild returns. Emits the given
  * output and then closes with the given code, mirroring the real event order.
  */
-function fakeChildProcess(stdout: string, stderr: string, code: number | null) {
+function fakeChildProcess(stdout: string | Buffer[], stderr: string, code: number | null) {
     const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter; stderr: EventEmitter };
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
 
     // After the caller has attached its handlers.
     setImmediate(() => {
-        if (stdout) {
-            child.stdout.emit("data", Buffer.from(stdout));
+        for (const chunk of typeof stdout === "string" ? [Buffer.from(stdout)] : stdout) {
+            child.stdout.emit("data", chunk);
         }
         if (stderr) {
             child.stderr.emit("data", Buffer.from(stderr));
@@ -140,6 +140,27 @@ describe("invokeKubectlCommandArgs", () => {
         assert.ok(result.error.includes("could not be started"), result.error);
     });
 
+    it("keeps multi-byte characters split across chunks intact", async () => {
+        const bytes = Buffer.from("héllo");
+        // Split inside "é", which is two bytes in UTF-8.
+        const { kubectl } = fakeKubectl(() => fakeChildProcess([bytes.subarray(0, 2), bytes.subarray(2)], "", 0));
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pod"]);
+
+        assert.ok(result.succeeded);
+        assert.strictEqual(result.result.stdout, "héllo");
+    });
+
+    it("releases its listeners when kubectl exits", async () => {
+        const child = fakeChildProcess("out", "", 0);
+        const { kubectl } = fakeKubectl(() => child);
+
+        await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pod"]);
+
+        assert.strictEqual(child.listenerCount("close"), 0);
+        assert.strictEqual(child.stdout.listenerCount("data"), 0);
+    });
+
     it("falls back to the array-based observe lane, never to a shell string", async () => {
         let observedArgs: string[] | undefined;
         const api = {
@@ -252,5 +273,42 @@ describe("getExecOutput", () => {
             "-c",
             "tcpdump --list-interfaces",
         ]);
+    });
+});
+
+describe("parseKubectlCommandArgs", () => {
+    function parse(command: string): string[] {
+        const result = parseKubectlCommandArgs(command);
+        assert.ok(result.succeeded, result.succeeded ? "" : result.error);
+        return result.result;
+    }
+
+    it('reads \\" inside double quotes as a quote, as in the kubectl docs', () => {
+        const args = parse(String.raw`get pods -o=jsonpath="{.metadata.name}{\"\t\"}{end}"`);
+        assert.deepStrictEqual(args, ["get", "pods", String.raw`-o=jsonpath={.metadata.name}{"\t"}{end}`]);
+    });
+
+    it("keeps single-quoted text as is", () => {
+        const args = parse(String.raw`get pods -o jsonpath='{.metadata.name}{"\n"}'`);
+        assert.deepStrictEqual(args, ["get", "pods", "-o", String.raw`jsonpath={.metadata.name}{"\n"}`]);
+    });
+
+    it("keeps other backslashes, such as in jsonpath keys and Windows paths", () => {
+        assert.deepStrictEqual(parse(String.raw`get secret s -o jsonpath="{.data.tls\.crt}"`), [
+            "get",
+            "secret",
+            "s",
+            "-o",
+            String.raw`jsonpath={.data.tls\.crt}`,
+        ]);
+        assert.deepStrictEqual(parse(String.raw`apply -f C:\Users\me\app.yaml`), [
+            "apply",
+            "-f",
+            String.raw`C:\Users\me\app.yaml`,
+        ]);
+    });
+
+    it("rejects shell operators", () => {
+        assert.ok(!parseKubectlCommandArgs("get pods -o yaml > out.yaml").succeeded);
     });
 });

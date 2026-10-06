@@ -53,8 +53,8 @@ export async function invokeKubectlPodCommandArgs(
 
 /**
  * Runs kubectl with an argument array and no shell, so values carried in `args` cannot be
- * interpreted as commands. This is the only way the extension runs kubectl: there is no
- * string-based entry point, so no caller can reintroduce a shell.
+ * interpreted as commands. Use this for every kubectl call; see development.md for the
+ * few exceptions.
  */
 export async function invokeKubectlCommandArgs(
     kubectl: APIAvailable<KubectlV1>,
@@ -161,22 +161,30 @@ function respawnIfQuotedPath(child: ChildProcess, args: string[]): ChildProcess 
 
 function readChildProcess(child: ChildProcess): Promise<KubectlV1.ShellResult> {
     return new Promise<KubectlV1.ShellResult>((resolve, reject) => {
-        let stdout = "";
-        let stderr = "";
+        // Decode once at the end so multi-byte characters split across chunks stay intact.
+        const stdout: Buffer[] = [];
+        const stderr: Buffer[] = [];
         const authMonitor = createAuthPromptMonitor();
 
-        child.stdout?.on("data", (chunk) => (stdout += chunk.toString()));
-        child.stderr?.on("data", (chunk) => {
-            const text = chunk.toString();
-            stderr += text;
-            authMonitor.onStderr(text);
+        child.stdout?.on("data", (chunk: Buffer) => stdout.push(chunk));
+        child.stderr?.on("data", (chunk: Buffer) => {
+            stderr.push(chunk);
+            authMonitor.onStderr(chunk.toString());
         });
         child.on("error", reject);
         // `code` is null when the process was killed by a signal; report that as a failure
         // rather than as a success, which a 0 default would imply.
         child.on("close", (code) => {
             authMonitor.onExit(code);
-            resolve({ code: code ?? 1, stdout, stderr });
+            // legacySpawnAsChild keeps every child it starts, so release our listeners and output.
+            child.removeAllListeners();
+            child.stdout?.removeAllListeners();
+            child.stderr?.removeAllListeners();
+            resolve({
+                code: code ?? 1,
+                stdout: Buffer.concat(stdout).toString(),
+                stderr: Buffer.concat(stderr).toString(),
+            });
         });
     });
 }
@@ -353,10 +361,15 @@ export function parseKubectlCommandArgs(command: string): Errorable<string[]> {
     let quote: '"' | "'" | undefined;
     let started = false;
 
-    for (const char of command.trim()) {
+    const chars = [...command.trim()];
+    for (let i = 0; i < chars.length; i++) {
+        const char = chars[i];
         if (quote !== undefined) {
             if (char === quote) {
                 quote = undefined;
+            } else if (quote === '"' && char === "\\" && (chars[i + 1] === '"' || chars[i + 1] === "\\")) {
+                // As in a shell, \" and \\ are escapes inside double quotes.
+                current += chars[++i];
             } else {
                 current += char;
             }

@@ -52,10 +52,13 @@ conforming API server only ever assigns DNS-1123 names, so rejecting anything el
 nothing for real clusters.
 
 Invoke kubectl with `invokeKubectlCommandArgs(kubectl, kubeConfigFile, args)` from
-`src/commands/utils/kubectl.ts`, which spawns with an argument array and no shell. The
-string form, `invokeKubectlCommand`, reaches a shell through the kubernetes-tools
-dependency and an eslint rule rejects it; the only exception is the Run Kubectl Command
-panel, where the command is what the user typed.
+`src/commands/utils/kubectl.ts`, which spawns with an argument array and no shell. For
+commands with a `--` separator, such as `exec` or `run`, use `invokeKubectlPodCommandArgs`,
+which places `--kubeconfig` before the separator. The kubernetes-tools string API,
+`kubectl.api.invokeCommand`, runs in a shell and an eslint rule rejects it. The only
+exceptions are constant commands on the default kubeconfig, each marked with an
+`eslint-disable` comment. The Run Kubectl Command panel splits what the user typed with
+`parseKubectlCommandArgs`, so pipes and redirection are not supported there.
 
 ## Checks that gate a pull request
 
