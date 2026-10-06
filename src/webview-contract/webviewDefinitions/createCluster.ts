@@ -38,6 +38,10 @@ export type ToVsCodeMsgDef = {
     getLocationsRequest: void;
     getResourceGroupsRequest: void;
     createClusterRequest: CreateClusterParams;
+    mergeKubeconfigRequest: {
+        resourceGroupName: string;
+        name: string;
+    };
 };
 
 export type ToWebViewMsgDef = {
