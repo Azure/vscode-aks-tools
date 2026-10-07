@@ -10,8 +10,10 @@ import * as k8s from "vscode-kubernetes-tools-api";
 import {
     correctedKubectlPath,
     createAuthPromptMonitor,
+    describeKubectlCommand,
     getExecOutput,
     invokeKubectlCommandArgs,
+    kubectlEnv,
     MAX_KUBECTL_OUTPUT_BYTES,
     parseKubectlCommandArgs,
 } from "../../commands/utils/kubectl";
@@ -207,7 +209,7 @@ describe("invokeKubectlCommandArgs", () => {
 
 describe("correctedKubectlPath", () => {
     it("leaves an unquoted path alone", () => {
-        assert.strictEqual(correctedKubectlPath("C:\\tools\\kubectl.exe"), undefined);
+        assert.strictEqual(correctedKubectlPath("C:\\tools\\kubectl.exe", "win32"), undefined);
         assert.strictEqual(correctedKubectlPath("/usr/local/bin/kubectl"), undefined);
     });
 
@@ -235,6 +237,63 @@ describe("correctedKubectlPath", () => {
             correctedKubectlPath('"/opt/my tools/kubectl.exe.exe"', "linux"),
             "/opt/my tools/kubectl.exe.exe",
         );
+        assert.strictEqual(correctedKubectlPath("C:\\tools\\KUBECTL.EXE.exe", "linux"), undefined);
+    });
+
+    it("recovers every configured Windows path from what the dependency launches", () => {
+        // vscode-kubernetes-tools 1.4.1: baseKubectlPath quotes paths with spaces, then
+        // binutil.execPath appends ".exe" unless the path ends in lowercase ".exe".
+        const launchedBy = (configured: string) => {
+            const quoted = configured.includes(" ") ? `"${configured}"` : configured;
+            if (quoted.endsWith(".exe")) {
+                return quoted;
+            }
+            return quoted.endsWith('"') ? `${quoted.slice(0, -1)}.exe"` : `${quoted}.exe`;
+        };
+
+        for (const configured of [
+            "C:\\tools\\kubectl.exe",
+            "C:\\tools\\KUBECTL.EXE",
+            "C:\\tools\\kubectl.Exe",
+            "C:\\Program Files\\kubectl\\kubectl.exe",
+            "C:\\Program Files\\kubectl\\KUBECTL.EXE",
+            "C:\\tools\\kubectl.exe.exe",
+        ]) {
+            const launched = launchedBy(configured);
+            const corrected = correctedKubectlPath(launched, "win32") ?? launched;
+            assert.strictEqual(corrected, configured, `launched ${launched}`);
+        }
+    });
+});
+
+describe("kubectlEnv", () => {
+    it("puts the kubectl folder first on PATH", () => {
+        const env = kubectlEnv("/opt/my tools/kubectl", { PATH: "/usr/bin" }, "linux");
+        assert.strictEqual(env.PATH, "/opt/my tools:/usr/bin");
+    });
+
+    it("uses the existing Path key and sets HOME on Windows", () => {
+        const env = kubectlEnv(
+            "C:\\Program Files\\kubectl\\kubectl.exe",
+            { Path: "C:\\Windows", USERPROFILE: "C:\\Users\\John Smith" },
+            "win32",
+        );
+        assert.strictEqual(env.Path, "C:\\Program Files\\kubectl;C:\\Windows");
+        assert.strictEqual(env.PATH, undefined);
+        assert.strictEqual(env.HOME, "C:\\Users\\John Smith");
+    });
+});
+
+describe("describeKubectlCommand", () => {
+    it("hides --from-literal values, which can be secrets", () => {
+        assert.strictEqual(
+            describeKubectlCommand(["create", "secret", "generic", "s", "--from-literal=password=ghp_abc=def"]),
+            "kubectl create secret generic s --from-literal=password=***",
+        );
+    });
+
+    it("keeps everything else", () => {
+        assert.strictEqual(describeKubectlCommand(["get", "pods", "-n", "default"]), "kubectl get pods -n default");
     });
 });
 
@@ -346,6 +405,31 @@ describe("invokeKubectlCommandArgs with a kubectl path containing spaces", () =>
             "/tmp/kubeconfig",
         ]);
         assert.strictEqual(calls.length, 1, "the dependency should still be asked to launch kubectl");
+    });
+});
+
+describe("invokeKubectlCommandArgs when a corrected path was launched successfully", () => {
+    it("uses the original process and does not run kubectl twice", async () => {
+        // A path the correction would change, but which really exists, so the launch works.
+        const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter; stderr: EventEmitter };
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        Object.assign(child, { spawnfile: '"/opt/my tools/kubectl"' });
+        setImmediate(() => {
+            child.emit("spawn");
+            setImmediate(() => {
+                child.stdout.emit("data", Buffer.from("from the original launch"));
+                child.emit("close", 0);
+            });
+        });
+        const { kubectl } = fakeKubectl(() => child);
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["delete", "pod", "p"]);
+
+        // A relaunch of the corrected path would fail, since it does not exist, so this output
+        // can only come from the original process.
+        assert.ok(result.succeeded, result.succeeded ? "" : result.error);
+        assert.strictEqual(result.result.stdout, "from the original launch");
     });
 });
 

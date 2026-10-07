@@ -6,7 +6,8 @@ import { KubectlClusterOperations, validateGadgetFilters } from "../../commands/
 import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { NamespaceSelection } from "../../webview-contract/webviewDefinitions/inspektorGadget";
 import { getAzureServiceResourceTypes } from "../../tree/azureResourceNodeContributor";
-import { parsePort } from "../../panels/utilities/KaitoHelpers";
+import * as vscode from "vscode";
+import { createCurlPodArgs, getClusterIP, parsePort } from "../../panels/utilities/KaitoHelpers";
 
 /**
  * Guards the boundaries where names served by a cluster's API server enter the
@@ -281,5 +282,54 @@ describe("parsePort", () => {
         for (const value of ["", "0", "65536", "80; touch /tmp/pwned #", "8o", "-1", "1e3", " "]) {
             assert.strictEqual(parsePort(value), undefined, JSON.stringify(value));
         }
+    });
+});
+
+describe("KAITO test query", () => {
+    const fakeKubectl = { api: {} } as k8s.APIAvailable<k8s.KubectlV1>;
+
+    afterEach(() => sinon.restore());
+
+    function curlArgs(clusterIP: string, prompt: string, runtime: string) {
+        const args = createCurlPodArgs(
+            "curl-1",
+            "workspace-phi-3-5-mini",
+            clusterIP,
+            prompt,
+            0.7,
+            0.9,
+            50,
+            1.1,
+            100,
+            runtime,
+        );
+        const curl = args.slice(args.indexOf("--") + 1);
+        return { args, url: curl[3], body: JSON.parse(curl[curl.indexOf("-d") + 1]) };
+    }
+
+    it("sends the prompt as JSON in a single argument, unchanged", () => {
+        const prompt = `it's a "test" with \`ticks\`\nand $(x)`;
+        const { body } = curlArgs("10.0.0.5", prompt, "vllm");
+        assert.strictEqual(body.prompt, prompt);
+        assert.strictEqual(body.model, "phi-3.5-mini");
+    });
+
+    it("chooses the endpoint by runtime and brackets IPv6 addresses", () => {
+        assert.strictEqual(curlArgs("10.0.0.5", "hi", "vllm").url, "http://10.0.0.5/v1/completions");
+        assert.strictEqual(curlArgs("fd00::1", "hi", "transformers").url, "http://[fd00::1]/chat");
+    });
+
+    it("accepts only an IP address as the cluster IP", async () => {
+        sinon.stub(vscode.window, "showErrorMessage");
+        const stdout = sinon.stub(kubectlModule, "invokeKubectlCommandArgs");
+        const clusterIP = (value: string) => {
+            stdout.resolves({ succeeded: true, result: { code: 0, stdout: value, stderr: "" } });
+            return getClusterIP("/tmp/kubeconfig", "workspace-phi", fakeKubectl, "default");
+        };
+
+        assert.strictEqual(await clusterIP("10.0.0.5"), "10.0.0.5");
+        assert.strictEqual(await clusterIP("fd00::1"), "fd00::1");
+        assert.strictEqual(await clusterIP("None"), "");
+        assert.strictEqual(await clusterIP("1.2.3.4; touch /tmp/pwned"), "");
     });
 });

@@ -4,6 +4,7 @@ import { OutputStream } from "./commands";
 import { Observable, concat, of } from "rxjs";
 import { NonZeroExitCodeBehaviour } from "./shell";
 import { ChildProcess, spawn } from "child_process";
+import { posix, win32 } from "path";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
 
@@ -54,9 +55,15 @@ export async function invokeKubectlCommandArgs(
     return runKubectl(
         kubectl,
         [...args.slice(0, at), "--kubeconfig", kubeConfigFile, ...args.slice(at)],
-        `kubectl ${args.join(" ")}`,
+        describeKubectlCommand(args),
         exitCodeBehaviour ?? NonZeroExitCodeBehaviour.Fail,
     );
+}
+
+/** The command for error messages, with --from-literal values hidden since they can be secrets. */
+export function describeKubectlCommand(args: string[]): string {
+    const shown = args.map((arg) => arg.replace(/^(--from-literal=[^=]*=).*$/s, "$1***"));
+    return `kubectl ${shown.join(" ")}`;
 }
 
 async function runKubectl(
@@ -85,7 +92,7 @@ async function runKubectl(
             return { succeeded: false, error: `Failed to run "${description}": kubectl could not be started.` };
         }
 
-        const result = await readChildProcess(respawnIfQuotedPath(child, fullArgs));
+        const result = await readChildProcess(await respawnWithCorrectedPath(child, fullArgs));
         if (result.code !== 0 && behaviour === NonZeroExitCodeBehaviour.Fail) {
             return {
                 succeeded: false,
@@ -99,29 +106,62 @@ async function runKubectl(
     }
 }
 
-function respawnIfQuotedPath(child: ChildProcess, args: string[]): ChildProcess {
+async function respawnWithCorrectedPath(child: ChildProcess, args: string[]): Promise<ChildProcess> {
     const file = typeof child.spawnfile === "string" ? correctedKubectlPath(child.spawnfile) : undefined;
     if (file === undefined) {
         return child;
     }
 
-    child.on("error", () => {}); // expected ENOENT
-    return spawn(file, args, { cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath });
+    // Relaunch only if the original launch failed, so kubectl never runs twice.
+    const started = await new Promise<boolean>((resolve) => {
+        child.once("spawn", () => resolve(true));
+        child.once("error", () => resolve(false));
+    });
+    return started
+        ? child
+        : spawn(file, args, { cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath, env: kubectlEnv(file) });
 }
 
 /**
- * legacySpawnAsChild wraps a kubectl path containing spaces in quotes, and on Windows then
- * adds ".exe" before the closing quote, so `"C:\...\kubectl.exe"` becomes `"C:\...\kubectl.exe.exe"`.
- * Without a shell that launch fails with ENOENT. Returns the path to launch instead, or
- * undefined when the original path is fine.
+ * The environment vscode-kubernetes-tools gives kubectl: its folder first on PATH, so plugins
+ * next to it are found, and on Windows a HOME, so kubectl uses the same cache folders.
+ */
+export function kubectlEnv(
+    file: string,
+    env: NodeJS.ProcessEnv = process.env,
+    platform: NodeJS.Platform = process.platform,
+): NodeJS.ProcessEnv {
+    const result = { ...env };
+    const pathKey = Object.keys(result).find((key) => key.toLowerCase() === "path") ?? "PATH";
+    const separator = platform === "win32" ? ";" : ":";
+    const dir = platform === "win32" ? win32.dirname(file) : posix.dirname(file);
+    result[pathKey] = result[pathKey] ? `${dir}${separator}${result[pathKey]}` : dir;
+    if (platform === "win32" && !result.HOME) {
+        result.HOME = result.HOMEDRIVE && result.HOMEPATH ? result.HOMEDRIVE + result.HOMEPATH : result.USERPROFILE;
+    }
+    return result;
+}
+
+/**
+ * legacySpawnAsChild wraps a kubectl path containing spaces in quotes. On Windows it then
+ * appends ".exe" unless the path ends in lowercase ".exe", which a quoted path never does:
+ * `"C:\...\kubectl.exe"` becomes `"C:\...\kubectl.exe.exe"` and `C:\...\KUBECTL.EXE` becomes
+ * `C:\...\KUBECTL.EXE.exe`. Without a shell those launches fail with ENOENT. Returns the
+ * path to launch instead, or undefined when the original path is fine.
  */
 export function correctedKubectlPath(file: string, platform: NodeJS.Platform = process.platform): string | undefined {
-    if (file.length < 2 || !file.startsWith('"') || !file.endsWith('"')) {
-        return undefined;
+    const quoted = file.length >= 2 && file.startsWith('"') && file.endsWith('"');
+    const path = quoted ? file.slice(1, -1) : file;
+
+    if (platform === "win32" && path.endsWith(".exe")) {
+        const original = path.slice(0, -4);
+        // An unquoted path ending in lowercase ".exe" was left alone, so it is the real name.
+        if (/\.exe$/i.test(original) && (quoted || !original.endsWith(".exe"))) {
+            return original;
+        }
     }
 
-    const unquoted = file.slice(1, -1);
-    return platform === "win32" && unquoted.toLowerCase().endsWith(".exe.exe") ? unquoted.slice(0, -4) : unquoted;
+    return quoted ? path : undefined;
 }
 
 // 20 MiB, the limit the shell path used (shelljs maxBuffer), here across stdout and stderr.
@@ -328,7 +368,8 @@ interface KubectlInternal {
     /**
      * Spawns kubectl with an argument array and no shell, returning the child process so
      * stdout, stderr and the exit code are all available. Not part of the published
-     * KubectlV1 surface, so treat it as optional and fall back when it is missing.
+     * KubectlV1 surface, so treat it as optional; when it is missing, kubectl calls fail
+     * rather than use the shell-based string API.
      */
     legacySpawnAsChild?(args: string[]): Promise<ChildProcess | undefined>;
 }

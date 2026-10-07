@@ -160,7 +160,7 @@ export async function getClusterIP(
     // Cluster-supplied value used in the curl URL; accept only an IP.
     const clusterIP = ipResult.result.stdout.trim();
     if (isIP(clusterIP) === 0) {
-        vscode.window.showErrorMessage(`Service ${modelName} returned an invalid cluster IP: ${clusterIP}`);
+        vscode.window.showErrorMessage(`Service ${modelName} returned an invalid cluster IP.`);
         return "";
     }
 
