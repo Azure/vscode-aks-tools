@@ -25,4 +25,6 @@ Right-click your AKS cluster > **Develop & Deploy** > **Run Kubectl Commands** t
 
 User can also run custom commands by typing or editing `kubectl` command parameters in the text field. Custom commands can optionally be saved for future use..
 
+Commands run kubectl directly rather than through a shell, so shell features such as pipes (`|`) and redirection (`>`) are not supported. Saved commands are stored in the `azure.customkubectl.commands` user setting; values in workspace settings are ignored.
+
 ![Kubectl command panel](../resources/kubectl-command-panel.png)

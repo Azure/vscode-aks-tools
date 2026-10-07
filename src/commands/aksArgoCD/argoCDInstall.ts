@@ -20,7 +20,7 @@ import * as l10n from "@vscode/l10n";
 
 import { getReadySessionProvider } from "../../auth/azureAuth";
 import { getKubernetesClusterInfo } from "../utils/clusters";
-import { invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommandArgs } from "../utils/kubectl";
 import { withOptionalTempFile } from "../utils/tempfile";
 import { failed } from "../utils/errorable";
 import { longRunning } from "../utils/host";
@@ -104,12 +104,20 @@ export async function detectManagedArgoCDExtension(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFile: string,
 ): Promise<ArgoCDInstallMethod> {
-    const result = await invokeKubectlCommand(
+    const result = await invokeKubectlCommandArgs(
         kubectl,
         kubeConfigFile,
-        `get pods -n ${ARGOCD_NAMESPACE} ` +
-            `-l app.kubernetes.io/managed-by=Microsoft.ArgoCD ` +
-            `--ignore-not-found -o name`,
+        [
+            "get",
+            "pods",
+            "-n",
+            ARGOCD_NAMESPACE,
+            "-l",
+            "app.kubernetes.io/managed-by=Microsoft.ArgoCD",
+            "--ignore-not-found",
+            "-o",
+            "name",
+        ],
         NonZeroExitCodeBehaviour.Succeed,
     );
     if (failed(result)) return "unknown";
@@ -153,10 +161,10 @@ async function showArgoCDStatus(
     channel.appendLine(`\n[Argo CD Status] Cluster: ${clusterName}`);
 
     // Check namespace existence first.
-    const nsCheck = await invokeKubectlCommand(
+    const nsCheck = await invokeKubectlCommandArgs(
         kubectl,
         kubeconfigFile,
-        `get namespace ${ARGOCD_NAMESPACE} --ignore-not-found -o name`,
+        ["get", "namespace", ARGOCD_NAMESPACE, "--ignore-not-found", "-o", "name"],
         NonZeroExitCodeBehaviour.Succeed,
     );
 
@@ -189,10 +197,10 @@ async function showArgoCDStatus(
 
     // Pods.
     const podsResult = await longRunning(l10n.t("Fetching Argo CD pod status from {0}…", clusterName), () =>
-        invokeKubectlCommand(
+        invokeKubectlCommandArgs(
             kubectl,
             kubeconfigFile,
-            `get pods -n ${ARGOCD_NAMESPACE} -o wide`,
+            ["get", "pods", "-n", ARGOCD_NAMESPACE, "-o", "wide"],
             NonZeroExitCodeBehaviour.Succeed,
         ),
     );
@@ -207,10 +215,10 @@ async function showArgoCDStatus(
     }
 
     // Services.
-    const svcResult = await invokeKubectlCommand(
+    const svcResult = await invokeKubectlCommandArgs(
         kubectl,
         kubeconfigFile,
-        `get svc -n ${ARGOCD_NAMESPACE}`,
+        ["get", "svc", "-n", ARGOCD_NAMESPACE],
         NonZeroExitCodeBehaviour.Succeed,
     );
     channel.appendLine(`\n[Argo CD Status] Services in namespace '${ARGOCD_NAMESPACE}':`);

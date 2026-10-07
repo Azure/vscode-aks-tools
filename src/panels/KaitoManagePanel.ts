@@ -5,11 +5,11 @@ import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { ToVsCodeMsgDef, ToWebViewMsgDef, ModelState } from "../webview-contract/webviewDefinitions/kaitoManage";
 import { InitialState } from "../webview-contract/webviewDefinitions/kaitoManage";
 import { TelemetryDefinition } from "../webview-contract/webviewTypes";
-import { invokeKubectlCommand } from "../commands/utils/kubectl";
+import { invokeKubectlCommandArgs } from "../commands/utils/kubectl";
 import { failed } from "../commands/utils/errorable";
 import { validateK8sName } from "../commands/utils/kubernetesNames";
 import { longRunning } from "../commands/utils/host";
-import { getConditions, convertAgeToMinutes, deployModel, getClusterIP } from "./utilities/KaitoHelpers";
+import { getConditions, convertAgeToMinutes, deployModel, getClusterIP, parsePort } from "./utilities/KaitoHelpers";
 import { filterPodImage } from "../commands/utils/clusters";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient } from "../commands/utils/arm";
@@ -63,7 +63,7 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         };
     }
     getMessageHandler(webview: MessageSink<ToWebViewMsgDef>): MessageHandler<ToVsCodeMsgDef> {
-        // Cluster-supplied, returned over the webview channel, reach kubectl command strings.
+        // Cluster-supplied, returned over the webview channel, reach kubectl arguments and a terminal command.
         const guard = (model: string, namespace: string): { model: string; namespace: string } | null => {
             const validModel = validateK8sName(model, "subdomain", "workspace");
             if (failed(validModel)) {
@@ -126,8 +126,8 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
         this.operatingState[model] = true;
         try {
             await longRunning(`Deleting '${model}'`, async () => {
-                const command = `delete workspace ${model} -n ${namespace}`;
-                const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+                const args = ["delete", "workspace", model, "-n", namespace];
+                const kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
                 if (failed(kubectlresult)) {
                     vscode.window.showErrorMessage(
                         l10n.t(`There was an error deleting '{0}'. {1}`, model, kubectlresult.error),
@@ -197,8 +197,8 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
 
     // Updates the current state of models on the cluster
     private async updateModels(webview: MessageSink<ToWebViewMsgDef>) {
-        const command = `get workspace -A -o json`;
-        const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = ["get", "workspace", "-A", "-o", "json"];
+        const kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         if (failed(kubectlresult)) {
             webview.postMonitorUpdate({
                 clusterName: this.clusterName,
@@ -272,8 +272,8 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             }
             const pod = workspacePods.result[0];
             // retrieves up to 500 lines of logs
-            const command = `logs ${pod.podName} -n ${pod.nameSpace} --tail=500`;
-            const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+            const args = ["logs", pod.podName, "-n", pod.nameSpace, "--tail=500"];
+            const kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
             if (failed(kubectlresult)) {
                 vscode.window.showErrorMessage(l10n.t(`Error fetching logs: {0}`, kubectlresult.error));
                 return;
@@ -294,13 +294,18 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
     }
 
     private async getPort(serviceName: string, namespace: string) {
-        const command = `get svc ${serviceName} -n ${namespace} -o jsonpath="{.spec.ports[0].port}"`;
-        const kubectlresult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFilePath, command);
+        const args = ["get", "svc", serviceName, "-n", namespace, "-o", "jsonpath={.spec.ports[0].port}"];
+        const kubectlresult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFilePath, args);
         if (failed(kubectlresult)) {
             vscode.window.showErrorMessage(l10n.t(`Error getting port: {0}`, kubectlresult.error));
             return undefined;
         }
-        return kubectlresult.result.stdout;
+        // The port comes from the cluster and is typed into a terminal, so accept only a port number.
+        const port = parsePort(kubectlresult.result.stdout);
+        if (port === undefined) {
+            vscode.window.showErrorMessage(l10n.t(`Service {0} returned an invalid port.`, serviceName));
+        }
+        return port;
     }
 
     // prompt the user for port number
@@ -365,6 +370,9 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             isTransient: false,
         });
         terminal.show();
+        // modelName and namespace are validated names, localPort and servicePort are numbers,
+        // and the kubeconfig path is a temp file this extension created.
+        // eslint-disable-next-line no-restricted-syntax
         terminal.sendText(portForwardCommand);
     }
 }

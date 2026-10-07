@@ -4,7 +4,7 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { getKubernetesClusterInfo } from "../utils/clusters";
 import { Errorable, failed, succeeded } from "../utils/errorable";
 import { longRunning } from "../utils/host";
-import { invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommandArgs } from "../utils/kubectl";
 import * as tmpfile from "../utils/tempfile";
 import { getReadySessionProvider } from "../../auth/azureAuth";
 
@@ -74,19 +74,20 @@ async function deployEraserAutomaticInstallationScenario(
         "YAML",
         async (kubeConfigFile) => {
             // Clean up running instance (without an error if it doesn't yet exist).
-            const deleteResult = await invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile,
-                "delete ns eraser-system --ignore-not-found=true",
-            );
+            const deleteResult = await invokeKubectlCommandArgs(kubectl, kubeConfigFile, [
+                "delete",
+                "ns",
+                "eraser-system",
+                "--ignore-not-found=true",
+            ]);
             if (failed(deleteResult)) return deleteResult;
 
             // Deploy eraser tool: https://eraser-dev.github.io/eraser/docs/installation
-            const applyResult = await invokeKubectlCommand(
-                kubectl,
-                kubeConfigFile,
-                `apply -f https://raw.githubusercontent.com/eraser-dev/eraser/v1.2.0/deploy/eraser.yaml`,
-            );
+            const applyResult = await invokeKubectlCommandArgs(kubectl, kubeConfigFile, [
+                "apply",
+                "-f",
+                "https://raw.githubusercontent.com/eraser-dev/eraser/v1.2.0/deploy/eraser.yaml",
+            ]);
             if (failed(applyResult)) return applyResult;
 
             return applyResult;
