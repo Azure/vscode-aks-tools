@@ -1,10 +1,11 @@
-# What's New in 2.6.1
+# What's New in 2.7.0
 
 Everything added since `2.6.0`. Full release history is on the
 [GitHub Releases](https://github.com/Azure/vscode-aks-tools/releases) page.
 
-This is a patch release focused on security hardening and Kickstart guided-setup fixes.
-There are no new commands, settings, or feature flags.
+This release focuses on security hardening and Kickstart guided-setup fixes. There are
+no new commands, settings, or feature flags, but some inputs that were previously
+accepted are now rejected; see [Behavior and compatibility](#behavior-and-compatibility).
 
 ## Safer handling of cluster and kubeconfig values
 
