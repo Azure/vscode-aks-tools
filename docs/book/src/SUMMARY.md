@@ -39,7 +39,7 @@
   - [Pinned versions](./reference/pinned-versions.md)
 
 - [Release](./release.md)
-  - [What's New in 2.6.0](./release/whats-new-2.6.0.md)
+  - [What's New in 2.7.0](./release/whats-new-2.7.0.md)
   - [Releasing Information](./release/releasing.md)
 - [Contributing](./contributing.md)
 - [Telemetery](./telemetery.md)
