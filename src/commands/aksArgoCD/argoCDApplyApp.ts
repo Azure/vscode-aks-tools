@@ -20,7 +20,7 @@ import * as yaml from "js-yaml";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as l10n from "@vscode/l10n";
 
-import { invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommandArgs } from "../utils/kubectl";
 import { createTempFile } from "../utils/tempfile";
 import { failed } from "../utils/errorable";
 import { getAuthenticatedKubeconfigYaml } from "../utils/clusters";
@@ -106,6 +106,8 @@ function resolveFileUri(target: unknown): vscode.Uri | undefined {
 export async function resolveCurrentKubectlContext(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
 ): Promise<{ contextName: string; kubeconfigYaml: string } | undefined> {
+    // Constant commands on the default kubeconfig, which invokeKubectlCommandArgs does not support.
+    // eslint-disable-next-line no-restricted-syntax
     const ctxResult = await kubectl.api.invokeCommand("config current-context");
     if (!ctxResult || ctxResult.code !== 0) {
         vscode.window.showErrorMessage(
@@ -124,6 +126,7 @@ export async function resolveCurrentKubectlContext(
         return undefined;
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     const cfgResult = await kubectl.api.invokeCommand("config view --minify --flatten -o yaml");
     if (!cfgResult || cfgResult.code !== 0) {
         vscode.window.showErrorMessage(l10n.t("Could not read kubeconfig for context '{0}'.", contextName));
@@ -160,10 +163,19 @@ async function detectArgoCDAuthMode(
     kubectl: k8s.APIAvailable<k8s.KubectlV1>,
     kubeConfigFile: string,
 ): Promise<ArgoCDAuthMode> {
-    const result = await invokeKubectlCommand(
+    const result = await invokeKubectlCommandArgs(
         kubectl,
         kubeConfigFile,
-        `get configmap argocd-cm -n argocd --ignore-not-found -o jsonpath="{.data['oidc\\.config']}"`,
+        [
+            "get",
+            "configmap",
+            "argocd-cm",
+            "-n",
+            "argocd",
+            "--ignore-not-found",
+            "-o",
+            "jsonpath={.data['oidc\\.config']}",
+        ],
         NonZeroExitCodeBehaviour.Succeed,
     );
     if (failed(result)) return "admin-password";
@@ -229,10 +241,10 @@ export async function detectArgoCDConfiguredPort(
     kubeConfigFile: string,
 ): Promise<number> {
     const read = async (key: string): Promise<string> => {
-        const result = await invokeKubectlCommand(
+        const result = await invokeKubectlCommandArgs(
             kubectl,
             kubeConfigFile,
-            `get configmap argocd-cm -n argocd --ignore-not-found -o jsonpath="{.data['${key}']}"`,
+            ["get", "configmap", "argocd-cm", "-n", "argocd", "--ignore-not-found", "-o", `jsonpath={.data['${key}']}`],
             NonZeroExitCodeBehaviour.Succeed,
         );
         return failed(result) ? "" : result.result.stdout.trim().replace(/^"|"$/g, "");
@@ -264,10 +276,19 @@ async function getArgoCDAdminCredentials(
     kubeConfigFile: string,
 ): Promise<{ username: string; password: string } | undefined> {
     const result = await longRunning(l10n.t("Fetching Argo CD admin credentials…"), () =>
-        invokeKubectlCommand(
+        invokeKubectlCommandArgs(
             kubectl,
             kubeConfigFile,
-            `get secret argocd-initial-admin-secret -n argocd --ignore-not-found ` + `-o jsonpath="{.data.password}"`,
+            [
+                "get",
+                "secret",
+                "argocd-initial-admin-secret",
+                "-n",
+                "argocd",
+                "--ignore-not-found",
+                "-o",
+                "jsonpath={.data.password}",
+            ],
             NonZeroExitCodeBehaviour.Succeed,
         ),
     );
@@ -315,11 +336,19 @@ async function openArgoCDUI(
         detectArgoCDAuthMode(kubectl, kubeConfigFile),
         detectArgoCDConfiguredPort(kubectl, kubeConfigFile),
         longRunning(l10n.t("Checking for Argo CD external address on '{0}'…", clusterName), () =>
-            invokeKubectlCommand(
+            invokeKubectlCommandArgs(
                 kubectl,
                 kubeConfigFile,
-                `get svc argocd-server -n argocd --ignore-not-found ` +
-                    `-o jsonpath='{.status.loadBalancer.ingress[0].ip}{.status.loadBalancer.ingress[0].hostname}'`,
+                [
+                    "get",
+                    "svc",
+                    "argocd-server",
+                    "-n",
+                    "argocd",
+                    "--ignore-not-found",
+                    "-o",
+                    "jsonpath={.status.loadBalancer.ingress[0].ip}{.status.loadBalancer.ingress[0].hostname}",
+                ],
                 NonZeroExitCodeBehaviour.Succeed,
             ),
         ),
@@ -335,10 +364,10 @@ async function openArgoCDUI(
     } else {
         // No external address — verify the service exists before starting a port-forward.
         const svcCheck = await longRunning(l10n.t("Checking Argo CD server service on '{0}'…", clusterName), () =>
-            invokeKubectlCommand(
+            invokeKubectlCommandArgs(
                 kubectl,
                 kubeConfigFile,
-                `get svc argocd-server -n argocd --ignore-not-found -o name`,
+                ["get", "svc", "argocd-server", "-n", "argocd", "--ignore-not-found", "-o", "name"],
                 NonZeroExitCodeBehaviour.Succeed,
             ),
         );
@@ -402,6 +431,8 @@ async function openArgoCDUI(
         // (argocd-cm url / global.domain). This keeps the opened URL aligned
         // with the Entra ID redirect URI so SSO does not break (issue #2322).
         const terminal = vscode.window.createTerminal({ name: `Argo CD UI — ${clusterName}` });
+        // configuredPort is a number and callers in this extension pass a temp kubeconfig they created.
+        // eslint-disable-next-line no-restricted-syntax
         terminal.sendText(
             `kubectl port-forward svc/argocd-server -n argocd ${configuredPort}:443 --kubeconfig="${kubeConfigFile}"`,
         );
@@ -604,30 +635,37 @@ async function connectPrivateGitHubRepo(
     // label the resulting Secret so Argo CD auto-discovers it.
     const result = await longRunning(l10n.t("Registering repository with Argo CD…"), async () => {
         // Remove any existing secret first so `create` is idempotent.
-        await invokeKubectlCommand(
+        await invokeKubectlCommandArgs(
             kubectl,
             kubeConfigFile,
-            `delete secret ${secretName} -n argocd --ignore-not-found`,
+            ["delete", "secret", secretName, "-n", "argocd", "--ignore-not-found"],
             NonZeroExitCodeBehaviour.Succeed,
         );
 
-        const createResult = await invokeKubectlCommand(
+        const createResult = await invokeKubectlCommandArgs(
             kubectl,
             kubeConfigFile,
-            `create secret generic ${secretName} -n argocd` +
-                ` --from-literal=type=git` +
-                ` --from-literal=url=${httpsUrl}` +
-                ` --from-literal=username=${username}` +
-                ` --from-literal=password=${pat}`,
+            [
+                "create",
+                "secret",
+                "generic",
+                secretName,
+                "-n",
+                "argocd",
+                "--from-literal=type=git",
+                `--from-literal=url=${httpsUrl}`,
+                `--from-literal=username=${username}`,
+                `--from-literal=password=${pat}`,
+            ],
             NonZeroExitCodeBehaviour.Succeed,
         );
         if (failed(createResult) || createResult.result.code !== 0) return createResult;
 
         // Label the secret so Argo CD picks it up automatically.
-        return invokeKubectlCommand(
+        return invokeKubectlCommandArgs(
             kubectl,
             kubeConfigFile,
-            `label secret ${secretName} -n argocd argocd.argoproj.io/secret-type=repository --overwrite`,
+            ["label", "secret", secretName, "-n", "argocd", "argocd.argoproj.io/secret-type=repository", "--overwrite"],
             NonZeroExitCodeBehaviour.Succeed,
         );
     });
@@ -696,10 +734,10 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         //    Do this early — no point continuing if Argo CD is not present.
         // ------------------------------------------------------------------
         const nsCheck = await longRunning(l10n.t("Checking if Argo CD is installed on '{0}'…", clusterName), () =>
-            invokeKubectlCommand(
+            invokeKubectlCommandArgs(
                 kubectl,
                 kubeConfigFile.filePath,
-                `get namespace argocd --ignore-not-found -o name`,
+                ["get", "namespace", "argocd", "--ignore-not-found", "-o", "name"],
                 NonZeroExitCodeBehaviour.Succeed,
             ),
         );
@@ -739,11 +777,14 @@ export async function argoCDApplyApp(_context: IActionContext, target: unknown):
         const applyResult = await longRunning(
             l10n.t("Applying Argo CD Application '{0}' to '{1}'…", appName, clusterName),
             () =>
-                invokeKubectlCommand(
-                    kubectl,
-                    kubeConfigFile.filePath,
-                    `apply -n ${targetNamespace} -f "${fileUri.fsPath}" --validate=false`,
-                ),
+                invokeKubectlCommandArgs(kubectl, kubeConfigFile.filePath, [
+                    "apply",
+                    "-n",
+                    targetNamespace,
+                    "-f",
+                    fileUri.fsPath,
+                    "--validate=false",
+                ]),
         );
 
         if (failed(applyResult)) {

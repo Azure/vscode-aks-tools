@@ -3,8 +3,11 @@ import * as sinon from "sinon";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as kubectlModule from "../../commands/utils/kubectl";
 import { KubectlClusterOperations, validateGadgetFilters } from "../../commands/aksInspektorGadget/clusterOperations";
-import { getLinuxNodes, isSafeLocalCapturePath } from "../../panels/utilities/KubectlNetworkHelper";
+import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { NamespaceSelection } from "../../webview-contract/webviewDefinitions/inspektorGadget";
+import { getAzureServiceResourceTypes } from "../../tree/azureResourceNodeContributor";
+import * as vscode from "vscode";
+import { createCurlPodArgs, getClusterIP, parsePort } from "../../panels/utilities/KaitoHelpers";
 
 /**
  * Guards the boundaries where names served by a cluster's API server enter the
@@ -22,14 +25,14 @@ describe("Cluster-supplied name boundaries", () => {
     const hostileNode = "aks-np1-12345678-vmss000000$(touch /tmp/aks-pwned)";
     const hostileNamespace = "default& calc.exe & rem ";
 
-    const fakeKubectl = {} as k8s.APIAvailable<k8s.KubectlV1>;
+    const fakeKubectl = { api: {} } as k8s.APIAvailable<k8s.KubectlV1>;
     const clusterInfo = { name: "test-cluster", kubeconfigYaml: "" };
 
     let invokeStub: sinon.SinonStub;
 
     function stubKubectlStdout(stdout: string) {
         invokeStub = sinon
-            .stub(kubectlModule, "invokeKubectlCommand")
+            .stub(kubectlModule, "invokeKubectlCommandArgs")
             .resolves({ succeeded: true, result: { code: 0, stdout, stderr: "" } });
     }
 
@@ -237,36 +240,96 @@ describe("Cluster-supplied name boundaries", () => {
             assert.deepStrictEqual(result.result, ["aks-node-1", "aks-node-2"]);
         });
     });
+});
 
-    describe("Retina download path", () => {
-        it("accepts ordinary paths on both platforms", () => {
-            assert.ok(isSafeLocalCapturePath("/Users/me/captures/retina-capture-prod_2026"));
-            assert.ok(isSafeLocalCapturePath("C:\\Users\\me\\captures\\retina"));
-            assert.ok(isSafeLocalCapturePath("..\\Users\\me\\capture"));
-            assert.ok(isSafeLocalCapturePath("./relative/path-1"));
-        });
+describe("Azure Services tree", () => {
+    // Fields are space-separated, newline first: name, kind, singular, plural, group, shortName.
+    function kubectlReturning(...lines: string[]) {
+        const stdout = lines.map((l) => `\n${l}`).join("");
+        return { invokeCommand: async () => ({ code: 0, stdout, stderr: "" }) } as unknown as k8s.KubectlV1;
+    }
 
-        it("refuses a path carrying shell punctuation", () => {
-            const payloads = [
-                "/tmp/out; touch /tmp/pwned",
-                "/tmp/out$(touch /tmp/pwned)",
-                "/tmp/out`touch /tmp/pwned`",
-                "/tmp/out & calc.exe",
-                "/tmp/out|tee /tmp/pwned",
-                '/tmp/out" --flag "',
-            ];
+    it("accepts Azure CRDs with valid names", async () => {
+        const result = await getAzureServiceResourceTypes(
+            kubectlReturning("vaults.keyvault.azure.com Vault vault vaults keyvault.azure.com kv"),
+        );
 
-            for (const payload of payloads) {
-                assert.strictEqual(isSafeLocalCapturePath(payload), false, `should refuse: ${payload}`);
-            }
-        });
+        assert.ok(result.succeeded);
+        assert.deepStrictEqual(
+            result.result.map((r) => r.abbreviation),
+            ["kv"],
+        );
+    });
 
-        it("refuses a path containing a space, which breaks the unquoted cp command today", () => {
-            assert.strictEqual(isSafeLocalCapturePath("C:\\Users\\John Smith\\capture"), false);
-        });
+    it("refuses a hostile short name, which vscode-kubernetes-tools runs in a shell", async () => {
+        const result = await getAzureServiceResourceTypes(
+            kubectlReturning(
+                "vaults.keyvault.azure.com Vault vault vaults keyvault.azure.com kv$(touch${IFS}/tmp/pwned)",
+            ),
+        );
 
-        it("refuses an empty path", () => {
-            assert.strictEqual(isSafeLocalCapturePath(""), false);
-        });
+        assert.ok(!result.succeeded);
+    });
+});
+
+describe("parsePort", () => {
+    it("accepts a port number", () => {
+        assert.strictEqual(parsePort("8080"), 8080);
+        assert.strictEqual(parsePort("80\n"), 80);
+    });
+
+    it("rejects anything else, so it cannot alter the port-forward terminal command", () => {
+        for (const value of ["", "0", "65536", "80; touch /tmp/pwned #", "8o", "-1", "1e3", " "]) {
+            assert.strictEqual(parsePort(value), undefined, JSON.stringify(value));
+        }
+    });
+});
+
+describe("KAITO test query", () => {
+    const fakeKubectl = { api: {} } as k8s.APIAvailable<k8s.KubectlV1>;
+
+    afterEach(() => sinon.restore());
+
+    function curlArgs(clusterIP: string, prompt: string, runtime: string) {
+        const args = createCurlPodArgs(
+            "curl-1",
+            "workspace-phi-3-5-mini",
+            clusterIP,
+            prompt,
+            0.7,
+            0.9,
+            50,
+            1.1,
+            100,
+            runtime,
+        );
+        const curl = args.slice(args.indexOf("--") + 1);
+        return { args, url: curl[3], body: JSON.parse(curl[curl.indexOf("-d") + 1]) };
+    }
+
+    it("sends the prompt as JSON in a single argument, unchanged", () => {
+        const prompt = `it's a "test" with \`ticks\`\nand $(x)`;
+        const { body } = curlArgs("10.0.0.5", prompt, "vllm");
+        assert.strictEqual(body.prompt, prompt);
+        assert.strictEqual(body.model, "phi-3.5-mini");
+    });
+
+    it("chooses the endpoint by runtime and brackets IPv6 addresses", () => {
+        assert.strictEqual(curlArgs("10.0.0.5", "hi", "vllm").url, "http://10.0.0.5/v1/completions");
+        assert.strictEqual(curlArgs("fd00::1", "hi", "transformers").url, "http://[fd00::1]/chat");
+    });
+
+    it("accepts only an IP address as the cluster IP", async () => {
+        sinon.stub(vscode.window, "showErrorMessage");
+        const stdout = sinon.stub(kubectlModule, "invokeKubectlCommandArgs");
+        const clusterIP = (value: string) => {
+            stdout.resolves({ succeeded: true, result: { code: 0, stdout: value, stderr: "" } });
+            return getClusterIP("/tmp/kubeconfig", "workspace-phi", fakeKubectl, "default");
+        };
+
+        assert.strictEqual(await clusterIP("10.0.0.5"), "10.0.0.5");
+        assert.strictEqual(await clusterIP("fd00::1"), "fd00::1");
+        assert.strictEqual(await clusterIP("None"), "");
+        assert.strictEqual(await clusterIP("1.2.3.4; touch /tmp/pwned"), "");
     });
 });

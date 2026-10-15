@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { EventEmitter } from "events";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { parseArgoCDPort, detectArgoCDConfiguredPort } from "../../../commands/aksArgoCD/argoCDApplyApp";
 
@@ -6,17 +7,30 @@ import { parseArgoCDPort, detectArgoCDConfiguredPort } from "../../../commands/a
  * Builds a fake kubectl whose `argocd-cm` reads return the supplied values.
  *
  * `detectArgoCDConfiguredPort` issues one jsonpath query per key, so dispatch on
- * whether the command asks for `global.domain` or `url`.
+ * whether the arguments ask for `global.domain` or `url`.
  */
 function fakeKubectl(data: { url?: string; globalDomain?: string }): k8s.APIAvailable<k8s.KubectlV1> {
     return {
         available: true,
         api: {
-            invokeCommand: async (command: string) => ({
-                code: 0,
-                stdout: command.includes("global") ? (data.globalDomain ?? "") : (data.url ?? ""),
-                stderr: "",
-            }),
+            kubectl: {
+                legacySpawnAsChild: async (args: string[]) => {
+                    const stdout = args.join(" ").includes("global") ? (data.globalDomain ?? "") : (data.url ?? "");
+                    const child = new EventEmitter() as EventEmitter & {
+                        stdout: EventEmitter;
+                        stderr: EventEmitter;
+                    };
+                    child.stdout = new EventEmitter();
+                    child.stderr = new EventEmitter();
+                    setImmediate(() => {
+                        if (stdout) {
+                            child.stdout.emit("data", Buffer.from(stdout));
+                        }
+                        child.emit("close", 0);
+                    });
+                    return child;
+                },
+            },
         },
     } as unknown as k8s.APIAvailable<k8s.KubectlV1>;
 }

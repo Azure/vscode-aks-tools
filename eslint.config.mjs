@@ -100,6 +100,24 @@ export default [
                     message:
                         "Do not build shell command strings from values. Use execFile(binary, argsArray); see docs/book/src/development/development.md.",
                 },
+                {
+                    // The string form reaches a shell via the kubernetes-tools dependency.
+                    selector: 'CallExpression[callee.name="invokeKubectlCommand"]',
+                    message:
+                        "Do not build kubectl command strings. Use invokeKubectlCommandArgs(kubectl, kubeConfigFile, argsArray); see docs/book/src/development/development.md.",
+                },
+                {
+                    // The dependency's string API, which runs in a shell.
+                    selector: 'CallExpression[callee.type="MemberExpression"][callee.property.name="invokeCommand"]',
+                    message:
+                        "kubectl.api.invokeCommand runs its string in a shell. Use invokeKubectlCommandArgs(kubectl, kubeConfigFile, argsArray); see docs/book/src/development/development.md.",
+                },
+                {
+                    // Terminal text runs in the user's shell.
+                    selector: 'CallExpression[callee.type="MemberExpression"][callee.property.name="sendText"]',
+                    message:
+                        "terminal.sendText runs its text in a shell. Validate every value in it and add an eslint-disable comment saying why it is safe; see docs/book/src/development/development.md.",
+                },
             ],
             "no-var": "error",
             "prefer-const": "error",

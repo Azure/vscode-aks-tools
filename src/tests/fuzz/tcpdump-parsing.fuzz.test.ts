@@ -158,7 +158,7 @@ describe("TCP Dump Command Parsing - Fuzz Tests", () => {
             );
         });
 
-        it("should keep generated shell payloads out of the local shell command", () => {
+        it("should pass generated payloads to the pod's shell only inside single quotes", () => {
             fc.assert(
                 fc.property(
                     fc.string().filter((value) => !value.includes("\0")),
@@ -168,7 +168,8 @@ describe("TCP Dump Command Parsing - Fuzz Tests", () => {
                             interface: null,
                             pcapFilterString: filter,
                         });
-                        expect(command).not.to.include(filter);
+                        expect(command).to.have.length(3);
+                        expect(command[2]).to.include(`'${filter.replace(/'/g, `'"'"'`)}'`);
                         return true;
                     },
                 ),

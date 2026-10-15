@@ -27,7 +27,7 @@ import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as l10n from "@vscode/l10n";
 
-import { invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommandArgs } from "../utils/kubectl";
 import { NonZeroExitCodeBehaviour } from "../utils/shell";
 import { failed } from "../utils/errorable";
 import { getOutputChannel } from "./argoCDInstall";
@@ -142,10 +142,18 @@ async function collectWifContext(
     let serviceAccount: string | undefined;
     let existingClientId: string | undefined;
     for (const candidate of CANDIDATE_SERVICE_ACCOUNTS) {
-        const saResult = await invokeKubectlCommand(
+        const saResult = await invokeKubectlCommandArgs(
             kubectl,
             kubeConfigFilePath,
-            `get sa ${candidate} -n ${ARGOCD_NAMESPACE} -o jsonpath="{.metadata.name},{.metadata.annotations.azure\\.workload\\.identity/client-id}"`,
+            [
+                "get",
+                "sa",
+                candidate,
+                "-n",
+                ARGOCD_NAMESPACE,
+                "-o",
+                "jsonpath={.metadata.name},{.metadata.annotations.azure\\.workload\\.identity/client-id}",
+            ],
             NonZeroExitCodeBehaviour.Succeed,
         );
         if (failed(saResult) || saResult.result.code !== 0) continue;
@@ -175,10 +183,10 @@ async function collectWifContext(
     // via the public well-known endpoint; if kubectl can't fetch it the
     // user will get it from the cluster properties / Azure Portal.
     let issuerUrl: string | undefined;
-    const issuerResult = await invokeKubectlCommand(
+    const issuerResult = await invokeKubectlCommandArgs(
         kubectl,
         kubeConfigFilePath,
-        `get --raw /.well-known/openid-configuration`,
+        ["get", "--raw", "/.well-known/openid-configuration"],
         NonZeroExitCodeBehaviour.Succeed,
     );
     if (!failed(issuerResult) && issuerResult.result.code === 0) {
