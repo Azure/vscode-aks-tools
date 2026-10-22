@@ -14,6 +14,17 @@ import { filterPodImage } from "../commands/utils/clusters";
 import { ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient } from "../commands/utils/arm";
 import { l10n } from "vscode";
+
+export function parseServicePort(output: string): number | undefined {
+    const value = output.trim();
+    if (!/^[0-9]+$/.test(value)) {
+        return undefined;
+    }
+
+    const port = Number(value);
+    return Number.isSafeInteger(port) && port >= 1 && port <= 65535 ? port : undefined;
+}
+
 export class KaitoManagePanel extends BasePanel<"kaitoManage"> {
     constructor(extensionUri: vscode.Uri) {
         super(extensionUri, "kaitoManage", {
@@ -300,7 +311,14 @@ export class KaitoManagePanelDataProvider implements PanelDataProvider<"kaitoMan
             vscode.window.showErrorMessage(l10n.t(`Error getting port: {0}`, kubectlresult.error));
             return undefined;
         }
-        return kubectlresult.result.stdout;
+
+        const port = parseServicePort(kubectlresult.result.stdout);
+        if (port === undefined) {
+            vscode.window.showErrorMessage(l10n.t(`Service '{0}' returned an invalid port.`, serviceName));
+            return undefined;
+        }
+
+        return port;
     }
 
     // prompt the user for port number
