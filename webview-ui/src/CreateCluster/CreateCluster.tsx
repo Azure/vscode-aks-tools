@@ -68,6 +68,15 @@ export function CreateCluster(initialState: InitialState) {
                     <Success
                         portalClusterUrl={state.createdCluster?.portalUrl || ""}
                         name={state.createParams?.name || ""}
+                        isMergingKubeconfig={state.isMergingKubeconfig}
+                        onMergeKubeconfig={() => {
+                            if (!state.createParams) return;
+                            eventHandlers.onSetMergingKubeconfig();
+                            vscode.postMergeKubeconfigRequest({
+                                resourceGroupName: state.createParams.resourceGroupName,
+                                name: state.createParams.name,
+                            });
+                        }}
                     />
                 );
             default:
