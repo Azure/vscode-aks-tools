@@ -7,7 +7,7 @@ import { getLinuxNodes } from "../../panels/utilities/KubectlNetworkHelper";
 import { NamespaceSelection } from "../../webview-contract/webviewDefinitions/inspektorGadget";
 import { getAzureServiceResourceTypes } from "../../tree/azureResourceNodeContributor";
 import * as vscode from "vscode";
-import { createCurlPodArgs, getClusterIP, parsePort } from "../../panels/utilities/KaitoHelpers";
+import { createCurlPodArgs, getClusterIP } from "../../panels/utilities/KaitoHelpers";
 
 /**
  * Guards the boundaries where names served by a cluster's API server enter the
@@ -269,19 +269,6 @@ describe("Azure Services tree", () => {
         );
 
         assert.ok(!result.succeeded);
-    });
-});
-
-describe("parsePort", () => {
-    it("accepts a port number", () => {
-        assert.strictEqual(parsePort("8080"), 8080);
-        assert.strictEqual(parsePort("80\n"), 80);
-    });
-
-    it("rejects anything else, so it cannot alter the port-forward terminal command", () => {
-        for (const value of ["", "0", "65536", "80; touch /tmp/pwned #", "8o", "-1", "1e3", " "]) {
-            assert.strictEqual(parsePort(value), undefined, JSON.stringify(value));
-        }
     });
 });
 

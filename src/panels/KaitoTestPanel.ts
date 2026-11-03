@@ -1,3 +1,4 @@
+/* eslint no-console: "error" */
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { ReadyAzureSessionProvider } from "../auth/types";
@@ -130,7 +131,6 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     maxLength,
                     runtime,
                 );
-                console.log(createArgs.join(" "));
                 // used to delete the curl pod after query is complete
                 const deleteArgs = ["delete", "pod", podName];
 
@@ -140,6 +140,7 @@ export class KaitoTestPanelDataProvider implements PanelDataProvider<"kaitoTest"
                     this.kubeConfigFilePath,
                     createArgs,
                     NonZeroExitCodeBehaviour.Succeed,
+                    { sensitiveArgs: [createArgs.length - 1] },
                 );
 
                 // retrieve the logs from the curl pod

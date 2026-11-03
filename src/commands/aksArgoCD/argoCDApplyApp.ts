@@ -630,9 +630,7 @@ async function connectPrivateGitHubRepo(
     const username = githubUsername ?? "git";
     const httpsUrl = repoUrl.trim().startsWith("http") ? repoUrl.trim() : `https://github.com/${owner}/${repoSlug}.git`;
 
-    // Avoid writing the PAT to a temp file on disk.  Instead, use
-    // `kubectl create secret --from-literal` (in-memory only) and then
-    // label the resulting Secret so Argo CD auto-discovers it.
+    // Keep the PAT out of both temporary files and process arguments.
     const result = await longRunning(l10n.t("Registering repository with Argo CD…"), async () => {
         // Remove any existing secret first so `create` is idempotent.
         await invokeKubectlCommandArgs(
@@ -645,29 +643,24 @@ async function connectPrivateGitHubRepo(
         const createResult = await invokeKubectlCommandArgs(
             kubectl,
             kubeConfigFile,
-            [
-                "create",
-                "secret",
-                "generic",
-                secretName,
-                "-n",
-                "argocd",
-                "--from-literal=type=git",
-                `--from-literal=url=${httpsUrl}`,
-                `--from-literal=username=${username}`,
-                `--from-literal=password=${pat}`,
-            ],
-            NonZeroExitCodeBehaviour.Succeed,
+            ["create", "-f", "-"],
+            NonZeroExitCodeBehaviour.Fail,
+            {
+                stdin: JSON.stringify({
+                    apiVersion: "v1",
+                    kind: "Secret",
+                    metadata: {
+                        name: secretName,
+                        namespace: "argocd",
+                        labels: { "argocd.argoproj.io/secret-type": "repository" },
+                    },
+                    type: "Opaque",
+                    stringData: { type: "git", url: httpsUrl, username, password: pat },
+                }),
+                sensitiveStdin: true,
+            },
         );
-        if (failed(createResult) || createResult.result.code !== 0) return createResult;
-
-        // Label the secret so Argo CD picks it up automatically.
-        return invokeKubectlCommandArgs(
-            kubectl,
-            kubeConfigFile,
-            ["label", "secret", secretName, "-n", "argocd", "argocd.argoproj.io/secret-type=repository", "--overwrite"],
-            NonZeroExitCodeBehaviour.Succeed,
-        );
+        return createResult;
     });
 
     if (failed(result) || result.result.code !== 0) {

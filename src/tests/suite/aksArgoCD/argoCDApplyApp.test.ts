@@ -1,7 +1,8 @@
 import * as assert from "assert";
-import { EventEmitter } from "events";
+import * as sinon from "sinon";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { parseArgoCDPort, detectArgoCDConfiguredPort } from "../../../commands/aksArgoCD/argoCDApplyApp";
+import * as kubectlModule from "../../../commands/utils/kubectl";
 
 /**
  * Builds a fake kubectl whose `argocd-cm` reads return the supplied values.
@@ -10,28 +11,17 @@ import { parseArgoCDPort, detectArgoCDConfiguredPort } from "../../../commands/a
  * whether the arguments ask for `global.domain` or `url`.
  */
 function fakeKubectl(data: { url?: string; globalDomain?: string }): k8s.APIAvailable<k8s.KubectlV1> {
+    sinon.stub(kubectlModule, "invokeKubectlCommandArgs").callsFake(async (_api, _config, args) => ({
+        succeeded: true,
+        result: {
+            code: 0,
+            stdout: args.join(" ").includes("global") ? (data.globalDomain ?? "") : (data.url ?? ""),
+            stderr: "",
+        },
+    }));
     return {
         available: true,
-        api: {
-            kubectl: {
-                legacySpawnAsChild: async (args: string[]) => {
-                    const stdout = args.join(" ").includes("global") ? (data.globalDomain ?? "") : (data.url ?? "");
-                    const child = new EventEmitter() as EventEmitter & {
-                        stdout: EventEmitter;
-                        stderr: EventEmitter;
-                    };
-                    child.stdout = new EventEmitter();
-                    child.stderr = new EventEmitter();
-                    setImmediate(() => {
-                        if (stdout) {
-                            child.stdout.emit("data", Buffer.from(stdout));
-                        }
-                        child.emit("close", 0);
-                    });
-                    return child;
-                },
-            },
-        },
+        api: {},
     } as unknown as k8s.APIAvailable<k8s.KubectlV1>;
 }
 
@@ -81,6 +71,7 @@ describe("argoCDApplyApp — parseArgoCDPort", () => {
 
 describe("argoCDApplyApp — detectArgoCDConfiguredPort", () => {
     const KUBECONFIG = "/tmp/kubeconfig";
+    afterEach(() => sinon.restore());
 
     it("prefers the port from argocd-cm 'url'", async () => {
         const port = await detectArgoCDConfiguredPort(fakeKubectl({ url: "https://localhost:9000" }), KUBECONFIG);

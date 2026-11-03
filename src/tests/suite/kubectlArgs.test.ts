@@ -1,14 +1,14 @@
 import * as assert from "assert";
-import { spawn } from "child_process";
+import childProcess from "child_process";
 import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { PassThrough } from "stream";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import * as k8s from "vscode-kubernetes-tools-api";
 import {
-    correctedKubectlPath,
     createAuthPromptMonitor,
     describeKubectlCommand,
     getExecOutput,
@@ -17,19 +17,19 @@ import {
     MAX_KUBECTL_OUTPUT_BYTES,
     parseKubectlCommandArgs,
 } from "../../commands/utils/kubectl";
+import { kubectlExecutablePath } from "../../commands/utils/kubectlExecutable";
 import { NonZeroExitCodeBehaviour } from "../../commands/utils/shell";
 import { KubectlDataProvider } from "../../panels/KubectlPanel";
 import { MessageSink } from "../../webview-contract/messaging";
 import { ToWebViewMsgDef } from "../../webview-contract/webviewDefinitions/kubectl";
 
-/**
- * A stand-in for the ChildProcess that legacySpawnAsChild returns. Emits the given
- * output and then closes with the given code, mirroring the real event order.
- */
 function fakeChildProcess(stdout: string | Buffer[], stderr: string, code: number | null) {
-    const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter; stderr: EventEmitter };
-    child.stdout = new EventEmitter();
-    child.stderr = new EventEmitter();
+    const child = Object.assign(new EventEmitter(), {
+        stdout: new PassThrough(),
+        stderr: new PassThrough(),
+        stdin: new PassThrough(),
+        kill: sinon.stub().returns(true),
+    });
 
     // After the caller has attached its handlers.
     setImmediate(() => {
@@ -45,28 +45,34 @@ function fakeChildProcess(stdout: string | Buffer[], stderr: string, code: numbe
     return child;
 }
 
-/** A kubectl API exposing the spawn-based lane, capturing the argv it is handed. */
+function configureKubectl(file: string) {
+    const config = {
+        get: (_key: string, fallback: unknown) => fallback,
+        inspect: (key: string) => (key === "vscode-kubernetes.kubectl-path" ? { globalValue: file } : undefined),
+    } as unknown as vscode.WorkspaceConfiguration;
+    sinon.stub(vscode.workspace, "getConfiguration").returns(config);
+}
+
 function fakeKubectl(makeChild: () => unknown) {
     const calls: string[][] = [];
+    configureKubectl(process.execPath);
+    const spawn = sinon.stub(childProcess, "spawn").callsFake((_file, args) => {
+        calls.push(args as string[]);
+        const child = makeChild();
+        if (!child) {
+            throw new Error("kubectl could not be started");
+        }
+        return child as childProcess.ChildProcess;
+    });
     const api = {
-        invokeCommand: async () => {
-            throw new Error("the string lane must not be used when the spawn lane is available");
-        },
-        kubectl: {
-            observeCommand: async () => {
-                throw new Error("not used");
-            },
-            legacySpawnAsChild: async (args: string[]) => {
-                calls.push(args);
-                return makeChild();
-            },
-        },
+        invokeCommand: sinon.stub().rejects(new Error("the string lane must never be reached")),
     };
 
-    return { kubectl: { api } as unknown as k8s.APIAvailable<k8s.KubectlV1>, calls };
+    return { kubectl: { available: true, api } as unknown as k8s.APIAvailable<k8s.KubectlV1>, calls, spawn, api };
 }
 
 describe("invokeKubectlCommandArgs", () => {
+    afterEach(() => sinon.restore());
     it("passes each value as its own argument, with kubeconfig last", async () => {
         const { kubectl, calls } = fakeKubectl(() => fakeChildProcess("nginx", "", 0));
 
@@ -165,6 +171,66 @@ describe("invokeKubectlCommandArgs", () => {
         assert.strictEqual(result.result.stdout, "héllo");
     });
 
+    it("keeps explicitly masked values out of nonzero errors even when stderr echoes them", async () => {
+        const prompt = "private prompt and credentials";
+        const { kubectl, calls } = fakeKubectl(() => fakeChildProcess("", `invalid request: ${prompt}`, 7));
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["run", "pod", prompt], undefined, {
+            sensitiveArgs: [2],
+        });
+
+        assert.ok(!result.succeeded);
+        assert.ok(!result.error.includes(prompt));
+        assert.ok(result.error.includes("status code 7"));
+        assert.strictEqual(calls[0][2], prompt);
+    });
+
+    it("keeps masked values out of spawn errors", async () => {
+        const prompt = "private prompt";
+        const { kubectl, spawn } = fakeKubectl(() => undefined);
+        spawn.throws(new Error(`spawn failed for ${prompt}`));
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["run", "pod", prompt], undefined, {
+            sensitiveArgs: [2],
+        });
+
+        assert.ok(!result.succeeded);
+        assert.ok(!result.error.includes(prompt));
+    });
+
+    it("passes sensitive stdin without putting it in argv or failure messages", async () => {
+        const secret = JSON.stringify({ password: "private-token" });
+        const child = fakeChildProcess("", `invalid Secret: ${secret}`, 1);
+        const { kubectl, calls } = fakeKubectl(() => child);
+
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["create", "-f", "-"], undefined, {
+            stdin: secret,
+            sensitiveStdin: true,
+        });
+
+        assert.ok(!result.succeeded);
+        assert.ok(!JSON.stringify(calls).includes("private-token"));
+        assert.ok(!result.error.includes("private-token"));
+        assert.strictEqual(child.stdin.read()?.toString(), secret);
+    });
+
+    it("preserves complete results under Succeed even when argument diagnostics are masked", async () => {
+        const { kubectl } = fakeKubectl(() => fakeChildProcess("partial", "raw stderr", 7));
+
+        const result = await invokeKubectlCommandArgs(
+            kubectl,
+            "/tmp/kubeconfig",
+            ["run", "pod", "private prompt"],
+            NonZeroExitCodeBehaviour.Succeed,
+            { sensitiveArgs: [2] },
+        );
+
+        assert.deepStrictEqual(result, {
+            succeeded: true,
+            result: { code: 7, stdout: "partial", stderr: "raw stderr" },
+        });
+    });
+
     it("releases its listeners when kubectl exits", async () => {
         const child = fakeChildProcess("out", "", 0);
         const { kubectl } = fakeKubectl(() => child);
@@ -175,21 +241,15 @@ describe("invokeKubectlCommandArgs", () => {
         assert.strictEqual(child.stdout.listenerCount("data"), 0);
     });
 
-    it("fails rather than fall back to a shell string when legacySpawnAsChild is missing", async () => {
-        const api = {
-            invokeCommand: async () => {
-                throw new Error("the string lane must never be reached");
-            },
-            kubectl: { observeCommand: async () => {} },
-        } as unknown as k8s.KubectlV1;
+    it("needs no private dependency properties and never falls back to a shell string", async () => {
+        const { kubectl, api, spawn } = fakeKubectl(() => fakeChildProcess("out", "", 0));
 
-        const result = await invokeKubectlCommandArgs({ api } as k8s.APIAvailable<k8s.KubectlV1>, "/tmp/kubeconfig", [
-            "get",
-            "pod",
-        ]);
+        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pod"]);
 
-        assert.ok(!result.succeeded);
-        assert.ok(result.error.includes("update the Kubernetes extension"), result.error);
+        assert.ok(result.succeeded, result.succeeded ? "" : result.error);
+        sinon.assert.notCalled(api.invokeCommand);
+        sinon.assert.calledOnce(spawn);
+        assert.strictEqual(spawn.firstCall.args[2]?.shell, false);
     });
 
     it("stops kubectl and fails when output exceeds the limit", async () => {
@@ -207,62 +267,35 @@ describe("invokeKubectlCommandArgs", () => {
     });
 });
 
-describe("correctedKubectlPath", () => {
-    it("leaves an unquoted path alone", () => {
-        assert.strictEqual(correctedKubectlPath("C:\\tools\\kubectl.exe", "win32"), undefined);
-        assert.strictEqual(correctedKubectlPath("/usr/local/bin/kubectl"), undefined);
-    });
-
-    it("removes the quotes the dependency adds to a path with spaces", () => {
-        assert.strictEqual(correctedKubectlPath('"/Users/John Smith/bin/kubectl"'), "/Users/John Smith/bin/kubectl");
-        assert.strictEqual(
-            correctedKubectlPath('"C:\\Program Files\\kubectl\\kubectl.exe"'),
-            "C:\\Program Files\\kubectl\\kubectl.exe",
-        );
-    });
-
-    it("undoes the duplicate .exe the dependency adds on Windows", () => {
-        assert.strictEqual(
-            correctedKubectlPath('"C:\\Program Files\\kubectl\\kubectl.exe.exe"', "win32"),
-            "C:\\Program Files\\kubectl\\kubectl.exe",
-        );
-        assert.strictEqual(
-            correctedKubectlPath('"C:\\Users\\John Smith\\.vs-kubernetes\\tools\\kubectl\\KUBECTL.EXE.exe"', "win32"),
-            "C:\\Users\\John Smith\\.vs-kubernetes\\tools\\kubectl\\KUBECTL.EXE",
-        );
-    });
-
-    it("keeps .exe.exe on other platforms, where the dependency adds nothing", () => {
-        assert.strictEqual(
-            correctedKubectlPath('"/opt/my tools/kubectl.exe.exe"', "linux"),
-            "/opt/my tools/kubectl.exe.exe",
-        );
-        assert.strictEqual(correctedKubectlPath("C:\\tools\\KUBECTL.EXE.exe", "linux"), undefined);
-    });
-
-    it("recovers every configured Windows path from what the dependency launches", () => {
-        // vscode-kubernetes-tools 1.4.1: baseKubectlPath quotes paths with spaces, then
-        // binutil.execPath appends ".exe" unless the path ends in lowercase ".exe".
-        const launchedBy = (configured: string) => {
-            const quoted = configured.includes(" ") ? `"${configured}"` : configured;
-            if (quoted.endsWith(".exe")) {
-                return quoted;
-            }
-            return quoted.endsWith('"') ? `${quoted.slice(0, -1)}.exe"` : `${quoted}.exe`;
-        };
-
+describe("kubectlExecutablePath", () => {
+    it("preserves configured Windows .exe paths without quoting or duplicate suffixes", () => {
         for (const configured of [
             "C:\\tools\\kubectl.exe",
             "C:\\tools\\KUBECTL.EXE",
             "C:\\tools\\kubectl.Exe",
             "C:\\Program Files\\kubectl\\kubectl.exe",
             "C:\\Program Files\\kubectl\\KUBECTL.EXE",
+            "C:\\Users\\John Smith\\.vs-kubernetes\\tools\\kubectl\\KUBECTL.EXE",
             "C:\\tools\\kubectl.exe.exe",
         ]) {
-            const launched = launchedBy(configured);
-            const corrected = correctedKubectlPath(launched, "win32") ?? launched;
-            assert.strictEqual(corrected, configured, `launched ${launched}`);
+            assert.strictEqual(kubectlExecutablePath(configured, "win32"), configured);
         }
+    });
+
+    it("adds a Windows suffix only when it is missing", () => {
+        assert.strictEqual(kubectlExecutablePath("C:\\tools\\kubectl", "win32"), "C:\\tools\\kubectl.exe");
+        assert.strictEqual(kubectlExecutablePath("C:\\tools\\kubectl.COM", "win32"), "C:\\tools\\kubectl.COM");
+    });
+
+    it("leaves Unix paths unchanged, including literal quotes and .exe.exe filenames", () => {
+        for (const file of ["/usr/local/bin/kubectl", '/opt/my tools/"kubectl"', "/opt/tools/kubectl.exe.exe"]) {
+            assert.strictEqual(kubectlExecutablePath(file, "linux"), file);
+        }
+    });
+
+    it("rejects Windows command scripts instead of launching a shell", () => {
+        assert.throws(() => kubectlExecutablePath("C:\\tools\\kubectl.cmd", "win32"), /without a shell/);
+        assert.throws(() => kubectlExecutablePath("C:\\tools\\kubectl.BAT", "win32"), /without a shell/);
     });
 });
 
@@ -295,6 +328,17 @@ describe("describeKubectlCommand", () => {
     it("keeps everything else", () => {
         assert.strictEqual(describeKubectlCommand(["get", "pods", "-n", "default"]), "kubectl get pods -n default");
     });
+
+    it("hides joined curl request bodies as well as split data arguments", () => {
+        for (const arg of [
+            "--data=private prompt",
+            "--data-raw=private prompt",
+            "--data-binary=private prompt",
+            "-dprivate prompt",
+        ]) {
+            assert.ok(!describeKubectlCommand(["run", "pod", "--", "curl", arg]).includes("private prompt"));
+        }
+    });
 });
 
 describe("createAuthPromptMonitor", () => {
@@ -318,6 +362,7 @@ describe("createAuthPromptMonitor", () => {
 });
 
 describe("KubectlDataProvider", () => {
+    afterEach(() => sinon.restore());
     async function argsFor(command: string): Promise<string[]> {
         const { kubectl, calls } = fakeKubectl(() => fakeChildProcess("", "", 0));
         const provider = new KubectlDataProvider(kubectl, "/tmp/kubeconfig", "cluster", []);
@@ -366,6 +411,8 @@ describe("invokeKubectlCommandArgs with a kubectl path containing spaces", () =>
     let dir: string;
     let bin: string;
 
+    afterEach(() => sinon.restore());
+
     before(function () {
         // Shebang scripts can be spawned without a shell only on Unix.
         if (process.platform === "win32") {
@@ -384,15 +431,10 @@ describe("invokeKubectlCommandArgs with a kubectl path containing spaces", () =>
         }
     });
 
-    it("runs the unquoted path when the dependency launches a quoted one", async () => {
-        // Mirrors the dependency: await, then spawn the quoted path without a shell.
-        const { kubectl, calls } = fakeKubectl(() => undefined);
-        const internal = (kubectl.api as unknown as { kubectl: Record<string, unknown> }).kubectl;
-        internal.legacySpawnAsChild = async (args: string[]) => {
-            calls.push(args);
-            await Promise.resolve();
-            return spawn(`"${bin}"`, args);
-        };
+    it("launches the configured executable exactly once without adding quotes", async () => {
+        configureKubectl(bin);
+        const spawn = sinon.spy(childProcess, "spawn");
+        const kubectl = { api: {} } as k8s.APIAvailable<k8s.KubectlV1>;
 
         const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pod", "a b; $(x)"]);
 
@@ -404,50 +446,31 @@ describe("invokeKubectlCommandArgs with a kubectl path containing spaces", () =>
             "--kubeconfig",
             "/tmp/kubeconfig",
         ]);
-        assert.strictEqual(calls.length, 1, "the dependency should still be asked to launch kubectl");
+        sinon.assert.calledOnce(spawn);
+        assert.strictEqual(spawn.firstCall.args[0], bin);
+        assert.strictEqual(spawn.firstCall.args[2]?.shell, false);
     });
-});
 
-describe("invokeKubectlCommandArgs when a corrected path was launched successfully", () => {
-    it("uses the original process and does not run kubectl twice", async () => {
-        // A path the correction would change, but which really exists, so the launch works.
-        const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter; stderr: EventEmitter };
-        child.stdout = new EventEmitter();
-        child.stderr = new EventEmitter();
-        Object.assign(child, { spawnfile: '"/opt/my tools/kubectl"' });
-        setImmediate(() => {
-            child.emit("spawn");
-            setImmediate(() => {
-                child.stdout.emit("data", Buffer.from("from the original launch"));
-                child.emit("close", 0);
-            });
-        });
-        const { kubectl } = fakeKubectl(() => child);
+    it("reports a missing executable as an error even when nonzero exits are allowed", async () => {
+        configureKubectl(path.join(dir, "missing-kubectl"));
+        const spawn = sinon.spy(childProcess, "spawn");
+        const kubectl = { api: {} } as k8s.APIAvailable<k8s.KubectlV1>;
 
-        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["delete", "pod", "p"]);
+        const result = await invokeKubectlCommandArgs(
+            kubectl,
+            "/tmp/kubeconfig",
+            ["version"],
+            NonZeroExitCodeBehaviour.Succeed,
+        );
 
-        // A relaunch of the corrected path would fail, since it does not exist, so this output
-        // can only come from the original process.
-        assert.ok(result.succeeded, result.succeeded ? "" : result.error);
-        assert.strictEqual(result.result.stdout, "from the original launch");
-    });
-});
-
-describe("invokeKubectlCommandArgs with an unquoted kubectl path", () => {
-    it("reads the dependency's process and starts no other", async () => {
-        const { kubectl } = fakeKubectl(() => {
-            const child = fakeChildProcess("from the dependency", "", 0);
-            return Object.assign(child, { spawnfile: "/usr/local/bin/kubectl" });
-        });
-
-        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["version"]);
-
-        assert.ok(result.succeeded, result.succeeded ? "" : result.error);
-        assert.strictEqual(result.result.stdout, "from the dependency");
+        assert.ok(!result.succeeded);
+        assert.ok(result.error.includes("ENOENT"), result.error);
+        sinon.assert.calledOnce(spawn);
     });
 });
 
 describe("getExecOutput", () => {
+    afterEach(() => sinon.restore());
     it("passes the pod command as separate arguments, with kubeconfig before the separator", async () => {
         const { kubectl, calls } = fakeKubectl(() => fakeChildProcess("eth0", "", 0));
 

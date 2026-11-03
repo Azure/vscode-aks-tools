@@ -3,10 +3,12 @@ import { Errorable, failed, getErrorMessage, map } from "./errorable";
 import { OutputStream } from "./commands";
 import { Observable, concat, of } from "rxjs";
 import { NonZeroExitCodeBehaviour } from "./shell";
-import { ChildProcess, spawn } from "child_process";
-import { posix, win32 } from "path";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
+import { getKubectlSettings, resolveKubectlInvocation } from "./kubectlExecutable";
+import { kubectlProcessRunner } from "./kubectlProcess";
+
+export { kubectlEnv, MAX_KUBECTL_OUTPUT_BYTES } from "./kubectlProcess";
 
 export type K8sVersion = {
     major: string;
@@ -19,6 +21,12 @@ export type KubectlVersion = {
     clientVersion: K8sVersion;
     serverVersion: K8sVersion;
 };
+
+export interface KubectlCommandOptions {
+    readonly stdin?: string;
+    readonly sensitiveArgs?: readonly number[];
+    readonly sensitiveStdin?: boolean;
+}
 
 export function getVersion(
     kubectl: APIAvailable<KubectlV1>,
@@ -43,172 +51,74 @@ export async function getExecOutput(
  * few exceptions.
  */
 export async function invokeKubectlCommandArgs(
-    kubectl: APIAvailable<KubectlV1>,
+    _kubectl: APIAvailable<KubectlV1>,
     kubeConfigFile: string,
     args: string[],
     exitCodeBehaviour?: NonZeroExitCodeBehaviour,
+    options: KubectlCommandOptions = {},
 ): Promise<Errorable<KubectlV1.ShellResult>> {
-    // kubeconfig goes last, since kubectl plugins do not accept flags before the plugin name,
-    // but before any "--": what follows it is passed to the command run in the pod.
-    const separator = args.indexOf("--");
-    const at = separator === -1 ? args.length : separator;
-    return runKubectl(
-        kubectl,
-        [...args.slice(0, at), "--kubeconfig", kubeConfigFile, ...args.slice(at)],
-        describeKubectlCommand(args),
-        exitCodeBehaviour ?? NonZeroExitCodeBehaviour.Fail,
-    );
-}
-
-/** The command for error messages, with --from-literal values hidden since they can be secrets. */
-export function describeKubectlCommand(args: string[]): string {
-    const shown = args.map((arg) => arg.replace(/^(--from-literal=[^=]*=).*$/s, "$1***"));
-    return `kubectl ${shown.join(" ")}`;
-}
-
-async function runKubectl(
-    kubectl: APIAvailable<KubectlV1>,
-    fullArgs: string[],
-    description: string,
-    behaviour: NonZeroExitCodeBehaviour,
-): Promise<Errorable<KubectlV1.ShellResult>> {
-    const internal = asInternal(kubectl.api);
-
-    if (failed(internal)) {
-        return { succeeded: false, error: `Failed to run "${description}": ${internal.error}` };
-    }
-
-    if (internal.result.legacySpawnAsChild === undefined) {
-        // Never fall back to the string form, which runs in a shell.
-        return {
-            succeeded: false,
-            error: `Failed to run "${description}": update the Kubernetes extension (ms-kubernetes-tools.vscode-kubernetes-tools).`,
-        };
-    }
+    const commandArgs = [...args];
+    const shown = redactedKubectlArgs(commandArgs, options.sensitiveArgs);
+    const description = `kubectl ${shown.join(" ")}`;
+    const sensitive = options.sensitiveStdin || shown.some((arg, index) => arg !== commandArgs[index]);
+    const hidden = "Command details hidden because the input contains sensitive data.";
 
     try {
-        const child = await internal.result.legacySpawnAsChild(fullArgs);
-        if (child === undefined) {
-            return { succeeded: false, error: `Failed to run "${description}": kubectl could not be started.` };
-        }
-
-        const result = await readChildProcess(await respawnWithCorrectedPath(child, fullArgs));
-        if (result.code !== 0 && behaviour === NonZeroExitCodeBehaviour.Fail) {
+        const invocation = await resolveKubectlInvocation(
+            kubeConfigFile,
+            commandArgs,
+            getKubectlSettings(),
+            createAuthPromptMonitor,
+        );
+        const result = await kubectlProcessRunner.execute(invocation, options.stdin, createAuthPromptMonitor());
+        if (result.code !== 0 && exitCodeBehaviour !== NonZeroExitCodeBehaviour.Succeed) {
             return {
                 succeeded: false,
-                error: `The command "${description}" returned status code ${result.code}\nError: ${result.stderr}`,
+                error: `The command "${description}" returned status code ${result.code}\nError: ${sensitive ? hidden : result.stderr}`,
             };
         }
 
         return { succeeded: true, result };
     } catch (e) {
-        return { succeeded: false, error: `Error running "${description}":\n${getErrorMessage(e)}` };
+        return {
+            succeeded: false,
+            error: `Error running "${description}":\n${sensitive ? hidden : getErrorMessage(e)}`,
+        };
     }
 }
 
-async function respawnWithCorrectedPath(child: ChildProcess, args: string[]): Promise<ChildProcess> {
-    const file = typeof child.spawnfile === "string" ? correctedKubectlPath(child.spawnfile) : undefined;
-    if (file === undefined) {
-        return child;
-    }
-
-    // Relaunch only if the original launch failed, so kubectl never runs twice.
-    const started = await new Promise<boolean>((resolve) => {
-        child.once("spawn", () => resolve(true));
-        child.once("error", () => resolve(false));
-    });
-    return started
-        ? child
-        : spawn(file, args, { cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath, env: kubectlEnv(file) });
+/** Display only, never a command to execute. */
+export function describeKubectlCommand(args: readonly string[], sensitiveArgs: readonly number[] = []): string {
+    return `kubectl ${redactedKubectlArgs(args, sensitiveArgs).join(" ")}`;
 }
 
-/**
- * The environment vscode-kubernetes-tools gives kubectl: its folder first on PATH, so plugins
- * next to it are found, and on Windows a HOME, so kubectl uses the same cache folders.
- */
-export function kubectlEnv(
-    file: string,
-    env: NodeJS.ProcessEnv = process.env,
-    platform: NodeJS.Platform = process.platform,
-): NodeJS.ProcessEnv {
-    const result = { ...env };
-    const pathKey = Object.keys(result).find((key) => key.toLowerCase() === "path") ?? "PATH";
-    const separator = platform === "win32" ? ";" : ":";
-    const dir = platform === "win32" ? win32.dirname(file) : posix.dirname(file);
-    result[pathKey] = result[pathKey] ? `${dir}${separator}${result[pathKey]}` : dir;
-    if (platform === "win32" && !result.HOME) {
-        result.HOME = result.HOMEDRIVE && result.HOMEPATH ? result.HOMEDRIVE + result.HOMEPATH : result.USERPROFILE;
-    }
-    return result;
-}
-
-/**
- * legacySpawnAsChild wraps a kubectl path containing spaces in quotes. On Windows it then
- * appends ".exe" unless the path ends in lowercase ".exe", which a quoted path never does:
- * `"C:\...\kubectl.exe"` becomes `"C:\...\kubectl.exe.exe"` and `C:\...\KUBECTL.EXE` becomes
- * `C:\...\KUBECTL.EXE.exe`. Without a shell those launches fail with ENOENT. Returns the
- * path to launch instead, or undefined when the original path is fine.
- */
-export function correctedKubectlPath(file: string, platform: NodeJS.Platform = process.platform): string | undefined {
-    const quoted = file.length >= 2 && file.startsWith('"') && file.endsWith('"');
-    const path = quoted ? file.slice(1, -1) : file;
-
-    if (platform === "win32" && path.endsWith(".exe")) {
-        const original = path.slice(0, -4);
-        // An unquoted path ending in lowercase ".exe" was left alone, so it is the real name.
-        if (/\.exe$/i.test(original) && (quoted || !original.endsWith(".exe"))) {
-            return original;
+function redactedKubectlArgs(args: readonly string[], sensitiveArgs: readonly number[] = []): string[] {
+    const shown = args.map((arg) =>
+        arg
+            .replace(/^(--from-literal=)([^=]*=)?.*$/s, "$1$2***")
+            .replace(/^(--(?:data|data-raw|data-binary)=).*$/s, "$1***")
+            .replace(/^(-d).+$/s, "$1***"),
+    );
+    for (let index = 0; index < args.length; index++) {
+        if (args[index] === "--from-literal" && index + 1 < args.length) {
+            shown[index + 1] = args[index + 1].replace(/^([^=]*=)?.*$/s, "$1***");
+        }
+        if (["-d", "--data", "--data-raw", "--data-binary"].includes(args[index]) && index + 1 < args.length) {
+            shown[index + 1] = "***";
         }
     }
-
-    return quoted ? path : undefined;
+    for (const index of sensitiveArgs) {
+        if (index >= 0 && index < args.length) {
+            shown[index] = "***";
+        }
+    }
+    return shown;
 }
 
-// 20 MiB, the limit the shell path used (shelljs maxBuffer), here across stdout and stderr.
-export const MAX_KUBECTL_OUTPUT_BYTES = 20 * 1024 * 1024;
-
-function readChildProcess(child: ChildProcess): Promise<KubectlV1.ShellResult> {
-    return new Promise<KubectlV1.ShellResult>((resolve, reject) => {
-        // Decode once at the end so multi-byte characters split across chunks stay intact.
-        const stdout: Buffer[] = [];
-        const stderr: Buffer[] = [];
-        let outputBytes = 0;
-        const authMonitor = createAuthPromptMonitor();
-
-        const collect = (chunks: Buffer[], chunk: Buffer) => {
-            outputBytes += chunk.length;
-            if (outputBytes > MAX_KUBECTL_OUTPUT_BYTES) {
-                child.kill();
-                return;
-            }
-            chunks.push(chunk);
-        };
-
-        child.stdout?.on("data", (chunk: Buffer) => collect(stdout, chunk));
-        child.stderr?.on("data", (chunk: Buffer) => {
-            collect(stderr, chunk);
-            authMonitor.onStderr(chunk.toString());
-        });
-        child.on("error", reject);
-        // `code` is null when the process was killed by a signal; report that as a failure
-        // rather than as a success, which a 0 default would imply.
-        child.on("close", (code) => {
-            authMonitor.onExit(code);
-            // legacySpawnAsChild keeps every child it starts, so release our listeners and output.
-            child.removeAllListeners();
-            child.stdout?.removeAllListeners();
-            child.stderr?.removeAllListeners();
-            if (outputBytes > MAX_KUBECTL_OUTPUT_BYTES) {
-                reject(new Error(`kubectl output exceeded ${MAX_KUBECTL_OUTPUT_BYTES / (1024 * 1024)} MiB.`));
-                return;
-            }
-            resolve({
-                code: code ?? 1,
-                stdout: Buffer.concat(stdout).toString(),
-                stderr: Buffer.concat(stderr).toString(),
-            });
-        });
-    });
+export function disposeKubectlProcesses(): void {
+    kubectlProcessRunner.dispose();
+    authOutputChannel?.dispose();
+    authOutputChannel = undefined;
 }
 
 // Azure AD device login URLs, as matched by vscode-kubernetes-tools.
@@ -365,13 +275,6 @@ function asInternal(api: KubectlV1): Errorable<KubectlInternal> {
 
 interface KubectlInternal {
     observeCommand(args: string[]): Promise<RunningProcess>;
-    /**
-     * Spawns kubectl with an argument array and no shell, returning the child process so
-     * stdout, stderr and the exit code are all available. Not part of the published
-     * KubectlV1 surface, so treat it as optional; when it is missing, kubectl calls fail
-     * rather than use the shell-based string API.
-     */
-    legacySpawnAsChild?(args: string[]): Promise<ChildProcess | undefined>;
 }
 
 interface RunningProcess {
@@ -400,8 +303,8 @@ export function parseKubectlCommandArgs(command: string): Errorable<string[]> {
         if (quote !== undefined) {
             if (char === quote) {
                 quote = undefined;
-            } else if (quote === '"' && char === "\\" && (chars[i + 1] === '"' || chars[i + 1] === "\\")) {
-                // As in a shell, \" and \\ are escapes inside double quotes.
+            } else if (quote === '"' && char === "\\" && chars[i + 1] === '"') {
+                // Preserve Windows path separators, including the UNC prefix.
                 current += chars[++i];
             } else {
                 current += char;
