@@ -22,16 +22,19 @@ function quotePosixShellArg(value: string): string {
     return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 
-export function getTcpDumpPodCommand(capture: string, filters: CaptureFilters): string {
+/**
+ * Returns the argument array to exec in the debug pod. The pod's shell is still needed to
+ * background tcpdump, so the values are quoted for that shell. No local shell is involved:
+ * the script reaches the pod as a single argument.
+ */
+export function getTcpDumpPodCommand(capture: string, filters: CaptureFilters): string[] {
     const parts = [
         tcpDumpCommandBase,
         filters.interface ? `-i ${quotePosixShellArg(filters.interface)}` : "",
         `-w ${quotePosixShellArg(`${captureFileBasePath}${capture}.cap`)}`,
         filters.pcapFilterString ? quotePosixShellArg(filters.pcapFilterString) : "",
     ].filter((part) => !!part);
-    const script = `${parts.join(" ")} 1>/dev/null 2>&1 &`;
-    const encodedScript = Buffer.from(script, "utf8").toString("base64");
-    return `/bin/sh -c "printf '%s' '${encodedScript}' | base64 -d | /bin/sh"`;
+    return ["/bin/sh", "-c", `${parts.join(" ")} 1>/dev/null 2>&1 &`];
 }
 
 export function getCaptureFromCommand(command: string, commandWithArgs: string): string | null {

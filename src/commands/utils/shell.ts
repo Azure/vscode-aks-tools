@@ -25,7 +25,7 @@ export enum NonZeroExitCodeBehaviour {
 
 /**
  * Used to invoke a binary executable.
- * NOTE: This is for tools other than `kubectl`, which is invoked using the vscode-kubernetes-tools extension's API.
+ * NOTE: kubectl uses invokeKubectlCommandArgs instead.
  */
 export async function exec(cmd: string, options?: ShellOptions): Promise<Errorable<ShellResult>> {
     try {

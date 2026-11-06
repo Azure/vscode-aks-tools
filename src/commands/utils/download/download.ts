@@ -64,6 +64,9 @@ async function download(url: string, outputFilepath: string): Promise<Errorable<
 
     try {
         const response = await fetch(url);
+        if (!response.ok) {
+            return { succeeded: false, error: `Download from ${url} failed with HTTP ${response.status}.` };
+        }
         if (response.body === null) {
             return { succeeded: false, error: `No body in response from ${url}` };
         }
