@@ -39,6 +39,10 @@ export type ToVsCodeMsgDef = {
     getLocationsRequest: void;
     getResourceGroupsRequest: void;
     createClusterRequest: CreateClusterParams;
+    mergeKubeconfigRequest: {
+        resourceGroupName: string;
+        name: string;
+    };
 };
 
 export type ToWebViewMsgDef = {
@@ -55,6 +59,7 @@ export type ToWebViewMsgDef = {
         deploymentPortalUrl: string | null;
         createdCluster: CreatedCluster | null;
     };
+    mergeKubeconfigResponse: void;
 };
 
 export type CreateClusterDefinition = WebviewDefinition<InitialState, ToVsCodeMsgDef, ToWebViewMsgDef>;

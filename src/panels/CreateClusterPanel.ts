@@ -1,7 +1,7 @@
 import { ContainerServiceClient, KubernetesVersion } from "@azure/arm-containerservice";
 import { ResourceGroup as ARMResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { RestError } from "@azure/storage-blob";
-import { Uri, window } from "vscode";
+import { Uri, commands, window } from "vscode";
 import { getEnvironment } from "../auth/azureAuth";
 import { AzureAuthenticationSession, ReadyAzureSessionProvider } from "../auth/types";
 import { getAksClient, getResourceManagementClient } from "../commands/utils/arm";
@@ -23,6 +23,7 @@ import { ClusterDeploymentBuilder, ClusterSpec } from "./utilities/ClusterSpecCr
 import { reporter } from "../commands/utils/reporter";
 import { getFilteredClusters } from "../commands/utils/config";
 import { addItemToClusterFilter } from "../commands/utils/clusterfilter";
+import { getClusterKubeconfig } from "../commands/utils/clusters";
 import * as l10n from "@vscode/l10n";
 
 export class CreateClusterPanel extends BasePanel<"createCluster"> {
@@ -31,9 +32,13 @@ export class CreateClusterPanel extends BasePanel<"createCluster"> {
             getLocationsResponse: null,
             getResourceGroupsResponse: null,
             progressUpdate: null,
+            mergeKubeconfigResponse: null,
         });
     }
 }
+
+// Shared by all create cluster panels: the Kubernetes extension's merge isn't safe to run concurrently.
+let isMergingKubeconfig = false;
 
 export class CreateClusterDataProvider implements PanelDataProvider<"createCluster"> {
     private readonly resourceManagementClient: ResourceManagementClient;
@@ -67,6 +72,7 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             getResourceGroupsRequest: false,
             getLocationsRequest: false,
             createClusterRequest: true,
+            mergeKubeconfigRequest: true,
         };
     }
 
@@ -83,7 +89,39 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
                     args.preset,
                     webview,
                 ),
+            mergeKubeconfigRequest: (args) =>
+                this.handleMergeKubeconfigRequest(args.resourceGroupName, args.name, webview),
         };
+    }
+
+    private async handleMergeKubeconfigRequest(
+        resourceGroupName: string,
+        name: string,
+        webview: MessageSink<ToWebViewMsgDef>,
+    ) {
+        if (isMergingKubeconfig) {
+            window.showInformationMessage(
+                l10n.t("Another kubeconfig merge is in progress. Try again when it finishes."),
+            );
+            webview.postMergeKubeconfigResponse();
+            return;
+        }
+
+        isMergingKubeconfig = true;
+        try {
+            await commands.executeCommand("kubernetes.cloudExplorer.mergeIntoKubeconfig", {
+                nodeType: "contributed",
+                provider: { getKubeconfigYaml: getClusterKubeconfig },
+                value: { subscriptionId: this.subscriptionId, resourceGroupName, name },
+            });
+        } catch (e) {
+            window.showErrorMessage(
+                l10n.t(`Failed to merge cluster {0} into kubeconfig: {1}`, name, getErrorMessage(e)),
+            );
+        } finally {
+            isMergingKubeconfig = false;
+            webview.postMergeKubeconfigResponse();
+        }
     }
 
     private async handleGetLocationsRequest(webview: MessageSink<ToWebViewMsgDef>) {
