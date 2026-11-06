@@ -244,7 +244,7 @@
   "Create New": "Create New",
   "Cluster Name*": "Cluster Name*",
   "Creating Cluster": "Creating Cluster",
-  "to view the deployment in the AzurePortal.": "to view the deployment in the AzurePortal.",
+  "View deployment in Azure portal": "View deployment in Azure portal",
   "Error Creating Cluster": "Error Creating Cluster",
   "Create AKS Cluster": "Create AKS Cluster",
   "You are about to upgrade your AKS cluster from version": "You are about to upgrade your AKS cluster from version",
@@ -471,5 +471,14 @@
   "$(plus) Create new {0}...": "$(plus) Create new {0}...",
   "$(add) Create...": "$(add) Create...",
   "Click to view resource": "Click to view resource",
-  "Azure Activity": "Azure Activity"
+  "Azure Activity": "Azure Activity",
+  "Couldn't get the status of AKS cluster {0}. Check the deployment in the Azure portal.": "Couldn't get the status of AKS cluster {0}. Check the deployment in the Azure portal.",
+  "Cluster name:": "Cluster name:",
+  "Resource group:": "Resource group:",
+  "Region:": "Region:",
+  "Preset:": "Preset:",
+  "Couldn't Get Cluster Creation Status": "Couldn't Get Cluster Creation Status",
+  "The deployment may still be running. Check its status in the Azure portal.": "The deployment may still be running. Check its status in the Azure portal.",
+  "No error details were returned.": "No error details were returned.",
+  "No error details were returned (error code: {0}).": "No error details were returned (error code: {0})."
 }

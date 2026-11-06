@@ -15,6 +15,7 @@ export enum ProgressEventType {
     Cancelled,
     Failed,
     Success,
+    TrackingLost,
 }
 
 export type CreatedCluster = {
