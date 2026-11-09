@@ -26,6 +26,7 @@ export type CreateClusterState = InitialState & {
     createParams: CreateClusterParams | null;
     deploymentPortalUrl: string | null;
     createdCluster: CreatedCluster | null;
+    isMergingKubeconfig: boolean;
 };
 
 export type EventDef = {
@@ -34,6 +35,7 @@ export type EventDef = {
     setCreating: {
         parameters: CreateClusterParams;
     };
+    setMergingKubeconfig: void;
 };
 
 export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, CreateClusterState> = {
@@ -46,6 +48,7 @@ export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, Create
         createParams: null,
         deploymentPortalUrl: null,
         createdCluster: null,
+        isMergingKubeconfig: false,
     }),
     vscodeMessageHandler: {
         getLocationsResponse: (state, args) => ({ ...state, locations: args.locations }),
@@ -56,6 +59,7 @@ export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, Create
             deploymentPortalUrl: args.deploymentPortalUrl,
             createdCluster: args.createdCluster,
         }),
+        mergeKubeconfigResponse: (state) => ({ ...state, isMergingKubeconfig: false }),
     },
     eventHandler: {
         setInitializing: (state) => ({ ...state, stage: Stage.Loading }),
@@ -65,6 +69,7 @@ export const stateUpdater: WebviewStateUpdater<"createCluster", EventDef, Create
             createParams: args.parameters,
             message: "Sending create cluster request",
         }),
+        setMergingKubeconfig: (state) => ({ ...state, isMergingKubeconfig: true }),
     },
 };
 
@@ -91,4 +96,5 @@ export const vscode = getWebviewMessageContext<"createCluster">({
     createClusterRequest: null,
     getLocationsRequest: null,
     getResourceGroupsRequest: null,
+    mergeKubeconfigRequest: null,
 });
