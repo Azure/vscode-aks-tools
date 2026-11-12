@@ -1,6 +1,6 @@
 import * as k8s from "vscode-kubernetes-tools-api";
 import { Errorable, map as errmap, bind, bindAsync, bindAll, failed } from "../utils/errorable";
-import { invokeKubectlCommand, streamKubectlOutput } from "../utils/kubectl";
+import { invokeKubectlCommandArgs, streamKubectlOutput } from "../utils/kubectl";
 import { validateK8sName, validateK8sNames, validateK8sNamesJson } from "../utils/kubernetesNames";
 import { KubernetesClusterInfo } from "../utils/clusters";
 import { OutputStream } from "../utils/commands";
@@ -34,7 +34,7 @@ export class KubectlClusterOperations implements ClusterOperations {
     ) {}
 
     async getGadgetVersion(): Promise<Errorable<GadgetVersion>> {
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget version");
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, ["gadget", "version"]);
 
         function setNullIfNotInstalled(version: string) {
             return version === "not available" ? null : version;
@@ -60,12 +60,12 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     async deploy(): Promise<Errorable<GadgetVersion>> {
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget deploy");
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, ["gadget", "deploy"]);
         return bindAsync(commandResult, () => this.getGadgetVersion());
     }
 
     async undeploy(): Promise<Errorable<GadgetVersion>> {
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, "gadget undeploy");
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, ["gadget", "undeploy"]);
         return bindAsync(commandResult, () => this.getGadgetVersion());
     }
 
@@ -75,8 +75,11 @@ export class KubectlClusterOperations implements ClusterOperations {
             return validArguments;
         }
 
-        const command = this.getKubectlArgs(validArguments.result).join(" ");
-        const shellResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
+        const shellResult = await invokeKubectlCommandArgs(
+            this.kubectl,
+            this.kubeConfigFile,
+            this.getKubectlArgs(validArguments.result),
+        );
         const linesResult = errmap(shellResult, (r) => r.stdout.split("\n"));
         const arraysResult = bindAll(linesResult, parseOutputLine);
         return errmap(arraysResult, (arrays) => arrays.flatMap((arrays) => arrays).flatMap(asFlatItems));
@@ -132,14 +135,14 @@ export class KubectlClusterOperations implements ClusterOperations {
     }
 
     async getNodes(): Promise<Errorable<string[]>> {
-        const command = "get node -o json";
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
+        const args = ["get", "node", "-o", "json"];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
         return bind(commandResult, (sr) => validateK8sNamesJson(sr.stdout, "subdomain", "node"));
     }
 
     async getNamespaces(): Promise<Errorable<string[]>> {
-        const command = "get ns -o json";
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
+        const args = ["get", "ns", "-o", "json"];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
         return bind(commandResult, (sr) => validateK8sNamesJson(sr.stdout, "label", "namespace"));
     }
 
@@ -149,8 +152,8 @@ export class KubectlClusterOperations implements ClusterOperations {
             return validNamespace;
         }
 
-        const command = `get pod -n ${validNamespace.result} -o json`;
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
+        const args = ["get", "pod", "-n", validNamespace.result, "-o", "json"];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
         return bind(commandResult, (sr) => validateK8sNamesJson(sr.stdout, "subdomain", "pod"));
     }
 
@@ -165,8 +168,8 @@ export class KubectlClusterOperations implements ClusterOperations {
             return validPodName;
         }
 
-        const command = `get pod -n ${validNamespace.result} ${validPodName.result} -o json`;
-        const commandResult = await invokeKubectlCommand(this.kubectl, this.kubeConfigFile, command);
+        const args = ["get", "pod", "-n", validNamespace.result, validPodName.result, "-o", "json"];
+        const commandResult = await invokeKubectlCommandArgs(this.kubectl, this.kubeConfigFile, args);
         return bind(commandResult, (sr) => {
             try {
                 const pod = JSON.parse(sr.stdout) as { spec?: { containers?: Array<{ name?: unknown }> } };

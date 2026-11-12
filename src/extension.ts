@@ -53,6 +53,7 @@ import {
 import { draftValidate, draftDeployment, draftDockerfile, draftWorkflow } from "./commands/draft/draftCommands";
 import refreshSubscription from "./commands/refreshSubscriptions";
 import { getClusterKubeconfig } from "./commands/utils/clusters";
+import { disposeKubectlProcesses } from "./commands/utils/kubectl";
 import { Reporter, reporter } from "./commands/utils/reporter";
 import { createAzureAccountTreeItem } from "./tree/azureAccountTreeItem";
 import { AzureResourceNodeContributor } from "./tree/azureResourceNodeContributor";
@@ -89,6 +90,7 @@ import {
 } from "./commands/aksContainerAssist/oidcSetup";
 
 export async function activate(context: vscode.ExtensionContext) {
+    context.subscriptions.push({ dispose: disposeKubectlProcesses });
     const language = vscode.env.language;
 
     const bundle = language === "en" ? "bundle.l10n.json" : `bundle.l10n.${language}.json`;

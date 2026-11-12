@@ -51,10 +51,75 @@ back from the cluster, and again on any that return over the webview channel. A
 conforming API server only ever assigns DNS-1123 names, so rejecting anything else costs
 nothing for real clusters.
 
-Some kubectl calls still build command strings, because the `KubectlV1.invokeCommand`
-API the kubernetes-tools dependency exposes only accepts a string and runs it through a
-shell. Boundary validation is what keeps those safe today; prefer the array-based
-`streamKubectlOutput` lane where a streaming result works.
+Invoke kubectl with `invokeKubectlCommandArgs(kubectl, kubeConfigFile, args)` from
+`src/commands/utils/kubectl.ts`. Buffered commands use an AKS-owned one-shot runner,
+not the Kubernetes extension's private child-process list. It launches kubectl with
+an argument array and no shell, adds `--kubeconfig` at the end or before a `--`
+separator, and releases completed commands. Deactivating AKS cancels active commands.
+
+The runner reads user-configured executable paths, including OS-specific and legacy
+overrides. Executable path substitutions read only user/default configuration values,
+the host environment, `${userHome}`, and `${pathSeparator}`. Workspace/editor variables,
+command substitutions, and relative executable paths are rejected. Bare executable
+names are resolved only through absolute PATH entries.
+Workspace-level executable settings are ignored. It preserves Windows executable
+suffixes, plugin PATH entries, Windows HOME, WSL routing and automatic client-version
+selection. Automatic selection probes the target kubeconfig, validates the returned
+version, and reuses the existing binary downloader. If inference or downloading fails,
+it keeps the already selected client, matching the previous fallback. WSL uses a fixed shell probe to
+read the default shell's PATH; no kubectl arguments enter that probe. Host kubeconfig
+paths are translated with `wslpath` using an argument array.
+
+With the Snap compatibility flag enabled, stdout passes through a separate `cat`
+process rather than a shell pipeline. The result retains kubectl's exit code and
+separate stderr. Signal termination of either child, spawn, output-limit and copier
+failures remain errors even under `NonZeroExitCodeBehaviour.Succeed`; ordinary
+nonzero kubectl exits retain complete
+`{ code, stdout, stderr }` results in that mode.
+
+Execution flow:
+
+```text
+AKS arguments + optional stdin
+  -> resolve kubectl and execution settings
+  -> kubectl process -> optional Snap stdout copier
+  -> exit code, stdout and stderr
+```
+
+Pass optional input and diagnostic masks as a fifth argument:
+
+```typescript
+invokeKubectlCommandArgs(kubectl, kubeConfigFile, ["create", "-f", "-"], undefined, {
+    stdin: secretJson,
+    sensitiveStdin: true,
+});
+```
+
+Keep credentials out of argv and temporary files. Mark sensitive argument positions
+with `sensitiveArgs`, for example the KAITO JSON body. Command descriptions also
+redact joined and split `--from-literal` values and curl data arguments. Sensitive
+command failures omit raw diagnostic details, which may echo the input. Successful
+results and `Succeed` results are not redacted, so callers must not log sensitive
+output. The KAITO test panel prohibits console logging.
+
+The kubernetes-tools string API,
+`kubectl.api.invokeCommand`, runs in a shell and an eslint rule rejects it. The only
+exceptions are constant commands on the default kubeconfig, each marked with an
+`eslint-disable` comment. The Run Kubectl Command panel splits what the user typed with
+`parseKubectlCommandArgs`, preserving quoted UNC paths. Pipes and redirection are not
+supported there. Existing long-running streams keep their observation integration;
+the one-shot runner does not change it.
+
+Some paths still reach a shell: commands sent to a terminal with `terminal.sendText`, and
+vscode-kubernetes-tools tree nodes, which build kubectl strings from the resource names
+they are given. Validate any cluster-supplied value before it reaches one of these, for
+example a port with `parseServicePort` or a name with `isValidK8sName`. An eslint rule flags
+`sendText`, so each use needs an `eslint-disable` comment saying why its values are safe.
+
+kubectl output is capped at 20 MiB per stream, matching the old maxBuffer limit.
+Larger output stops kubectl and its optional stdout copier and returns an error.
+Before release, run native Windows, live WSL and Snap-confinement smoke tests in
+addition to the cross-platform argument and settings tests.
 
 ## Checks that gate a pull request
 
