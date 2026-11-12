@@ -100,18 +100,26 @@ export class KubectlProcessRunner {
                 children.push(child);
                 child.on("error", fail);
                 child.stdin?.on("error", onStdinError);
-                child.once("close", (code: number | null) => {
+                child.once("close", (code: number | null, signal: NodeJS.Signals | null) => {
                     child.removeListener("error", fail);
                     child.stdin?.removeListener("error", onStdinError);
                     child.stdout?.removeListener("data", onStdout);
                     child.stderr?.removeListener("data", index === 0 ? onStderr : onPipeStderr);
+                    if (index === 0 && !settled) {
+                        monitor?.onExit(code);
+                    }
+                    if (signal) {
+                        fail(
+                            new Error(
+                                `${index === 0 ? "kubectl" : "kubectl output pipe"} terminated by signal ${signal}.`,
+                            ),
+                        );
+                        return;
+                    }
                     codes[index] = code ?? 1;
                     remaining--;
                     if (index === 1 && code !== 0 && !settled) {
                         fail(new Error(`kubectl output pipe failed with status ${code ?? 1}.`));
-                    }
-                    if (index === 0 && !settled) {
-                        monitor?.onExit(code);
                     }
                     if (remaining === 0 && !settled) {
                         settled = true;

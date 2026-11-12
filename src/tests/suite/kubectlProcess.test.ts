@@ -84,6 +84,46 @@ describe("AKS one-shot kubectl process runner", () => {
         }
     });
 
+    it("rejects a real signal-terminated command instead of fabricating exit code 1", async function () {
+        if (process.platform === "win32") this.skip();
+        const runner = new KubectlProcessRunner();
+        try {
+            await assert.rejects(
+                () => runner.execute(invocation(["-e", 'process.kill(process.pid, "SIGTERM")'])),
+                /SIGTERM/,
+            );
+        } finally {
+            runner.dispose();
+        }
+    });
+
+    it("rejects signal termination of either pipeline child and stops the other child", async () => {
+        const runner = new KubectlProcessRunner();
+        const spawn = sinon.stub(childProcess, "spawn");
+        try {
+            for (const signalled of [0, 1]) {
+                const source = fixture();
+                const sink = fixture();
+                spawn.resetBehavior();
+                spawn.onFirstCall().returns(source.process);
+                spawn.onSecondCall().returns(sink.process);
+                const pending = assert.rejects(
+                    runner.execute({ ...invocation(), pipeTo: { executable: "cat", args: [] } }),
+                    /SIGTERM/,
+                );
+
+                [source, sink][signalled].child.emit("close", null, "SIGTERM");
+                [source, sink][1 - signalled].child.emit("close", 0, null);
+
+                await pending;
+                sinon.assert.calledOnceWithExactly([source, sink][1 - signalled].child.kill, "SIGKILL");
+                spawn.resetHistory();
+            }
+        } finally {
+            runner.dispose();
+        }
+    });
+
     it("forgets completed commands instead of retaining children until disposal", async () => {
         const runner = new KubectlProcessRunner();
         const children: ReturnType<typeof fixture>["child"][] = [];

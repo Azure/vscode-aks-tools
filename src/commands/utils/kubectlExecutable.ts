@@ -30,11 +30,11 @@ export function getKubectlSettings(
     const file = userToolPath("kubectl", os, config);
     const otherToolFiles = ["helm", "minikube"].flatMap((tool) => {
         const configured = userToolPath(tool, os, config);
-        return configured ? [expandKubectlPath(configured, env)] : [];
+        return configured ? [expandKubectlPath(configured, env, config)] : [];
     });
 
     return {
-        file: file ? expandKubectlPath(file, env) : undefined,
+        file: file ? expandKubectlPath(file, env, config) : undefined,
         useWsl,
         snap: legacy["vs-kubernetes.enable-snap-flag"] === true,
         inferVersion: legacy["vs-kubernetes.kubectlVersioning"] === "infer",
@@ -82,6 +82,15 @@ export async function resolveKubectlInvocation(
     monitor?: () => KubectlOutputMonitor,
 ): Promise<KubectlInvocation> {
     const { env, cwd } = settings;
+    const pathsApi = settings.platform === "win32" ? path.win32 : path.posix;
+    if (
+        settings.file &&
+        !pathsApi.isAbsolute(settings.file) &&
+        !(settings.useWsl && path.posix.isAbsolute(settings.file)) &&
+        /[\\/]/.test(settings.file)
+    ) {
+        throw new Error("Configure an absolute executable path or an executable name on PATH, not a relative path.");
+    }
     let configPath = kubeConfigFile;
     let guestPath: string | undefined;
     let wsl: string | undefined;
@@ -132,7 +141,6 @@ export async function resolveKubectlInvocation(
             };
         }
         let runEnv: NodeJS.ProcessEnv = { ...env, KUBECONFIG: configPath };
-        const pathsApi = settings.platform === "win32" ? path.win32 : path.posix;
         for (const tool of settings.otherToolFiles ?? []) {
             if (pathsApi.isAbsolute(tool)) {
                 runEnv = kubectlEnv(tool, runEnv, settings.platform);
@@ -164,11 +172,8 @@ export async function resolveKubectlInvocation(
         }
     } else {
         const configured = settings.file ? kubectlExecutablePath(settings.file, settings.platform) : undefined;
-        const pathsApi = settings.platform === "win32" ? path.win32 : path.posix;
         if (configured && pathsApi.isAbsolute(configured)) {
             file = configured;
-        } else if (configured && (configured.includes(pathsApi.sep) || configured.includes("/"))) {
-            file = pathsApi.resolve(settings.cwd ?? process.cwd(), configured);
         } else {
             file = await findNativeKubectl(settings, configured);
         }
@@ -331,37 +336,26 @@ async function downloadedKubectl(version: string, platform: string, arch: string
     return result.result;
 }
 
-function expandKubectlPath(value: string, env: NodeJS.ProcessEnv): string {
-    const workspace = vscode.workspace.workspaceFolders?.[0];
-    const editor = vscode.window.activeTextEditor;
-    const file = editor?.document.uri.fsPath;
-    const fileWorkspace = editor ? (vscode.workspace.getWorkspaceFolder(editor.document.uri) ?? workspace) : workspace;
-    const parsed = file ? path.parse(file) : undefined;
-    const relative = file && fileWorkspace ? path.relative(fileWorkspace.uri.fsPath, file) : undefined;
-    const variables: Record<string, string | undefined> = {
-        userHome: homedir(),
-        workspaceFolder: workspace?.uri.fsPath,
-        workspaceFolderBasename: workspace?.name,
-        file,
-        fileWorkspaceFolder: fileWorkspace?.uri.fsPath,
-        relativeFile: relative,
-        relativeFileDirname: relative ? path.dirname(relative) : undefined,
-        fileBasename: parsed?.base,
-        fileBasenameNoExtension: parsed?.name,
-        fileExtname: parsed?.ext,
-        fileDirname: parsed?.dir,
-        cwd: parsed?.dir,
-        pathSeparator: path.sep,
-        lineNumber: editor ? String(editor.selection.start.line + 1) : undefined,
-        selectedText: editor?.document.getText(editor.selection),
-    };
+function expandKubectlPath(value: string, env: NodeJS.ProcessEnv, config: vscode.WorkspaceConfiguration): string {
     return value.replace(/\$\{([^}]+)\}/g, (original, name: string) => {
         if (name.startsWith("env:")) {
             return env[name.slice(4)] ?? "";
         }
         if (name.startsWith("config:")) {
-            return vscode.workspace.getConfiguration().get<string>(name.slice(7), "");
+            const key = name.slice(7);
+            const setting = config.inspect<string>(key);
+            const configured = setting?.globalValue ?? setting?.defaultValue;
+            if (typeof configured !== "string") {
+                throw new Error(`Executable path setting '${key}' must have a user or default string value.`);
+            }
+            return configured;
         }
-        return variables[name] ?? original;
+        if (name === "userHome") {
+            return homedir();
+        }
+        if (name === "pathSeparator") {
+            return path.sep;
+        }
+        throw new Error(`Unsupported variable '${original}' in executable path.`);
     });
 }

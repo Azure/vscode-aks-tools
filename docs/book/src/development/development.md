@@ -58,7 +58,11 @@ an argument array and no shell, adds `--kubeconfig` at the end or before a `--`
 separator, and releases completed commands. Deactivating AKS cancels active commands.
 
 The runner reads user-configured executable paths, including OS-specific and legacy
-overrides. Workspace-level executable settings are ignored. It preserves Windows executable
+overrides. Executable path substitutions read only user/default configuration values,
+the host environment, `${userHome}`, and `${pathSeparator}`. Workspace/editor variables,
+command substitutions, and relative executable paths are rejected. Bare executable
+names are resolved only through absolute PATH entries.
+Workspace-level executable settings are ignored. It preserves Windows executable
 suffixes, plugin PATH entries, Windows HOME, WSL routing and automatic client-version
 selection. Automatic selection probes the target kubeconfig, validates the returned
 version, and reuses the existing binary downloader. If inference or downloading fails,
@@ -68,8 +72,9 @@ paths are translated with `wslpath` using an argument array.
 
 With the Snap compatibility flag enabled, stdout passes through a separate `cat`
 process rather than a shell pipeline. The result retains kubectl's exit code and
-separate stderr. Spawn, output-limit and copier failures remain errors even under
-`NonZeroExitCodeBehaviour.Succeed`; ordinary nonzero kubectl exits retain complete
+separate stderr. Signal termination of either child, spawn, output-limit and copier
+failures remain errors even under `NonZeroExitCodeBehaviour.Succeed`; ordinary
+nonzero kubectl exits retain complete
 `{ code, stdout, stderr }` results in that mode.
 
 Execution flow:

@@ -11,6 +11,7 @@ import { stateUpdater } from "../CreateCluster/helpers/state";
 
 const failLocationMarker = "thiswillfail";
 const cancelLocationMarker = "thiswillbecancelled";
+const trackingLostLocationMarker = "thiswilllosetracking";
 const locations = [
     "westus",
     "eastus",
@@ -20,6 +21,7 @@ const locations = [
     "notus",
     failLocationMarker,
     cancelLocationMarker,
+    trackingLostLocationMarker,
 ];
 const resourceGroups = locations.map((l) => ({ name: `rg_${l}`, location: l }));
 
@@ -41,6 +43,7 @@ export function getCreateClusterScenarios() {
                     args.name,
                     webview,
                 ),
+            mergeKubeconfigRequest: () => webview.postMergeKubeconfigResponse(),
         };
     }
 
@@ -96,9 +99,16 @@ export function getCreateClusterScenarios() {
                 ? ProgressEventType.Failed
                 : location === cancelLocationMarker
                   ? ProgressEventType.Cancelled
-                  : ProgressEventType.Success;
+                  : location === trackingLostLocationMarker
+                    ? ProgressEventType.TrackingLost
+                    : ProgressEventType.Success;
 
-        const errorMessage = event === ProgressEventType.Failed ? "Mistakes were made" : null;
+        const errorMessage =
+            event === ProgressEventType.Failed
+                ? "Mistakes were made"
+                : event === ProgressEventType.TrackingLost
+                  ? "No error details were returned (error code: ETIMEDOUT)."
+                  : null;
 
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         webview.postProgressUpdate({

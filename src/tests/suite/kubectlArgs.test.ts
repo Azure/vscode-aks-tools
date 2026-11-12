@@ -23,7 +23,12 @@ import { KubectlDataProvider } from "../../panels/KubectlPanel";
 import { MessageSink } from "../../webview-contract/messaging";
 import { ToWebViewMsgDef } from "../../webview-contract/webviewDefinitions/kubectl";
 
-function fakeChildProcess(stdout: string | Buffer[], stderr: string, code: number | null) {
+function fakeChildProcess(
+    stdout: string | Buffer[],
+    stderr: string,
+    code: number | null,
+    signal: NodeJS.Signals | null = null,
+) {
     const child = Object.assign(new EventEmitter(), {
         stdout: new PassThrough(),
         stderr: new PassThrough(),
@@ -39,7 +44,7 @@ function fakeChildProcess(stdout: string | Buffer[], stderr: string, code: numbe
         if (stderr) {
             child.stderr.emit("data", Buffer.from(stderr));
         }
-        child.emit("close", code);
+        child.emit("close", code, signal);
     });
 
     return child;
@@ -143,12 +148,15 @@ describe("invokeKubectlCommandArgs", () => {
         assert.strictEqual(result.result.code, 1);
     });
 
-    it("treats a signal kill as a failure rather than success", async () => {
-        const { kubectl } = fakeKubectl(() => fakeChildProcess("", "", null));
+    it("treats signal termination as a failure even when nonzero exits are allowed", async () => {
+        const { kubectl } = fakeKubectl(() => fakeChildProcess("", "", null, "SIGTERM"));
 
-        const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pod"]);
+        for (const behavior of [undefined, NonZeroExitCodeBehaviour.Succeed]) {
+            const result = await invokeKubectlCommandArgs(kubectl, "/tmp/kubeconfig", ["get", "pod"], behavior);
 
-        assert.ok(!result.succeeded, "a null exit code must not be read as 0");
+            assert.ok(!result.succeeded, "signal termination must not become an ordinary nonzero exit");
+            assert.ok(result.error.includes("SIGTERM"), result.error);
+        }
     });
 
     it("reports a spawn failure instead of throwing", async () => {

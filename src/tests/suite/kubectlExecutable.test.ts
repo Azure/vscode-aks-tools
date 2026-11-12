@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import fs from "fs/promises";
 import { Stats } from "fs";
-import { tmpdir } from "os";
+import { homedir, tmpdir } from "os";
 import * as path from "path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
@@ -64,6 +64,82 @@ describe("Kubectl settings and executable resolution", () => {
         assert.strictEqual(getKubectlSettings("linux").file, "/user/kubectl");
     });
 
+    it("resolves config substitutions from user or default values, never workspace values", async () => {
+        const substituted = {
+            globalValue: "/user/bin/kubectl" as string | undefined,
+            defaultValue: "/default/bin/kubectl",
+            workspaceValue: "/workspace/planted-kubectl",
+        };
+        configure(
+            { "demo.kubectlExecutable": "/workspace/planted-kubectl" },
+            {
+                "vscode-kubernetes.kubectl-path": { globalValue: "${config:demo.kubectlExecutable}" },
+                "demo.kubectlExecutable": substituted,
+            },
+        );
+
+        for (const expected of ["/user/bin/kubectl", "/default/bin/kubectl"]) {
+            const invocation = await resolveKubectlInvocation("/config", ["get", "pods"], getKubectlSettings("linux"));
+
+            assert.strictEqual(invocation.executable, expected);
+            substituted.globalValue = undefined;
+        }
+    });
+
+    it("rejects config substitutions that exist only in workspace settings", () => {
+        configure(
+            { "demo.kubectlExecutable": "/workspace/planted-kubectl" },
+            {
+                "vscode-kubernetes.kubectl-path": { globalValue: "${config:demo.kubectlExecutable}" },
+                "demo.kubectlExecutable": { workspaceValue: "/workspace/planted-kubectl" },
+            },
+        );
+
+        assert.throws(() => getKubectlSettings("linux"), /user or default/);
+    });
+
+    it("rejects workspace, editor and command substitutions in executable paths", () => {
+        const toolPath = { globalValue: "" };
+        configure({}, { "vscode-kubernetes.kubectl-path": toolPath });
+        sinon
+            .stub(vscode.workspace, "workspaceFolders")
+            .value([{ uri: vscode.Uri.file("/workspace/repo"), name: "repo", index: 0 }]);
+        sinon.stub(vscode.window, "activeTextEditor").get(() => ({
+            document: {
+                uri: vscode.Uri.file("/workspace/repo/file.yaml"),
+                getText: () => "/workspace/repo/planted-kubectl",
+            },
+            selection: new vscode.Selection(0, 0, 0, 1),
+        }));
+        const execute = sinon.stub(vscode.commands, "executeCommand");
+
+        for (const variable of ["workspaceFolder", "fileDirname", "selectedText", "command:doNotRun"]) {
+            toolPath.globalValue = `\${${variable}}/kubectl`;
+
+            assert.throws(() => getKubectlSettings("linux"), /Unsupported variable/);
+        }
+        sinon.assert.notCalled(execute);
+    });
+
+    it("rejects relative executable paths before native or WSL resolution", async () => {
+        const execute = sinon
+            .stub(kubectlProcessRunner, "execute")
+            .resolves({ code: 0, stdout: "/workspace/kubectl", stderr: "" });
+        const candidates = [
+            settings({ file: "./kubectl" }),
+            settings({ file: ".\\kubectl", platform: "win32" }),
+            settings({ file: "./kubectl", platform: "win32", useWsl: true, env: { SystemRoot: "C:\\Windows" } }),
+        ];
+
+        for (const candidate of candidates) {
+            await assert.rejects(
+                () => resolveKubectlInvocation("/config", ["get", "pods"], candidate),
+                /absolute executable path/,
+            );
+        }
+        sinon.assert.notCalled(execute);
+    });
+
     it("honors legacy user paths, Snap and automatic version settings", () => {
         configure(
             {
@@ -99,19 +175,19 @@ describe("Kubectl settings and executable resolution", () => {
         assert.strictEqual(result.useWsl, true);
     });
 
-    it("expands user path variables without executing command substitutions", () => {
+    it("expands user-owned path variables without executing commands", () => {
+        const toolPath = { globalValue: "${env:TOOL_HOME}/kubectl" };
         configure(
             {},
             {
-                "vscode-kubernetes.kubectl-path": { globalValue: "${env:TOOL_HOME}/${command:doNotRun}/kubectl" },
+                "vscode-kubernetes.kubectl-path": toolPath,
             },
         );
         const execute = sinon.stub(vscode.commands, "executeCommand");
 
-        assert.strictEqual(
-            getKubectlSettings("linux", { TOOL_HOME: "/home/my tools" }).file,
-            "/home/my tools/${command:doNotRun}/kubectl",
-        );
+        assert.strictEqual(getKubectlSettings("linux", { TOOL_HOME: "/home/my tools" }).file, "/home/my tools/kubectl");
+        toolPath.globalValue = "${userHome}${pathSeparator}bin${pathSeparator}kubectl";
+        assert.strictEqual(getKubectlSettings("linux").file, path.join(homedir(), "bin", "kubectl"));
         sinon.assert.notCalled(execute);
     });
 
