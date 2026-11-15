@@ -18,10 +18,10 @@ export type AgentPoolProfileInfo = {
     name: string;
     nodeImageVersion: string;
     powerStateCode: string;
-    osDiskSizeGB: number;
+    osDiskSizeGB: number | null;
     provisioningState: string;
     vmSize: string;
-    count: number;
+    count: number | null;
     osType: string;
 };
 
@@ -46,6 +46,8 @@ export type ToVsCodeMsgDef = {
 
 export type ToWebViewMsgDef = {
     getPropertiesResponse: ClusterInfo;
+    propertiesRequestComplete: void;
+    clusterOperationResponse: void;
     errorNotification: string;
     upgradeClusterVersionResponse: boolean;
 };

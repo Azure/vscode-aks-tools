@@ -1,10 +1,11 @@
 import { ClusterInfo, InitialState } from "../../../src/webview-contract/webviewDefinitions/clusterProperties";
-import { Lazy, newLoaded, newLoading, newNotLoaded } from "../utilities/lazy";
+import { isLoaded, Lazy, newLoaded, newLoading, newNotLoaded } from "../utilities/lazy";
 import { WebviewStateUpdater } from "../utilities/state";
 import { getWebviewMessageContext } from "../utilities/vscode";
 
 export type CreateClusterState = InitialState & {
     clusterInfo: Lazy<ClusterInfo>;
+    propertiesLoading: boolean;
     clusterOperationRequested: boolean;
     errorMessage: string | null;
     selectedUpgradeVersion: string | null;
@@ -20,6 +21,7 @@ export const stateUpdater: WebviewStateUpdater<"clusterProperties", EventDef, Cr
     createState: (initialState) => ({
         ...initialState,
         clusterInfo: newNotLoaded(),
+        propertiesLoading: false,
         clusterOperationRequested: false,
         errorMessage: null,
         selectedUpgradeVersion: null,
@@ -28,17 +30,36 @@ export const stateUpdater: WebviewStateUpdater<"clusterProperties", EventDef, Cr
         getPropertiesResponse: (state, clusterInfo) => ({
             ...state,
             clusterInfo: newLoaded(clusterInfo),
+        }),
+        propertiesRequestComplete: (state) => ({
+            ...state,
+            propertiesLoading: false,
+        }),
+        clusterOperationResponse: (state) => ({
+            ...state,
             clusterOperationRequested: false,
         }),
         upgradeClusterVersionResponse: (state) => ({
             ...state,
-            clusterOperationRequested: false,
+            selectedUpgradeVersion: null,
         }),
-        errorNotification: (state, err) => ({ ...state, errorMessage: err }),
+        errorNotification: (state, err) => ({
+            ...state,
+            errorMessage: state.errorMessage && state.errorMessage !== err ? `${state.errorMessage}\n${err}` : err,
+        }),
     },
     eventHandler: {
-        setPropertiesLoading: (state) => ({ ...state, clusterInfo: newLoading() }),
-        setClusterOperationRequested: (state) => ({ ...state, clusterOperationRequested: true }),
+        setPropertiesLoading: (state) => ({
+            ...state,
+            clusterInfo: isLoaded(state.clusterInfo) ? state.clusterInfo : newLoading(),
+            propertiesLoading: true,
+            errorMessage: null,
+        }),
+        setClusterOperationRequested: (state) => ({
+            ...state,
+            clusterOperationRequested: true,
+            errorMessage: null,
+        }),
         upgradeVersionSelected: (state, version) => ({ ...state, selectedUpgradeVersion: version }),
     },
 };

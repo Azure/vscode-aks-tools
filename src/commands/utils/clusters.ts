@@ -586,7 +586,9 @@ export async function getClusterUpgradeProfile(
     }
 
     try {
-        const upgradeProfile = await containerClient.managedClusters.getUpgradeProfile(resourceGroup, clusterName);
+        const upgradeProfile = await containerClient.managedClusters.getUpgradeProfile(resourceGroup, clusterName, {
+            onResponse: (response) => normalizeUpgradeProfileResponse(response.parsedBody),
+        });
         return { succeeded: true, result: upgradeProfile };
     } catch (e) {
         return {
@@ -594,6 +596,21 @@ export async function getClusterUpgradeProfile(
             error: `Failed to retrieve upgrade profile for cluster ${clusterName}: ${getErrorMessage(e)}`,
         };
     }
+}
+
+export function normalizeUpgradeProfileResponse(body: unknown): void {
+    if (!isRecord(body) || !isRecord(body.properties)) {
+        return;
+    }
+
+    // The service can return null here, but the generated SDK deserializer assumes an array and throws.
+    if (body.properties.agentPoolProfiles === null || body.properties.agentPoolProfiles === undefined) {
+        body.properties.agentPoolProfiles = [];
+    }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export async function getWindowsNodePoolKubernetesVersions(

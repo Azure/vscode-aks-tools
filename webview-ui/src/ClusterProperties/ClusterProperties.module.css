@@ -111,6 +111,19 @@ th {
     font-weight: bold;
 }
 
+.errorMessage {
+    margin: 0.75rem 0 1rem;
+    padding: 0.75rem 1rem;
+    border-left: 0.25rem solid var(--vscode-errorForeground);
+    background-color: var(--vscode-inputValidation-errorBackground);
+    color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
+}
+
+.errorMessage p {
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+}
+
 .kubernetesVersionContainer {
     display: flex;
     align-items: center;
