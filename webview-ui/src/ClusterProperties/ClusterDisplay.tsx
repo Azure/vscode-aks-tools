@@ -15,7 +15,8 @@ type StartStopState = "Started" | "Starting" | "Stopped" | "Stopping";
 
 // Note: Starting and Stopping state mixed with Abort leads to weird cases where the
 //       cluster is in a state that it can't be started or stopped.
-const unabortableProvisioningStates = ["Canceled", "Failed", "Succeeded", "Starting", "Stopping"];
+const terminalProvisioningStates = ["Canceled", "Failed", "Succeeded"];
+const unabortableProvisioningStates = [...terminalProvisioningStates, "Starting", "Stopping"];
 
 function displayValue(value: string): string {
     return value === "Unknown" ? l10n.t("Unknown") : value;
@@ -27,12 +28,14 @@ export function determineStartStopState(clusterInfo: ClusterInfo): StartStopStat
         hasAgentPools && clusterInfo.agentPoolProfiles.every((nodePool) => nodePool.powerStateCode === "Stopped");
     const allAgentPoolsRunning =
         hasAgentPools && clusterInfo.agentPoolProfiles.every((nodePool) => nodePool.powerStateCode === "Running");
+    const isTerminalProvisioningState = terminalProvisioningStates.includes(clusterInfo.provisioningState);
     if (clusterInfo.provisioningState === "Stopping") {
         return "Stopping";
     } else if (
-        clusterInfo.powerStateCode === "Stopped" ||
-        clusterInfo.powerStateCode === "Deallocated" ||
-        allAgentPoolsStopped
+        isTerminalProvisioningState &&
+        (clusterInfo.powerStateCode === "Stopped" ||
+            clusterInfo.powerStateCode === "Deallocated" ||
+            allAgentPoolsStopped)
     ) {
         return "Stopped";
     } else if (
