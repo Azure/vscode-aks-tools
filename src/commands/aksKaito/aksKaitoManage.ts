@@ -7,7 +7,7 @@ import { KaitoManagePanel } from "../../panels/KaitoManagePanel";
 import { failed } from "../utils/errorable";
 import { getExtension } from "../utils/host";
 import { getConditions, convertAgeToMinutes, getClusterDetails } from "../../panels/utilities/KaitoHelpers";
-import { invokeKubectlCommand } from "../utils/kubectl";
+import { invokeKubectlCommandArgs } from "../utils/kubectl";
 import { getKaitoInstallationStatus } from "../../panels/utilities/KaitoHelpers";
 
 export default async function aksKaitoManage(_context: IActionContext, target: unknown): Promise<void> {
@@ -62,8 +62,8 @@ export default async function aksKaitoManage(_context: IActionContext, target: u
     }
 
     // The logic below is to acquire the initial deployment data.
-    const command = `get workspace -A -o json`;
-    const kubectlresult = await invokeKubectlCommand(kubectl, kubeConfigFile.filePath, command);
+    const args = ["get", "workspace", "-A", "-o", "json"];
+    const kubectlresult = await invokeKubectlCommandArgs(kubectl, kubeConfigFile.filePath, args);
     if (failed(kubectlresult)) {
         vscode.window.showErrorMessage(`Error retrieving workspaces: ${kubectlresult.error}`);
         return;

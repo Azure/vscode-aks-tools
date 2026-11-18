@@ -6,6 +6,7 @@ import { ReadyAzureSessionProvider } from "../../auth/types";
 import { KaitoManagePanelDataProvider, parseServicePort } from "../../panels/KaitoManagePanel";
 import { MessageSink } from "../../webview-contract/messaging";
 import { ToWebViewMsgDef } from "../../webview-contract/webviewDefinitions/kaitoManage";
+import * as kubectlModule from "../../commands/utils/kubectl";
 
 describe("Kaito manage panel", () => {
     afterEach(() => {
@@ -30,6 +31,10 @@ describe("Kaito manage panel", () => {
                 '8080" & whoami',
                 "8080\nwhoami",
                 "",
+                " ",
+                "0",
+                "8o",
+                "1e3",
                 "-1",
                 "1.5",
                 "65536",
@@ -43,13 +48,16 @@ describe("Kaito manage panel", () => {
     });
 
     it("does not create a terminal when the cluster returns the reported service-port payload", async () => {
-        const invokeCommand = sinon.stub();
-        invokeCommand.onFirstCall().resolves({ code: 0, stdout: "10.0.0.1", stderr: "" });
-        invokeCommand.onSecondCall().resolves({ code: 0, stdout: "8080&echo AKSC1RT_P3>P3.marker", stderr: "" });
+        const invoke = sinon.stub(kubectlModule, "invokeKubectlCommandArgs");
+        invoke.onFirstCall().resolves({ succeeded: true, result: { code: 0, stdout: "10.0.0.1", stderr: "" } });
+        invoke.onSecondCall().resolves({
+            succeeded: true,
+            result: { code: 0, stdout: "8080&echo AKSC1RT_P3>P3.marker", stderr: "" },
+        });
 
         const kubectl = {
             available: true,
-            api: { invokeCommand, portForward: sinon.stub() },
+            api: { invokeCommand: sinon.stub(), portForward: sinon.stub() },
         } as k8s.APIAvailable<k8s.KubectlV1>;
         const provider = new KaitoManagePanelDataProvider(
             "cluster",
