@@ -11,7 +11,7 @@ export interface ClusterDisplayProps {
     eventHandlers: EventHandlers<EventDef>;
 }
 
-type StartStopState = "Started" | "Starting" | "Stopped" | "Stopping";
+type StartStopState = "Started" | "Starting" | "Stopped" | "Stopping" | "Unknown";
 
 // Note: Starting and Stopping state mixed with Abort leads to weird cases where the
 //       cluster is in a state that it can't be started or stopped.
@@ -43,9 +43,10 @@ export function determineStartStopState(clusterInfo: ClusterInfo): StartStopStat
         (clusterInfo.powerStateCode === "Running" || allAgentPoolsRunning)
     ) {
         return "Started";
-    } else {
+    } else if (clusterInfo.provisioningState === "Starting") {
         return "Starting";
     }
+    return "Unknown";
 }
 
 export function ClusterDisplay(props: ClusterDisplayProps) {
