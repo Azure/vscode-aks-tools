@@ -15,18 +15,19 @@ export function ClusterProperties(initialState: InitialState) {
     const { state, eventHandlers } = useStateManagement(stateUpdater, initialState, vscode);
 
     useEffect(() => {
-        if (isNotLoaded(state.clusterInfo)) {
-            vscode.postGetPropertiesRequest();
+        if (isNotLoaded(state.clusterInfo) && !state.propertiesLoading) {
             eventHandlers.onSetPropertiesLoading();
+            vscode.postGetPropertiesRequest();
         }
     });
 
     function handleRefreshRequest() {
-        vscode.postRefreshRequest();
         eventHandlers.onSetPropertiesLoading();
+        vscode.postRefreshRequest();
     }
 
     const clusterInfo = isLoaded(state.clusterInfo) && state.clusterInfo.value;
+    const requestInProgress = state.propertiesLoading || state.clusterOperationRequested;
     return (
         <>
             <div className={styles.header}>
@@ -36,29 +37,43 @@ export function ClusterProperties(initialState: InitialState) {
                     </span>
                     <button
                         onClick={handleRefreshRequest}
+                        disabled={requestInProgress}
                         className={styles.refreshButton}
-                        aria-label="Refresh content"
-                        title="Refresh content"
+                        aria-label={l10n.t("Refresh content")}
+                        title={l10n.t("Refresh content")}
                     >
                         <FontAwesomeIcon icon={faRedoAlt} className={styles.refreshIcon} />
                     </button>
                 </h2>
             </div>
+            {state.errorMessage && (
+                <div className={styles.errorMessage} role="alert">
+                    <strong>
+                        {clusterInfo
+                            ? l10n.t("Unable to complete the request")
+                            : l10n.t("Unable to load cluster properties")}
+                    </strong>
+                    <p>{state.errorMessage}</p>
+                    {!clusterInfo && (
+                        <button className="secondary-button" onClick={handleRefreshRequest}>
+                            {l10n.t("Retry")}
+                        </button>
+                    )}
+                </div>
+            )}
             {clusterInfo ? (
                 <ClusterDisplay
                     clusterInfo={clusterInfo}
-                    clusterOperationRequested={state.clusterOperationRequested}
+                    clusterOperationRequested={requestInProgress}
                     eventHandlers={eventHandlers}
                 />
-            ) : (
-                <>
-                    <ProgressRing />
-                </>
+            ) : state.errorMessage ? null : (
+                <ProgressRing />
             )}
 
             {clusterInfo &&
                 clusterInfo.agentPoolProfiles.map((ap) => (
-                    <>
+                    <section key={ap.name}>
                         <h3>
                             {l10n.t("Agent Pool:")} {ap.name}
                         </h3>
@@ -66,9 +81,9 @@ export function ClusterProperties(initialState: InitialState) {
                             eventHandlers={eventHandlers}
                             clusterInfo={clusterInfo}
                             profileInfo={ap}
-                            clusterOperationRequested={state.clusterOperationRequested}
+                            clusterOperationRequested={requestInProgress}
                         />
-                    </>
+                    </section>
                 ))}
         </>
     );

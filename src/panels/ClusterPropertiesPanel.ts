@@ -1,5 +1,5 @@
 import { l10n, Uri } from "vscode";
-import { failed, getErrorMessage } from "../commands/utils/errorable";
+import { Errorable, failed, getErrorMessage } from "../commands/utils/errorable";
 import { MessageHandler, MessageSink } from "../webview-contract/messaging";
 import { BasePanel, PanelDataProvider } from "./BasePanel";
 import {
@@ -29,6 +29,8 @@ export class ClusterPropertiesPanel extends BasePanel<"clusterProperties"> {
     constructor(extensionUri: Uri) {
         super(extensionUri, "clusterProperties", {
             getPropertiesResponse: null,
+            propertiesRequestComplete: null,
+            clusterOperationResponse: null,
             errorNotification: null,
             upgradeClusterVersionResponse: null,
         });
@@ -87,6 +89,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
     }
 
     private async handleAbortAgentPoolOperation(webview: MessageSink<ToWebViewMsgDef>, poolName: string) {
+        let requestCompleted = false;
         try {
             const poller = await this.client.agentPools.beginAbortLatestOperation(
                 this.resourceGroup,
@@ -104,16 +107,23 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             // Update the cluster properties now the operation has started.
             await this.readAndPostClusterProperties(webview);
+            webview.postClusterOperationResponse();
+            requestCompleted = true;
 
             // Wait until operation completes.
             await poller.pollUntilDone();
         } catch (ex) {
             const errorMessage = getErrorMessage(ex);
             webview.postErrorNotification(errorMessage);
+        } finally {
+            if (!requestCompleted) {
+                webview.postClusterOperationResponse();
+            }
         }
     }
 
     private async handleAbortClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
+        let requestCompleted = false;
         try {
             const poller = await this.client.managedClusters.beginAbortLatestOperation(
                 this.resourceGroup,
@@ -130,16 +140,23 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             // Update the cluster properties now the operation has started.
             await this.readAndPostClusterProperties(webview);
+            webview.postClusterOperationResponse();
+            requestCompleted = true;
 
             // Wait until operation completes.
             await poller.pollUntilDone();
         } catch (ex) {
             const errorMessage = getErrorMessage(ex);
             webview.postErrorNotification(errorMessage);
+        } finally {
+            if (!requestCompleted) {
+                webview.postClusterOperationResponse();
+            }
         }
     }
 
     private async handleReconcileClusterOperation(webview: MessageSink<ToWebViewMsgDef>) {
+        let requestCompleted = false;
         try {
             const getClusterInfo = await this.client.managedClusters.get(this.resourceGroup, this.clusterName);
             const poller = await this.client.managedClusters.beginCreateOrUpdate(this.resourceGroup, this.clusterName, {
@@ -159,20 +176,33 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             // Update the cluster properties now the operation has started.
             await this.readAndPostClusterProperties(webview);
+            webview.postClusterOperationResponse();
+            requestCompleted = true;
 
             // Wait until operation completes.
             await poller.pollUntilDone();
         } catch (ex) {
             const errorMessage = getErrorMessage(ex);
             webview.postErrorNotification(errorMessage);
+        } finally {
+            if (!requestCompleted) {
+                webview.postClusterOperationResponse();
+            }
         }
     }
 
     private async handleGetPropertiesRequest(webview: MessageSink<ToWebViewMsgDef>) {
-        await this.readAndPostClusterProperties(webview);
+        try {
+            await this.readAndPostClusterProperties(webview);
+        } catch (ex) {
+            webview.postErrorNotification(getErrorMessage(ex));
+        } finally {
+            webview.postPropertiesRequestComplete();
+        }
     }
 
     private async handleStopClusterRequest(webview: MessageSink<ToWebViewMsgDef>) {
+        let requestCompleted = false;
         try {
             const poller = await this.client.managedClusters.beginStop(this.resourceGroup, this.clusterName);
 
@@ -189,18 +219,25 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             // Update the cluster properties now the operation has started.
             await this.readAndPostClusterProperties(webview);
+            webview.postClusterOperationResponse();
+            requestCompleted = true;
 
             // Wait until operation completes.
             await poller.pollUntilDone();
         } catch (ex) {
             const errorMessage = getErrorMessage(ex);
             webview.postErrorNotification(errorMessage);
+        } finally {
+            if (!requestCompleted) {
+                webview.postClusterOperationResponse();
+            }
         }
 
         await this.readAndPostClusterProperties(webview);
     }
 
     private async handleStartClusterRequest(webview: MessageSink<ToWebViewMsgDef>) {
+        let requestCompleted = false;
         try {
             const poller = await this.client.managedClusters.beginStart(this.resourceGroup, this.clusterName);
 
@@ -217,18 +254,25 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             // Update the cluster properties now the operation has started.
             await this.readAndPostClusterProperties(webview);
+            webview.postClusterOperationResponse();
+            requestCompleted = true;
 
             // Wait until operation completes.
             await poller.pollUntilDone();
         } catch (ex) {
             const errorMessage = getErrorMessage(ex);
             webview.postErrorNotification(errorMessage);
+        } finally {
+            if (!requestCompleted) {
+                webview.postClusterOperationResponse();
+            }
         }
 
         await this.readAndPostClusterProperties(webview);
     }
 
     private async handleUpgradeClusterVersion(webview: MessageSink<ToWebViewMsgDef>, version: string) {
+        let requestCompleted = false;
         try {
             const cluster = await getManagedCluster(
                 this.sessionProvider,
@@ -239,6 +283,7 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             if (failed(cluster)) {
                 webview.postErrorNotification(cluster.error);
+                webview.postUpgradeClusterVersionResponse(false);
                 return;
             }
 
@@ -269,6 +314,8 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
 
             // Update the cluster properties now that the operation has started
             await this.readAndPostClusterProperties(webview);
+            webview.postClusterOperationResponse();
+            requestCompleted = true;
 
             // Wait until operation completes
             await poller.pollUntilDone();
@@ -277,6 +324,10 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             const errorMessage = getErrorMessage(ex);
             webview.postErrorNotification(errorMessage);
             webview.postUpgradeClusterVersionResponse(false);
+        } finally {
+            if (!requestCompleted) {
+                webview.postClusterOperationResponse();
+            }
         }
 
         // Refresh the cluster properties after operation completes
@@ -301,37 +352,64 @@ export class ClusterPropertiesDataProvider implements PanelDataProvider<"cluster
             return;
         }
 
-        const kubernetesVersion = await getKubernetesVersionInfo(this.client, cluster.result.location);
-        if (failed(kubernetesVersion)) {
-            webview.postErrorNotification(kubernetesVersion.error);
-            return;
-        }
-
-        const upgradeProfile = await getClusterUpgradeProfile(this.client, this.resourceGroup, this.clusterName);
-        if (failed(upgradeProfile)) {
-            webview.postErrorNotification(upgradeProfile.error);
-            return;
-        }
-
-        webview.postGetPropertiesResponse(
-            asClusterInfo(cluster.result, kubernetesVersion.result, upgradeProfile.result),
+        await postClusterProperties(
+            webview,
+            cluster.result,
+            () => getKubernetesVersionInfo(this.client, cluster.result.location),
+            () => getClusterUpgradeProfile(this.client, this.resourceGroup, this.clusterName),
         );
     }
 }
 
-function asClusterInfo(
+export async function postClusterProperties(
+    webview: MessageSink<ToWebViewMsgDef>,
     cluster: ManagedCluster,
-    kubernetesVersionList: KubernetesVersionListResult,
-    upgradeProfile: ManagedClusterUpgradeProfile,
+    getKubernetesVersions: () => Promise<Errorable<KubernetesVersionListResult>>,
+    getUpgradeProfile: () => Promise<Errorable<ManagedClusterUpgradeProfile>>,
+): Promise<void> {
+    const [kubernetesVersions, upgradeProfile] = await Promise.all([
+        getKubernetesVersions().catch((error): Errorable<KubernetesVersionListResult> => ({
+            succeeded: false,
+            error: getErrorMessage(error),
+        })),
+        getUpgradeProfile().catch((error): Errorable<ManagedClusterUpgradeProfile> => ({
+            succeeded: false,
+            error: getErrorMessage(error),
+        })),
+    ]);
+    const versionList = failed(kubernetesVersions) ? undefined : kubernetesVersions.result;
+    const profile = failed(upgradeProfile) ? undefined : upgradeProfile.result;
+
+    // Upgrade metadata is useful but should never prevent the core cluster properties from loading.
+    webview.postGetPropertiesResponse(asClusterInfo(cluster, versionList, profile));
+
+    const errors: string[] = [];
+    if (failed(kubernetesVersions)) {
+        errors.push(kubernetesVersions.error);
+    }
+    if (failed(upgradeProfile)) {
+        errors.push(upgradeProfile.error);
+    }
+    if (errors.length > 0) {
+        webview.postErrorNotification(
+            l10n.t("Some Kubernetes version and upgrade information could not be loaded: {0}", errors.join("\n")),
+        );
+    }
+}
+
+export function asClusterInfo(
+    cluster: ManagedCluster,
+    kubernetesVersionList?: KubernetesVersionListResult,
+    upgradeProfile?: ManagedClusterUpgradeProfile,
 ): ClusterInfo {
     return {
-        provisioningState: cluster.provisioningState!,
-        fqdn: cluster.fqdn!,
-        kubernetesVersion: cluster.currentKubernetesVersion!,
-        powerStateCode: cluster.powerState!.code!,
+        provisioningState: cluster.provisioningState ?? "Unknown",
+        fqdn: cluster.fqdn ?? "Unknown",
+        kubernetesVersion: cluster.currentKubernetesVersion ?? cluster.kubernetesVersion ?? "Unknown",
+        powerStateCode: cluster.powerState?.code ?? "Unknown",
         agentPoolProfiles: (cluster.agentPoolProfiles || []).map(asPoolProfileInfo),
-        supportedVersions: (kubernetesVersionList.values || []).map(asKubernetesVersionInfo),
-        availableUpgradeVersions: processAndSortUpgradeVersions(upgradeProfile.controlPlaneProfile?.upgrades || []),
+        supportedVersions: (kubernetesVersionList?.values || []).map(asKubernetesVersionInfo),
+        availableUpgradeVersions: processAndSortUpgradeVersions(upgradeProfile?.controlPlaneProfile?.upgrades || []),
     };
 }
 
@@ -348,13 +426,13 @@ function processAndSortUpgradeVersions(upgrades: Array<{ kubernetesVersion?: str
 function asPoolProfileInfo(pool: ManagedClusterAgentPoolProfile): AgentPoolProfileInfo {
     return {
         name: pool.name,
-        nodeImageVersion: pool.nodeImageVersion!,
-        powerStateCode: pool.powerState!.code!,
-        osDiskSizeGB: pool.osDiskSizeGB!,
-        provisioningState: pool.provisioningState!,
-        vmSize: pool.vmSize!,
-        count: pool.count!,
-        osType: pool.osType!,
+        nodeImageVersion: pool.nodeImageVersion ?? "Unknown",
+        powerStateCode: pool.powerState?.code ?? "Unknown",
+        osDiskSizeGB: pool.osDiskSizeGB ?? null,
+        provisioningState: pool.provisioningState ?? "Unknown",
+        vmSize: pool.vmSize ?? "Unknown",
+        count: pool.count ?? null,
+        osType: pool.osType ?? "Unknown",
     };
 }
 

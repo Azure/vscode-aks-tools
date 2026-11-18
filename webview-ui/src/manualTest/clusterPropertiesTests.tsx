@@ -133,14 +133,19 @@ export function getClusterPropertiesScenarios() {
         };
 
         async function handleGetPropertiesRequest() {
-            await new Promise((resolve) => setTimeout(resolve, 3000));
-            webview.postGetPropertiesResponse(testClusterInfo);
+            try {
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+                webview.postGetPropertiesResponse(testClusterInfo);
+            } finally {
+                webview.postPropertiesRequestComplete();
+            }
         }
 
         async function handleStopClusterRequest(hasError: boolean) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             if (hasError) {
                 webview.postErrorNotification("Sorry, I wasn't quite able to stop the cluster.");
+                webview.postClusterOperationResponse();
                 return;
             }
 
@@ -151,6 +156,7 @@ export function getClusterPropertiesScenarios() {
                 p.powerStateCode = "Stopped";
             });
             webview.postGetPropertiesResponse(testClusterInfo);
+            webview.postClusterOperationResponse();
 
             await new Promise((resolve) => setTimeout(resolve, 10000));
             testClusterInfo.provisioningState = "Succeeded";
@@ -166,6 +172,7 @@ export function getClusterPropertiesScenarios() {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             if (hasError) {
                 webview.postErrorNotification("Sorry, I wasn't quite able to get the cluster started.");
+                webview.postClusterOperationResponse();
                 return;
             }
 
@@ -176,6 +183,7 @@ export function getClusterPropertiesScenarios() {
                 p.powerStateCode = "Running";
             });
             webview.postGetPropertiesResponse(testClusterInfo);
+            webview.postClusterOperationResponse();
 
             await new Promise((resolve) => setTimeout(resolve, 10000));
             testClusterInfo.provisioningState = "Succeeded";
@@ -191,11 +199,13 @@ export function getClusterPropertiesScenarios() {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             if (hasError) {
                 webview.postErrorNotification("Sorry, I wasn't quite able to abort the operation.");
+                webview.postClusterOperationResponse();
                 return;
             }
 
             const agentPoolProfile = testClusterInfo.agentPoolProfiles.find((p) => p.name === agentPoolName)!;
             webview.postGetPropertiesResponse(testClusterInfo);
+            webview.postClusterOperationResponse();
 
             await new Promise((resolve) => setTimeout(resolve, 10000));
             agentPoolProfile.provisioningState = "Canceled";
@@ -206,10 +216,12 @@ export function getClusterPropertiesScenarios() {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             if (hasError) {
                 webview.postErrorNotification("Sorry, I wasn't quite able to abort the operation.");
+                webview.postClusterOperationResponse();
                 return;
             }
             // Nore: provisioning state doesnt change immidiately after abort request.
             webview.postGetPropertiesResponse(testClusterInfo);
+            webview.postClusterOperationResponse();
 
             await new Promise((resolve) => setTimeout(resolve, 3000));
             testClusterInfo.provisioningState = "Canceled";
@@ -223,6 +235,7 @@ export function getClusterPropertiesScenarios() {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             if (hasError) {
                 webview.postErrorNotification("Sorry, I wasn't quite able to reconcile the cluster.");
+                webview.postClusterOperationResponse();
                 return;
             }
 
@@ -231,6 +244,7 @@ export function getClusterPropertiesScenarios() {
                 p.provisioningState = "Updating";
             });
             webview.postGetPropertiesResponse(testClusterInfo);
+            webview.postClusterOperationResponse();
 
             await new Promise((resolve) => setTimeout(resolve, 3000));
             testClusterInfo.provisioningState = "Succeeded";
@@ -246,12 +260,15 @@ export function getClusterPropertiesScenarios() {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             if (hasError) {
                 webview.postErrorNotification("Sorry, I wasn't quite able to upgrade the cluster.");
+                webview.postUpgradeClusterVersionResponse(false);
+                webview.postClusterOperationResponse();
                 return;
             }
 
             // Begin upgrade operation
             testClusterInfo.provisioningState = "Upgrading";
             webview.postGetPropertiesResponse(testClusterInfo);
+            webview.postClusterOperationResponse();
 
             // Simulate time for upgrade
             await new Promise((resolve) => setTimeout(resolve, 3000));
