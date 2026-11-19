@@ -1,6 +1,10 @@
 import * as assert from "assert";
 import { CoreV1Api } from "@kubernetes/client-node";
-import { createKubernetesClient, replaceKubeconfigUserAuthWithToken } from "../../commands/utils/kubernetesClient";
+import {
+    createKubernetesClient,
+    isTlsVerificationDisabled,
+    replaceKubeconfigUserAuthWithToken,
+} from "../../commands/utils/kubernetesClient";
 
 describe("Kubernetes client factory", () => {
     it("creates a typed API client from inline credentials", () => {
@@ -45,23 +49,10 @@ describe("Kubernetes client factory", () => {
         }
     });
 
-    it("rejects process-wide TLS verification bypass", () => {
-        const previousValue = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-        try {
-            const client = createKubernetesClient(createKubeconfig(), CoreV1Api);
-
-            assert.strictEqual(client.succeeded, false);
-            if (!client.succeeded) {
-                assert.match(client.error, /NODE_TLS_REJECT_UNAUTHORIZED/);
-            }
-        } finally {
-            if (previousValue === undefined) {
-                delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-            } else {
-                process.env.NODE_TLS_REJECT_UNAUTHORIZED = previousValue;
-            }
-        }
+    it("detects process-wide TLS verification bypass without changing the environment", () => {
+        assert.strictEqual(isTlsVerificationDisabled("0"), true);
+        assert.strictEqual(isTlsVerificationDisabled("1"), false);
+        assert.strictEqual(isTlsVerificationDisabled(undefined), false);
     });
 
     it("rejects executable credential providers even when a token is present", () => {

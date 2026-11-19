@@ -113,7 +113,7 @@ function validateKubeConfig(kubeConfig: KubeConfig): Errorable<void> {
     if (cluster.skipTLSVerify) {
         return { succeeded: false, error: "Kubernetes API clients require TLS certificate verification." };
     }
-    if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+    if (isTlsVerificationDisabled(process.env.NODE_TLS_REJECT_UNAUTHORIZED)) {
         return {
             succeeded: false,
             error: "Kubernetes API clients cannot run while NODE_TLS_REJECT_UNAUTHORIZED disables TLS verification.",
@@ -131,6 +131,10 @@ function validateKubeConfig(kubeConfig: KubeConfig): Errorable<void> {
     }
 
     return { succeeded: true, result: undefined };
+}
+
+export function isTlsVerificationDisabled(value: string | undefined): boolean {
+    return value === "0";
 }
 
 function validateRawKubeConfig(kubeconfigYaml: string): Errorable<void> {
