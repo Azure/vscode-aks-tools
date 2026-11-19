@@ -31,11 +31,16 @@ import { DiagnosticSettingsResource } from "@azure/arm-monitor";
 import { parseResource } from "../../azure-api-utils";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as l10n from "@vscode/l10n";
+import { createKubernetesClient, replaceKubeconfigUserAuthWithToken } from "./kubernetesClient";
+import { CoreV1Api, Observable, type ObservableMiddleware, type V1Namespace } from "@kubernetes/client-node";
 
 export interface KubernetesClusterInfo {
     readonly name: string;
     readonly kubeconfigYaml: string;
 }
+
+// First-party AKS server application ID, shared across Azure environments.
+const aksServerApplicationId = "6dae42f8-4368-4678-94ff-3960e28e3630";
 
 /**
  * A managed cluster with the name and location properties guaranteed to be defined.
@@ -217,6 +222,38 @@ export async function getKubeconfigYaml(
         : getNonAadKubeconfig(client, resourceGroup, managedCluster.name);
 }
 
+export async function getKubernetesClientKubeconfigYaml(
+    sessionProvider: ReadyAzureSessionProvider,
+    subscriptionId: string,
+    resourceGroup: string,
+    managedCluster: DefinedManagedCluster,
+): Promise<Errorable<string>> {
+    const client = getAksClient(sessionProvider, subscriptionId);
+    const aadProfile = managedCluster.aadProfile;
+    if (aadProfile && aadProfile.managed !== true) {
+        return { succeeded: false, error: "Direct Kubernetes API access does not support legacy AKS AAD clusters." };
+    }
+    if (aadProfile?.tenantID && aadProfile.tenantID.toLowerCase() !== sessionProvider.selectedTenant.id.toLowerCase()) {
+        return { succeeded: false, error: "The AKS cluster belongs to a different Microsoft Entra tenant." };
+    }
+
+    const kubeconfig = managedCluster.aadProfile
+        ? await getRawAadKubeconfig(client, resourceGroup, managedCluster.name)
+        : await getNonAadKubeconfig(client, resourceGroup, managedCluster.name);
+    if (failed(kubeconfig)) return kubeconfig;
+    if (!managedCluster.aadProfile) return kubeconfig;
+
+    const session = await sessionProvider.getAuthSession({ scopes: [`${aksServerApplicationId}/.default`] });
+    if (failed(session)) {
+        return {
+            succeeded: false,
+            error: `Failed to retrieve Microsoft authentication session for AKS: ${session.error}`,
+        };
+    }
+
+    return replaceKubeconfigUserAuthWithToken(kubeconfig.result, session.result.accessToken);
+}
+
 export async function getClusterKubeconfig(
     treeNode: Pick<AksClusterTreeNode, "subscriptionId" | "resourceGroupName" | "name">,
 ): Promise<string | undefined> {
@@ -322,6 +359,24 @@ async function getNonAadKubeconfig(
     }
 
     return getClusterUserKubeconfig(clusterUserCredentials, clusterName);
+}
+
+async function getRawAadKubeconfig(
+    client: azcs.ContainerServiceClient,
+    resourceGroup: string,
+    clusterName: string,
+): Promise<Errorable<string>> {
+    try {
+        const credentials = await client.managedClusters.listClusterUserCredentials(resourceGroup, clusterName, {
+            format: azcs.KnownFormat.Exec,
+        });
+        return getClusterUserKubeconfig(credentials, clusterName);
+    } catch (error) {
+        return {
+            succeeded: false,
+            error: `Failed to retrieve user credentials for AAD cluster ${clusterName}: ${getErrorMessage(error)}`,
+        };
+    }
 }
 
 type KubeConfigExecBlock = {
@@ -659,6 +714,14 @@ export interface NamespaceWithType {
     annotations?: { [key: string]: string };
 }
 
+export function getNamespaceType(
+    name: string,
+    labels: { [key: string]: string },
+): Exclude<NamespaceWithType["type"], "unknown"> {
+    if (isSystemNamespace(name)) return "system";
+    return isManagedNamespace(labels) ? "managed" : "user";
+}
+
 export async function getClusterNamespaces(
     sessionProvider: ReadyAzureSessionProvider,
     kubectl: APIAvailable<KubectlV1>,
@@ -685,7 +748,6 @@ export async function getClusterNamespaces(
 
 export async function getClusterNamespacesWithTypes(
     sessionProvider: ReadyAzureSessionProvider,
-    kubectl: APIAvailable<KubectlV1>,
     subscriptionId: string,
     resourceGroup: string,
     clusterName: string,
@@ -695,55 +757,117 @@ export async function getClusterNamespacesWithTypes(
         return cluster;
     }
 
-    const kubeconfig = await getKubeconfigYaml(sessionProvider, subscriptionId, resourceGroup, cluster.result);
+    const kubeconfig = await getKubernetesClientKubeconfigYaml(
+        sessionProvider,
+        subscriptionId,
+        resourceGroup,
+        cluster.result,
+    );
     if (failed(kubeconfig)) {
         return kubeconfig;
     }
 
-    return await withOptionalTempFile(kubeconfig.result, "yaml", async (kubeconfigPath) => {
-        const command = `get namespace -o json`;
-        const output = await invokeKubectlCommand(kubectl, kubeconfigPath, command);
-        return errmap(output, (sr) => {
-            try {
-                const namespacesJson = JSON.parse(sr.stdout);
-                return namespacesJson.items.map(
-                    (ns: {
-                        metadata: {
-                            name: string;
-                            labels?: Record<string, string>;
-                            annotations?: Record<string, string>;
-                        };
-                    }) => {
-                        const name = ns.metadata.name;
-                        const labels = ns.metadata.labels || {};
-                        const annotations = ns.metadata.annotations || {};
+    const client = createKubernetesClient(kubeconfig.result, CoreV1Api);
+    if (failed(client)) return client;
 
-                        // Determine namespace type
-                        let type: "system" | "user" | "managed" | "unknown";
-                        if (isSystemNamespace(name)) {
-                            type = "system";
-                        } else if (isManagedNamespace(labels)) {
-                            type = "managed";
-                        } else {
-                            type = "user";
-                        }
+    const namespaces = await listAllNamespaces(client.result);
+    if (failed(namespaces)) return namespaces;
 
-                        return {
-                            name,
-                            type,
-                            labels,
-                            annotations,
-                        };
-                    },
-                );
-            } catch (e) {
+    const result: NamespaceWithType[] = [];
+    for (const namespace of namespaces.result) {
+        const name = namespace.metadata?.name ?? "";
+        if (!validateNamespaceName(name)) {
+            return {
+                succeeded: false,
+                error: `Kubernetes API returned an invalid namespace name: ${JSON.stringify(name)}`,
+            };
+        }
+
+        const labels = namespace.metadata?.labels ?? {};
+        result.push({
+            namespace: name,
+            name,
+            type: getNamespaceType(name, labels),
+            labels,
+            annotations: namespace.metadata?.annotations ?? {},
+        });
+    }
+
+    return { succeeded: true, result };
+}
+
+export async function listAllNamespaces(
+    client: Pick<CoreV1Api, "listNamespace">,
+    deadlineMs = 60_000,
+): Promise<Errorable<V1Namespace[]>> {
+    const maximumPages = 20;
+    const maximumNamespaces = 10_000;
+    const namespaces: V1Namespace[] = [];
+    const continuationTokens = new Set<string>();
+    let continueToken: string | undefined;
+    let pageCount = 0;
+    const abortController = new AbortController();
+    const deadline = setTimeout(() => abortController.abort(), deadlineMs);
+    const middleware = createAbortMiddleware(abortController.signal);
+
+    try {
+        do {
+            if (pageCount >= maximumPages) {
                 return {
                     succeeded: false,
-                    error: `Failed to parse namespace JSON: ${clusterName}: ${getErrorMessage(e)}`,
+                    error: `Kubernetes API returned more than ${maximumPages} namespace pages.`,
                 };
             }
-        });
-    });
+            pageCount++;
+
+            const page = await client.listNamespace(
+                { _continue: continueToken, limit: 500, timeoutSeconds: 30 },
+                { middleware: [middleware] },
+            );
+            namespaces.push(...page.items);
+            if (namespaces.length > maximumNamespaces) {
+                return {
+                    succeeded: false,
+                    error: `Kubernetes API returned more than ${maximumNamespaces} namespaces.`,
+                };
+            }
+
+            // The generated model follows the Kubernetes `_continue` wire name.
+            // eslint-disable-next-line no-underscore-dangle
+            const nextToken = page.metadata?._continue;
+            if (nextToken && continuationTokens.has(nextToken)) {
+                return { succeeded: false, error: "Kubernetes API repeated a namespace continuation token." };
+            }
+            if (nextToken) continuationTokens.add(nextToken);
+            continueToken = nextToken;
+        } while (continueToken);
+
+        return { succeeded: true, result: namespaces };
+    } catch (error) {
+        return { succeeded: false, error: getKubernetesApiErrorMessage(error) };
+    } finally {
+        clearTimeout(deadline);
+    }
+}
+
+function createAbortMiddleware(signal: AbortSignal): ObservableMiddleware {
+    return {
+        pre: (context) => {
+            context.setSignal(signal);
+            return new Observable(Promise.resolve(context));
+        },
+        post: (context) => new Observable(Promise.resolve(context)),
+    };
+}
+
+function getKubernetesApiErrorMessage(error: unknown): string {
+    if (typeof error !== "object" || error === null) return getErrorMessage(error);
+
+    const code = "code" in error && typeof error.code === "number" ? error.code : undefined;
+    const body = "body" in error && typeof error.body === "object" && error.body !== null ? error.body : undefined;
+    const bodyMessage = body && "message" in body && typeof body.message === "string" ? body.message : undefined;
+    const message = bodyMessage ?? getErrorMessage(error);
+    return code === undefined ? message : `Kubernetes API returned ${code}: ${message}`;
 }
 
 function isSystemNamespace(name: string): boolean {
