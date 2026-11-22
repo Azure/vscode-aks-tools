@@ -1,23 +1,27 @@
 import * as assert from "assert";
+import * as sinon from "sinon";
 import * as k8s from "vscode-kubernetes-tools-api";
 import { parseArgoCDPort, detectArgoCDConfiguredPort } from "../../../commands/aksArgoCD/argoCDApplyApp";
+import * as kubectlModule from "../../../commands/utils/kubectl";
 
 /**
  * Builds a fake kubectl whose `argocd-cm` reads return the supplied values.
  *
  * `detectArgoCDConfiguredPort` issues one jsonpath query per key, so dispatch on
- * whether the command asks for `global.domain` or `url`.
+ * whether the arguments ask for `global.domain` or `url`.
  */
 function fakeKubectl(data: { url?: string; globalDomain?: string }): k8s.APIAvailable<k8s.KubectlV1> {
+    sinon.stub(kubectlModule, "invokeKubectlCommandArgs").callsFake(async (_api, _config, args) => ({
+        succeeded: true,
+        result: {
+            code: 0,
+            stdout: args.join(" ").includes("global") ? (data.globalDomain ?? "") : (data.url ?? ""),
+            stderr: "",
+        },
+    }));
     return {
         available: true,
-        api: {
-            invokeCommand: async (command: string) => ({
-                code: 0,
-                stdout: command.includes("global") ? (data.globalDomain ?? "") : (data.url ?? ""),
-                stderr: "",
-            }),
-        },
+        api: {},
     } as unknown as k8s.APIAvailable<k8s.KubectlV1>;
 }
 
@@ -67,6 +71,7 @@ describe("argoCDApplyApp — parseArgoCDPort", () => {
 
 describe("argoCDApplyApp — detectArgoCDConfiguredPort", () => {
     const KUBECONFIG = "/tmp/kubeconfig";
+    afterEach(() => sinon.restore());
 
     it("prefers the port from argocd-cm 'url'", async () => {
         const port = await detectArgoCDConfiguredPort(fakeKubectl({ url: "https://localhost:9000" }), KUBECONFIG);

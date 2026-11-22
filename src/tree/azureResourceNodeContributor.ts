@@ -1,6 +1,7 @@
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as vscode from "vscode";
-import { Errorable } from "../commands/utils/errorable";
+import { Errorable, failed } from "../commands/utils/errorable";
+import { validateK8sName } from "../commands/utils/kubernetesNames";
 
 export class AzureResourceNodeContributor implements k8s.ClusterExplorerV1.NodeContributor {
     constructor(
@@ -64,13 +65,15 @@ interface CustomResource {
     readonly abbreviation: string;
 }
 
-async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Errorable<CustomResource[]>> {
+export async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Errorable<CustomResource[]>> {
     // Some kubectl versions discard everything after a null/missing value within a jsonpath `range`,
     // meaning trailing newlines get omitted from the output and we can't split lines correctly.
     // For this reason, we make the newline the *first* component of the range, and ensure the value
     // which might be null (shortNames[0] in this case) is right at the end.
     // This means we end up with a blank line at the start of the output, but it's otherwise consistent.
     const command = `get crd -o jsonpath="{range .items[*]}{\\"\\n\\"}{.metadata.name}{\\" \\"}{.spec.names.kind}{\\" \\"}{.spec.names.singular}{\\" \\"}{.spec.names.plural}{\\" \\"}{.spec.group}{\\" \\"}{.spec.names.shortNames[0]}{end}"`;
+    // Constant command on the default kubeconfig.
+    // eslint-disable-next-line no-restricted-syntax
     const crdShellResult = await kubectl.invokeCommand(command);
     if (crdShellResult === undefined) {
         return { succeeded: false, error: `Failed to run kubectl command: ${command}` };
@@ -138,5 +141,17 @@ async function getAzureServiceResourceTypes(kubectl: k8s.KubectlV1): Promise<Err
 
     // Filter the custom resources to only include Azure resources
     const azureResources = customResources.filter((r) => approvedGroups.has(r.group));
+
+    // vscode-kubernetes-tools builds shell commands from the abbreviation when a folder is
+    // expanded, so reject any name a conforming API server could not have returned.
+    for (const r of azureResources) {
+        for (const name of [r.name, r.abbreviation]) {
+            const valid = validateK8sName(name, "subdomain", "custom resource");
+            if (failed(valid)) {
+                return valid;
+            }
+        }
+    }
+
     return { succeeded: true, result: azureResources };
 }
