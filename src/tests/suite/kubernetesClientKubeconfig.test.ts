@@ -5,6 +5,8 @@ import * as arm from "../../commands/utils/arm";
 import { getKubernetesClientKubeconfigYaml } from "../../commands/utils/clusters";
 import { ReadyAzureSessionProvider } from "../../auth/types";
 import { ContainerServiceClient, ManagedCluster } from "@azure/arm-containerservice";
+import { CoreV1Api } from "@kubernetes/client-node";
+import { createKubernetesClient } from "../../commands/utils/kubernetesClient";
 
 describe("Kubernetes client AKS credentials", () => {
     const aksServerApplicationId = "6dae42f8-4368-4678-94ff-3960e28e3630";
@@ -73,6 +75,48 @@ describe("Kubernetes client AKS credentials", () => {
         );
 
         assert.deepStrictEqual(result, { succeeded: true, result: kubeconfig });
+        assert.strictEqual(getAuthSession.called, false);
+        assert.ok(listCredentials.calledOnceWithExactly("resource-group", "cluster-name"));
+    });
+
+    it("prefers inline certificates when non-AAD credentials also contain a token", async () => {
+        const getAuthSession = sandbox.stub();
+        const kubeconfig = createKubeconfig([
+            "      client-certificate-data: certificate-data",
+            "      client-key-data: key-data",
+            "      token: duplicate-token",
+        ]);
+        const listCredentials = sandbox.stub().resolves({
+            kubeconfigs: [{ name: "clusterUser", value: Buffer.from(kubeconfig) }],
+        });
+        sandbox.stub(arm, "getAksClient").returns({
+            managedClusters: { listClusterUserCredentials: listCredentials },
+        } as unknown as ContainerServiceClient);
+
+        const unnormalizedClient = createKubernetesClient(kubeconfig, CoreV1Api);
+        assert.strictEqual(unnormalizedClient.succeeded, false);
+        if (!unnormalizedClient.succeeded) {
+            assert.match(unnormalizedClient.error, /exactly one supported authentication mechanism/);
+        }
+
+        const result = await getKubernetesClientKubeconfigYaml(
+            createSessionProvider(getAuthSession),
+            "subscription-id",
+            "resource-group",
+            createManagedCluster(false),
+        );
+
+        assert.strictEqual(result.succeeded, true);
+        if (!result.succeeded) return;
+
+        const parsed = yaml.load(result.result) as {
+            users: Array<{ name: string; user: Record<string, string> }>;
+        };
+        assert.deepStrictEqual(parsed.users[0].user, {
+            "client-certificate-data": "certificate-data",
+            "client-key-data": "key-data",
+        });
+        assert.strictEqual(createKubernetesClient(result.result, CoreV1Api).succeeded, true);
         assert.strictEqual(getAuthSession.called, false);
         assert.ok(listCredentials.calledOnceWithExactly("resource-group", "cluster-name"));
     });

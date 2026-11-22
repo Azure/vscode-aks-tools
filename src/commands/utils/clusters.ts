@@ -31,7 +31,11 @@ import { DiagnosticSettingsResource } from "@azure/arm-monitor";
 import { parseResource } from "../../azure-api-utils";
 import * as k8s from "vscode-kubernetes-tools-api";
 import * as l10n from "@vscode/l10n";
-import { createKubernetesClient, replaceKubeconfigUserAuthWithToken } from "./kubernetesClient";
+import {
+    createKubernetesClient,
+    normalizeArmKubeconfigUserAuth,
+    replaceKubeconfigUserAuthWithToken,
+} from "./kubernetesClient";
 import { CoreV1Api, Observable, type ObservableMiddleware, type V1Namespace } from "@kubernetes/client-node";
 
 export interface KubernetesClusterInfo {
@@ -241,7 +245,7 @@ export async function getKubernetesClientKubeconfigYaml(
         ? await getRawAadKubeconfig(client, resourceGroup, managedCluster.name)
         : await getNonAadKubeconfig(client, resourceGroup, managedCluster.name);
     if (failed(kubeconfig)) return kubeconfig;
-    if (!managedCluster.aadProfile) return kubeconfig;
+    if (!managedCluster.aadProfile) return normalizeArmKubeconfigUserAuth(kubeconfig.result);
 
     const session = await sessionProvider.getAuthSession({ scopes: [`${aksServerApplicationId}/.default`] });
     if (failed(session)) {

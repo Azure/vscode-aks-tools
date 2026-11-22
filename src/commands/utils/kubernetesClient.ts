@@ -49,10 +49,74 @@ export function replaceKubeconfigUserAuthWithToken(kubeconfigYaml: string, token
     const parsed = parseKubeconfigYaml(kubeconfigYaml);
     if (failed(parsed)) return parsed;
 
-    const currentContextName = parsed.result["current-context"];
-    const clusters = parsed.result.clusters;
-    const contexts = parsed.result.contexts;
-    const users = parsed.result.users;
+    const entries = getCurrentKubeconfigEntries(parsed.result);
+    if (failed(entries)) return entries;
+
+    return {
+        succeeded: true,
+        result: yaml.dump({
+            apiVersion: "v1",
+            kind: "Config",
+            clusters: [entries.result.currentCluster],
+            contexts: [entries.result.currentContext],
+            "current-context": entries.result.currentContextName,
+            users: [{ name: entries.result.userName, user: { token } }],
+        }),
+    };
+}
+
+/** Normalizes duplicate auth only in kubeconfigs retrieved directly from the trusted AKS ARM API. */
+export function normalizeArmKubeconfigUserAuth(kubeconfigYaml: string): Errorable<string> {
+    if (Buffer.byteLength(kubeconfigYaml, "utf8") > maximumKubeconfigBytes) {
+        return { succeeded: false, error: "Kubeconfig is larger than the 1 MiB safety limit." };
+    }
+
+    const parsed = parseKubeconfigYaml(kubeconfigYaml);
+    if (failed(parsed)) return parsed;
+
+    const entries = getCurrentKubeconfigEntries(parsed.result);
+    if (failed(entries)) return entries;
+
+    const user = entries.result.currentUser.user;
+    if (!isRecord(user)) {
+        return { succeeded: false, error: "Kubeconfig current user does not define authentication details." };
+    }
+
+    const token = user.token;
+    const certificateData = user["client-certificate-data"];
+    const keyData = user["client-key-data"];
+    if (
+        typeof token !== "string" ||
+        token.length === 0 ||
+        typeof certificateData !== "string" ||
+        certificateData.length === 0 ||
+        typeof keyData !== "string" ||
+        keyData.length === 0
+    ) {
+        return { succeeded: true, result: kubeconfigYaml };
+    }
+
+    // Non-AAD AKS credentials can contain the same identity as both a client certificate and a bearer token.
+    const normalizedUser = { ...user };
+    delete normalizedUser.token;
+    entries.result.currentUser.user = normalizedUser;
+
+    return { succeeded: true, result: yaml.dump(parsed.result) };
+}
+
+interface CurrentKubeconfigEntries {
+    currentContextName: string;
+    currentCluster: Record<string, unknown>;
+    currentContext: Record<string, unknown>;
+    currentUser: Record<string, unknown>;
+    userName: string;
+}
+
+function getCurrentKubeconfigEntries(rawConfig: Record<string, unknown>): Errorable<CurrentKubeconfigEntries> {
+    const currentContextName = rawConfig["current-context"];
+    const clusters = rawConfig.clusters;
+    const contexts = rawConfig.contexts;
+    const users = rawConfig.users;
     if (
         typeof currentContextName !== "string" ||
         !Array.isArray(clusters) ||
@@ -75,20 +139,13 @@ export function replaceKubeconfigUserAuthWithToken(kubeconfigYaml: string, token
 
     const currentCluster = clusters.find((entry) => isRecord(entry) && entry.name === clusterName);
     const currentUser = users.find((entry) => isRecord(entry) && entry.name === userName);
-    if (!isRecord(currentCluster) || !isRecord(currentUser)) {
+    if (!isRecord(currentCluster) || !isRecord(currentUser) || !isRecord(currentContext)) {
         return { succeeded: false, error: "Kubeconfig does not define the current context cluster and user." };
     }
 
     return {
         succeeded: true,
-        result: yaml.dump({
-            apiVersion: "v1",
-            kind: "Config",
-            clusters: [currentCluster],
-            contexts: [currentContext],
-            "current-context": currentContextName,
-            users: [{ name: userName, user: { token } }],
-        }),
+        result: { currentContextName, currentCluster, currentContext, currentUser, userName },
     };
 }
 
