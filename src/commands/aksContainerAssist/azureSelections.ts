@@ -13,7 +13,6 @@ import {
     listManagedNamespacesByCluster,
     validateNamespaceName,
 } from "../utils/clusters";
-import { extension } from "vscode-kubernetes-tools-api";
 import { getAuthorizationManagementClient } from "../utils/arm";
 import { getPrincipalRoleAssignmentsForAcr, createRoleAssignment, getScopeForAcr } from "../utils/roleAssignments";
 import { acrPullRoleDefinitionName } from "../../webview-contract/webviewDefinitions/attachAcrToCluster";
@@ -162,14 +161,8 @@ export async function fetchClusterNamespaces(
     subscriptionId: string,
     cluster: Cluster,
 ): Promise<NamespaceData | undefined> {
-    const kubectl = await extension.kubectl.v1;
-    if (!kubectl.available) {
-        vscode.window.showErrorMessage(l10n.t("kubectl is not available. Please install kubectl extension."));
-        return undefined;
-    }
-
     const namespacesResult = await longRunning(l10n.t("Loading cluster namespaces..."), () =>
-        getClusterNamespacesWithTypes(sessionProvider, kubectl, subscriptionId, cluster.resourceGroup, cluster.name),
+        getClusterNamespacesWithTypes(sessionProvider, subscriptionId, cluster.resourceGroup, cluster.name),
     );
 
     if (!namespacesResult.succeeded && !isNamespacesListForbidden(namespacesResult.error)) {
@@ -310,9 +303,7 @@ export async function selectClusterNamespace(
 }
 
 function isNamespacesListForbidden(error: string): boolean {
-    return /Error from server \(Forbidden\)|cannot list resource "namespaces"|cannot list resource 'namespaces'/i.test(
-        error,
-    );
+    return /\b403\b|Forbidden|cannot list resource "namespaces"|cannot list resource 'namespaces'/i.test(error);
 }
 
 export async function selectClusterAcr(
