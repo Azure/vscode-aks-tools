@@ -184,10 +184,12 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
                 name: groupName,
                 location,
             };
-            await createResourceGroup(group, webview, this.resourceManagementClient);
+            if (!(await createResourceGroup(group, webview, this.resourceManagementClient))) {
+                return;
+            }
         }
 
-        await createCluster(
+        const created = await createCluster(
             this.sessionProvider,
             this.subscriptionId,
             groupName,
@@ -199,6 +201,9 @@ export class CreateClusterDataProvider implements PanelDataProvider<"createClust
             this.resourceManagementClient,
             this.commandId,
         );
+        if (!created) {
+            return;
+        }
 
         // Get the selected clusters from the configuration
         const filteredClusters = getFilteredClusters();
@@ -236,14 +241,16 @@ async function createResourceGroup(
 
     try {
         await resourceManagementClient.resourceGroups.createOrUpdate(group.name, group);
+        return true;
     } catch (ex) {
         webview.postProgressUpdate({
             event: ProgressEventType.Failed,
             operationDescription,
-            errorMessage: getErrorMessage(ex),
+            errorMessage: describeError(ex),
             deploymentPortalUrl: null,
             createdCluster: null,
         });
+        return false;
     }
 }
 
@@ -258,7 +265,7 @@ async function createCluster(
     containerServiceClient: ContainerServiceClient,
     resourceManagementClient: ResourceManagementClient,
     commandId: string,
-) {
+): Promise<boolean> {
     const operationDescription = l10n.t(`Creating cluster {0}`, name);
     webview.postProgressUpdate({
         event: ProgressEventType.InProgress,
@@ -268,87 +275,81 @@ async function createCluster(
         createdCluster: null,
     });
 
-    // kubernetes version is required to create a cluster via deployments
-    const kubernetesVersionsResult = await containerServiceClient.managedClusters.listKubernetesVersions(location);
-    const kubernetesVersions = kubernetesVersionsResult.values || [];
-    const hasDefaultVersion = kubernetesVersions.some(isDefaultK8sVersion);
-    const [kubernetesVersion] = hasDefaultVersion ? kubernetesVersions.filter(isDefaultK8sVersion) : kubernetesVersions;
-    if (!kubernetesVersion?.version) {
-        window.showErrorMessage(l10n.t(`No Kubernetes versions available for location {0}`, location));
-        webview.postProgressUpdate({
-            event: ProgressEventType.Failed,
-            operationDescription,
-            errorMessage: l10n.t("No Kubernetes versions available for location"),
-            deploymentPortalUrl: null,
-            createdCluster: null,
-        });
-        return;
-    }
-
-    const session = await sessionProvider.getAuthSession();
-    if (failed(session)) {
-        window.showErrorMessage(l10n.t(`Error getting authentication session: {0}`, session.error));
-        webview.postProgressUpdate({
-            event: ProgressEventType.Failed,
-            operationDescription,
-            errorMessage: session.error,
-            deploymentPortalUrl: null,
-            createdCluster: null,
-        });
-        return;
-    }
-
-    // if automatic preset, we need role assignments for the cluster RBAC admin role which requires service principal id
-    let servicePrincipalId = "";
-    if (preset === PresetType.Automatic) {
-        servicePrincipalId = getServicePrincipalId(session.result);
-        if (!servicePrincipalId) {
-            window.showErrorMessage(l10n.t("No service principal id available for logged in user."));
+    let deploymentPortalUrl: string | null = null;
+    let deploymentSubmitted = false;
+    try {
+        // kubernetes version is required to create a cluster via deployments
+        const kubernetesVersionsResult = await containerServiceClient.managedClusters.listKubernetesVersions(location);
+        const kubernetesVersions = kubernetesVersionsResult.values || [];
+        const hasDefaultVersion = kubernetesVersions.some(isDefaultK8sVersion);
+        const [kubernetesVersion] = hasDefaultVersion
+            ? kubernetesVersions.filter(isDefaultK8sVersion)
+            : kubernetesVersions;
+        if (!kubernetesVersion?.version) {
+            window.showErrorMessage(l10n.t(`No Kubernetes versions available for location {0}`, location));
             webview.postProgressUpdate({
                 event: ProgressEventType.Failed,
                 operationDescription,
-                errorMessage: l10n.t("No service principal id available for logged in user."),
+                errorMessage: l10n.t("No Kubernetes versions available for location"),
                 deploymentPortalUrl: null,
                 createdCluster: null,
             });
-            return;
+            return false;
         }
-    }
 
-    const clusterSpec: ClusterSpec = {
-        location,
-        name,
-        resourceGroupName: groupName,
-        subscriptionId: subscriptionId,
-        kubernetesVersion: kubernetesVersion.version,
-        username: session.result.account.label, // Account label seems to be email address
-        servicePrincipalId: servicePrincipalId,
-    };
+        const session = await sessionProvider.getAuthSession();
+        if (failed(session)) {
+            window.showErrorMessage(l10n.t(`Error getting authentication session: {0}`, session.error));
+            webview.postProgressUpdate({
+                event: ProgressEventType.Failed,
+                operationDescription,
+                errorMessage: session.error,
+                deploymentPortalUrl: null,
+                createdCluster: null,
+            });
+            return false;
+        }
 
-    // Create a unique deployment name.
-    const deploymentName = `${name}-${Math.random().toString(36).substring(5)}`;
-    const deploymentSpec = new ClusterDeploymentBuilder()
-        .buildCommonParameters(clusterSpec, preset)
-        .buildTemplate(preset)
-        .getDeployment();
+        // if automatic preset, we need role assignments for the cluster RBAC admin role which requires service principal id
+        let servicePrincipalId = "";
+        if (preset === PresetType.Automatic) {
+            servicePrincipalId = getServicePrincipalId(session.result);
+            if (!servicePrincipalId) {
+                window.showErrorMessage(l10n.t("No service principal id available for logged in user."));
+                webview.postProgressUpdate({
+                    event: ProgressEventType.Failed,
+                    operationDescription,
+                    errorMessage: l10n.t("No service principal id available for logged in user."),
+                    deploymentPortalUrl: null,
+                    createdCluster: null,
+                });
+                return false;
+            }
+        }
 
-    const environment = getEnvironment();
+        const clusterSpec: ClusterSpec = {
+            location,
+            name,
+            resourceGroupName: groupName,
+            subscriptionId: subscriptionId,
+            kubernetesVersion: kubernetesVersion.version,
+            username: session.result.account.label, // Account label seems to be email address
+            servicePrincipalId: servicePrincipalId,
+        };
 
-    // event name for telemetry reporter
-    const eventName = commandId === "aks.createCluster" ? "command" : "aks.ghcp";
+        // Create a unique deployment name.
+        const deploymentName = `${name}-${Math.random().toString(36).substring(5)}`;
+        const deploymentSpec = new ClusterDeploymentBuilder()
+            .buildCommonParameters(clusterSpec, preset)
+            .buildTemplate(preset)
+            .getDeployment();
 
-    let deploymentPortalUrl: string | null = null;
-    try {
-        // Create deployment using the generic resources API with deployment resource type
+        const environment = getEnvironment();
+
+        // event name for telemetry reporter
+        const eventName = commandId === "aks.createCluster" ? "command" : "aks.ghcp";
+
         const deploymentResourceId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
-
-        const poller = await resourceManagementClient.resources.beginCreateOrUpdateById(
-            deploymentResourceId,
-            "2021-04-01", // API version for Microsoft.Resources/deployments
-            {
-                properties: deploymentSpec.properties,
-            },
-        );
         const deploymentArmId = `/subscriptions/${subscriptionId}/resourcegroups/${groupName}/providers/Microsoft.Resources/deployments/${deploymentName}`;
         deploymentPortalUrl = getDeploymentPortalUrl(environment, deploymentArmId);
         webview.postProgressUpdate({
@@ -358,6 +359,16 @@ async function createCluster(
             deploymentPortalUrl,
             createdCluster: null,
         });
+
+        // Create deployment using the generic resources API with deployment resource type
+        const poller = await resourceManagementClient.resources.beginCreateOrUpdateById(
+            deploymentResourceId,
+            "2021-04-01", // API version for Microsoft.Resources/deployments
+            {
+                properties: deploymentSpec.properties,
+            },
+        );
+        deploymentSubmitted = true;
 
         const state = await waitForDeployment(poller);
         if (state.status === "canceled") {
@@ -379,7 +390,7 @@ async function createCluster(
                 deploymentPortalUrl,
                 createdCluster: null,
             });
-        } else {
+        } else if (state.status === "succeeded") {
             reporter.sendTelemetryEvent(eventName, { command: commandId, clusterCreationSuccess: "true" });
             window.showInformationMessage(l10n.t(`Successfully created AKS cluster {0}.`, name));
             const armId = `/subscriptions/${subscriptionId}/resourceGroups/${groupName}/providers/Microsoft.ContainerService/managedClusters/${name}`;
@@ -392,10 +403,13 @@ async function createCluster(
                     portalUrl: getPortalResourceUrl(environment, armId),
                 },
             });
+            return true;
+        } else {
+            throw new Error(l10n.t("Unexpected deployment status: {0}", state.status));
         }
     } catch (ex) {
         const errorMessage = describeError(ex);
-        if (deploymentPortalUrl) {
+        if (deploymentSubmitted) {
             // The deployment was submitted but its status couldn't be read, so it may still succeed.
             window.showWarningMessage(
                 l10n.t(`Couldn't get the status of AKS cluster {0}. Check the deployment in the Azure portal.`, name),
@@ -407,7 +421,7 @@ async function createCluster(
                 deploymentPortalUrl,
                 createdCluster: null,
             });
-            return;
+            return false;
         }
 
         window.showErrorMessage(l10n.t(`Error creating AKS cluster {0}: {1}`, name, errorMessage));
@@ -415,10 +429,11 @@ async function createCluster(
             event: ProgressEventType.Failed,
             operationDescription,
             errorMessage,
-            deploymentPortalUrl: null,
+            deploymentPortalUrl,
             createdCluster: null,
         });
     }
+    return false;
 }
 
 const statusRetryCount = 3;
