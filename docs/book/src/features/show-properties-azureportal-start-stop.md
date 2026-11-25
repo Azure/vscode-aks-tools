@@ -22,7 +22,11 @@ Right-click your Azure subscription > **Create Cluster** > **Create Cluster From
 
 ## Create cluster
 
-Right-click your Azure subscription > **Create Cluster** > **Create Cluster From VS Code**, which starts a 2-step wizard for you to enter a valid cluster name and select an existing resource group. The VS Code experience will then notify user with the deployment progress and present you with the **Navigate to Portal** link when it completes successfully.
+Right-click your Azure subscription > **Create Cluster** > **Create Cluster From VS Code**, which starts a 2-step wizard for you to enter a valid cluster name and select an existing resource group. The panel shows creation progress and any preparation errors. If creating a new resource group fails, cluster creation stops and its error remains visible.
+
+**View deployment in Azure portal** is available when deployment submission starts and remains available on error screens. The deployment may not appear in the portal until Azure accepts it. After successful creation, **Navigate to Portal** opens the cluster.
+
+If a cluster filter is active, the new cluster is added only after creation succeeds. Failed or cancelled creation and lost status tracking leave the filter unchanged.
 
 ![Step 1: Create Cluster Name](../resources/vscode-create-cluster-step-1.png)
 
